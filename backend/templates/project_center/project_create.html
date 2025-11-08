@@ -1,0 +1,348 @@
+{% extends "project_center/base.html" %}
+{% load static %}
+
+{% block title %}新建项目 - 维海科技生产信息化管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">新建项目</h4>
+            <div>
+                <button type="button" class="btn btn-light btn-sm" onclick="saveDraft()">保存草稿</button>
+                <button type="button" class="btn btn-success btn-sm" onclick="submitForm()">提交申请</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <form id="projectForm" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" id="formAction" value="draft">
+                
+                <!-- 基础信息卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">基础信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">子公司 <span class="text-danger">*</span></label>
+                                <select name="subsidiary" class="form-select" required>
+                                    {% for value, label in subsidiary_choices %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">项目编号</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">VIH-</span>
+                                    <input type="text" class="form-control" id="projectYear" value="{{ current_year }}" readonly style="max-width: 80px;">
+                                    <span class="input-group-text">-</span>
+                                    <input type="text" name="project_number_seq" id="projectNumberSeq" class="form-control" placeholder="001" maxlength="3" pattern="[0-9]{3}">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="autoGenerateSeq()">自动生成</button>
+                                </div>
+                                <small class="text-muted">格式：VIH-年份-序号（年份自动，序号可手动填写或自动生成）</small>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">项目名称 <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" required maxlength="200">
+                                <small class="text-muted"><span id="nameCount">0</span>/200</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">项目别名</label>
+                                <input type="text" name="alias" class="form-control" maxlength="200" placeholder="用于内部识别">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 服务信息卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">服务信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">服务类型 <span class="text-danger">*</span></label>
+                                <div class="btn-group w-100" role="group">
+                                    {% for value, label in service_types %}
+                                    <input type="radio" class="btn-check" name="service_type" id="service_{{ value }}" value="{{ value }}" data-required="true">
+                                    <label class="btn btn-outline-primary" for="service_{{ value }}">{{ label }}</label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">项目业态 <span class="text-danger">*</span></label>
+                                <select name="business_type" class="form-select" data-required="true">
+                                    {% for value, label in business_types %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">图纸阶段 <span class="text-danger">*</span></label>
+                                <select name="design_stage" class="form-select" data-required="true">
+                                    {% for value, label in design_stages %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">服务专业 <span class="text-danger">*</span></label>
+                                <div id="professionOptions" class="form-check-group">
+                                    <!-- 动态生成专业选项 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 合同信息卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">合同信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">合同编号</label>
+                                <input type="text" name="contract_number" class="form-control">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">合同金额（元）</label>
+                                <input type="number" name="contract_amount" class="form-control" step="0.01" min="0" onchange="calculatePaymentAmounts()">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">签约日期</label>
+                                <input type="date" name="contract_date" class="form-control">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">合同附件</label>
+                                <input type="file" name="contract_file" class="form-control" accept=".pdf,.doc,.docx">
+                                <small class="text-muted">支持拖拽上传，支持 PDF、Word 格式</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 回款计划卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">回款计划</h5>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="addPaymentPhase()">添加回款阶段</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="paymentPlanTable">
+                                <thead>
+                                    <tr>
+                                        <th>回款阶段</th>
+                                        <th>回款比例（%）</th>
+                                        <th>回款金额（元）</th>
+                                        <th>计划回款日期</th>
+                                        <th>触发条件</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paymentPlanBody">
+                                    <!-- 动态添加行 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// 专业选项配置（根据服务类型动态显示）
+const professionOptions = {
+    'result_optimization': ['结构', '构造', '地库减面积', '地库加车位', '停车效率', '节能', '门窗栏杆', '幕墙', '总坪景观', '电气', '给排水', '暖通', '市政道路'],
+    'process_optimization': ['结构', '建筑地库'],
+    'detailed_review': ['建筑', '结构', '电气', '给排水', '暖通'],
+    'full_process_consulting': ['建筑', '结构', '电气', '给排水', '暖通']
+};
+
+// 服务类型变化时更新专业选项
+document.querySelectorAll('input[name="service_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        updateProfessionOptions(this.value);
+    });
+});
+
+function updateProfessionOptions(serviceType) {
+    const container = document.getElementById('professionOptions');
+    container.innerHTML = '';
+    const options = professionOptions[serviceType] || [];
+    options.forEach(profession => {
+        const div = document.createElement('div');
+        div.className = 'form-check form-check-inline';
+        div.innerHTML = `
+            <input class="form-check-input" type="checkbox" name="service_professions" id="prof_${profession}" value="${profession}">
+            <label class="form-check-label" for="prof_${profession}">${profession}</label>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// 项目名称字数统计
+document.querySelector('input[name="name"]').addEventListener('input', function() {
+    document.getElementById('nameCount').textContent = this.value.length;
+});
+
+// 自动生成项目编号序号
+function autoGenerateSeq() {
+    const year = document.getElementById('projectYear').value;
+    const seqInput = document.getElementById('projectNumberSeq');
+    
+    // 通过 AJAX 获取下一个序号
+    fetch(`/api/project/get-next-number/?year=${year}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.next_seq) {
+                seqInput.value = data.next_seq.toString().padStart(3, '0');
+            } else {
+                seqInput.value = '001';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            seqInput.value = '001';
+        });
+}
+
+// 添加回款阶段
+let paymentPhaseIndex = 0;
+function addPaymentPhase() {
+    const tbody = document.getElementById('paymentPlanBody');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td><input type="text" name="payment_phase[]" class="form-control" required></td>
+        <td><input type="number" name="payment_ratio[]" class="form-control" step="0.01" min="0" max="100" required onchange="calculatePaymentAmounts()"></td>
+        <td><input type="text" class="form-control" readonly></td>
+        <td><input type="date" name="payment_date[]" class="form-control" required></td>
+        <td><select name="payment_trigger[]" class="form-select">
+            <option value="">请选择</option>
+            <option value="合同签订">合同签订</option>
+            <option value="项目启动">项目启动</option>
+            <option value="阶段完成">阶段完成</option>
+            <option value="项目验收">项目验收</option>
+        </select></td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="removePaymentPhase(this)">删除</button></td>
+    `;
+    tbody.appendChild(row);
+    paymentPhaseIndex++;
+}
+
+// 删除回款阶段
+function removePaymentPhase(btn) {
+    btn.closest('tr').remove();
+    calculatePaymentAmounts();
+}
+
+// 计算回款金额
+function calculatePaymentAmounts() {
+    const contractAmount = parseFloat(document.querySelector('input[name="contract_amount"]').value) || 0;
+    document.querySelectorAll('input[name="payment_ratio[]"]').forEach((ratioInput, index) => {
+        const ratio = parseFloat(ratioInput.value) || 0;
+        const amount = contractAmount * ratio / 100;
+        const row = ratioInput.closest('tr');
+        row.querySelector('td:nth-child(3) input').value = amount.toFixed(2);
+    });
+}
+
+// 保存草稿
+function saveDraft() {
+    // 移除必填验证
+    document.querySelectorAll('[data-required="true"]').forEach(el => {
+        el.removeAttribute('required');
+    });
+    document.getElementById('formAction').value = 'draft';
+    document.getElementById('projectForm').submit();
+}
+
+// 提交申请
+function submitForm() {
+    // 添加必填验证
+    let isValid = true;
+    const serviceType = document.querySelector('input[name="service_type"]:checked');
+    const businessType = document.querySelector('select[name="business_type"]').value;
+    const designStage = document.querySelector('select[name="design_stage"]').value;
+    
+    if (!serviceType) {
+        alert('请选择服务类型');
+        isValid = false;
+    }
+    if (!businessType) {
+        alert('请选择项目业态');
+        isValid = false;
+    }
+    if (!designStage) {
+        alert('请选择图纸阶段');
+        isValid = false;
+    }
+    
+    if (isValid) {
+        document.querySelectorAll('[data-required="true"]').forEach(el => {
+            el.setAttribute('required', 'required');
+        });
+        document.getElementById('formAction').value = 'submit';
+        document.getElementById('projectForm').submit();
+    }
+}
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 设置当前年份
+    const now = new Date();
+    const year = now.getFullYear();
+    document.getElementById('projectYear').value = year;
+    
+    // 初始化专业选项（默认选择第一个服务类型）
+    const firstServiceType = document.querySelector('input[name="service_type"]:checked')?.value || 
+                            document.querySelector('input[name="service_type"]')?.value;
+    if (firstServiceType) {
+        updateProfessionOptions(firstServiceType);
+    }
+});
+</script>
+
+<style>
+.card {
+    border: none;
+    border-radius: 8px;
+}
+
+.card-header {
+    border-bottom: 2px solid #e9ecef;
+}
+
+.form-check-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.btn-group .btn-check:checked + .btn {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+

@@ -1,0 +1,53 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgresql-init
+  namespace: weihai-tech
+spec:
+  template:
+    spec:
+      containers:
+      - name: init-db
+        image: postgres:13
+        env:
+        - name: PGHOST
+          value: "postgresql-service.weihai-tech.svc.cluster.local"
+        - name: PGPORT
+          value: "5432"
+        - name: PGUSER
+          value: "weihai_admin"
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: postgres-password
+        - name: PGDATABASE
+          value: "weihai_tech"
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          echo "等待 PostgreSQL 服务启动..."
+          until pg_isready -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE; do
+            sleep 2
+          done
+          echo "PostgreSQL 已就绪，开始初始化..."
+          
+          # 创建应用数据库用户（如果需要）
+          psql -c "CREATE USER weihai_app WITH PASSWORD 'WeihaiApp2024!';"
+          psql -c "GRANT CONNECT ON DATABASE weihai_tech TO weihai_app;"
+          psql -c "GRANT USAGE ON SCHEMA public TO weihai_app;"
+          psql -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO weihai_app;"
+          psql -c "GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO weihai_app;"
+          
+          echo "数据库初始化完成！"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      restartPolicy: OnFailure
+  backoffLimit: 3

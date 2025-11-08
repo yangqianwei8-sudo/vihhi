@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登 录 - 维海科技生产信息化管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 50px;
+            max-width: 450px;
+            width: 100%;
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .logo-title {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .logo-subtitle {
+            font-size: 1.1em;
+            color: #7f8c8d;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 500;
+            font-size: 0.95em;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-input::placeholder {
+            color: #adb5bd;
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .messages {
+            margin-bottom: 20px;
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+        
+        .alert-error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+        
+        .alert-success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+        
+        .links {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .links a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 0.9em;
+            margin: 0 10px;
+            transition: color 0.3s ease;
+        }
+        
+        .links a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #6c757d;
+            font-size: 0.85em;
+        }
+        
+        .input-icon {
+            position: relative;
+        }
+        
+        .input-icon::before {
+            content: '';
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            background-size: contain;
+            opacity: 0.5;
+        }
+        
+        .username-icon::before {
+            content: '👤';
+        }
+        
+        .password-icon::before {
+            content: '🔒';
+        }
+        
+        .input-icon .form-input {
+            padding-left: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <div class="logo-title">维海科技</div>
+            <div class="logo-subtitle">生产信息化管理系统</div>
+        </div>
+        
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.GET.next|default:'home' }}">
+            
+            <div class="form-group">
+                <label class="form-label" for="username">用户名</label>
+                <div class="input-icon username-icon">
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        class="form-input" 
+                        placeholder="请输入用户名"
+                        required
+                        autofocus
+                        autocomplete="username"
+                    >
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="password">密码</label>
+                <div class="input-icon password-icon">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-input" 
+                        placeholder="请输入密码"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+            </div>
+            
+            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-top: -10px; margin-bottom: 15px;">
+                <label style="display: flex; align-items: center; cursor: pointer; font-size: 0.9em; color: #6c757d;">
+                    <input type="checkbox" name="remember_me" style="margin-right: 8px;">
+                    记住密码
+                </label>
+                <a href="/password-reset/" style="color: #667eea; text-decoration: none; font-size: 0.9em;">忘记密码？</a>
+            </div>
+            <button type="submit" class="btn-login">登 录</button>
+        </form>
+        
+        <div class="links">
+            <a href="{% url 'home' %}">返回首页</a>
+            <a href="{% url 'api-root' %}">API 接口</a>
+        </div>
+        
+        <div class="footer">
+            <p>© 2025 维海科技 - 诚信创新，专业领先</p>
+        </div>
+    </div>
+    
+    <script>
+        // 表单验证和交互增强
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.querySelector('.btn-login');
+            
+            if (!username || !password) {
+                e.preventDefault();
+                alert('请输入用户名和密码');
+                return false;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = '登 录中...';
+        });
+        
+        // 回车键快速提交
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.querySelector('form').dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,191 @@
+{% extends "project_center/base.html" %}
+{% load static %}
+
+{% block title %}项目信息完善 - {{ project.name }}{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'project_pages:project_detail' project.id %}">{{ project.name }}</a></li>
+<li class="breadcrumb-item active">信息完善</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-0">{{ project.name }}</h4>
+                <small>项目信息完善</small>
+            </div>
+            <span class="badge bg-light text-dark">{{ project.get_status_display }}</span>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <!-- 客户信息卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">客户信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">甲方公司名称 <span class="text-danger">*</span></label>
+                                <input type="text" name="client_company_name" class="form-control" value="{{ project.client_company_name }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">甲方项目负责人</label>
+                                <input type="text" name="client_contact_person" class="form-control" value="{{ project.client_contact_person }}">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">联系电话</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-phone"></i></span>
+                                    <input type="tel" name="client_phone" class="form-control" value="{{ project.client_phone }}" pattern="[0-9]{11}">
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">电子邮箱</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                    <input type="email" name="client_email" class="form-control" value="{{ project.client_email }}">
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">通讯地址</label>
+                                <input type="text" name="client_address" class="form-control" value="{{ project.client_address }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 设计方信息卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">设计方信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">设计单位名称</label>
+                                <input type="text" name="design_company" class="form-control" value="{{ project.design_company }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">设计方项目负责人</label>
+                                <input type="text" name="design_contact_person" class="form-control" value="{{ project.design_contact_person }}">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">设计方联系电话</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-phone"></i></span>
+                                    <input type="tel" name="design_phone" class="form-control" value="{{ project.design_phone }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">设计方电子邮箱</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                    <input type="email" name="design_email" class="form-control" value="{{ project.design_email }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 项目详细信息卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">项目详细信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">项目地址</label>
+                                <input type="text" name="project_address" class="form-control" value="{{ project.project_address }}">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">建筑面积（㎡）</label>
+                                <input type="number" name="building_area" class="form-control" step="0.01" min="0" value="{{ project.building_area }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">地下面积（㎡）</label>
+                                <input type="number" name="underground_area" class="form-control" step="0.01" min="0" value="{{ project.underground_area }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">地上面积（㎡）</label>
+                                <input type="number" name="aboveground_area" class="form-control" step="0.01" min="0" value="{{ project.aboveground_area }}">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">建筑高度（米）</label>
+                                <input type="number" name="building_height" class="form-control" step="0.01" min="0" value="{{ project.building_height }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">地上层数</label>
+                                <input type="number" name="aboveground_floors" class="form-control" min="0" value="{{ project.aboveground_floors }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">地下层数</label>
+                                <input type="number" name="underground_floors" class="form-control" min="0" value="{{ project.underground_floors }}">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">结构形式</label>
+                                <select name="structure_type" class="form-select">
+                                    <option value="">请选择</option>
+                                    <option value="框架结构" {% if project.structure_type == '框架结构' %}selected{% endif %}>框架结构</option>
+                                    <option value="剪力墙结构" {% if project.structure_type == '剪力墙结构' %}selected{% endif %}>剪力墙结构</option>
+                                    <option value="框架-剪力墙结构" {% if project.structure_type == '框架-剪力墙结构' %}selected{% endif %}>框架-剪力墙结构</option>
+                                    <option value="钢结构" {% if project.structure_type == '钢结构' %}selected{% endif %}>钢结构</option>
+                                    <option value="其他" {% if project.structure_type == '其他' %}selected{% endif %}>其他</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 特殊要求卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">特殊要求</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">甲方特殊要求</label>
+                                <textarea name="client_special_requirements" class="form-control" rows="4">{{ project.client_special_requirements }}</textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">技术难点说明</label>
+                                <textarea name="technical_difficulties" class="form-control" rows="4">{{ project.technical_difficulties }}</textarea>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">项目风险预判</label>
+                                <textarea name="risk_assessment" class="form-control" rows="4">{{ project.risk_assessment }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'project_pages:project_detail' project.id %}" class="btn btn-secondary">取消</a>
+                    <button type="submit" class="btn btn-primary">保存并继续</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

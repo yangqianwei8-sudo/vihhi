@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>维海科技生产信息化管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif;
+            background: #f8f9fa;
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        /* 顶部导航栏 */
+        .top-nav {
+            background: #1a365d;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .logo {
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .nav-center {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+            justify-content: center;
+        }
+        
+        .nav-link {
+            color: rgba(255,255,255,0.9);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .nav-link:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+        }
+        
+        .btn-nav {
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-nav-primary {
+            background: #2d74b5;
+            color: white;
+        }
+        
+        .btn-nav-primary:hover {
+            background: #1e5a8f;
+        }
+        
+        .btn-nav-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        .btn-nav-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        /* 主容器 */
+        .main-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        /* 顶部数据看板 */
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid #2d74b5;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        
+        .stat-card.warning {
+            border-left-color: #e67e22;
+        }
+        
+        .stat-card.danger {
+            border-left-color: #e74c3c;
+        }
+        
+        .stat-card.success {
+            border-left-color: #27ae60;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1a365d;
+            margin-bottom: 5px;
+        }
+        
+        .stat-trend {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .stat-trend.up {
+            color: #27ae60;
+        }
+        
+        .stat-trend.down {
+            color: #e74c3c;
+        }
+        
+        /* 主要内容区 */
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        /* 中央工作台 - 九宫格 */
+        .workbench {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .workbench-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a365d;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        
+        .module-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 25px;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            transition: all 0.3s ease;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #2d74b5, #667eea);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .module-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(45, 116, 181, 0.15);
+            border-color: #2d74b5;
+        }
+        
+        .module-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .module-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .module-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a365d;
+            margin-bottom: 8px;
+        }
+        
+        .module-desc {
+            font-size: 12px;
+            color: #6c757d;
+            line-height: 1.5;
+        }
+        
+        /* 右侧信息面板 */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .sidebar-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a365d;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .panel-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-title {
+            font-size: 14px;
+            color: #333;
+            flex: 1;
+        }
+        
+        .item-meta {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .item-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+        
+        .badge-primary {
+            background: #e3f2fd;
+            color: #2d74b5;
+        }
+        
+        .badge-warning {
+            background: #fff3e0;
+            color: #e67e22;
+        }
+        
+        .badge-danger {
+            background: #ffebee;
+            color: #e74c3c;
+        }
+        
+        .badge-success {
+            background: #e8f5e9;
+            color: #27ae60;
+        }
+        
+        /* 底部数据图表区 */
+        .charts-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-top: 25px;
+        }
+        
+        .chart-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .content-wrapper {
+                grid-template-columns: 1fr;
+            }
+            
+            .modules-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .top-nav {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .nav-center {
+                flex-wrap: wrap;
+            }
+            
+            .modules-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* 快捷功能卡片 */
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .quick-action-btn {
+            padding: 10px 20px;
+            background: #2d74b5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .quick-action-btn:hover {
+            background: #1e5a8f;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(45, 116, 181, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <div class="top-nav">
+        <div class="nav-left">
+            <div class="logo">维海科技生产信息化管理系统</div>
+        </div>
+        <div class="nav-center">
+            <a href="{% url 'project_pages:project_list' %}" class="nav-link">项目中心</a>
+            <a href="/api/task/" class="nav-link">任务协作</a>
+            <a href="/api/production/" class="nav-link">生产质量</a>
+            <a href="/api/settlement/" class="nav-link">结算中心</a>
+            <a href="/api/risk/" class="nav-link">风控中心</a>
+        </div>
+        <div class="nav-right">
+            <div class="user-info">
+                <span>👤</span>
+                <span>{{ user.get_full_name|default:user.username }}</span>
+            </div>
+            <a href="/admin/" class="btn-nav btn-nav-secondary" target="_blank">管理后台</a>
+            <a href="{% url 'logout' %}" class="btn-nav btn-nav-secondary">退出</a>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <!-- 顶部数据看板 -->
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <div class="stat-label">项目总数</div>
+                <div class="stat-value">0</div>
+                <div class="stat-trend">进行中: 0 | 已完成: 0</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-label">待办任务</div>
+                <div class="stat-value">0</div>
+                <div class="stat-trend">个人: 0 | 团队: 0</div>
+            </div>
+            <div class="stat-card danger">
+                <div class="stat-label">风险预警</div>
+                <div class="stat-value">0</div>
+                <div class="stat-trend">高风险: 0 | 中风险: 0</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-label">回款状态</div>
+                <div class="stat-value">¥0</div>
+                <div class="stat-trend">本月应收: ¥0 | 已收: ¥0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">客户满意度</div>
+                <div class="stat-value">--</div>
+                <div class="stat-trend">最新评分: --</div>
+            </div>
+        </div>
+        
+        <!-- 主要内容区 -->
+        <div class="content-wrapper">
+            <!-- 中央工作台 - 九宫格 -->
+            <div class="workbench">
+                <div class="workbench-title">核心业务模块</div>
+                <div class="modules-grid">
+                    <a href="{% url 'project_pages:project_list' %}" class="module-card">
+                        <span class="module-icon">📊</span>
+                        <div class="module-title">项目中心</div>
+                        <div class="module-desc">项目创建、团队配置、项目监控、项目档案</div>
+                    </a>
+                    
+                    <a href="/api/resource/" class="module-card">
+                        <span class="module-icon">📚</span>
+                        <div class="module-title">资源与标准中心</div>
+                        <div class="module-desc">标准库管理、模板管理、知识库、数据维护</div>
+                    </a>
+                    
+                    <a href="/api/task/" class="module-card">
+                        <span class="module-icon">✅</span>
+                        <div class="module-title">任务与协作中心</div>
+                        <div class="module-desc">任务管理、流程引擎、协作空间、工时管理</div>
+                    </a>
+                    
+                    <a href="/api/production/" class="module-card">
+                        <span class="module-icon">🏭</span>
+                        <div class="module-title">生产与质量中心</div>
+                        <div class="module-desc">意见填报、质量审核、报告生成、生产统计</div>
+                    </a>
+                    
+                    <a href="/api/delivery/" class="module-card">
+                        <span class="module-icon">📦</span>
+                        <div class="module-title">交付与客户门户</div>
+                        <div class="module-desc">报告交付、客户协同、门户管理、电子签章</div>
+                    </a>
+                    
+                    <a href="/api/settlement/" class="module-card">
+                        <span class="module-icon">💰</span>
+                        <div class="module-title">结算中心</div>
+                        <div class="module-desc">项目结算、产值管理、财务管理、统计分析</div>
+                    </a>
+                    
+                    <a href="/api/customer/" class="module-card">
+                        <span class="module-icon">👥</span>
+                        <div class="module-title">客户成功中心</div>
+                        <div class="module-desc">客户管理、服务跟踪、价值分析、商机挖掘</div>
+                    </a>
+                    
+                    <a href="/api/risk/" class="module-card">
+                        <span class="module-icon">⚠️</span>
+                        <div class="module-title">风控中心</div>
+                        <div class="module-desc">风险监控、风险处理、风险分析、预警管理</div>
+                    </a>
+                    
+                    <a href="/admin/" class="module-card" target="_blank">
+                        <span class="module-icon">⚙️</span>
+                        <div class="module-title">快捷功能</div>
+                        <div class="module-desc">系统设置、用户管理、权限配置、数据维护</div>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- 右侧信息面板 -->
+            <div class="sidebar">
+                <!-- 项目动态 -->
+                <div class="sidebar-panel">
+                    <div class="panel-title">
+                        <span>📈</span>
+                        <span>项目动态</span>
+                    </div>
+                    <div class="panel-item">
+                        <div class="item-title">暂无项目动态</div>
+                        <span class="item-meta">--</span>
+                    </div>
+                    <div class="panel-item">
+                        <div class="item-title">最新项目进展</div>
+                        <span class="item-meta">--</span>
+                    </div>
+                </div>
+                
+                <!-- 任务提醒 -->
+                <div class="sidebar-panel">
+                    <div class="panel-title">
+                        <span>📋</span>
+                        <span>任务提醒</span>
+                    </div>
+                    <div class="panel-item">
+                        <div class="item-title">我的待办任务</div>
+                        <span class="item-badge badge-primary">0</span>
+                    </div>
+                    <div class="panel-item">
+                        <div class="item-title">即将到期</div>
+                        <span class="item-badge badge-warning">0</span>
+                    </div>
+                    <div class="panel-item">
+                        <div class="item-title">已逾期</div>
+                        <span class="item-badge badge-danger">0</span>
+                    </div>
+                </div>
+                
+                <!-- 系统公告 -->
+                <div class="sidebar-panel">
+                    <div class="panel-title">
+                        <span>📢</span>
+                        <span>系统公告</span>
+                    </div>
+                    <div class="panel-item">
+                        <div class="item-title">系统运行正常</div>
+                        <span class="item-meta">今天</span>
+                    </div>
+                    <div class="panel-item">
+                        <div class="item-title">欢迎使用新系统</div>
+                        <span class="item-meta">2025-11-07</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 底部数据图表区 -->
+        <div class="charts-section">
+            <div class="workbench-title">数据统计分析</div>
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <div style="text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📊</div>
+                        <div>项目进度分布图</div>
+                        <div style="font-size: 12px; margin-top: 10px; color: #adb5bd;">待数据接入后显示</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div style="text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📈</div>
+                        <div>产值趋势图</div>
+                        <div style="font-size: 12px; margin-top: 10px; color: #adb5bd;">待数据接入后显示</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div style="text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">⚠️</div>
+                        <div>风险分布图</div>
+                        <div style="font-size: 12px; margin-top: 10px; color: #adb5bd;">待数据接入后显示</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 页面加载动画
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.module-card, .stat-card, .sidebar-panel');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 50);
+            });
+        });
+        
+        // 数据自动刷新（30秒间隔）
+        setInterval(function() {
+            // 这里可以添加数据刷新逻辑
+            console.log('数据刷新中...');
+        }, 30000);
+    </script>
+</body>
+</html>
