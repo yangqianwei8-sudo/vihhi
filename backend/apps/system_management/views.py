@@ -5,8 +5,15 @@ from django.contrib.auth import login, logout
 from django.db.models import Q
 from .models import User, Department, Role, DataDictionary, SystemConfig
 from .serializers import (
-    UserSerializer, UserLoginSerializer, DepartmentSerializer,
-    RoleSerializer, DataDictionarySerializer, SystemConfigSerializer
+    UserSerializer,
+    UserLoginSerializer,
+    DepartmentSerializer,
+    RoleSerializer,
+    DataDictionarySerializer,
+    SystemConfigSerializer,
+    AccountProfileSerializer,
+    AccountNotificationSerializer,
+    AccountPasswordChangeSerializer,
 )
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -60,6 +67,55 @@ class UserViewSet(viewsets.ModelViewSet):
     def profile(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['put', 'patch'], url_path='me/profile')
+    def update_profile(self, request):
+        serializer = AccountProfileSerializer(
+            instance=request.user,
+            data=request.data,
+            partial=True,
+            context={'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({
+            'success': True,
+            'message': '账号资料已更新。',
+            'data': serializer.data,
+        })
+
+    @action(detail=False, methods=['get', 'put'], url_path='me/notifications')
+    def notification_preferences(self, request):
+        if request.method.upper() == 'GET':
+            return Response(request.user.get_notification_preferences())
+
+        serializer = AccountNotificationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        preferences = request.user.get_notification_preferences()
+        preferences.update(serializer.validated_data)
+        request.user.notification_preferences = preferences
+        request.user.save(update_fields=['notification_preferences'])
+        return Response({
+            'success': True,
+            'message': '通知偏好已保存。',
+            'data': request.user.get_notification_preferences(),
+        })
+
+    @action(detail=False, methods=['post'], url_path='me/change-password')
+    def change_password(self, request):
+        serializer = AccountPasswordChangeSerializer(
+            data=request.data,
+            context={'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+        new_password = serializer.validated_data['new_password']
+        request.user.set_password(new_password)
+        request.user.save(update_fields=['password'])
+        logout(request)
+        return Response({
+            'success': True,
+            'message': '密码更新成功，请重新登录。',
+        })
 
 class DepartmentViewSet(viewsets.ModelViewSet):
     queryset = Department.objects.all()

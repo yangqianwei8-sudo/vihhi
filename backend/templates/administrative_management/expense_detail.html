@@ -1,0 +1,265 @@
+{% extends "administrative_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:expense_management' %}">报销管理</a></li>
+<li class="breadcrumb-item active">{{ expense.reimbursement_number }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .info-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .info-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-bottom: 16px;
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .info-label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: 14px;
+        color: #1f2937;
+        font-weight: 500;
+    }
+    .item-row {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="text-end mb-4">
+        <a href="{% url 'admin_pages:expense_management' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        {% if expense.status == 'draft' or expense.applicant == request.user %}
+        <a href="{% url 'admin_pages:expense_update' expense.id %}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> 编辑
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <h5>基本信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">报销单号</span>
+                <span class="info-value"><code>{{ expense.reimbursement_number }}</code></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">申请人</span>
+                <span class="info-value">{{ expense.applicant.get_full_name|default:expense.applicant.username }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">申请日期</span>
+                <span class="info-value">{{ expense.application_date|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">报销类型</span>
+                <span class="info-value">{{ expense.get_expense_type_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">报销总金额</span>
+                <span class="info-value" style="font-size: 20px; font-weight: 700; color: #142F5B;">¥{{ expense.total_amount|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">状态</span>
+                <span class="info-value">
+                    {% if expense.status == 'draft' %}
+                    <span class="badge bg-secondary">草稿</span>
+                    {% elif expense.status == 'pending_approval' %}
+                    <span class="badge bg-warning">待审批</span>
+                    {% elif expense.status == 'finance_review' %}
+                    <span class="badge bg-info">财务审核中</span>
+                    {% elif expense.status == 'approved' %}
+                    <span class="badge bg-success">已批准</span>
+                    {% elif expense.status == 'rejected' %}
+                    <span class="badge bg-danger">已拒绝</span>
+                    {% elif expense.status == 'paid' %}
+                    <span class="badge bg-primary">已支付</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 审批信息 -->
+    {% if expense.approver or expense.finance_reviewer %}
+    <div class="info-card">
+        <h5>审批信息</h5>
+        <div class="info-row">
+            {% if expense.approver %}
+            <div class="info-item">
+                <span class="info-label">审批人</span>
+                <span class="info-value">{{ expense.approver.get_full_name|default:expense.approver.username }}</span>
+            </div>
+            {% endif %}
+            {% if expense.approved_time %}
+            <div class="info-item">
+                <span class="info-label">审批时间</span>
+                <span class="info-value">{{ expense.approved_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            {% endif %}
+            {% if expense.finance_reviewer %}
+            <div class="info-item">
+                <span class="info-label">财务审核人</span>
+                <span class="info-value">{{ expense.finance_reviewer.get_full_name|default:expense.finance_reviewer.username }}</span>
+            </div>
+            {% endif %}
+            {% if expense.finance_reviewed_time %}
+            <div class="info-item">
+                <span class="info-label">财务审核时间</span>
+                <span class="info-value">{{ expense.finance_reviewed_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 支付信息 -->
+    {% if expense.payment_date %}
+    <div class="info-card">
+        <h5>支付信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">支付日期</span>
+                <span class="info-value">{{ expense.payment_date|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">支付方式</span>
+                <span class="info-value">{{ expense.get_payment_method_display|default:"-" }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 费用明细 -->
+    {% if items %}
+    <div class="info-card">
+        <h5>费用明细 ({{ items|length }} 项)</h5>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>费用日期</th>
+                        <th>费用类型</th>
+                        <th>费用说明</th>
+                        <th>金额</th>
+                        <th>发票号码</th>
+                        <th>附件</th>
+                        <th>备注</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item.expense_date|date:"Y-m-d" }}</td>
+                        <td>{{ item.get_expense_type_display }}</td>
+                        <td>{{ item.description|truncatewords:10 }}</td>
+                        <td><strong>¥{{ item.amount|floatformat:2 }}</strong></td>
+                        <td>{{ item.invoice_number|default:"-" }}</td>
+                        <td>
+                            {% if item.attachment %}
+                            <a href="{{ item.attachment.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="bi bi-file-earmark"></i>
+                            </a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.notes|truncatewords:5|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-end"><strong>合计：</strong></td>
+                        <td><strong style="font-size: 16px; color: #142F5B;">¥{{ expense.total_amount|floatformat:2 }}</strong></td>
+                        <td colspan="3"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注信息 -->
+    {% if expense.notes %}
+    <div class="info-card">
+        <h5>备注信息</h5>
+        <p style="color: #374151; white-space: pre-wrap;">{{ expense.notes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- 其他信息 -->
+    <div class="info-card">
+        <h5>其他信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">创建时间</span>
+                <span class="info-value">{{ expense.created_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

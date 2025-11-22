@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}{% if mode == 'edit' %}编辑综合单价{% else %}新增综合单价{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">{% if mode == 'edit' %}编辑综合单价{% else %}新增综合单价{% endif %}</h2>
+        <a class="btn btn-outline-secondary" href="{% url 'resource_standard:material_price_list' %}">返回列表</a>
+    </div>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="card">
+            <div class="card-body">
+                {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label">{{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+                    {{ field }}
+                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                    {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="mt-4 d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

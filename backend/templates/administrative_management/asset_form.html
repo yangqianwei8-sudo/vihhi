@@ -1,0 +1,261 @@
+{% extends "administrative_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:asset_management' %}">固定资产</a></li>
+<li class="breadcrumb-item active">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:asset_management' %}">固定资产</a></li>
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:asset_detail' asset.id %}">{{ asset.asset_number }}</a></li>
+<li class="breadcrumb-item active">编辑</li>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-card h5 {
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <h5>基本信息</h5>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label required">资产名称</label>
+                    {{ form.asset_name }}
+                    {% if form.asset_name.errors %}
+                    <div class="text-danger small mt-1">{{ form.asset_name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">资产类别</label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                    <div class="text-danger small mt-1">{{ form.category.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">品牌</label>
+                    {{ form.brand }}
+                    {% if form.brand.errors %}
+                    <div class="text-danger small mt-1">{{ form.brand.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">型号</label>
+                    {{ form.model }}
+                    {% if form.model.errors %}
+                    <div class="text-danger small mt-1">{{ form.model.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">规格</label>
+                    {{ form.specification }}
+                    {% if form.specification.errors %}
+                    <div class="text-danger small mt-1">{{ form.specification.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <h5>购买信息</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">购买日期</label>
+                    {{ form.purchase_date }}
+                    {% if form.purchase_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.purchase_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">购买价格</label>
+                    {{ form.purchase_price }}
+                    {% if form.purchase_price.errors %}
+                    <div class="text-danger small mt-1">{{ form.purchase_price.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">供应商</label>
+                    {{ form.supplier }}
+                    {% if form.supplier.errors %}
+                    <div class="text-danger small mt-1">{{ form.supplier.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">保修期（月）</label>
+                    {{ form.warranty_period }}
+                    {% if form.warranty_period.errors %}
+                    <div class="text-danger small mt-1">{{ form.warranty_period.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">保修到期日</label>
+                    {{ form.warranty_expiry }}
+                    {% if form.warranty_expiry.errors %}
+                    <div class="text-danger small mt-1">{{ form.warranty_expiry.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <h5>使用信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">当前使用人</label>
+                    {{ form.current_user }}
+                    {% if form.current_user.errors %}
+                    <div class="text-danger small mt-1">{{ form.current_user.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">所属部门</label>
+                    {{ form.department }}
+                    {% if form.department.errors %}
+                    <div class="text-danger small mt-1">{{ form.department.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">当前位置</label>
+                    {{ form.current_location }}
+                    {% if form.current_location.errors %}
+                    <div class="text-danger small mt-1">{{ form.current_location.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">状态</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                    <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <h5>折旧信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">折旧方法</label>
+                    {{ form.depreciation_method }}
+                    {% if form.depreciation_method.errors %}
+                    <div class="text-danger small mt-1">{{ form.depreciation_method.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">折旧率</label>
+                    {{ form.depreciation_rate }}
+                    {% if form.depreciation_rate.errors %}
+                    <div class="text-danger small mt-1">{{ form.depreciation_rate.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">净值</label>
+                    {{ form.net_value }}
+                    {% if form.net_value.errors %}
+                    <div class="text-danger small mt-1">{{ form.net_value.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">描述</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            是否启用
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% if is_create %}{% url 'admin_pages:asset_management' %}{% else %}{% url 'admin_pages:asset_detail' asset.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-submit">
+                    <i class="bi bi-check-circle"></i> 保存
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

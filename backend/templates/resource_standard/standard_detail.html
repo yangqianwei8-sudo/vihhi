@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}标准详情{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">{{ standard.name }}</h2>
+            <div class="text-muted">编号：{{ standard.code }} · 状态：{{ standard.get_status_display }}</div>
+        </div>
+        <div>
+            <a class="btn btn-outline-secondary" href="{% url 'resource_standard:standard_list' %}">返回列表</a>
+            <a class="btn btn-primary" href="{% url 'resource_standard:standard_edit' standard.pk %}">编辑标准</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">基础信息</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">标准类型</dt>
+                        <dd class="col-sm-8">{{ standard.get_standard_type_display }}</dd>
+
+                        <dt class="col-sm-4">适用专业</dt>
+                        <dd class="col-sm-8">
+                            {% for profession in standard.applicable_professions %}
+                                <span class="badge bg-primary-subtle text-primary-emphasis me-1">{{ profession }}</span>
+                            {% empty %}
+                                <span class="text-muted">—</span>
+                            {% endfor %}
+                        </dd>
+
+                        <dt class="col-sm-4">适用业态</dt>
+                        <dd class="col-sm-8">
+                            {% for business in standard.applicable_business_types %}
+                                <span class="badge bg-info-subtle text-info-emphasis me-1">{{ business }}</span>
+                            {% empty %}
+                                <span class="text-muted">—</span>
+                            {% endfor %}
+                        </dd>
+
+                        <dt class="col-sm-4">生效日期</dt>
+                        <dd class="col-sm-8">{{ standard.effective_date }}</dd>
+
+                        <dt class="col-sm-4">可见范围</dt>
+                        <dd class="col-sm-8">
+                            {% for scope in standard.visible_scope %}
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis me-1">{{ scope }}</span>
+                            {% empty %}
+                                <span class="text-muted">—</span>
+                            {% endfor %}
+                        </dd>
+
+                        <dt class="col-sm-4">可编辑角色</dt>
+                        <dd class="col-sm-8">
+                            {% for role in standard.editable_roles.all %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis me-1">{{ role.name }}</span>
+                            {% empty %}
+                                <span class="text-muted">仅创建人</span>
+                            {% endfor %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">版本信息</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">创建人</dt>
+                        <dd class="col-sm-8">{{ standard.created_by.get_full_name|default:standard.created_by.username }}</dd>
+                        <dt class="col-sm-4">创建时间</dt>
+                        <dd class="col-sm-8">{{ standard.created_time|date:'Y-m-d H:i' }}</dd>
+                        <dt class="col-sm-4">更新时间</dt>
+                        <dd class="col-sm-8">{{ standard.updated_time|date:'Y-m-d H:i' }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>审查要点</span>
+            <span class="text-muted">共 {{ standard.review_items.count }} 项</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>部位名称</th>
+                        <th>审查要点</th>
+                        <th>问题类别</th>
+                        <th>严重等级</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in standard.review_items.all %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.section_name }}</td>
+                        <td style="white-space:pre-wrap;">{{ item.review_point }}</td>
+                        <td>{{ item.get_issue_category_display }}</td>
+                        <td>{{ item.get_severity_level_display }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">暂无审查要点</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

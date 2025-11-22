@@ -1,0 +1,401 @@
+{% extends "financial_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:voucher_management' %}">记账凭证</a></li>
+<li class="breadcrumb-item active">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:voucher_management' %}">记账凭证</a></li>
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:voucher_detail' voucher.id %}">{{ voucher.voucher_number }}</a></li>
+<li class="breadcrumb-item active">编辑</li>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-card h5 {
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+    .entry-row {
+        background: #f9fafb;
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        border: 1px solid #e5e7eb;
+    }
+    .entry-row:hover {
+        background: #f3f4f6;
+    }
+    .totals-row {
+        background: #eff6ff;
+        padding: 16px;
+        border-radius: 8px;
+        border: 2px solid #3b82f6;
+        font-weight: 600;
+        margin-top: 16px;
+    }
+    .balance-warning {
+        color: #dc2626;
+        font-weight: 600;
+    }
+    .balance-ok {
+        color: #059669;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <!-- 表单 -->
+    <form method="post" id="voucherForm">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-card">
+            <h5>基本信息</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label required">凭证日期</label>
+                    {{ form.voucher_date }}
+                    {% if form.voucher_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.voucher_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">附件数</label>
+                    {{ form.attachment_count }}
+                    {% if form.attachment_count.errors %}
+                    <div class="text-danger small mt-1">{{ form.attachment_count.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">状态</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                    <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">制单人</label>
+                    {{ form.preparer }}
+                    {% if form.preparer.errors %}
+                    <div class="text-danger small mt-1">{{ form.preparer.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">审核人</label>
+                    {{ form.reviewer }}
+                    {% if form.reviewer.errors %}
+                    <div class="text-danger small mt-1">{{ form.reviewer.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">备注</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 凭证分录 -->
+        <div class="form-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">凭证分录</h5>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addEntryRow()">
+                    <i class="bi bi-plus-circle"></i> 添加分录行
+                </button>
+            </div>
+            
+            {{ formset.management_form }}
+            
+            <div id="entryContainer">
+                {% for entry_form in formset %}
+                <div class="entry-row" data-form-index="{{ forloop.counter0 }}">
+                    {{ entry_form.id }}
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-1">
+                            <label class="form-label small">行号</label>
+                            {{ entry_form.line_number }}
+                            {% if entry_form.line_number.errors %}
+                            <div class="text-danger small">{{ entry_form.line_number.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small required">会计科目</label>
+                            {{ entry_form.account_subject }}
+                            {% if entry_form.account_subject.errors %}
+                            <div class="text-danger small">{{ entry_form.account_subject.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small required">摘要</label>
+                            {{ entry_form.summary }}
+                            {% if entry_form.summary.errors %}
+                            <div class="text-danger small">{{ entry_form.summary.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">借方金额</label>
+                            {{ entry_form.debit_amount }}
+                            {% if entry_form.debit_amount.errors %}
+                            <div class="text-danger small">{{ entry_form.debit_amount.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">贷方金额</label>
+                            {{ entry_form.credit_amount }}
+                            {% if entry_form.credit_amount.errors %}
+                            <div class="text-danger small">{{ entry_form.credit_amount.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-1">
+                            {% if entry_form.DELETE %}
+                            <div class="form-check">
+                                {{ entry_form.DELETE }}
+                                <label class="form-check-label small" for="{{ entry_form.DELETE.id_for_label }}">
+                                    删除
+                                </label>
+                            </div>
+                            {% else %}
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeEntryRow(this)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- 合计行 -->
+            <div class="totals-row">
+                <div class="row">
+                    <div class="col-md-6 text-end">
+                        <strong>借方合计：</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <span id="totalDebit">¥0.00</span>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <strong>贷方合计：</strong>
+                        <span id="totalCredit">¥0.00</span>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12 text-center">
+                        <span id="balanceStatus" class="balance-ok">✓ 借贷平衡</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 表单错误 -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+        {% if formset.non_form_errors %}
+        <div class="alert alert-danger">
+            {{ formset.non_form_errors }}
+        </div>
+        {% endif %}
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% if is_create %}{% url 'finance_pages:voucher_management' %}{% else %}{% url 'finance_pages:voucher_detail' voucher.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-submit">
+                    <i class="bi bi-check-circle"></i> 保存
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+let formCount = {{ formset.total_form_count }};
+
+function updateFormIndexes() {
+    const container = document.getElementById('entryContainer');
+    const rows = container.querySelectorAll('.entry-row');
+    rows.forEach((row, index) => {
+        const formPrefix = 'form-' + index;
+        row.querySelector('[name*="-line_number"]').name = formPrefix + '-line_number';
+        row.querySelector('[name*="-account_subject"]').name = formPrefix + '-account_subject';
+        row.querySelector('[name*="-summary"]').name = formPrefix + '-summary';
+        row.querySelector('[name*="-debit_amount"]').name = formPrefix + '-debit_amount';
+        row.querySelector('[name*="-credit_amount"]').name = formPrefix + '-credit_amount';
+        row.querySelector('[name*="-DELETE"]') && (row.querySelector('[name*="-DELETE"]').name = formPrefix + '-DELETE');
+        if (row.querySelector('[name*="-id"]')) {
+            row.querySelector('[name*="-id"]').name = formPrefix + '-id';
+        }
+        row.dataset.formIndex = index;
+        // 更新行号
+        const lineNumberInput = row.querySelector('[name*="-line_number"]');
+        if (lineNumberInput) {
+            lineNumberInput.value = index + 1;
+        }
+    });
+    document.getElementById('id_form-TOTAL_FORMS').value = rows.length;
+}
+
+function addEntryRow() {
+    const container = document.getElementById('entryContainer');
+    const newRow = document.createElement('div');
+    newRow.className = 'entry-row';
+    newRow.dataset.formIndex = formCount;
+    newRow.innerHTML = `
+        <div class="row g-2 align-items-end">
+            <div class="col-md-1">
+                <label class="form-label small">行号</label>
+                <input type="number" name="form-${formCount}-line_number" class="form-control form-control-sm" value="${formCount + 1}" readonly>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small required">会计科目</label>
+                <select name="form-${formCount}-account_subject" class="form-select form-select-sm" required>
+                    <option value="">---------</option>
+                    {% for subject in account_subjects %}
+                    <option value="{{ subject.id }}">{{ subject.code }} - {{ subject.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small required">摘要</label>
+                <input type="text" name="form-${formCount}-summary" class="form-control form-control-sm" maxlength="200" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">借方金额</label>
+                <input type="number" name="form-${formCount}-debit_amount" class="form-control form-control-sm entry-debit" step="0.01" min="0" value="0.00" onchange="calculateTotals()">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">贷方金额</label>
+                <input type="number" name="form-${formCount}-credit_amount" class="form-control form-control-sm entry-credit" step="0.01" min="0" value="0.00" onchange="calculateTotals()">
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeEntryRow(this)">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(newRow);
+    formCount++;
+    updateFormIndexes();
+    calculateTotals();
+}
+
+function removeEntryRow(btn) {
+    const row = btn.closest('.entry-row');
+    row.remove();
+    updateFormIndexes();
+    calculateTotals();
+}
+
+function calculateTotals() {
+    let totalDebit = 0;
+    let totalCredit = 0;
+    
+    document.querySelectorAll('.entry-debit').forEach(input => {
+        if (!input.closest('.entry-row').querySelector('[name*="-DELETE"]:checked')) {
+            totalDebit += parseFloat(input.value) || 0;
+        }
+    });
+    
+    document.querySelectorAll('.entry-credit').forEach(input => {
+        if (!input.closest('.entry-row').querySelector('[name*="-DELETE"]:checked')) {
+            totalCredit += parseFloat(input.value) || 0;
+        }
+    });
+    
+    document.getElementById('totalDebit').textContent = '¥' + totalDebit.toFixed(2);
+    document.getElementById('totalCredit').textContent = '¥' + totalCredit.toFixed(2);
+    
+    const balanceStatus = document.getElementById('balanceStatus');
+    const diff = Math.abs(totalDebit - totalCredit);
+    if (diff < 0.01) {
+        balanceStatus.textContent = '✓ 借贷平衡';
+        balanceStatus.className = 'balance-ok';
+    } else {
+        balanceStatus.textContent = '✗ 借贷不平衡（差额：¥' + diff.toFixed(2) + '）';
+        balanceStatus.className = 'balance-warning';
+    }
+}
+
+// 页面加载时计算合计
+document.addEventListener('DOMContentLoaded', function() {
+    calculateTotals();
+    // 监听所有借贷金额输入的变化
+    document.querySelectorAll('.entry-debit, .entry-credit').forEach(input => {
+        input.addEventListener('input', calculateTotals);
+    });
+    // 监听删除复选框的变化
+    document.querySelectorAll('[name*="-DELETE"]').forEach(checkbox => {
+        checkbox.addEventListener('change', calculateTotals);
+    });
+});
+</script>
+{% endblock %}
+

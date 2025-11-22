@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}维海科技信息化管理平台{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --vh-primary: #142F5B;
+            --vh-primary-light: #1F4A85;
+            --vh-primary-muted: #6C7BA8;
+            --vh-accent: #D62828;
+            --vh-accent-soft: rgba(214,40,40,0.16);
+            --vh-surface: #F6F7FD;
+            --vh-border: #E4E8F4;
+            --vh-text: #1F2937;
+            --vh-muted: #6B7280;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif;
+            background-color: var(--vh-surface);
+            color: var(--vh-text);
+            padding-top: 56px; /* 为固定导航栏留出空间 */
+        }
+
+        .navbar {
+            background: var(--vh-primary);
+            box-shadow: 0 8px 16px rgba(20, 47, 91, 0.15);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            width: 100%;
+        }
+
+        .navbar-brand {
+            color: #fff !important;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.85) !important;
+        }
+
+        .nav-link:hover,
+        .nav-link:focus {
+            color: #fff !important;
+        }
+
+        /* 下拉菜单样式 */
+        .navbar-nav .nav-item.dropdown {
+            position: relative;
+        }
+
+        .dropdown-menu {
+            background: #fff;
+            border: 1px solid rgba(20, 47, 91, 0.15);
+            border-radius: 12px;
+            box-shadow: 0 16px 32px rgba(20, 47, 91, 0.15);
+            margin-top: 8px;
+            padding: 8px 0;
+            min-width: 180px;
+        }
+
+        .dropdown-item {
+            padding: 8px 16px;
+            color: var(--vh-text);
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+
+        .dropdown-item:hover,
+        .dropdown-item:focus {
+            background: rgba(20, 47, 91, 0.08);
+            color: var(--vh-primary);
+        }
+
+        .dropdown-divider {
+            margin: 6px 0;
+            border-top: 1px solid var(--vh-border);
+        }
+
+        .dropdown-toggle::after {
+            margin-left: 6px;
+            vertical-align: 0.2em;
+        }
+
+        .breadcrumb {
+            background-color: transparent;
+            padding: 0;
+        }
+
+        .card {
+            border: 1px solid rgba(20, 47, 91, 0.08);
+            border-radius: 18px;
+            box-shadow: 0 14px 32px rgba(20, 47, 91, 0.08);
+            background-color: #fff;
+        }
+
+        .card-header {
+            border-bottom: 1px solid var(--vh-border);
+            background-color: var(--vh-surface);
+        }
+
+        .card-title {
+            color: var(--vh-primary);
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: var(--vh-accent);
+            border-color: var(--vh-accent);
+            box-shadow: 0 12px 20px rgba(214, 40, 40, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: #b61f1f;
+            border-color: #b61f1f;
+        }
+
+        .btn-outline-primary {
+            color: var(--vh-primary);
+            border-color: var(--vh-primary);
+        }
+
+        .btn-outline-primary:hover,
+        .btn-outline-primary:focus {
+            background: var(--vh-primary);
+            color: #fff;
+        }
+
+        .badge.bg-light {
+            background: var(--vh-accent-soft) !important;
+            color: var(--vh-primary) !important;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="bi bi-building"></i> 维海科技
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'home' %}">首页</a>
+                    </li>
+                    {% for section in full_top_nav %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="dropdown{{ forloop.counter }}" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            {% if section.section_icon %}{{ section.section_icon }} {% endif %}{{ section.section_label }}
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="dropdown{{ forloop.counter }}">
+                            {% for item in section.items %}
+                            <li><a class="dropdown-item" href="{{ item.url }}">{{ item.label }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    {% empty %}
+                    {% endfor %}
+                </ul>
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <span class="nav-link">{{ user.get_full_name|default:user.username }}</span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">退出</a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">登录</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-3">
+        {% if messages %}
+        <div class="alert-container">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block breadcrumb %}
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">首页</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'business_pages:contract_management' %}">商务中心</a></li>
+                {% block breadcrumb_items %}{% endblock %}
+            </ol>
+        </nav>
+        {% endblock %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+

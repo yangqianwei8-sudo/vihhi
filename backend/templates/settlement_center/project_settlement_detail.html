@@ -1,0 +1,659 @@
+{% extends "settlement_center/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'settlement_pages:project_settlement_list' %}">项目结算管理</a></li>
+<li class="breadcrumb-item active">{{ settlement.settlement_number }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .info-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .info-card h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .info-row {
+        padding: 12px 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    .info-label {
+        font-weight: 600;
+        color: #6b7280;
+        width: 150px;
+        display: inline-block;
+    }
+    .info-value {
+        color: #1f2937;
+    }
+    .amount-highlight {
+        font-size: 24px;
+        font-weight: 700;
+        color: #D62828;
+    }
+    .status-badge {
+        padding: 6px 16px;
+        border-radius: 16px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .status-draft { background: #e5e7eb; color: #374151; }
+    .status-submitted { background: #dbeafe; color: #1e40af; }
+    .status-client_review { background: #fef3c7; color: #92400e; }
+    .status-client_feedback { background: #fed7aa; color: #9a3412; }
+    .status-reconciliation { background: #fce7f3; color: #9f1239; }
+    .status-confirmed { background: #d1fae5; color: #065f46; }
+    .status-cancelled { background: #f3f4f6; color: #4b5563; }
+    .table-hover tbody tr:hover {
+        background-color: rgba(20, 47, 91, 0.03);
+    }
+    .review-step {
+        padding: 16px;
+        border-left: 4px solid #e5e7eb;
+        margin-bottom: 16px;
+        border-radius: 8px;
+        background: #f9fafb;
+    }
+    .review-step.completed {
+        border-left-color: #10b981;
+        background: #ecfdf5;
+    }
+    .review-step.pending {
+        border-left-color: #f59e0b;
+        background: #fffbeb;
+    }
+    .review-step.current {
+        border-left-color: #3b82f6;
+        background: #eff6ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="{% url 'settlement_pages:project_settlement_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        <div>
+            {% if can_edit %}
+            <a href="{% url 'settlement_pages:project_settlement_update' settlement.id %}" class="btn btn-primary me-2">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+            {% if can_submit %}
+            <a href="{% url 'settlement_pages:project_settlement_submit' settlement.id %}" class="btn btn-success">
+                <i class="bi bi-send"></i> 提交审核
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <h5>基本信息</h5>
+        <div class="info-row">
+            <span class="info-label">结算单号：</span>
+            <span class="info-value"><strong>{{ settlement.settlement_number }}</strong></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">项目：</span>
+            <span class="info-value">
+                <a href="{% url 'project_pages:project_detail' settlement.project.id %}">
+                    {{ settlement.project.project_number }} - {{ settlement.project.name }}
+                </a>
+            </span>
+        </div>
+        {% if settlement.contract %}
+        <div class="info-row">
+            <span class="info-label">关联合同：</span>
+            <span class="info-value">
+                {{ settlement.contract.contract_number }} - {{ settlement.contract.contract_name|default:settlement.contract.contract_number }}
+            </span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+            <span class="info-label">结算类型：</span>
+            <span class="info-value">{{ settlement.get_settlement_type_display }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">结算日期：</span>
+            <span class="info-value">{{ settlement.settlement_date|date:"Y年m月d日" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">状态：</span>
+            <span class="info-value">
+                <span class="status-badge status-{{ settlement.status }}">
+                    {{ settlement.get_status_display }}
+                </span>
+            </span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">创建人：</span>
+            <span class="info-value">{{ settlement.created_by.get_full_name|default:settlement.created_by.username }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">创建时间：</span>
+            <span class="info-value">{{ settlement.created_time|date:"Y-m-d H:i:s" }}</span>
+        </div>
+    </div>
+
+    <!-- 节省金额明细表格 -->
+    <div class="info-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">节省金额明细</h5>
+            {% if can_generate_items %}
+            <form method="post" action="{% url 'settlement_pages:generate_items_from_opinions' settlement.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-arrow-clockwise"></i> 重新生成明细项
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        
+        {% if settlement_items %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>意见编号</th>
+                        <th>意见标题</th>
+                        <th>专业分类</th>
+                        <th>部位名称</th>
+                        <th>原始节省金额</th>
+                        <th>调整后节省金额</th>
+                        <th>调整原因</th>
+                        <th>审核状态</th>
+                        {% if can_review_items %}
+                        <th>审核操作</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in settlement_items %}
+                    <tr id="item-row-{{ item.id }}" class="{% if item.review_status == 'approved' %}table-success{% elif item.review_status == 'rejected' %}table-danger{% endif %}">
+                        <td>{{ item.opinion_number }}</td>
+                        <td>{{ item.opinion_title|truncatewords:10 }}</td>
+                        <td>{{ item.professional_category|default:"-" }}</td>
+                        <td>{{ item.location_name|default:"-" }}</td>
+                        <td>{{ item.original_saving_amount|floatformat:2 }}</td>
+                        <td>
+                            {% if item.adjusted_saving_amount %}
+                            <strong>{{ item.adjusted_saving_amount|floatformat:2 }}</strong>
+                            {% else %}
+                            <span class="text-muted">{{ item.original_saving_amount|floatformat:2 }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.adjustment_reason|truncatewords:5|default:"-" }}</td>
+                        <td>
+                            <span class="badge {% if item.review_status == 'approved' %}bg-success{% elif item.review_status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                {{ item.get_review_status_display }}
+                            </span>
+                            {% if item.reviewed_by %}
+                            <br><small class="text-muted">{{ item.reviewed_by.get_full_name|default:item.reviewed_by.username }}</small>
+                            {% endif %}
+                        </td>
+                        {% if can_review_items %}
+                        <td>
+                            {% if item.review_status == 'pending' %}
+                            <button type="button" class="btn btn-sm btn-success" onclick="reviewItem({{ item.id }}, 'approve')">
+                                <i class="bi bi-check"></i> 确认
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="reviewItem({{ item.id }}, 'reject')">
+                                <i class="bi bi-x"></i> 驳回
+                            </button>
+                            {% else %}
+                            <span class="text-muted">已审核</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <p>暂无结算明细项</p>
+            {% if can_generate_items %}
+            <form method="post" action="{% url 'settlement_pages:generate_items_from_opinions' settlement.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> 从Opinion生成明细项
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 节省金额汇总 -->
+    <div class="info-card">
+        <h5>节省金额汇总</h5>
+        <div class="info-row">
+            <span class="info-label">原始节省总额：</span>
+            <span class="info-value">{{ settlement.original_total_saving|floatformat:2 }} 元</span>
+            <small class="text-muted ms-2">（所有Opinion原始节省金额总和）</small>
+        </div>
+        <div class="info-row">
+            <span class="info-label">审核后节省总额：</span>
+            <span class="info-value amount-highlight">{{ settlement.reviewed_total_saving|floatformat:2 }} 元</span>
+            <small class="text-muted ms-2">（已确认意见的调整后节省金额总和）</small>
+        </div>
+        <div class="info-row">
+            <span class="info-label">调整差额：</span>
+            <span class="info-value {% if settlement.saving_adjustment_diff > 0 %}text-success{% elif settlement.saving_adjustment_diff < 0 %}text-danger{% endif %}">
+                {% if settlement.saving_adjustment_diff > 0 %}+{% endif %}{{ settlement.saving_adjustment_diff|floatformat:2 }} 元
+            </span>
+            <small class="text-muted ms-2">（审核后节省总额 - 原始节省总额）</small>
+        </div>
+    </div>
+
+    <!-- 服务费计算 -->
+    <div class="info-card">
+        <h5>服务费计算</h5>
+        <div class="info-row">
+            <span class="info-label">取费基数：</span>
+            <span class="info-value">{{ settlement.fee_base_amount|floatformat:2 }} 元</span>
+            <small class="text-muted ms-2">（等于审核后节省总额）</small>
+        </div>
+        <div class="info-row">
+            <span class="info-label">服务费率：</span>
+            <span class="info-value">
+                {% if settlement.service_fee_rate %}
+                {% widthratio settlement.service_fee_rate 1 100 as fee_rate_percent %}
+                {{ fee_rate_percent|floatformat:2 }}%
+                {% else %}
+                <span class="text-muted">未匹配</span>
+                {% endif %}
+            </span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">服务费金额：</span>
+            <span class="info-value">{{ settlement.service_fee_amount|floatformat:2 }} 元</span>
+            <small class="text-muted ms-2">（取费基数 × 服务费率）</small>
+        </div>
+        <div class="info-row">
+            <span class="info-label">基础服务费：</span>
+            <span class="info-value">{{ settlement.base_service_fee|floatformat:2 }} 元</span>
+            <small class="text-muted ms-2">（从合同模块同步的固定服务费）</small>
+        </div>
+        <div class="info-row">
+            <span class="info-label">结算总金额：</span>
+            <span class="info-value amount-highlight">{{ settlement.total_settlement_amount|floatformat:2 }} 元</span>
+            <small class="text-muted ms-2">（基础服务费 + 服务费金额）</small>
+        </div>
+        <div class="info-row">
+            <span class="info-label">税率：</span>
+            <span class="info-value">{{ settlement.tax_rate }}%</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">税额：</span>
+            <span class="info-value">{{ settlement.tax_amount|floatformat:2 }} 元</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">结算总金额（含税）：</span>
+            <span class="info-value amount-highlight">{{ settlement.settlement_amount_tax|floatformat:2 }} 元</span>
+            <small class="text-muted ms-2">（结算总金额 + 税额）</small>
+        </div>
+    </div>
+
+    <!-- 参考信息 -->
+    <div class="info-card">
+        <h5>参考信息</h5>
+        <div class="info-row">
+            <span class="info-label">合同金额：</span>
+            <span class="info-value">{{ settlement.contract_amount|floatformat:2 }} 元</span>
+            <small class="text-muted ms-2">（用于参考）</small>
+        </div>
+    </div>
+
+    <!-- 产值信息 -->
+    <div class="info-card">
+        <h5>产值信息</h5>
+        <div class="info-row">
+            <span class="info-label">累计产值：</span>
+            <span class="info-value">{{ total_calculated_value|floatformat:2 }} 元</span>
+            <small class="text-muted ms-2">（项目已计算的产值总和）</small>
+            <a href="{% url 'settlement_pages:project_output_value_detail' settlement.project.id %}" class="btn btn-sm btn-outline-primary ms-2">
+                <i class="bi bi-eye"></i> 查看产值详情
+            </a>
+        </div>
+        <div class="info-row">
+            <span class="info-label">确认产值：</span>
+            <span class="info-value amount-highlight">{{ settlement.confirmed_output_value|floatformat:2 }} 元</span>
+            <small class="text-muted ms-2">（本次结算确认的产值）</small>
+        </div>
+    </div>
+
+    <!-- 审核流程 -->
+    <div class="info-card">
+        <h5>审核流程</h5>
+        
+        <!-- 提交 -->
+        <div class="review-step {% if settlement.status != 'draft' %}completed{% else %}pending{% endif %}">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>提交审核</strong>
+                    {% if settlement.submitted_by %}
+                    <div class="text-muted small">
+                        提交人：{{ settlement.submitted_by.get_full_name|default:settlement.submitted_by.username }}
+                        {% if settlement.submitted_time %}
+                        | 时间：{{ settlement.submitted_time|date:"Y-m-d H:i:s" }}
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-muted small">待提交</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 甲方初审 -->
+        <div class="review-step {% if settlement.status == 'confirmed' or settlement.status == 'reconciliation' or settlement.status == 'client_feedback' %}completed{% elif settlement.status == 'client_review' %}current{% elif settlement.status == 'submitted' %}current{% else %}pending{% endif %}">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>甲方初审</strong>
+                    {% if settlement.client_reviewer %}
+                    <div class="text-muted small">
+                        初审人：{{ settlement.client_reviewer }}
+                        {% if settlement.client_reviewed_time %}
+                        | 时间：{{ settlement.client_reviewed_time|date:"Y-m-d H:i:s" }}
+                        {% endif %}
+                    </div>
+                    {% if settlement.client_review_comment %}
+                    <div class="mt-2"><strong>初审意见：</strong>{{ settlement.client_review_comment }}</div>
+                    {% endif %}
+                    {% else %}
+                    <div class="text-muted small">待初审</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 甲方反馈 -->
+        {% if settlement.client_feedback_comment or settlement.status == 'client_feedback' %}
+        <div class="review-step {% if settlement.status == 'confirmed' or settlement.status == 'reconciliation' %}completed{% elif settlement.status == 'client_feedback' %}current{% else %}pending{% endif %}">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>甲方反馈</strong>
+                    {% if settlement.client_feedback_time %}
+                    <div class="text-muted small">
+                        反馈时间：{{ settlement.client_feedback_time|date:"Y-m-d H:i:s" }}
+                    </div>
+                    {% endif %}
+                    {% if settlement.client_feedback_comment %}
+                    <div class="mt-2"><strong>反馈意见：</strong>{{ settlement.client_feedback_comment }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 对账 -->
+        <div class="review-step {% if settlement.status == 'confirmed' %}completed{% elif settlement.status == 'reconciliation' %}current{% else %}pending{% endif %}">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>对账</strong>
+                    {% if settlement.reconciliation_by %}
+                    <div class="text-muted small">
+                        对账人：{{ settlement.reconciliation_by.get_full_name|default:settlement.reconciliation_by.username }}
+                        {% if settlement.reconciliation_time %}
+                        | 时间：{{ settlement.reconciliation_time|date:"Y-m-d H:i:s" }}
+                        {% endif %}
+                    </div>
+                    {% if settlement.reconciliation_comment %}
+                    <div class="mt-2"><strong>对账说明：</strong>{{ settlement.reconciliation_comment }}</div>
+                    {% endif %}
+                    {% else %}
+                    <div class="text-muted small">待对账</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 确认 -->
+        <div class="review-step {% if settlement.status == 'confirmed' %}completed{% elif settlement.status == 'reconciliation' %}current{% else %}pending{% endif %}">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>确认结算</strong>
+                    {% if settlement.confirmed_by %}
+                    <div class="text-muted small">
+                        确认人：{{ settlement.confirmed_by.get_full_name|default:settlement.confirmed_by.username }}
+                        {% if settlement.confirmed_time %}
+                        | 时间：{{ settlement.confirmed_time|date:"Y-m-d H:i:s" }}
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-muted small">待确认</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 附件和备注 -->
+    {% if settlement.settlement_file or settlement.description or settlement.notes %}
+    <div class="info-card">
+        <h5>附件和备注</h5>
+        {% if settlement.settlement_file %}
+        <div class="info-row">
+            <span class="info-label">结算文件：</span>
+            <span class="info-value">
+                <a href="{{ settlement.settlement_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-file-earmark"></i> 查看文件
+                </a>
+            </span>
+        </div>
+        {% endif %}
+        {% if settlement.description %}
+        <div class="info-row">
+            <span class="info-label">结算说明：</span>
+            <span class="info-value">{{ settlement.description|linebreaks }}</span>
+        </div>
+        {% endif %}
+        {% if settlement.notes %}
+        <div class="info-row">
+            <span class="info-label">备注：</span>
+            <span class="info-value">{{ settlement.notes|linebreaks }}</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 明细项审核模态框 -->
+    {% if can_review_items %}
+    <div class="modal fade" id="reviewItemModal" tabindex="-1" aria-labelledby="reviewItemModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reviewItemModalLabel">审核结算明细项</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="reviewItemForm" method="post" action="">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <input type="hidden" name="action" id="reviewAction">
+                        <div id="itemInfo" class="mb-3"></div>
+                        
+                        <div id="approveSection" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">调整后节省金额</label>
+                                <input type="number" class="form-control" name="adjusted_saving_amount" id="adjustedSavingAmount" step="0.01" placeholder="留空则使用原始金额">
+                                <small class="text-muted">如果不填写，将使用原始节省金额</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">调整原因</label>
+                                <textarea class="form-control" name="adjustment_reason" id="adjustmentReason" rows="3" placeholder="填写调整原因（如有调整）"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">审核意见</label>
+                                <textarea class="form-control" name="review_comment" id="reviewComment" rows="3" placeholder="填写审核意见"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div id="rejectSection" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label required">驳回原因</label>
+                                <textarea class="form-control" name="rejection_reason" id="rejectionReason" rows="3" placeholder="请填写驳回原因" required></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary" id="submitReviewBtn">确认</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+// 审核明细项
+function reviewItem(itemId, action) {
+    const modal = new bootstrap.Modal(document.getElementById('reviewItemModal'));
+    const form = document.getElementById('reviewItemForm');
+    const actionInput = document.getElementById('reviewAction');
+    const approveSection = document.getElementById('approveSection');
+    const rejectSection = document.getElementById('rejectSection');
+    const itemInfo = document.getElementById('itemInfo');
+    const submitBtn = document.getElementById('submitReviewBtn');
+    const adjustedAmountInput = document.getElementById('adjustedSavingAmount');
+    const adjustmentReasonInput = document.getElementById('adjustmentReason');
+    const reviewCommentInput = document.getElementById('reviewComment');
+    const rejectionReasonInput = document.getElementById('rejectionReason');
+    
+    // 重置表单
+    if (adjustedAmountInput) adjustedAmountInput.value = '';
+    if (adjustmentReasonInput) adjustmentReasonInput.value = '';
+    if (reviewCommentInput) reviewCommentInput.value = '';
+    if (rejectionReasonInput) rejectionReasonInput.value = '';
+    
+    // 设置表单action
+    form.action = '{% url "settlement_pages:settlement_item_review" 0 %}'.replace('0', itemId);
+    actionInput.value = action;
+    
+    // 获取当前行的数据
+    const row = document.getElementById('item-row-' + itemId);
+    let originalAmountValue = 0;
+    if (row) {
+        const cells = row.querySelectorAll('td');
+        const opinionNumber = cells[0].textContent.trim();
+        const opinionTitle = cells[1].textContent.trim();
+        const originalAmountText = cells[4].textContent.trim();
+        originalAmountValue = parseFloat(originalAmountText.replace(/[^\d.-]/g, '')) || 0;
+        
+        itemInfo.innerHTML = `
+            <div class="alert alert-info">
+                <strong>意见编号：</strong>${opinionNumber}<br>
+                <strong>意见标题：</strong>${opinionTitle}<br>
+                <strong>原始节省金额：</strong>${originalAmountText}
+            </div>
+        `;
+    }
+    
+    // 根据操作类型显示不同的表单
+    if (action === 'approve') {
+        approveSection.style.display = 'block';
+        rejectSection.style.display = 'none';
+        submitBtn.className = 'btn btn-success';
+        submitBtn.textContent = '确认通过';
+        document.getElementById('reviewItemModalLabel').textContent = '确认结算明细项';
+        
+        // 填充原始金额到调整金额输入框的占位符
+        if (adjustedAmountInput && originalAmountValue > 0) {
+            adjustedAmountInput.placeholder = originalAmountValue.toFixed(2);
+        }
+    } else if (action === 'reject') {
+        approveSection.style.display = 'none';
+        rejectSection.style.display = 'block';
+        submitBtn.className = 'btn btn-danger';
+        submitBtn.textContent = '确认驳回';
+        document.getElementById('reviewItemModalLabel').textContent = '驳回结算明细项';
+    }
+    
+    modal.show();
+}
+
+// 表单提交后刷新页面
+document.getElementById('reviewItemForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('submitReviewBtn');
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = '提交中...';
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || '操作失败，请重试');
+            submitBtn.disabled = false;
+            submitBtn.textContent = submitBtn.className.includes('danger') ? '确认驳回' : '确认通过';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败，请重试');
+        submitBtn.disabled = false;
+        submitBtn.textContent = submitBtn.className.includes('danger') ? '确认驳回' : '确认通过';
+    });
+});
+</script>
+{% endblock %}
+

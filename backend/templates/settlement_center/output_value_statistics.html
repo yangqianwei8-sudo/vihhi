@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_head %}
+<style>
+    .output-value-nav {
+        background: #fff;
+        border-radius: 12px;
+        padding: 0;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .output-value-nav-tabs {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .output-value-nav-item {
+        flex: 1;
+    }
+    .output-value-nav-link {
+        display: block;
+        padding: 16px 24px;
+        text-align: center;
+        color: #6b7280;
+        text-decoration: none;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        font-size: 14px;
+    }
+    .output-value-nav-link:hover {
+        color: #1f2937;
+        background: #f9fafb;
+    }
+    .output-value-nav-link.active {
+        color: #1f2937;
+        border-bottom-color: #1f2937;
+        background: #f9fafb;
+    }
+    .stat-section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        margin-bottom: 24px;
+    }
+    .stat-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .stat-table thead th {
+        background: #f9fafb;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #374151;
+        font-size: 13px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    .stat-table tbody td {
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 13px;
+    }
+    .stat-table tbody tr:hover {
+        background: #f9fafb;
+    }
+    .value-highlight {
+        font-weight: 600;
+        color: #1e40af;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <div class="hero-icon">{{ page_icon }}</div>
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">产值管理</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">配置和管理产值计算模板、查看产值记录和统计分析。</p>
+        </div>
+    </div>
+
+    <!-- 顶部导航栏 -->
+    <div class="output-value-nav">
+        <div class="output-value-nav-tabs">
+            <div class="output-value-nav-item">
+                <a href="{% url 'settlement_pages:output_value_template_manage' %}" class="output-value-nav-link">产值模板</a>
+            </div>
+            <div class="output-value-nav-item">
+                <a href="{% url 'settlement_pages:output_value_record_list' %}" class="output-value-nav-link">产值记录</a>
+            </div>
+            <div class="output-value-nav-item">
+                <a href="{% url 'settlement_pages:output_value_statistics' %}" class="output-value-nav-link active">产值统计</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row g-3 mb-4">
+        {% for card in summary_cards %}
+        <div class="col-md-3">
+            <div class="summary-card">
+                <h3>{{ card.label }}</h3>
+                <div class="value">{{ card.value }}</div>
+                <div class="hint">{{ card.hint }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 筛选区域 -->
+    <div class="stat-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">开始日期</label>
+                <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">结束日期</label>
+                <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">人员筛选</label>
+                <select name="user_id" class="form-select">
+                    <option value="">全部人员</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if request.GET.user_id == user.id|stringformat:"s" %}selected{% endif %}>
+                        {{ user.get_full_name|default:user.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">项目筛选</label>
+                <select name="project_id" class="form-select">
+                    <option value="">全部项目</option>
+                    {% for project in projects %}
+                    <option value="{{ project.id }}" {% if request.GET.project_id == project.id|stringformat:"s" %}selected{% endif %}>
+                        {{ project.project_number }} - {{ project.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-primary me-2">查询</button>
+                <a href="{% url 'settlement_pages:output_value_statistics' %}" class="btn btn-outline-secondary">重置</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- 按用户统计 -->
+    <div class="stat-section">
+        <h3 class="section-title mb-3">按人员统计</h3>
+        <table class="stat-table">
+            <thead>
+                <tr>
+                    <th>人员</th>
+                    <th>产值记录数</th>
+                    <th>总产值</th>
+                    <th>平均产值</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in user_stats %}
+                <tr>
+                    <td>{% if stat.responsible_user__first_name or stat.responsible_user__last_name %}{{ stat.responsible_user__first_name }}{{ stat.responsible_user__last_name }}{% else %}{{ stat.responsible_user__username }}{% endif %}</td>
+                    <td>{{ stat.record_count }}</td>
+                    <td class="value-highlight">{{ stat.total_value|floatformat:2 }}</td>
+                    <td>{{ stat.avg_value|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center py-4" style="color: #6b7280;">暂无数据</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 按阶段统计 -->
+    <div class="stat-section">
+        <h3 class="section-title mb-3">按阶段统计</h3>
+        <table class="stat-table">
+            <thead>
+                <tr>
+                    <th>产值阶段</th>
+                    <th>产值记录数</th>
+                    <th>总产值</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in stage_stats %}
+                <tr>
+                    <td>{{ stat.stage__name }}</td>
+                    <td>{{ stat.record_count }}</td>
+                    <td class="value-highlight">{{ stat.total_value|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center py-4" style="color: #6b7280;">暂无数据</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 按项目统计 -->
+    <div class="stat-section">
+        <h3 class="section-title mb-3">按项目统计（Top 20）</h3>
+        <table class="stat-table">
+            <thead>
+                <tr>
+                    <th>项目编号</th>
+                    <th>项目名称</th>
+                    <th>产值记录数</th>
+                    <th>总产值</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in project_stats %}
+                <tr>
+                    <td>{{ stat.project__project_number }}</td>
+                    <td>{{ stat.project__name }}</td>
+                    <td>{{ stat.record_count }}</td>
+                    <td class="value-highlight">{{ stat.total_value|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center py-4" style="color: #6b7280;">暂无数据</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

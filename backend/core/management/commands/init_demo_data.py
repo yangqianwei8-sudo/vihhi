@@ -1,8 +1,8 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from backend.apps.system_management.models import Department, DataDictionary
-from backend.apps.customer_success.models import Client, ClientContact
-from backend.apps.project_center.models import Project, ProjectTeam, PaymentPlan
+from backend.apps.customer_success.models import Client, ClientContact, BusinessContract, BusinessPaymentPlan
+from backend.apps.project_center.models import Project, ProjectTeam
 from django.utils import timezone
 from datetime import datetime, timedelta
 
@@ -115,8 +115,6 @@ class Command(BaseCommand):
                 'created_by': admin_user,
                 'start_date': timezone.now().date(),
                 'end_date': timezone.now().date() + timedelta(days=90),
-                'contract_amount': 500000.00,
-                'estimated_cost': 350000.00,
                 'status': 'in_progress'
             }
         )
@@ -139,28 +137,36 @@ class Command(BaseCommand):
                 responsibility='技术指导和方案审核'
             )
         
-        # 创建回款计划
+        # 创建商务合同与回款计划
         if created:
-            PaymentPlan.objects.create(
+            contract = BusinessContract.objects.create(
                 project=project,
+                contract_number='BC-2024-001',
+                amount=500000.00,
+                contract_date=timezone.now().date(),
+                notes='演示数据合同'
+            )
+
+            BusinessPaymentPlan.objects.create(
+                contract=contract,
                 phase_name='合同签订',
                 phase_description='项目启动，合同签订后首付款',
                 planned_amount=150000.00,
                 planned_date=timezone.now().date() + timedelta(days=7),
                 status='pending'
             )
-            
-            PaymentPlan.objects.create(
-                project=project,
+
+            BusinessPaymentPlan.objects.create(
+                contract=contract,
                 phase_name='中期汇报',
                 phase_description='方案中期汇报通过后付款',
-                planned_amount=200000.00, 
+                planned_amount=200000.00,
                 planned_date=timezone.now().date() + timedelta(days=45),
                 status='pending'
             )
-            
-            PaymentPlan.objects.create(
-                project=project,
+
+            BusinessPaymentPlan.objects.create(
+                contract=contract,
                 phase_name='项目完成',
                 phase_description='项目最终成果交付后尾款',
                 planned_amount=150000.00,

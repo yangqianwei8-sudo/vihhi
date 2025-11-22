@@ -1,0 +1,150 @@
+{% extends "project_center/base.html" %}
+{% load static %}
+
+{% block title %}项目批量导入{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'project_pages:project_list' %}">项目总览</a></li>
+<li class="breadcrumb-item active">批量导入</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row g-4">
+        <div class="col-12 col-xl-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0">批量导入项目</h4>
+                        <small class="text-white-50">支持 CSV 文件，导入后自动创建项目与关键成员关系。</small>
+                    </div>
+                    <a class="btn btn-light btn-sm" href="{% url 'project_pages:project_import_admin' %}?download=template">
+                        <i class="bi bi-download"></i> 下载模板
+                    </a>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">选择 CSV 文件 <span class="text-danger">*</span></label>
+                            <input type="file" name="import_file" class="form-control" accept=".csv" required>
+                            <div class="form-text text-muted">
+                                文件需使用 UTF-8 编码，大小不超过 5MB。建议先下载模板并按列填写。
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <a class="btn btn-secondary" href="{% url 'project_pages:project_list' %}">返回</a>
+                            <button type="submit" class="btn btn-primary">开始导入</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if import_results %}
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">导入结果</h5>
+                    <span class="badge bg-success-subtle text-success">
+                        成功 {{ import_results.success }} / 共 {{ import_results.total }} 条
+                    </span>
+                </div>
+                <div class="card-body">
+                    {% if import_results.failed %}
+                    <div class="alert alert-warning small">
+                        有 {{ import_results.failed }} 条记录导入失败，请根据下列表格提示修正后重新导入。
+                    </div>
+                    {% endif %}
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:80px;">行号</th>
+                                    <th style="width:120px;">状态</th>
+                                    <th>说明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in import_results.rows %}
+                                <tr>
+                                    <td>第 {{ item.row }} 行</td>
+                                    {% if item.status == 'success' %}
+                                    <td><span class="badge bg-success-subtle text-success">成功</span></td>
+                                    <td class="text-muted">{{ item.message }}</td>
+                                    {% else %}
+                                    <td><span class="badge bg-danger-subtle text-danger">失败</span></td>
+                                    <td class="text-danger">{{ item.message }}</td>
+                                    {% endif %}
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">暂无导入记录</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-12 col-xl-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">字段说明</h6>
+                </div>
+                <div class="card-body small text-muted">
+                    <ul class="ps-3 mb-0">
+                        <li class="mb-2"><strong>project_number</strong>：可留空，系统自动生成。</li>
+                        <li class="mb-2"><strong>subsidiary</strong>：子公司编码（见右侧下表）。</li>
+                        <li class="mb-2"><strong>service_type_code</strong>：服务类型编码。</li>
+                        <li class="mb-2"><strong>business_manager_phone / project_manager_phone</strong>：系统中已存在用户的手机号，项目经理可选。</li>
+                        <li><strong>status</strong>：项目状态编码，默认 waiting_receive。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">子公司编码</h6>
+                </div>
+                <div class="card-body small">
+                    <ul class="list-unstyled mb-0">
+                        {% for code, label in allowed_subsidiaries %}
+                        <li><code>{{ code }}</code> - {{ label }}</li>
+                        {% empty %}
+                        <li class="text-muted">暂无配置</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">状态编码</h6>
+                </div>
+                <div class="card-body small">
+                    <ul class="list-unstyled mb-0">
+                        {% for code, label in status_choices %}
+                        <li><code>{{ code }}</code> - {{ label }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">操作提示</h6>
+                </div>
+                <div class="card-body small text-muted">
+                    <ol class="ps-3 mb-0">
+                        <li class="mb-2">请确保业务人员、项目经理等基础数据已在系统中维护。</li>
+                        <li class="mb-2">建议按子公司或批次分文件导入，便于追踪。</li>
+                        <li>导入后可在项目详情中继续完善信息、配置团队。</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

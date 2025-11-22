@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}账号设置{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        background: #f4f6fb;
+        min-height: 100vh;
+    }
+    .account-settings-container {
+        max-width: 1100px;
+    }
+    .settings-hero {
+        background: linear-gradient(135deg, #142F5B, #1F3E7C);
+        border-radius: 24px;
+        color: #fff;
+        padding: 32px 36px;
+        box-shadow: 0 24px 48px rgba(20, 47, 91, 0.18);
+        margin-bottom: 26px;
+        position: relative;
+        overflow: hidden;
+    }
+    .settings-hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at top right, rgba(255,255,255,0.22), transparent 60%);
+        pointer-events: none;
+    }
+    .settings-layout {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 24px;
+    }
+    @media (max-width: 992px) {
+        .settings-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+    .settings-nav {
+        background: #fff;
+        border-radius: 20px;
+        padding: 20px;
+        border: 1px solid rgba(14, 26, 57, 0.08);
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .settings-nav-title {
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        color: rgba(20, 47, 91, 0.6);
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+    .settings-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-radius: 14px;
+        padding: 12px 16px;
+        font-size: 15px;
+        font-weight: 500;
+        color: #142F5B;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    .settings-nav-item span {
+        width: 28px;
+        height: 28px;
+        border-radius: 10px;
+        background: rgba(20, 47, 91, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+    }
+    .settings-nav-item:hover {
+        background: rgba(20, 47, 91, 0.08);
+    }
+    .settings-nav-item.active {
+        background: linear-gradient(135deg, #142F5B, #1F3E7C);
+        color: #fff;
+        box-shadow: 0 12px 24px rgba(20, 47, 91, 0.18);
+    }
+    .settings-nav-item.active span {
+        background: rgba(255,255,255,0.2);
+    }
+    .settings-card {
+        background: #fff;
+        border-radius: 22px;
+        padding: 26px 28px;
+        border: 1px solid rgba(14, 26, 57, 0.08);
+        box-shadow: 0 18px 40px rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .settings-card h3 {
+        font-size: 20px;
+        font-weight: 700;
+        color: #142F5B;
+        margin-bottom: 6px;
+    }
+    .settings-card p.description {
+        font-size: 13px;
+        color: rgba(20, 47, 91, 0.6);
+        margin-bottom: 22px;
+    }
+    .form-label {
+        font-weight: 600;
+        color: #142F5B;
+        font-size: 14px;
+    }
+    .avatar-preview {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: #f0f4ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #142F5B;
+        font-weight: 700;
+        font-size: 20px;
+        overflow: hidden;
+    }
+    .avatar-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .badge-role {
+        background: rgba(20, 47, 91, 0.08);
+        color: #142F5B;
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    .permission-chip {
+        display: inline-flex;
+        align-items: center;
+        background: rgba(20, 47, 91, 0.06);
+        color: #142F5B;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+        margin: 3px;
+    }
+    .alert-messages .alert {
+        border-radius: 14px;
+        border: none;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-4 py-lg-5">
+    <div class="container account-settings-container">
+        <div class="settings-hero">
+            <div style="position: relative; z-index: 1;">
+                <div style="font-size: 14px; letter-spacing: 1px; opacity: 0.85; text-transform: uppercase;">Account Center</div>
+                <h1 class="h3 fw-bold mb-2 mt-2">账号设置</h1>
+                <p class="mb-0" style="opacity:0.75; max-width: 540px;">
+                    管理个人资料、安全密码与消息提醒，让系统体验更贴合您的工作习惯。
+                </p>
+            </div>
+        </div>
+
+        {% if messages %}
+        <div class="alert-messages mb-3">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} mb-2" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="settings-layout">
+            <nav class="settings-nav">
+                <div class="settings-nav-title">设置项目</div>
+                <a href="?tab=profile" class="settings-nav-item {% if active_tab == 'profile' %}active{% endif %}">
+                    <span>👤</span> 基本资料
+                </a>
+                <a href="?tab=notifications" class="settings-nav-item {% if active_tab == 'notifications' %}active{% endif %}">
+                    <span>🔔</span> 消息通知
+                </a>
+                <a href="?tab=security" class="settings-nav-item {% if active_tab == 'security' %}active{% endif %}">
+                    <span>🔐</span> 登录安全
+                </a>
+            </nav>
+
+            <div>
+                <section id="profile-card" class="settings-card {% if active_tab != 'profile' %}d-none{% endif %}">
+                    <h3>基本资料</h3>
+                    <p class="description">完善个人资料，便于团队成员快速了解您，并在通知中展示准确的信息。</p>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="profile">
+                        <div class="row g-4 align-items-center mb-3">
+                            <div class="col-auto">
+                                <div class="avatar-preview">
+                                    {% if user_obj.avatar %}
+                                        <img src="{{ user_obj.avatar.url }}" alt="头像">
+                                    {% else %}
+                                        {{ user_obj.first_name|default:user_obj.username|slice:":1"|upper }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <label class="form-label">上传头像</label>
+                                <input class="form-control" type="file" accept="image/*" name="avatar">
+                                <div class="form-text text-muted">支持 JPG/PNG，最大 2MB。</div>
+                                {% if profile_errors.avatar %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in profile_errors.avatar %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="form-label">姓名（名）</label>
+                                <input class="form-control {% if profile_errors.first_name %}is-invalid{% endif %}" type="text" name="first_name" value="{{ profile_data.first_name|default_if_none:'' }}">
+                                {% if profile_errors.first_name %}
+                                    <div class="invalid-feedback">
+                                        {% for error in profile_errors.first_name %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">姓名（姓氏）</label>
+                                <input class="form-control {% if profile_errors.last_name %}is-invalid{% endif %}" type="text" name="last_name" value="{{ profile_data.last_name|default_if_none:'' }}">
+                                {% if profile_errors.last_name %}
+                                    <div class="invalid-feedback">
+                                        {% for error in profile_errors.last_name %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">电子邮箱</label>
+                                <input class="form-control {% if profile_errors.email %}is-invalid{% endif %}" type="email" name="email" value="{{ profile_data.email|default_if_none:'' }}">
+                                {% if profile_errors.email %}
+                                    <div class="invalid-feedback">
+                                        {% for error in profile_errors.email %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">手机号（登录账号）</label>
+                                <input class="form-control" type="text" value="{{ profile_data.phone|default_if_none:user_obj.username }}" readonly>
+                                <div class="form-text">如需变更手机号，请联系系统管理员。</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">当前职位</label>
+                                {% if position_choices %}
+                                <select class="form-select {% if profile_errors.position %}is-invalid{% endif %}" name="position">
+                                    <option value="">请选择职位</option>
+                                    {% with selected_position=profile_data.position|default_if_none:user_obj.position %}
+                                        {% for group in position_choices %}
+                                            {% if group.1 %}
+                                            <optgroup label="{{ group.0 }}">
+                                                {% for option in group.1 %}
+                                                    <option value="{{ option.0 }}"
+                                                        {% if option.0 == selected_position or option.1 == selected_position %}selected{% endif %}>
+                                                        {{ option.1 }}
+                                                    </option>
+                                                {% endfor %}
+                                            </optgroup>
+                                            {% else %}
+                                            <option value="{{ group.0 }}"
+                                                {% if group.0 == selected_position or group.1 == selected_position %}selected{% endif %}>
+                                                {{ group.1|default:group.0 }}
+                                            </option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endwith %}
+                                </select>
+                                {% else %}
+                                <input class="form-control {% if profile_errors.position %}is-invalid{% endif %}" type="text" name="position" value="{{ profile_data.position|default_if_none:user_obj.position }}">
+                                {% endif %}
+                                {% if profile_errors.position %}
+                                    <div class="invalid-feedback">
+                                        {% for error in profile_errors.position %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">职位选项由系统根据账号类型提供，如需新增请联系管理员。</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">单位名称</label>
+                                <input class="form-control" type="text" value="{{ user_obj.department.name|default:'未设置' }}" readonly>
+                                <div class="form-text">单位信息由管理员维护，如需更新请联系系统管理员。</div>
+                            </div>
+                        </div>
+                        {% if profile_errors.non_field_errors %}
+                        <div class="alert alert-danger mt-3">
+                            {% for error in profile_errors.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="mt-4">
+                            <button class="btn btn-primary px-4" type="submit">保存资料</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section id="notification-card" class="settings-card {% if active_tab != 'notifications' %}d-none{% endif %}">
+                    <h3>消息通知</h3>
+                    <p class="description">灵活配置站内信、邮件、企微提醒方式，避免错过关键业务提醒。</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="notifications">
+                        <div class="list-group list-group-flush">
+                            <label class="list-group-item d-flex align-items-start gap-3">
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" name="inbox" {% if notification_values.inbox %}checked{% endif %}>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">站内提醒</div>
+                                    <div class="text-muted small">在系统通知中心收到提醒（推荐开启）。</div>
+                                </div>
+                            </label>
+                            <label class="list-group-item d-flex align-items-start gap-3">
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" name="email" {% if notification_values.email %}checked{% endif %}>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">邮件提醒</div>
+                                    <div class="text-muted small">发送邮件到 {{ profile_data.email|default_if_none:'您的邮箱' }}。</div>
+                                </div>
+                            </label>
+                            <label class="list-group-item d-flex align-items-start gap-3">
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" name="wecom" {% if notification_values.wecom %}checked{% endif %}>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">企微消息</div>
+                                    <div class="text-muted small">通过企业微信机器人推送通知。</div>
+                                </div>
+                            </label>
+                        </div>
+                        {% if notification_errors %}
+                        <div class="alert alert-danger mt-3">
+                            {% for field, field_errors in notification_errors.items %}
+                                {% for error in field_errors %}
+                                    {{ error }}{% if not forloop.last or not forloop.parentloop.last %}<br>{% endif %}
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="mt-4">
+                            <button class="btn btn-primary px-4" type="submit">保存通知偏好</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section id="security-card" class="settings-card {% if active_tab != 'security' %}d-none{% endif %}">
+                    <h3>登录安全</h3>
+                    <p class="description">建议定期修改密码并确保保密，系统将强制校验复杂度并即时生效。</p>
+                    <form method="post" autocomplete="off">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="password">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="form-label">当前密码</label>
+                                <input class="form-control {% if password_errors.old_password %}is-invalid{% endif %}" type="password" name="old_password" required>
+                                {% if password_errors.old_password %}
+                                    <div class="invalid-feedback">
+                                        {% for error in password_errors.old_password %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">新密码</label>
+                                <input class="form-control {% if password_errors.new_password %}is-invalid{% endif %}" type="password" name="new_password" required>
+                                {% if password_errors.new_password %}
+                                    <div class="invalid-feedback">
+                                        {% for error in password_errors.new_password %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">确认新密码</label>
+                                <input class="form-control {% if password_errors.confirm_password %}is-invalid{% endif %}" type="password" name="confirm_password" required>
+                                {% if password_errors.confirm_password %}
+                                    <div class="invalid-feedback">
+                                        {% for error in password_errors.confirm_password %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if password_errors.non_field_errors %}
+                        <div class="alert alert-danger mt-3">
+                            {% for error in password_errors.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="alert alert-warning mt-3">
+                            修改密码后需要使用新密码重新登录系统。
+                        </div>
+                        <div class="mt-4">
+                            <button class="btn btn-danger px-4" type="submit">更新密码</button>
+                        </div>
+                    </form>
+                </section>
+
+                            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

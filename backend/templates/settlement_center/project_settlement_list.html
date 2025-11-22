@@ -1,0 +1,219 @@
+{% extends "settlement_center/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">项目结算管理</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .content-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .status-draft { background: #e5e7eb; color: #374151; }
+    .status-submitted { background: #dbeafe; color: #1e40af; }
+    .status-client_review { background: #fef3c7; color: #92400e; }
+    .status-client_feedback { background: #fed7aa; color: #9a3412; }
+    .status-reconciliation { background: #fce7f3; color: #9f1239; }
+    .status-confirmed { background: #d1fae5; color: #065f46; }
+    .status-cancelled { background: #f3f4f6; color: #4b5563; }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6b7280;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <!-- 统计卡片 -->
+    {% if summary_cards %}
+    <div class="row g-3 mb-4">
+        {% for card in summary_cards %}
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">{{ card.label }}</h6>
+                    <div class="value" style="font-size: 28px; font-weight: 700; color: #142F5B; margin-bottom: 4px;">{{ card.value }}</div>
+                    <div class="hint" style="font-size: 12px; color: #6b7280;">{{ card.hint }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 内容区域 -->
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">结算单列表</h3>
+            {% if can_create %}
+            <a href="{% url 'settlement_pages:project_settlement_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> 新增结算单
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- 筛选栏 -->
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <select name="project_id" class="form-select">
+                        <option value="">全部项目</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}" {% if project_id == project.id|stringformat:"s" %}selected{% endif %}>
+                            {{ project.project_number }} - {{ project.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">全部状态</option>
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a href="{% url 'settlement_pages:project_settlement_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 清除
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <!-- 数据表格 -->
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>结算单号</th>
+                        <th>项目名称</th>
+                        <th>结算类型</th>
+                        <th>合同金额</th>
+                        <th>结算金额</th>
+                        <th>结算日期</th>
+                        <th>状态</th>
+                        <th>创建人</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for settlement in page_obj %}
+                    <tr>
+                        <td><strong>{{ settlement.settlement_number }}</strong></td>
+                        <td>
+                            <a href="{% url 'project_pages:project_detail' settlement.project.id %}">
+                                {{ settlement.project.name }}
+                            </a>
+                        </td>
+                        <td>{{ settlement.get_settlement_type_display }}</td>
+                        <td>{{ settlement.contract_amount|floatformat:2 }}</td>
+                        <td><strong style="color: #D62828;">{{ settlement.total_settlement_amount|floatformat:2 }}</strong></td>
+                        <td>{{ settlement.settlement_date|date:"Y-m-d" }}</td>
+                        <td>
+                            <span class="status-badge status-{{ settlement.status }}">
+                                {{ settlement.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ settlement.created_by.get_full_name|default:settlement.created_by.username }}</td>
+                        <td>{{ settlement.created_time|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <a href="{% url 'settlement_pages:project_settlement_detail' settlement.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> 查看
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航">
+            <ul class="pagination justify-content-center mt-4">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}{% if project_id %}&project_id={{ project_id }}{% endif %}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if project_id %}&project_id={{ project_id }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if project_id %}&project_id={{ project_id }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if project_id %}&project_id={{ project_id }}{% endif %}">末页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <div class="empty-state-title">暂无结算单</div>
+            <div class="empty-state-text">还没有创建任何项目结算单</div>
+            {% if can_create %}
+            <a href="{% url 'settlement_pages:project_settlement_create' %}" class="btn btn-primary mt-3">
+                <i class="bi bi-plus-circle"></i> 创建结算单
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

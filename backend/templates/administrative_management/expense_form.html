@@ -1,0 +1,348 @@
+{% extends "administrative_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:expense_management' %}">报销申请</a></li>
+<li class="breadcrumb-item active">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:expense_management' %}">报销申请</a></li>
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:expense_detail' expense.id %}">{{ expense.reimbursement_number }}</a></li>
+<li class="breadcrumb-item active">编辑</li>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-card h5 {
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+    .item-row {
+        background: #f9fafb;
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        border: 1px solid #e5e7eb;
+    }
+    .item-row:hover {
+        background: #f3f4f6;
+    }
+    .total-row {
+        background: #eff6ff;
+        padding: 16px;
+        border-radius: 8px;
+        border: 2px solid #3b82f6;
+        font-weight: 600;
+        margin-top: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="expenseForm">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <h5>基本信息</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label required">申请日期</label>
+                    {{ form.application_date }}
+                    {% if form.application_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.application_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">报销类型</label>
+                    {{ form.expense_type }}
+                    {% if form.expense_type.errors %}
+                    <div class="text-danger small mt-1">{{ form.expense_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">状态</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                    <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">支付方式</label>
+                    {{ form.payment_method }}
+                    {% if form.payment_method.errors %}
+                    <div class="text-danger small mt-1">{{ form.payment_method.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">备注</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 费用明细 -->
+        <div class="form-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">费用明细</h5>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addItemRow()">
+                    <i class="bi bi-plus-circle"></i> 添加明细
+                </button>
+            </div>
+            
+            {{ formset.management_form }}
+            
+            <div id="itemContainer">
+                {% for item_form in formset %}
+                <div class="item-row" data-form-index="{{ forloop.counter0 }}">
+                    {{ item_form.id }}
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-2">
+                            <label class="form-label small required">费用日期</label>
+                            {{ item_form.expense_date }}
+                            {% if item_form.expense_date.errors %}
+                            <div class="text-danger small">{{ item_form.expense_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small required">费用类型</label>
+                            {{ item_form.expense_type }}
+                            {% if item_form.expense_type.errors %}
+                            <div class="text-danger small">{{ item_form.expense_type.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small required">费用说明</label>
+                            {{ item_form.description }}
+                            {% if item_form.description.errors %}
+                            <div class="text-danger small">{{ item_form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small required">金额</label>
+                            {{ item_form.amount }}
+                            {% if item_form.amount.errors %}
+                            <div class="text-danger small">{{ item_form.amount.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">发票号码</label>
+                            {{ item_form.invoice_number }}
+                            {% if item_form.invoice_number.errors %}
+                            <div class="text-danger small">{{ item_form.invoice_number.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-1">
+                            {% if item_form.DELETE %}
+                            <div class="form-check">
+                                {{ item_form.DELETE }}
+                                <label class="form-check-label small" for="{{ item_form.DELETE.id_for_label }}">
+                                    删除
+                                </label>
+                            </div>
+                            {% else %}
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- 合计行 -->
+            <div class="total-row">
+                <div class="row">
+                    <div class="col-md-6 text-end">
+                        <strong>报销总金额：</strong>
+                    </div>
+                    <div class="col-md-6">
+                        <span id="totalAmount">¥0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+        {% if formset.non_form_errors %}
+        <div class="alert alert-danger">
+            {{ formset.non_form_errors }}
+        </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% if is_create %}{% url 'admin_pages:expense_management' %}{% else %}{% url 'admin_pages:expense_detail' expense.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-submit">
+                    <i class="bi bi-check-circle"></i> 保存
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+let formCount = {{ formset.total_form_count }};
+
+function updateFormIndexes() {
+    const container = document.getElementById('itemContainer');
+    const rows = container.querySelectorAll('.item-row');
+    rows.forEach((row, index) => {
+        const formPrefix = 'form-' + index;
+        row.querySelector('[name*="-expense_date"]').name = formPrefix + '-expense_date';
+        row.querySelector('[name*="-expense_type"]').name = formPrefix + '-expense_type';
+        row.querySelector('[name*="-description"]').name = formPrefix + '-description';
+        row.querySelector('[name*="-amount"]').name = formPrefix + '-amount';
+        row.querySelector('[name*="-invoice_number"]').name = formPrefix + '-invoice_number';
+        row.querySelector('[name*="-attachment"]') && (row.querySelector('[name*="-attachment"]').name = formPrefix + '-attachment');
+        row.querySelector('[name*="-DELETE"]') && (row.querySelector('[name*="-DELETE"]').name = formPrefix + '-DELETE');
+        if (row.querySelector('[name*="-id"]')) {
+            row.querySelector('[name*="-id"]').name = formPrefix + '-id';
+        }
+        row.dataset.formIndex = index;
+    });
+    document.getElementById('id_form-TOTAL_FORMS').value = rows.length;
+}
+
+function addItemRow() {
+    const container = document.getElementById('itemContainer');
+    const newRow = document.createElement('div');
+    newRow.className = 'item-row';
+    newRow.dataset.formIndex = formCount;
+    newRow.innerHTML = `
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small required">费用日期</label>
+                <input type="date" name="form-${formCount}-expense_date" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small required">费用类型</label>
+                <select name="form-${formCount}-expense_type" class="form-select form-select-sm" required>
+                    <option value="">---------</option>
+                    <option value="travel">差旅</option>
+                    <option value="accommodation">住宿</option>
+                    <option value="meal">餐饮</option>
+                    <option value="transport">交通</option>
+                    <option value="other">其他</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small required">费用说明</label>
+                <input type="text" name="form-${formCount}-description" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small required">金额</label>
+                <input type="number" name="form-${formCount}-amount" class="form-control form-control-sm item-amount" step="0.01" min="0" value="0.00" onchange="calculateTotal()">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">发票号码</label>
+                <input type="text" name="form-${formCount}-invoice_number" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItemRow(this)">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(newRow);
+    formCount++;
+    updateFormIndexes();
+    calculateTotal();
+}
+
+function removeItemRow(btn) {
+    const row = btn.closest('.item-row');
+    row.remove();
+    updateFormIndexes();
+    calculateTotal();
+}
+
+function calculateTotal() {
+    let total = 0;
+    document.querySelectorAll('.item-amount').forEach(input => {
+        if (!input.closest('.item-row').querySelector('[name*="-DELETE"]:checked')) {
+            total += parseFloat(input.value) || 0;
+        }
+    });
+    document.getElementById('totalAmount').textContent = '¥' + total.toFixed(2);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    calculateTotal();
+    document.querySelectorAll('.item-amount').forEach(input => {
+        input.addEventListener('input', calculateTotal);
+    });
+    document.querySelectorAll('[name*="-DELETE"]').forEach(checkbox => {
+        checkbox.addEventListener('change', calculateTotal);
+    });
+});
+</script>
+{% endblock %}
+

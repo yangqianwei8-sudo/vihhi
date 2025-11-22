@@ -1,0 +1,266 @@
+{% extends "administrative_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">{{ page_title }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+        position: relative;
+        overflow: hidden;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 8px 0;
+    }
+    .page-description {
+        font-size: 14px;
+        opacity: 0.9;
+        margin: 0;
+    }
+    .content-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6b7280;
+    }
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+    .empty-state-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .empty-state-text {
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 class="page-title">{{ page_title }}</h1>
+        <p class="page-description">{{ description }}</p>
+    </div>
+
+    <!-- 统计卡片 -->
+    {% if summary_cards %}
+    <div class="row g-3 mb-4">
+        {% for card in summary_cards %}
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">{{ card.label }}</h6>
+                    <div class="value" style="font-size: 28px; font-weight: 700; color: #142F5B; margin-bottom: 4px;">{{ card.value }}</div>
+                    <div class="hint" style="font-size: 12px; color: #6b7280;">{{ card.hint }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">会议室列表</h3>
+            <div>
+                <a href="/admin/administrative_management/meetingroombooking/add/" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-calendar-plus"></i> 预订会议室
+                </a>
+                <a href="{% url 'admin_pages:meeting_room_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> 新增会议室
+                </a>
+            </div>
+        </div>
+
+        <!-- 筛选栏 -->
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="搜索编号、名称、位置..." value="{{ search }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">全部状态</option>
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="is_active" class="form-select">
+                        <option value="">全部</option>
+                        <option value="true" {% if is_active == 'true' %}selected{% endif %}>启用</option>
+                        <option value="false" {% if is_active == 'false' %}selected{% endif %}>停用</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a href="{% url 'admin_pages:meeting_room_management' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <!-- 数据表格 -->
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>编号</th>
+                        <th>名称</th>
+                        <th>位置</th>
+                        <th>容纳人数</th>
+                        <th>设备</th>
+                        <th>状态</th>
+                        <th>启用状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for room in page_obj %}
+                    <tr>
+                        <td><code>{{ room.code }}</code></td>
+                        <td>{{ room.name }}</td>
+                        <td>{{ room.location|default:"-" }}</td>
+                        <td>{{ room.capacity }} 人</td>
+                        <td>
+                            {% if room.equipment %}
+                                {% for eq in room.equipment|slice:":3" %}
+                                    <span class="badge bg-light text-dark">{{ eq }}</span>
+                                {% endfor %}
+                                {% if room.equipment|length > 3 %}
+                                    <span class="badge bg-secondary">+{{ room.equipment|length|add:"-3" }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if room.status == 'available' %}
+                            <span class="badge bg-success">可用</span>
+                            {% elif room.status == 'maintenance' %}
+                            <span class="badge bg-warning">维护中</span>
+                            {% else %}
+                            <span class="badge bg-secondary">不可用</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if room.is_active %}
+                            <span class="badge bg-success">启用</span>
+                            {% else %}
+                            <span class="badge bg-secondary">停用</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_pages:meeting_room_detail' room.id %}" class="btn btn-sm btn-outline-primary" title="查看详情">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="/admin/administrative_management/meetingroombooking/add/?room={{ room.id }}" class="btn btn-sm btn-outline-info" title="预订">
+                                <i class="bi bi-calendar-plus"></i>
+                            </a>
+                            <a href="{% url 'admin_pages:meeting_room_update' room.id %}" class="btn btn-sm btn-outline-secondary" title="编辑">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🏢</div>
+                                <div class="empty-state-title">暂无数据</div>
+                                <div class="empty-state-text">
+                                    当前筛选条件下没有找到会议室，请调整筛选条件或添加新会议室。
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航">
+            <ul class="pagination justify-content-center mt-4">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}">末页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🏢</div>
+            <div class="empty-state-title">暂无数据</div>
+            <div class="empty-state-text">
+                当前没有会议室数据，请先添加会议室。
+            </div>
+            <a href="{% url 'admin_pages:meeting_room_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> 添加第一个会议室
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,251 @@
+{% extends "settlement_center/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'settlement_pages:output_value_record_list' %}">产值记录</a></li>
+<li class="breadcrumb-item active">{{ project.project_number }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .info-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .info-card h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .summary-item {
+        padding: 16px;
+        border-radius: 12px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+    }
+    .summary-label {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 8px;
+    }
+    .summary-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #142F5B;
+    }
+    .record-table {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .badge-status {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .badge-calculated { background: #dbeafe; color: #1e40af; }
+    .badge-confirmed { background: #d1fae5; color: #065f46; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="{% url 'settlement_pages:output_value_record_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回产值记录
+        </a>
+        <div>
+            <a href="{% url 'project_pages:project_detail' project.id %}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-folder"></i> 查看项目详情
+            </a>
+        </div>
+    </div>
+
+    <!-- 产值统计汇总 -->
+    <div class="summary-grid">
+        <div class="summary-item">
+            <div class="summary-label">累计产值</div>
+            <div class="summary-value">{{ output_value_summary.total_value|floatformat:2 }}</div>
+            <small class="text-muted">所有产值记录总和</small>
+        </div>
+        <div class="summary-item">
+            <div class="summary-label">已确认产值</div>
+            <div class="summary-value" style="color: #059669;">{{ output_value_summary.confirmed_value|floatformat:2 }}</div>
+            <small class="text-muted">已确认的产值总额</small>
+        </div>
+        <div class="summary-item">
+            <div class="summary-label">待确认产值</div>
+            <div class="summary-value" style="color: #f59e0b;">{{ output_value_summary.calculated_value|floatformat:2 }}</div>
+            <small class="text-muted">待确认的产值总额</small>
+        </div>
+        <div class="summary-item">
+            <div class="summary-label">产值记录数</div>
+            <div class="summary-value">{{ output_value_summary.total_records }}</div>
+            <small class="text-muted">所有产值记录数量</small>
+        </div>
+    </div>
+
+    <!-- 按阶段统计 -->
+    {% if output_value_summary.stage_stats %}
+    <div class="info-card">
+        <h5>按阶段统计</h5>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>阶段</th>
+                        <th>产值记录数</th>
+                        <th>产值总额</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in output_value_summary.stage_stats %}
+                    <tr>
+                        <td>{{ stat.stage__name }}</td>
+                        <td>{{ stat.count }}</td>
+                        <td><strong>{{ stat.total|floatformat:2 }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 按责任人统计 -->
+    {% if output_value_summary.user_stats %}
+    <div class="info-card">
+        <h5>按责任人统计</h5>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>责任人</th>
+                        <th>产值记录数</th>
+                        <th>产值总额</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in output_value_summary.user_stats %}
+                    <tr>
+                        <td>{{ stat.responsible_user__first_name }}{{ stat.responsible_user__last_name|default:stat.responsible_user__username }}</td>
+                        <td>{{ stat.count }}</td>
+                        <td><strong>{{ stat.total|floatformat:2 }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 产值记录列表 -->
+    <div class="info-card">
+        <h5>产值记录明细</h5>
+        <div class="record-table">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>阶段</th>
+                        <th>里程碑</th>
+                        <th>事件</th>
+                        <th>责任人</th>
+                        <th>计取基数</th>
+                        <th>计算产值</th>
+                        <th>状态</th>
+                        <th>计算时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.stage.name }}</td>
+                        <td>{{ record.milestone.name }}</td>
+                        <td>{{ record.event.name }}</td>
+                        <td>{{ record.responsible_user.get_full_name|default:record.responsible_user.username }}</td>
+                        <td>{{ record.base_amount|floatformat:2 }}</td>
+                        <td><strong>{{ record.calculated_value|floatformat:2 }}</strong></td>
+                        <td>
+                            <span class="badge-status badge-{{ record.status }}">
+                                {{ record.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ record.calculated_time|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5" style="color: #6b7280;">
+                            暂无产值记录
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        {% if records.has_other_pages %}
+        <nav aria-label="分页导航" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if records.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ records.previous_page_number }}">上一页</a>
+                </li>
+                {% endif %}
+                <li class="page-item active">
+                    <span class="page-link">{{ records.number }} / {{ records.paginator.num_pages }}</span>
+                </li>
+                {% if records.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ records.next_page_number }}">下一页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

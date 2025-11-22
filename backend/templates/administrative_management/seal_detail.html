@@ -1,0 +1,275 @@
+{% extends "administrative_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:seal_management' %}">印章管理</a></li>
+<li class="breadcrumb-item active">{{ seal.seal_name }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .info-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .info-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-bottom: 16px;
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .info-label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: 14px;
+        color: #1f2937;
+        font-weight: 500;
+    }
+    .record-item {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="text-end mb-4">
+        <a href="{% url 'admin_pages:seal_management' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        <a href="/admin/administrative_management/sealborrowing/add/?seal={{ seal.id }}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-box-arrow-in-right"></i> 借用申请
+        </a>
+        <a href="{% url 'admin_pages:seal_update' seal.id %}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> 编辑
+        </a>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <h5>基本信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">印章编号</span>
+                <span class="info-value"><code>{{ seal.seal_number }}</code></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">印章名称</span>
+                <span class="info-value">{{ seal.seal_name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">印章类型</span>
+                <span class="info-value">{{ seal.get_seal_type_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">当前状态</span>
+                <span class="info-value">
+                    {% if seal.status == 'available' %}
+                    <span class="badge bg-success">可借用</span>
+                    {% elif seal.status == 'borrowed' %}
+                    <span class="badge bg-warning">已借出</span>
+                    {% elif seal.status == 'maintenance' %}
+                    <span class="badge bg-info">维护中</span>
+                    {% else %}
+                    <span class="badge bg-secondary">已停用</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">保管人</span>
+                <span class="info-value">{{ seal.keeper.get_full_name|default:seal.keeper.username|default:"未指定" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">保管部门</span>
+                <span class="info-value">{{ seal.department.name|default:"未指定" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">启用状态</span>
+                <span class="info-value">
+                    {% if seal.is_active %}
+                    <span class="badge bg-success">启用</span>
+                    {% else %}
+                    <span class="badge bg-secondary">停用</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">是否外借</span>
+                <span class="info-value">
+                    {% if seal.can_borrow %}
+                    <span class="badge bg-success">允许外借</span>
+                    {% else %}
+                    <span class="badge bg-secondary">不允许外借</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 当前借用信息 -->
+    {% if seal.status == 'borrowed' %}
+    <div class="info-card">
+        <h5>当前借用信息</h5>
+        {% if borrowings and borrowings.0.status == 'borrowed' %}
+        {% with current=borrowings.0 %}
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">借用日期</span>
+                <span class="info-value">{{ current.borrow_date|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">借用时长</span>
+                <span class="info-value">{{ current.expected_return_date|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">借用人</span>
+                <span class="info-value">{{ current.borrower.get_full_name|default:current.borrower.username }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">借用用途</span>
+                <span class="info-value">{{ current.purpose|truncatewords:10 }}</span>
+            </div>
+        </div>
+        {% endwith %}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 借用记录 -->
+    {% if borrowings %}
+    <div class="info-card">
+        <h5>借用记录 (最近10条)</h5>
+        {% for borrowing in borrowings %}
+        <div class="record-item">
+            <div class="d-flex justify-content-between align-items-start">
+                <div style="flex: 1;">
+                    <strong>{{ borrowing.borrow_number }}</strong>
+                    <span class="badge bg-{{ borrowing.status|yesno:'success,warning,info,secondary' }} ms-2">
+                        {% if borrowing.status == 'pending' %}
+                        <span class="badge bg-warning">待审批</span>
+                        {% elif borrowing.status == 'borrowed' %}
+                        <span class="badge bg-info">已借出</span>
+                        {% elif borrowing.status == 'returned' %}
+                        <span class="badge bg-success">已归还</span>
+                        {% elif borrowing.status == 'overdue' %}
+                        <span class="badge bg-danger">已逾期</span>
+                        {% elif borrowing.status == 'rejected' %}
+                        <span class="badge bg-secondary">已拒绝</span>
+                        {% endif %}
+                    </span>
+                    <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">
+                        借用人：{{ borrowing.borrower.get_full_name|default:borrowing.borrower.username }} | 
+                        借用日期：{{ borrowing.borrow_date|date:"Y-m-d" }} | 
+                        预计归还：{{ borrowing.expected_return_date|date:"Y-m-d" }}
+                        {% if borrowing.actual_return_date %}
+                        | 实际归还：{{ borrowing.actual_return_date|date:"Y-m-d" }}
+                        {% endif %}
+                    </p>
+                    {% if borrowing.purpose %}
+                    <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">
+                        用途：{{ borrowing.purpose|truncatewords:15 }}
+                    </p>
+                    {% endif %}
+                    {% if borrowing.approver %}
+                    <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">
+                        审批人：{{ borrowing.approver.get_full_name|default:borrowing.approver.username }}
+                        {% if borrowing.approved_time %}
+                        ({{ borrowing.approved_time|date:"Y-m-d H:i" }})
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                    {% if borrowing.reject_reason %}
+                    <p class="mb-0 mt-1" style="font-size: 12px; color: #dc3545;">
+                        拒绝原因：{{ borrowing.reject_reason }}
+                    </p>
+                    {% endif %}
+                </div>
+                <a href="/admin/administrative_management/sealborrowing/{{ borrowing.id }}/" class="btn btn-sm btn-outline-info ms-2">
+                    <i class="bi bi-eye"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 使用说明 -->
+    {% if seal.usage_instructions %}
+    <div class="info-card">
+        <h5>使用说明</h5>
+        <p style="color: #374151; white-space: pre-wrap;">{{ seal.usage_instructions }}</p>
+    </div>
+    {% endif %}
+
+    <!-- 其他信息 -->
+    <div class="info-card">
+        <h5>其他信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">创建时间</span>
+                <span class="info-value">{{ seal.created_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            {% if seal.purchase_date %}
+            <div class="info-item">
+                <span class="info-label">购买日期</span>
+                <span class="info-value">{{ seal.purchase_date|date:"Y-m-d" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

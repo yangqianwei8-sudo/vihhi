@@ -10,10 +10,14 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-weihai-tech-production-sys
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
+# Default allowed hosts includes Sealos deployment domain
+DEFAULT_ALLOWED_HOSTS = 'localhost,127.0.0.1,tivpdkrxyioz.sealosbja.site'
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', DEFAULT_ALLOWED_HOSTS).split(',') if h.strip()]
 
 # CSRF trusted origins (must include scheme)
-CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
+# Default includes common Sealos deployment domains
+DEFAULT_CSRF_ORIGINS = 'https://tivpdkrxyioz.sealosbja.site,http://tivpdkrxyioz.sealosbja.site,http://localhost:8001,http://127.0.0.1:8001,http://localhost:8000,http://127.0.0.1:8000'
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS', DEFAULT_CSRF_ORIGINS).split(',') if o.strip()]
 
 # Application definition
 INSTALLED_APPS = [
@@ -30,15 +34,20 @@ INSTALLED_APPS = [
     'django_filters',
     
     # Local apps
-    'backend.apps.system_management',
+    'backend.apps.permission_management.apps.PermissionManagementConfig',  # 必须在 system_management 之前
+    'backend.apps.system_management.apps.SystemManagementConfig',
     'backend.apps.project_center',
-    'backend.apps.customer_success',
+    'backend.apps.customer_success.apps.CustomerSuccessConfig',
     'backend.apps.resource_standard',
     'backend.apps.task_collaboration',
-    'backend.apps.production_quality',
+    'backend.apps.production_quality.apps.ProductionQualityConfig',
     'backend.apps.delivery_customer',
-    'backend.apps.settlement_center',
+    'backend.apps.settlement_center.apps.SettlementCenterConfig',
     'backend.apps.risk_management',
+    # 行政管理、财务管理模块已禁用
+    # 'backend.apps.administrative_management.apps.AdministrativeManagementConfig',
+    # 'backend.apps.financial_management.apps.FinancialManagementConfig',
+    'backend.apps.personnel_management.apps.PersonnelManagementConfig',
 ]
 
 MIDDLEWARE = [
@@ -73,13 +82,18 @@ TEMPLATES = [
 ]
 
 # Database configuration
-# 根据环境变量选择数据库
-if os.getenv('DATABASE_URL'):
+# 优先使用环境变量 DATABASE_URL；若未配置，则使用最新的云端数据库连接
+DEFAULT_DATABASE_URL = "postgresql://postgres:zdg7xx28@dbconn.sealosbja.site:38013/postgres"
+database_url = os.getenv('DATABASE_URL', DEFAULT_DATABASE_URL).strip()
+if database_url and "dbconn.sealosbja.site:45978" in database_url:
+    database_url = database_url.replace("dbconn.sealosbja.site:45978", "dbconn.sealosbja.site:38013")
+
+if database_url:
     # 使用生产环境数据库（如 PostgreSQL）
     import dj_database_url
     DATABASES = {
         'default': dj_database_url.config(
-            default=os.getenv('DATABASE_URL'),
+            default=database_url,
             conn_max_age=600,
             conn_health_checks=True,
         )
@@ -92,6 +106,21 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '25') or 25)
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False') == 'True'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False') == 'True'
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'noreply@example.com')
+
+# 企业微信（WeCom）配置
+WECOM_AGENT_ID = os.getenv('WECOM_AGENT_ID')
+WECOM_CORP_ID = os.getenv('WECOM_CORP_ID')
+WECOM_AGENT_SECRET = os.getenv('WECOM_AGENT_SECRET')
+WECOM_DEFAULT_TO_USER = os.getenv('WECOM_DEFAULT_TO_USER', '')
 
 # REST Framework configuration
 REST_FRAMEWORK = {
@@ -128,9 +157,28 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-# Use Whitenoise compressed storage in production
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Whitenoise 配置 - 确保静态文件正确提供
+WHITENOISE_USE_FINDERS = True  # 在开发模式下使用 finders
+WHITENOISE_AUTOREFRESH = DEBUG  # 开发模式下自动刷新
+WHITENOISE_MANIFEST_STRICT = False  # 允许静态文件即使不在 manifest 中也能访问
+WHITENOISE_ROOT = STATIC_ROOT  # 明确指定 Whitenoise 的根目录
+
+# 静态文件存储配置
+# 在开发环境使用默认存储（无需 manifest）
+# 在生产环境使用 Whitenoise 压缩存储，但需要确保 manifest 文件正确
 if not DEBUG:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    try:
+        # 生产环境：使用 Whitenoise 的压缩 manifest 存储
+        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    except ImportError:
+        # 如果 Whitenoise 不可用，使用 Django 的 manifest 存储
+        STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+else:
+    # 开发环境：使用默认存储，避免 manifest 文件问题
+    # 这样可以直接访问原始文件名（如 base.css），而不需要带哈希的文件名
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

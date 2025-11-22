@@ -1,0 +1,1746 @@
+{% extends 'base.html' %}
+
+{% block title %}新建咨询意见{% endblock %}
+
+{% block extra_head %}
+<style>
+    .wizard-shell {
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 18px 36px rgba(20, 47, 91, 0.08);
+        padding: 28px 32px;
+    }
+
+    .stepper {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        position: relative;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .stepper-item {
+        position: relative;
+        flex: 1 1 160px;
+        text-align: center;
+        min-width: 150px;
+    }
+
+    .stepper-item::after {
+        content: '';
+        position: absolute;
+        top: 19px;
+        left: 50%;
+        right: -50%;
+        height: 3px;
+        background: #e5e7eb;
+        z-index: 0;
+    }
+
+    .stepper-item:last-child::after {
+        display: none;
+    }
+
+    .stepper-circle {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: #e5e7eb;
+        color: #4b5563;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 8px;
+        font-weight: 600;
+        position: relative;
+        z-index: 1;
+    }
+
+    .stepper-label {
+        font-size: 13px;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    .stepper-item.active .stepper-circle {
+        background: #0d6efd;
+        color: #fff;
+    }
+
+    .stepper-item.active .stepper-label {
+        color: #0d6efd;
+    }
+
+    .stepper-item.completed .stepper-circle {
+        background: #198754;
+        color: #fff;
+    }
+
+    .stepper-item.completed .stepper-label {
+        color: #198754;
+    }
+
+    .stepper-item.completed::after {
+        background: #198754;
+    }
+
+    .stepper-item.active::after {
+        background: linear-gradient(90deg, #198754 0%, #0d6efd 100%);
+    }
+
+    .step-panel {
+        display: none;
+        animation: fadeIn 0.25s ease-in-out;
+    }
+
+    .step-panel.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .step-section-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 22px 24px;
+        margin-bottom: 18px;
+        background: #fff;
+    }
+
+    .step-section-card h5 {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #0f172a;
+    }
+
+    .step-navigation {
+        border-top: 1px solid #e5e7eb;
+        padding-top: 20px;
+        margin-top: 32px;
+    }
+
+    .review-point-list {
+        max-height: 220px;
+        overflow: auto;
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .review-point-list ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 12px;
+    }
+
+    .review-point-list label {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 13px;
+        color: #1f2937;
+    }
+
+    .attachments-empty {
+        border: 1px dashed #cbd5f5;
+        border-radius: 12px;
+        background: #f8fafc;
+        padding: 18px;
+        text-align: center;
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .attachment-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 18px;
+        margin-bottom: 14px;
+        background: #fff;
+    }
+
+    .step-hint {
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .badge-soft {
+        background: rgba(13, 110, 253, 0.12);
+        color: #0d6efd;
+        font-weight: 600;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+    }
+
+    .action-bar .btn-link {
+        color: #64748b;
+    }
+
+    .action-bar .btn-link:hover {
+        text-decoration: underline;
+        color: #0d6efd;
+    }
+
+    .inline-addon {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .scope-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 4px;
+    }
+
+    .scope-chip {
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #0f172a;
+        font-size: 13px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .scope-chip:hover {
+        border-color: rgba(13, 110, 253, 0.35);
+    }
+
+    .scope-chip.selected {
+        background: #0d6efd;
+        color: #fff;
+        border-color: #0b5ed7;
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.18);
+    }
+
+    .saving-items-table input {
+        min-width: 90px;
+    }
+
+    .saving-items-table td {
+        vertical-align: middle;
+    }
+
+    .saving-summary {
+        font-size: 14px;
+    }
+
+    .participant-table select,
+    .participant-table input {
+        min-width: 120px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" id="opinionWizard" data-initial-step="{{ initial_step|default:1 }}" data-is-post="{% if request.method == 'POST' %}true{% else %}false{% endif %}">
+    <div class="wizard-shell mb-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center align-items-start gap-3 mb-4 action-bar">
+            <div>
+                <h2 class="mb-1">新建咨询意见</h2>
+                <p class="text-muted mb-0">按照步骤填写信息，系统将自动接入模板与节省金额计算。</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" form="opinionForm" class="btn btn-outline-secondary" data-submit-action="draft">保存草稿</button>
+                <button type="submit" form="opinionForm" class="btn btn-primary" data-submit-action="submit">提交审核</button>
+                <a href="{% url 'home' %}" class="btn btn-link text-decoration-none">取消</a>
+            </div>
+        </div>
+
+        <div class="stepper" id="opinionStepper">
+            <div class="stepper-item" data-step="1">
+                <div class="stepper-circle">1</div>
+                <div class="stepper-label">项目与专业</div>
+            </div>
+            <div class="stepper-item" data-step="2">
+                <div class="stepper-circle">2</div>
+                <div class="stepper-label">基本信息</div>
+            </div>
+            <div class="stepper-item" data-step="3">
+                <div class="stepper-circle">3</div>
+                <div class="stepper-label">问题描述</div>
+            </div>
+            <div class="stepper-item" data-step="4">
+                <div class="stepper-circle">4</div>
+                <div class="stepper-label">节省计算</div>
+            </div>
+            <div class="stepper-item" data-step="5">
+                <div class="stepper-circle">5</div>
+                <div class="stepper-label">协同与计划</div>
+            </div>
+            <div class="stepper-item" data-step="6">
+                <div class="stepper-circle">6</div>
+                <div class="stepper-label">附件资料</div>
+            </div>
+        </div>
+
+        {% if messages %}
+        <div class="mb-3 w-100">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} mb-2" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form id="opinionForm" method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="submit_action" id="submitAction" value="draft">
+            <input type="hidden" name="current_step" id="currentStepInput" value="{{ initial_step|default:1 }}">
+            <input type="hidden" name="participants_payload" id="participantsPayloadInput" value='{{ initial_participants_payload|default:"[]" }}'>
+            <input type="hidden" name="saving_items_payload" id="savingItemsPayloadInput" value='{{ initial_saving_items_payload|default:"[]" }}'>
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger mb-3">
+                {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Step 1 -->
+            <div class="step-panel" data-step="1">
+                <div class="step-section-card">
+                    <h5>1. 关联项目与专业</h5>
+                    <div class="mb-3">
+                        <label class="form-label">关联项目 <span class="text-danger">*</span></label>
+                        <div class="inline-addon flex-column flex-md-row align-items-start">
+                            <div class="flex-grow-1 w-100">
+                                {{ form.project }}
+                            </div>
+                            <input type="search" class="form-control w-100 w-md-auto mt-2 mt-md-0" id="projectSearchInput" placeholder="搜索项目名称 / 编号">
+                        </div>
+                        {% for error in form.project.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        <div class="step-hint mt-1">仅显示当前账号可访问的项目，可通过搜索快速定位。</div>
+                    </div>
+                    <div>
+                        <label class="form-label">专业分类 <span class="text-danger">*</span></label>
+                        {{ form.professional_category }}
+                        {% for error in form.professional_category.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        <div class="step-hint mt-1">选择项目后会自动加载对应专业选项。</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step-panel" data-step="2">
+                <div class="step-section-card">
+                    <h5>2. 意见基本信息</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">图纸编号</label>
+                            {{ form.drawing_number }}
+                            {% for error in form.drawing_number.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">图纸版本</label>
+                            {{ form.drawing_version }}
+                            {% for error in form.drawing_version.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">部位名称 <span class="text-danger">*</span></label>
+                        {{ form.location_name }}
+                        {% for error in form.location_name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        <div class="step-hint mt-1">请准确描述具体部位，例如“地下室顶板”“屋面层梁板”等。</div>
+                    </div>
+                </div>
+                <div class="step-section-card">
+                    <h5>3. 审查要点选择 <span class="badge-soft" id="reviewPointSelectedBadge">已选 0 / {{ review_point_count }}</span></h5>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="step-hint mb-0">选择后系统可自动带出问题描述模板。</div>
+                        <button type="button" class="btn btn-link btn-sm text-decoration-none" id="applyTemplateBtn">重新应用模板</button>
+                    </div>
+                    <div class="review-point-list">
+                        {{ form.review_points }}
+                    </div>
+                    {% for error in form.review_points.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step-panel" data-step="3">
+                <div class="step-section-card">
+                    <h5>4. 问题与建议描述</h5>
+                    <div class="mb-3">
+                        <label class="form-label">问题描述 <span class="text-danger">*</span></label>
+                        {{ form.issue_description }}
+                        {% for error in form.issue_description.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        <div class="step-hint mt-1">系统将在此处填充审查要点模板，可自主调整细节。</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">现行做法</label>
+                        {{ form.current_practice }}
+                        {% for error in form.current_practice.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">优化建议 <span class="text-danger">*</span></label>
+                        {{ form.recommendation }}
+                        {% for error in form.recommendation.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">问题类别 <span class="text-danger">*</span></label>
+                            {{ form.issue_category }}
+                            {% for error in form.issue_category.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">严重等级 <span class="text-danger">*</span></label>
+                            {{ form.severity_level }}
+                            {% for error in form.severity_level.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">引用规范</label>
+                        {{ form.reference_codes }}
+                        {% for error in form.reference_codes.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        <div class="step-hint mt-1">可录入规范编号与条文，例如《混凝土结构设计规范》GB50010-2010 第 8.2.3 条。</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step-panel" data-step="4">
+                <div class="step-section-card">
+                    <h5>5. 节省金额计算（核心）</h5>
+                    <div class="mb-3">
+                        <label class="form-label">计算方式 <span class="text-danger">*</span></label>
+                        <div class="d-flex flex-wrap gap-3" id="calculationModeGroup">
+                            {{ form.calculation_mode }}
+                        </div>
+                        {% for error in form.calculation_mode.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="row g-3 auto-calculation-block" data-mode-panel="auto">
+                        <div class="col-md-3">
+                            <label class="form-label">优化前工程量</label>
+                            {{ form.quantity_before }}
+                            {% for error in form.quantity_before.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">优化后工程量</label>
+                            {{ form.quantity_after }}
+                            {% for error in form.quantity_after.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">优化前综合单价</label>
+                            {{ form.unit_price_before }}
+                            {% for error in form.unit_price_before.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">优化后综合单价</label>
+                            {{ form.unit_price_after }}
+                            {% for error in form.unit_price_after.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-12">
+                            <div class="step-hint">可调用单价库获取最新价格；系统将实时计算节省金额。</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-4">
+                            <label class="form-label">计量单位</label>
+                            {{ form.measure_unit }}
+                            {% for error in form.measure_unit.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">节省金额 <span class="text-danger">*</span></label>
+                            {{ form.saving_amount }}
+                            <div class="form-text text-danger d-none" id="savingAmountError">节省金额需大于等于 0。</div>
+                            {% for error in form.saving_amount.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            <div class="step-hint" id="savingAmountHint">自动计算模式下该字段只读。</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">计算说明</label>
+                            {{ form.calculation_note }}
+                            {% for error in form.calculation_note.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-section-card mt-4">
+                    <h5>5. 节省金额分项</h5>
+                    <p class="step-hint mb-3">将节省金额拆分至材料、人工、工期等分项，便于后续统计分析。</p>
+                    <div class="table-responsive">
+                        <table class="table align-middle saving-items-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 14%;">分项类型</th>
+                                    <th style="width: 26%;">说明</th>
+                                    <th style="width: 12%;">数量</th>
+                                    <th style="width: 10%;">单位</th>
+                                    <th style="width: 12%;">单位节省</th>
+                                    <th style="width: 14%;">节省金额</th>
+                                    <th style="width: 12%;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="savingItemsTableBody"></tbody>
+                        </table>
+                        <div id="savingItemsEmptyState" class="attachments-empty">暂无分项数据，可点击“新增分项”进行填写。</div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="addSavingItemBtn"><i class="bi bi-plus-circle"></i> 新增分项</button>
+                        <div class="saving-summary text-end">
+                            <span class="text-muted me-2">分项合计</span>
+                            <span class="fw-semibold text-primary" id="savingItemsTotal">0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="step-panel" data-step="5">
+                <div class="step-section-card">
+                    <h5>6. 意见来源与计划</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">意见来源 <span class="text-danger">*</span></label>
+                            {{ form.source }}
+                            {% for error in form.source.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">优先级 <span class="text-danger">*</span></label>
+                            {{ form.priority }}
+                            {% for error in form.priority.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">影响范围</label>
+                        <div id="impactScopeList" class="scope-chip-list"></div>
+                        <div class="input-group mt-2">
+                            <input type="text" class="form-control" id="impactScopeCustomInput" placeholder="输入自定义范围，例如“地下室结构”，然后点击添加">
+                            <button type="button" class="btn btn-outline-primary" id="addImpactScopeBtn"><i class="bi bi-plus-lg"></i> 添加范围</button>
+                        </div>
+                        {% for error in form.impact_scope.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        <div class="step-hint mt-1">可多选多个范围，系统将同步到后续统计看板。</div>
+                        {{ form.impact_scope }}
+                    </div>
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-4">
+                            <label class="form-label">计划完成日期</label>
+                            {{ form.expected_complete_date }}
+                            {% for error in form.expected_complete_date.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">整改要求完成期限</label>
+                            {{ form.response_deadline }}
+                            {% for error in form.response_deadline.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">实际完成日期</label>
+                            {{ form.actual_complete_date }}
+                            {% for error in form.actual_complete_date.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-section-card">
+                    <h5>7. 协同参与人</h5>
+                    <p class="step-hint">默认已将当前登录人作为提出人，您可以继续添加项目团队成员作为协同角色。</p>
+                    <div class="row g-2 align-items-end mb-3">
+                        <div class="col-lg-5">
+                            <label class="form-label">项目团队成员</label>
+                            <select id="participantCandidateSelect" class="form-select">
+                                <option value="">请选择成员</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-4">
+                            <label class="form-label">参与角色</label>
+                            <select id="participantRoleSelect" class="form-select">
+                                {% for value, label in participant_role_choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-lg-3 d-grid">
+                            <button type="button" class="btn btn-outline-primary" id="addParticipantBtn"><i class="bi bi-person-plus"></i> 添加参与人</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive participant-table">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 28%;">姓名</th>
+                                    <th style="width: 28%;">角色</th>
+                                    <th style="width: 18%;">主责</th>
+                                    <th style="width: 18%;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="participantTableBody"></tbody>
+                        </table>
+                        <div id="participantEmptyState" class="attachments-empty">暂未添加任何参与人。</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6 -->
+            <div class="step-panel" data-step="6">
+                <div class="step-section-card">
+                    <h5>8. 附件资料</h5>
+                    <p class="step-hint mb-3">上传支撑材料，可预览、删除或新增附件。建议包含现状图纸、建议图纸、计算书等。</p>
+                    {{ formset.management_form }}
+                    {% if formset.non_form_errors %}
+                    <div class="alert alert-danger mb-3">
+                        {% for error in formset.non_form_errors %}
+                        <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <div id="attachmentContainer">
+                        {% for attachment_form in formset %}
+                        <div class="attachment-card" data-form-index="{{ forloop.counter0 }}">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label">附件类型</label>
+                                    {{ attachment_form.attachment_type }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">文件</label>
+                                    {{ attachment_form.file }}
+                                    {% for error in attachment_form.file.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                    <div class="text-muted small mt-1 attachment-preview" data-preview></div>
+                                </div>
+                                <div class="col-md-2">
+                                    {% if attachment_form.can_delete %}
+                                    <div class="form-check mt-2">
+                                        {{ attachment_form.DELETE }}
+                                        <label class="form-check-label">删除</label>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% for hidden in attachment_form.hidden_fields %}{{ hidden }}{% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="step-hint">支持多次追加附件，系统会自动记录上传人和时间。</div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="addAttachmentBtn">新增附件</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-navigation d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" data-step-nav="prev">上一步</button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" data-step-nav="next">下一步</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ project_options|json_script:"project-data" }}
+{{ professional_categories|json_script:"professional-category-data" }}
+{{ review_point_templates|json_script:"review-point-templates" }}
+{{ impact_scope_options|json_script:"impact-scope-options" }}
+{{ participant_role_choices|json_script:"participant-role-options" }}
+{{ saving_category_choices|json_script:"saving-category-options" }}
+{{ initial_participants_payload|json_script:"initial-participants" }}
+{{ initial_saving_items_payload|json_script:"initial-saving-items" }}
+{{ current_user_payload|json_script:"current-user-info" }}
+{{ form.media }}
+<script>
+    (function () {
+        const wizard = document.getElementById('opinionWizard');
+        if (!wizard) return;
+
+        const initialStep = parseInt(wizard.dataset.initialStep || '1', 10);
+        const stepperItems = Array.from(document.querySelectorAll('#opinionStepper .stepper-item'));
+        const stepPanels = Array.from(document.querySelectorAll('.step-panel'));
+        const formEl = document.getElementById('opinionForm');
+        const submitInput = document.getElementById('submitAction');
+        const currentStepInput = document.getElementById('currentStepInput');
+        const nextBtn = document.querySelector('[data-step-nav="next"]');
+        const prevBtn = document.querySelector('[data-step-nav="prev"]');
+        const projectSelect = document.getElementById('id_project');
+        const professionSelect = document.getElementById('id_professional_category');
+        const projectSearchInput = document.getElementById('projectSearchInput');
+        const reviewPointBadge = document.getElementById('reviewPointSelectedBadge');
+        const reviewTemplates = JSON.parse(document.getElementById('review-point-templates').textContent || '{}');
+        const projectOptionsData = JSON.parse(document.getElementById('project-data').textContent || '[]');
+        const globalProfessionalCategories = JSON.parse(document.getElementById('professional-category-data').textContent || '[]');
+        const impactScopeOptions = JSON.parse(document.getElementById('impact-scope-options').textContent || '[]');
+        const participantRoleOptions = JSON.parse(document.getElementById('participant-role-options').textContent || '[]');
+        const savingCategoryOptions = JSON.parse(document.getElementById('saving-category-options').textContent || '[]');
+        const initialParticipantsData = (() => {
+            try { return JSON.parse(document.getElementById('initial-participants').textContent || '[]'); }
+            catch (error) { return []; }
+        })();
+        const initialSavingItemsData = (() => {
+            try { return JSON.parse(document.getElementById('initial-saving-items').textContent || '[]'); }
+            catch (error) { return []; }
+        })();
+        const currentUserInfo = (() => {
+            try { return JSON.parse(document.getElementById('current-user-info').textContent || '{}'); }
+            catch (error) { return {}; }
+        })();
+        const attachmentTemplateEl = document.getElementById('attachmentTemplate');
+        const attachmentContainer = document.getElementById('attachmentContainer');
+        const addAttachmentBtn = document.getElementById('addAttachmentBtn');
+        const savingAmountField = document.getElementById('id_saving_amount');
+        const calculationRadios = () => Array.from(document.querySelectorAll('input[name="calculation_mode"]'));
+        const autoFields = document.querySelector('[data-mode-panel="auto"]');
+        const applyTemplateBtn = document.getElementById('applyTemplateBtn');
+        const issueDescriptionField = document.getElementById('id_issue_description');
+        const reviewPointInputs = Array.from(document.querySelectorAll('input[name="review_points"]'));
+        const impactScopeInput = document.getElementById('id_impact_scope');
+        const impactScopeList = document.getElementById('impactScopeList');
+        const impactScopeCustomInput = document.getElementById('impactScopeCustomInput');
+        const addImpactScopeBtn = document.getElementById('addImpactScopeBtn');
+        const savingItemsTableBody = document.getElementById('savingItemsTableBody');
+        const savingItemsEmptyState = document.getElementById('savingItemsEmptyState');
+        const savingItemsTotalLabel = document.getElementById('savingItemsTotal');
+        const addSavingItemBtn = document.getElementById('addSavingItemBtn');
+        const savingItemsPayloadInput = document.getElementById('savingItemsPayloadInput');
+        const participantCandidateSelect = document.getElementById('participantCandidateSelect');
+        const participantRoleSelect = document.getElementById('participantRoleSelect');
+        const addParticipantBtn = document.getElementById('addParticipantBtn');
+        const participantTableBody = document.getElementById('participantTableBody');
+        const participantEmptyState = document.getElementById('participantEmptyState');
+        const participantsPayloadInput = document.getElementById('participantsPayloadInput');
+        const savingAmountErrorEl = document.getElementById('savingAmountError');
+        const isPostback = wizard.dataset.isPost === 'true';
+        const draftStorageKey = `opinionWizardDraft:${currentUserInfo?.id || 'guest'}`;
+        const autosaveDelay = 800;
+        let autosaveTimer = null;
+        const hasSuccessMessage = Boolean(document.querySelector('.alert-success'));
+        if (hasSuccessMessage) {
+            try { localStorage.removeItem(draftStorageKey); } catch (error) { /* ignore */ }
+        }
+
+        let currentStep = initialStep >= 1 && initialStep <= stepPanels.length ? initialStep : 1;
+        let issueDescriptionEdited = Boolean(issueDescriptionField && issueDescriptionField.value.trim().length);
+        let selectedImpactScope = new Set();
+        if (impactScopeInput) {
+            try {
+                const parsedScope = JSON.parse(impactScopeInput.value || '[]');
+                if (Array.isArray(parsedScope)) parsedScope.forEach((value) => selectedImpactScope.add(value));
+            } catch (error) {
+                // ignore parse error
+            }
+        }
+        let savingItems = (Array.isArray(initialSavingItemsData) ? initialSavingItemsData : []).map((item, index) => ({
+            id: item.id || null,
+            category: item.category || '',
+            description: item.description || '',
+            quantity: item.quantity ?? null,
+            unit: item.unit || '',
+            unit_saving: item.unit_saving ?? null,
+            total_saving: item.total_saving ?? null,
+            notes: item.notes || '',
+            _uid: `saving-${Date.now()}-${index}`,
+        }));
+        const defaultParticipantRole = (() => {
+            const proposer = participantRoleOptions.find(([value]) => value === 'proposer');
+            return proposer ? proposer[0] : (participantRoleOptions[0]?.[0] || 'observer');
+        })();
+        let participants = (Array.isArray(initialParticipantsData) ? initialParticipantsData : []).map((item, index) => ({
+            id: item.id || null,
+            user: item.user,
+            user_name: item.user_name || memberLookup[item.user]?.name || currentUserInfo.name || `用户 ${item.user}`,
+            role: item.role || defaultParticipantRole,
+            is_primary: Boolean(item.is_primary),
+            extra_info: item.extra_info || {},
+            _uid: `participant-${Date.now()}-${index}`,
+        }));
+
+        function ensureDefaultParticipant() {
+            if (!participants.length && currentUserInfo?.id) {
+                participants.push({
+                    id: null,
+                    user: currentUserInfo.id,
+                    user_name: currentUserInfo.name || '',
+                    role: defaultParticipantRole,
+                    is_primary: true,
+                    extra_info: {},
+                    _uid: `participant-default-${Date.now()}`,
+                });
+            }
+        }
+
+        function ensurePrimaryParticipant() {
+            if (!participants.length) return;
+            if (!participants.some((item) => item.is_primary)) {
+                participants[0].is_primary = true;
+            }
+        }
+
+        function shouldSkipDraftField(field) {
+            if (!field || !field.name) return true;
+            if (field.type === 'file' || field.name === 'csrfmiddlewaretoken') return true;
+            if (field.hasAttribute('data-skip-draft')) return true;
+            return false;
+        }
+
+        function escapeFieldName(name) {
+            if (window.CSS && typeof window.CSS.escape === 'function') {
+                return window.CSS.escape(name);
+            }
+            return name.replace(/"/g, '\\"');
+        }
+
+        function collectDraftData() {
+            if (!formEl) return {};
+            const data = {};
+            Array.from(formEl.elements).forEach((field) => {
+                if (shouldSkipDraftField(field)) return;
+                if (field.type === 'checkbox') {
+                    if (!Array.isArray(data[field.name])) data[field.name] = [];
+                    if (field.checked) data[field.name].push(field.value);
+                    return;
+                }
+                if (field.type === 'radio') {
+                    if (field.checked) data[field.name] = field.value;
+                    return;
+                }
+                if (field.tagName === 'SELECT' && field.multiple) {
+                    data[field.name] = Array.from(field.options)
+                        .filter((opt) => opt.selected)
+                        .map((opt) => opt.value);
+                    return;
+                }
+                data[field.name] = field.value;
+            });
+            return data;
+        }
+
+        function clearDraftStorage() {
+            try { localStorage.removeItem(draftStorageKey); } catch (error) { /* ignore */ }
+        }
+
+        function saveDraft(immediate = false) {
+            if (!formEl || !window.localStorage) return;
+            const payload = {
+                step: currentStep,
+                data: collectDraftData(),
+                timestamp: Date.now(),
+            };
+            try {
+                localStorage.setItem(draftStorageKey, JSON.stringify(payload));
+            } catch (error) {
+                if (immediate) throw error;
+            }
+        }
+
+        function scheduleDraftSave() {
+            if (!window.localStorage) return;
+            clearTimeout(autosaveTimer);
+            autosaveTimer = setTimeout(saveDraft, autosaveDelay);
+        }
+
+        function restoreDraftData() {
+            if (!formEl || !window.localStorage) return;
+            if (hasSuccessMessage || isPostback) {
+                clearDraftStorage();
+                return;
+            }
+            let payload;
+            try {
+                const raw = localStorage.getItem(draftStorageKey);
+                if (!raw) return;
+                payload = JSON.parse(raw);
+            } catch (error) {
+                return;
+            }
+            const data = payload?.data || {};
+            const storedStep = payload?.step;
+
+            if (projectSelect && data.project) {
+                projectSelect.value = data.project;
+                projectSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            Object.entries(data).forEach(([name, value]) => {
+                if (name === 'project') return;
+                const selector = `[name="${escapeFieldName(name)}"]`;
+                const fields = formEl.querySelectorAll(selector);
+                if (!fields.length) return;
+                fields.forEach((field) => {
+                    if (field.type === 'checkbox') {
+                        field.checked = Array.isArray(value) ? value.includes(field.value) : Boolean(value);
+                    } else if (field.type === 'radio') {
+                        field.checked = value === field.value;
+                    } else if (field.tagName === 'SELECT' && field.multiple && Array.isArray(value)) {
+                        Array.from(field.options).forEach((opt) => {
+                            opt.selected = value.includes(opt.value);
+                        });
+                    } else if (field.type !== 'file' && value !== undefined) {
+                        field.value = value;
+                    }
+                });
+            });
+
+            if (data.saving_items_payload) {
+                try {
+                    const parsedItems = JSON.parse(data.saving_items_payload);
+                    if (Array.isArray(parsedItems)) {
+                        savingItems = parsedItems.map((item, index) => ({
+                            id: item.id || null,
+                            category: item.category || '',
+                            description: item.description || '',
+                            quantity: item.quantity ?? null,
+                            unit: item.unit || '',
+                            unit_saving: item.unit_saving ?? null,
+                            total_saving: item.total_saving ?? null,
+                            notes: item.notes || '',
+                            _uid: `saving-${Date.now()}-${index}`,
+                        }));
+                    }
+                } catch (error) {
+                    // ignore parse error
+                }
+            }
+
+            if (data.participants_payload) {
+                try {
+                    const parsedParticipants = JSON.parse(data.participants_payload);
+                    if (Array.isArray(parsedParticipants)) {
+                        participants = parsedParticipants.map((item, index) => ({
+                            id: item.id || null,
+                            user: item.user,
+                            user_name: item.user_name || currentUserInfo.name || `用户 ${item.user}`,
+                            role: item.role || defaultParticipantRole,
+                            is_primary: Boolean(item.is_primary),
+                            extra_info: item.extra_info || {},
+                            _uid: `participant-${Date.now()}-${index}`,
+                        }));
+                    }
+                } catch (error) {
+                    // ignore parse error
+                }
+            }
+
+            ensureDefaultParticipant();
+            ensurePrimaryParticipant();
+
+            if (typeof storedStep === 'number') {
+                currentStep = Math.min(Math.max(storedStep, 1), stepPanels.length);
+            }
+            issueDescriptionEdited = Boolean(issueDescriptionField && issueDescriptionField.value.trim().length);
+        }
+
+        ensureDefaultParticipant();
+        ensurePrimaryParticipant();
+        restoreDraftData();
+        if (formEl) {
+            const draftEventHandler = (event) => {
+                const target = event.target;
+                if (!target || shouldSkipDraftField(target)) return;
+                scheduleDraftSave();
+            };
+            formEl.addEventListener('input', draftEventHandler);
+            formEl.addEventListener('change', draftEventHandler);
+        }
+        window.addEventListener('beforeunload', () => {
+            try { saveDraft(true); } catch (error) { /* ignore */ }
+        });
+
+        function updateStepperUI() {
+            stepperItems.forEach((item) => {
+                const step = parseInt(item.dataset.step, 10);
+                item.classList.remove('active', 'completed');
+                if (step < currentStep) {
+                    item.classList.add('completed');
+                } else if (step === currentStep) {
+                    item.classList.add('active');
+                }
+            });
+            stepPanels.forEach((panel) => {
+                panel.classList.toggle('active', parseInt(panel.dataset.step, 10) === currentStep);
+            });
+            prevBtn.disabled = currentStep === 1;
+            if (currentStep === stepPanels.length) {
+                nextBtn.classList.add('d-none');
+            } else {
+                nextBtn.classList.remove('d-none');
+            }
+            currentStepInput.value = currentStep;
+        }
+
+        function temporarilyDisableOtherFields(callback) {
+            const nonActivePanels = stepPanels.filter((panel) => parseInt(panel.dataset.step, 10) !== currentStep);
+            const toggled = [];
+            nonActivePanels.forEach((panel) => {
+                panel.querySelectorAll('input, select, textarea').forEach((el) => {
+                    if (!el.disabled) {
+                        el.dataset._tempDisabled = 'true';
+                        el.disabled = true;
+                        toggled.push(el);
+                    }
+                });
+            });
+            const result = callback();
+            toggled.forEach((el) => {
+                el.disabled = false;
+                delete el.dataset._tempDisabled;
+            });
+            return result;
+        }
+
+        function validateCurrentStep() {
+            return temporarilyDisableOtherFields(() => formEl.reportValidity());
+        }
+
+        function goToStep(step) {
+            currentStep = Math.min(Math.max(step, 1), stepPanels.length);
+            updateStepperUI();
+            scheduleDraftSave();
+        }
+
+        function updateCalculationModeState() {
+            const radios = calculationRadios();
+            if (!radios.length) return;
+            const activeRadio = radios.find(r => r.checked) || radios[0];
+            if (!activeRadio.checked) {
+                activeRadio.checked = true;
+            }
+            toggleCalculationModeUI();
+        }
+
+        function renderImpactScopeChips() {
+            if (!impactScopeList) return;
+            impactScopeList.innerHTML = '';
+            const selectedValues = new Set(selectedImpactScope);
+            const options = [...impactScopeOptions];
+            selectedValues.forEach((value) => {
+                if (!options.some((item) => item.value === value)) {
+                    options.push({ value, label: value });
+                }
+            });
+            options.forEach((option) => {
+                const chip = document.createElement('span');
+                chip.className = 'scope-chip';
+                chip.textContent = option.label;
+                chip.dataset.value = option.value;
+                if (selectedValues.has(option.value)) {
+                    chip.classList.add('selected');
+                }
+                chip.addEventListener('click', () => {
+                    if (selectedValues.has(option.value)) {
+                        selectedValues.delete(option.value);
+                    } else {
+                        selectedValues.add(option.value);
+                    }
+                    selectedImpactScope = new Set(selectedValues);
+                    renderImpactScopeChips();
+                });
+                impactScopeList.appendChild(chip);
+            });
+            if (impactScopeInput) {
+                impactScopeInput.value = JSON.stringify(Array.from(selectedImpactScope));
+            }
+            scheduleDraftSave();
+        }
+
+        function addCustomImpactScope() {
+            if (!impactScopeCustomInput) return;
+            const value = impactScopeCustomInput.value.trim();
+            if (!value) return;
+            selectedImpactScope.add(value);
+            impactScopeCustomInput.value = '';
+            renderImpactScopeChips();
+            scheduleDraftSave();
+        }
+
+        if (addImpactScopeBtn) {
+            addImpactScopeBtn.addEventListener('click', addCustomImpactScope);
+        }
+        if (impactScopeCustomInput) {
+            impactScopeCustomInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addCustomImpactScope();
+                }
+            });
+        }
+
+        function updateSavingItemsPayload() {
+            if (!savingItemsPayloadInput) return;
+            savingItemsPayloadInput.value = JSON.stringify(
+                savingItems.map(({ id, category, description, quantity, unit, unit_saving, total_saving, notes }) => ({
+                    id,
+                    category,
+                    description,
+                    quantity,
+                    unit,
+                    unit_saving,
+                    total_saving,
+                    notes,
+                }))
+            );
+            scheduleDraftSave();
+        }
+
+        function recalcSavingItemTotal(item) {
+            if (typeof item.quantity === 'number' && typeof item.unit_saving === 'number') {
+                item.total_saving = item.quantity * item.unit_saving;
+            }
+        }
+
+        function renderSavingItems() {
+            if (!savingItemsTableBody || !savingItemsEmptyState || !savingItemsTotalLabel) return;
+            savingItemsTableBody.innerHTML = '';
+            if (!savingItems.length) {
+                savingItemsEmptyState.classList.remove('d-none');
+                savingItemsTotalLabel.textContent = '0.00';
+            } else {
+                savingItemsEmptyState.classList.add('d-none');
+                let totalValue = 0;
+                savingItems.forEach((item) => {
+                    const row = document.createElement('tr');
+
+                    const categoryCell = document.createElement('td');
+                    const categorySelect = document.createElement('select');
+                    categorySelect.className = 'form-select form-select-sm';
+                    const placeholder = document.createElement('option');
+                    placeholder.value = '';
+                    placeholder.textContent = '选择类型';
+                    categorySelect.appendChild(placeholder);
+                    savingCategoryOptions.forEach(([value, label]) => {
+                        const option = document.createElement('option');
+                        option.value = value;
+                        option.textContent = label;
+                        categorySelect.appendChild(option);
+                    });
+                    categorySelect.value = item.category || '';
+                    categorySelect.addEventListener('change', () => {
+                        item.category = categorySelect.value;
+                        updateSavingItemsPayload();
+                    });
+                    categoryCell.appendChild(categorySelect);
+                    row.appendChild(categoryCell);
+
+                    const descCell = document.createElement('td');
+                    const descInput = document.createElement('input');
+                    descInput.type = 'text';
+                    descInput.className = 'form-control form-control-sm';
+                    descInput.placeholder = '分项说明';
+                    descInput.value = item.description || '';
+                    descInput.addEventListener('input', () => {
+                        item.description = descInput.value;
+                        updateSavingItemsPayload();
+                    });
+                    descCell.appendChild(descInput);
+                    row.appendChild(descCell);
+
+                    const quantityCell = document.createElement('td');
+                    const quantityInput = document.createElement('input');
+                    quantityInput.type = 'number';
+                    quantityInput.step = '0.01';
+                    quantityInput.className = 'form-control form-control-sm';
+                    quantityInput.value = item.quantity ?? '';
+                    quantityInput.addEventListener('input', () => {
+                        item.quantity = quantityInput.value ? parseFloat(quantityInput.value) : null;
+                        recalcSavingItemTotal(item);
+                        renderSavingItems();
+                    });
+                    quantityCell.appendChild(quantityInput);
+                    row.appendChild(quantityCell);
+
+                    const unitCell = document.createElement('td');
+                    const unitInput = document.createElement('input');
+                    unitInput.type = 'text';
+                    unitInput.className = 'form-control form-control-sm';
+                    unitInput.placeholder = '单位';
+                    unitInput.value = item.unit || '';
+                    unitInput.addEventListener('input', () => {
+                        item.unit = unitInput.value;
+                        updateSavingItemsPayload();
+                    });
+                    unitCell.appendChild(unitInput);
+                    row.appendChild(unitCell);
+
+                    const unitSavingCell = document.createElement('td');
+                    const unitSavingInput = document.createElement('input');
+                    unitSavingInput.type = 'number';
+                    unitSavingInput.step = '0.01';
+                    unitSavingInput.className = 'form-control form-control-sm';
+                    unitSavingInput.value = item.unit_saving ?? '';
+                    unitSavingInput.addEventListener('input', () => {
+                        item.unit_saving = unitSavingInput.value ? parseFloat(unitSavingInput.value) : null;
+                        recalcSavingItemTotal(item);
+                        renderSavingItems();
+                    });
+                    unitSavingCell.appendChild(unitSavingInput);
+                    row.appendChild(unitSavingCell);
+
+                    const totalCell = document.createElement('td');
+                    const totalInput = document.createElement('input');
+                    totalInput.type = 'number';
+                    totalInput.step = '0.01';
+                    totalInput.className = 'form-control form-control-sm';
+                    totalInput.value = item.total_saving ?? '';
+                    totalInput.addEventListener('input', () => {
+                        item.total_saving = totalInput.value ? parseFloat(totalInput.value) : null;
+                        updateSavingItemsPayload();
+                        renderSavingItems();
+                    });
+                    totalCell.appendChild(totalInput);
+                    row.appendChild(totalCell);
+
+                    const actionCell = document.createElement('td');
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'btn btn-link text-danger p-0';
+                    removeBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                    removeBtn.addEventListener('click', () => {
+                        savingItems = savingItems.filter((s) => s._uid !== item._uid);
+                        renderSavingItems();
+                    });
+                    actionCell.appendChild(removeBtn);
+                    row.appendChild(actionCell);
+
+                    savingItemsTableBody.appendChild(row);
+
+                    if (typeof item.total_saving === 'number') {
+                        totalValue += item.total_saving;
+                    }
+                });
+                savingItemsTotalLabel.textContent = formatDecimal(totalValue);
+            }
+            updateSavingItemsPayload();
+        }
+
+        if (addSavingItemBtn) {
+            addSavingItemBtn.addEventListener('click', () => {
+                savingItems.push({
+                    id: null,
+                    category: '',
+                    description: '',
+                    quantity: null,
+                    unit: '',
+                    unit_saving: null,
+                    total_saving: null,
+                    notes: '',
+                    _uid: `saving-${Date.now()}`,
+                });
+                renderSavingItems();
+            });
+        }
+
+        function updateParticipantsPayload() {
+            if (!participantsPayloadInput) return;
+            participantsPayloadInput.value = JSON.stringify(
+                participants.map(({ id, user, role, is_primary, extra_info, user_name }) => ({
+                    id,
+                    user,
+                    role,
+                    is_primary,
+                    extra_info: extra_info || {},
+                    user_name,
+                }))
+            );
+            scheduleDraftSave();
+        }
+
+        function renderParticipants() {
+            if (!participantTableBody || !participantEmptyState) return;
+            participantTableBody.innerHTML = '';
+            if (!participants.length) {
+                participantEmptyState.classList.remove('d-none');
+            } else {
+                participantEmptyState.classList.add('d-none');
+                participants.forEach((item) => {
+                    const row = document.createElement('tr');
+
+                    const nameCell = document.createElement('td');
+                    const nameLabel = document.createElement('div');
+                    nameLabel.className = 'fw-semibold';
+                    nameLabel.textContent = item.user_name || `用户 ${item.user}`;
+                    nameCell.appendChild(nameLabel);
+                    row.appendChild(nameCell);
+
+                    const roleCell = document.createElement('td');
+                    const roleSelect = document.createElement('select');
+                    roleSelect.className = 'form-select form-select-sm';
+                    participantRoleOptions.forEach(([value, label]) => {
+                        const option = document.createElement('option');
+                        option.value = value;
+                        option.textContent = label;
+                        roleSelect.appendChild(option);
+                    });
+                    roleSelect.value = item.role || defaultParticipantRole;
+                    roleSelect.addEventListener('change', () => {
+                        item.role = roleSelect.value;
+                        updateParticipantsPayload();
+                    });
+                    roleCell.appendChild(roleSelect);
+                    row.appendChild(roleCell);
+
+                    const primaryCell = document.createElement('td');
+                    const primaryWrapper = document.createElement('div');
+                    primaryWrapper.className = 'form-check form-switch';
+                    const primaryInput = document.createElement('input');
+                    primaryInput.type = 'checkbox';
+                    primaryInput.className = 'form-check-input';
+                    primaryInput.checked = Boolean(item.is_primary);
+                    primaryInput.addEventListener('change', () => {
+                        item.is_primary = primaryInput.checked;
+                        ensurePrimaryParticipant();
+                        updateParticipantsPayload();
+                        renderParticipants();
+                    });
+                    primaryWrapper.appendChild(primaryInput);
+                    const primaryLabel = document.createElement('label');
+                    primaryLabel.className = 'form-check-label';
+                    primaryLabel.textContent = primaryInput.checked ? '主责' : '设为主责';
+                    primaryWrapper.appendChild(primaryLabel);
+                    primaryCell.appendChild(primaryWrapper);
+                    row.appendChild(primaryCell);
+
+                    const actionCell = document.createElement('td');
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'btn btn-link text-danger p-0';
+                    removeBtn.innerHTML = '<i class="bi bi-x-circle"></i>';
+                    removeBtn.addEventListener('click', () => {
+                        participants = participants.filter((p) => p._uid !== item._uid);
+                        ensureDefaultParticipant();
+                        ensurePrimaryParticipant();
+                        renderParticipants();
+                    });
+                    actionCell.appendChild(removeBtn);
+                    row.appendChild(actionCell);
+
+                    participantTableBody.appendChild(row);
+                });
+            }
+            updateParticipantsPayload();
+        }
+
+        if (addParticipantBtn) {
+            addParticipantBtn.addEventListener('click', () => {
+                const userId = parseInt(participantCandidateSelect?.value || '0', 10);
+                if (!userId) return;
+                if (participants.some((item) => Number(item.user) === userId)) {
+                    participantCandidateSelect.value = '';
+                    return;
+                }
+                const candidate = memberLookup[userId];
+                participants.push({
+                    id: null,
+                    user: userId,
+                    user_name: candidate?.name || `用户 ${userId}`,
+                    role: participantRoleSelect?.value || defaultParticipantRole,
+                    is_primary: false,
+                    extra_info: {},
+                    _uid: `participant-${Date.now()}-${userId}`,
+                });
+                participantCandidateSelect.value = '';
+                renderParticipants();
+            });
+        }
+
+        renderImpactScopeChips();
+        renderSavingItems();
+        renderParticipants();
+        updateStepperUI();
+        updateCalculationModeState();
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                if (!validateCurrentStep()) return;
+                goToStep(currentStep + 1);
+            });
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                goToStep(currentStep - 1);
+            });
+        }
+
+        formEl.addEventListener('submit', (event) => {
+            currentStepInput.value = currentStep;
+            if (impactScopeInput) {
+                impactScopeInput.value = JSON.stringify(Array.from(selectedImpactScope));
+            }
+            ensureDefaultParticipant();
+            ensurePrimaryParticipant();
+            updateParticipantsPayload();
+            updateSavingItemsPayload();
+            if (!validateSavingAmountValue()) {
+                event.preventDefault();
+                if (savingAmountField && typeof savingAmountField.reportValidity === 'function') {
+                    savingAmountField.reportValidity();
+                }
+                return;
+            }
+            try { saveDraft(true); } catch (error) { /* ignore */ }
+        });
+
+        document.querySelectorAll('[data-submit-action]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                submitInput.value = btn.dataset.submitAction;
+                currentStepInput.value = currentStep;
+            });
+        });
+
+        /* Step 1 project & professional linking */
+        const projectCategoryMap = projectOptionsData.reduce((acc, item) => {
+            acc[item.id] = item.categories || [];
+            return acc;
+        }, {});
+        const projectMembersMap = projectOptionsData.reduce((acc, item) => {
+            acc[item.id] = item.members || [];
+            return acc;
+        }, {});
+        const memberLookup = {};
+        projectOptionsData.forEach((item) => {
+            (item.members || []).forEach((member) => {
+                memberLookup[member.id] = member;
+            });
+        });
+
+        function ensurePlaceholder(selectEl, placeholder) {
+            if (!selectEl) return;
+            if (!selectEl.options.length || selectEl.options[0].value !== '') {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = placeholder;
+                option.disabled = true;
+                option.selected = !selectEl.value;
+                selectEl.insertBefore(option, selectEl.firstChild);
+            }
+        }
+
+        ensurePlaceholder(projectSelect, '请选择项目');
+        ensurePlaceholder(professionSelect, '请选择专业');
+
+        function refreshProfessionalOptions(projectId) {
+            if (!professionSelect) return;
+            let categories = [];
+            if (projectId) {
+                const scopedCategories = projectCategoryMap[projectId] || [];
+                categories = scopedCategories.length ? scopedCategories : globalProfessionalCategories;
+            }
+            const currentValue = professionSelect.value;
+            professionSelect.innerHTML = '';
+            ensurePlaceholder(professionSelect, '请选择专业');
+            if (!projectId || !categories.length) {
+                professionSelect.value = '';
+                professionSelect.disabled = !projectId;
+                return;
+            }
+            categories.forEach((category) => {
+                const option = document.createElement('option');
+                option.value = String(category.id);
+                option.textContent = `${category.code}｜${category.name}`;
+                professionSelect.appendChild(option);
+            });
+            professionSelect.disabled = false;
+            if (categories.some((cat) => String(cat.id) === currentValue)) {
+                professionSelect.value = currentValue;
+            } else {
+                professionSelect.value = '';
+            }
+        }
+
+        function refreshParticipantCandidates(projectId) {
+            if (!participantCandidateSelect) return;
+            participantCandidateSelect.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = projectId ? '请选择成员' : '请选择项目后加载成员';
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            participantCandidateSelect.appendChild(placeholder);
+            if (!projectId) return;
+            const members = projectMembersMap[projectId] || [];
+            members.forEach((member) => {
+                const option = document.createElement('option');
+                option.value = String(member.id);
+                option.textContent = [member.name, member.roleLabel, member.profession].filter(Boolean).join('｜');
+                participantCandidateSelect.appendChild(option);
+            });
+        }
+
+        if (projectSelect) {
+            const initialProjectId = parseInt(projectSelect.value || '0', 10);
+            refreshProfessionalOptions(initialProjectId);
+            refreshParticipantCandidates(initialProjectId);
+            projectSelect.addEventListener('change', (event) => {
+                const projectId = parseInt(event.target.value || '0', 10);
+                refreshProfessionalOptions(projectId);
+                refreshParticipantCandidates(projectId);
+                scheduleDraftSave();
+            });
+        }
+
+        if (projectSearchInput && projectSelect) {
+            projectSearchInput.addEventListener('input', () => {
+                const query = projectSearchInput.value.trim().toLowerCase();
+                Array.from(projectSelect.options).forEach((option) => {
+                    if (!option.value) return;
+                    const text = option.textContent.toLowerCase();
+                    option.hidden = query && !text.includes(query);
+                });
+            });
+        }
+
+        /* Review point selection */
+        function updateReviewPointCount() {
+            const selectedCount = reviewPointInputs.filter((input) => input.checked).length;
+            if (reviewPointBadge) {
+                reviewPointBadge.textContent = `已选 ${selectedCount} / {{ review_point_count }}`;
+            }
+        }
+
+        function applyIssueTemplate(force = false) {
+            if (!issueDescriptionField) return;
+            if (!force && issueDescriptionEdited) return;
+            const selectedIds = reviewPointInputs.filter((input) => input.checked).map((input) => input.value);
+            if (!selectedIds.length) {
+                if (force) {
+                    issueDescriptionField.value = '';
+                    issueDescriptionEdited = false;
+                }
+                return;
+            }
+            const lines = selectedIds
+                .map((id) => {
+                    const tpl = reviewTemplates[id];
+                    if (!tpl) return null;
+                    return `• ${tpl.section}：${tpl.content}`;
+                })
+                .filter(Boolean);
+            if (lines.length) {
+                issueDescriptionField.value = lines.join('\\n');
+                issueDescriptionEdited = false;
+            }
+        }
+
+        reviewPointInputs.forEach((input) => {
+            input.addEventListener('change', () => {
+                updateReviewPointCount();
+                applyIssueTemplate(false);
+            });
+        });
+        updateReviewPointCount();
+
+        if (issueDescriptionField) {
+            issueDescriptionField.addEventListener('input', () => {
+                issueDescriptionEdited = issueDescriptionField.value.trim().length > 0;
+            });
+        }
+
+        if (applyTemplateBtn) {
+            applyTemplateBtn.addEventListener('click', () => applyIssueTemplate(true));
+        }
+
+        if (!issueDescriptionEdited) {
+            applyIssueTemplate(false);
+        }
+
+        /* Calculation mode handling */
+        function parseDecimal(value) {
+            const num = parseFloat(value);
+            return Number.isFinite(num) ? num : 0;
+        }
+
+        function formatDecimal(value) {
+            return Number.isFinite(value) ? value.toFixed(2) : '';
+        }
+
+        function recalculateSavingAmount() {
+            if (!savingAmountField) return;
+            const mode = getCalculationMode();
+            if (mode !== 'auto') return;
+            const qb = parseDecimal(document.getElementById('id_quantity_before')?.value || '0');
+            const qa = parseDecimal(document.getElementById('id_quantity_after')?.value || '0');
+            const upb = parseDecimal(document.getElementById('id_unit_price_before')?.value || '0');
+            const upa = parseDecimal(document.getElementById('id_unit_price_after')?.value || '0');
+            const saving = (qb * upb) - (qa * upa);
+            savingAmountField.value = formatDecimal(saving);
+            validateSavingAmountValue();
+            scheduleDraftSave();
+        }
+
+        function getCalculationMode() {
+            const checked = calculationRadios().find((radio) => radio.checked);
+            return checked ? checked.value : 'auto';
+        }
+
+        function setSavingAmountValidity(isValid) {
+            if (!savingAmountField) return;
+            if (isValid) {
+                savingAmountField.classList.remove('is-invalid');
+                savingAmountField.setCustomValidity('');
+                if (savingAmountErrorEl) savingAmountErrorEl.classList.add('d-none');
+            } else {
+                savingAmountField.classList.add('is-invalid');
+                savingAmountField.setCustomValidity('节省金额需大于等于 0');
+                if (savingAmountErrorEl) savingAmountErrorEl.classList.remove('d-none');
+            }
+        }
+
+        function validateSavingAmountValue() {
+            if (!savingAmountField) return true;
+            const raw = (savingAmountField.value ?? '').toString().trim();
+            if (raw === '') {
+                setSavingAmountValidity(false);
+                return false;
+            }
+            const numeric = Number(raw);
+            if (!Number.isFinite(numeric) || numeric < 0) {
+                setSavingAmountValidity(false);
+                return false;
+            }
+            setSavingAmountValidity(true);
+            return true;
+        }
+
+        function toggleCalculationModeUI() {
+            const mode = getCalculationMode();
+            if (autoFields) {
+                autoFields.classList.toggle('d-none', mode !== 'auto');
+                autoFields.querySelectorAll('input').forEach((input) => {
+                    input.required = mode === 'auto';
+                });
+            }
+            if (savingAmountField) {
+                const hint = document.getElementById('savingAmountHint');
+                if (mode === 'auto') {
+                    savingAmountField.readOnly = true;
+                    savingAmountField.classList.add('bg-light');
+                    if (hint) hint.textContent = '自动计算模式下该字段只读。';
+                    recalculateSavingAmount();
+                } else {
+                    savingAmountField.readOnly = false;
+                    savingAmountField.classList.remove('bg-light');
+                    if (hint) hint.textContent = '手动输入模式下可自行录入估算金额。';
+                }
+            }
+            validateSavingAmountValue();
+            scheduleDraftSave();
+        }
+
+        calculationRadios().forEach((radio) => {
+            radio.addEventListener('change', () => {
+                toggleCalculationModeUI();
+            });
+        });
+
+        ['id_quantity_before', 'id_quantity_after', 'id_unit_price_before', 'id_unit_price_after'].forEach((id) => {
+            const field = document.getElementById(id);
+            if (field) {
+                field.addEventListener('input', () => {
+                    recalculateSavingAmount();
+                    scheduleDraftSave();
+                });
+            }
+        });
+
+        if (savingAmountField) {
+            savingAmountField.addEventListener('input', () => {
+                validateSavingAmountValue();
+                scheduleDraftSave();
+            });
+        }
+
+        toggleCalculationModeUI();
+
+        function updateAttachmentPreview(input) {
+            if (!input) return;
+            const wrapper = input.closest('.col-md-6');
+            const preview = wrapper ? wrapper.querySelector('[data-preview]') : null;
+            if (!preview) return;
+            const files = input.files;
+            if (files && files.length) {
+                const file = files[0];
+                const sizeText = file.size ? ` (${(file.size / 1024).toFixed(1)} KB)` : '';
+                preview.textContent = `${file.name}${sizeText}`;
+            } else {
+                preview.textContent = '';
+            }
+        }
+
+        function bindAttachmentPreview(input) {
+            if (!input) return;
+            updateAttachmentPreview(input);
+            input.addEventListener('change', () => {
+                updateAttachmentPreview(input);
+                scheduleDraftSave();
+            });
+        }
+
+        if (attachmentContainer) {
+            attachmentContainer.querySelectorAll('input[type="file"]').forEach((input) => bindAttachmentPreview(input));
+        }
+
+        /* Attachments add/remove */
+        if (attachmentContainer && addAttachmentBtn) {
+            const totalFormsInput = document.getElementById('id_attachments-TOTAL_FORMS');
+            const emptyTemplate = (function () {
+                const template = document.createElement('template');
+                template.innerHTML = `
+                <div class="attachment-card" data-form-index="__prefix__">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label">附件类型</label>
+                            {{ formset.empty_form.attachment_type }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">文件</label>
+                            {{ formset.empty_form.file }}
+                            <div class="text-muted small mt-1 attachment-preview" data-preview></div>
+                        </div>
+                        <div class="col-md-2">
+                            {% if formset.empty_form.can_delete %}
+                            <div class="form-check mt-2">
+                                {{ formset.empty_form.DELETE }}
+                                <label class="form-check-label">删除</label>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                </div>
+                `.trim();
+                return template.innerHTML;
+            })();
+
+            addAttachmentBtn.addEventListener('click', () => {
+                const total = parseInt(totalFormsInput.value || '0', 10);
+                const html = emptyTemplate.replace(/__prefix__/g, total);
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = html;
+                const card = wrapper.firstElementChild;
+                attachmentContainer.appendChild(card);
+                totalFormsInput.value = total + 1;
+                const newInput = card.querySelector('input[type="file"]');
+                bindAttachmentPreview(newInput);
+                scheduleDraftSave();
+            });
+        }
+
+        updateStepperUI();
+    })();
+</script>
+{% endblock %}
+

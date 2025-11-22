@@ -1,0 +1,570 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}接收项目立项 - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --vh-primary: #142F5B;
+        --vh-accent: #D62828;
+        --vh-surface: #F6F7FD;
+        --vh-border: #E4E8F4;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 20px;
+        padding: 28px 32px;
+        color: #fff;
+        box-shadow: 0 8px 24px rgba(20, 47, 91, 0.15);
+        margin-bottom: 28px;
+    }
+    
+    .info-section {
+        background: #fff;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        border: 1px solid #e5e7eb;
+        margin-bottom: 20px;
+        transition: box-shadow 0.2s;
+    }
+    
+    .info-section:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    .info-section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--vh-primary);
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .info-item-label {
+        font-size: 13px;
+        color: #6b7280;
+        font-weight: 500;
+    }
+    
+    .info-item-value {
+        font-size: 15px;
+        color: #1f2937;
+        font-weight: 600;
+        word-break: break-word;
+    }
+    
+    .info-item-value a {
+        color: var(--vh-primary);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    
+    .info-item-value a:hover {
+        color: var(--vh-accent);
+        text-decoration: underline;
+    }
+    
+    .batch-grid {
+        display: grid;
+        gap: 12px;
+        margin-top: 12px;
+    }
+    
+    .batch-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 12px;
+        padding: 16px;
+        border-left: 4px solid var(--vh-primary);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .batch-card:hover {
+        transform: translateX(4px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .batch-title {
+        font-weight: 600;
+        color: var(--vh-primary);
+        margin-bottom: 8px;
+        font-size: 15px;
+    }
+    
+    .batch-details {
+        font-size: 14px;
+        color: #4b5563;
+        line-height: 1.6;
+    }
+    
+    .profession-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 4px;
+    }
+    
+    .profession-tag {
+        display: inline-flex;
+        align-items: center;
+        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+        color: #3730a3;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .contract-amount-highlight {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 16px;
+        border: 2px solid #f59e0b;
+        text-align: center;
+    }
+    
+    .contract-amount-label {
+        font-size: 14px;
+        color: #92400e;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+    
+    .contract-amount-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #d97706;
+        letter-spacing: -0.5px;
+    }
+    
+    .receive-form-section {
+        background: linear-gradient(135deg, #fff 0%, #f0fdf4 100%);
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+        border: 2px solid #10b981;
+        margin-top: 32px;
+    }
+    
+    .receive-form-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #10b981;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    
+    .btn-group-custom {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="page-header">
+        <h1 style="font-size: 26px; font-weight: 700; margin: 0 0 4px 0;">接收项目立项</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ project.name }}</p>
+    </div>
+    
+    <!-- 立项凭证 -->
+    <div class="info-section">
+        <div class="info-section-title">
+            <span>📋</span>
+            <span>立项凭证</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-item-label">子公司</span>
+                <span class="info-item-value">{{ project.get_subsidiary_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">凭证类型</span>
+                <span class="info-item-value">{{ project.get_initiation_document_type_display }}</span>
+            </div>
+            {% if project.initiation_document %}
+            <div class="info-item">
+                <span class="info-item-label">凭证文件</span>
+                <span class="info-item-value">
+                    <a href="{{ project.initiation_document.url }}" target="_blank">
+                        <i class="bi bi-file-earmark-pdf"></i> 查看文件
+                    </a>
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 基本信息 -->
+    <div class="info-section">
+        <div class="info-section-title">
+            <span>📝</span>
+            <span>基本信息</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-item-label">项目名称</span>
+                <span class="info-item-value">{{ project.name }}</span>
+            </div>
+            {% if project.alias %}
+            <div class="info-item">
+                <span class="info-item-label">项目别名</span>
+                <span class="info-item-value">{{ project.alias }}</span>
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <span class="info-item-label">项目地址</span>
+                <span class="info-item-value">{{ project.project_address }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">项目业态</span>
+                <span class="info-item-value">{{ project.get_business_type_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">图纸阶段</span>
+                <span class="info-item-value">{{ project.get_design_stage_display }}</span>
+            </div>
+            {% if project.description %}
+            <div class="info-item" style="grid-column: 1 / -1;">
+                <span class="info-item-label">项目描述</span>
+                <span class="info-item-value" style="white-space: pre-wrap; font-weight: 400;">{{ project.description }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 项目规模 -->
+    {% if project.project_batches %}
+    <div class="info-section">
+        <div class="info-section-title">
+            <span>📐</span>
+            <span>项目规模</span>
+        </div>
+        <div class="batch-grid">
+            {% for batch in project.project_batches %}
+            <div class="batch-card">
+                <div class="batch-title">{{ batch.batch_name }}</div>
+                <div class="batch-details">
+                    建筑面积 <strong>{{ batch.total_area|floatformat:2 }}</strong> 平方米
+                    （地上 <strong>{{ batch.aboveground_area|floatformat:2 }}</strong> 平方米，
+                    地下 <strong>{{ batch.underground_area|floatformat:2 }}</strong> 平方米）<br>
+                    地上 <strong>{{ batch.aboveground_floors }}</strong> 层，地下 <strong>{{ batch.underground_floors }}</strong> 层
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="info-grid" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+            <div class="info-item">
+                <span class="info-item-label">总建筑面积</span>
+                <span class="info-item-value">{{ project.building_area|floatformat:2 }} 平方米</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">其中地上</span>
+                <span class="info-item-value">{{ project.aboveground_area|floatformat:2 }} 平方米</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">其中地下</span>
+                <span class="info-item-value">{{ project.underground_area|floatformat:2 }} 平方米</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- 服务内容 -->
+    <div class="info-section">
+        <div class="info-section-title">
+            <span>🔧</span>
+            <span>服务内容</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-item-label">服务类型</span>
+                <span class="info-item-value">{{ project.service_type.name }}</span>
+            </div>
+            {% if project.service_scope %}
+            <div class="info-item">
+                <span class="info-item-label">服务范围</span>
+                <span class="info-item-value">{{ project.service_scope }}</span>
+            </div>
+            {% endif %}
+            <div class="info-item" style="grid-column: 1 / -1;">
+                <span class="info-item-label">服务专业</span>
+                <div class="profession-tags">
+                    {% for profession in project.service_professions.all %}
+                    <span class="profession-tag">{{ profession.name }}</span>
+                    {% empty %}
+                    <span class="text-muted">未选择</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 委托单位信息 -->
+    <div class="info-section">
+        <div class="info-section-title">
+            <span>🏢</span>
+            <span>委托单位信息</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-item-label">单位名称</span>
+                <span class="info-item-value">{{ project.client_company_name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">统一社会信用代码</span>
+                <span class="info-item-value">{{ project.client_credit_code }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">注册资本</span>
+                <span class="info-item-value">{{ project.client_registered_capital|floatformat:2 }} 万元</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">注册地址</span>
+                <span class="info-item-value">{{ project.client_registered_address }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">企业类型</span>
+                <span class="info-item-value">{{ project.get_client_company_type_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">企业所有</span>
+                <span class="info-item-value">{{ project.get_client_ownership_type_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">成立日期</span>
+                <span class="info-item-value">{{ project.client_established_date|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">项目负责人</span>
+                <span class="info-item-value">{{ project.client_contact_person }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">联系电话</span>
+                <span class="info-item-value">{{ project.client_phone }}</span>
+            </div>
+            {% if project.client_litigation_count is not None %}
+            <div class="info-item">
+                <span class="info-item-label">司法案件数量</span>
+                <span class="info-item-value">{{ project.client_litigation_count }}（启信宝）</span>
+            </div>
+            {% endif %}
+            {% if project.client_enforcement_count is not None %}
+            <div class="info-item">
+                <span class="info-item-label">被执行人数量</span>
+                <span class="info-item-value">{{ project.client_enforcement_count }}（启信宝）</span>
+            </div>
+            {% endif %}
+            {% if project.client_final_case_count is not None %}
+            <div class="info-item">
+                <span class="info-item-label">终本案件数量</span>
+                <span class="info-item-value">{{ project.client_final_case_count }}（启信宝）</span>
+            </div>
+            {% endif %}
+            {% if project.client_restriction_count is not None %}
+            <div class="info-item">
+                <span class="info-item-label">限制高消费数量</span>
+                <span class="info-item-value">{{ project.client_restriction_count }}（启信宝）</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 设计单位信息 -->
+    <div class="info-section">
+        <div class="info-section-title">
+            <span>🏗️</span>
+            <span>设计单位信息</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-item-label">单位名称</span>
+                <span class="info-item-value">{{ project.design_company }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">统一社会信用代码</span>
+                <span class="info-item-value">{{ project.design_credit_code }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">项目负责人</span>
+                <span class="info-item-value">{{ project.design_contact_person }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">联系电话</span>
+                <span class="info-item-value">{{ project.design_phone }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 合同金额信息 -->
+    {% if project.billing_method %}
+    <div class="info-section">
+        <div class="info-section-title">
+            <span>💰</span>
+            <span>合同金额</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-item-label">取费方式</span>
+                <span class="info-item-value">{{ project.get_billing_method_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">项目区域</span>
+                <span class="info-item-value">{{ project.get_project_region_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">结构形式</span>
+                <span class="info-item-value">{{ project.get_structure_type_display }}</span>
+            </div>
+            {% if project.billing_method == 'pure_rate' and project.fee_rate_coefficient %}
+            <div class="info-item">
+                <span class="info-item-label">取费系数</span>
+                <span class="info-item-value">{{ project.fee_rate_coefficient|floatformat:2 }}%</span>
+            </div>
+            {% elif project.billing_method == 'base_fee_rate' %}
+            {% if project.base_fee %}
+            <div class="info-item">
+                <span class="info-item-label">基本费</span>
+                <span class="info-item-value">¥{{ project.base_fee|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            {% if project.fee_rate_coefficient %}
+            <div class="info-item">
+                <span class="info-item-label">取费系数</span>
+                <span class="info-item-value">{{ project.fee_rate_coefficient|floatformat:2 }}%</span>
+            </div>
+            {% endif %}
+            {% elif project.billing_method == 'unit_price' and project.unit_price %}
+            <div class="info-item">
+                <span class="info-item-label">包干单价</span>
+                <span class="info-item-value">¥{{ project.unit_price|floatformat:2 }} /平方米</span>
+            </div>
+            {% endif %}
+        </div>
+        {% if project.contract_amount %}
+        <div class="contract-amount-highlight">
+            <div class="contract-amount-label">合同金额</div>
+            <div class="contract-amount-value">¥{{ project.contract_amount|floatformat:2 }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- 提交信息 -->
+    {% if approval %}
+    <div class="info-section">
+        <div class="info-section-title">
+            <span>📤</span>
+            <span>提交信息</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-item-label">提交人</span>
+                <span class="info-item-value">{{ approval.submitted_by.get_full_name|default:approval.submitted_by.username }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-item-label">提交时间</span>
+                <span class="info-item-value">{{ approval.submitted_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            {% if approval.submission_comment %}
+            <div class="info-item" style="grid-column: 1 / -1;">
+                <span class="info-item-label">提交说明</span>
+                <span class="info-item-value" style="white-space: pre-wrap; font-weight: 400;">{{ approval.submission_comment }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- 接收表单 -->
+    <div class="receive-form-section">
+        <div class="receive-form-title">
+            <span>📥</span>
+            <span>接收操作</span>
+        </div>
+        
+        <form method="post" id="receiveForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label">接收意见（可选）</label>
+                <textarea name="comment" class="form-control" rows="3" placeholder="填写接收意见"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label required">驳回原因（驳回时需要填写）</label>
+                <textarea name="rejection_reason" class="form-control" rows="3" placeholder="如果驳回，请填写驳回原因" id="rejectionReason"></textarea>
+            </div>
+            
+            <div class="btn-group-custom">
+                <a href="{% url 'project_pages:project_initiation_detail' project.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回
+                </a>
+                <button type="submit" name="action" value="reject" class="btn btn-danger" onclick="return confirmReject();">
+                    <i class="bi bi-x-circle"></i> 驳回
+                </button>
+                <button type="submit" name="action" value="receive" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> 接收
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function confirmReject() {
+    const reason = document.getElementById('rejectionReason').value.trim();
+    if (!reason) {
+        alert('请填写驳回原因');
+        document.getElementById('rejectionReason').focus();
+        return false;
+    }
+    return confirm('确认驳回此项目立项申请？');
+}
+</script>
+{% endblock %}
+

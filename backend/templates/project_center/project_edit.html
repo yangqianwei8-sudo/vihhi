@@ -1,0 +1,233 @@
+{% extends "project_center/base.html" %}
+{% load static %}
+
+{% block title %}编辑项目 - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">编辑项目：{{ project.project_number }} - {{ project.name }}</h4>
+            <div>
+                <button type="button" class="btn btn-light btn-sm" onclick="saveDraft()">保存草稿</button>
+                <button type="button" class="btn btn-success btn-sm" onclick="submitForm()">提交申请</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <form id="projectForm" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" id="formAction" value="draft">
+                
+                <!-- 基础信息卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">基础信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">子公司 <span class="text-danger">*</span></label>
+                                <select name="subsidiary" class="form-select" required>
+                                    {% for value, label in subsidiary_choices %}
+                                    <option value="{{ value }}" {% if initial_values.subsidiary|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">项目编号</label>
+                                <input type="text" class="form-control" value="{{ project.project_number }}" readonly>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">项目名称 <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" required maxlength="200" value="{{ initial_values.name }}">
+                                <small class="text-muted"><span id="nameCount">{{ initial_values.name|length }}</span>/200</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">项目别名</label>
+                                <input type="text" name="alias" class="form-control" maxlength="200" value="{{ initial_values.alias }}">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">项目描述</label>
+                                <textarea name="description" class="form-control" rows="3" placeholder="补充项目背景、目标等信息">{{ initial_values.description }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 服务信息卡片 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">服务信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">服务类型 <span class="text-danger">*</span></label>
+                                <div class="btn-group w-100" role="group">
+                                    {% for service_type in service_types %}
+                                    <input type="radio" class="btn-check" name="service_type" id="service_{{ service_type.code }}" value="{{ service_type.id }}" data-code="{{ service_type.code }}" data-required="true" {% if initial_values.service_type|stringformat:"s" == service_type.id|stringformat:"s" %}checked{% endif %}>
+                                    <label class="btn btn-outline-primary" for="service_{{ service_type.code }}">{{ service_type.name }}</label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">项目业态 <span class="text-danger">*</span></label>
+                                <select name="business_type" class="form-select" data-required="true">
+                                    <option value="">请选择</option>
+                                    {% for value, label in business_types %}
+                                    <option value="{{ value }}" {% if initial_values.business_type|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">图纸阶段 <span class="text-danger">*</span></label>
+                                <select name="design_stage" class="form-select" data-required="true">
+                                    <option value="">请选择</option>
+                                    {% for value, label in design_stages %}
+                                    <option value="{{ value }}" {% if initial_values.design_stage|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">服务专业 <span class="text-danger">*</span></label>
+                                <div id="professionOptions" class="form-check-group">
+                                    <!-- 动态生成专业选项 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const professionOptions = {{ service_professions_map_json }};
+const preselectedProfessionIds = new Set({{ selected_profession_ids_json }});
+
+document.querySelectorAll('input[name="service_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        updateProfessionOptions(this.value);
+    });
+});
+
+function updateProfessionOptions(serviceTypeId) {
+    const container = document.getElementById('professionOptions');
+    container.innerHTML = '';
+    const options = professionOptions[String(serviceTypeId)] || [];
+    options.forEach(profession => {
+        const div = document.createElement('div');
+        div.className = 'form-check form-check-inline';
+        div.innerHTML = `
+            <input class="form-check-input" type="checkbox" name="service_profession_ids[]" id="prof_${profession.id}" value="${profession.id}" data-required="true">
+            <label class="form-check-label" for="prof_${profession.id}">${profession.name}</label>
+        `;
+        container.appendChild(div);
+    });
+
+    options.forEach(profession => {
+        const checkbox = document.getElementById(`prof_${profession.id}`);
+        if (checkbox && preselectedProfessionIds.has(profession.id)) {
+            checkbox.checked = true;
+        }
+    });
+}
+
+document.querySelector('input[name="name"]').addEventListener('input', function() {
+    document.getElementById('nameCount').textContent = this.value.length;
+});
+
+function saveDraft() {
+    document.getElementById('formAction').value = 'draft';
+    document.getElementById('projectForm').submit();
+}
+
+function submitForm() {
+    let isValid = true;
+    const serviceType = document.querySelector('input[name="service_type"]:checked');
+    const businessType = document.querySelector('select[name="business_type"]').value;
+    const designStage = document.querySelector('select[name="design_stage"]').value;
+    const selectedProfessions = document.querySelectorAll('input[name="service_profession_ids[]"]:checked');
+    
+    if (!serviceType) {
+        alert('请选择服务类型');
+        isValid = false;
+    }
+    if (!businessType) {
+        alert('请选择项目业态');
+        isValid = false;
+    }
+    if (!designStage) {
+        alert('请选择图纸阶段');
+        isValid = false;
+    }
+    if (selectedProfessions.length === 0) {
+        alert('请选择至少一个服务专业');
+        isValid = false;
+    }
+
+    if (isValid) {
+        document.querySelectorAll('[data-required="true"]').forEach(el => {
+            el.setAttribute('required', 'required');
+        });
+        document.getElementById('formAction').value = 'submit';
+        document.getElementById('projectForm').submit();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.querySelector('input[name="name"]');
+    if (nameInput) {
+        document.getElementById('nameCount').textContent = nameInput.value.length;
+    }
+
+    const radios = document.querySelectorAll('input[name="service_type"]');
+    let activeServiceType = document.querySelector('input[name="service_type"]:checked');
+    if (!activeServiceType && radios.length > 0) {
+        radios[0].checked = true;
+        activeServiceType = radios[0];
+    }
+    if (activeServiceType) {
+        updateProfessionOptions(activeServiceType.value);
+    }
+
+});
+</script>
+
+<style>
+.card {
+    border: none;
+    border-radius: 8px;
+}
+
+.card-header {
+    border-bottom: 2px solid #e9ecef;
+}
+
+.form-check-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.btn-group .btn-check:checked + .btn {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+

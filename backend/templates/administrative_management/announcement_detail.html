@@ -1,0 +1,221 @@
+{% extends "administrative_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:announcement_management' %}">公告通知</a></li>
+<li class="breadcrumb-item active">{{ announcement.title|truncatewords:5 }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .info-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .info-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-bottom: 16px;
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .info-label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: 14px;
+        color: #1f2937;
+        font-weight: 500;
+    }
+    .announcement-content {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        margin: 20px 0;
+        min-height: 200px;
+    }
+    .read-record-item {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="text-end mb-4">
+        <a href="{% url 'admin_pages:announcement_management' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        <a href="{% url 'admin_pages:announcement_update' announcement.id %}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> 编辑
+        </a>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <h3 style="margin: 0; color: #1f2937;">
+                {% if announcement.is_top %}
+                <span class="badge bg-danger me-2">置顶</span>
+                {% endif %}
+                {% if announcement.is_popup %}
+                <span class="badge bg-warning me-2">弹窗提醒</span>
+                {% endif %}
+                {{ announcement.title }}
+            </h3>
+        </div>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">分类</span>
+                <span class="info-value">{{ announcement.get_category_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">优先级</span>
+                <span class="info-value">
+                    {% if announcement.priority == 'urgent' %}
+                    <span class="badge bg-danger">紧急</span>
+                    {% elif announcement.priority == 'important' %}
+                    <span class="badge bg-warning">重要</span>
+                    {% else %}
+                    <span class="badge bg-info">普通</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">发布范围</span>
+                <span class="info-value">{{ announcement.get_target_scope_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">发布日期</span>
+                <span class="info-value">{{ announcement.publish_date|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">失效日期</span>
+                <span class="info-value">{{ announcement.expiry_date|date:"Y-m-d"|default:"永久有效" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">发布人</span>
+                <span class="info-value">{{ announcement.publisher.get_full_name|default:announcement.publisher.username }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">查看次数</span>
+                <span class="info-value">{{ announcement.view_count }} 次</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">状态</span>
+                <span class="info-value">
+                    {% if announcement.is_active %}
+                    <span class="badge bg-success">生效</span>
+                    {% else %}
+                    <span class="badge bg-secondary">失效</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 公告内容 -->
+    <div class="info-card">
+        <h5>公告内容</h5>
+        <div class="announcement-content">
+            {{ announcement.content|safe|linebreaks }}
+        </div>
+        {% if announcement.attachment %}
+        <div class="mt-3">
+            <span class="info-label">附件</span>
+            <div class="mt-2">
+                <a href="{{ announcement.attachment.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                    <i class="bi bi-file-earmark"></i> 下载附件
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 阅读记录 -->
+    {% if read_records %}
+    <div class="info-card">
+        <h5>阅读记录 (最近20条)</h5>
+        {% for record in read_records %}
+        <div class="read-record-item">
+            <div>
+                <strong>{{ record.user.get_full_name|default:record.user.username }}</strong>
+                <span class="text-muted ms-2" style="font-size: 13px;">{{ record.read_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 其他信息 -->
+    <div class="info-card">
+        <h5>其他信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">创建时间</span>
+                <span class="info-value">{{ announcement.created_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">发布时间</span>
+                <span class="info-value">{{ announcement.publish_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

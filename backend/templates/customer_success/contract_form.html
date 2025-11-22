@@ -1,0 +1,419 @@
+{% extends "customer_success/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .form-section {
+        margin-bottom: 32px;
+    }
+    .form-section h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+    .form-text {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+    .required-field::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .error-list {
+        list-style: none;
+        padding: 0;
+        margin: 4px 0 0 0;
+        color: #dc2626;
+        font-size: 13px;
+    }
+    .error-list li {
+        margin-bottom: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <div class="hero-icon">{{ page_icon }}</div>
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">填写合同信息</p>
+        </div>
+    </div>
+
+    <!-- 表单 -->
+    <form method="post" class="form-card">
+        {% csrf_token %}
+        
+        <!-- 关联信息 -->
+        <div class="form-section">
+            <h5>关联信息</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label required-field">客户</label>
+                        {{ form.client }}
+                        {% if form.client.errors %}
+                            <ul class="error-list">
+                                {% for error in form.client.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        {% if form.client.help_text %}
+                            <div class="form-text">{{ form.client.help_text }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">关联项目</label>
+                        {{ form.project }}
+                        {% if form.project.errors %}
+                            <ul class="error-list">
+                                {% for error in form.project.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">主合同</label>
+                        {{ form.parent_contract }}
+                        {% if form.parent_contract.errors %}
+                            <ul class="error-list">
+                                {% for error in form.parent_contract.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        <div class="form-text">用于补充协议、变更协议关联主合同</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 基本信息 -->
+        <div class="form-section">
+            <h5>基本信息</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">合同编号</label>
+                        {{ form.contract_number }}
+                        {% if form.contract_number.errors %}
+                            <ul class="error-list">
+                                {% for error in form.contract_number.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        <div class="form-text">留空将自动生成（格式：VIH-CON-YYYY-NNNN），或手动输入自定义编号</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">合同名称</label>
+                        {{ form.contract_name }}
+                        {% if form.contract_name.errors %}
+                            <ul class="error-list">
+                                {% for error in form.contract_name.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        <div class="form-text">如未填写，将使用合同编号</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label required-field">合同类型</label>
+                        {{ form.contract_type }}
+                        {% if form.contract_type.errors %}
+                            <ul class="error-list">
+                                {% for error in form.contract_type.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label required-field">合同状态</label>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                            <ul class="error-list">
+                                {% for error in form.status.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 金额信息 -->
+        <div class="form-section">
+            <h5>金额信息</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">合同金额（含税）</label>
+                        {{ form.contract_amount }}
+                        {% if form.contract_amount.errors %}
+                            <ul class="error-list">
+                                {% for error in form.contract_amount.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">税率(%)</label>
+                        {{ form.tax_rate }}
+                        {% if form.tax_rate.errors %}
+                            <ul class="error-list">
+                                {% for error in form.tax_rate.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        <div class="form-text">默认6%，可调整</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 时间信息 -->
+        <div class="form-section">
+            <h5>时间信息</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">合同签订日期</label>
+                        {{ form.contract_date }}
+                        {% if form.contract_date.errors %}
+                            <ul class="error-list">
+                                {% for error in form.contract_date.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">合同生效日期</label>
+                        {{ form.effective_date }}
+                        {% if form.effective_date.errors %}
+                            <ul class="error-list">
+                                {% for error in form.effective_date.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">合同开始日期</label>
+                        {{ form.start_date }}
+                        {% if form.start_date.errors %}
+                            <ul class="error-list">
+                                {% for error in form.start_date.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">合同结束日期</label>
+                        {{ form.end_date }}
+                        {% if form.end_date.errors %}
+                            <ul class="error-list">
+                                {% for error in form.end_date.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 双方信息 -->
+        <div class="form-section">
+            <h5>双方信息</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">甲方名称</label>
+                        {{ form.party_a_name }}
+                        {% if form.party_a_name.errors %}
+                            <ul class="error-list">
+                                {% for error in form.party_a_name.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">甲方联系人</label>
+                        {{ form.party_a_contact }}
+                        {% if form.party_a_contact.errors %}
+                            <ul class="error-list">
+                                {% for error in form.party_a_contact.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">乙方名称</label>
+                        {{ form.party_b_name }}
+                        {% if form.party_b_name.errors %}
+                            <ul class="error-list">
+                                {% for error in form.party_b_name.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">乙方联系人</label>
+                        {{ form.party_b_contact }}
+                        {% if form.party_b_contact.errors %}
+                            <ul class="error-list">
+                                {% for error in form.party_b_contact.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">合同签订人</label>
+                        {{ form.signed_by }}
+                        {% if form.signed_by.errors %}
+                            <ul class="error-list">
+                                {% for error in form.signed_by.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">合同审批人</label>
+                        {{ form.approved_by }}
+                        {% if form.approved_by.errors %}
+                            <ul class="error-list">
+                                {% for error in form.approved_by.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 其他信息 -->
+        <div class="form-section">
+            <h5>其他信息</h5>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label">合同描述</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <ul class="error-list">
+                                {% for error in form.description.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label">备注</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                            <ul class="error-list">
+                                {% for error in form.notes.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <div class="form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                是否启用
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 表单错误 -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+            {% for error in form.non_field_errors %}
+                <p class="mb-0">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- 提交按钮 -->
+        <div class="text-end mt-4">
+            <a href="{% if contract %}{% url 'business_pages:contract_detail' contract.id %}{% else %}{% url 'business_pages:contract_management' %}{% endif %}" class="btn btn-outline-secondary me-2">取消</a>
+            <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

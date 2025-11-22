@@ -1,0 +1,622 @@
+{% extends 'base.html' %}
+
+{% block title %}质量审核总览{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    :root {
+        --brand-primary: #142F5B;
+        --brand-accent: #1F3E7C;
+        --brand-light: #E7EEF8;
+        --brand-soft: #F3F6FB;
+        --brand-danger: #D62828;
+    }
+
+    .review-shell {
+        background: #fff;
+        border-radius: 20px;
+        padding: 28px 32px;
+        box-shadow: 0 18px 40px rgba(20, 47, 91, 0.12);
+    }
+
+    .summary-card {
+        background: var(--brand-soft);
+        border-radius: 16px;
+        padding: 18px 20px;
+        height: 100%;
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+
+    .summary-title {
+        font-size: 13px;
+        color: rgba(20, 47, 91, 0.6);
+        font-weight: 600;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+    }
+
+    .summary-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--brand-primary);
+    }
+
+    .summary-desc {
+        font-size: 12px;
+        color: rgba(20, 47, 91, 0.55);
+    }
+
+    .pending-cluster {
+        border-radius: 16px;
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        background: #fff;
+        padding: 20px 22px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .cluster-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+    }
+
+    .cluster-badge {
+        background: var(--brand-light);
+        color: var(--brand-primary);
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .opinion-item {
+        display: flex;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px dashed rgba(20, 47, 91, 0.12);
+    }
+
+    .opinion-item:last-child {
+        border-bottom: none;
+    }
+
+    .opinion-tag {
+        background: rgba(20, 47, 91, 0.08);
+        color: var(--brand-primary);
+        border-radius: 10px;
+        padding: 4px 8px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .opinion-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 2px;
+    }
+
+    .opinion-meta {
+        font-size: 12px;
+        color: rgba(15, 23, 42, 0.55);
+    }
+
+    .insight-card {
+        background: linear-gradient(135deg, rgba(20,47,91,0.92), rgba(31,62,124,0.92));
+        border-radius: 18px;
+        padding: 20px;
+        color: #fff;
+        height: 100%;
+        box-shadow: 0 12px 28px rgba(20, 47, 91, 0.25);
+    }
+
+    .insight-item + .insight-item {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .insight-title {
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 6px;
+    }
+
+    .insight-content {
+        font-weight: 600;
+        font-size: 15px;
+    }
+
+    .insight-meta {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--brand-primary);
+    }
+
+    .chart-card {
+        background: #fff;
+        border-radius: 18px;
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        padding: 18px 20px;
+        height: 100%;
+        box-shadow: 0 12px 28px rgba(20, 47, 91, 0.08);
+    }
+
+    .chart-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--brand-primary);
+        margin-bottom: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="review-shell mb-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+            <div>
+                <div class="badge bg-primary-subtle text-primary fw-semibold px-3 py-1 mb-2">Quality Review</div>
+                <h1 class="h3 mb-1" style="color:var(--brand-primary);">质量审核总览</h1>
+                <p class="text-muted mb-0">掌握待审核意见、近期审批动态与风险提醒，确保审核效率与质量。</p>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="summary-card">
+                    <div class="summary-title">待审核意见</div>
+                    <div class="summary-value">{{ summary.total_pending }}</div>
+                    <div class="summary-desc">当前排队中</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-card">
+                    <div class="summary-title">未指派审核人</div>
+                    <div class="summary-value text-warning">{{ summary.total_unassigned }}</div>
+                    <div class="summary-desc">待分配至审核人</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-card">
+                    <div class="summary-title">已过期</div>
+                    <div class="summary-value text-danger">{{ summary.total_overdue }}</div>
+                    <div class="summary-desc">已超过整改期限</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-card">
+                    <div class="summary-title">累计意见</div>
+                    <div class="summary-value">{{ summary.total_all }}</div>
+                    <div class="summary-desc">系统内全部意见数据</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="summary-card">
+                    <div class="summary-title">平均首响时间</div>
+                    <div class="summary-value">
+                        {% if sla_metrics.avg_response_hours %}
+                            {{ sla_metrics.avg_response_hours|floatformat:1 }}
+                        {% else %}
+                            --
+                        {% endif %}
+                    </div>
+                    <div class="summary-desc">提交到首次指派/处理</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="summary-card">
+                    <div class="summary-title">平均结案耗时</div>
+                    <div class="summary-value">
+                        {% if sla_metrics.avg_cycle_hours %}
+                            {{ sla_metrics.avg_cycle_hours|floatformat:1 }}
+                        {% else %}
+                            --
+                        {% endif %}
+                    </div>
+                    <div class="summary-desc">提交到正式结案</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="summary-card">
+                    <div class="summary-title">累计节省金额</div>
+                    <div class="summary-value text-success">¥{{ financial_summary.total_saving|default_if_none:"0"|floatformat:0 }}</div>
+                    <div class="summary-desc">含最近通过金额 ¥{{ financial_summary.recent_saving|default_if_none:"0"|floatformat:0 }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-lg-4">
+                <div class="chart-card">
+                    <div class="chart-title">状态分布</div>
+                    <canvas id="statusChart" height="180"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="chart-card">
+                    <div class="chart-title">待审核 · 专业分布</div>
+                    <canvas id="professionChart" height="180"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="chart-card">
+                    <div class="chart-title">待审核 · 审核人分布</div>
+                    <canvas id="reviewerChart" height="180"></canvas>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="chart-card">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="chart-title mb-0">近30天待审核趋势</div>
+                        <small class="text-muted">数据来源：ProductionStatistic</small>
+                    </div>
+                    <canvas id="trendChart" height="210"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 align-items-stretch mb-4">
+            <div class="col-lg-8">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="section-title mb-0">按专业待审核</h2>
+                    <span class="text-muted" style="font-size:13px;">展示近期待审核的重点专业</span>
+                </div>
+                <div class="row g-3">
+                    {% for bucket in pending_cards %}
+                    <div class="col-md-6">
+                        <div class="pending-cluster h-100">
+                            <div class="cluster-header">
+                                <div class="fw-semibold" style="color:var(--brand-primary);">{{ bucket.category }}</div>
+                                <div class="cluster-badge">待审 {{ bucket.count }}</div>
+                            </div>
+                            {% for item in bucket.items %}
+                            {% with opinion=item.opinion %}
+                            <div class="opinion-item">
+                                <div class="opinion-tag">
+                                    {% if opinion.project %}
+                                        {{ opinion.project.project_number }}
+                                    {% else %}
+                                        未关联
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="opinion-title">
+                                        {{ opinion.location_name }}
+                                        {% if item.is_unassigned %}
+                                        <span class="badge bg-warning-subtle text-warning ms-1">未指派</span>
+                                        {% endif %}
+                                        {% if item.is_overdue %}
+                                        <span class="badge bg-danger-subtle text-danger ms-1">超期</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="opinion-meta">
+                                        提出人：{{ opinion.created_by.get_full_name|default:opinion.created_by.username }} ·
+                                        进入审核：{{ opinion.submitted_at|date:"Y-m-d" }} ·
+                                        等待 {{ item.waiting_hours|default:"-"|floatformat:1 }} 小时
+                                        {% if opinion.response_deadline %}
+                                        · 截止 {{ opinion.response_deadline|date:"m-d" }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endwith %}
+                            {% empty %}
+                            <div class="text-muted small">暂无待处理意见</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12">
+                        <div class="alert alert-success mb-0">所有意见均已审核完毕。</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="insight-card">
+                    <h2 class="h5 mb-3">智能提示</h2>
+                     {% for insight in insights %}
+                    <div class="insight-item">
+                        <div class="insight-title">{{ insight.title }}</div>
+                        <div class="insight-content">{{ insight.content }}</div>
+                        <div class="insight-meta">{{ insight.time }}</div>
+                    </div>
+                    {% empty %}
+                    <p class="mb-0 text-white-50">暂无提醒，继续保持高效审核节奏！</p>
+                    {% endfor %}
+                </div>
+                <div class="card border-0 shadow-sm mt-3">
+                    <div class="card-header bg-light fw-semibold text-danger">超期提醒</div>
+                    <div class="card-body">
+                        {% for entry in overdue_list %}
+                        {% with opinion=entry.opinion %}
+                        <div class="opinion-item border-bottom pb-3 mb-3">
+                            <div class="opinion-tag bg-danger-subtle text-danger">超期 {{ entry.days }} 天</div>
+                        <div>
+                            <div class="opinion-title">
+                                {% if opinion.project %}
+                                    {{ opinion.project.project_number }}
+                                {% else %}
+                                    未关联
+                                {% endif %}
+                                · {{ opinion.location_name }}
+                            </div>
+                            <div class="opinion-meta">
+                                截止 {{ opinion.response_deadline|date:"Y-m-d" }} ·
+                                提出人：{{ opinion.created_by.get_full_name|default:opinion.created_by.username }}
+                            </div>
+                        </div>
+                        </div>
+                        {% endwith %}
+                        {% empty %}
+                        <p class="text-muted mb-0">暂无超期记录。</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-light fw-semibold">近期通过</div>
+                    <div class="card-body">
+                        {% for opinion in approved_recent %}
+                        <div class="opinion-item border-bottom pb-3 mb-3">
+                            <div class="opinion-tag bg-success-subtle text-success">已通过</div>
+                            <div>
+                                <div class="opinion-title">
+                                    {% if opinion.project %}
+                                        {{ opinion.project.project_number }}
+                                    {% else %}
+                                        未关联
+                                    {% endif %}
+                                     · {{ opinion.location_name }}
+                                </div>
+                                <div class="opinion-meta">
+                                    审核时间：{{ opinion.reviewed_at|date:"Y-m-d" }} ·
+                                    节省金额：¥{{ opinion.saving_amount|default_if_none:"0" }}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted mb-0">近30天暂无通过记录。</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-light fw-semibold text-danger">驳回记录</div>
+                    <div class="card-body">
+                        {% for opinion in rejected_recent %}
+                        <div class="opinion-item border-bottom pb-3 mb-3">
+                            <div class="opinion-tag bg-danger-subtle text-danger">已驳回</div>
+                            <div>
+                                <div class="opinion-title">
+                                    {% if opinion.project %}
+                                        {{ opinion.project.project_number }}
+                                    {% else %}
+                                        未关联
+                                    {% endif %}
+                                     · {{ opinion.location_name }}
+                                </div>
+                                <div class="opinion-meta">
+                                    审核时间：{{ opinion.reviewed_at|date:"Y-m-d" }} ·
+                                    问题类别：{{ opinion.get_issue_category_display }}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted mb-0">近30天暂无驳回记录。</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{ status_chart|json_script:"status-chart-data" }}
+{{ profession_chart|json_script:"profession-chart-data" }}
+{{ reviewer_chart|json_script:"reviewer-chart-data" }}
+<script>
+    const statisticFetchConfig = {
+        endpoint: "{% url 'production_quality:production-statistic-list' %}?statistic_type=quality",
+    };
+</script>
+<script>
+    (function() {
+        const palette = [
+            '#142F5B',
+            '#1F3E7C',
+            '#3162B2',
+            '#4A7ED1',
+            '#6E9BE4',
+            '#9CB9F2',
+        ];
+
+        const statusData = JSON.parse(document.getElementById('status-chart-data').textContent);
+        const professionData = JSON.parse(document.getElementById('profession-chart-data').textContent);
+        const reviewerData = JSON.parse(document.getElementById('reviewer-chart-data').textContent);
+
+        const statusCtx = document.getElementById('statusChart');
+        if (statusCtx) {
+            new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: statusData.labels,
+                    datasets: [{
+                        data: statusData.data,
+                        backgroundColor: palette,
+                        borderWidth: 1,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#142F5B' },
+                        },
+                    },
+                },
+            });
+        }
+
+        const professionCtx = document.getElementById('professionChart');
+        if (professionCtx) {
+            new Chart(professionCtx, {
+                type: 'bar',
+                data: {
+                    labels: professionData.labels,
+                    datasets: [{
+                        data: professionData.data,
+                        backgroundColor: palette[2],
+                        borderRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#142F5B' },
+                            grid: { display: false },
+                        },
+                        y: {
+                            ticks: { color: '#142F5B', precision: 0 },
+                            grid: { color: 'rgba(20,47,91,0.08)' },
+                        },
+                    },
+                },
+            });
+        }
+
+        const reviewerCtx = document.getElementById('reviewerChart');
+        if (reviewerCtx) {
+            new Chart(reviewerCtx, {
+                type: 'bar',
+                data: {
+                    labels: reviewerData.labels,
+                    datasets: [{
+                        data: reviewerData.data,
+                        backgroundColor: palette[4],
+                        borderRadius: 6,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#142F5B', precision: 0 },
+                            grid: { color: 'rgba(20,47,91,0.08)' },
+                        },
+                        y: {
+                            ticks: { color: '#142F5B' },
+                            grid: { display: false },
+                        },
+                    },
+                },
+            });
+        }
+
+        const trendCtx = document.getElementById('trendChart');
+        if (trendCtx && statisticFetchConfig.endpoint) {
+            fetch(statisticFetchConfig.endpoint, {
+                headers: {
+                    'Accept': 'application/json',
+                },
+            })
+            .then((response) => response.json())
+            .then((payload) => {
+                const results = Array.isArray(payload?.results)
+                    ? payload.results
+                    : Array.isArray(payload)
+                        ? payload
+                        : [];
+                const labels = [];
+                const waitingData = [];
+                const overdueData = [];
+                results.slice(0, 30).reverse().forEach((item) => {
+                    labels.push(item.snapshot_date);
+                    const pending = item.payload?.pending || {};
+                    waitingData.push(pending.total ?? 0);
+                    overdueData.push(pending.overdue ?? 0);
+                });
+                new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                label: '待审核',
+                                data: waitingData,
+                                borderColor: '#3162B2',
+                                backgroundColor: 'rgba(49, 98, 178, 0.12)',
+                                tension: 0.35,
+                                fill: true,
+                            },
+                            {
+                                label: '超期',
+                                data: overdueData,
+                                borderColor: '#D62828',
+                                backgroundColor: 'rgba(214, 40, 40, 0.15)',
+                                tension: 0.35,
+                                fill: true,
+                            }
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { precision: 0 }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: '#142F5B' },
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                        },
+                    },
+                });
+            })
+            .catch((error) => {
+                console.warn('加载趋势数据失败', error);
+            });
+        }
+    })();
+</script>
+{% endblock %}
+

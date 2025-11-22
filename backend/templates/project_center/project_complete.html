@@ -3,189 +3,612 @@
 
 {% block title %}项目信息完善 - {{ project.name }}{% endblock %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'project_pages:project_detail' project.id %}">{{ project.name }}</a></li>
-<li class="breadcrumb-item active">信息完善</li>
+{% block extra_css %}
+<style>
+    .project-complete-page {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+        min-height: calc(100vh - 140px);
+        padding: 2rem 0;
+    }
+    
+    .project-complete-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px 16px 0 0;
+        padding: 1rem 2rem;
+        color: white;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+    }
+    
+    .project-complete-header h4 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .project-complete-header small {
+        font-size: 0.875rem;
+        opacity: 0.95;
+        font-weight: 400;
+    }
+    
+    .project-complete-header .status-badge {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+    
+    .project-complete-card {
+        background: white;
+        border-radius: 0 0 16px 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: none;
+        overflow: hidden;
+    }
+    
+    .project-complete-card .card-body {
+        padding: 2rem;
+    }
+    
+    .info-alert {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border: none;
+        border-left: 4px solid #2196f3;
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+    }
+    
+    .info-alert i {
+        color: #2196f3;
+        font-size: 1.25rem;
+    }
+    
+    .section-card {
+        background: #fafbfc;
+        border: 1px solid #e8eaed;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    
+    .section-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border-color: #d1d5db;
+    }
+    
+    .section-card .card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 2px solid #e8eaed;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+        color: #2d3748;
+        font-size: 1.1rem;
+    }
+    
+    .section-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .form-control,
+    .form-select {
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.625rem 0.875rem;
+        transition: all 0.2s ease;
+        font-size: 0.95rem;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+    
+    .form-control[readonly] {
+        background-color: #f9fafb;
+        border-color: #d1d5db;
+    }
+    
+    .form-text {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-top: 0.375rem;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.625rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-secondary {
+        background: #f3f4f6;
+        border: 2px solid #e5e7eb;
+        color: #374151;
+        border-radius: 8px;
+        padding: 0.625rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-secondary:hover {
+        background: #e5e7eb;
+        border-color: #d1d5db;
+        color: #1f2937;
+    }
+    
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+    
+    .form-check-label {
+        color: #374151;
+        font-weight: 500;
+        cursor: pointer;
+    }
+    
+    .action-buttons {
+        padding-top: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+        margin-top: 2rem;
+    }
+    
+    .address-row {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-end;
+    }
+    
+    .address-row .col-md-4 {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    @media (max-width: 768px) {
+        .address-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+</style>
 {% endblock %}
 
+{% block breadcrumb %}{% endblock %}
+
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <div>
-                <h4 class="mb-0">{{ project.name }}</h4>
-                <small>项目信息完善</small>
+<div class="project-complete-page">
+    <div class="container-fluid">
+        <div class="project-complete-card card">
+            <div class="project-complete-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">{{ project.name }}</h4>
+                    <small>{{ project.project_number }}</small>
+                </div>
+                <span class="status-badge">{{ project.get_status_display }}</span>
             </div>
-            <span class="badge bg-light text-dark">{{ project.get_status_display }}</span>
-        </div>
-        <div class="card-body">
-            <form method="post">
-                {% csrf_token %}
-                
-                <!-- 客户信息卡片 -->
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">客户信息</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">甲方公司名称 <span class="text-danger">*</span></label>
-                                <input type="text" name="client_company_name" class="form-control" value="{{ project.client_company_name }}" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">甲方项目负责人</label>
-                                <input type="text" name="client_contact_person" class="form-control" value="{{ project.client_contact_person }}">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">联系电话</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-phone"></i></span>
-                                    <input type="tel" name="client_phone" class="form-control" value="{{ project.client_phone }}" pattern="[0-9]{11}">
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">电子邮箱</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                                    <input type="email" name="client_email" class="form-control" value="{{ project.client_email }}">
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">通讯地址</label>
-                                <input type="text" name="client_address" class="form-control" value="{{ project.client_address }}">
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
 
-                <!-- 设计方信息卡片 -->
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">设计方信息</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">设计单位名称</label>
-                                <input type="text" name="design_company" class="form-control" value="{{ project.design_company }}">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">设计方项目负责人</label>
-                                <input type="text" name="design_contact_person" class="form-control" value="{{ project.design_contact_person }}">
-                            </div>
+                    <!-- 项目地址卡片 -->
+                    <div class="section-card card">
+                        <div class="card-header">
+                            <h5 class="mb-0">项目地址</h5>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">设计方联系电话</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-phone"></i></span>
-                                    <input type="tel" name="design_phone" class="form-control" value="{{ project.design_phone }}">
+                        <div class="card-body">
+                            <input type="hidden" name="project_address" id="projectAddressField" value="{{ project.project_address|default:'' }}">
+                            <div class="address-row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">省份 <span class="text-muted">（可选择或直接输入）</span></label>
+                                    <select id="provinceSelect" class="form-select"></select>
+                                    <input type="text" id="provinceCustomInput" class="form-control mt-2" placeholder="其他省份" style="display:none;">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">城市 <span class="text-muted">（可选择或直接输入）</span></label>
+                                    <select id="citySelect" class="form-select"></select>
+                                    <input type="text" id="cityCustomInput" class="form-control mt-2" placeholder="其他城市" style="display:none;">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">区/县 <span class="text-muted">（可选择或直接输入）</span></label>
+                                    <select id="districtSelect" class="form-select"></select>
+                                    <input type="text" id="districtCustomInput" class="form-control mt-2" placeholder="其他区县" style="display:none;">
                                 </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">设计方电子邮箱</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                                    <input type="email" name="design_email" class="form-control" value="{{ project.design_email }}">
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">详细地址</label>
+                                    <input type="text" class="form-control" id="addressDetailInput" placeholder="街道、楼栋、门牌等" value="">
+                                    <div class="form-text">完整地址会在保存前自动组合。</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- 项目详细信息卡片 -->
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">项目详细信息</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label">项目地址</label>
-                                <input type="text" name="project_address" class="form-control" value="{{ project.project_address }}">
-                            </div>
+                    <!-- 项目规模卡片 -->
+                    <div class="section-card card">
+                        <div class="card-header">
+                            <h5 class="mb-0">项目规模</h5>
                         </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">建筑面积（㎡）</label>
-                                <input type="number" name="building_area" class="form-control" step="0.01" min="0" value="{{ project.building_area }}">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">地下面积（㎡）</label>
+                                    <input type="number" name="underground_area" class="form-control" step="0.01" min="0" value="{{ project.underground_area|default_if_none:'' }}">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">地上面积（㎡）</label>
+                                    <input type="number" name="aboveground_area" class="form-control" step="0.01" min="0" value="{{ project.aboveground_area|default_if_none:'' }}">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">建筑面积（㎡）</label>
+                                    <input type="number" name="building_area" class="form-control" step="0.01" min="0" value="{{ project.building_area|default_if_none:'' }}" readonly>
+                                    <div class="form-text">系统将根据地上/地下面积自动计算：<span id="buildingAreaDisplay">{{ project.building_area|default_if_none:"0" }}</span></div>
+                                </div>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">地下面积（㎡）</label>
-                                <input type="number" name="underground_area" class="form-control" step="0.01" min="0" value="{{ project.underground_area }}">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">建筑高度（米）</label>
+                                    <input type="number" name="building_height" class="form-control" step="0.01" min="0" value="{{ project.building_height }}">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">地上层数</label>
+                                    <input type="number" name="aboveground_floors" class="form-control" min="0" value="{{ project.aboveground_floors }}">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">地下层数</label>
+                                    <input type="number" name="underground_floors" class="form-control" min="0" value="{{ project.underground_floors }}">
+                                </div>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">地上面积（㎡）</label>
-                                <input type="number" name="aboveground_area" class="form-control" step="0.01" min="0" value="{{ project.aboveground_area }}">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">建筑高度（米）</label>
-                                <input type="number" name="building_height" class="form-control" step="0.01" min="0" value="{{ project.building_height }}">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">地上层数</label>
-                                <input type="number" name="aboveground_floors" class="form-control" min="0" value="{{ project.aboveground_floors }}">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">地下层数</label>
-                                <input type="number" name="underground_floors" class="form-control" min="0" value="{{ project.underground_floors }}">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label">结构形式</label>
-                                <select name="structure_type" class="form-select">
-                                    <option value="">请选择</option>
-                                    <option value="框架结构" {% if project.structure_type == '框架结构' %}selected{% endif %}>框架结构</option>
-                                    <option value="剪力墙结构" {% if project.structure_type == '剪力墙结构' %}selected{% endif %}>剪力墙结构</option>
-                                    <option value="框架-剪力墙结构" {% if project.structure_type == '框架-剪力墙结构' %}selected{% endif %}>框架-剪力墙结构</option>
-                                    <option value="钢结构" {% if project.structure_type == '钢结构' %}selected{% endif %}>钢结构</option>
-                                    <option value="其他" {% if project.structure_type == '其他' %}selected{% endif %}>其他</option>
-                                </select>
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">结构形式</label>
+                                    <select name="structure_type" class="form-select">
+                                        <option value="">请选择</option>
+                                        <option value="框架结构" {% if project.structure_type == '框架结构' %}selected{% endif %}>框架结构</option>
+                                        <option value="剪力墙结构" {% if project.structure_type == '剪力墙结构' %}selected{% endif %}>剪力墙结构</option>
+                                        <option value="框架-剪力墙结构" {% if project.structure_type == '框架-剪力墙结构' %}selected{% endif %}>框架-剪力墙结构</option>
+                                        <option value="钢结构" {% if project.structure_type == '钢结构' %}selected{% endif %}>钢结构</option>
+                                        <option value="其他" {% if project.structure_type == '其他' %}selected{% endif %}>其他</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- 特殊要求卡片 -->
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">特殊要求</h5>
+                    <!-- 项目说明卡片 -->
+                    <div class="section-card card">
+                        <div class="card-header">
+                            <h5 class="mb-0">项目说明</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">甲方特殊要求</label>
+                                    <textarea name="client_special_requirements" class="form-control" rows="4">{{ project.client_special_requirements }}</textarea>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">技术难点说明</label>
+                                    <textarea name="technical_difficulties" class="form-control" rows="4">{{ project.technical_difficulties }}</textarea>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">项目风险预判</label>
+                                    <textarea name="risk_assessment" class="form-control" rows="4">{{ project.risk_assessment }}</textarea>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label">甲方特殊要求</label>
-                                <textarea name="client_special_requirements" class="form-control" rows="4">{{ project.client_special_requirements }}</textarea>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label">技术难点说明</label>
-                                <textarea name="technical_difficulties" class="form-control" rows="4">{{ project.technical_difficulties }}</textarea>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label">项目风险预判</label>
-                                <textarea name="risk_assessment" class="form-control" rows="4">{{ project.risk_assessment }}</textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="d-flex justify-content-end gap-2">
-                    <a href="{% url 'project_pages:project_detail' project.id %}" class="btn btn-secondary">取消</a>
-                    <button type="submit" class="btn btn-primary">保存并继续</button>
-                </div>
-            </form>
+                    <div class="action-buttons d-flex justify-content-end gap-3">
+                        <a href="{% url 'project_pages:project_detail' project.id %}" class="btn btn-secondary">取消</a>
+                        <button type="submit" class="btn btn-primary">保存并继续</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+(function() {
+    const REGION_DATA = {
+        '北京市': {'北京市': ['东城区', '西城区', '朝阳区', '海淀区', '丰台区', '石景山区', '房山区', '通州区', '顺义区', '昌平区', '大兴区', '怀柔区', '门头沟区', '平谷区', '密云区', '延庆区', '其他']},
+        '天津市': {'天津市': ['和平区', '河西区', '河北区', '河东区', '南开区', '红桥区', '滨海新区', '西青区', '北辰区', '津南区', '东丽区', '武清区', '宝坻区', '宁河区', '静海区', '蓟州区', '其他']},
+        '上海市': {'上海市': ['黄浦区', '徐汇区', '长宁区', '静安区', '虹口区', '杨浦区', '浦东新区', '闵行区', '宝山区', '嘉定区', '金山区', '松江区', '青浦区', '奉贤区', '崇明区', '其他']},
+        '重庆市': {'重庆市': ['渝中区', '江北区', '南岸区', '沙坪坝区', '九龙坡区', '大渡口区', '北碚区', '渝北区', '巴南区', '两江新区', '万州区', '涪陵区', '黔江区', '长寿区', '永川区', '合川区', '江津区', '其他']},
+        '广东省': {
+            '广州市': ['越秀区', '荔湾区', '天河区', '海珠区', '白云区', '黄埔区', '番禺区', '花都区', '增城区', '从化区', '南沙区', '其他'],
+            '深圳市': ['福田区', '罗湖区', '南山区', '盐田区', '宝安区', '龙岗区', '龙华区', '坪山区', '光明区', '大鹏新区', '其他'],
+            '珠海市': ['香洲区', '斗门区', '金湾区', '其他'],
+            '佛山市': ['禅城区', '顺德区', '南海区', '三水区', '高明区', '其他'],
+            '东莞市': ['东城街道', '南城街道', '万江街道', '莞城街道', '塘厦镇', '厚街镇', '凤岗镇', '长安镇', '虎门镇', '大朗镇', '常平镇', '黄江镇', '清溪镇', '沙田镇', '道滘镇', '麻涌镇', '中堂镇', '高埗镇', '石碣镇', '石龙镇', '石排镇', '松山湖', '企石镇', '寮步镇', '桥头镇', '大岭山镇', '茶山镇', '四会镇', '望牛墩镇', '其他'],
+            '惠州市': ['惠城区', '惠阳区', '博罗县', '惠东县', '龙门县', '其他'],
+            '中山市': ['石岐街道', '东区街道', '火炬开发区', '西区街道', '南区街道', '坦州镇', '黄圃镇', '三乡镇', '沙溪镇', '小榄镇', '横栏镇', '古镇镇', '东凤镇', '民众镇', '板芙镇', '神湾镇', '阜沙镇', '其他'],
+            '其他': ['其他']
+        },
+        '四川省': {
+            '成都市': ['锦江区', '青羊区', '金牛区', '武侯区', '成华区', '龙泉驿区', '青白江区', '新都区', '温江区', '双流区', '郫都区', '新津区', '都江堰市', '彭州市', '邛崃市', '崇州市', '简阳市', '蒲江县', '大邑县', '金堂县', '其他'],
+            '绵阳市': ['涪城区', '游仙区', '安州区', '江油市', '三台县', '盐亭县', '梓潼县', '平武县', '北川羌族自治县', '其他'],
+            '德阳市': ['旌阳区', '罗江区', '广汉市', '什邡市', '绵竹市', '中江县', '其他'],
+            '南充市': ['顺庆区', '高坪区', '嘉陵区', '阆中市', '营山县', '蓬安县', '仪陇县', '西充县', '南部县', '其他'],
+            '宜宾市': ['翠屏区', '南溪区', '叙州区', '江安县', '长宁县', '高县', '筠连县', '珙县', '兴文县', '屏山县', '其他'],
+            '泸州市': ['江阳区', '纳溪区', '龙马潭区', '合江县', '叙永县', '古蔺县', '其他'],
+            '自贡市': ['自流井区', '贡井区', '大安区', '沿滩区', '荣县', '富顺县', '其他'],
+            '攀枝花市': ['东区', '西区', '仁和区', '米易县', '盐边县', '其他'],
+            '眉山市': ['东坡区', '彭山区', '洪雅县', '丹棱县', '青神县', '仁寿县', '其他'],
+            '乐山市': ['市中区', '沙湾区', '五通桥区', '金口河区', '峨眉山市', '夹江县', '沐川县', '犍为县', '井研县', '峨边彝族自治县', '马边彝族自治县', '其他'],
+            '达州市': ['通川区', '达川区', '万源市', '宣汉县', '开江县', '大竹县', '渠县', '其他'],
+            '其他': ['其他']
+        },
+        '江苏省': {
+            '南京市': ['玄武区', '秦淮区', '建邺区', '鼓楼区', '栖霞区', '雨花台区', '江宁区', '浦口区', '六合区', '溧水区', '高淳区', '其他'],
+            '苏州市': ['姑苏区', '虎丘区', '吴中区', '相城区', '吴江区', '昆山市', '常熟市', '太仓市', '张家港市', '吴江其他', '其他'],
+            '无锡市': ['梁溪区', '滨湖区', '锡山区', '惠山区', '新吴区', '宜兴市', '江阴市', '其他'],
+            '常州市': ['天宁区', '钟楼区', '新北区', '武进区', '金坛区', '溧阳市', '其他'],
+            '南通市': ['崇川区', '通州区', '海门区', '启东市', '如皋市', '海安市', '如东县', '其他'],
+            '扬州市': ['广陵区', '邗江区', '江都区', '仪征市', '高邮市', '宝应县', '其他'],
+            '镇江市': ['京口区', '润州区', '丹徒区', '丹阳市', '扬中市', '句容市', '其他'],
+            '徐州市': ['鼓楼区', '云龙区', '泉山区', '贾汪区', '铜山区', '邳州市', '新沂市', '睢宁县', '丰县', '沛县', '其他'],
+            '盐城市': ['亭湖区', '盐都区', '东台市', '大丰区', '建湖县', '射阳县', '阜宁县', '滨海县', '响水县', '其他'],
+            '其他': ['其他']
+        },
+        '浙江省': {
+            '杭州市': ['上城区', '拱墅区', '西湖区', '滨江区', '余杭区', '萧山区', '富阳区', '临平区', '钱塘区', '临安区', '建德市', '桐庐县', '淳安县', '其他'],
+            '宁波市': ['海曙区', '江北区', '鄞州区', '北仑区', '镇海区', '奉化区', '慈溪市', '余姚市', '象山县', '宁海县', '其他'],
+            '温州市': ['鹿城区', '瓯海区', '龙湾区', '瑞安市', '乐清市', '永嘉县', '平阳县', '苍南县', '文成县', '泰顺县', '洞头区', '其他'],
+            '嘉兴市': ['南湖区', '秀洲区', '海宁市', '桐乡市', '平湖市', '嘉善县', '海盐县', '其他'],
+            '绍兴市': ['越城区', '柯桥区', '上虞区', '诸暨市', '嵊州市', '新昌县', '其他'],
+            '台州市': ['椒江区', '黄岩区', '路桥区', '临海市', '温岭市', '玉环市', '天台县', '仙居县', '三门县', '其他'],
+            '湖州市': ['吴兴区', '南浔区', '德清县', '长兴县', '安吉县', '其他'],
+            '衢州市': ['柯城区', '衢江区', '常山县', '开化县', '龙游县', '江山市', '其他'],
+            '丽水市': ['莲都区', '龙泉市', '青田县', '缙云县', '遂昌县', '松阳县', '云和县', '庆元县', '景宁畲族自治县', '其他'],
+            '舟山市': ['定海区', '普陀区', '岱山县', '嵊泗县', '其他'],
+            '金华市': ['婺城区', '金东区', '义乌市', '东阳市', '永康市', '兰溪市', '武义县', '浦江县', '磐安县', '其他'],
+            '其他': ['其他']
+        },
+        '湖北省': {
+            '武汉市': ['江岸区', '江汉区', '硚口区', '汉阳区', '武昌区', '青山区', '洪山区', '东西湖区', '蔡甸区', '江夏区', '黄陂区', '新洲区', '汉南区', '其他'],
+            '宜昌市': ['西陵区', '伍家岗区', '点军区', '猇亭区', '夷陵区', '枝江市', '宜都市', '当阳市', '远安县', '兴山县', '秭归县', '长阳土家族自治县', '五峰土家族自治县', '其他'],
+            '襄阳市': ['襄城区', '樊城区', '襄州区', '宜城市', '枣阳市', '老河口市', '南漳县', '谷城县', '保康县', '其他'],
+            '荆州市': ['沙市区', '荆州区', '洪湖市', '松滋市', '石首市', '江陵县', '公安县', '监利市', '其他'],
+            '黄石市': ['黄石港区', '西塞山区', '下陆区', '铁山区', '阳新县', '大冶市', '其他'],
+            '十堰市': ['茅箭区', '张湾区', '郧阳区', '丹江口市', '郧西县', '竹山县', '竹溪县', '房县', '其他'],
+            '其他': ['其他']
+        },
+        '湖南省': {
+            '长沙市': ['芙蓉区', '天心区', '岳麓区', '开福区', '雨花区', '望城区', '浏阳市', '宁乡市', '其他'],
+            '株洲市': ['荷塘区', '芦淞区', '石峰区', '天元区', '醴陵市', '茶陵县', '炎陵县', '攸县', '其他'],
+            '湘潭市': ['岳塘区', '雨湖区', '湘潭县', '湘乡市', '韶山市', '其他'],
+            '衡阳市': ['雁峰区', '石鼓区', '珠晖区', '蒸湘区', '南岳区', '常宁市', '耒阳市', '衡阳县', '衡南县', '衡山县', '衡东县', '祁东县', '其他'],
+            '常德市': ['武陵区', '鼎城区', '津市市', '澧县', '临澧县', '桃源县', '汉寿县', '石门县', '安乡县', '其他'],
+            '益阳市': ['资阳区', '赫山区', '沅江市', '南县', '桃江县', '安化县', '其他'],
+            '娄底市': ['娄星区', '冷水江市', '涟源市', '双峰县', '新化县', '其他'],
+            '其他': ['其他']
+        },
+        '其它地区': {'其他城市': ['其他']}
+    };
+
+    const provinceSelect = document.getElementById('provinceSelect');
+    const citySelect = document.getElementById('citySelect');
+    const districtSelect = document.getElementById('districtSelect');
+    const addressField = document.getElementById('projectAddressField');
+    const detailInput = document.getElementById('addressDetailInput');
+    const provinceCustomInput = document.getElementById('provinceCustomInput');
+    const cityCustomInput = document.getElementById('cityCustomInput');
+    const districtCustomInput = document.getElementById('districtCustomInput');
+
+    function populateProvinces() {
+        provinceSelect.innerHTML = '<option value="">选择省份</option>';
+        Object.keys(REGION_DATA).forEach((province) => {
+            if (province === '其它地区') return;
+            const opt = document.createElement('option');
+            opt.value = province;
+            opt.textContent = province;
+            provinceSelect.appendChild(opt);
+        });
+    }
+
+    function populateCities(province) {
+        citySelect.innerHTML = '<option value="">选择城市</option>';
+        districtSelect.innerHTML = '<option value="">选择区县</option>';
+        if (!province || !REGION_DATA[province]) return;
+        Object.keys(REGION_DATA[province]).forEach((city) => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            citySelect.appendChild(opt);
+        });
+    }
+
+    function populateDistricts(province, city) {
+        districtSelect.innerHTML = '<option value="">选择区县</option>';
+        if (!province || !city || !REGION_DATA[province] || !REGION_DATA[province][city]) return;
+        REGION_DATA[province][city].forEach((district) => {
+            const opt = document.createElement('option');
+            opt.value = district;
+            opt.textContent = district;
+            districtSelect.appendChild(opt);
+        });
+    }
+
+    function updateAddressField() {
+        const parts = [];
+        const province = (provinceSelect.value || (provinceCustomInput ? provinceCustomInput.value.trim() : ''));
+        const city = (citySelect.value || (cityCustomInput ? cityCustomInput.value.trim() : ''));
+        const district = (districtSelect.value || (districtCustomInput ? districtCustomInput.value.trim() : ''));
+        const detail = detailInput.value.trim();
+        if (province) parts.push(province);
+        if (city) parts.push(city);
+        if (district) parts.push(district);
+        if (detail) parts.push(detail);
+        addressField.value = parts.join(' ');
+    }
+
+    populateProvinces();
+
+    provinceSelect.addEventListener('change', () => {
+        populateCities(provinceSelect.value || '');
+        populateDistricts(provinceSelect.value || '', citySelect.value || '');
+        updateAddressField();
+    });
+    citySelect.addEventListener('change', () => {
+        populateDistricts(provinceSelect.value || '', citySelect.value || '');
+        updateAddressField();
+    });
+    districtSelect.addEventListener('change', updateAddressField);
+    detailInput.addEventListener('input', updateAddressField);
+
+    (function initialiseAddress() {
+        const initial = addressField.value.trim();
+        if (!initial) return;
+        let remaining = initial;
+        let matchedProvince = Object.keys(REGION_DATA).find((province) => remaining.startsWith(province));
+        if (matchedProvince) {
+            provinceSelect.value = matchedProvince;
+            remaining = remaining.replace(matchedProvince, '').trim();
+            populateCities(matchedProvince);
+        } else if (remaining) {
+            provinceCustomInput.style.display = '';
+            const firstToken = remaining.split(/\s+/)[0];
+            provinceCustomInput.value = firstToken;
+            remaining = remaining.replace(firstToken, '').trim();
+        }
+
+        if (provinceSelect.value) {
+            const province = provinceSelect.value;
+            const cities = REGION_DATA[province] ? Object.keys(REGION_DATA[province]) : [];
+            let matchedCity = cities.find((city) => remaining.startsWith(city));
+            if (matchedCity) {
+                citySelect.value = matchedCity;
+                remaining = remaining.replace(matchedCity, '').trim();
+                populateDistricts(province, matchedCity);
+                const districts = REGION_DATA[province][matchedCity];
+                if (districts && districts.length) {
+                    let matchedDistrict = districts.find((district) => remaining.startsWith(district));
+                    if (matchedDistrict) {
+                        districtSelect.value = matchedDistrict;
+                        remaining = remaining.replace(matchedDistrict, '').trim();
+                    }
+                }
+            }
+        }
+
+        if (!citySelect.value && remaining) {
+            cityCustomInput.style.display = '';
+            const firstToken = remaining.split(/\s+/)[0];
+            cityCustomInput.value = firstToken;
+            remaining = remaining.replace(firstToken, '').trim();
+        }
+
+        if (!districtSelect.value && remaining) {
+            districtCustomInput.style.display = '';
+            const firstToken = remaining.split(/\s+/)[0];
+            districtCustomInput.value = firstToken;
+            remaining = remaining.replace(firstToken, '').trim();
+        }
+
+        detailInput.value = remaining;
+        updateAddressField();
+    })();
+
+    // 初始化地址字段显示
+    if (provinceCustomInput) {
+        if (!provinceSelect.value) {
+            provinceCustomInput.style.display = '';
+        }
+    }
+    if (cityCustomInput) {
+        if (!citySelect.value) {
+            cityCustomInput.style.display = '';
+        }
+    }
+    if (districtCustomInput) {
+        if (!districtSelect.value) {
+            districtCustomInput.style.display = '';
+        }
+    }
+
+    const aboveInput = document.querySelector('input[name="aboveground_area"]');
+    const belowInput = document.querySelector('input[name="underground_area"]');
+    const totalInput = document.querySelector('input[name="building_area"]');
+    const initialBuildingArea = totalInput ? totalInput.value : '';
+    const buildingAreaDisplay = document.getElementById('buildingAreaDisplay');
+
+    function parseNumber(value) {
+        if (!value) return null;
+        const num = parseFloat(value);
+        return Number.isFinite(num) ? num : null;
+    }
+
+    function updateBuildingArea() {
+        const aboveVal = parseNumber(aboveInput.value);
+        const belowVal = parseNumber(belowInput.value);
+        if (aboveVal === null && belowVal === null) {
+            totalInput.value = initialBuildingArea;
+            if (buildingAreaDisplay) buildingAreaDisplay.textContent = initialBuildingArea || '0';
+            return;
+        }
+        const sum = (aboveVal || 0) + (belowVal || 0);
+        totalInput.value = sum ? sum.toFixed(2).replace(/\.00$/, '') : '0';
+        if (buildingAreaDisplay) buildingAreaDisplay.textContent = totalInput.value || '0';
+    }
+
+    if (aboveInput && belowInput && totalInput) {
+        aboveInput.addEventListener('input', updateBuildingArea);
+        belowInput.addEventListener('input', updateBuildingArea);
+        updateBuildingArea();
+    }
+
+    function toggleCustomInput(selectElement, inputElement) {
+        if (!selectElement || !inputElement) return;
+        selectElement.addEventListener('change', () => {
+            if (!selectElement.value) {
+                inputElement.style.display = '';
+            } else {
+                inputElement.style.display = 'none';
+                inputElement.value = '';
+            }
+            updateAddressField();
+        });
+        inputElement.addEventListener('input', updateAddressField);
+    }
+
+    toggleCustomInput(provinceSelect, provinceCustomInput);
+    toggleCustomInput(citySelect, cityCustomInput);
+    toggleCustomInput(districtSelect, districtCustomInput);
+})();
+</script>
 {% endblock %}
 

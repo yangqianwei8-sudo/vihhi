@@ -1,0 +1,251 @@
+{% extends "financial_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:voucher_management' %}">凭证管理</a></li>
+<li class="breadcrumb-item active">{{ voucher.voucher_number }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .info-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .info-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-bottom: 16px;
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .info-label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: 14px;
+        color: #1f2937;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="text-end mb-4">
+        <a href="{% url 'finance_pages:voucher_management' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        <a href="{% url 'finance_pages:voucher_update' voucher.id %}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> 编辑
+        </a>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <h5>基本信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">凭证字号</span>
+                <span class="info-value"><code>{{ voucher.voucher_number }}</code></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">凭证日期</span>
+                <span class="info-value">{{ voucher.voucher_date|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">状态</span>
+                <span class="info-value">
+                    {% if voucher.status == 'draft' %}
+                    <span class="badge bg-secondary">草稿</span>
+                    {% elif voucher.status == 'submitted' %}
+                    <span class="badge bg-warning">已提交</span>
+                    {% elif voucher.status == 'approved' %}
+                    <span class="badge bg-success">已审核</span>
+                    {% elif voucher.status == 'posted' %}
+                    <span class="badge bg-primary">已过账</span>
+                    {% else %}
+                    <span class="badge bg-danger">已拒绝</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">附件数</span>
+                <span class="info-value">{{ voucher.attachment_count }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">制单人</span>
+                <span class="info-value">{{ voucher.preparer.get_full_name|default:voucher.preparer.username|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">审核人</span>
+                <span class="info-value">{{ voucher.reviewer.get_full_name|default:voucher.reviewer.username|default:"-" }}</span>
+            </div>
+            {% if voucher.reviewed_time %}
+            <div class="info-item">
+                <span class="info-label">审核时间</span>
+                <span class="info-value">{{ voucher.reviewed_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            {% endif %}
+            {% if voucher.posted_by %}
+            <div class="info-item">
+                <span class="info-label">过账人</span>
+                <span class="info-value">{{ voucher.posted_by.get_full_name|default:voucher.posted_by.username }}</span>
+            </div>
+            {% endif %}
+            {% if voucher.posted_time %}
+            <div class="info-item">
+                <span class="info-label">过账时间</span>
+                <span class="info-value">{{ voucher.posted_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 金额信息 -->
+    <div class="info-card">
+        <h5>金额信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">借方合计</span>
+                <span class="info-value" style="font-size: 18px; font-weight: 700; color: #142F5B;">¥{{ voucher.total_debit|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">贷方合计</span>
+                <span class="info-value" style="font-size: 18px; font-weight: 700; color: #142F5B;">¥{{ voucher.total_credit|floatformat:2 }}</span>
+            </div>
+            <div class="info-item" style="grid-column: span 2;">
+                <span class="info-label">借贷平衡</span>
+                <span class="info-value">
+                    {% if voucher.total_debit == voucher.total_credit %}
+                    <span class="badge bg-success">✓ 平衡</span>
+                    {% else %}
+                    <span class="badge bg-danger">✗ 不平衡（差额：¥{{ voucher.total_debit|add:voucher.total_credit|floatformat:2 }}）</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 凭证分录 -->
+    {% if entries %}
+    <div class="info-card">
+        <h5>凭证分录 ({{ entries|length }} 行)</h5>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>行号</th>
+                        <th>会计科目</th>
+                        <th>摘要</th>
+                        <th class="text-end">借方金额</th>
+                        <th class="text-end">贷方金额</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in entries %}
+                    <tr>
+                        <td>{{ entry.line_number }}</td>
+                        <td><code>{{ entry.account_subject.code }}</code> {{ entry.account_subject.name }}</td>
+                        <td>{{ entry.summary }}</td>
+                        <td class="text-end">
+                            {% if entry.debit_amount > 0 %}
+                            <strong>¥{{ entry.debit_amount|floatformat:2 }}</strong>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if entry.credit_amount > 0 %}
+                            <strong>¥{{ entry.credit_amount|floatformat:2 }}</strong>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr style="background-color: #f9fafb; font-weight: 700;">
+                        <td colspan="3" class="text-end">合计：</td>
+                        <td class="text-end">¥{{ voucher.total_debit|floatformat:2 }}</td>
+                        <td class="text-end">¥{{ voucher.total_credit|floatformat:2 }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注信息 -->
+    {% if voucher.notes %}
+    <div class="info-card">
+        <h5>备注信息</h5>
+        <p style="color: #374151; white-space: pre-wrap;">{{ voucher.notes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- 其他信息 -->
+    <div class="info-card">
+        <h5>其他信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">创建时间</span>
+                <span class="info-value">{{ voucher.created_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">更新时间</span>
+                <span class="info-value">{{ voucher.updated_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

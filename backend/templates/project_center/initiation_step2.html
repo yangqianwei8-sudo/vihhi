@@ -1,0 +1,628 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_head %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        position: relative;
+    }
+    .step-item {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e5e7eb;
+        color: #6b7280;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin: 0 auto 8px;
+    }
+    .step-item.active .step-number {
+        background: #D62828;
+        color: #fff;
+    }
+    .step-item.completed .step-number {
+        background: #10b981;
+        color: #fff;
+    }
+    .step-label {
+        font-size: 13px;
+        color: #6b7280;
+    }
+    .step-item.active .step-label {
+        color: #D62828;
+        font-weight: 600;
+    }
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-card h5 {
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .batch-row {
+        background: #f9fafb;
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        border: 1px solid #e5e7eb;
+    }
+    .batch-row:hover {
+        background: #f3f4f6;
+    }
+    .batch-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .totals-row {
+        background: #eff6ff;
+        padding: 16px;
+        border-radius: 8px;
+        border: 2px solid #3b82f6;
+        font-weight: 600;
+        margin-top: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <form method="post" id="projectInfoForm">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-card">
+            <h5>基本信息</h5>
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label required">项目名称</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                    <div class="text-danger small mt-1">{{ form.name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">项目地址（与图纸保持一致）</label>
+                    {{ form.project_address }}
+                    {% if form.project_address.errors %}
+                    <div class="text-danger small mt-1">{{ form.project_address.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">项目业态</label>
+                    {{ form.business_type }}
+                    {% if form.business_type.errors %}
+                    <div class="text-danger small mt-1">{{ form.business_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">图纸阶段</label>
+                    {{ form.design_stage }}
+                    {% if form.design_stage.errors %}
+                    <div class="text-danger small mt-1">{{ form.design_stage.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">项目别名（可选）</label>
+                    {{ form.alias }}
+                    {% if form.alias.errors %}
+                    <div class="text-danger small mt-1">{{ form.alias.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">项目描述（可选）</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 项目规模 -->
+        <div class="form-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">项目规模</h5>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addBatchRow()">
+                    <i class="bi bi-plus-circle"></i> 添加批次
+                </button>
+            </div>
+            <div id="batches-container">
+                <!-- 批次行将通过 JavaScript 动态添加 -->
+            </div>
+            <div class="totals-row">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <strong>总建筑面积：</strong>
+                        <span id="total-building-area">0</span> 平方米
+                    </div>
+                    <div class="col-md-4">
+                        <strong>其中地上：</strong>
+                        <span id="total-aboveground-area">0</span> 平方米
+                    </div>
+                    <div class="col-md-4">
+                        <strong>其中地下：</strong>
+                        <span id="total-underground-area">0</span> 平方米
+                    </div>
+                </div>
+            </div>
+            {{ form.project_batches_json }}
+        </div>
+
+        <!-- 服务内容 -->
+        <div class="form-card">
+            <h5>服务内容</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">服务类型</label>
+                    {{ form.service_type }}
+                    {% if form.service_type.errors %}
+                    <div class="text-danger small mt-1">{{ form.service_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">服务专业</label>
+                    <div id="service-professions-container" class="border rounded p-3" style="min-height: 120px; max-height: 300px; overflow-y: auto; background: #f9fafb;">
+                        <small class="text-muted d-block mb-2">请先选择服务类型</small>
+                        <div id="service-professions-options" class="d-flex flex-wrap gap-2">
+                            {% for profession in form.service_professions.field.queryset %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       name="service_professions" 
+                                       id="profession_{{ profession.id }}" 
+                                       value="{{ profession.id }}"
+                                       {% if profession.id in form.service_professions.value %}checked{% endif %}>
+                                <label class="form-check-label" for="profession_{{ profession.id }}">
+                                    {{ profession.name }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% if form.service_professions.errors %}
+                    <div class="text-danger small mt-1">{{ form.service_professions.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">根据服务类型选择对应的服务专业（可多选）</small>
+                </div>
+            </div>
+            <div class="row g-3 mt-2">
+                <div class="col-md-12">
+                    <label class="form-label">服务范围</label>
+                    <div id="service-scope-checkboxes" class="border rounded p-3" style="min-height: 50px; background: #f9fafb;">
+                        <small class="text-muted d-block mb-2">请先添加项目批次，然后选择服务范围</small>
+                        <div id="service-scope-options"></div>
+                    </div>
+                    <input type="hidden" id="id_service_scope" name="service_scope" value="{{ form.service_scope.value|default:'' }}">
+                    {% if form.service_scope.errors %}
+                    <div class="text-danger small mt-1">{{ form.service_scope.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">根据项目规模的批次选择服务范围（可多选）</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% url 'project_pages:project_initiation_detail' project.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回
+            </a>
+            <div>
+                <button type="submit" name="action" value="save" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-save"></i> 保存
+                </button>
+                <button type="submit" name="action" value="continue" class="btn btn-primary">
+                    继续 <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+// 批次计数器
+let batchCounter = 0;
+let batches = [];
+
+// 初始化批次数据
+{% if project_batches_json %}
+batches = JSON.parse('{{ project_batches_json|escapejs }}');
+batchCounter = batches.length;
+{% else %}
+batches = [];
+batchCounter = 0;
+{% endif %}
+
+// 渲染批次行
+function renderBatchRow(batch, index) {
+    const batchName = batch.batch_name || '';
+    const abovegroundArea = batch.aboveground_area || '';
+    const undergroundArea = batch.underground_area || '';
+    const abovegroundFloors = batch.aboveground_floors || '';
+    const undergroundFloors = batch.underground_floors || '';
+    
+    // 计算建筑面积：地下面积 + 地上面积
+    let totalArea = batch.total_area || '';
+    if (!totalArea || totalArea === '0' || totalArea === 0) {
+        const above = parseFloat(abovegroundArea) || 0;
+        const under = parseFloat(undergroundArea) || 0;
+        if (above > 0 || under > 0) {
+            totalArea = (above + under).toFixed(2);
+        }
+    } else {
+        totalArea = parseFloat(totalArea).toFixed(2);
+    }
+
+    return `
+        <div class="batch-row" data-index="${index}">
+            <div class="batch-header">
+                <span>${batchName || `批次 ${index + 1}`}</span>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBatchRow(${index})">
+                    <i class="bi bi-trash"></i> 删除
+                </button>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">批次名称</label>
+                    <input type="text" class="form-control batch-name" placeholder="例如：一批次" 
+                           value="${batchName}" oninput="updateBatch(${index}); updateServiceScopeOptions();" 
+                           onchange="updateBatch(${index}); updateServiceScopeOptions();">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">其中地上（㎡）</label>
+                    <input type="number" class="form-control batch-aboveground-area" step="0.01" 
+                           placeholder="地上面积" value="${abovegroundArea}" 
+                           onchange="calculateBatchTotalArea(${index}); updateBatch(${index}); calculateTotals();">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">其中地下（㎡）</label>
+                    <input type="number" class="form-control batch-underground-area" step="0.01" 
+                           placeholder="地下面积" value="${undergroundArea}" 
+                           onchange="calculateBatchTotalArea(${index}); updateBatch(${index}); calculateTotals();">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">建筑面积（㎡）</label>
+                    <input type="number" class="form-control batch-total-area" step="0.01" 
+                           placeholder="自动计算" value="${totalArea}" readonly
+                           style="background-color: #e9ecef;">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">地上层数</label>
+                    <input type="number" class="form-control batch-aboveground-floors" 
+                           placeholder="层" value="${abovegroundFloors}" min="0"
+                           onchange="updateBatch(${index})">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">地下层数</label>
+                    <input type="number" class="form-control batch-underground-floors" 
+                           placeholder="层（可为负）" value="${undergroundFloors}" 
+                           onchange="updateBatch(${index})">
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 添加批次行
+function addBatchRow() {
+    const newBatch = {
+        batch_name: '',
+        total_area: 0,
+        aboveground_area: '',
+        underground_area: '',
+        aboveground_floors: '',
+        underground_floors: ''
+    };
+    batches.push(newBatch);
+    const container = document.getElementById('batches-container');
+    const row = document.createElement('div');
+    row.innerHTML = renderBatchRow(newBatch, batches.length - 1);
+    container.appendChild(row.firstElementChild);
+    updateBatchesJSON();
+    updateServiceScopeOptions();
+}
+
+// 删除批次行
+function removeBatchRow(index) {
+    if (confirm('确定要删除此批次吗？')) {
+        batches.splice(index, 1);
+        renderAllBatches();
+        calculateTotals();
+        updateServiceScopeOptions();
+    }
+}
+
+// 计算单个批次的建筑面积（地上面积 + 地下面积）
+function calculateBatchTotalArea(index) {
+    const row = document.querySelector(`.batch-row[data-index="${index}"]`);
+    if (!row) return;
+    
+    const abovegroundArea = parseFloat(row.querySelector('.batch-aboveground-area').value) || 0;
+    const undergroundArea = parseFloat(row.querySelector('.batch-underground-area').value) || 0;
+    const totalArea = abovegroundArea + undergroundArea;
+    
+    const totalAreaInput = row.querySelector('.batch-total-area');
+    if (totalAreaInput) {
+        totalAreaInput.value = totalArea > 0 ? totalArea.toFixed(2) : '';
+    }
+}
+
+// 更新批次数据
+function updateBatch(index) {
+    const row = document.querySelector(`.batch-row[data-index="${index}"]`);
+    if (!row) return;
+    
+    // 如果建筑面积未填写，自动计算
+    const totalAreaInput = row.querySelector('.batch-total-area');
+    const abovegroundArea = parseFloat(row.querySelector('.batch-aboveground-area').value) || 0;
+    const undergroundArea = parseFloat(row.querySelector('.batch-underground-area').value) || 0;
+    let totalArea = parseFloat(totalAreaInput.value) || 0;
+    
+    // 如果建筑面积为0或未填写，自动计算
+    if (totalArea === 0 && (abovegroundArea > 0 || undergroundArea > 0)) {
+        totalArea = abovegroundArea + undergroundArea;
+        totalAreaInput.value = totalArea.toFixed(2);
+    }
+    
+    batches[index] = {
+        batch_name: row.querySelector('.batch-name').value || '',
+        total_area: totalArea,
+        aboveground_area: abovegroundArea,
+        underground_area: undergroundArea,
+        aboveground_floors: parseInt(row.querySelector('.batch-aboveground-floors').value) || 0,
+        underground_floors: parseInt(row.querySelector('.batch-underground-floors').value) || 0
+    };
+    updateBatchesJSON();
+}
+
+// 渲染所有批次
+function renderAllBatches() {
+    const container = document.getElementById('batches-container');
+    container.innerHTML = '';
+    batches.forEach((batch, index) => {
+        const row = document.createElement('div');
+        row.innerHTML = renderBatchRow(batch, index);
+        container.appendChild(row.firstElementChild);
+        // 重新计算建筑面积（如果已有地上和地下面积）
+        if (batch.aboveground_area || batch.underground_area) {
+            calculateBatchTotalArea(index);
+        }
+    });
+}
+
+// 更新隐藏字段
+function updateBatchesJSON() {
+    const input = document.getElementById('id_project_batches_json');
+    if (input) {
+        input.value = JSON.stringify(batches);
+    }
+}
+
+// 计算总计
+function calculateTotals() {
+    let totalArea = 0;
+    let totalAbovegroundArea = 0;
+    let totalUndergroundArea = 0;
+    
+    batches.forEach(batch => {
+        totalArea += parseFloat(batch.total_area || 0);
+        totalAbovegroundArea += parseFloat(batch.aboveground_area || 0);
+        totalUndergroundArea += parseFloat(batch.underground_area || 0);
+    });
+    
+    document.getElementById('total-building-area').textContent = totalArea.toFixed(2);
+    document.getElementById('total-aboveground-area').textContent = totalAbovegroundArea.toFixed(2);
+    document.getElementById('total-underground-area').textContent = totalUndergroundArea.toFixed(2);
+}
+
+// 更新服务范围选项（根据批次名称生成多选框）
+function updateServiceScopeOptions() {
+    const container = document.getElementById('service-scope-options');
+    const selectedScopes = document.getElementById('id_service_scope').value.split(',').filter(s => s.trim());
+    
+    // 获取所有有名称的批次
+    const batchNames = batches
+        .map(b => b.batch_name && b.batch_name.trim())
+        .filter(name => name);
+    
+    if (batchNames.length === 0) {
+        container.innerHTML = '<small class="text-muted">请先添加项目批次并填写批次名称</small>';
+        return;
+    }
+    
+    container.innerHTML = batchNames.map(batchName => {
+        const checked = selectedScopes.includes(batchName) ? 'checked' : '';
+        return `
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" 
+                       id="scope_${batchName.replace(/[^a-zA-Z0-9]/g, '_')}" 
+                       value="${batchName}" ${checked} 
+                       onchange="updateServiceScope()">
+                <label class="form-check-label" for="scope_${batchName.replace(/[^a-zA-Z0-9]/g, '_')}">
+                    ${batchName}
+                </label>
+            </div>
+        `;
+    }).join('');
+}
+
+// 更新服务范围隐藏字段
+function updateServiceScope() {
+    const checkboxes = document.querySelectorAll('#service-scope-options input[type="checkbox"]:checked');
+    const selectedScopes = Array.from(checkboxes).map(cb => cb.value);
+    document.getElementById('id_service_scope').value = selectedScopes.join(',');
+}
+
+// 表单提交前更新批次数据
+document.getElementById('projectInfoForm').addEventListener('submit', function(e) {
+    // 确保所有批次数据都已更新
+    batches.forEach((batch, index) => {
+        calculateBatchTotalArea(index);
+        updateBatch(index);
+    });
+    updateBatchesJSON();
+    updateServiceScope();
+});
+
+// 加载服务专业选项
+function loadServiceProfessions(serviceTypeId) {
+    const container = document.getElementById('service-professions-options');
+    const containerWrapper = document.getElementById('service-professions-container');
+    if (!container || !containerWrapper) return;
+    
+    if (!serviceTypeId) {
+        container.innerHTML = '<small class="text-muted">请先选择服务类型</small>';
+        return;
+    }
+    
+    // 显示加载状态
+    container.innerHTML = '<small class="text-muted">加载中...</small>';
+    
+    fetch(`{% url 'project_pages:get_service_professions' %}?service_type_id=${serviceTypeId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('加载服务专业失败:', data.error);
+                container.innerHTML = '<small class="text-danger">加载失败，请刷新页面重试</small>';
+                return;
+            }
+            
+            if (data.professions.length === 0) {
+                container.innerHTML = '<small class="text-muted">该服务类型暂无专业</small>';
+                return;
+            }
+            
+            // 保存当前选中的值（从现有的复选框中获取，避免切换服务类型时丢失选择）
+            const existingCheckboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+            const selectedValues = Array.from(existingCheckboxes).map(cb => cb.value);
+            
+            // 清空并重新填充选项（使用复选框）
+            container.innerHTML = '';
+            data.professions.forEach(prof => {
+                const checkboxWrapper = document.createElement('div');
+                checkboxWrapper.className = 'form-check';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'form-check-input';
+                checkbox.name = 'service_professions';
+                checkbox.id = `profession_${prof.id}`;
+                checkbox.value = prof.id;
+                if (selectedValues.includes(String(prof.id))) {
+                    checkbox.checked = true;
+                }
+                
+                const label = document.createElement('label');
+                label.className = 'form-check-label';
+                label.htmlFor = `profession_${prof.id}`;
+                label.textContent = prof.name;
+                
+                checkboxWrapper.appendChild(checkbox);
+                checkboxWrapper.appendChild(label);
+                container.appendChild(checkboxWrapper);
+            });
+        })
+        .catch(error => {
+            console.error('加载服务专业失败:', error);
+            container.innerHTML = '<small class="text-danger">加载失败，请刷新页面重试</small>';
+        });
+}
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化服务专业
+    const serviceTypeSelect = document.getElementById('id_service_type');
+    if (serviceTypeSelect) {
+        // 初始化时加载
+        if (serviceTypeSelect.value) {
+            loadServiceProfessions(serviceTypeSelect.value);
+        }
+        
+        // 监听变化
+        serviceTypeSelect.addEventListener('change', function() {
+            loadServiceProfessions(this.value);
+            // 清空已选的专业
+            const professionSelect = document.getElementById('id_service_professions');
+            if (professionSelect) {
+                Array.from(professionSelect.options).forEach(opt => opt.selected = false);
+            }
+        });
+    }
+    
+    if (batches.length > 0) {
+        renderAllBatches();
+        calculateTotals();
+        updateServiceScopeOptions();
+    } else {
+        // 如果没有批次数据，自动添加一个批次
+        addBatchRow();
+    }
+});
+</script>
+{% endblock extra_scripts %}

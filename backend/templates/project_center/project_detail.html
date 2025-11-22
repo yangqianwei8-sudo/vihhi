@@ -3,147 +3,1639 @@
 
 {% block title %}项目详情 - {{ project.name }}{% endblock %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item active">{{ project.name }}</li>
-{% endblock %}
+{% block breadcrumb %}{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- 基本信息区 -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <div>
-                <h4 class="mb-0">{{ project.name }}</h4>
-                <small>{{ project.project_number }}</small>
+<div class="project-detail container-fluid py-4">
+    <style>
+        :root {
+            --brand-deep: #142F5B;
+            --brand-primary: #1B3F77;
+            --brand-medium: #2D5DA8;
+            --brand-light: #4A7FDB;
+            --brand-soft: #E8F0FD;
+            --brand-surface: #F7FAFF;
+            --brand-accent: #D62828;
+            --brand-accent-soft: #FDE7E7;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --text-tertiary: #9CA3AF;
+            --border-light: #E5E7EB;
+            --success: #27AE60;
+            --warning: #F97316;
+            --danger: #E74C3C;
+        }
+        .project-detail {
+            color: var(--text-primary);
+        }
+        .project-header-card {
+            background: linear-gradient(135deg, rgba(20, 47, 91, 0.96) 0%, rgba(27, 63, 119, 0.88) 55%, rgba(214, 40, 40, 0.82) 100%);
+            border-radius: 24px;
+            padding: 32px;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(10, 45, 93, 0.25);
+        }
+        .project-header-card::before,
+        .project-header-card::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .project-header-card::before {
+            top: -60px;
+            right: -40px;
+            width: 240px;
+            height: 240px;
+            background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.26), transparent 65%);
+        }
+        .project-header-card::after {
+            bottom: -70px;
+            left: -60px;
+            width: 320px;
+            height: 320px;
+            background: linear-gradient(130deg, rgba(214, 40, 40, 0.32), transparent 60%);
+            clip-path: polygon(0% 25%, 70% 0%, 100% 75%, 30% 100%);
+            border-radius: 0;
+        }
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+        .project-title-section h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .project-badges {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .project-badges .badge {
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            padding: 0.35rem 0.9rem;
+            color: #fff;
+            font-weight: 500;
+        }
+        .project-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.82);
+        }
+        .project-quick-actions {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .project-layout {
+            display: grid;
+            grid-template-columns: 260px minmax(0, 1fr) 320px;
+            gap: 24px;
+            align-items: flex-start;
+            margin-top: 32px;
+        }
+        .project-nav-card {
+            position: sticky;
+            top: 96px;
+            background: #fff;
+            border-radius: 22px;
+            padding: 24px;
+            border: 1px solid rgba(229, 231, 235, 0.9);
+            box-shadow: 0 12px 28px rgba(10, 45, 93, 0.12);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+        .project-nav-card::-webkit-scrollbar {
+            width: 4px;
+        }
+        .project-nav-card::-webkit-scrollbar-thumb {
+            background: rgba(26, 79, 140, 0.2);
+            border-radius: 999px;
+        }
+        .project-nav-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .project-nav-group-title {
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: var(--brand-deep);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+        .project-nav-group-title::before {
+            content: "";
+            width: 3px;
+            height: 16px;
+            background: linear-gradient(180deg, var(--brand-primary), var(--brand-accent));
+            border-radius: 2px;
+        }
+        .project-nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .project-nav-link {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 0.65rem 0.95rem;
+            border-radius: 14px;
+            background: var(--brand-surface);
+            color: var(--text-secondary);
+            font-weight: 500;
+            border: 1px solid rgba(229, 231, 235, 0.9);
+            transition: all 0.25s ease;
+        }
+        .project-nav-link span { display: inline-flex; align-items: center; gap: 0.45rem; }
+        .project-nav-link .chevron { font-size: 0.75rem; color: var(--text-tertiary); transition: transform 0.25s ease; }
+        .project-nav-link:hover {
+            color: var(--brand-primary);
+            border-color: var(--brand-light);
+            box-shadow: 0 4px 16px rgba(26, 79, 140, 0.12), 0 2px 10px rgba(214, 40, 40, 0.12);
+            transform: translateX(4px);
+        }
+        .project-nav-link.active {
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent));
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 12px 30px rgba(26, 79, 140, 0.24), 0 6px 16px rgba(214, 40, 40, 0.25);
+        }
+        .project-nav-link.active .chevron { transform: translateX(6px); color: rgba(255,255,255,0.9); }
+        .project-main {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .detail-section {
+            position: relative;
+            background: #fff;
+            border-radius: 22px;
+            padding: 28px 32px;
+            border: 1px solid rgba(229, 231, 235, 0.9);
+            box-shadow: 0 12px 28px rgba(10, 45, 93, 0.12);
+            background-image: linear-gradient(135deg, rgba(27, 63, 119, 0.06), transparent 55%), linear-gradient(315deg, rgba(214, 40, 40, 0.05), transparent 60%);
+            overflow: hidden;
+        }
+        .detail-section.collapsed {
+            display: none;
+        }
+        .detail-section::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, rgba(27, 63, 119, 0.08), transparent 55%), linear-gradient(300deg, rgba(214, 40, 40, 0.07), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .detail-section:hover::after {
+            opacity: 1;
+        }
+
+        .flow-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .flow-status-card {
+            background: var(--brand-surface);
+            border-radius: 18px;
+            padding: 18px 20px;
+            border: 1px solid rgba(229, 231, 235, 0.8);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+        }
+        .flow-status-card h5 {
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+            color: var(--brand-deep);
+        }
+        .flow-status-value {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--brand-primary);
+        }
+        .flow-steps {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .flow-step-card {
+            border-radius: 16px;
+            padding: 14px 16px;
+            border: 1px solid rgba(229, 231, 235, 0.9);
+            background: #fff;
+            min-width: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .flow-step-card::before {
+            content: attr(data-step-index);
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-tertiary);
+        }
+        .flow-step-card h6 {
+            font-size: 1rem;
+            margin: 0;
+        }
+        .flow-step-card.flow-step-completed {
+            border-color: rgba(39, 174, 96, 0.4);
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.08), rgba(255, 255, 255, 0.9));
+        }
+        .flow-step-card.flow-step-current {
+            border-color: rgba(27, 63, 119, 0.4);
+            box-shadow: 0 12px 24px rgba(27, 63, 119, 0.15);
+        }
+        .flow-step-card.flow-step-upcoming {
+            opacity: 0.85;
+        }
+        .flow-deadline {
+            margin-top: 20px;
+            padding: 14px 18px;
+            border-radius: 14px;
+            background: rgba(214, 40, 40, 0.08);
+            color: var(--brand-accent);
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+        .flow-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 18px;
+        }
+        .flow-actions button {
+            border: none;
+            border-radius: 12px;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent));
+            color: #fff;
+            font-weight: 500;
+            box-shadow: 0 10px 20px rgba(20, 47, 91, 0.25);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .flow-actions button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .flow-actions button:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+        .flow-log-list {
+            margin-top: 20px;
+            border-top: 1px dashed rgba(229, 231, 235, 0.8);
+        }
+        .flow-log-item {
+            padding: 16px 0;
+            border-bottom: 1px dashed rgba(229, 231, 235, 0.6);
+        }
+        .flow-log-item:last-child {
+            border-bottom: none;
+        }
+        .flow-log-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--brand-primary);
+        }
+        .flow-note-input {
+            width: 100%;
+            border: 1px solid rgba(229, 231, 235, 0.9);
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+        .section-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--brand-deep);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .section-title::before {
+            content: "";
+            width: 4px;
+            height: 18px;
+            background: linear-gradient(180deg, var(--brand-primary), var(--brand-accent));
+            border-radius: 2px;
+        }
+        .section-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            max-width: 420px;
+        }
+        .gantt-track {
+            position: relative;
+            height: 12px;
+            background: var(--brand-soft);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .detail-section::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, rgba(27, 63, 119, 0.08), transparent 55%), linear-gradient(300deg, rgba(214, 40, 40, 0.07), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .detail-section:hover::after {
+            opacity: 1;
+        }
+
+        .gantt-bar {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            border-radius: 6px;
+            opacity: 0.9;
+        }
+        .timeline-card {
+            background: #fff;
+            border-radius: 18px;
+            border: 1px solid rgba(229, 231, 235, 0.9);
+            padding: 24px;
+            box-shadow: 0 10px 26px rgba(10, 45, 93, 0.1);
+        }
+        .service-timeline {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 24px 16px;
+        }
+        .timeline-stage {
+            background: var(--brand-surface);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid rgba(229, 231, 235, 0.9);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .timeline-stage::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--brand-light);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        .timeline-stage.completed {
+            border-color: rgba(39, 174, 96, 0.24);
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.15), #fff 70%);
+        }
+        .timeline-stage.completed::before {
+            background: var(--success);
+            opacity: 1;
+        }
+        .timeline-stage.current {
+            border-color: rgba(26, 79, 140, 0.32);
+            background: linear-gradient(135deg, rgba(26, 79, 140, 0.18), rgba(214, 40, 40, 0.12));
+        }
+        .timeline-stage.current::before {
+            background: linear-gradient(180deg, var(--brand-primary), var(--brand-accent));
+            opacity: 1;
+        }
+        .timeline-stage:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(26, 79, 140, 0.15);
+        }
+        .timeline-progress-track {
+            position: relative;
+            height: 8px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(27, 63, 119, 0.12), rgba(214, 40, 40, 0.1));
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .timeline-progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 0;
+            border-radius: inherit;
+            background: linear-gradient(135deg, var(--brand-medium), var(--brand-accent));
+        }
+        .project-sidebar {
+            position: sticky;
+            top: 96px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .sidebar-card {
+            background: #fff;
+            border-radius: 22px;
+            padding: 24px;
+            border: 1px solid rgba(229, 231, 235, 0.9);
+            box-shadow: 0 12px 28px rgba(10, 45, 93, 0.12);
+        }
+        .sidebar-card .card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: var(--brand-deep);
+            margin-bottom: 1rem;
+        }
+        .sidebar-card .card-title::before {
+            content: "";
+            width: 3px;
+            height: 16px;
+            background: linear-gradient(180deg, var(--brand-primary), var(--brand-accent));
+            border-radius: 2px;
+        }
+        .task-card .task-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .task-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.3rem 0.65rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            background: var(--brand-surface);
+            border: 1px solid rgba(27, 63, 119, 0.15);
+            color: var(--brand-primary);
+        }
+        .task-chip.pending { background: rgba(214, 40, 40, 0.08); border-color: rgba(214, 40, 40, 0.3); color: var(--brand-accent); }
+        .task-chip.in_progress { background: rgba(27, 63, 119, 0.08); }
+        .task-chip.completed { background: rgba(39, 174, 96, 0.12); border-color: rgba(39, 174, 96, 0.3); color: var(--success); }
+        .task-chip.cancelled { background: rgba(156, 163, 175, 0.15); border-color: rgba(156, 163, 175, 0.3); color: var(--text-secondary); }
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .task-item {
+            border: 1px solid rgba(229, 231, 235, 0.9);
+            border-radius: 16px;
+            padding: 14px 16px;
+            background: var(--brand-surface);
+        }
+        .task-item h6 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .task-item .task-meta {
+            font-size: 0.78rem;
+            color: var(--text-tertiary);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
+        }
+        .task-item p {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        .task-section-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin: 16px 0 8px;
+        }
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .activity-item {
+            padding: 16px;
+            border-radius: 16px;
+            background: var(--brand-surface);
+            border: 1px solid rgba(229, 231, 235, 0.9);
+            box-shadow: inset 3px 0 0 rgba(214, 40, 40, 0.35);
+        }
+        .activity-item h6 {
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .activity-item .time {
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+        }
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            background: var(--brand-surface);
+            border: 1px solid rgba(27, 63, 119, 0.18);
+            box-shadow: inset 0 0 0 1px rgba(214, 40, 40, 0.12);
+        }
+        @media (max-width: 1400px) {
+            .project-layout { grid-template-columns: 240px minmax(0, 1fr) 280px; }
+        }
+        @media (max-width: 1200px) {
+            .project-layout { grid-template-columns: 220px minmax(0, 1fr); }
+            .project-sidebar { position: static; }
+        }
+        @media (max-width: 992px) {
+            .project-layout { grid-template-columns: 1fr; }
+            .project-nav-card { position: static; max-height: none; }
+            .project-sidebar { order: 3; }
+        }
+        @media (max-width: 768px) {
+            .detail-section { padding: 24px; }
+        }
+        @media (max-width: 576px) {
+            .project-nav-card { padding: 20px; }
+            .detail-section { padding: 20px; }
+            .section-header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+
+    <div class="project-header-card mb-4">
+        <div class="project-header">
+            <div class="project-basic-info">
+                <div class="project-title-section">
+                    <h1 class="project-name">{{ project.name }}</h1>
+                    <div class="project-badges">
+                        <span class="badge">{{ project.project_number }}</span>
+                        <span class="badge">{{ project.get_status_display }}</span>
+                        <span class="badge">优先级：{{ project.priority|default:"中" }}</span>
+                        {% if project.service_type %}
+                        <span class="badge">{{ project.service_type.name }}</span>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            <div>
-                <span class="badge bg-light text-dark">{{ project.get_status_display }}</span>
-                <a href="{% url 'project_pages:project_list' %}" class="btn btn-light btn-sm ms-2">返回列表</a>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3">
-                    <strong>项目状态：</strong>{{ project.get_status_display }}
-                </div>
-                <div class="col-md-3">
-                    <strong>服务类型：</strong>{{ project.get_service_type_display }}
-                </div>
-                <div class="col-md-3">
-                    <strong>项目负责人：</strong>{{ project.project_manager.get_full_name|default:project.project_manager.username|default:"未分配" }}
-                </div>
-                <div class="col-md-3">
-                    <strong>合同金额：</strong>¥{{ project.contract_amount|default:"0.00"|floatformat:2 }}
-                </div>
-            </div>
-            <div class="mt-3">
-                <div class="progress" style="height: 20px;">
-                    <div class="progress-bar" role="progressbar" style="width: 50%">50%</div>
-                </div>
+            <div class="project-quick-actions">
+                <button class="btn btn-outline-light btn-sm"><i class="bi bi-star"></i> 关注项目</button>
+                {% if edit_permitted %}
+                <a href="{% url 'project_pages:project_edit' project.id %}" class="btn btn-light btn-sm text-primary fw-semibold"><i class="bi bi-pencil-square"></i> 编辑信息</a>
+                {% endif %}
+                {% if team_manage_permitted %}
+                <a href="{% url 'project_pages:project_team' project.id %}" class="btn btn-outline-light btn-sm"><i class="bi bi-people"></i> 配置团队</a>
+                {% endif %}
+                {% if quick_links.complete_info %}
+                <a href="{% url 'project_pages:project_complete' project.id %}" class="btn btn-light btn-sm text-primary fw-semibold"><i class="bi bi-clipboard-check"></i> 信息完善</a>
+                {% endif %}
+                {% if quick_links.design_reply %}
+                <a href="{% url 'project_pages:project_design_reply' project.id %}" class="btn btn-outline-light btn-sm"><i class="bi bi-pencil"></i> 设计方回复</a>
+                {% endif %}
+                {% if quick_links.meeting_log %}
+                <a href="{% url 'project_pages:project_meeting_log' project.id %}" class="btn btn-outline-light btn-sm"><i class="bi bi-people-fill"></i> 三方会议</a>
+                {% endif %}
+                {% if quick_links.design_upload %}
+                <a href="{% url 'project_pages:project_design_upload' project.id %}" class="btn btn-outline-light btn-sm"><i class="bi bi-upload"></i> 改图上传</a>
+                {% endif %}
+                {% if quick_links.internal_verify %}
+                <a href="{% url 'project_pages:project_internal_verify' project.id %}" class="btn btn-outline-light btn-sm"><i class="bi bi-check2-circle"></i> 核图确认</a>
+                {% endif %}
+                {% if quick_links.client_confirm %}
+                <a href="{% url 'project_pages:project_client_confirm_outcome' project.id %}" class="btn btn-outline-light btn-sm"><i class="bi bi-file-earmark-check"></i> 成果确认</a>
+                {% endif %}
+                <button class="btn btn-outline-light btn-sm"><i class="bi bi-download"></i> 导出报告</button>
             </div>
         </div>
     </div>
 
-    <!-- 核心KPI监控区域 -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h5 class="text-primary">进度KPI</h5>
-                    <h3>50%</h3>
-                    <p class="text-muted mb-0">计划进度</p>
+    <div class="project-layout">
+        <aside class="project-nav">
+            <div class="project-nav-card">
+                <div class="project-nav-group">
+                    <div class="project-nav-group-title">项目概览</div>
+                    <div class="project-nav-links">
+                        <a class="project-nav-link active" href="#section-flow" data-target="section-flow">
+                            <span><i class="bi bi-diagram-3"></i> 流程进度</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        <a class="project-nav-link" href="#section-basic" data-target="section-basic">
+                            <span><i class="bi bi-info-circle"></i> 基本信息</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        <a class="project-nav-link" href="#section-progress" data-target="section-progress">
+                            <span><i class="bi bi-graph-up"></i> 进度详情</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        <a class="project-nav-link" href="#section-timeline" data-target="section-timeline">
+                            <span><i class="bi bi-ui-checks-grid"></i> 服务时间轴</span>
+                            <span class="chevron">›</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="project-nav-group">
+                    <div class="project-nav-group-title">协作管理</div>
+                    <div class="project-nav-links">
+                        <a class="project-nav-link" href="#section-launch" data-target="section-launch">
+                            <span><i class="bi bi-rocket-takeoff"></i> 启动与图纸</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        <a class="project-nav-link" href="#section-team" data-target="section-team">
+                            <span><i class="bi bi-people"></i> 团队协作</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        <a class="project-nav-link" href="#section-comms" data-target="section-comms">
+                            <span><i class="bi bi-chat-text"></i> 通知记录</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        {% if quick_links.design_reply %}
+                        <a class="project-nav-link" href="{% url 'project_pages:project_design_reply' project.id %}">
+                            <span><i class="bi bi-pencil"></i> 设计方回复</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        {% endif %}
+                        {% if quick_links.meeting_log %}
+                        <a class="project-nav-link" href="{% url 'project_pages:project_meeting_log' project.id %}">
+                            <span><i class="bi bi-people-fill"></i> 三方会议</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        {% endif %}
+                        {% if quick_links.design_upload %}
+                        <a class="project-nav-link" href="{% url 'project_pages:project_design_upload' project.id %}">
+                            <span><i class="bi bi-upload"></i> 改图上传</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        {% endif %}
+                        {% if quick_links.internal_verify %}
+                        <a class="project-nav-link" href="{% url 'project_pages:project_internal_verify' project.id %}">
+                            <span><i class="bi bi-shield-check"></i> 核图确认</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        {% endif %}
+                        {% if quick_links.client_confirm %}
+                        <a class="project-nav-link" href="{% url 'project_pages:project_client_confirm_outcome' project.id %}">
+                            <span><i class="bi bi-file-earmark-check"></i> 成果确认</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        {% endif %}
+                        {% if quick_links.complete_info %}
+                        <a class="project-nav-link" href="{% url 'project_pages:project_complete' project.id %}">
+                            <span><i class="bi bi-clipboard-check"></i> 信息完善</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="project-nav-group">
+                    <div class="project-nav-group-title">业务数据</div>
+                    <div class="project-nav-links">
+                        {% if show_risk_section %}
+                        <a class="project-nav-link" href="#section-risk" data-target="section-risk">
+                            <span><i class="bi bi-exclamation-triangle"></i> 风险监控</span>
+                            <span class="chevron">›</span>
+                        </a>
+                        {% endif %}
+                        <a class="project-nav-link" href="#section-deliver" data-target="section-deliver">
+                            <span><i class="bi bi-box-seam"></i> 交付物</span>
+                            <span class="chevron">›</span>
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h5 class="text-success">成本KPI</h5>
-                    <h3>¥{{ project.estimated_savings|default:"0.00"|floatformat:2 }}</h3>
-                    <p class="text-muted mb-0">预计节省金额</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h5 class="text-info">质量KPI</h5>
-                    <h3>85%</h3>
-                    <p class="text-muted mb-0">意见采纳率</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h5 class="text-warning">风险KPI</h5>
-                    <h3>2</h3>
-                    <p class="text-muted mb-0">风险数量</p>
-                </div>
-            </div>
-        </div>
-    </div>
+        </aside>
 
-    <!-- 交付物追踪区域 -->
-    <div class="card mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">交付物追踪</h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>交付物名称</th>
-                            <th>计划完成时间</th>
-                            <th>实际完成时间</th>
-                            <th>当前状态</th>
-                            <th>负责人</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for milestone in milestones %}
-                        <tr>
-                            <td>{{ milestone.name }}</td>
-                            <td>{{ milestone.planned_date|date:"Y-m-d" }}</td>
-                            <td>{{ milestone.actual_date|date:"Y-m-d"|default:"-" }}</td>
-                            <td>
-                                {% if milestone.is_completed %}
-                                <span class="badge bg-success">已完成</span>
-                                {% elif milestone.planned_date < today %}
-                                <span class="badge bg-danger">延期</span>
-                                {% else %}
-                                <span class="badge bg-warning">进行中</span>
-                                {% endif %}
-                            </td>
-                            <td>-</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center text-muted">暂无交付物</td>
-                        </tr>
+        <main class="project-main">
+            <section id="section-flow" class="detail-section" data-flow-action-url="{{ flow.action_url }}">
+                <div class="section-header">
+                    <h4 class="section-title">结果优化流程</h4>
+                    <p class="section-desc">串联资料、预审、开工、意见、审核、推送的最小闭环，方便技术团队与甲方协同。</p>
+                </div>
+                <div class="section-body">
+                    <div class="flow-summary">
+                        <div class="flow-status-card">
+                            <h5>当前步骤</h5>
+                            <div class="flow-status-value">{{ flow.current_label }}</div>
+                            <p class="small text-muted mb-0">{{ flow.started_time|date:"Y-m-d H:i"|default:"—" }} 开始</p>
+                            {% if client_upload.should_prompt %}
+                            <div class="mt-3 p-3 rounded-3" style="background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(234, 179, 8, 0.4);">
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="small text-warning fw-semibold"><i class="bi bi-exclamation-circle"></i> 等待甲方上传资料</div>
+                                    <button type="button"
+                                            class="btn btn-sm btn-warning text-dark fw-semibold"
+                                            data-bs-toggle="offcanvas"
+                                            data-bs-target="#clientPreDocsDrawer">
+                                        <i class="bi bi-cloud-arrow-up"></i> 立即上传
+                                    </button>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flow-status-card">
+                            <h5>下一步</h5>
+                            <div class="flow-status-value">{{ flow.next_label|default:"—" }}</div>
+                            <p class="small text-muted mb-0">完成当前节点后自动流转</p>
+                        </div>
+                        <div class="flow-status-card">
+                            <h5>截止时间</h5>
+                            {% if flow.deadline %}
+                            <div class="flow-status-value" data-flow-countdown data-deadline="{{ flow.deadline|date:'c' }}">—</div>
+                            <p class="small text-muted mb-0">截止 {{ flow.deadline|date:"m-d H:i" }}</p>
+                            {% else %}
+                            <div class="flow-status-value text-muted">未设置</div>
+                            <p class="small text-muted mb-0">当前步骤无倒计时</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="flow-steps">
+                        {% for step in flow.steps %}
+                        <div class="flow-step-card flow-step-{{ step.status }}" data-step-index="{{ forloop.counter|stringformat:'02d' }}">
+                            <h6>{{ step.label }}</h6>
+                            <p class="small text-muted mb-0">
+                                {% if step.status == 'completed' %}已完成{% elif step.status == 'current' %}进行中{% else %}待开始{% endif %}
+                            </p>
+                        </div>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+                    </div>
+                    {% if flow.can_operate %}
+                    <div class="flow-actions">
+                        {% for action in flow.available_actions %}
+                            {% if action.key == 'mark_documents_uploaded' and client_upload.can_submit %}
+                            <button type="button"
+                                    data-bs-toggle="offcanvas"
+                                    data-bs-target="#clientPreDocsDrawer">
+                                <i class="bi bi-cloud-arrow-up"></i> {{ action.label }}
+                            </button>
+                            {% else %}
+                            <button type="button" data-flow-action="{{ action.key }}">{{ action.label }}</button>
+                            {% endif %}
+                        {% empty %}
+                        <span class="text-muted small">当前步骤无需人工操作。</span>
+                        {% endfor %}
+                    </div>
+                    <textarea class="flow-note-input" rows="2" placeholder="备注信息（可选）" data-flow-note></textarea>
+                    {% endif %}
+                </div>
+            </section>
+            <section id="section-basic" class="detail-section collapsed" data-lazy-section="true">
+                <div class="section-header">
+                    <h4 class="section-title">项目基本信息</h4>
+                    <p class="section-desc">项目属性、财务摘要与主要参与方概览，帮助快速建立对项目的整体认知。</p>
+                </div>
+                <div class="section-body">
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h6 class="card-title">项目属性</h6>
+                                    <dl class="row small mb-0">
+                                        <dt class="col-sm-4 text-muted">项目编号</dt><dd class="col-sm-8">{{ project.project_number }}</dd>
+                                        <dt class="col-sm-4 text-muted">项目类型</dt><dd class="col-sm-8">{{ project.business_type|default:"—" }}</dd>
+                                        <dt class="col-sm-4 text-muted">服务类型</dt><dd class="col-sm-8">{{ project.service_type.name|default:"—" }}</dd>
+                                        <dt class="col-sm-4 text-muted">服务专业</dt>
+                                        <dd class="col-sm-8">
+                                            {% for profession in project.service_professions.all %}
+                                            <span class="badge bg-light text-dark me-1 mb-1">{{ profession.name }}</span>
+                                            {% empty %}—{% endfor %}
+                                        </dd>
+                                        <dt class="col-sm-4 text-muted">图纸阶段</dt><dd class="col-sm-8">{{ project.design_stage|default:"—" }}</dd>
+                                        <dt class="col-sm-4 text-muted">项目周期</dt><dd class="col-sm-8">{{ project.start_date|default:"待定" }} - {{ project.end_date|default:"待定" }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h6 class="card-title">执行摘要</h6>
+                                    <dl class="row small mb-0">
+                                        <dt class="col-sm-4 text-muted">进度完成率</dt>
+                                        <dd class="col-sm-8">{{ metrics.progress.percent }}%</dd>
+                                        <dt class="col-sm-4 text-muted">健康指数</dt>
+                                        <dd class="col-sm-8">{{ metrics.health.score }} / 100</dd>
+                                        <dt class="col-sm-4 text-muted">风险级别</dt>
+                                        <dd class="col-sm-8">{{ metrics.risk.level_label }}</dd>
+                                        <dt class="col-sm-4 text-muted">里程碑达成率</dt>
+                                        <dd class="col-sm-8">{{ metrics.progress.summary.completion_rate }}%</dd>
+                                        <dt class="col-sm-4 text-muted">下一个节点</dt>
+                                        <dd class="col-sm-8">
+                                            {% if metrics.progress.upcoming and metrics.progress.upcoming.0.date %}
+                                                {{ metrics.progress.upcoming.0.name }} · {{ metrics.progress.upcoming.0.date|date:"Y-m-d" }}
+                                            {% else %}暂无待办里程碑{% endif %}
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="alert alert-info border-0 shadow-sm d-flex align-items-center" role="alert">
+                                <i class="bi bi-link-45deg me-2"></i>
+                                <div>合同与回款信息已迁移至商务中心，请前往 <a href="{% url 'business_pages:contract_management' %}" class="alert-link">商务中心 · 合同管理</a> 查看。</div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h6 class="card-title">参与方信息</h6>
+                                    <div class="row small">
+                                        <div class="col-md-4">
+                                            <h6>甲方信息</h6>
+                                            <p class="text-muted mb-1">单位：{{ project.client_company_name|default:"—" }}</p>
+                                            <p class="text-muted mb-1">联系人：{{ project.client_contact_person|default:"—" }}</p>
+                                            <p class="text-muted">联系方式：{{ project.client_phone|default:"—" }} · {{ project.client_email|default:"—" }}</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h6>设计方信息</h6>
+                                            <p class="text-muted mb-1">单位：{{ project.design_company|default:"—" }}</p>
+                                            <p class="text-muted mb-1">联系人：{{ project.design_contact_person|default:"—" }}</p>
+                                            <p class="text-muted">联系方式：{{ project.design_phone|default:"—" }} · {{ project.design_email|default:"—" }}</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h6>我方团队</h6>
+                                            <p class="text-muted mb-1">项目负责人：{{ project_manager_display }}</p>
+                                            <p class="text-muted mb-1">商务经理：{{ business_manager_display }}</p>
+                                            <p class="text-muted">专业负责人：
+                                                {% for leader in metrics.team.professional_leaders %}
+                                                <span class="badge bg-light text-dark me-1 mb-1">{{ leader }}</span>
+                                                {% empty %}待分配{% endfor %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-    <!-- 项目操作按钮 -->
-    <div class="d-flex justify-content-between">
-        <div>
-            {% if project.status == 'waiting_receive' %}
-            <a href="{% url 'project_pages:project_complete' project.id %}" class="btn btn-primary">完善项目信息</a>
-            {% elif project.status == 'configuring' %}
-            <a href="{% url 'project_pages:project_team' project.id %}" class="btn btn-primary">配置团队</a>
+            <section id="section-progress" class="detail-section collapsed" data-lazy-section="true">
+                <div class="section-header">
+                    <h4 class="section-title">项目进度详情</h4>
+                    <p class="section-desc">甘特进度、任务完成情况与近期提醒，帮助实时掌握项目执行状态。</p>
+                </div>
+                <div class="section-body">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                <h6 class="card-title mb-0">项目甘特进度</h6>
+                                <span class="small text-muted">计划周期：{{ project.start_date|default:"待定" }} ~ {{ project.end_date|default:"待定" }}</span>
+                            </div>
+                            <div class="gantt-legend small mb-3 d-flex gap-2">
+                                <span class="badge bg-success">已完成</span>
+                                <span class="badge bg-primary">进行中</span>
+                                <span class="badge bg-danger">延迟</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col">任务</th>
+                                            <th scope="col">计划时间</th>
+                                            <th scope="col">实际完成</th>
+                                            <th scope="col">状态</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for task in metrics.progress.tasks %}
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">{{ task.name }}</div>
+                                                <div class="gantt-track mt-2">
+                                                    <div class="gantt-bar bg-{{ task.status_badge_class }}" data-left="{{ task.timeline_offset }}" data-width="{{ task.timeline_width }}"></div>
+                                                </div>
+                                            </td>
+                                            <td class="small text-muted">{{ task.planned_start|date:"Y-m-d" }} ~ {{ task.planned_end|date:"Y-m-d" }}</td>
+                                            <td class="small text-muted">
+                                                {% if task.actual_end %}
+                                                    {{ task.actual_end|date:"Y-m-d" }}
+                                                {% else %}—{% endif %}
+                                                {% if task.delay_days %}
+                                                    <span class="badge bg-danger-subtle text-danger ms-1">延迟 {{ task.delay_days }} 天</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><span class="badge bg-{{ task.status_badge_class }}">{{ task.status_label }}</span></td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">暂无进度任务数据</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="row g-4 mt-4 progress-insights">
+                                <div class="col-lg-4 col-md-6">
+                                    <div class="insight-card">
+                                        <h6>任务完成统计</h6>
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between small text-muted">
+                                                <span>总体完成率</span>
+                                                <span>{{ metrics.progress.summary.completion_rate }}%</span>
+                                            </div>
+                                            <div class="progress" style="height:8px;">
+                                                <div class="progress-bar bg-success" data-width="{{ metrics.progress.summary.completion_rate }}"></div>
+                                            </div>
+                                        </div>
+                                        <ul>
+                                            <li><span><span class="badge bg-success me-2">●</span>已完成</span><span>{{ metrics.progress.summary.completed }}</span></li>
+                                            <li><span><span class="badge bg-primary me-2">●</span>进行中</span><span>{{ metrics.progress.summary.in_progress }}</span></li>
+                                            <li><span><span class="badge bg-danger me-2">●</span>延迟</span><span>{{ metrics.progress.summary.delayed }}</span></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-lg-4 col-md-6">
+                                    <div class="insight-card">
+                                        <h6>延迟任务</h6>
+                                        <ul>
+                                            {% for task in metrics.progress.delayed_tasks %}
+                                            <li><span>{{ task.name }}</span><span class="text-danger">+{{ task.delay_days }} 天</span></li>
+                                            {% empty %}
+                                            <li class="text-muted">目前没有延迟任务</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-lg-4 col-md-12">
+                                    <div class="insight-card">
+                                        <h6>即将到来的里程碑</h6>
+                                        <ul>
+                                            {% for milestone in metrics.progress.upcoming %}
+                                            <li><span>{{ milestone.name }}</span><span class="text-muted">{{ milestone.date|date:"Y-m-d" }} · {{ milestone.days_remaining }}天</span></li>
+                                            {% empty %}
+                                            <li class="text-muted">暂无待开始的里程碑</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <section id="section-timeline" class="detail-section collapsed" data-lazy-section="true">
+                <div class="section-header">
+                    <h4 class="section-title">服务类型时间轴</h4>
+                    <p class="section-desc">针对当前服务类型的阶段划分，展示横向里程碑完成情况，并支持对当前阶段重点的提醒。</p>
+                </div>
+                <div class="timeline-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="chip"><i class="bi bi-diagram-3"></i> {{ project.service_type.name|default:"未设置" }}</span>
+                        </div>
+                        <div class="chip">
+                            已完成 {{ metrics.progress.completed }} / {{ metrics.progress.total }} · 进度 {{ metrics.timeline.completion_rate }}%
+                        </div>
+                    </div>
+                    <div class="timeline-progress-track">
+                        <div class="timeline-progress-bar" data-width="{{ metrics.timeline.completion_rate }}"></div>
+                    </div>
+                    <div class="service-timeline">
+                        {% for stage in metrics.timeline.stages %}
+                        <div class="timeline-stage {% if stage.status %}{{ stage.status }}{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-1">{{ stage.name }}</h6>
+                                {% if stage.status == 'completed' %}
+                                <span class="badge bg-success">已完成</span>
+                                {% elif stage.status == 'current' %}
+                                <span class="badge bg-primary">进行中</span>
+                                {% else %}
+                                <span class="badge bg-secondary">待开始</span>
+                                {% endif %}
+                            </div>
+                            <p class="small text-muted mb-0">计划：{{ stage.planned_start|date:"Y-m-d"|default:"待定" }}</p>
+                            {% if stage.actual_end %}
+                            <p class="small text-muted mb-0">完成：{{ stage.actual_end|date:"Y-m-d" }}</p>
+                            {% endif %}
+                        </div>
+                        {% empty %}
+                        <div class="text-center text-muted py-4">当前服务类型未设置阶段模板。</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-launch" class="detail-section collapsed" data-lazy-section="true">
+                <div class="section-header">
+                    <h4 class="section-title">启动流转与图纸管理</h4>
+                    <p class="section-desc">展示商务移交、预审、开工通知的流转节点，支持图纸提交、审核与甲方通知。</p>
+                </div>
+                <div class="section-body">
+                    <div class="row g-4">
+                        <div class="col-lg-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="card-title mb-0">启动状态</h6>
+                                        <span class="badge {% if launch.status_code == 'started' %}bg-success{% elif launch.status_code == 'ready_to_start' %}bg-primary{% elif launch.status_code == 'changes_requested' %}bg-warning text-dark{% elif launch.status_code == 'precheck_in_progress' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                                            {{ launch.status_label }}
+                                        </span>
+                                    </div>
+                                    <p class="small text-muted mt-2">跟踪启动关键节点的完成情况，监控图纸预审与开工前准备。</p>
+                                    <ul class="list-unstyled small mt-3 mb-0">
+                                        {% for step in launch.timeline %}
+                                        <li class="d-flex align-items-start mb-3">
+                                            <span class="me-2 mt-1">
+                                                <i class="bi {% if step.is_completed %}bi-check-circle-fill text-success{% elif step.is_current %}bi-record-circle-fill text-primary{% else %}bi-circle text-muted{% endif %}"></i>
+                                            </span>
+                                            <div>
+                                                <div class="fw-semibold">{{ step.label }}</div>
+                                                <div class="text-muted">
+                                                    {% if step.timestamp %}
+                                                        {{ step.timestamp|date:"Y-m-d H:i" }}
+                                                    {% else %}
+                                                        尚未完成
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="card border-0 shadow-sm mt-4">
+                                <div class="card-body">
+                                    <h6 class="card-title">甲方联系人</h6>
+                                    <p class="small text-muted mb-1"><strong>姓名：</strong>{{ client_contact.name|default:"—" }}</p>
+                                    <p class="small text-muted mb-1"><strong>电话：</strong>{{ client_contact.phone|default:"—" }}</p>
+                                    <p class="small text-muted mb-0"><strong>邮箱：</strong>{{ client_contact.email|default:"—" }}</p>
+                                    <div class="alert alert-light border mt-3 mb-0 small">预审通过后可在此直接向甲方推送开工通知，所有动作会记录在通知记录中。</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-8">
+                            <div class="card border-0 shadow-sm mb-4">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                        <h6 class="card-title mb-0">图纸提交记录</h6>
+                                        <span class="small text-muted">共 {{ drawing_submissions|length }} 条</span>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>标题 / 版本</th>
+                                                    <th>提交人</th>
+                                                    <th>提交时间</th>
+                                                    <th>状态</th>
+                                                    <th>最新审核</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for submission in drawing_submissions %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="fw-semibold">{{ submission.title }}</div>
+                                                        <div class="small text-muted">版本：{{ submission.version|default:"—" }}</div>
+                                                    </td>
+                                                    <td class="small text-muted">{{ submission.submitter_name }}<br>{{ submission.submitter_role|default:"—" }}</td>
+                                                    <td class="small text-muted">{{ submission.submitted_time|date:"Y-m-d H:i" }}</td>
+                                                    <td><span class="badge bg-{{ submission.status_class }}">{{ submission.status_label }}</span></td>
+                                                    <td class="small">
+                                                        {% if submission.latest_review %}
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <span class="badge bg-{{ submission.latest_review.result_class }}">{{ submission.latest_review.result_label }}</span>
+                                                            <span class="text-muted">{{ submission.latest_review.reviewer_name }}</span>
+                                                        </div>
+                                                        <div class="text-muted">{{ submission.latest_review.reviewed_time|date:"Y-m-d" }}</div>
+                                                        {% else %}
+                                                        <span class="text-muted">未审核</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="5" class="text-center text-muted py-4">暂无图纸提交记录</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                        <h6 class="card-title mb-0">开工通知记录</h6>
+                                        <span class="small text-muted">共 {{ start_notices|length }} 条</span>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table align-middle">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>主题</th>
+                                                    <th>接收人</th>
+                                                    <th>渠道</th>
+                                                    <th>状态</th>
+                                                    <th>发送时间</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for notice in start_notices %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="fw-semibold">{{ notice.subject }}</div>
+                                                        <div class="small text-muted text-truncate" style="max-width:220px;">{{ notice.message|default:"—" }}</div>
+                                                    </td>
+                                                    <td class="small text-muted">{{ notice.recipient_name|default:"—" }}<br>{{ notice.recipient_phone|default:"" }}</td>
+                                                    <td class="small text-muted">{{ notice.channel }}</td>
+                                                    <td><span class="badge bg-{{ notice.status_class }}">{{ notice.status_label }}</span></td>
+                                                    <td class="small text-muted">{{ notice.sent_time|date:"Y-m-d H:i"|default:"未发送" }}</td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr><td colspan="5" class="text-center text-muted py-4">暂无开工通知记录</td></tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-team" class="detail-section collapsed" data-lazy-section="true">
+                <div class="section-header">
+                    <h4 class="section-title">团队协作</h4>
+                    <p class="section-desc">以角色和业务单元为维度梳理团队构成，支持快速定位责任人。</p>
+                </div>
+                <div class="section-body">
+                    <div class="row g-3">
+                        {% for key, entry in metrics.team.summary.items %}
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title d-flex align-items-center gap-2 mb-3">
+                                        <i class="bi bi-person-badge"></i> {{ entry.label }}
+                                    </h6>
+                                    <ul class="list-unstyled small mb-0">
+                                        {% for member in entry.members %}
+                                        <li class="d-flex justify-content-between align-items-center py-1">
+                                            <span>{{ member.name }}</span>
+                                            <span class="text-muted">{{ member.profession }}</span>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12 text-center text-muted py-4">暂无团队成员信息</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-comms" class="detail-section collapsed" data-lazy-section="true">
+                <div class="section-header">
+                    <h4 class="section-title">通知与沟通记录</h4>
+                    <p class="section-desc">查看近期触达甲方的通知、系统生成的提醒以及关键事件摘要。</p>
+                </div>
+                <div class="section-body">
+                    <div class="row g-3">
+                        {% for notice in start_notices|slice:":4" %}
+                        <div class="col-lg-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ notice.subject }}</h6>
+                                    <p class="small text-muted mb-2">发送时间：{{ notice.sent_time|date:"Y-m-d H:i"|default:"未发送" }}</p>
+                                    <p class="small mb-2">接收人：{{ notice.recipient_name|default:"—" }} · 渠道：{{ notice.channel }}</p>
+                                    <p class="small text-muted mb-0">状态：<span class="badge bg-{{ notice.status_class }}">{{ notice.status_label }}</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12 text-center text-muted py-4">暂无通知记录，可在上方开工通知板块发起。</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+            {% if show_risk_section %}
+            <section id="section-risk" class="detail-section collapsed" data-lazy-section="true">
+                <div class="section-header">
+                    <h4 class="section-title">风险监控</h4>
+                    <p class="section-desc">汇总逾期里程碑等高风险事项，聚焦需要优先处理的问题。</p>
+                </div>
+                <div class="section-body">
+                    <div class="row g-4">
+                        <div class="col-lg-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title mb-3">风险等级</h6>
+                                    <div class="display-6 fw-bold text-{{ metrics.risk.level_class }}">{{ metrics.risk.level_label }}</div>
+                                    <p class="small text-muted mb-0">高风险事项：{{ metrics.risk.high_count }} 项</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-8">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">待处理事项</h6>
+                                    <ul class="list-group list-group-flush small">
+                                        {% for item in metrics.risk.items %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <div class="fw-semibold">{{ item.title }} <span class="badge text-danger border border-danger-subtle bg-transparent ms-2">{{ item.category }}</span></div>
+                                                <div class="text-muted">负责人：{{ item.owner }}</div>
+                                            </div>
+                                            <div class="text-end">
+                                                <span class="badge bg-danger">{{ item.level }}</span>
+                                                <div class="text-muted">{{ item.days }} 天</div>
+                                            </div>
+                                        </li>
+                                        {% empty %}
+                                        <li class="list-group-item text-muted text-center">当前无待处理风险事项</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
             {% endif %}
-        </div>
-        <div>
-            {% if project.status == 'completed' %}
-            <a href="{% url 'project_pages:project_archive' project.id %}" class="btn btn-success">项目归档</a>
-            {% endif %}
-        </div>
+
+            <section id="section-deliver" class="detail-section collapsed" data-lazy-section="true">
+                <div class="section-header">
+                    <h4 class="section-title">交付物进度</h4>
+                    <p class="section-desc">针对服务类型预置的交付物列表，标记达成情况并补充相关文档。</p>
+                </div>
+                <div class="section-body">
+                    <div class="row g-3">
+                        {% for deliverable in deliverables_progress %}
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="card-title mb-0">{{ deliverable.name }}</h6>
+                                        {% if deliverable.completed %}
+                                        <span class="badge bg-success">已完成</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">待提交</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if deliverable.document %}
+                                    <p class="small text-muted mb-0">关联文档：{{ deliverable.document.name }}</p>
+                                    {% else %}
+                                    <p class="small text-muted mb-0">暂未上传对应文档</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12 text-center text-muted py-4">当前服务类型暂未定义交付物。</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <aside class="project-sidebar">
+            <div class="sidebar-card task-card">
+                <h6 class="card-title"><i class="bi bi-check2-square"></i> 工作待办</h6>
+                <div class="task-stats">
+                    {% with counts=task_panel.status_counts %}
+                    <span class="task-chip pending"><i class="bi bi-exclamation-circle"></i> 待处理 {{ counts.pending|default:0 }}</span>
+                    <span class="task-chip in_progress"><i class="bi bi-hourglass-split"></i> 进行中 {{ counts.in_progress|default:0 }}</span>
+                    <span class="task-chip completed"><i class="bi bi-check-circle"></i> 已完成 {{ counts.completed|default:0 }}</span>
+                    <span class="task-chip cancelled"><i class="bi bi-slash-circle"></i> 已取消 {{ counts.cancelled|default:0 }}</span>
+                    {% endwith %}
+                </div>
+                {% with my_tasks=task_panel.mine %}
+                <div class="task-section-title">
+                    {% if my_tasks|length %}我的待办{% else %}项目待办{% endif %}
+                </div>
+                {% if my_tasks|length %}
+                <div class="task-list">
+                    {% for task in my_tasks|slice:":3" %}
+                    <div class="task-item">
+                        <h6>
+                            {{ task.title }}
+                            <span class="task-chip {{ task.status }}">{{ task.status_label }}</span>
+                        </h6>
+                        <div class="task-meta">
+                            <span><i class="bi bi-card-checklist"></i> {{ task.task_type_label }}</span>
+                            {% if task.due_time %}<span><i class="bi bi-clock"></i> {{ task.due_time|date:"m-d H:i" }}</span>{% endif %}
+                            <span><i class="bi bi-person"></i> {{ task.assigned_to_name }}</span>
+                        </div>
+                        <p>{{ task.description }}</p>
+                            <form method="post" action="{% url 'project:project_task_action' project.id task.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="complete">
+                                <button type="submit" class="btn btn-sm btn-primary mt-2">标记完成</button>
+                            </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                    {% if task_panel.active %}
+                    <div class="task-list">
+                        {% for task in task_panel.active|slice:":3" %}
+                        <div class="task-item">
+                            <h6>
+                                {{ task.title }}
+                                <span class="task-chip {{ task.status }}">{{ task.status_label }}</span>
+                            </h6>
+                            <div class="task-meta">
+                                <span><i class="bi bi-card-checklist"></i> {{ task.task_type_label }}</span>
+                                {% if task.due_time %}<span><i class="bi bi-clock"></i> {{ task.due_time|date:"m-d H:i" }}</span>{% endif %}
+                                <span><i class="bi bi-person"></i> {{ task.assigned_to_name }}</span>
+                            </div>
+                            <p>{{ task.description }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted small mb-0">暂无待办事项，等待新的流程节点触发。</p>
+                    {% endif %}
+                {% endif %}
+                {% endwith %}
+                {% if task_panel.active|length > 3 %}
+                <div class="task-section-title">项目待办</div>
+                <div class="task-list">
+                    {% for task in task_panel.active|slice:":3" %}
+                        {% if not task.is_mine %}
+                        <div class="task-item">
+                            <h6>
+                                {{ task.title }}
+                                <span class="task-chip {{ task.status }}">{{ task.status_label }}</span>
+                            </h6>
+                            <div class="task-meta">
+                                <span><i class="bi bi-card-checklist"></i> {{ task.task_type_label }}</span>
+                                {% if task.due_time %}<span><i class="bi bi-clock"></i> {{ task.due_time|date:"m-d H:i" }}</span>{% endif %}
+                                <span><i class="bi bi-person"></i> {{ task.assigned_to_name }}</span>
+                            </div>
+                            <p>{{ task.description }}</p>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="sidebar-card">
+                <h6 class="card-title">项目动态</h6>
+                <div class="activity-list">
+                    {% for activity in metrics.activity %}
+                    <div class="activity-item">
+                        <h6>{{ activity.title }}</h6>
+                        <div class="time mb-1"><i class="bi bi-clock"></i> {{ activity.time }}</div>
+                        <p class="small text-muted mb-0">{{ activity.description|default:"系统自动记录" }}</p>
+                    </div>
+                    {% empty %}
+                    <div class="text-muted small">近期暂无动态，完成任务或上传文档后会自动生成。</div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="sidebar-card">
+                <h6 class="card-title"><i class="bi bi-shuffle"></i> 流转信息</h6>
+                <div class="activity-list">
+                    {% for log in flow.logs %}
+                    <div class="activity-item">
+                        <h6>{{ log.operator }} · {{ log.action_label }}</h6>
+                        <div class="time mb-1">{{ log.time|date:"Y-m-d H:i" }}</div>
+                        <p class="small text-muted mb-1">{{ log.from_label }} → {{ log.to_label }}</p>
+                        {% if log.notes %}<p class="small text-muted mb-0">{{ log.notes }}</p>{% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="text-muted small">暂无流转记录。</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </aside>
     </div>
 </div>
-{% endblock %}
 
+{% if client_upload.can_submit %}
+<div class="offcanvas offcanvas-end" tabindex="-1" id="clientPreDocsDrawer" aria-labelledby="clientPreDocsDrawerLabel">
+    <div class="offcanvas-header">
+        <div>
+            <h5 class="offcanvas-title" id="clientPreDocsDrawerLabel">等待资料上传</h5>
+            <p class="text-muted small mb-0">请上传优化前图纸、计算书、模型等资料，提交后系统自动通知我方预审。</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body border-top">
+        <form method="post" action="{% url 'project_pages:project_drawing_submit' project.id %}" enctype="multipart/form-data" class="row g-3">
+            {% csrf_token %}
+            <div class="col-12">
+                <label class="form-label">提交标题 <span class="text-danger">*</span></label>
+                <input type="text" name="title" class="form-control" placeholder="如：结构图纸（第一次提交）" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">版本号</label>
+                <input type="text" name="version" class="form-control" placeholder="V1.0 / 2025-01">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">预审截止</label>
+                <input type="datetime-local" name="review_deadline" class="form-control">
+            </div>
+            <div class="col-12">
+                <label class="form-label">资料说明</label>
+                <textarea name="description" rows="3" class="form-control" placeholder="补充范围、重点及需要关注的专业"></textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">文件分类</label>
+                <select name="file_category" class="form-select">
+                    {% for option in drawing_file_categories %}
+                    <option value="{{ option.value }}">{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">提交人身份</label>
+                <input type="text" name="submitter_role" class="form-control" value="甲方项目负责人">
+            </div>
+            <div class="col-12">
+                <label class="form-label">上传文件 <span class="text-danger">*</span></label>
+                <input type="file" name="files" class="form-control" multiple required>
+                <div class="form-text">支持多选，单个文件不超过 200MB。</div>
+            </div>
+            <div class="col-12 d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-cloud-arrow-up"></i> 提交资料
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">稍后再说</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    (function() {
+        const navLinks = document.querySelectorAll('.project-nav-link');
+        const sections = Array.from(navLinks).map(link => document.getElementById(link.dataset.target));
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', event => {
+                if (link.dataset.target) {
+                    event.preventDefault();
+                    const target = document.getElementById(link.dataset.target);
+                    if (target) {
+                        if (target.dataset.lazySection === 'true' && target.classList.contains('collapsed')) {
+                            target.classList.remove('collapsed');
+                        }
+                        requestAnimationFrame(() => {
+                            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        });
+                    }
+                }
+            });
+        });
+
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const activeId = entry.target.id;
+                    navLinks.forEach(link => link.classList.toggle('active', link.dataset.target === activeId));
+                }
+            });
+        }, { rootMargin: '-120px 0px -60%', threshold: 0.2 });
+
+        sections.forEach(section => {
+            if (section) {
+                observer.observe(section);
+            }
+        });
+
+        document.querySelectorAll('.gantt-bar').forEach(bar => {
+            const left = bar.dataset.left || 0;
+            const width = bar.dataset.width || 0;
+            bar.style.left = `${left}%`;
+            bar.style.width = `${width}%`;
+        });
+
+        document.querySelectorAll('.progress-bar[data-width]').forEach(bar => {
+            const value = Number(bar.dataset.width || 0);
+            requestAnimationFrame(() => {
+                bar.style.width = `${Math.min(Math.max(value, 0), 100)}%`;
+            });
+        });
+
+        const timelineBar = document.querySelector('.timeline-progress-bar[data-width]');
+        const getCsrfToken = () => {
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : '';
+        };
+
+        const flowSection = document.querySelector('#section-flow');
+        if (flowSection) {
+            const actionUrl = flowSection.dataset.flowActionUrl;
+            const noteInput = flowSection.querySelector('[data-flow-note]');
+            const actionButtons = flowSection.querySelectorAll('[data-flow-action]');
+
+            actionButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const action = button.dataset.flowAction;
+                    if (!actionUrl || !action) {
+                        return;
+                    }
+                    button.disabled = true;
+                    fetch(actionUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': getCsrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: new URLSearchParams({
+                            action,
+                            note: noteInput ? noteInput.value : '',
+                        }),
+                    })
+                        .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                        .then(({ ok, data }) => {
+                            if (!ok) {
+                                throw new Error(data.message || '操作失败');
+                            }
+                            if (noteInput) {
+                                noteInput.value = '';
+                            }
+                            window.location.reload();
+                        })
+                        .catch(error => {
+                            alert(error.message);
+                        })
+                        .finally(() => {
+                            button.disabled = false;
+                        });
+                });
+            });
+
+            const countdownEl = flowSection.querySelector('[data-flow-countdown]');
+            if (countdownEl) {
+                const deadline = new Date(countdownEl.dataset.deadline);
+                const updateCountdown = () => {
+                    if (Number.isNaN(deadline.getTime())) {
+                        countdownEl.textContent = '—';
+                        return;
+                    }
+                    const diff = deadline.getTime() - Date.now();
+                    if (diff <= 0) {
+                        countdownEl.textContent = '到期';
+                        return;
+                    }
+                    const hours = Math.floor(diff / 36e5);
+                    const minutes = Math.floor((diff % 36e5) / 6e4);
+                    countdownEl.textContent = `${hours}h ${minutes}m`;
+                };
+                updateCountdown();
+                setInterval(updateCountdown, 60000);
+            }
+        }
+
+        if (timelineBar) {
+            const width = Number(timelineBar.dataset.width || 0);
+            requestAnimationFrame(() => {
+                timelineBar.style.width = `${Math.min(Math.max(width, 0), 100)}%`;
+            });
+        }
+
+        const initialHash = window.location.hash.replace('#', '');
+        if (initialHash) {
+            const initialSection = document.getElementById(initialHash);
+            if (initialSection && initialSection.dataset.lazySection === 'true') {
+                initialSection.classList.remove('collapsed');
+            }
+        }
+    })();
+</script>
+{% endblock %}

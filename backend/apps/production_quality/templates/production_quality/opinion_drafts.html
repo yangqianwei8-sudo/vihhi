@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+
+{% block title %}意见草稿管理{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --brand-primary: #142F5B;
+        --brand-accent: #1F3E7C;
+        --brand-soft: #F3F6FB;
+        --brand-border: rgba(20, 47, 91, 0.1);
+    }
+
+    .draft-shell {
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 22px 50px rgba(20, 47, 91, 0.12);
+        padding: 28px 32px;
+    }
+
+    .filters-card {
+        background: var(--brand-soft);
+        border-radius: 18px;
+        padding: 18px 20px;
+        border: 1px solid var(--brand-border);
+    }
+
+    .table thead th {
+        background: rgba(20, 47, 91, 0.06);
+        border-bottom: none;
+        color: var(--brand-primary);
+        font-weight: 600;
+    }
+
+    .badge-status {
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .badge-draft {
+        background: rgba(20, 47, 91, 0.12);
+        color: var(--brand-primary);
+    }
+
+    .badge-needs-update {
+        background: rgba(245, 158, 11, 0.12);
+        color: #b45309;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="draft-shell">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3 mb-4">
+            <div>
+                <div class="small text-muted text-uppercase">Drafts</div>
+                <h1 class="h4 mb-1" style="color:var(--brand-primary);">意见草稿管理</h1>
+                <p class="mb-0 text-muted">在提交审核前统一查看与批量操作草稿，支持筛选项目、专业与状态。</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'production_quality_pages:opinion_create' %}" class="btn btn-outline-primary">新建意见</a>
+                <a href="{% url 'production_quality_pages:opinion_import' %}" class="btn btn-outline-primary">批量导入</a>
+            </div>
+        </div>
+
+        <div class="filters-card mb-4">
+            <form id="filters-form" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label text-muted">项目</label>
+                    <select class="form-select" id="filter-project" data-empty-label="全部项目"></select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-muted">专业分类</label>
+                    <select class="form-select" id="filter-profession" data-empty-label="全部专业"></select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-muted">状态</label>
+                    <select class="form-select" id="filter-status">
+                        <option value="">全部状态</option>
+                        <option value="draft">草稿</option>
+                        <option value="needs_update">需修改</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-muted">关键词</label>
+                    <input type="text" class="form-control" id="filter-keyword" placeholder="部位名称 / 问题描述">
+                </div>
+                <div class="col-12 text-end">
+                    <button type="button" class="btn btn-primary px-4" id="btn-apply-filter">应用筛选</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="table-responsive mb-3">
+            <table class="table align-middle" id="draft-table">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">
+                            <input type="checkbox" class="form-check-input" id="select-all">
+                        </th>
+                        <th>意见编号</th>
+                        <th>项目</th>
+                        <th>专业</th>
+                        <th>部位名称</th>
+                        <th>状态</th>
+                        <th class="text-end">节省金额</th>
+                        <th style="width:140px;" class="text-end">操作</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+            <div class="text-muted small" id="table-summary">共 0 条草稿</div>
+            <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-outline-danger" id="btn-delete-selected" disabled>删除所选</button>
+                <button class="btn btn-primary" id="btn-submit-selected" disabled>提交审核</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const apiBase = "{% url 'production_quality:opinion-list' %}";
+        const submitEndpointTemplate = "{% url 'production_quality:opinion-submit' pk='__ID__' %}";
+        const detailTemplate = "{% url 'production_quality_pages:opinion_review_detail' opinion_id='__ID__' %}";
+        const csrfToken = "{{ csrf_token }}";
+
+        const projectSelect = document.getElementById('filter-project');
+        const professionSelect = document.getElementById('filter-profession');
+        const statusSelect = document.getElementById('filter-status');
+        const keywordInput = document.getElementById('filter-keyword');
+        const applyFilterBtn = document.getElementById('btn-apply-filter');
+        const tableBody = document.querySelector('#draft-table tbody');
+        const selectAllCheckbox = document.getElementById('select-all');
+        const submitSelectedBtn = document.getElementById('btn-submit-selected');
+        const deleteSelectedBtn = document.getElementById('btn-delete-selected');
+        const summaryText = document.getElementById('table-summary');
+
+        let currentData = [];
+
+        function fetchOptions() {
+            fetch(apiBase + '?status=draft,needs_update&ordering=project__name')
+                .then(resp => resp.json())
+                .then(data => {
+                    const records = Array.isArray(data) ? data : (data.results || []);
+                    const projects = new Map();
+                    const professions = new Map();
+                    records.forEach(item => {
+                        if (item.project) {
+                            projects.set(item.project, item.project_name || item.project_number || `项目#${item.project}`);
+                        }
+                        if (item.professional_category) {
+                            professions.set(item.professional_category, item.professional_category_name || `专业#${item.professional_category}`);
+                        }
+                    });
+                    populateSelect(projectSelect, projects);
+                    populateSelect(professionSelect, professions);
+                })
+                .catch(() => {});
+        }
+
+        function populateSelect(select, optionsMap) {
+            const emptyLabel = select.getAttribute('data-empty-label') || '全部';
+            select.innerHTML = `<option value="">${emptyLabel}</option>`;
+            optionsMap.forEach((label, value) => {
+                const opt = document.createElement('option');
+                opt.value = value;
+                opt.textContent = `${label}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function buildQuery() {
+            const params = new URLSearchParams();
+            params.append('status', 'draft,needs_update');
+            params.append('ordering', '-updated_at');
+            if (projectSelect.value) {
+                params.append('project', projectSelect.value);
+            }
+            if (professionSelect.value) {
+                params.append('professional_category', professionSelect.value);
+            }
+            if (statusSelect.value) {
+                params.set('status', statusSelect.value);
+            }
+            if (keywordInput.value.trim()) {
+                params.append('search', keywordInput.value.trim());
+            }
+            return params.toString();
+        }
+
+        function fetchDrafts() {
+            const url = apiBase + '?' + buildQuery();
+            fetch(url)
+                .then(resp => resp.json())
+                .then(data => {
+                    currentData = Array.isArray(data) ? data : (data.results || []);
+                    renderTable();
+                })
+                .catch(() => {
+                    currentData = [];
+                    renderTable();
+                });
+        }
+
+        function renderTable() {
+            tableBody.innerHTML = '';
+            selectAllCheckbox.checked = false;
+            const fragment = document.createDocumentFragment();
+            currentData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <input type="checkbox" class="form-check-input row-select" data-id="${item.id}">
+                    </td>
+                    <td>
+                        <div class="fw-semibold">${item.opinion_number || '-'}</div>
+                        <div class="text-muted small">${item.created_by_name || ''}</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold">${item.project_number || ''}</div>
+                        <div class="text-muted small">${item.project_name || ''}</div>
+                    </td>
+                    <td>${item.professional_category_name || '-'}</td>
+                    <td>${item.location_name || '-'}</td>
+                    <td>
+                        <span class="badge badge-status ${item.status === 'draft' ? 'badge-draft' : 'badge-needs-update'}">
+                            ${item.status_display}
+                        </span>
+                    </td>
+                    <td class="text-end">${item.saving_amount ? '¥' + item.saving_amount : '-'}</td>
+                    <td class="text-end">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="${detailTemplate.replace('__ID__', item.id)}" class="btn btn-outline-primary btn-sm">查看</a>
+                            <button class="btn btn-outline-success btn-sm btn-submit-one" data-id="${item.id}">提交</button>
+                        </div>
+                    </td>
+                `;
+                fragment.appendChild(tr);
+            });
+            tableBody.appendChild(fragment);
+            summaryText.textContent = `共 ${currentData.length} 条草稿`;
+            refreshSelectionState();
+        }
+
+        function refreshSelectionState() {
+            const selectedIds = getSelectedIds();
+            const hasSelection = selectedIds.length > 0;
+            submitSelectedBtn.disabled = !hasSelection;
+            deleteSelectedBtn.disabled = !hasSelection;
+        }
+
+        function getSelectedIds() {
+            return Array.from(document.querySelectorAll('.row-select:checked')).map(input => input.dataset.id);
+        }
+
+        selectAllCheckbox.addEventListener('change', (event) => {
+            const checked = event.target.checked;
+            document.querySelectorAll('.row-select').forEach(input => input.checked = checked);
+            refreshSelectionState();
+        });
+
+        tableBody.addEventListener('change', (event) => {
+            if (event.target.classList.contains('row-select')) {
+                const all = document.querySelectorAll('.row-select');
+                const selected = document.querySelectorAll('.row-select:checked');
+                selectAllCheckbox.checked = all.length === selected.length;
+                refreshSelectionState();
+            }
+        });
+
+        tableBody.addEventListener('click', (event) => {
+            if (event.target.classList.contains('btn-submit-one')) {
+                const opinionId = event.target.dataset.id;
+                submitOpinions([opinionId]);
+            }
+        });
+
+        submitSelectedBtn.addEventListener('click', () => {
+            submitOpinions(getSelectedIds());
+        });
+
+        deleteSelectedBtn.addEventListener('click', () => {
+            const ids = getSelectedIds();
+            if (!ids.length) return;
+            if (!confirm('确认删除所选草稿？删除后将无法恢复。')) return;
+            Promise.all(ids.map(id =>
+                fetch(apiBase + id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                })
+            ))
+            .then(() => fetchDrafts())
+            .catch(() => alert('删除失败，请稍后重试。'));
+        });
+
+        function submitOpinions(ids) {
+            if (!ids.length) return;
+            const promises = ids.map(id => {
+                const url = submitEndpointTemplate.replace('__ID__', id);
+                return fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                });
+            });
+            Promise.all(promises)
+                .then(() => fetchDrafts())
+                .catch(() => alert('提交失败，请稍后重试。'));
+        }
+
+        applyFilterBtn.addEventListener('click', fetchDrafts);
+
+        fetchOptions();
+        fetchDrafts();
+    })();
+</script>
+{% endblock %}
+

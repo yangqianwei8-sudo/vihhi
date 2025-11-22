@@ -1,0 +1,100 @@
+{% extends "project_center/base.html" %}
+{% block title %}设计方意见回复 - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-0">设计方意见回复</h3>
+            <div class="text-muted small">项目：{{ project.project_number }} {{ project.name }}</div>
+        </div>
+        <a class="btn btn-outline-primary" href="{% url 'project_pages:project_detail' project.id %}">返回项目</a>
+    </div>
+
+    {% if can_submit %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">提交新回复</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">关联意见 <span class="text-danger">*</span></label>
+                        <select name="opinion_id" class="form-select" required>
+                            <option value="">请选择具体意见</option>
+                            {% for opinion in opinions %}
+                            <option value="{{ opinion.id }}">{{ opinion.opinion_number }} · {{ opinion.location_name }}</option>
+                            {% empty %}
+                            <option value="">当前暂无可选意见</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">事项 / 问题 <span class="text-danger">*</span></label>
+                        <input type="text" name="issue_title" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">回复结果</label>
+                        <select name="status" class="form-select">
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">回复说明</label>
+                        <textarea name="response_detail" class="form-control" rows="3" placeholder="请说明同意/不同意的原因、条件或所需补充资料。"></textarea>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary">提交回复</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info border-0 shadow-sm">当前账户无权提交设计方回复，仅可浏览记录。</div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">历史回复</h5>
+        </div>
+        <div class="card-body">
+            {% if replies %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>关联意见</th>
+                            <th>事项</th>
+                            <th>回复结果</th>
+                            <th>说明</th>
+                            <th>提交人</th>
+                            <th>时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reply in replies %}
+                        <tr>
+                            <td>{{ reply.opinion.opinion_number|default:"—" }}</td>
+                            <td>{{ reply.issue_title }}</td>
+                            <td>{{ reply.get_status_display }}</td>
+                            <td>{{ reply.response_detail|default:"—" }}</td>
+                            <td>{{ reply.submitted_by.get_full_name|default:reply.submitted_by.username|default:"—" }}</td>
+                            <td>{{ reply.created_time|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">暂无提交记录。</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

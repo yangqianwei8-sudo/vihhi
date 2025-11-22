@@ -1,0 +1,95 @@
+{% extends "project_center/base.html" %}
+{% load static %}
+
+{% block title %}项目接收 - {{ project.name }}{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'project_pages:project_detail' project.id %}">{{ project.name }}</a></li>
+<li class="breadcrumb-item active">项目接收</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">接收项目</h4>
+                    <small>确认接收并指派项目经理，项目将进入信息完善阶段。</small>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="avatar bg-light border">{{ project.name|default:"项"|slice:":1"|upper }}</div>
+                            <div>
+                                <div class="fw-semibold">{{ project.project_number }} · {{ project.name }}</div>
+                                <div class="text-muted small">
+                                    当前状态：{{ project.get_status_display }} · 商务经理：
+                                    {% if business_manager %}
+                                        {{ business_manager.get_full_name|default:business_manager.username }}
+                                    {% else %}
+                                        待分配
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">请选择项目经理 <span class="text-danger">*</span></label>
+                            <select name="project_manager" class="form-select" required>
+                                <option value="">请选择项目经理</option>
+                                {% if project_manager_candidates %}
+                                    {% for candidate in project_manager_candidates %}
+                                    <option value="{{ candidate.id }}">
+                                        {{ candidate.get_full_name|default:candidate.username }}
+                                        {% if candidate.department %}（{{ candidate.department.name }}）{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="">暂无可选项目经理，请先在人员管理中维护</option>
+                                {% endif %}
+                            </select>
+                            <div class="form-text text-muted">
+                                接收后将自动通知所选项目经理，并允许其进入“信息完善”和“团队配置”环节。
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'project_pages:project_detail' project.id %}" class="btn btn-secondary">返回项目</a>
+                            <button type="submit" class="btn btn-primary">确认接收</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">截止目前</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0 small text-muted">
+                        <li class="mb-2"><span class="text-dark">服务类型：</span>{% if project.service_type %}{{ project.service_type.name }}{% else %}待确定{% endif %}</li>
+                        <li class="mb-2"><span class="text-dark">服务专业：</span>{{ project.service_professions.all|length }} 项</li>
+                        <li><span class="text-dark">创建人：</span>{% if project.created_by %}{{ project.created_by.get_full_name|default:project.created_by.username }}{% else %}—{% endif %}</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">接收说明</h6>
+                </div>
+                <div class="card-body small text-muted">
+                    <ol class="ps-3 mb-0">
+                        <li class="mb-2">确认项目资料是否完整，如需补充可联系商务经理。</li>
+                        <li class="mb-2">指派项目经理后，系统会自动通知相关人员并开放后续步骤。</li>
+                        <li>如暂未确定项目经理，可先在人员配置中维护候选人，再返回此处接收项目。</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

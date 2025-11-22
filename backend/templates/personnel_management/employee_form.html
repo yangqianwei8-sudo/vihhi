@@ -1,0 +1,293 @@
+{% extends "personnel_management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:employee_management' %}">员工档案</a></li>
+<li class="breadcrumb-item active">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:employee_management' %}">员工档案</a></li>
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:employee_detail' employee.id %}">{{ employee.name }}</a></li>
+<li class="breadcrumb-item active">编辑</li>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-card h5 {
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <!-- 表单 -->
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-card">
+            <h5>基本信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">姓名</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                    <div class="text-danger small mt-1">{{ form.name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label required">性别</label>
+                    {{ form.gender }}
+                    {% if form.gender.errors %}
+                    <div class="text-danger small mt-1">{{ form.gender.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">出生日期</label>
+                    {{ form.birthday }}
+                    {% if form.birthday.errors %}
+                    <div class="text-danger small mt-1">{{ form.birthday.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">身份证号</label>
+                    {{ form.id_number }}
+                    {% if form.id_number.errors %}
+                    <div class="text-danger small mt-1">{{ form.id_number.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label required">手机号</label>
+                    {{ form.phone }}
+                    {% if form.phone.errors %}
+                    <div class="text-danger small mt-1">{{ form.phone.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">邮箱</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <div class="text-danger small mt-1">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 工作信息 -->
+        <div class="form-card">
+            <h5>工作信息</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">部门</label>
+                    {{ form.department }}
+                    {% if form.department.errors %}
+                    <div class="text-danger small mt-1">{{ form.department.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">职位</label>
+                    {{ form.position }}
+                    {% if form.position.errors %}
+                    <div class="text-danger small mt-1">{{ form.position.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">职称</label>
+                    {{ form.job_title }}
+                    {% if form.job_title.errors %}
+                    <div class="text-danger small mt-1">{{ form.job_title.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">入职日期</label>
+                    {{ form.entry_date }}
+                    {% if form.entry_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.entry_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">状态</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                    <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">离职日期</label>
+                    {{ form.resignation_date }}
+                    {% if form.resignation_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.resignation_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">系统账号</label>
+                    {{ form.user }}
+                    {% if form.user.errors %}
+                    <div class="text-danger small mt-1">{{ form.user.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">关联系统用户账号（可选）</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 联系信息 -->
+        <div class="form-card">
+            <h5>联系信息</h5>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label">住址</label>
+                    {{ form.address }}
+                    {% if form.address.errors %}
+                    <div class="text-danger small mt-1">{{ form.address.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">紧急联系人</label>
+                    {{ form.emergency_contact }}
+                    {% if form.emergency_contact.errors %}
+                    <div class="text-danger small mt-1">{{ form.emergency_contact.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">紧急联系电话</label>
+                    {{ form.emergency_phone }}
+                    {% if form.emergency_phone.errors %}
+                    <div class="text-danger small mt-1">{{ form.emergency_phone.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 附件信息 -->
+        <div class="form-card">
+            <h5>附件信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">头像</label>
+                    {{ form.avatar }}
+                    {% if form.avatar.errors %}
+                    <div class="text-danger small mt-1">{{ form.avatar.errors }}</div>
+                    {% endif %}
+                    {% if not is_create and employee.avatar %}
+                    <div class="mt-2">
+                        <small class="text-muted">当前头像：</small>
+                        <img src="{{ employee.avatar.url }}" alt="头像" style="max-width: 100px; max-height: 100px; border-radius: 8px;">
+                    </div>
+                    {% endif %}
+                    <small class="text-muted">支持 JPG、PNG 等图片格式</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">简历</label>
+                    {{ form.resume }}
+                    {% if form.resume.errors %}
+                    <div class="text-danger small mt-1">{{ form.resume.errors }}</div>
+                    {% endif %}
+                    {% if not is_create and employee.resume %}
+                    <div class="mt-2">
+                        <small class="text-muted">当前简历：</small>
+                        <a href="{{ employee.resume.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-download"></i> 查看简历
+                        </a>
+                    </div>
+                    {% endif %}
+                    <small class="text-muted">支持 PDF、DOC、DOCX 格式</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 备注信息 -->
+        <div class="form-card">
+            <h5>备注信息</h5>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label">备注</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 表单错误 -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% if is_create %}{% url 'personnel_pages:employee_management' %}{% else %}{% url 'personnel_pages:employee_detail' employee.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-submit">
+                    <i class="bi bi-check-circle"></i> 保存
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

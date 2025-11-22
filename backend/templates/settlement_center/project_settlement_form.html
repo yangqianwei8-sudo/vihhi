@@ -1,0 +1,354 @@
+{% extends "settlement_center/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'settlement_pages:project_settlement_list' %}">项目结算管理</a></li>
+<li class="breadcrumb-item active">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'settlement_pages:project_settlement_list' %}">项目结算管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'settlement_pages:project_settlement_detail' settlement.id %}">{{ settlement.settlement_number }}</a></li>
+<li class="breadcrumb-item active">编辑</li>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-card h5 {
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .amount-highlight {
+        font-size: 18px;
+        font-weight: 700;
+        color: #D62828;
+    }
+    .info-box {
+        background: #eff6ff;
+        padding: 16px;
+        border-radius: 8px;
+        border-left: 4px solid #3b82f6;
+        margin-bottom: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <!-- 表单 -->
+    <form method="post" enctype="multipart/form-data" id="settlementForm">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-card">
+            <h5>基本信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">关联项目</label>
+                    {{ form.project }}
+                    {% if form.project.errors %}
+                    <div class="text-danger small mt-1">{{ form.project.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">关联合同</label>
+                    {{ form.contract }}
+                    {% if form.contract.errors %}
+                    <div class="text-danger small mt-1">{{ form.contract.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">选择项目后自动加载相关合同</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">结算类型</label>
+                    {{ form.settlement_type }}
+                    {% if form.settlement_type.errors %}
+                    <div class="text-danger small mt-1">{{ form.settlement_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">结算周期开始日期</label>
+                    {{ form.settlement_period_start }}
+                    {% if form.settlement_period_start.errors %}
+                    <div class="text-danger small mt-1">{{ form.settlement_period_start.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">结算周期开始日期</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">结算周期结束日期</label>
+                    {{ form.settlement_period_end }}
+                    {% if form.settlement_period_end.errors %}
+                    <div class="text-danger small mt-1">{{ form.settlement_period_end.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">结算周期结束日期</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">结算日期</label>
+                    {{ form.settlement_date }}
+                    {% if form.settlement_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.settlement_date.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">默认当前日期</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 参考信息 -->
+        <div class="form-card">
+            <h5>参考信息</h5>
+            <div class="info-box">
+                <i class="bi bi-info-circle"></i> <strong>提示：</strong>合同金额用于参考；结算金额、节省金额汇总、服务费等信息将在创建结算单后，从Opinion明细项自动生成和计算。
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">合同金额</label>
+                    {{ form.contract_amount }}
+                    {% if form.contract_amount.errors %}
+                    <div class="text-danger small mt-1">{{ form.contract_amount.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">用于参考，选择合同后自动填充</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">税率(%)</label>
+                    {{ form.tax_rate }}
+                    {% if form.tax_rate.errors %}
+                    <div class="text-danger small mt-1">{{ form.tax_rate.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">默认6%，用于税额计算</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 产值信息 -->
+        <div class="form-card">
+            <h5>产值信息</h5>
+            <div class="info-box">
+                <i class="bi bi-info-circle"></i> <strong>提示：</strong>累计产值为项目已计算的产值总和（从产值管理模块自动获取），确认产值为本次结算确认的产值金额。
+                {% if not is_create and form.project.value %}
+                <a href="{% url 'settlement_pages:project_output_value_detail' form.project.value %}" class="btn btn-sm btn-outline-primary ms-2" target="_blank">
+                    <i class="bi bi-eye"></i> 查看产值详情
+                </a>
+                {% endif %}
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">累计产值</label>
+                    {{ form.total_output_value }}
+                    {% if form.total_output_value.errors %}
+                    <div class="text-danger small mt-1">{{ form.total_output_value.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">从产值管理模块自动统计</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">确认产值</label>
+                    {{ form.confirmed_output_value }}
+                    {% if form.confirmed_output_value.errors %}
+                    <div class="text-danger small mt-1">{{ form.confirmed_output_value.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">本次结算确认的产值金额</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 附件和备注 -->
+        <div class="form-card">
+            <h5>附件和备注</h5>
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label">结算文件</label>
+                    {{ form.settlement_file }}
+                    {% if form.settlement_file.errors %}
+                    <div class="text-danger small mt-1">{{ form.settlement_file.errors }}</div>
+                    {% endif %}
+                    {% if not is_create and settlement.settlement_file %}
+                    <div class="mt-2">
+                        <a href="{{ settlement.settlement_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-file-earmark"></i> 查看现有文件
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">结算说明</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">备注</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="{% url 'settlement_pages:project_settlement_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-submit">
+                    <i class="bi bi-check-circle"></i> 保存
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const projectSelect = document.getElementById('id_project');
+    const contractSelect = document.getElementById('id_contract');
+    const contractAmountInput = document.getElementById('id_contract_amount');
+    const settlementDateInput = document.getElementById('id_settlement_date');
+    const periodStartInput = document.getElementById('id_settlement_period_start');
+    const periodEndInput = document.getElementById('id_settlement_period_end');
+
+    // 设置默认结算日期为今天
+    if (settlementDateInput && !settlementDateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        settlementDateInput.value = today;
+    }
+
+    // 设置默认结算周期为本月（如果为空）
+    if (periodStartInput && !periodStartInput.value) {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        periodStartInput.value = firstDay.toISOString().split('T')[0];
+        periodEndInput.value = lastDay.toISOString().split('T')[0];
+    }
+
+    // 选择项目后自动加载相关合同
+    if (projectSelect) {
+        projectSelect.addEventListener('change', function() {
+            const projectId = this.value;
+            const contractOption = contractSelect.querySelector(`option[value="${contractSelect.value}"]`);
+            
+            // 清空合同选择（除了当前选中的）
+            if (projectId) {
+                // 可以通过AJAX加载项目相关的合同
+                // 暂时让用户手动选择合同，提交后由后端处理
+                if (contractOption && contractOption.dataset.projectId !== projectId) {
+                    contractSelect.value = '';
+                }
+            }
+        });
+    }
+
+    // 选择合同后自动填充合同金额
+    if (contractSelect) {
+        contractSelect.addEventListener('change', function() {
+            const contractId = this.value;
+            if (contractId) {
+                // 可以通过AJAX获取合同金额
+                // 暂时让用户手动填写或提交后由后端处理
+            }
+        });
+    }
+
+    // 验证结算周期日期
+    if (periodStartInput && periodEndInput) {
+        function validatePeriod() {
+            const startDate = new Date(periodStartInput.value);
+            const endDate = new Date(periodEndInput.value);
+            
+            if (periodStartInput.value && periodEndInput.value && endDate < startDate) {
+                periodEndInput.setCustomValidity('结算周期结束日期不能早于开始日期');
+            } else {
+                periodEndInput.setCustomValidity('');
+            }
+        }
+        
+        periodStartInput.addEventListener('change', validatePeriod);
+        periodEndInput.addEventListener('change', validatePeriod);
+    }
+
+    // 表单提交前验证
+    const form = document.getElementById('settlementForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // 确保必填字段已填写
+            if (!projectSelect.value) {
+                e.preventDefault();
+                alert('请选择关联项目');
+                projectSelect.focus();
+                return false;
+            }
+            
+            if (!periodStartInput.value || !periodEndInput.value) {
+                e.preventDefault();
+                alert('请填写结算周期');
+                if (!periodStartInput.value) periodStartInput.focus();
+                else periodEndInput.focus();
+                return false;
+            }
+            
+            if (!settlementDateInput.value) {
+                e.preventDefault();
+                alert('请填写结算日期');
+                settlementDateInput.focus();
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+

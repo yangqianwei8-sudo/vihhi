@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_head %}
+<style>
+    .output-value-nav {
+        background: #fff;
+        border-radius: 12px;
+        padding: 0;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .output-value-nav-tabs {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .output-value-nav-item {
+        flex: 1;
+    }
+    .output-value-nav-link {
+        display: block;
+        padding: 16px 24px;
+        text-align: center;
+        color: #6b7280;
+        text-decoration: none;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        font-size: 14px;
+    }
+    .output-value-nav-link:hover {
+        color: #1f2937;
+        background: #f9fafb;
+    }
+    .output-value-nav-link.active {
+        color: #1f2937;
+        border-bottom-color: #1f2937;
+        background: #f9fafb;
+    }
+    .stage-container {
+        margin-bottom: 32px;
+    }
+    .stage-header {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        color: #fff;
+        padding: 18px 24px;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+    }
+    .stage-header h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+    }
+    .stage-info {
+        font-size: 13px;
+        opacity: 0.9;
+    }
+    .milestone-card {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+    .milestone-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px dashed #d1d5db;
+    }
+    .milestone-header > div {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .milestone-name {
+        font-weight: 600;
+        color: #1f2937;
+        font-size: 15px;
+    }
+    .milestone-percentage {
+        color: #6b7280;
+        font-size: 13px;
+    }
+    .event-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 10px;
+    }
+    .event-item {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        padding-right: 80px;
+        font-size: 13px;
+        position: relative;
+    }
+    .event-name {
+        font-weight: 500;
+        color: #111827;
+        margin-bottom: 6px;
+    }
+    .event-details {
+        display: flex;
+        gap: 12px;
+        color: #6b7280;
+        font-size: 12px;
+    }
+    .event-details span {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 500;
+        display: inline-block;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+    }
+    .btn-primary {
+        background: #1f2937;
+        color: #fff;
+        border-color: #1f2937;
+    }
+    .btn-primary:hover {
+        background: #111827;
+        border-color: #111827;
+        color: #fff;
+    }
+    .btn-outline-primary {
+        background: #fff;
+        color: #1f2937;
+        border-color: #d1d5db;
+    }
+    .btn-outline-primary:hover {
+        background: #f9fafb;
+        border-color: #1f2937;
+        color: #1f2937;
+    }
+    .section-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 8px;
+    }
+    .section-desc {
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <div class="hero-icon">{{ page_icon }}</div>
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">产值管理</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">配置和管理产值计算模板、查看产值记录和统计分析。</p>
+        </div>
+    </div>
+
+    <!-- 顶部导航栏 -->
+    <div class="output-value-nav">
+        <div class="output-value-nav-tabs">
+            <div class="output-value-nav-item">
+                <a href="{% url 'settlement_pages:output_value_template_manage' %}" class="output-value-nav-link active">产值模板</a>
+            </div>
+            <div class="output-value-nav-item">
+                <a href="{% url 'settlement_pages:output_value_record_list' %}" class="output-value-nav-link">产值记录</a>
+            </div>
+            <div class="output-value-nav-item">
+                <a href="{% url 'settlement_pages:output_value_statistics' %}" class="output-value-nav-link">产值统计</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row g-3 mb-4">
+        {% for card in summary_cards %}
+        <div class="col-md-3">
+            <div class="summary-card">
+                <h3>{{ card.label }}</h3>
+                <div class="value">{{ card.value }}</div>
+                <div class="hint">{{ card.hint }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 产值模板配置 -->
+    <div class="section-block" id="stages">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div>
+                <h2 class="section-title" style="margin: 0;">产值阶段配置</h2>
+                <p class="section-desc" style="margin: 8px 0 0 0;">查看和编辑所有产值阶段的配置详情，包括里程碑和事件的设置。</p>
+            </div>
+            <div>
+                <a href="{% url 'admin:settlement_center_outputvaluestage_changelist' %}" class="btn btn-primary me-2" target="_blank">管理阶段</a>
+                <a href="{% url 'admin:settlement_center_outputvaluemilestone_changelist' %}" class="btn btn-outline-primary me-2" target="_blank">管理里程碑</a>
+                <a href="{% url 'admin:settlement_center_outputvalueevent_changelist' %}" class="btn btn-outline-primary" target="_blank">管理事件</a>
+            </div>
+        </div>
+        
+        {% for stage in stages %}
+        <div class="stage-container">
+            <div class="stage-header">
+                <div>
+                    <h3>{{ stage.name }}</h3>
+                    <div class="stage-info">
+                        阶段产值比例：{{ stage.percentage }}% | 
+                        计取基数：{{ stage.base_amount_type }}
+                    </div>
+                </div>
+                <div>
+                    <a href="{% url 'admin:settlement_center_outputvaluestage_change' stage.id %}" class="btn btn-outline-primary" target="_blank" style="background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: #fff; font-size: 12px; padding: 6px 12px;">编辑阶段</a>
+                </div>
+            </div>
+            
+            {% for milestone in stage.milestones %}
+            <div class="milestone-card">
+                <div class="milestone-header">
+                    <div>
+                        <span class="milestone-name">{{ milestone.name }}</span>
+                        <span class="milestone-percentage">里程碑比例：{{ milestone.percentage }}%</span>
+                    </div>
+                    <a href="{% url 'admin:settlement_center_outputvaluemilestone_change' milestone.id %}" class="btn btn-outline-primary" target="_blank" style="font-size: 12px; padding: 4px 10px;">编辑里程碑</a>
+                </div>
+                
+                <div class="event-list">
+                    {% for event in milestone.events %}
+                    <div class="event-item" style="position: relative;">
+                        <div class="event-name">{{ event.name }}</div>
+                        <div class="event-details">
+                            <span>事件比例：{{ event.percentage }}%</span>
+                            <span>|</span>
+                            <span>责任岗位：{{ event.role }}</span>
+                            {% if event.trigger_condition %}<span>|</span><span>触发条件：{{ event.trigger_condition }}</span>{% endif %}
+                        </div>
+                        <a href="{% url 'admin:settlement_center_outputvalueevent_change' event.id %}" class="btn btn-outline-primary" target="_blank" style="position: absolute; top: 8px; right: 8px; font-size: 11px; padding: 3px 8px; background: #fff;">编辑</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% empty %}
+        <div class="text-center py-5" style="color: #6b7280;">
+            <p>暂无产值模板配置数据。</p>
+            <p class="small">请运行 <code>python manage.py seed_output_value_template</code> 初始化模板数据。</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}风险案例库{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">风险案例库</h2>
+        <div class="d-flex gap-2">
+            <a class="btn btn-light" href="{% url 'resource_standard:risk_case_export' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"><i class="bi bi-file-earmark-pdf"></i> 导出PDF</a>
+            <a class="btn btn-primary" href="{% url 'resource_standard:risk_case_create' %}">新增案例</a>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>案例编号</th>
+                    <th>标题</th>
+                    <th>类型</th>
+                    <th>发生项目</th>
+                    <th>发生时间</th>
+                    <th>推荐指数</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for case in cases %}
+                <tr>
+                    <td>{{ case.case_code }}</td>
+                    <td>{{ case.title }}</td>
+                    <td>{{ case.get_case_type_display }}</td>
+                    <td>{{ case.project.name|default:"—" }}</td>
+                    <td>{{ case.occurred_on|default:"—" }}</td>
+                    <td>
+                        {% for star in "12345"|make_list %}{% if forloop.counter <= case.recommend_score %}★{% else %}☆{% endif %}{% endfor %}
+                    </td>
+                    <td>{% if case.is_published %}<span class="badge bg-success-subtle text-success-emphasis">已发布</span>{% else %}<span class="badge bg-secondary-subtle text-secondary-emphasis">草稿</span>{% endif %}</td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'resource_standard:risk_case_edit' case.pk %}">编辑</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">暂无风险案例</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
