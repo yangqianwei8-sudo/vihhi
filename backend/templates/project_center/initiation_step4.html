@@ -1,0 +1,640 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_head %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        position: relative;
+    }
+    .step-item {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e5e7eb;
+        color: #6b7280;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin: 0 auto 8px;
+        transition: all 0.3s;
+    }
+    .step-item.active .step-number {
+        background: #3b82f6;
+        color: #fff;
+    }
+    .step-item.completed .step-number {
+        background: #10b981;
+        color: #fff;
+    }
+    .step-title {
+        font-size: 13px;
+        color: #6b7280;
+        font-weight: 500;
+    }
+    .step-item.active .step-title {
+        color: #fff;
+        font-weight: 600;
+    }
+    .step-item.completed .step-title {
+        color: #10b981;
+    }
+    .step-line {
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e5e7eb;
+        z-index: 0;
+    }
+    .step-line-fill {
+        height: 100%;
+        background: #10b981;
+        transition: width 0.3s;
+    }
+    .form-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        margin-bottom: 24px;
+    }
+    .form-group {
+        margin-bottom: 24px;
+    }
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+    .form-label .required {
+        color: #ef4444;
+        margin-left: 4px;
+    }
+    .form-control, .form-select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+    .form-control:focus, .form-select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .form-control[readonly] {
+        background-color: #f3f4f6;
+        cursor: not-allowed;
+    }
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid #e5e7eb;
+    }
+    .btn {
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .btn-primary {
+        background: #3b82f6;
+        color: #fff;
+    }
+    .btn-primary:hover {
+        background: #2563eb;
+    }
+    .btn-secondary {
+        background: #6b7280;
+        color: #fff;
+    }
+    .btn-secondary:hover {
+        background: #4b5563;
+    }
+    .amount-input-wrapper {
+        position: relative;
+    }
+    .amount-prefix {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+        font-weight: 500;
+    }
+    .amount-input-wrapper .form-control {
+        padding-left: 60px;
+    }
+    .amount-hint {
+        margin-top: 8px;
+        font-size: 13px;
+        color: #6b7280;
+    }
+    .calculation-info {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 16px;
+        font-size: 13px;
+        color: #0369a1;
+    }
+    .field-group {
+        display: none;
+    }
+    .field-group.active {
+        display: block;
+    }
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin: 0 -12px;
+    }
+    .col-md-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+        padding: 0 12px;
+    }
+    .col-md-12 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding: 0 12px;
+    }
+    @media (max-width: 768px) {
+        .col-md-6 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 class="mb-2" style="font-size: 28px; font-weight: 700;">{{ page_title }}</h1>
+        <p class="mb-0" style="opacity: 0.9; font-size: 15px;">{{ description }}</p>
+        
+    </div>
+
+    <form method="post" class="form-card" id="contractAmountForm">
+        {% csrf_token %}
+        
+        <!-- 服务费取费方式 -->
+        <div class="form-group">
+            <label class="form-label" for="{{ form.billing_method.id_for_label }}">
+                {{ form.billing_method.label }}
+                <span class="required">*</span>
+            </label>
+            {{ form.billing_method }}
+            {% if form.billing_method.errors %}
+                <div class="text-danger mt-1" style="font-size: 13px;">
+                    {{ form.billing_method.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 项目区域 -->
+        <div class="form-group">
+            <label class="form-label" for="{{ form.project_region.id_for_label }}">
+                {{ form.project_region.label }}
+                <span class="required">*</span>
+            </label>
+            {{ form.project_region }}
+            {% if form.project_region.errors %}
+                <div class="text-danger mt-1" style="font-size: 13px;">
+                    {{ form.project_region.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 结构形式 -->
+        <div class="form-group">
+            <label class="form-label" for="{{ form.structure_type.id_for_label }}">
+                {{ form.structure_type.label }}
+                <span class="required">*</span>
+            </label>
+            {{ form.structure_type }}
+            {% if form.structure_type.errors %}
+                <div class="text-danger mt-1" style="font-size: 13px;">
+                    {{ form.structure_type.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 纯费率计费字段 -->
+        <div class="field-group" id="pure_rate_fields">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.fee_rate_coefficient.id_for_label }}">
+                    {{ form.fee_rate_coefficient.label }}
+                    <span class="required">*</span>
+                </label>
+                {{ form.fee_rate_coefficient }}
+                {% if form.fee_rate_coefficient.errors %}
+                    <div class="text-danger mt-1" style="font-size: 13px;">
+                        {{ form.fee_rate_coefficient.errors }}
+                    </div>
+                {% endif %}
+                <div class="amount-hint">计算公式：合同金额 = 建筑面积 × 25元/平方米 × 10% × 调整系数</div>
+            </div>
+        </div>
+
+        <!-- 基本费+费率取费字段 -->
+        <div class="field-group" id="base_fee_rate_fields">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.base_fee.id_for_label }}">
+                            {{ form.base_fee.label }}
+                        </label>
+                        {{ form.base_fee }}
+                        {% if form.base_fee.errors %}
+                            <div class="text-danger mt-1" style="font-size: 13px;">
+                                {{ form.base_fee.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.fee_rate_coefficient.id_for_label }}">
+                            {{ form.fee_rate_coefficient.label }}
+                        </label>
+                        {{ form.fee_rate_coefficient }}
+                        {% if form.fee_rate_coefficient.errors %}
+                            <div class="text-danger mt-1" style="font-size: 13px;">
+                                {{ form.fee_rate_coefficient.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="amount-hint">计算公式：合同金额 = 基本费 + 建筑面积 × 25元/平方米 × 10% × 节省金额综合调整系数 × 取费系数综合调整系数<br>或：合同金额 = 建筑面积 × 20元/平方米 × 10% × 节省金额综合调整系数 × 取费系数综合调整系数</div>
+        </div>
+
+        <!-- 综合单价包干字段 -->
+        <div class="field-group" id="unit_price_fields">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.unit_price.id_for_label }}">
+                    {{ form.unit_price.label }}
+                    <span class="required">*</span>
+                </label>
+                {{ form.unit_price }}
+                {% if form.unit_price.errors %}
+                    <div class="text-danger mt-1" style="font-size: 13px;">
+                        {{ form.unit_price.errors }}
+                    </div>
+                {% endif %}
+                <div class="amount-hint">计算公式：合同金额 = 建筑面积 × 包干单价 × 综合调整系数</div>
+            </div>
+        </div>
+
+        <!-- 合同金额（自动计算） -->
+        <div class="form-group">
+            <label class="form-label" for="{{ form.contract_amount.id_for_label }}">
+                {{ form.contract_amount.label }}
+            </label>
+            <div class="amount-input-wrapper">
+                <span class="amount-prefix">¥</span>
+                {{ form.contract_amount }}
+            </div>
+            {% if form.contract_amount.errors %}
+                <div class="text-danger mt-1" style="font-size: 13px;">
+                    {{ form.contract_amount.errors }}
+                </div>
+            {% endif %}
+            <div class="amount-hint">合同金额将根据选择的取费方式自动计算</div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'project_pages:project_initiation_step3' project.id %}" class="btn btn-secondary">
+                上一步
+            </a>
+            <button type="button" id="calculateBtn" class="btn btn-secondary">
+                计算金额
+            </button>
+            <button type="submit" name="action" value="save" class="btn btn-secondary">
+                保存
+            </button>
+            <button type="submit" name="action" value="continue" class="btn btn-primary">
+                继续
+            </button>
+        </div>
+    </form>
+
+    <div class="text-center mt-3">
+        <a href="{% url 'project_pages:project_initiation_list' %}" class="text-decoration-none" style="color: #6b7280;">
+            ← 返回项目立项列表
+        </a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const billingMethodSelect = document.getElementById('id_billing_method');
+    const pureRateFields = document.getElementById('pure_rate_fields');
+    const baseFeeRateFields = document.getElementById('base_fee_rate_fields');
+    const unitPriceFields = document.getElementById('unit_price_fields');
+    const calculateBtn = document.getElementById('calculateBtn');
+    const contractAmountInput = document.getElementById('id_contract_amount');
+    
+    // 项目数据（从后端传递）
+    const projectData = {
+        buildingArea: {{ project.building_area|default:0 }},
+        projectBatches: {{ project_batches_json|safe }},
+        serviceType: '{{ project.service_type.code|default:"" }}',
+        businessType: '{{ project.business_type|default:"" }}',
+        serviceProfessions: [
+            {% for prof in project.service_professions.all %}
+            '{{ prof.name }}',
+            {% endfor %}
+        ],
+        undergroundArea: {{ project.underground_area|default:0 }},
+    };
+    
+    // 切换取费方式时显示/隐藏相应字段
+    function toggleFields() {
+        const method = billingMethodSelect.value;
+        pureRateFields.classList.remove('active');
+        baseFeeRateFields.classList.remove('active');
+        unitPriceFields.classList.remove('active');
+        
+        if (method === 'pure_rate') {
+            pureRateFields.classList.add('active');
+        } else if (method === 'base_fee_rate') {
+            baseFeeRateFields.classList.add('active');
+        } else if (method === 'unit_price') {
+            unitPriceFields.classList.add('active');
+        }
+    }
+    
+    billingMethodSelect.addEventListener('change', toggleFields);
+    toggleFields(); // 初始化
+    
+    // 计算合同金额
+    function calculateContractAmount() {
+        const method = billingMethodSelect.value;
+        if (!method) {
+            alert('请选择服务费取费方式');
+            return;
+        }
+        
+        // 计算总建筑面积
+        let totalBuildingArea = projectData.buildingArea || 0;
+        if (projectData.projectBatches && projectData.projectBatches.length > 0) {
+            totalBuildingArea = projectData.projectBatches.reduce((sum, batch) => {
+                return sum + (parseFloat(batch.total_area || 0) || 0);
+            }, 0);
+        }
+        
+        if (totalBuildingArea <= 0) {
+            alert('请先填写项目规模信息（建筑面积）');
+            return;
+        }
+        
+        // 计算地下面积
+        let totalUndergroundArea = projectData.undergroundArea || 0;
+        if (projectData.projectBatches && projectData.projectBatches.length > 0) {
+            totalUndergroundArea = projectData.projectBatches.reduce((sum, batch) => {
+                return sum + (parseFloat(batch.underground_area || 0) || 0);
+            }, 0);
+        }
+        
+        const undergroundRatio = totalUndergroundArea / totalBuildingArea;
+        
+        // 获取服务专业
+        const professionNames = projectData.serviceProfessions || [];
+        const standardProfessions = ['结构', '构造', '电气', '给排水'];
+        const hasStandardProfessions = standardProfessions.some(std => 
+            professionNames.some(name => name.includes(std))
+        );
+        const professionCount = professionNames.length;
+        
+        // 获取其他参数
+        const projectRegion = document.getElementById('id_project_region').value;
+        const structureType = document.getElementById('id_structure_type').value;
+        
+        let contractAmount = 0;
+        
+        if (method === 'pure_rate') {
+            // 纯费率计费
+            const feeRate = parseFloat(document.getElementById('id_fee_rate_coefficient').value || 10);
+            
+            // 服务类型系数
+            let serviceTypeCoef = 1.0;
+            if (projectData.serviceType.includes('result_optimization') || projectData.serviceType.includes('结果优化')) {
+                serviceTypeCoef = 1.0;
+            } else if (projectData.serviceType.includes('process_optimization') || projectData.serviceType.includes('过程优化')) {
+                serviceTypeCoef = 1.5;
+            }
+            
+            // 项目业态系数
+            let businessTypeCoef = 1.0;
+            if (projectData.businessType === 'residential') {
+                businessTypeCoef = 1.0;
+            } else if (projectData.businessType === 'complex') {
+                businessTypeCoef = 1.3;
+            } else if (projectData.businessType === 'industrial') {
+                businessTypeCoef = 1.1;
+            }
+            
+            // 服务专业系数
+            let professionCoef = 1.0;
+            if (!hasStandardProfessions || professionCount < 4) {
+                // 简化处理：每少一个专业减少0.25
+                professionCoef = Math.max(0.1, 1.0 - (4 - professionCount) * 0.25);
+            } else if (professionCount > 4) {
+                professionCoef = 1.0 + (professionCount - 4) * 0.15;
+            }
+            
+            // 项目区域系数
+            let regionCoef = 1.0;
+            if (projectRegion === 'provincial_capital') {
+                regionCoef = 1.0;
+            } else if (projectRegion === 'non_provincial_city') {
+                regionCoef = 1.1;
+            } else if (projectRegion === 'county_city') {
+                regionCoef = 1.2;
+            } else if (projectRegion === 'tier1_city') {
+                regionCoef = 0.7;
+            }
+            
+            // 地下面积比例系数
+            const undergroundCoef = undergroundRatio > 0.2 ? 1.2 : 1.0;
+            
+            // 结构形式系数
+            let structureCoef = 1.0;
+            if (structureType === 'shear_wall') {
+                structureCoef = 1.0;
+            } else if (structureType === 'frame') {
+                structureCoef = 0.6;
+            } else if (structureType === 'steel') {
+                structureCoef = 1.2;
+            } else {
+                structureCoef = 0.9;
+            }
+            
+            // 取费系数
+            const feeRateCoef = feeRate / 10;
+            
+            // 综合调整系数
+            const adjustmentCoef = serviceTypeCoef * businessTypeCoef * professionCoef * regionCoef * undergroundCoef * structureCoef * feeRateCoef;
+            
+            // 计算合同金额
+            contractAmount = totalBuildingArea * 25 * 0.1 * adjustmentCoef;
+            
+        } else if (method === 'base_fee_rate') {
+            // 基本费+费率取费
+            const baseFee = parseFloat(document.getElementById('id_base_fee').value || 0);
+            const feeRate = parseFloat(document.getElementById('id_fee_rate_coefficient').value || 10);
+            
+            // 节省金额综合调整系数
+            let serviceTypeCoef = 1.0;
+            if (projectData.serviceType.includes('result_optimization') || projectData.serviceType.includes('结果优化')) {
+                serviceTypeCoef = 1.0;
+            } else if (projectData.serviceType.includes('process_optimization') || projectData.serviceType.includes('过程优化')) {
+                serviceTypeCoef = 1.2;
+            }
+            
+            let businessTypeCoef = 1.0;
+            if (projectData.businessType === 'residential') {
+                businessTypeCoef = 1.0;
+            } else if (projectData.businessType === 'complex') {
+                businessTypeCoef = 1.3;
+            } else if (projectData.businessType === 'industrial') {
+                businessTypeCoef = 1.1;
+            }
+            
+            let professionCoef = 1.0;
+            if (professionCount < 4) {
+                professionCoef = 1.0 - (4 - professionCount) * 0.25;
+            } else if (professionCount > 4) {
+                professionCoef = 1.0 + (professionCount - 4) * 0.1;
+            }
+            
+            let regionCoef = 1.0;
+            if (projectRegion === 'provincial_capital') {
+                regionCoef = 1.0;
+            } else if (projectRegion === 'non_provincial_city') {
+                regionCoef = 1.1;
+            } else if (projectRegion === 'county_city') {
+                regionCoef = 1.2;
+            } else if (projectRegion === 'tier1_city') {
+                regionCoef = 0.7;
+            }
+            
+            const undergroundCoef = undergroundRatio > 0.2 ? 1.2 : 1.0;
+            
+            let structureCoef = 1.0;
+            if (structureType === 'shear_wall') {
+                structureCoef = 1.0;
+            } else if (structureType === 'frame') {
+                structureCoef = 0.6;
+            } else if (structureType === 'steel') {
+                structureCoef = 1.2;
+            }
+            
+            const savingAdjustmentCoef = serviceTypeCoef * businessTypeCoef * professionCoef * regionCoef * undergroundCoef * structureCoef;
+            const feeRateCoef = feeRate / 10;
+            
+            if (baseFee > 0) {
+                contractAmount = baseFee + totalBuildingArea * 25 * 0.1 * savingAdjustmentCoef * feeRateCoef;
+            } else {
+                contractAmount = totalBuildingArea * 20 * 0.1 * savingAdjustmentCoef * feeRateCoef;
+            }
+            
+        } else if (method === 'unit_price') {
+            // 综合单价包干
+            const unitPrice = parseFloat(document.getElementById('id_unit_price').value || 0);
+            if (unitPrice <= 0) {
+                alert('请填写包干单价');
+                return;
+            }
+            
+            let serviceTypeCoef = 0.8;
+            if (projectData.serviceType.includes('detailed_review') || projectData.serviceType.includes('精细化审图')) {
+                serviceTypeCoef = 0.80;
+            } else if (projectData.serviceType.includes('full_process_consulting') || projectData.serviceType.includes('过程咨询')) {
+                serviceTypeCoef = 0.9;
+            }
+            
+            contractAmount = totalBuildingArea * unitPrice * serviceTypeCoef;
+        }
+        
+        // 显示计算结果
+        contractAmountInput.value = contractAmount.toFixed(2);
+    }
+    
+    calculateBtn.addEventListener('click', calculateContractAmount);
+    
+    // 监听相关字段变化，自动计算
+    ['id_project_region', 'id_structure_type', 'id_fee_rate_coefficient', 'id_base_fee', 'id_unit_price'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', function() {
+                if (billingMethodSelect.value) {
+                    calculateContractAmount();
+                }
+            });
+            element.addEventListener('input', function() {
+                if (billingMethodSelect.value) {
+                    calculateContractAmount();
+                }
+            });
+        }
+    });
+    
+    billingMethodSelect.addEventListener('change', function() {
+        toggleFields();
+        if (this.value) {
+            setTimeout(calculateContractAmount, 100);
+        }
+    });
+});
+</script>
+{% endblock %}

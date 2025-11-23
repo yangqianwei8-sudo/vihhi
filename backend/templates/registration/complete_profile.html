@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}完善个人信息{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --brand-primary: #142F5B;
+        --brand-accent: #1F3E7C;
+        --brand-soft: #F3F6FB;
+    }
+
+    .profile-shell {
+        border-radius: 20px;
+        box-shadow: 0 20px 45px rgba(20, 47, 91, 0.18);
+        overflow: hidden;
+        border: none;
+    }
+
+    .profile-header {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        color: #fff;
+        padding: 24px 28px;
+    }
+
+    .profile-header h5 {
+        font-weight: 700;
+        letter-spacing: 0.4px;
+    }
+
+    .profile-body {
+        padding: 28px 30px;
+        background: #fff;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--brand-primary);
+    }
+
+    .form-text-muted {
+        color: rgba(20, 47, 91, 0.55);
+    }
+
+    .profile-footer {
+        background: var(--brand-soft);
+        padding: 18px 28px;
+        font-size: 13px;
+        color: rgba(20, 47, 91, 0.65);
+    }
+
+    .btn-primary {
+        background-color: var(--brand-primary);
+        border-color: var(--brand-primary);
+        border-radius: 999px;
+        padding: 12px 0;
+        font-weight: 600;
+        letter-spacing: 0.4px;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--brand-accent);
+        border-color: var(--brand-accent);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-xl-5 col-lg-6 col-md-8">
+            <div class="card profile-shell">
+                <div class="profile-header">
+                    <h5 class="mb-1">完善个人信息</h5>
+                    <p class="mb-0 small text-white-50">请选择所属服务端并确认职责，确保系统匹配正确的权限。</p>
+                </div>
+                <div class="profile-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label">姓名</label>
+                            {{ form.full_name }}
+                            {{ form.full_name.errors }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">服务端类别</label>
+                            {{ form.service_category }}
+                            {{ form.service_category.errors }}
+                            <div class="form-text form-text-muted">可根据职能选择：咨询单位 / 委托单位 / 设计单位 / 过控单位。</div>
+                        </div>
+
+                        {% if form.department and not form.department.field.widget.is_hidden %}
+                        <div class="mb-3" id="department-field-wrapper">
+                            <label class="form-label">所属部门</label>
+                            {{ form.department }}
+                            {{ form.department.errors }}
+                        </div>
+                        {% else %}
+                        <div class="mb-3 d-none" id="department-field-wrapper">
+                            <label class="form-label">所属部门</label>
+                            <select class="form-select" disabled>
+                                <option>仅服务单位需要选择部门</option>
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label">职责</label>
+                            {{ form.position }}
+                            {{ form.position.errors }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">邮箱</label>
+                            {{ form.email }}
+                            {{ form.email.errors }}
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">提交并继续</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="profile-footer">
+                    当前服务端类别：{{ service_category_label }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ service_options|json_script:"service-duty-data" }}
+{{ department_group_map|json_script:"department-group-data" }}
+<script>
+    (function() {
+        const serviceData = JSON.parse(document.getElementById('service-duty-data').textContent);
+        const departmentGroupDataEl = document.getElementById('department-group-data');
+        const departmentGroupData = departmentGroupDataEl ? JSON.parse(departmentGroupDataEl.textContent || '{}') : {};
+        const serviceSelect = document.getElementById('id_service_category');
+        const positionSelect = document.getElementById('id_position');
+        const departmentWrapper = document.getElementById('department-field-wrapper');
+        const departmentSelect = document.getElementById('id_department');
+
+        function currentDepartmentGroup() {
+            if (!departmentSelect) return null;
+            const value = departmentSelect.value;
+            return departmentGroupData[value] || null;
+        }
+
+        function rebuildPositionOptions(category) {
+            if (!positionSelect) return;
+            const groups = serviceData[category] || [];
+            const currentValue = positionSelect.value;
+            const allowedGroup = category === 'internal' ? currentDepartmentGroup() : null;
+            positionSelect.innerHTML = '';
+            let firstValue = null;
+            groups.forEach(group => {
+                const { group: groupLabel, options } = group;
+                if (allowedGroup && groupLabel && groupLabel !== allowedGroup) {
+                    return;
+                }
+                if (groupLabel) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = groupLabel;
+                    options.forEach(option => {
+                        const opt = document.createElement('option');
+                        opt.value = option.value;
+                        opt.textContent = option.label;
+                        if (firstValue === null) firstValue = option.value;
+                        optgroup.appendChild(opt);
+                    });
+                    if (optgroup.children.length > 0) {
+                        positionSelect.appendChild(optgroup);
+                    }
+                } else {
+                    options.forEach(option => {
+                        const opt = document.createElement('option');
+                        opt.value = option.value;
+                        opt.textContent = option.label;
+                        if (firstValue === null) firstValue = option.value;
+                        positionSelect.appendChild(opt);
+                    });
+                }
+            });
+            const optionElements = positionSelect.querySelectorAll('option');
+            let hasValue = false;
+            optionElements.forEach(optionEl => {
+                if (optionEl.value === currentValue) {
+                    optionEl.selected = true;
+                    hasValue = true;
+                }
+            });
+            if (!hasValue && firstValue !== null) {
+                positionSelect.value = firstValue;
+            }
+        }
+
+        function toggleDepartment(category) {
+            if (!departmentWrapper) return;
+            if (category === 'internal') {
+                departmentWrapper.classList.remove('d-none');
+                if (departmentSelect) {
+                    departmentSelect.disabled = false;
+                }
+            } else {
+                departmentWrapper.classList.add('d-none');
+                if (departmentSelect) {
+                    departmentSelect.disabled = true;
+                }
+            }
+        }
+
+        if (serviceSelect && positionSelect) {
+            if (departmentSelect && serviceSelect.value !== 'internal') {
+                departmentSelect.disabled = true;
+            }
+            rebuildPositionOptions(serviceSelect.value);
+            toggleDepartment(serviceSelect.value);
+            serviceSelect.addEventListener('change', (event) => {
+                const category = event.target.value;
+                toggleDepartment(category);
+                rebuildPositionOptions(category);
+            });
+        }
+        if (departmentSelect) {
+            departmentSelect.addEventListener('change', () => {
+                if (serviceSelect && serviceSelect.value === 'internal') {
+                    rebuildPositionOptions('internal');
+                }
+            });
+        }
+    })();
+</script>
+{% endblock %}
+

@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}综合单价库{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">综合单价库</h2>
+        <a class="btn btn-primary" href="{% url 'resource_standard:material_price_create' %}">新增单价</a>
+    </div>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>编号</th>
+                    <th>材料名称</th>
+                    <th>规格型号</th>
+                    <th>单位</th>
+                    <th>综合单价</th>
+                    <th>价格类型</th>
+                    <th>版本</th>
+                    <th>生效时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in materials %}
+                <tr>
+                    <td>{{ item.code }}</td>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.specification|default:"—" }}</td>
+                    <td>{{ item.get_unit_display }}</td>
+                    <td>¥{{ item.price }}</td>
+                    <td>{{ item.get_price_type_display }}</td>
+                    <td>{{ item.version }}</td>
+                    <td>{{ item.effective_date|default:"—" }}</td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'resource_standard:material_price_edit' item.pk %}">编辑</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">暂无价格数据</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

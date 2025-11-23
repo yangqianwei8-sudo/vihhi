@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_head %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        position: relative;
+    }
+    .step-item {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e5e7eb;
+        color: #6b7280;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin: 0 auto 8px;
+    }
+    .step-item.active .step-number {
+        background: #D62828;
+        color: #fff;
+    }
+    .step-item.completed .step-number {
+        background: #10b981;
+        color: #fff;
+    }
+    .step-label {
+        font-size: 13px;
+        color: #6b7280;
+    }
+    .step-item.active .step-label {
+        color: #D62828;
+        font-weight: 600;
+    }
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-card h5 {
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .info-note {
+        font-size: 13px;
+        color: #6b7280;
+        margin-top: 4px;
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- 委托单位信息 -->
+        <div class="form-card">
+            <h5>委托单位信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">单位名称</label>
+                    {{ form.client_company_name }}
+                    {% if form.client_company_name.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_company_name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">统一社会信用代码</label>
+                    {{ form.client_credit_code }}
+                    {% if form.client_credit_code.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_credit_code.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">注册资本（万元）</label>
+                    {{ form.client_registered_capital }}
+                    {% if form.client_registered_capital.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_registered_capital.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">注册地址</label>
+                    {{ form.client_registered_address }}
+                    {% if form.client_registered_address.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_registered_address.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">企业类型</label>
+                    {{ form.client_company_type }}
+                    {% if form.client_company_type.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_company_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">企业所有</label>
+                    {{ form.client_ownership_type }}
+                    {% if form.client_ownership_type.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_ownership_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">成立日期</label>
+                    {{ form.client_established_date }}
+                    {% if form.client_established_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_established_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">项目负责人</label>
+                    {{ form.client_contact_person }}
+                    {% if form.client_contact_person.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_contact_person.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">项目负责人联系电话</label>
+                    {{ form.client_phone }}
+                    {% if form.client_phone.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_phone.errors }}</div>
+                    {% endif %}
+                    <div class="info-note">系统将根据联系电话自动创建用户账号并加入项目组</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">司法案件数量（启信宝公开数量）</label>
+                    {{ form.client_litigation_count }}
+                    {% if form.client_litigation_count.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_litigation_count.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">被执行人数量（启信宝公开数量）</label>
+                    {{ form.client_enforcement_count }}
+                    {% if form.client_enforcement_count.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_enforcement_count.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">终本案件数量（启信宝公开数量）</label>
+                    {{ form.client_final_case_count }}
+                    {% if form.client_final_case_count.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_final_case_count.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">限制高消费数量（启信宝公开数量）</label>
+                    {{ form.client_restriction_count }}
+                    {% if form.client_restriction_count.errors %}
+                    <div class="text-danger small mt-1">{{ form.client_restriction_count.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 设计单位信息 -->
+        <div class="form-card">
+            <h5>设计单位信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">单位名称</label>
+                    {{ form.design_company }}
+                    {% if form.design_company.errors %}
+                    <div class="text-danger small mt-1">{{ form.design_company.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">统一社会信用代码</label>
+                    {{ form.design_credit_code }}
+                    {% if form.design_credit_code.errors %}
+                    <div class="text-danger small mt-1">{{ form.design_credit_code.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">项目负责人</label>
+                    {{ form.design_contact_person }}
+                    {% if form.design_contact_person.errors %}
+                    <div class="text-danger small mt-1">{{ form.design_contact_person.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">项目负责人联系电话</label>
+                    {{ form.design_phone }}
+                    {% if form.design_phone.errors %}
+                    <div class="text-danger small mt-1">{{ form.design_phone.errors }}</div>
+                    {% endif %}
+                    <div class="info-note">系统将根据联系电话自动创建用户账号并加入项目组</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% url 'project_pages:project_initiation_detail' project.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回
+            </a>
+            <div>
+                <button type="submit" name="action" value="save" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-save"></i> 保存
+                </button>
+                <button type="submit" name="action" value="continue" class="btn btn-primary">
+                    继续 <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

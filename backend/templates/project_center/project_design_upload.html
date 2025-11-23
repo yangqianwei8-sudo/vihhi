@@ -1,0 +1,66 @@
+{% extends "project_center/base.html" %}
+{% block title %}改图上传 - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-0">设计方改图上传</h3>
+            <div class="text-muted small">项目：{{ project.project_number }} {{ project.name }}</div>
+        </div>
+        <a class="btn btn-outline-primary" href="{% url 'project_pages:project_detail' project.id %}">返回项目</a>
+    </div>
+
+    {% if can_submit %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">上传改图资料</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">附件（可多选）</label>
+                    <input type="file" name="files" class="form-control" multiple>
+                    <div class="form-text">支持一次选择多个文件，自动归类为“设计文件”。</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">说明</label>
+                    <textarea name="note" class="form-control" rows="3" placeholder="可填写改图内容、范围、注意事项。"></textarea>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary">提交改图信息</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info border-0 shadow-sm">当前账号仅可查看记录，如需上传请联系项目管理员。</div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">最近的设计文档</h5>
+        </div>
+        <div class="card-body">
+            {% if design_documents %}
+            <ul class="list-group list-group-flush">
+                {% for doc in design_documents %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-semibold">{{ doc.name }}</div>
+                        <div class="text-muted small">{{ doc.description|default:"无说明" }}</div>
+                        <div class="text-muted small">由 {{ doc.uploaded_by.get_full_name|default:doc.uploaded_by.username }} 于 {{ doc.uploaded_time|date:"Y-m-d H:i" }} 上传</div>
+                    </div>
+                    <a class="btn btn-sm btn-outline-primary" href="{{ doc.file.url }}" target="_blank">下载</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted mb-0">尚未上传设计文件。</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

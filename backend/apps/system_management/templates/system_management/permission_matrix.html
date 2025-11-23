@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}权限配置表{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <h1 class="h4 mb-2">权限配置表</h1>
+            <p class="text-muted mb-0">当前共计 {{ role_total }} 个系统角色、{{ permission_total }} 个业务权限点。此表用于对照角色与权限的对应关系，便于后续调整。</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'system_pages:system_settings' %}" class="btn btn-outline-secondary btn-sm">
+                返回系统设置
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="card-title">角色数量</h6>
+                    <div class="display-6 fw-semibold text-primary">{{ role_total }}</div>
+                    <p class="text-muted small mb-0">当前启用的角色模板数量。</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="card-title">权限点数量</h6>
+                    <div class="display-6 fw-semibold text-primary">{{ permission_total }}</div>
+                    <p class="text-muted small mb-0">系统已定义的业务权限点。</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="card-title">模块覆盖</h6>
+                    <div class="text-muted small mb-2">按业务模块归类的权限点清单：</div>
+                    <ul class="list-unstyled mb-0 small">
+                        {% for module, perms in module_catalog %}
+                        <li class="d-flex justify-content-between gap-2 border-bottom py-1">
+                            <span>{{ module }}</span>
+                            <span class="text-muted">{{ perms|length }} 项</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light fw-semibold">
+            角色权限明细
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" style="width: 12rem;">角色名称</th>
+                            <th scope="col">角色描述</th>
+                            <th scope="col" style="width: 8rem;" class="text-end">权限数</th>
+                            <th scope="col" style="width: 28rem;">权限明细</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in role_entries %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ entry.name }}</div>
+                                <div class="text-muted small">编码：{{ entry.code }}</div>
+                            </td>
+                            <td>
+                                {% if entry.description %}
+                                <div class="small text-muted">{{ entry.description }}</div>
+                                {% else %}
+                                <span class="text-muted small">（未填写描述）</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <span class="badge bg-primary-subtle text-primary">
+                                    {{ entry.permission_count }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if entry.module_summary %}
+                                    {% for module, perms in entry.module_summary.items %}
+                                        <div class="mb-2">
+                                            <div class="fw-semibold small text-uppercase text-muted">{{ module }}</div>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                {% for perm in perms %}
+                                                <span class="badge bg-light text-dark border">{{ perm.code }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted small">尚未分配权限</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info small">
+        <strong>提示：</strong> 该配置表仅用于查看角色与权限的当前关系。若需调整，请在“系统管理 &gt; 用户与权限”或通过脚本更新角色 `custom_permissions`。
+    </div>
+</div>
+{% endblock %}
+

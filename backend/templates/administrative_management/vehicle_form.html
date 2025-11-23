@@ -1,0 +1,161 @@
+{% extends "administrative_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:vehicle_management' %}">车辆</a></li>
+<li class="breadcrumb-item active">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:vehicle_management' %}">车辆</a></li>
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:vehicle_detail' vehicle.id %}">{{ vehicle.plate_number }}</a></li>
+<li class="breadcrumb-item active">编辑</li>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: var(--font-size-md);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <h5>车辆信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">车牌号</label>
+                    {{ form.plate_number }}
+                    {% if form.plate_number.errors %}
+                    <div class="text-danger small mt-1">{{ form.plate_number.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">品牌型号</label>
+                    {{ form.brand }}
+                    {% if form.brand.errors %}
+                    <div class="text-danger small mt-1">{{ form.brand.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">车辆类型</label>
+                    {{ form.vehicle_type }}
+                    {% if form.vehicle_type.errors %}
+                    <div class="text-danger small mt-1">{{ form.vehicle_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">颜色</label>
+                    {{ form.color }}
+                    {% if form.color.errors %}
+                    <div class="text-danger small mt-1">{{ form.color.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">燃料类型</label>
+                    {{ form.fuel_type }}
+                    {% if form.fuel_type.errors %}
+                    <div class="text-danger small mt-1">{{ form.fuel_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">购买日期</label>
+                    {{ form.purchase_date }}
+                    {% if form.purchase_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.purchase_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">购买价格</label>
+                    {{ form.purchase_price }}
+                    {% if form.purchase_price.errors %}
+                    <div class="text-danger small mt-1">{{ form.purchase_price.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">当前里程数</label>
+                    {{ form.current_mileage }}
+                    {% if form.current_mileage.errors %}
+                    <div class="text-danger small mt-1">{{ form.current_mileage.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">专职司机</label>
+                    {{ form.driver }}
+                    {% if form.driver.errors %}
+                    <div class="text-danger small mt-1">{{ form.driver.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">状态</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                    <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">保险到期日</label>
+                    {{ form.insurance_expiry }}
+                    {% if form.insurance_expiry.errors %}
+                    <div class="text-danger small mt-1">{{ form.insurance_expiry.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">年检日期</label>
+                    {{ form.annual_inspection_date }}
+                    {% if form.annual_inspection_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.annual_inspection_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">描述</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            是否启用
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% if is_create %}{% url 'admin_pages:vehicle_management' %}{% else %}{% url 'admin_pages:vehicle_detail' vehicle.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-submit">
+                    <i class="bi bi-check-circle"></i> 保存
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

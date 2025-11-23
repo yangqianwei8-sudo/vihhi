@@ -1,0 +1,44 @@
+{% extends "project_center/base.html" %}
+{% block title %}成果确认 - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-0">甲方成果确认</h3>
+            <div class="text-muted small">项目：{{ project.project_number }} {{ project.name }}</div>
+        </div>
+        <a class="btn btn-outline-primary" href="{% url 'project_pages:project_detail' project.id %}">返回项目</a>
+    </div>
+
+    {% if can_confirm %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">确认结果</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">成果确认</label>
+                    <select name="result" class="form-select">
+                        <option value="accepted">确认通过</option>
+                        <option value="changes">仍需优化/整改</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">说明</label>
+                    <textarea name="comment" class="form-control" rows="4" placeholder="可记录确认意见、待补充事项等。"></textarea>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary">提交确认</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info border-0 shadow-sm">当前账号仅可查看，如需确认成果请联系甲方项目负责人。</div>
+    {% endif %}
+</div>
+{% endblock %}
+

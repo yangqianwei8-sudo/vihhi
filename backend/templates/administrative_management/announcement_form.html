@@ -1,0 +1,180 @@
+{% extends "administrative_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:announcement_management' %}">公告通知</a></li>
+<li class="breadcrumb-item active">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:announcement_management' %}">公告通知</a></li>
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:announcement_detail' announcement.id %}">{{ announcement.title }}</a></li>
+<li class="breadcrumb-item active">编辑</li>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: var(--font-size-md);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <h5>基本信息</h5>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label required">标题</label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                    <div class="text-danger small mt-1">{{ form.title.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">分类</label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                    <div class="text-danger small mt-1">{{ form.category.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">优先级</label>
+                    {{ form.priority }}
+                    {% if form.priority.errors %}
+                    <div class="text-danger small mt-1">{{ form.priority.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">发布日期</label>
+                    {{ form.publish_date }}
+                    {% if form.publish_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.publish_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label required">内容</label>
+                    {{ form.content }}
+                    {% if form.content.errors %}
+                    <div class="text-danger small mt-1">{{ form.content.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <h5>发布设置</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">发布范围</label>
+                    {{ form.target_scope }}
+                    {% if form.target_scope.errors %}
+                    <div class="text-danger small mt-1">{{ form.target_scope.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">失效日期</label>
+                    {{ form.expiry_date }}
+                    {% if form.expiry_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.expiry_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">目标部门</label>
+                    {{ form.target_departments }}
+                    {% if form.target_departments.errors %}
+                    <div class="text-danger small mt-1">{{ form.target_departments.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">发布范围为"指定部门"时选择</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">目标角色</label>
+                    {{ form.target_roles }}
+                    {% if form.target_roles.errors %}
+                    <div class="text-danger small mt-1">{{ form.target_roles.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">发布范围为"指定角色"时选择</small>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">目标用户</label>
+                    {{ form.target_users }}
+                    {% if form.target_users.errors %}
+                    <div class="text-danger small mt-1">{{ form.target_users.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">发布范围为"指定用户"时选择</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">附件</label>
+                    {{ form.attachment }}
+                    {% if form.attachment.errors %}
+                    <div class="text-danger small mt-1">{{ form.attachment.errors }}</div>
+                    {% endif %}
+                    {% if not is_create and announcement.attachment %}
+                    <div class="mt-2">
+                        <small class="text-muted">当前附件：</small>
+                        <a href="{{ announcement.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-download"></i> 查看附件
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-4">
+                        {{ form.is_top }}
+                        <label class="form-check-label" for="{{ form.is_top.id_for_label }}">
+                            是否置顶
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-4">
+                        {{ form.is_popup }}
+                        <label class="form-check-label" for="{{ form.is_popup.id_for_label }}">
+                            是否弹窗提醒
+                        </label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            是否启用
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% if is_create %}{% url 'admin_pages:announcement_management' %}{% else %}{% url 'admin_pages:announcement_detail' announcement.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-submit">
+                    <i class="bi bi-check-circle"></i> 保存
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -1,0 +1,173 @@
+{% extends "financial_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">账簿管理</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .content-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    {% if summary_cards %}
+    <div class="row g-3 mb-4">
+        {% for card in summary_cards %}
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">{{ card.label }}</h6>
+                    <div class="value" style="font-size: 28px; font-weight: 700; color: #142F5B; margin-bottom: 4px;">{{ card.value }}</div>
+                    <div class="hint" style="font-size: 12px; color: #6b7280;">{{ card.hint }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">总账列表</h3>
+        </div>
+
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" placeholder="搜索科目编码、名称..." value="{{ current_search }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="period_year" class="form-select">
+                        <option value="">全部年度</option>
+                        {% for year in years %}
+                        <option value="{{ year }}" {% if current_period_year == year|stringformat:"s" %}selected{% endif %}>{{ year }}年</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="period_month" class="form-select">
+                        <option value="">全部月份</option>
+                        {% for month in months %}
+                        <option value="{{ month }}" {% if current_period_month == month|stringformat:"s" %}selected{% endif %}>{{ month }}月</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a href="{% url 'finance_pages:ledger_management' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 清除
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>会计科目</th>
+                        <th>会计年度</th>
+                        <th>会计期间</th>
+                        <th>日期</th>
+                        <th>期初余额</th>
+                        <th>本期借方</th>
+                        <th>本期贷方</th>
+                        <th>期末余额</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ledger in ledgers %}
+                    <tr>
+                        <td><code>{{ ledger.account_subject.code }}</code> {{ ledger.account_subject.name }}</td>
+                        <td>{{ ledger.period_year }}</td>
+                        <td>{{ ledger.period_month }}</td>
+                        <td>{{ ledger.period_date|date:"Y-m-d" }}</td>
+                        <td>¥{{ ledger.opening_balance|floatformat:2 }}</td>
+                        <td>¥{{ ledger.period_debit|floatformat:2 }}</td>
+                        <td>¥{{ ledger.period_credit|floatformat:2 }}</td>
+                        <td><strong>¥{{ ledger.closing_balance|floatformat:2 }}</strong></td>
+                        <td>
+                            <a href="{% url 'finance_pages:ledger_detail' ledger.id %}" class="btn btn-sm btn-outline-primary me-1" title="查看详情">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="/admin/financial_management/ledger/{{ ledger.id }}/change/" class="btn btn-sm btn-outline-secondary" title="编辑">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">暂无数据</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航">
+            <ul class="pagination justify-content-center mt-4">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_period_year %}&period_year={{ current_period_year }}{% endif %}{% if current_period_month %}&period_month={{ current_period_month }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_period_year %}&period_year={{ current_period_year }}{% endif %}{% if current_period_month %}&period_month={{ current_period_month }}{% endif %}">下一页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            暂无数据或加载失败
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

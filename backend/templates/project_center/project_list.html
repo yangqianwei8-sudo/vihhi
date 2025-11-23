@@ -1,0 +1,526 @@
+{% extends "project_center/base.html" %}
+{% load static %}
+
+{% block title %}项目总览 - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">项目总览</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 查询条件区域 -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">查询条件</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">项目编号</label>
+                    <input type="text" name="project_number" class="form-control" value="{{ request.GET.project_number }}" placeholder="支持模糊查询">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">项目名称</label>
+                    <input type="text" name="project_name" class="form-control" value="{{ request.GET.project_name }}" placeholder="支持模糊查询">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">客户名称</label>
+                    <input type="text" name="client_name" class="form-control" value="{{ request.GET.client_name }}" placeholder="支持模糊查询">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">服务类型</label>
+                    <select name="service_type" class="form-select">
+                        <option value="">全部</option>
+                        {% for service_type in service_types %}
+                        <option value="{{ service_type.id }}"
+                                {% if selected_service_type_id and selected_service_type_id == service_type.id|stringformat:"s" %}selected{% endif %}
+                                {% if not selected_service_type_id and selected_service_type_ids and service_type.id|stringformat:"s" in selected_service_type_ids %}selected{% endif %}>
+                            {{ service_type.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">时间范围</label>
+                    <div class="input-group">
+                        <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                        <span class="input-group-text">至</span>
+                        <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">关键字（本页快速筛选）</label>
+                    <input type="search" class="form-control" id="keywordQuick" placeholder="项目编号/名称/客户/负责人">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">状态（本页快速筛选）</label>
+                    <select id="statusQuick" name="status" class="form-select">
+                        <option value="" {% if not status_selected %}selected{% endif %}>全部</option>
+                        <option value="draft" {% if status_selected == 'draft' %}selected{% endif %}>草稿</option>
+                        <option value="in_progress" {% if status_selected == 'in_progress' %}selected{% endif %}>进行中</option>
+                        <option value="completed" {% if status_selected == 'completed' %}selected{% endif %}>已完成</option>
+                        <option value="archived" {% if status_selected == 'archived' %}selected{% endif %}>已归档</option>
+                    </select>
+                </div>
+                <div class="col-md-3 text-end">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> 查询</button>
+                        <a href="{% url 'project_pages:project_list' %}" class="btn btn-secondary">重置</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 查询结果列表 -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">查询结果</h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                <div class="small text-muted">共 <span id="resultTotal">{{ projects|length }}</span> 条</div>
+                <div class="d-flex gap-2">
+                    <button id="bulkDeleteBtn" type="button" class="btn btn-outline-danger btn-sm" disabled>批量删除</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle" id="resultTable">
+                    <thead>
+                        <tr>
+                            <th style="width:36px"><input type="checkbox" id="selectAll"></th>
+                            <th data-sort="string" class="sortable">项目编号</th>
+                            <th data-sort="string" class="sortable">项目名称</th>
+                            <th data-sort="string" class="sortable">客户名称</th>
+                            <th data-sort="string" class="sortable">服务类型</th>
+                            <th data-sort="status" class="sortable">项目状态</th>
+                            <th data-sort="string" class="sortable">负责人</th>
+                            <th data-sort="date" class="sortable">创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in projects %}
+                        <tr data-status="{{ project.status }}">
+                            <td><input type="checkbox" class="row-check"></td>
+                            <td class="pn">{{ project.project_number }}</td>
+                            <td class="pname">{{ project.name }}</td>
+                            <td class="client">{{ project.client_company_name|default:"-" }}</td>
+                            <td class="stype">{{ project.service_type.name|default:"-" }}</td>
+                            <td class="status">
+                                <span class="badge bg-{% if project.status == 'in_progress' %}success{% elif project.status == 'completed' %}info{% elif project.status == 'archived' %}secondary{% else %}warning text-dark{% endif %}">
+                                    {{ project.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="pm">
+                                {% if project.project_manager %}
+                                    {{ project.project_manager.get_full_name|default:project.project_manager.username|default:"未分配" }}
+                                {% else %}
+                                    未分配
+                                {% endif %}
+                            </td>
+                            <td class="ctime" data-timestamp="{{ project.created_time|date:'c' }}">{{ project.created_time|date:"Y-m-d H:i" }}</td>
+                            <td class="d-flex gap-2 flex-wrap">
+                                <a href="{% url 'project_pages:project_detail' project.id %}" class="btn btn-sm btn-outline-primary">查看</a>
+                                <a href="{% url 'project_pages:project_edit' project.id %}" class="btn btn-sm btn-primary">编辑</a>
+                                <a href="{% url 'project_pages:project_archive' project.id %}" class="btn btn-sm btn-outline-warning"
+                                   onclick="return confirm('确认将该项目归档吗？归档后将不再显示为活动项目。');">归档</a>
+                                <button type="button" class="btn btn-sm btn-danger btn-row-delete" data-project-id="{{ project.id }}" onclick="return window.handleRowDelete && window.handleRowDelete(this);">删除</button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">暂无查询结果</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="small text-muted">每页
+                    <select id="pageSize" class="form-select d-inline-block" style="width:auto">
+                        <option>10</option><option selected>20</option><option>50</option><option>100</option>
+                    </select> 条
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0" id="pager"></ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{# 确保页面生成 CSRF Cookie #}
+<form style="display:none">{% csrf_token %}</form>
+<script>
+// quick keyword & status filter
+try { console.debug('[query] script loaded'); } catch(e){}
+const keywordInput = document.getElementById('keywordQuick');
+const statusBtns = document.querySelectorAll('[data-status-filter]'); // 旧的按钮（如果还存在）
+const statusSelect = document.getElementById('statusQuick'); // 下拉式筛选
+const table = document.getElementById('resultTable');
+const tbody = table.querySelector('tbody');
+const rows = Array.from(tbody.querySelectorAll('tr'));
+let statusFilter = statusSelect?.value || '';
+let sortState = { idx: -1, dir: 1 };
+
+function textOf(row){
+    return (row.querySelector('.pn')?.textContent || '') + ' ' +
+           (row.querySelector('.pname')?.textContent || '') + ' ' +
+           (row.querySelector('.client')?.textContent || '') + ' ' +
+           (row.querySelector('.pm')?.textContent || '');
+}
+
+function applyFilters(){
+    const kw = (keywordInput?.value || '').trim().toLowerCase();
+    // 调试：可在控制台看到当前筛选条件
+    try { console.debug('[query] kw=', kw, 'status=', statusFilter); } catch(e){}
+    let visible = 0;
+    rows.forEach(row=>{
+        const hitKw = kw ? textOf(row).toLowerCase().includes(kw) : true;
+        const hitStatus = !statusFilter || row.dataset.status === statusFilter;
+        const show = hitKw && hitStatus;
+        row.hidden = !show;
+        if(show) visible++;
+    });
+    document.getElementById('resultTotal').textContent = visible;
+    paginate();
+    // 过滤或分页变化后，取消表头全选状态
+    const selectAllEl = document.getElementById('selectAll');
+    if (selectAllEl) selectAllEl.checked = false;
+}
+keywordInput?.addEventListener('input', applyFilters);
+// 下拉式筛选
+statusSelect?.addEventListener('change', () => {
+    statusFilter = statusSelect.value || '';
+    applyFilters();
+});
+// 兼容某些浏览器：input 事件也触发
+statusSelect?.addEventListener('input', () => {
+    statusFilter = statusSelect.value || '';
+    applyFilters();
+});
+// 兼容旧按钮（若仍存在）
+function bindStatusQuickFilterButtons() {
+    const btns = document.querySelectorAll('[data-status-filter]');
+    btns.forEach(btn => {
+        if (btn._vhBound) return;
+        btn._vhBound = true;
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            document.querySelectorAll('[data-status-filter]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            statusFilter = btn.dataset.statusFilter || '';
+            if (statusSelect) statusSelect.value = statusFilter;
+            applyFilters();
+        });
+    });
+}
+bindStatusQuickFilterButtons();
+
+// sorting
+document.querySelectorAll('#resultTable thead th.sortable').forEach((th,idx)=>{
+    th.style.cursor='pointer';
+    th.addEventListener('click', ()=>{
+        const type = th.dataset.sort || 'string';
+        if(sortState.idx === idx){ sortState.dir *= -1; } else { sortState = { idx: idx, dir: 1 }; }
+        const visibleRows = rows.filter(r=>!r.hidden);
+        visibleRows.sort((a,b)=>{
+            const getVal = (row) => {
+                if(type==='date'){
+                    return Date.parse(row.querySelector('.ctime')?.dataset.timestamp || '') || 0;
+                }
+                if(type==='status'){
+                    return row.dataset.status || '';
+                }
+                return (row.cells[idx]?.textContent || '').trim();
+            };
+            const va = getVal(a), vb = getVal(b);
+            if(va===vb) return 0;
+            return va > vb ? sortState.dir : -sortState.dir;
+        });
+        // append back in sorted order
+        visibleRows.forEach(r=>tbody.appendChild(r));
+    });
+});
+
+// select all / export / copy
+const selectAll = document.getElementById('selectAll') || document.querySelector('#resultTable thead input[type="checkbox"]');
+function toggleSelectAllHeader(checked){
+    // 仅勾选当前“可见且在当前分页展示”的行
+    const visibleRows = rows.filter(r=>!r.hidden && r.style.display !== 'none');
+    const visibleSet = new Set(visibleRows);
+    tbody.querySelectorAll('.row-check').forEach(cb => {
+        const tr = cb.closest('tr');
+        if (visibleSet.has(tr)) cb.checked = checked;
+    });
+    try { window.refreshBulkBtn && window.refreshBulkBtn(); } catch(e){}
+}
+selectAll?.addEventListener('change', ()=> toggleSelectAllHeader(selectAll.checked));
+selectAll?.addEventListener('click', ()=> {
+    // 某些浏览器下 change 不触发，这里兜底
+    if (typeof selectAll.checked === 'boolean') toggleSelectAllHeader(selectAll.checked);
+});
+// 再加一层全局委托兜底，确保点击表头勾选框一定触发
+document.addEventListener('change', (e) => {
+    const headerCb = e.target && (e.target.id === 'selectAll' || (e.target.matches && e.target.matches('#resultTable thead input[type=\"checkbox\"]')));
+    if (headerCb) {
+        toggleSelectAllHeader(e.target.checked);
+    }
+}, true);
+// 个别行勾选联动全选框
+tbody.addEventListener('change', (e) => {
+    if (e.target && e.target.classList && e.target.classList.contains('row-check')) {
+        const visibleRows = rows.filter(r=>!r.hidden);
+        const allChecked = visibleRows.length>0 && visibleRows.every(r=>r.querySelector('.row-check')?.checked);
+        if (selectAll) selectAll.checked = allChecked;
+        try { window.refreshBulkBtn && window.refreshBulkBtn(); } catch(e){}
+    }
+});
+// 点击非操作单元格也可切换勾选
+tbody.addEventListener('click', (e) => {
+    const td = e.target.closest('td');
+    if (!td) return;
+    // 跳过操作列、链接、按钮、输入控件
+    if (td.closest('td:last-child') || e.target.closest('a,button,input,select,label')) return;
+    const tr = td.parentElement;
+    const cb = tr?.querySelector('.row-check');
+    if (cb) {
+        cb.checked = !cb.checked;
+        const visibleRows = rows.filter(r=>!r.hidden);
+        const allChecked = visibleRows.length>0 && visibleRows.every(r=>r.querySelector('.row-check')?.checked);
+        if (selectAll) selectAll.checked = allChecked;
+        try { window.refreshBulkBtn && window.refreshBulkBtn(); } catch(e){}
+    }
+});
+function getSelectedIds(){
+    return rows.filter(r=>!r.hidden && r.querySelector('.row-check')?.checked)
+               .map(r=> (r.querySelector('.pn')?.textContent || '').trim()) // fallback if id not in DOM
+}
+function getSelectedRowIds(){
+    // 尝试从“查看/修改/取消”链接里解析 /project/<id>/detail/ 这样的 id
+    return rows.filter(r=>!r.hidden && r.querySelector('.row-check')?.checked).map(r=>{
+        const link = r.querySelector('a.btn-outline-primary')?.getAttribute('href') || '';
+        const m = link.match(/\/project\/(\d+)\/detail\//);
+        return m ? m[1] : null;
+    }).filter(Boolean);
+}
+// 已移除“导出所选 / 复制编号”功能按钮
+
+// 单行删除（事件委托，确保始终能绑定成功）
+(function () {
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+    let csrftoken = getCookie('csrftoken');
+    if (!csrftoken) {
+        const inp = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (inp && inp.value) csrftoken = inp.value;
+    }
+    const tableEl = document.getElementById('resultTable');
+    if (!tableEl) return;
+
+    // 备用：直接在按钮 inline onclick 调用
+    window.handleRowDelete = async (btnEl) => {
+        try {
+            const id = btnEl?.dataset?.projectId;
+            if(!id){ alert('未获取到项目ID'); return false; }
+            if(!confirm('危险操作：将永久删除该项目，确定删除？')) return false;
+            btnEl.disabled = true;
+            alert(`准备删除项目 #${id}`); // 明确提示点击已生效
+            const url = `/api/project/api/projects/${id}/`;
+            console.log('[delete] send', url);
+            const res = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': csrftoken || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'Referer': window.location.href
+                },
+                credentials: 'same-origin',
+            });
+            console.log('[delete] status', res.status);
+            if(!res.ok){
+                let t = await res.text().catch(()=> '');
+                throw new Error(`删除失败(${res.status}) ${t}`);
+            }
+            alert('已删除该项目'); location.reload();
+            return false;
+        } catch (e) {
+            console.error(e);
+            alert(e.message || '删除失败');
+            btnEl.disabled = false;
+            return false;
+        }
+    };
+
+    tableEl.addEventListener('click', async (ev) => {
+        const btn = ev.target.closest('.btn-row-delete');
+        if (!btn) return;
+        console.log('[delete] click');
+        const id = btn.dataset.projectId;
+        if (!id) {
+            alert('未获取到项目ID，无法删除');
+            return;
+        }
+        if (!confirm('危险操作：将永久删除该项目，确定删除？')) return;
+        btn.disabled = true;
+        const originalText = btn.textContent;
+        btn.textContent = '删除中...';
+        try {
+            alert(`准备删除项目 #${id}`); // 明确提示点击已生效
+            const url = `/api/project/api/projects/${id}/`;
+            const res = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': csrftoken || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'Referer': window.location.href
+                },
+                credentials: 'same-origin',
+            });
+            if (!res.ok) {
+                let msg = `项目 ${id} 删除失败(${res.status})`;
+                try {
+                    const data = await res.json();
+                    if (data && (data.detail || data.error)) {
+                        msg += `：${data.detail || data.error}`;
+                    }
+                } catch (_) {}
+                throw new Error(msg);
+            }
+            alert('已删除该项目');
+            location.reload();
+        } catch (err) {
+            console.error('删除项目失败: ', err);
+            alert(err.message || '删除失败，请查看控制台日志');
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    });
+
+    // 额外保险：绑定到 body，避免任何时机问题导致未绑定
+    document.body.addEventListener('click', async (ev) => {
+        const btn = ev.target.closest?.('.btn-row-delete');
+        if (!btn) return;
+        if (btn._vhHandled) return; // 避免与 tableEl 监听重复执行
+        btn._vhHandled = true;
+        ev.preventDefault();
+        ev.stopPropagation();
+        console.log('[delete][body] click');
+        return window.handleRowDelete(btn);
+    }, { capture: true });
+})();
+
+// simple client-side pagination
+const pager = document.getElementById('pager');
+const pageSizeSel = document.getElementById('pageSize');
+let pageSize = parseInt(pageSizeSel?.value || '20',10);
+let currentPage = 1;
+
+function paginate(){
+    pageSize = parseInt(pageSizeSel?.value || '20',10);
+    const visible = rows.filter(r=>!r.hidden);
+    const total = visible.length;
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    currentPage = Math.min(currentPage, pages);
+    visible.forEach((r,i)=>{ r.style.display = (i >= (currentPage-1)*pageSize && i < currentPage*pageSize) ? '' : 'none'; });
+    // render pager
+    pager.innerHTML = '';
+    const addItem = (p, label, active=false) => {
+        const li = document.createElement('li'); li.className = 'page-item' + (active?' active':'');
+        const a = document.createElement('a'); a.className='page-link'; a.href='#'; a.textContent=label;
+        a.addEventListener('click', (e)=>{ e.preventDefault(); currentPage = p; paginate(); });
+        li.appendChild(a); pager.appendChild(li);
+    };
+    addItem(Math.max(1, currentPage-1), '«');
+    for(let p=1;p<=pages;p++){ addItem(p, String(p), p===currentPage); }
+    addItem(Math.min(pages, currentPage+1), '»');
+    // 分页切换后，取消表头全选状态
+    if (selectAll) selectAll.checked = false;
+    try { window.refreshBulkBtn && window.refreshBulkBtn(); } catch(e){}
+}
+pageSizeSel?.addEventListener('change', ()=>{ currentPage=1; paginate(); });
+
+// init
+applyFilters();
+
+// 批量删除
+(function () {
+    const bulkBtn = document.getElementById('bulkDeleteBtn');
+    if (!bulkBtn) return;
+    function refreshBulkBtn() {
+        const anyChecked = rows.some(r => !r.hidden && r.querySelector('.row-check')?.checked);
+        bulkBtn.disabled = !anyChecked;
+    }
+    // 暴露给外部联动
+    window.refreshBulkBtn = refreshBulkBtn;
+    document.getElementById('resultTable')?.addEventListener('change', (e) => {
+        if (e.target.matches?.('#selectAll, .row-check')) {
+            refreshBulkBtn();
+        }
+    });
+    pageSizeSel?.addEventListener('change', refreshBulkBtn);
+    keywordInput?.addEventListener('input', refreshBulkBtn);
+    statusSelect?.addEventListener('change', refreshBulkBtn);
+    refreshBulkBtn();
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+    let csrftoken = getCookie('csrftoken');
+    if (!csrftoken) {
+        const inp = document.querySelector('input[name=\"csrfmiddlewaretoken\"]');
+        if (inp && inp.value) csrftoken = inp.value;
+    }
+
+    bulkBtn.addEventListener('click', async () => {
+        const ids = getSelectedRowIds();
+        if (!ids.length) { alert('请选择要删除的项目'); return; }
+        if (!confirm(`危险操作：将永久删除 ${ids.length} 个项目，确定删除？`)) return;
+        bulkBtn.disabled = true;
+        bulkBtn.textContent = '批量删除中...';
+        let ok = 0, fail = 0, errors = [];
+        for (const id of ids) {
+            try {
+                const res = await fetch(`/api/project/api/projects/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': csrftoken || '',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'Referer': window.location.href
+                    },
+                    credentials: 'same-origin',
+                });
+                if (!res.ok) {
+                    fail++; errors.push(`#${id}(${res.status})`);
+                } else {
+                    ok++;
+                }
+            } catch (e) {
+                fail++; errors.push(`#${id}: ${e.message || '网络错误'}`);
+            }
+        }
+        if (fail === 0) {
+            alert(`已删除 ${ok} 个项目`);
+            location.reload();
+        } else {
+            alert(`删除完成：成功 ${ok}，失败 ${fail}\n${errors.slice(0,5).join('\\n')}${errors.length>5?'\\n...':''}`);
+            bulkBtn.disabled = false;
+            bulkBtn.textContent = '批量删除';
+        }
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,233 @@
+{% extends "financial_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:invoice_management' %}">发票管理</a></li>
+<li class="breadcrumb-item active">{{ invoice.invoice_number }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .info-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .info-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-bottom: 16px;
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .info-label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: 14px;
+        color: #1f2937;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="text-end mb-4">
+        <a href="{% url 'finance_pages:invoice_management' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        <a href="{% url 'finance_pages:invoice_update' invoice.id %}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> 编辑
+        </a>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <h5>基本信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">发票号码</span>
+                <span class="info-value"><code>{{ invoice.invoice_number }}</code></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">发票代码</span>
+                <span class="info-value">{{ invoice.invoice_code }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">发票类型</span>
+                <span class="info-value">
+                    {% if invoice.invoice_type == 'incoming' %}
+                    <span class="badge bg-info">进项发票</span>
+                    {% else %}
+                    <span class="badge bg-success">销项发票</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">开票日期</span>
+                <span class="info-value">{{ invoice.invoice_date|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">状态</span>
+                <span class="info-value">
+                    {% if invoice.status == 'draft' %}
+                    <span class="badge bg-secondary">草稿</span>
+                    {% elif invoice.status == 'issued' %}
+                    <span class="badge bg-warning">已开具</span>
+                    {% elif invoice.status == 'verified' %}
+                    <span class="badge bg-success">已认证</span>
+                    {% else %}
+                    <span class="badge bg-danger">已作废</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 金额信息 -->
+    <div class="info-card">
+        <h5>金额信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">发票金额</span>
+                <span class="info-value" style="font-size: 18px; font-weight: 700; color: #142F5B;">¥{{ invoice.amount|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">税额</span>
+                <span class="info-value" style="font-size: 18px; font-weight: 700; color: #142F5B;">¥{{ invoice.tax_amount|floatformat:2 }}</span>
+            </div>
+            <div class="info-item" style="grid-column: span 2;">
+                <span class="info-label">价税合计</span>
+                <span class="info-value" style="font-size: 24px; font-weight: 700; color: #142F5B;">¥{{ invoice.total_amount|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 单位信息 -->
+    <div class="info-card">
+        <h5>单位信息</h5>
+        <div class="info-row">
+            {% if invoice.invoice_type == 'outgoing' %}
+            <div class="info-item">
+                <span class="info-label">客户名称</span>
+                <span class="info-value">{{ invoice.customer_name|default:"-" }}</span>
+            </div>
+            {% else %}
+            <div class="info-item">
+                <span class="info-label">供应商名称</span>
+                <span class="info-value">{{ invoice.supplier_name|default:"-" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 认证信息 -->
+    {% if invoice.verified_by or invoice.verified_time %}
+    <div class="info-card">
+        <h5>认证信息</h5>
+        <div class="info-row">
+            {% if invoice.verified_by %}
+            <div class="info-item">
+                <span class="info-label">认证人</span>
+                <span class="info-value">{{ invoice.verified_by.get_full_name|default:invoice.verified_by.username }}</span>
+            </div>
+            {% endif %}
+            {% if invoice.verified_time %}
+            <div class="info-item">
+                <span class="info-label">认证时间</span>
+                <span class="info-value">{{ invoice.verified_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 附件信息 -->
+    {% if invoice.attachment %}
+    <div class="info-card">
+        <h5>附件信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">发票附件</span>
+                <div class="mt-2">
+                    <a href="{{ invoice.attachment.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                        <i class="bi bi-file-earmark"></i> 下载附件
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注信息 -->
+    {% if invoice.notes %}
+    <div class="info-card">
+        <h5>备注信息</h5>
+        <p style="color: #374151; white-space: pre-wrap;">{{ invoice.notes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- 其他信息 -->
+    <div class="info-card">
+        <h5>其他信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">创建人</span>
+                <span class="info-value">{{ invoice.created_by.get_full_name|default:invoice.created_by.username|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">创建时间</span>
+                <span class="info-value">{{ invoice.created_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,142 @@
+{% extends "financial_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 32px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 24px;
+        margin-top: 24px;
+    }
+    .stat-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 28px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+        text-decoration: none;
+        display: block;
+        color: inherit;
+        position: relative;
+        overflow: hidden;
+    }
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 40px rgba(20, 47, 91, 0.12);
+        text-decoration: none;
+        color: inherit;
+    }
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #142F5B, #1F4A85);
+    }
+    .stat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+    .stat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, rgba(20,47,91,0.1), rgba(31,62,124,0.08));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+    }
+    .stat-label {
+        font-size: 14px;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .stat-value {
+        font-size: 36px;
+        font-weight: 700;
+        color: #142F5B;
+        margin: 12px 0 8px 0;
+        line-height: 1;
+    }
+    .stat-subvalue {
+        font-size: 13px;
+        color: #6b7280;
+        margin-bottom: 8px;
+    }
+    .stat-extra {
+        font-size: 12px;
+        color: #9ca3af;
+        padding-top: 12px;
+        border-top: 1px solid #e5e7eb;
+        margin-top: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+    </div>
+
+    <!-- 统计数据卡片 -->
+    {% if summary_cards %}
+    <div class="stats-grid">
+        {% for card in summary_cards %}
+        <a href="{{ card.url|default:'#' }}" class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon">{{ card.icon }}</div>
+            </div>
+            <div class="stat-label">{{ card.label }}</div>
+            <div class="stat-value">{{ card.value }}</div>
+            {% if card.subvalue %}
+            <div class="stat-subvalue">{{ card.subvalue }}</div>
+            {% endif %}
+            {% if card.extra %}
+            <div class="stat-extra">{{ card.extra }}</div>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        您当前没有访问任何财务管理模块的权限，请联系管理员。
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

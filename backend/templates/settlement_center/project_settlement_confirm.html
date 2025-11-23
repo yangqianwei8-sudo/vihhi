@@ -1,0 +1,67 @@
+{% extends "settlement_center/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'settlement_pages:project_settlement_list' %}">项目结算管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'settlement_pages:project_settlement_detail' settlement.id %}">{{ settlement.settlement_number }}</a></li>
+<li class="breadcrumb-item active">提交审核</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .confirm-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <div class="confirm-card">
+        <div class="alert alert-info">
+            <h5 class="alert-heading"><i class="bi bi-info-circle"></i> 确认提交</h5>
+            <p>您即将提交结算单 <strong>{{ settlement.settlement_number }}</strong> 进行审核。</p>
+            <hr>
+            <p class="mb-0">
+                <strong>项目：</strong>{{ settlement.project.name }}<br>
+                <strong>结算金额：</strong><span style="color: #D62828; font-weight: 700;">{{ settlement.settlement_amount|floatformat:2 }} 元</span>
+            </p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'settlement_pages:project_settlement_detail' settlement.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> 取消
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> 确认提交
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

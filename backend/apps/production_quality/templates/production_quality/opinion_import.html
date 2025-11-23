@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+
+{% block title %}意见批量导入{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --brand-primary: #142F5B;
+        --brand-accent: #1F3E7C;
+        --brand-soft: #F3F6FB;
+        --brand-border: rgba(20, 47, 91, 0.12);
+    }
+
+    .import-shell {
+        border-radius: 20px;
+        background: #fff;
+        box-shadow: 0 22px 50px rgba(20, 47, 91, 0.13);
+        padding: 30px 34px;
+    }
+
+    .import-header {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.9));
+        border-radius: 18px;
+        padding: 24px 28px;
+        color: #fff;
+        margin-bottom: 24px;
+    }
+
+    .upload-box {
+        border: 2px dashed var(--brand-primary);
+        border-radius: 18px;
+        padding: 32px;
+        text-align: center;
+        background: var(--brand-soft);
+    }
+
+    .upload-box input[type="file"] {
+        display: none;
+    }
+
+    .upload-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 22px;
+        border-radius: 999px;
+        background: var(--brand-primary);
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .summary-card {
+        background: var(--brand-soft);
+        border-radius: 16px;
+        padding: 18px 20px;
+        border: 1px solid var(--brand-border);
+    }
+
+    .summary-value {
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--brand-primary);
+    }
+
+    .summary-label {
+        color: rgba(20, 47, 91, 0.65);
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.4px;
+    }
+
+    .preview-table thead th {
+        background: rgba(20, 47, 91, 0.08);
+        color: var(--brand-primary);
+        font-weight: 600;
+        border-bottom: none;
+    }
+
+    .preview-table td {
+        vertical-align: middle;
+    }
+
+    .badge-success-soft {
+        background: rgba(16, 185, 129, 0.12);
+        color: #047857;
+    }
+
+    .badge-danger-soft {
+        background: rgba(239, 68, 68, 0.12);
+        color: #b91c1c;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="import-shell">
+        <div class="import-header">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+                <div>
+                    <div class="small text-white-50 text-uppercase mb-1">Batch Import</div>
+                    <h1 class="h4 mb-1">意见批量导入</h1>
+                    <p class="mb-0 text-white-75">支持按模板上传 Excel，系统将自动校验项目、专业、字段完整性后批量生成意见草稿。</p>
+                </div>
+                <a class="btn btn-outline-light btn-sm" href="{% url 'production_quality_pages:opinion_import_template' %}">
+                    下载导入模板
+                </a>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h2 class="h6 text-uppercase text-muted mb-3">填写说明</h2>
+            <div class="row g-3">
+                <div class="col-lg-4 col-md-6">
+                    <div class="summary-card h-100">
+                        <div class="summary-label mb-1">必填字段</div>
+                        <p class="mb-0 text-muted">
+                            项目编号、专业编码、部位名称、问题描述、优化建议、问题类别、严重等级为必填。
+                            自动计算模式需完整填写工程量单价；手动模式需提供节省金额。
+                        </p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="summary-card h-100">
+                        <div class="summary-label mb-1">项目校验</div>
+                        <p class="mb-0 text-muted">
+                            系统仅允许导入当前账户可访问的项目（项目负责人、商务经理、团队成员等）。
+                            专业编码需在资源与标准中心已配置。
+                        </p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-12">
+                    <div class="summary-card h-100">
+                        <div class="summary-label mb-1">建议格式</div>
+                        <p class="mb-0 text-muted">
+                            Excel 第一行为表头，请勿修改字段名称；每次导入建议不超过 300 行。
+                            上传成功后可先预览，再确认写入。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="mb-4">
+            {% csrf_token %}
+            <div class="upload-box">
+                <p class="text-muted mb-3">拖拽 Excel 文件到此处，或点击按钮选择文件</p>
+                <label for="id_file" class="upload-label">
+                    <span class="bi bi-upload"></span>
+                    <span>选择文件</span>
+                </label>
+                {{ form.file }}
+                {% if form.file.errors %}
+                <div class="text-danger mt-3">
+                    {{ form.file.errors|striptags }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="text-end mt-3">
+                <button type="submit" class="btn btn-primary px-4">上传并预览</button>
+            </div>
+        </form>
+
+        {% if summary %}
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="summary-card text-center">
+                    <div class="summary-label">总记录数</div>
+                    <div class="summary-value">{{ summary.total }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-card text-center">
+                    <div class="summary-label">校验通过</div>
+                    <div class="summary-value text-success">{{ summary.success }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-card text-center">
+                    <div class="summary-label">存在问题</div>
+                    <div class="summary-value text-danger">{{ summary.failed }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-card text-center">
+                    <div class="summary-label">预计节省 (¥)</div>
+                    <div class="summary-value">{{ summary.total_saving }}</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if preview_rows %}
+        <div class="table-responsive mb-4">
+            <table class="table table-hover preview-table">
+                <thead>
+                    <tr>
+                        <th style="width:70px;">行号</th>
+                        <th>项目</th>
+                        <th>专业</th>
+                        <th>部位名称</th>
+                        <th>问题类别</th>
+                        <th>严重等级</th>
+                        <th>计算方式</th>
+                        <th class="text-end">节省金额</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in preview_rows %}
+                    <tr>
+                        <td>{{ row.index }}</td>
+                        <td>
+                            <div class="fw-semibold">{{ row.project_number }}</div>
+                            <div class="text-muted small">{{ row.project_name }}</div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">{{ row.professional_code }}</div>
+                            <div class="text-muted small">{{ row.professional_name }}</div>
+                        </td>
+                        <td>{{ row.location_name }}</td>
+                        <td>{{ row.issue_category }}</td>
+                        <td>{{ row.severity_level }}</td>
+                        <td>{{ row.calculation_mode_label|default:"-" }}</td>
+                        <td class="text-end">
+                            {% if row.saving_amount %}
+                            ¥{{ row.saving_amount }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.errors %}
+                            <span class="badge badge-danger-soft">存在错误</span>
+                            {% else %}
+                            <span class="badge badge-success-soft">可导入</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if row.errors %}
+                    <tr>
+                        <td></td>
+                        <td colspan="8" class="text-danger small">
+                            {% for err in row.errors %}
+                                <div>• {{ err }}</div>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if payload_json %}
+        <form method="post" class="text-end">
+            {% csrf_token %}
+            <input type="hidden" name="payload" value='{{ payload_json|escapejs }}'>
+            <button type="submit" class="btn btn-primary px-4">确认导入</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}审查标准库{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">审查要点标准库</h2>
+        <a class="btn btn-primary" href="{% url 'resource_standard:standard_create' %}">新建标准</a>
+    </div>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>编号</th>
+                    <th>名称</th>
+                    <th>标准类型</th>
+                    <th>生效日期</th>
+                    <th>状态</th>
+                    <th>创建人</th>
+                    <th>更新时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for standard in standards %}
+                <tr>
+                    <td>{{ standard.code }}</td>
+                    <td><a href="{% url 'resource_standard:standard_detail' standard.pk %}">{{ standard.name }}</a></td>
+                    <td>{{ standard.get_standard_type_display }}</td>
+                    <td>{{ standard.effective_date }}</td>
+                    <td>{{ standard.get_status_display }}</td>
+                    <td>{{ standard.created_by.get_full_name|default:standard.created_by.username }}</td>
+                    <td>{{ standard.updated_time|date:'Y-m-d H:i' }}</td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'resource_standard:standard_edit' standard.pk %}">编辑</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">暂无标准记录</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

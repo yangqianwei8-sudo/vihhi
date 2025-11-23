@@ -1,0 +1,813 @@
+{% extends "project_center/base.html" %}
+{% load static %}
+
+{% block title %}新建项目 - 维海科技信息化管理平台{% endblock %}
+
+{% block content %}
+{% block breadcrumb %}{% endblock %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+{% block extra_css %}
+<style>
+    /* 版面与卡片 */
+    .project-create__layout{
+        display: grid;
+        grid-template-columns: 1fr !important; /* 强制单列铺满 */
+        gap: 12px;
+    }
+    .project-create__main{ width:100% !important; }
+    .project-create .stepper,
+    .project-create .step-card{ width:100% !important; }
+    .project-create .stepper__content{ width:100%; }
+    .project-create.container-fluid{ padding-left:16px; padding-right:16px; }
+    .project-create .card{
+        border-radius: 16px;
+        box-shadow: 0 10px 26px rgba(15,30,58,.06);
+        transition: box-shadow .2s ease, transform .2s ease;
+    }
+    .project-create .card:hover{
+        transform: translateY(-1px);
+        box-shadow: 0 22px 44px rgba(15,30,58,.18);
+    }
+    .project-create .card-header{
+        border-radius: 16px 16px 0 0;
+        background: linear-gradient(180deg,#F2F5FB,#fff);
+        padding: 10px 16px;
+    }
+    .project-create .card-body{ padding: 16px 18px; }
+    /* Stepper */
+    .stepper__header{
+        display:flex;justify-content:space-between;align-items:center;padding:12px 16px;
+    }
+    .stepper__progress{height:6px;background:#eef2ff;border-radius:999px;overflow:hidden;margin:0 16px;}
+    .stepper__progress-bar{
+        height:100%;
+        background: linear-gradient(90deg,#1F2A57,#0F1E3A);
+        transition: width .35s ease;
+    }
+    .stepper__steps{display:flex;gap:10px;padding:10px 16px 14px;}
+    .stepper__step{
+        border:none;background:transparent;display:flex;align-items:center;gap:8px;color:#1F2A57;opacity:.6;
+    }
+    .stepper__step--active{opacity:1}
+    .stepper__index{
+        width:26px;height:26px;border-radius:50%;
+        display:inline-flex;align-items:center;justify-content:center;
+        background:#1F2A57;color:#fff;font-weight:600;box-shadow:0 6px 14px rgba(31,42,87,.25);
+    }
+    /* 表单交互 */
+    .project-create input.form-control,
+    .project-create textarea.form-control,
+    .project-create select.form-select{
+        border-radius: 12px;
+        padding: 8px 12px;
+        transition: box-shadow .2s ease, border-color .2s ease, transform .12s ease;
+    }
+    .project-create input.form-control:focus,
+    .project-create textarea.form-control:focus,
+    .project-create select.form-select:focus{
+        border-color:#1F2A57;
+        box-shadow: 0 0 0 3px rgba(31,42,87,.15);
+    }
+    .project-create label.form-label{ margin-bottom: 6px; }
+    .project-create .row.g-4{ row-gap: 12px; }
+    /* 主按钮微动效 */
+    .project-create .btn-primary{border-radius:12px;transition:transform .15s ease, box-shadow .15s ease; padding:8px 14px;}
+    .project-create .btn-primary:hover{transform: translateY(-1px); box-shadow:0 10px 20px rgba(201,43,43,.25);}
+    .project-create .btn-outline-primary{border-radius:12px; padding:8px 14px;}
+    /* 小提示样式 */
+    .form-text.text-muted{font-size:12px;color:#6b7280 !important}
+    /* 段落小标题强调条 */
+    .step-card .card-header h5{
+        position:relative;padding-left:10px;margin:0;
+    }
+    .step-card .card-header h5:before{
+        content:"";position:absolute;left:0;top:4px;bottom:4px;width:3px;border-radius:2px;background:linear-gradient(180deg,#1F2A57,#0F1E3A);
+    }
+    /* 大屏铺满：限制外层最大宽度为 100% */
+    @media (min-width: 1200px){
+        .container-fluid{max-width: 100%;}
+    }
+    /* 内联卡片：用于首排字段组合展示 */
+    .inline-card{
+        background: #fff;
+        border: 1px solid rgba(31,42,87,.08);
+        border-radius: 14px;
+        box-shadow: 0 10px 24px rgba(15,30,58,.10);
+        padding: 12px 14px;
+        margin-bottom: 8px;
+    }
+    .inline-card:hover{
+        transform: translateY(-1px);
+        box-shadow: 0 20px 40px rgba(15,30,58,.18);
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+    /* 服务配置置顶固定 */
+    .service-sticky{
+        position: -webkit-sticky !important; /* Safari */
+        position: sticky !important;
+        top: 84px;              /* 与顶栏/欢迎条的间距对齐，可根据需要微调 */
+        z-index: 1000;
+        background: #fff;       /* 避免滚动时内容透底 */
+        padding-top: 8px;
+        padding-bottom: 8px;
+        box-shadow: 0 6px 18px rgba(15,30,58,.06);
+        border-radius: 12px;
+    }
+    .service-sticky .service-actions{
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 8px;
+    }
+    /* 右下角浮动提交按钮 */
+    .floating-submit{
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 1100;
+        box-shadow: 0 12px 24px rgba(16,24,40,.18);
+        border-radius: 12px;
+        padding: 12px 16px;
+    }
+    @media (max-width: 768px){
+        .floating-submit{ right: 16px; bottom: 16px; padding: 10px 14px; }
+    }
+</style>
+{% endblock %}
+<div class="project-create container-fluid py-2">
+    <form id="projectForm" method="post" enctype="multipart/form-data" class="project-create__form">
+        {% csrf_token %}
+        <input type="hidden" name="action" id="formAction" value="draft">
+
+        <div class="project-create__layout">
+            <div class="project-create__main">
+                <!-- 顶部流程导航（隐藏占位，保留脚本依赖的元素，防止内容被脚本影响） -->
+                <div style="display:none">
+                    <div class="stepper__status">
+                        <span id="lastSaved"></span>
+                    </div>
+                    <div class="stepper__progress">
+                        <div class="stepper__progress-bar" id="stepProgress" style="width:25%"></div>
+                    </div>
+                    <div>
+                        <button type="button" class="stepper__step stepper__step--active" data-step="0"></button>
+                        <button type="button" class="stepper__step" data-step="1"></button>
+                    </div>
+                </div>
+
+                <!-- 步骤内容 -->
+                <div class="stepper__content">
+                    <!-- 基础信息 -->
+                    <section class="step-card card shadow-sm" data-step-content="0">
+                        <div class="card-header">
+                            <h5 class="mb-0">基础信息</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="inline-card"><div class="row g-4">
+                                <div class="col-md-4">
+                                    <label class="form-label">项目编号</label>
+                                    <div class="input-group project-code-group">
+                                        <span class="input-group-text">VIH</span>
+                                        <span class="input-group-text">-</span>
+                                        <input type="text" class="form-control" id="projectYear" value="{{ current_year }}" readonly style="max-width:90px;">
+                                        <span class="input-group-text">-</span>
+                                        <input type="text" name="project_number_seq" id="projectNumberSeq" class="form-control" placeholder="001" maxlength="3" pattern="[0-9]{3}" readonly value="{{ form_data.project_number_seq|default:'' }}">
+                                        <button type="button" class="btn btn-outline-secondary" id="toggleProjectSeq"><i class="bi bi-pencil-square"></i></button>
+                                        <button type="button" class="btn btn-outline-primary" onclick="autoGenerateSeq()"><i class="bi bi-magic"></i> 自动生成</button>
+                                    </div>
+                                    <small class="text-muted">格式：VIH-年份-序号，序号可手动编辑，支持唯一性校验。</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">所属子公司 <span class="text-danger">*</span></label>
+                                    {% with selected_subsidiary=form_data.subsidiary|default:'' %}
+                                    <select name="subsidiary" class="form-select" required id="subsidiarySelect">
+                                        {% for value, label in subsidiary_choices %}
+                                        <option value="{{ value }}" {% if selected_subsidiary %}{% if selected_subsidiary == value %}selected{% endif %}{% elif forloop.first %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    {% endwith %}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label d-flex justify-content-between">
+                                        <span>项目名称 <span class="text-danger">*</span></span>
+                                        <span class="text-muted"><span id="nameCount">0</span>/100</span>
+                                    </label>
+                                    <input type="text" name="name" class="form-control" required maxlength="100" id="projectNameInput" value="{{ form_data.name|default:'' }}">
+                                </div>
+                                </div></div>
+                                <div class="col-12">
+                                    <div class="info-block border rounded-3 p-3 bg-light">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0">甲方信息</h6>
+                                            <span class="badge bg-warning-subtle text-warning">手机号将自动绑定甲方账号</span>
+                                        </div>
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">甲方公司全称 <span class="text-danger">*</span></label>
+                                                <input type="text" name="client_company_name" class="form-control" required value="{{ form_data.client_company_name|default:'' }}" placeholder="请输入甲方公司全称">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">项目负责人电话 <span class="text-danger">*</span></label>
+                                                <input type="tel" name="client_phone" class="form-control" required value="{{ form_data.client_phone|default:'' }}" placeholder="请输入项目负责人手机号">
+                                                <div class="form-text text-muted">系统将根据手机号自动识别甲方项目负责人。</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="info-block border rounded-3 p-3 bg-light">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0">设计单位信息</h6>
+                                            <span class="badge bg-info-subtle text-info">手机号将自动绑定设计方账号</span>
+                                        </div>
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">设计单位全称 <span class="text-danger">*</span></label>
+                                                <input type="text" name="design_company" class="form-control" required value="{{ form_data.design_company|default:'' }}" placeholder="请输入设计单位全称">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">项目负责人电话 <span class="text-danger">*</span></label>
+                                                <input type="tel" name="design_phone" class="form-control" required value="{{ form_data.design_phone|default:'' }}" placeholder="请输入项目负责人手机号">
+                                                <div class="form-text text-muted">输入的手机号将自动绑定设计方项目负责人。</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 服务信息（与基础信息同页展示） -->
+                    <section class="step-card card shadow-sm" data-step-content="1">
+                        <div class="card-header">
+                            <h5 class="mb-0">服务配置</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="service-sticky"></div>
+                            <div class="row g-4 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label">项目业态 <span class="text-danger">*</span></label>
+                                    <select name="business_type" class="form-select" id="businessTypeSelect" required>
+                                        {% for value, label in business_types %}
+                                        <option value="{{ value }}" {% if form_data.business_type|default:'' == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <input type="text" class="form-control mt-2" id="businessTypeOther" name="business_type_other" placeholder="请输入项目业态" value="{{ form_data.business_type_other|default:'' }}" hidden>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">图纸阶段 <span class="text-danger">*</span></label>
+                                    <select name="design_stage" class="form-select" id="designStageSelect" required>
+                                        {% for value, label in design_stages %}
+                                        <option value="{{ value }}" {% if form_data.design_stage|default:'' == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">服务类型 <span class="text-danger">*</span></label>
+                                    <select name="service_type" class="form-select" id="serviceTypeSelect" required>
+                                        {% for service_type in service_types %}
+                                        <option value="{{ service_type.id }}" data-code="{{ service_type.code }}"
+                                            {% if selected_service_type_id and selected_service_type_id == service_type.id|stringformat:"s" %}selected{% endif %}
+                                            {% if not selected_service_type_id and forloop.first %}selected{% endif %}>
+                                            {{ service_type.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">服务专业 <span class="text-danger">*</span></label>
+                                    <div id="professionList" class="profession-list"></div>
+                                    <div class="text-muted small mt-2" id="professionSummary">已选择 0 项专业</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+
+                </div>
+            </div>
+
+            <!-- 右侧辅助面板（按需移除） -->
+        </div>
+
+        <!-- 底部操作栏 -->
+        <div class="project-create__footer">
+            <div class="project-create__footer-left">
+                <button type="button" class="btn btn-light" onclick="history.back()">取消创建</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="saveDraft()"><i class="bi bi-save"></i> 保存草稿</button>
+            </div>
+            <div class="project-create__footer-right">
+                <button type="button" class="btn btn-outline-primary" id="prevStepBtn" disabled style="display:none">上一步</button>
+                <button type="button" class="btn btn-primary" id="nextStepBtn" style="display:none">下一步</button>
+                <button type="button" class="btn btn-success" id="submitBtn" onclick="submitForm()"><i class="bi bi-check-circle"></i> 提交申请</button>
+            </div>
+        </div>
+        <!-- 右下角浮动提交按钮 -->
+        <button type="button" class="btn btn-success floating-submit" onclick="submitForm()">
+            <i class="bi bi-check-circle"></i> 提交申请
+        </button>
+    </form>
+</div>
+
+<script>
+const DRAFT_STORAGE_KEY = 'vihhi_project_create_draft';
+const professionOptions = {{ service_professions_map_json }};
+let preselectedProfessionIds = new Set({{ selected_profession_ids_json }});
+
+const steps = Array.from(document.querySelectorAll('[data-step-content]'));
+const stepButtons = Array.from(document.querySelectorAll('.stepper__step'));
+const projectForm = document.getElementById('projectForm');
+const projectYearInput = document.getElementById('projectYear');
+const projectNumberSeq = document.getElementById('projectNumberSeq');
+const projectNumberHint = document.getElementById('projectNumberHint');
+const serviceTypeSelect = document.getElementById('serviceTypeSelect');
+const subsidiarySelect = document.getElementById('subsidiarySelect');
+const contractAmountInput = document.getElementById('contractAmountInput');
+const contractDateInput = document.getElementById('contractDateInput');
+const contractFileInput = document.getElementById('contractFileInput');
+const uploadProgress = document.getElementById('uploadProgress');
+const uploadProgressBar = document.getElementById('uploadProgressBar');
+const uploadProgressText = document.getElementById('uploadProgressText');
+const validationList = document.getElementById('validationList');
+const historyList = document.getElementById('historyList');
+const lastSavedLabel = document.getElementById('lastSaved');
+const nameInput = document.getElementById('projectNameInput');
+const aliasInput = document.getElementById('projectAliasInput');
+let currentStep = 0;
+let autoSaveTimer = null;
+
+function updateStep(newStep){
+    if(newStep < 0 || newStep >= steps.length) return;
+    steps[currentStep].hidden = true;
+    stepButtons[currentStep].classList.remove('stepper__step--active');
+
+    currentStep = newStep;
+    steps[currentStep].hidden = false;
+    stepButtons[currentStep].classList.add('stepper__step--active');
+    document.getElementById('prevStepBtn').disabled = currentStep === 0;
+    document.getElementById('nextStepBtn').hidden = currentStep === steps.length -1;
+    document.getElementById('submitBtn').hidden = currentStep !== steps.length -1;
+    document.getElementById('stepProgress').style.width = ((currentStep+1)/steps.length*100)+'%';
+}
+
+stepButtons.forEach(btn => btn.addEventListener('click', () => updateStep(parseInt(btn.dataset.step,10))));
+document.getElementById('nextStepBtn').addEventListener('click', () => updateStep(currentStep+1));
+document.getElementById('prevStepBtn').addEventListener('click', () => updateStep(currentStep-1));
+
+const toggleProjectSeq = document.getElementById('toggleProjectSeq');
+if(toggleProjectSeq){
+    toggleProjectSeq.addEventListener('click', () => {
+        const isReadOnly = projectNumberSeq.hasAttribute('readonly');
+        if(isReadOnly){
+            projectNumberSeq.removeAttribute('readonly');
+            projectNumberSeq.focus();
+            toggleProjectSeq.innerHTML = '<i class="bi bi-check"></i>';
+        }else{
+            projectNumberSeq.setAttribute('readonly','readonly');
+            toggleProjectSeq.innerHTML = '<i class="bi bi-pencil-square"></i>';
+            checkProjectNumber();
+        }
+    });
+}
+
+function buildProjectNumber(){
+    const seq = (projectNumberSeq.value || '001').trim().padStart(3,'0');
+    return `VIH-${projectYearInput.value}-${seq}`;
+}
+
+function autoGenerateSeq(){
+    const year = projectYearInput.value;
+    const url = new URL('/api/project/api/projects/get_next_number/', window.location.origin);
+    url.searchParams.set('year', year);
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const seq = data.next_seq ? data.next_seq.toString().padStart(3,'0') : '001';
+            projectNumberSeq.value = seq;
+            projectNumberSeq.setAttribute('readonly','readonly');
+            toggleProjectSeq.innerHTML = '<i class="bi bi-pencil-square"></i>';
+            checkProjectNumber();
+        })
+        .catch(() => {
+            projectNumberSeq.value = '001';
+            projectNumberHint.textContent = '获取编号失败，请稍后重试';
+            projectNumberHint.className = 'form-text text-danger';
+        });
+}
+
+function checkProjectNumber(){
+    const number = buildProjectNumber();
+    const regex = /^VIH-\d{4}-\d{3}$/;
+    if(!regex.test(number)){
+        projectNumberHint.textContent = '项目编号格式应为 VIH-YYYY-NNN';
+        projectNumberHint.className = 'form-text text-danger';
+        updateValidationState('project_number', false);
+        return;
+    }
+    const url = new URL('/api/project/api/projects/check_project_number/', window.location.origin);
+    url.searchParams.set('project_number', number);
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            if(data.valid){
+                projectNumberHint.textContent = '项目编号可用';
+                projectNumberHint.className = 'form-text text-success';
+                updateValidationState('project_number', true);
+            }else{
+                projectNumberHint.textContent = '项目编号已存在，请重新生成';
+                projectNumberHint.className = 'form-text text-danger';
+                updateValidationState('project_number', false);
+            }
+        })
+        .catch(() => {
+            projectNumberHint.textContent = '无法验证项目编号，请稍后再试';
+            projectNumberHint.className = 'form-text text-warning';
+            updateValidationState('project_number', false);
+        });
+}
+
+function updateProfessionOptions(serviceTypeId){
+    const container = document.getElementById('professionList');
+    // 兼容：professionOptions 键可能是字符串或数字
+    const keyStr = String(serviceTypeId);
+    const keyNum = Number.isFinite(parseInt(serviceTypeId, 10)) ? parseInt(serviceTypeId, 10) : null;
+    let options = professionOptions[keyStr] || (keyNum !== null ? professionOptions[keyNum] : []) || [];
+
+    // 根据服务类型代码限定“服务专业”候选
+    const code = serviceTypeSelect?.selectedOptions?.[0]?.dataset?.code || '';
+    const allowMap = {
+        result_optimization: ['结构','构造','地库减面积','地库加车位','停车效率','节能','门窗栏杆','幕墙','总坪景观','电气','给排水','暖通','市政道路'],
+        process_optimization: ['结构','停车效率'],
+        detailed_review: ['建筑','结构','电气','给排水','暖通'],
+        process_consulting: ['建筑','结构','电气','给排水','暖通'],
+        full_process_consulting: ['建筑','结构','电气','给排水','暖通'],
+    };
+    const allowList = allowMap[code];
+    if (Array.isArray(allowList) && allowList.length) {
+        options = options.filter(p => allowList.includes(p.name));
+    }
+    container.innerHTML = '';
+
+    options.forEach(prof => {
+        const label = document.createElement('label');
+        label.className = 'profession-item';
+        label.title = prof.description || '专业服务';
+        label.innerHTML = `<input type="checkbox" name="service_profession_ids[]" value="${prof.id}"><span>${prof.name}</span>`;
+        const input = label.querySelector('input');
+        input.addEventListener('change', updateProfessionSummary);
+        if(preselectedProfessionIds.has(prof.id)){
+            input.checked = true;
+        }
+        container.appendChild(label);
+    });
+    updateProfessionSummary();
+}
+
+function updateProfessionSummary(){
+    const selected = document.querySelectorAll('input[name="service_profession_ids[]"]:checked');
+    document.getElementById('professionSummary').textContent = `已选择 ${selected.length} 项专业`;
+    updateValidationState('service_professions', selected.length > 0);
+}
+
+const businessSelect = document.getElementById('businessTypeSelect');
+const businessOther = document.getElementById('businessTypeOther');
+if(businessSelect){
+    businessSelect.addEventListener('change', () => {
+        const isOther = businessSelect.value === 'other';
+        businessOther.hidden = !isOther;
+        if(!isOther){
+            businessOther.value = '';
+        }
+        updateValidationState('business_type', !!businessSelect.value);
+    });
+    updateValidationState('business_type', !!businessSelect.value);
+    if(businessSelect.value === 'other'){
+        businessOther.hidden = false;
+    }
+}
+
+function saveDraft(){
+    document.getElementById('formAction').value = 'draft';
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(serializeForm()));
+    updateHistory('手动保存草稿');
+    if(lastSavedLabel){
+        lastSavedLabel.textContent = '最后保存：' + new Date().toLocaleString();
+    }
+    projectForm.submit();
+}
+
+function loadDraft(){
+    if(!restoreDraft()){
+        alert('当前没有可恢复的草稿');
+    }
+}
+
+function submitForm(){
+    if(!serviceTypeSelect || !serviceTypeSelect.value){
+        alert('请选择服务类型');
+        updateValidationState('service_type', false);
+        return;
+    }
+    if(document.querySelectorAll('input[name="service_profession_ids[]"]:checked').length === 0){
+        alert('请选择至少一个服务专业');
+        updateValidationState('service_professions', false);
+        return;
+    }
+    checkProjectNumber();
+    document.getElementById('formAction').value = 'submit';
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+    projectForm.submit();
+}
+
+function updateValidationState(field, valid){
+    const item = validationList?.querySelector(`[data-field="${field}"] span`);
+    if(!item) return;
+    if(valid){
+        item.className = 'badge bg-success';
+        item.textContent = '已完成';
+    }else{
+        item.className = 'badge bg-danger';
+        item.textContent = '待填写';
+    }
+}
+
+function updateHistory(action){
+    if(!historyList) return;
+    const entry = document.createElement('div');
+    entry.className = 'small text-muted';
+    entry.textContent = `${new Date().toLocaleString()} · ${action}`;
+    historyList.prepend(entry);
+}
+
+function serializeForm(){
+    const formData = new FormData(projectForm);
+    const data = {};
+    formData.forEach((value, key) => {
+        if(data[key]){
+            if(!Array.isArray(data[key])) data[key] = [data[key]];
+            data[key].push(value);
+        }else{
+            data[key] = value;
+        }
+    });
+    data.project_number = buildProjectNumber();
+    return data;
+}
+
+function populateForm(data){
+    Object.keys(data).forEach(key => {
+        if(key === 'project_number'){
+            const parts = data[key].split('-');
+            if(parts.length === 3){
+                projectYearInput.value = parts[1];
+                projectNumberSeq.value = parts[2];
+            }
+            return;
+        }
+        const value = data[key];
+        if(Array.isArray(value)){
+            const inputs = projectForm.querySelectorAll(`[name="${key}"]`);
+            inputs.forEach(input => {
+                if(input.type === 'checkbox' || input.type === 'radio'){
+                    input.checked = value.includes(input.value);
+                }
+            });
+        }else{
+            const input = projectForm.querySelector(`[name="${key}"]`);
+            if(input){
+                input.value = value;
+            }
+        }
+    });
+}
+
+function restoreDraft(){
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if(!raw) return false;
+    try {
+        const data = JSON.parse(raw);
+        populateForm(data);
+        if(data['service_profession_ids[]']){
+            const values = Array.isArray(data['service_profession_ids[]']) ? data['service_profession_ids[]'] : [data['service_profession_ids[]']];
+            preselectedProfessionIds = new Set(values.filter(Boolean).map(v => parseInt(v, 10)).filter(Number.isFinite));
+        }
+        updateProfessionOptions(document.querySelector('input[name="service_type"]:checked')?.value || document.querySelector('input[name="service_type"]').value);
+        updateHistory('已恢复草稿');
+        if(lastSavedLabel){
+            lastSavedLabel.textContent = '最后保存：' + new Date().toLocaleString();
+        }
+        return true;
+    } catch (e) {
+        console.warn('无法恢复草稿', e);
+        return false;
+    }
+}
+
+function scheduleAutoSave(){
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(serializeForm()));
+        updateHistory('自动保存草稿');
+        if(lastSavedLabel){
+            lastSavedLabel.textContent = '最后保存：' + new Date().toLocaleString();
+        }
+    }, 1000);
+}
+
+function handleFormChange(e){
+    const { name } = e.target;
+    if(name === 'service_type'){
+        preselectedProfessionIds = new Set(Array.from(document.querySelectorAll('input[name="service_profession_ids[]"]:checked')).map(el => parseInt(el.value,10)));
+        updateValidationState('service_type', true);
+        updateProfessionOptions(e.target.value);
+    }
+    if(name === 'business_type'){
+        updateValidationState('business_type', !!businessSelect.value);
+    }
+    if(name === 'service_profession_ids[]'){
+        updateProfessionSummary();
+    }
+    if(name === 'subsidiary'){
+        updateValidationState('subsidiary', !!subsidiarySelect.value);
+        autoGenerateSeq();
+    }
+    if(name === 'project_number_seq'){
+        checkProjectNumber();
+    }
+    scheduleAutoSave();
+}
+
+projectForm.addEventListener('input', handleFormChange, {capture:true});
+projectForm.addEventListener('change', handleFormChange, {capture:true});
+projectForm.addEventListener('submit', () => localStorage.removeItem(DRAFT_STORAGE_KEY));
+
+// 初始化：根据默认选中的服务类型渲染“服务专业”
+(function initProfessionByServiceType(){
+    if(serviceTypeSelect){
+        updateProfessionOptions(serviceTypeSelect.value);
+        serviceTypeSelect.addEventListener('change', (e)=> updateProfessionOptions(e.target.value));
+    }
+})();
+
+if(contractFileInput && uploadProgress && uploadProgressBar && uploadProgressText){
+    const resetUploadProgress = () => {
+        uploadProgressBar.style.width = '0%';
+        uploadProgressBar.setAttribute('aria-valuenow', 0);
+        uploadProgressBar.textContent = '0%';
+        uploadProgressText.textContent = '等待选择文件';
+        uploadProgress.hidden = true;
+    };
+
+    resetUploadProgress();
+
+    contractFileInput.addEventListener('change', () => {
+        const file = contractFileInput.files && contractFileInput.files[0];
+        if(!file){
+            resetUploadProgress();
+            return;
+        }
+        uploadProgress.hidden = false;
+        uploadProgressBar.style.width = '0%';
+        uploadProgressBar.setAttribute('aria-valuenow', 0);
+        uploadProgressBar.textContent = '0%';
+        uploadProgressText.textContent = `${file.name} · ${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+
+        const reader = new FileReader();
+        reader.onloadstart = () => {
+            uploadProgressBar.style.width = '0%';
+            uploadProgressBar.textContent = '0%';
+        };
+        reader.onprogress = (event) => {
+            if(event.lengthComputable){
+                const percent = Math.round((event.loaded / event.total) * 100);
+                uploadProgressBar.style.width = `${percent}%`;
+                uploadProgressBar.setAttribute('aria-valuenow', percent);
+                uploadProgressBar.textContent = `${percent}%`;
+            }
+        };
+        reader.onloadend = () => {
+            uploadProgressBar.style.width = '100%';
+            uploadProgressBar.setAttribute('aria-valuenow', 100);
+            uploadProgressBar.textContent = '100%';
+            uploadProgressText.textContent = `${file.name} 上传准备完成`;
+        };
+        reader.onerror = () => {
+            uploadProgressText.textContent = '读取文件失败，请重新选择';
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    projectForm.addEventListener('submit', () => {
+        if(!uploadProgress.hidden){
+            uploadProgressText.textContent = '正在上传，请稍候...';
+        }
+    });
+}
+
+const contractAmountRawKey = 'datasetRaw';
+if(contractAmountInput){
+    contractAmountInput.dataset.raw = contractAmountInput.value.replace(/[^\d.]/g,'');
+    contractAmountInput.addEventListener('input', (e) => {
+        const cleaned = e.target.value.replace(/[^\d.]/g,'');
+        e.target.dataset.raw = cleaned;
+    });
+    contractAmountInput.addEventListener('blur', () => {
+        const amount = getContractAmount();
+        contractAmountInput.value = amount ? amount.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}) : '';
+    });
+    contractAmountInput.addEventListener('focus', () => {
+        contractAmountInput.value = contractAmountInput.dataset.raw || '';
+    });
+}
+
+if(contractDateInput){
+    contractDateInput.addEventListener('change', () => {
+        updateHistory('更新签约日期');
+    });
+}
+
+if(subsidiarySelect){
+    updateValidationState('subsidiary', !!subsidiarySelect.value);
+}
+
+if(serviceTypeSelect){
+    updateValidationState('service_type', !!serviceTypeSelect.value);
+}
+
+if(nameInput){
+    nameInput.addEventListener('input', () => {
+        const text = nameInput.value.trim();
+        document.getElementById('nameCount').textContent = text.length;
+        updateValidationState('name', text.length > 0);
+        if(aliasInput && !aliasInput.value){
+            aliasInput.placeholder = text ? `${text.slice(0,10)} 项目` : '如：天府商业综合体';
+        }
+    });
+    updateValidationState('name', !!nameInput.value.trim());
+    document.getElementById('nameCount').textContent = nameInput.value.trim().length;
+}
+
+updateProfessionSummary();
+updateStep(0);
+const restored = restoreDraft();
+if(!projectNumberSeq.value){
+    autoGenerateSeq();
+}
+if(serviceTypeSelect){ updateProfessionOptions(serviceTypeSelect.value); }
+</script>
+
+<style>
+:root{--primary:var(--vh-primary);--primary-light:var(--vh-primary-light);--accent:var(--vh-accent);--muted:var(--vh-muted);}
+.project-create__layout{display:grid;grid-template-columns:1fr 320px;gap:24px;}
+.project-create__main{display:flex;flex-direction:column;gap:20px;}
+.project-create__aside{display:flex;flex-direction:column;gap:18px;}
+.project-create__footer{position:sticky;bottom:0;background:#fff;border-top:1px solid #e5e7eb;padding:16px 0;margin-top:24px;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+.project-create__footer-right{display:flex;gap:10px;}
+
+.stepper__header{display:flex;justify-content:space-between;align-items:center;padding:18px 20px 0;}
+.stepper__progress{height:4px;background:#f0f2f6;margin:0 20px;border-radius:999px;overflow:hidden;}
+.stepper__progress-bar{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s ease;}
+.stepper__steps{display:flex;justify-content:space-between;padding:14px 20px 18px;gap:12px;}
+.stepper__step{flex:1;border:none;background:transparent;padding:12px;border-radius:12px;display:flex;flex-direction:column;gap:6px;align-items:center;transition:background .2s ease,color .2s ease;cursor:pointer;}
+.stepper__step:hover{background:#f0f4ff;}
+.stepper__step--active{background:rgba(20,47,91,.1);box-shadow:inset 0 0 0 1px rgba(214,40,40,.4);}
+.stepper__index{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e5e7eb;color:#374151;font-weight:600;}
+.stepper__step--active .stepper__index{background:var(--accent);color:#fff;}
+.stepper__label{font-size:13px;font-weight:600;color:#374151;}
+
+.step-card .card-header{background:#f8f9fb;border-bottom:1px solid #edf1f6;}
+.step-card .card-body{padding:24px;}
+
+.service-type-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;}
+.service-card{display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid #dbe3f5;border-radius:14px;cursor:pointer;background:#fff;transition:.2s ease;min-height:120px;}
+.service-card:hover{border-color:var(--primary-light);box-shadow:0 6px 18px rgba(20,47,91,.08);}
+.service-card__title{font-weight:600;color:var(--primary);}
+.service-card__desc{font-size:12px;color:var(--muted);}
+.service-card__input{display:none;}
+.service-card__input:checked+label{border-color:var(--accent);box-shadow:0 6px 18px rgba(214,40,40,.12);}
+
+.profession-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;}
+.profession-item{border:1px solid #dbe3f5;border-radius:999px;padding:0 0;display:inline-flex;align-items:center;background:#f9fbff;transition:.2s;overflow:hidden;cursor:pointer;}
+.profession-item span{padding:8px 16px;font-size:13px;color:var(--primary);}
+.profession-item input{display:none;}
+.profession-item input:checked+span{background:linear-gradient(90deg,var(--primary-light),var(--accent));color:#fff;}
+
+.upload-dropzone{border:2px dashed #cdd5f5;border-radius:16px;padding:24px;text-align:center;position:relative;background:#f8faff;cursor:pointer;}
+.upload-dropzone__input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-dropzone__content{display:flex;flex-direction:column;gap:4px;align-items:center;color:var(--muted);}
+.upload-dropzone__content i{font-size:32px;color:var(--primary);}
+.upload-list{list-style:none;padding-left:0;margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+.upload-progress{margin-top:16px;}
+.upload-progress .progress{height:10px;background:var(--vh-border);border-radius:999px;overflow:hidden;}
+.upload-progress .progress-bar{background:linear-gradient(90deg,var(--primary-light),var(--accent));font-size:11px;color:#fff;display:flex;align-items:center;justify-content:center;transition:width .2s ease;}
+.upload-progress .small{margin-top:8px;color:var(--muted);}
+
+
+.validation-list{list-style:none;padding-left:0;margin:0;display:flex;flex-direction:column;gap:8px;font-size:13px;}
+.validation-list li{display:flex;justify-content:space-between;align-items:center;}
+
+@media (max-width:1200px){.project-create__layout{grid-template-columns:1fr;}.project-create__aside{order:-1;}}
+@media (max-width:768px){.stepper__steps{flex-direction:column;align-items:stretch;}.project-create__footer{flex-direction:column;align-items:flex-start;}}
+</style>
+{% endblock %}

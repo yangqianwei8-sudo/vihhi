@@ -1,0 +1,86 @@
+{% extends "production_quality/base.html" %}
+{% load static %}
+
+{% block title %}接收项目 - {{ project.name }}{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'production_quality_pages:production_startup_list' %}">生产启动</a></li>
+<li class="breadcrumb-item active">接收项目</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">📥</div>
+        <h1 class="hero-title">接收项目</h1>
+        <p class="hero-subtitle">{{ project.name }}（{{ project.project_number }}）</p>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">项目信息</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-row">
+                        <span class="info-label">项目编号：</span>
+                        <span class="info-value">{{ project.project_number }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">项目名称：</span>
+                        <span class="info-value">{{ project.name }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">合同金额：</span>
+                        <span class="info-value">¥{{ project.contract_amount|default:"0"|floatformat:2 }}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-row">
+                        <span class="info-label">服务类型：</span>
+                        <span class="info-value">{{ project.service_type.name|default:"--" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">项目业态：</span>
+                        <span class="info-value">{{ project.get_business_type_display|default:"--" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">预计节省：</span>
+                        <span class="info-value">¥{{ project.estimated_savings|default:"0"|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">分配项目经理</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group mb-3">
+                    <label class="form-label required">选择项目经理</label>
+                    <select name="project_manager" class="form-select" required>
+                        <option value="">-- 请选择 --</option>
+                        {% for manager in available_managers %}
+                        <option value="{{ manager.id }}" {% if startup.project_manager_assigned_id == manager.id %}selected{% endif %}>
+                            {{ manager.get_full_name|default:manager.username }}
+                            {% if manager.department %}（{{ manager.department.name }}）{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">系统将自动向项目经理发送通知</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">确认分配</button>
+                    <a href="{% url 'production_quality_pages:production_startup_list' %}" class="btn btn-secondary">取消</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,240 @@
+{% extends "administrative_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">{{ page_title }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-title {
+        font-size: var(--font-size-2xl);
+        font-weight: 700;
+        margin: 0 0 var(--spacing-sm) 0;
+    }
+    .page-description {
+        font-size: var(--font-size-base);
+        opacity: 0.9;
+        margin: 0;
+    }
+    .content-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--vh-text-muted);
+    }
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: var(--spacing-md);
+        opacity: 0.5;
+    }
+    .empty-state-title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--vh-text);
+        margin-bottom: var(--spacing-sm);
+    }
+    .empty-state-text {
+        font-size: var(--font-size-base);
+        color: var(--vh-text-muted);
+        margin-bottom: var(--spacing-lg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 class="page-title">{{ page_title }}</h1>
+        <p class="page-description">{{ description }}</p>
+    </div>
+
+    <!-- 统计卡片 -->
+    {% if summary_cards %}
+    <div class="row g-3 mb-4">
+        {% for card in summary_cards %}
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2" style="font-size: var(--font-size-sm); text-transform: uppercase; letter-spacing: 0.5px;">{{ card.label }}</h6>
+                    <div class="value text-primary" style="font-size: var(--font-size-2xl); font-weight: 700; margin-bottom: 4px;">{{ card.value }}</div>
+                    <div class="hint text-muted" style="font-size: var(--font-size-sm);">{{ card.hint }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 内容区域 -->
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">办公用品列表</h3>
+            <a href="{% url 'admin_pages:supply_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> 新增用品
+            </a>
+        </div>
+
+        <!-- 筛选栏 -->
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" placeholder="搜索编码、名称、品牌..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="category" class="form-select">
+                        <option value="">全部分类</option>
+                        {% for code, label in category_choices %}
+                        <option value="{{ code }}" {% if category == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="is_active" class="form-select">
+                        <option value="">全部状态</option>
+                        <option value="true" {% if is_active == 'true' %}selected{% endif %}>启用</option>
+                        <option value="false" {% if is_active == 'false' %}selected{% endif %}>停用</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-check-label">
+                        <input type="checkbox" name="low_stock" value="true" class="form-check-input" {% if low_stock == 'true' %}checked{% endif %}>
+                        仅显示低库存
+                    </label>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a href="{% url 'admin_pages:supplies_management' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 清除
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <!-- 数据表格 -->
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>编码</th>
+                        <th>名称</th>
+                        <th>分类</th>
+                        <th>单位</th>
+                        <th>当前库存</th>
+                        <th>最低库存</th>
+                        <th>最高库存</th>
+                        <th>单价</th>
+                        <th>库存状态</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for supply in page_obj %}
+                    <tr>
+                        <td><code>{{ supply.code }}</code></td>
+                        <td>{{ supply.name }}</td>
+                        <td>{{ supply.get_category_display }}</td>
+                        <td>{{ supply.unit }}</td>
+                        <td>{{ supply.current_stock }}</td>
+                        <td>{{ supply.min_stock }}</td>
+                        <td>{{ supply.max_stock }}</td>
+                        <td>¥{{ supply.purchase_price }}</td>
+                        <td>
+                            {% if supply.is_low_stock %}
+                            <span class="badge bg-danger">低库存</span>
+                            {% elif supply.max_stock > 0 and supply.current_stock >= supply.max_stock %}
+                            <span class="badge bg-warning">库存充足</span>
+                            {% else %}
+                            <span class="badge bg-success">正常</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if supply.is_active %}
+                            <span class="badge bg-success">启用</span>
+                            {% else %}
+                            <span class="badge bg-secondary">停用</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_pages:supply_detail' supply.id %}" class="btn btn-sm btn-outline-primary" title="查看详情">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'admin_pages:supply_update' supply.id %}" class="btn btn-sm btn-outline-secondary" title="编辑">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="11" class="text-center py-5">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📦</div>
+                                <div class="empty-state-title">暂无数据</div>
+                                <div class="empty-state-text">
+                                    当前筛选条件下没有找到办公用品，请调整筛选条件或添加新用品。
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航">
+            <ul class="pagination justify-content-center mt-4">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}{% if low_stock %}&low_stock={{ low_stock }}{% endif %}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}{% if low_stock %}&low_stock={{ low_stock }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}{% if low_stock %}&low_stock={{ low_stock }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}{% if low_stock %}&low_stock={{ low_stock }}{% endif %}">末页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📦</div>
+            <div class="empty-state-title">暂无数据</div>
+            <div class="empty-state-text">
+                当前没有办公用品数据，请先添加办公用品。
+            </div>
+            <a href="{% url 'admin_pages:supply_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> 添加第一个办公用品
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

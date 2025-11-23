@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}系统参数设置{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">系统参数</h2>
+        <a class="btn btn-primary" href="{% url 'resource_standard:system_parameter_create' %}">新增参数</a>
+    </div>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>参数键</th>
+                    <th>参数值</th>
+                    <th>描述</th>
+                    <th>分类</th>
+                    <th>更新时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for param in params %}
+                <tr>
+                    <td>{{ param.key }}</td>
+                    <td>{{ param.value }}</td>
+                    <td>{{ param.description|default:"—" }}</td>
+                    <td>{{ param.category }}</td>
+                    <td>{{ param.updated_time|date:'Y-m-d H:i' }}</td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'resource_standard:system_parameter_edit' param.pk %}">编辑</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">暂无系统参数</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

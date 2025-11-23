@@ -1,0 +1,195 @@
+{% extends "administrative_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:reception_management' %}">接待记录</a></li>
+<li class="breadcrumb-item active">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:reception_management' %}">接待记录</a></li>
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:reception_detail' reception.id %}">{{ reception.record_number }}</a></li>
+<li class="breadcrumb-item active">编辑</li>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: var(--font-size-md);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <h5>访客信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">访客姓名</label>
+                    {{ form.visitor_name }}
+                    {% if form.visitor_name.errors %}
+                    <div class="text-danger small mt-1">{{ form.visitor_name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">访客单位</label>
+                    {{ form.visitor_company }}
+                    {% if form.visitor_company.errors %}
+                    <div class="text-danger small mt-1">{{ form.visitor_company.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">访客职位</label>
+                    {{ form.visitor_position }}
+                    {% if form.visitor_position.errors %}
+                    <div class="text-danger small mt-1">{{ form.visitor_position.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">访客电话</label>
+                    {{ form.visitor_phone }}
+                    {% if form.visitor_phone.errors %}
+                    <div class="text-danger small mt-1">{{ form.visitor_phone.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">访客人数</label>
+                    {{ form.visitor_count }}
+                    {% if form.visitor_count.errors %}
+                    <div class="text-danger small mt-1">{{ form.visitor_count.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <h5>接待信息</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label required">接待日期</label>
+                    {{ form.reception_date }}
+                    {% if form.reception_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.reception_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">接待时间</label>
+                    {{ form.reception_time }}
+                    {% if form.reception_time.errors %}
+                    <div class="text-danger small mt-1">{{ form.reception_time.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">预计时长（分钟）</label>
+                    {{ form.expected_duration }}
+                    {% if form.expected_duration.errors %}
+                    <div class="text-danger small mt-1">{{ form.expected_duration.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">接待类型</label>
+                    {{ form.reception_type }}
+                    {% if form.reception_type.errors %}
+                    <div class="text-danger small mt-1">{{ form.reception_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">接待级别</label>
+                    {{ form.reception_level }}
+                    {% if form.reception_level.errors %}
+                    <div class="text-danger small mt-1">{{ form.reception_level.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">接待人</label>
+                    {{ form.host }}
+                    {% if form.host.errors %}
+                    <div class="text-danger small mt-1">{{ form.host.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">会议主题</label>
+                    {{ form.meeting_topic }}
+                    {% if form.meeting_topic.errors %}
+                    <div class="text-danger small mt-1">{{ form.meeting_topic.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">会议地点</label>
+                    {{ form.meeting_location }}
+                    {% if form.meeting_location.errors %}
+                    <div class="text-danger small mt-1">{{ form.meeting_location.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">餐饮安排</label>
+                    {{ form.catering_arrangement }}
+                    {% if form.catering_arrangement.errors %}
+                    <div class="text-danger small mt-1">{{ form.catering_arrangement.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check mt-4">
+                        {{ form.accommodation_arrangement }}
+                        <label class="form-check-label" for="{{ form.accommodation_arrangement.id_for_label }}">
+                            住宿安排
+                        </label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">礼品交换情况</label>
+                    {{ form.gifts_exchanged }}
+                    {% if form.gifts_exchanged.errors %}
+                    <div class="text-danger small mt-1">{{ form.gifts_exchanged.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">接待结果/成果</label>
+                    {{ form.outcome }}
+                    {% if form.outcome.errors %}
+                    <div class="text-danger small mt-1">{{ form.outcome.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">备注</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% if is_create %}{% url 'admin_pages:reception_management' %}{% else %}{% url 'admin_pages:reception_detail' reception.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-submit">
+                    <i class="bi bi-check-circle"></i> 保存
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -1,0 +1,333 @@
+{% extends "administrative_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:asset_management' %}">固定资产</a></li>
+<li class="breadcrumb-item active">{{ asset.asset_name }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .info-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .info-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-bottom: 16px;
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .info-label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: 14px;
+        color: #1f2937;
+        font-weight: 500;
+    }
+    .record-item {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <div class="hero-icon">{{ page_icon }}</div>
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="text-end mb-4">
+        <a href="{% url 'admin_pages:asset_management' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        <a href="/admin/administrative_management/assettransfer/add/?asset={{ asset.id }}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-arrow-left-right"></i> 资产转移
+        </a>
+        <a href="/admin/administrative_management/assetmaintenance/add/?asset={{ asset.id }}" class="btn btn-outline-info me-2">
+            <i class="bi bi-tools"></i> 维护记录
+        </a>
+        <a href="{% url 'admin_pages:asset_update' asset.id %}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> 编辑
+        </a>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <h5>基本信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">资产编号</span>
+                <span class="info-value"><code>{{ asset.asset_number }}</code></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">资产名称</span>
+                <span class="info-value">{{ asset.asset_name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">资产类别</span>
+                <span class="info-value">{{ asset.get_category_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">状态</span>
+                <span class="info-value">
+                    {% if asset.status == 'in_use' %}
+                    <span class="badge bg-success">使用中</span>
+                    {% elif asset.status == 'idle' %}
+                    <span class="badge bg-info">闲置</span>
+                    {% elif asset.status == 'maintenance' %}
+                    <span class="badge bg-warning">维护中</span>
+                    {% else %}
+                    <span class="badge bg-secondary">已处置</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">启用状态</span>
+                <span class="info-value">
+                    {% if asset.is_active %}
+                    <span class="badge bg-success">启用</span>
+                    {% else %}
+                    <span class="badge bg-secondary">停用</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 规格信息 -->
+    <div class="info-card">
+        <h5>规格信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">品牌</span>
+                <span class="info-value">{{ asset.brand|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">型号</span>
+                <span class="info-value">{{ asset.model|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">规格</span>
+                <span class="info-value">{{ asset.specification|default:"-" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 购买信息 -->
+    <div class="info-card">
+        <h5>购买信息</h5>
+        <div class="info-row">
+            {% if asset.purchase_date %}
+            <div class="info-item">
+                <span class="info-label">购买日期</span>
+                <span class="info-value">{{ asset.purchase_date|date:"Y-m-d" }}</span>
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <span class="info-label">购买价格</span>
+                <span class="info-value">¥{{ asset.purchase_price|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">供应商</span>
+                <span class="info-value">{{ asset.supplier|default:"-" }}</span>
+            </div>
+            {% if asset.warranty_period %}
+            <div class="info-item">
+                <span class="info-label">保修期</span>
+                <span class="info-value">{{ asset.warranty_period }} 个月</span>
+            </div>
+            {% endif %}
+            {% if asset.warranty_expiry %}
+            <div class="info-item">
+                <span class="info-label">保修到期日</span>
+                <span class="info-value">
+                    {{ asset.warranty_expiry|date:"Y-m-d" }}
+                    {% if asset.warranty_expiry %}
+                        {% if asset.warranty_expiry < today %}
+                        <span class="badge bg-danger ms-2">已过期</span>
+                        {% endif %}
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 使用信息 -->
+    <div class="info-card">
+        <h5>使用信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">当前使用人</span>
+                <span class="info-value">{{ asset.current_user.get_full_name|default:asset.current_user.username|default:"未分配" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">当前位置</span>
+                <span class="info-value">{{ asset.current_location|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">所属部门</span>
+                <span class="info-value">{{ asset.department.name|default:"-" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 折旧信息 -->
+    <div class="info-card">
+        <h5>折旧信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">折旧方法</span>
+                <span class="info-value">{{ asset.get_depreciation_method_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">折旧率</span>
+                <span class="info-value">{{ asset.depreciation_rate }}%</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">购买价格</span>
+                <span class="info-value">¥{{ asset.purchase_price|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">净值</span>
+                <span class="info-value" style="font-size: 18px; font-weight: 700; color: #142F5B;">¥{{ asset.net_value|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 资产转移记录 -->
+    {% if transfers %}
+    <div class="info-card">
+        <h5>资产转移记录 (最近10条)</h5>
+        {% for transfer in transfers %}
+        <div class="record-item">
+            <div class="d-flex justify-content-between align-items-start">
+                <div style="flex: 1;">
+                    <strong>{{ transfer.transfer_number }}</strong>
+                    <span class="badge bg-{{ transfer.status|yesno:'success,warning,info,secondary' }} ms-2">{{ transfer.get_status_display }}</span>
+                    <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">
+                        转移日期：{{ transfer.transfer_date|date:"Y-m-d" }} | 
+                        从：{{ transfer.from_user.get_full_name|default:transfer.from_user.username|default:"-" }} 
+                        → 到：{{ transfer.to_user.get_full_name|default:transfer.to_user.username|default:"-" }}
+                    </p>
+                    {% if transfer.transfer_reason %}
+                    <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">
+                        原因：{{ transfer.transfer_reason|truncatewords:15 }}
+                    </p>
+                    {% endif %}
+                </div>
+                <a href="/admin/administrative_management/assettransfer/{{ transfer.id }}/" class="btn btn-sm btn-outline-info ms-2">
+                    <i class="bi bi-eye"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 维护记录 -->
+    {% if maintenances %}
+    <div class="info-card">
+        <h5>维护记录 (最近10条)</h5>
+        {% for maintenance in maintenances %}
+        <div class="record-item">
+            <div class="d-flex justify-content-between align-items-start">
+                <div style="flex: 1;">
+                    <strong>{{ maintenance.get_maintenance_type_display }}</strong>
+                    <span class="badge bg-info ms-2">{{ maintenance.maintenance_date|date:"Y-m-d" }}</span>
+                    <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">
+                        服务商：{{ maintenance.service_provider|default:"-" }} | 
+                        费用：¥{{ maintenance.cost|floatformat:2 }} | 
+                        执行人：{{ maintenance.performed_by.get_full_name|default:maintenance.performed_by.username|default:"-" }}
+                    </p>
+                    {% if maintenance.description %}
+                    <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">
+                        描述：{{ maintenance.description|truncatewords:20 }}
+                    </p>
+                    {% endif %}
+                    {% if maintenance.next_maintenance_date %}
+                    <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">
+                        下次维护：{{ maintenance.next_maintenance_date|date:"Y-m-d" }}
+                    </p>
+                    {% endif %}
+                </div>
+                <a href="/admin/administrative_management/assetmaintenance/{{ maintenance.id }}/change/" class="btn btn-sm btn-outline-secondary ms-2">
+                    <i class="bi bi-pencil"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 描述信息 -->
+    {% if asset.description %}
+    <div class="info-card">
+        <h5>描述说明</h5>
+        <p style="color: #374151; white-space: pre-wrap;">{{ asset.description }}</p>
+    </div>
+    {% endif %}
+
+    <!-- 其他信息 -->
+    <div class="info-card">
+        <h5>其他信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">创建时间</span>
+                <span class="info-value">{{ asset.created_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

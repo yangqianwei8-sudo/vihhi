@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}意见书模板库{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">意见书模板库</h2>
+        <a class="btn btn-primary" href="{% url 'resource_standard:opinion_template_create' %}">新建模板</a>
+    </div>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>模板编号</th>
+                    <th>模板名称</th>
+                    <th>专业类型</th>
+                    <th>版本号</th>
+                    <th>默认审查要点</th>
+                    <th>更新时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for template in templates %}
+                <tr>
+                    <td>{{ template.template_code }}</td>
+                    <td>{{ template.name }}</td>
+                    <td>{{ template.get_professional_type_display }}</td>
+                    <td>v{{ template.version }}</td>
+                    <td>
+                        {% for point in template.default_review_points.all %}
+                            <span class="badge bg-primary-subtle text-primary-emphasis me-1">{{ point.section_name }}</span>
+                        {% empty %}
+                            <span class="text-muted">—</span>
+                        {% endfor %}
+                    </td>
+                    <td>{{ template.updated_time|date:'Y-m-d H:i' }}</td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'resource_standard:opinion_template_edit' template.pk %}">编辑</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">暂无意见书模板</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

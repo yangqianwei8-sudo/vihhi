@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}技术解决方案库{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">技术解决方案库</h2>
+        <a class="btn btn-primary" href="{% url 'resource_standard:technical_solution_create' %}">新增方案</a>
+    </div>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>方案编号</th>
+                    <th>方案名称</th>
+                    <th>技术领域</th>
+                    <th>节省效果</th>
+                    <th>实施难度</th>
+                    <th>推广价值</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for solution in solutions %}
+                <tr>
+                    <td>{{ solution.solution_code }}</td>
+                    <td>{{ solution.name }}</td>
+                    <td>{{ solution.get_domain_display }}</td>
+                    <td>{% if solution.saving_effect %}¥{{ solution.saving_effect }}{% else %}—{% endif %}</td>
+                    <td>{{ solution.get_difficulty_display }}</td>
+                    <td>{{ solution.get_promotion_value_display }}</td>
+                    <td>{% if solution.is_published %}<span class="badge bg-success-subtle text-success-emphasis">已发布</span>{% else %}<span class="badge bg-secondary-subtle text-secondary-emphasis">草稿</span>{% endif %}</td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'resource_standard:technical_solution_edit' solution.pk %}">编辑</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">暂无技术解决方案</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
