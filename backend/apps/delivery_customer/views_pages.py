@@ -14,29 +14,99 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
 
 @login_required
 def report_delivery(request):
+    """交付管理首页"""
+    from .models import DeliveryRecord
+    
+    # 从数据库获取统计数据
+    try:
+        total_count = DeliveryRecord.objects.count()
+        pending_count = DeliveryRecord.objects.filter(status__in=['draft', 'submitted']).count()
+        confirmed_count = DeliveryRecord.objects.filter(status='confirmed').count()
+        overdue_count = DeliveryRecord.objects.filter(is_overdue=True).count()
+    except Exception:
+        # 如果表不存在，使用默认值
+        total_count = 0
+        pending_count = 0
+        confirmed_count = 0
+        overdue_count = 0
+    
     context = _context(
-        "报告交付中心",
+        "交付管理",
         "📦",
-        "管理成果交付、上传确认材料，并追踪客户下载与回执情况。",
+        "管理成果交付、上传确认材料，并追踪客户下载与回执情况。支持邮件、快递、送达三种交付方式。",
         summary_cards=[
-            {"label": "待交付成果", "value": "0", "hint": "等待上传或发送的成果文件"},
-            {"label": "客户回执", "value": "0", "hint": "客户已确认的交付项目"},
-            {"label": "逾期待发", "value": "0", "hint": "超过交付期限仍未完成的任务"},
-            {"label": "交付模板", "value": "0", "hint": "标准交付模板数量"},
+            {"label": "待交付成果", "value": str(pending_count), "hint": "等待上传或发送的成果文件"},
+            {"label": "客户回执", "value": str(confirmed_count), "hint": "客户已确认的交付项目"},
+            {"label": "逾期待发", "value": str(overdue_count), "hint": "超过交付期限仍未完成的任务"},
+            {"label": "交付总数", "value": str(total_count), "hint": "所有交付记录总数"},
         ],
         sections=[
             {
                 "title": "交付操作",
                 "description": "对交付成果进行上传、推送与确认。",
                 "items": [
-                    {"label": "创建交付单", "description": "发起新的交付任务。", "url": "#", "icon": "🧾"},
-                    {"label": "交付记录", "description": "查看历次交付与客户回执。", "url": "#", "icon": "📚"},
-                    {"label": "交付统计", "description": "交付效率与及时率分析。", "url": "#", "icon": "📈"},
+                    {"label": "创建交付单", "description": "发起新的交付任务。", "url": "/delivery/create/", "icon": "🧾"},
+                    {"label": "交付记录", "description": "查看历次交付与客户回执。", "url": "/delivery/list/", "icon": "📚"},
+                    {"label": "交付统计", "description": "交付效率与及时率分析。", "url": "/delivery/statistics/", "icon": "📈"},
+                    {"label": "风险预警", "description": "查看逾期交付预警。", "url": "/delivery/warnings/", "icon": "⚠️"},
                 ],
             }
         ],
     )
     return render(request, "shared/center_dashboard.html", context)
+
+
+@login_required
+def delivery_list(request):
+    """交付记录列表页"""
+    return render(request, "delivery_customer/delivery_list.html", {
+        "page_title": "交付记录",
+        "page_icon": "📚",
+    })
+
+
+@login_required
+def delivery_create(request):
+    """创建交付记录页"""
+    return render(request, "delivery_customer/delivery_create.html", {
+        "page_title": "创建交付单",
+        "page_icon": "🧾",
+    })
+
+
+@login_required
+def delivery_detail(request, delivery_id):
+    """交付记录详情页"""
+    from .models import DeliveryRecord
+    try:
+        delivery = DeliveryRecord.objects.select_related('project', 'client', 'created_by', 'sent_by', 'delivery_person').prefetch_related('files', 'tracking_records', 'feedbacks').get(id=delivery_id)
+    except DeliveryRecord.DoesNotExist:
+        from django.http import Http404
+        raise Http404("交付记录不存在")
+    
+    return render(request, "delivery_customer/delivery_detail.html", {
+        "page_title": "交付详情",
+        "page_icon": "📋",
+        "delivery": delivery,
+    })
+
+
+@login_required
+def delivery_statistics(request):
+    """交付统计页"""
+    return render(request, "delivery_customer/delivery_statistics.html", {
+        "page_title": "交付统计",
+        "page_icon": "📈",
+    })
+
+
+@login_required
+def delivery_warnings(request):
+    """风险预警页"""
+    return render(request, "delivery_customer/delivery_warnings.html", {
+        "page_title": "风险预警",
+        "page_icon": "⚠️",
+    })
 
 
 @login_required

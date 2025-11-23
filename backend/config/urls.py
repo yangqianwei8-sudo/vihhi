@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/system/', include(('backend.apps.system_management.urls', 'system'), namespace='system')),
     path('api/project/', include(('backend.apps.project_center.urls', 'project'), namespace='project')),
     path('api/customer/', include(('backend.apps.customer_success.urls', 'customer'), namespace='customer')),
+    path('api/delivery/', include(('backend.apps.delivery_customer.urls_api', 'delivery'), namespace='delivery_api')),
     
     # 页面路由
     path('project/', include(('backend.apps.project_center.urls', 'project'), namespace='project_pages')),

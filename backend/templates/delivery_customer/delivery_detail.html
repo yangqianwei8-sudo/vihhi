@@ -1,0 +1,132 @@
+{% extends "shared/base.html" %}
+{% load static %}
+
+{% block title %}交付详情 - 维海科技信息化管理平台{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header">
+            <h3>📋 交付详情：{{ delivery.delivery_number }}</h3>
+            <a href="{% url 'delivery_pages:delivery_list' %}" class="btn btn-secondary">返回列表</a>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>基本信息</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>交付单号</th>
+                            <td>{{ delivery.delivery_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>标题</th>
+                            <td>{{ delivery.title }}</td>
+                        </tr>
+                        <tr>
+                            <th>交付方式</th>
+                            <td>{{ delivery.get_delivery_method_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>状态</th>
+                            <td>
+                                <span class="badge badge-{{ delivery.status|default:'secondary' }}">
+                                    {{ delivery.get_status_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>优先级</th>
+                            <td>{{ delivery.get_priority_display }}</td>
+                        </tr>
+                        {% if delivery.project %}
+                        <tr>
+                            <th>关联项目</th>
+                            <td>{{ delivery.project.project_number }} - {{ delivery.project.name }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if delivery.client %}
+                        <tr>
+                            <th>关联客户</th>
+                            <td>{{ delivery.client.name }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>收件人信息</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>收件人</th>
+                            <td>{{ delivery.recipient_name }}</td>
+                        </tr>
+                        {% if delivery.recipient_phone %}
+                        <tr>
+                            <th>电话</th>
+                            <td>{{ delivery.recipient_phone }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if delivery.recipient_email %}
+                        <tr>
+                            <th>邮箱</th>
+                            <td>{{ delivery.recipient_email }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if delivery.recipient_address %}
+                        <tr>
+                            <th>地址</th>
+                            <td>{{ delivery.recipient_address }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            
+            {% if delivery.files.exists %}
+            <div class="mt-4">
+                <h5>交付文件</h5>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>文件名</th>
+                            <th>类型</th>
+                            <th>大小</th>
+                            <th>上传时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in delivery.files.all %}
+                        <tr>
+                            <td>{{ file.file_name }}</td>
+                            <td>{{ file.get_file_type_display }}</td>
+                            <td>{{ file.get_file_size_display }}</td>
+                            <td>{{ file.uploaded_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            
+            {% if delivery.tracking_records.exists %}
+            <div class="mt-4">
+                <h5>跟踪记录</h5>
+                <div class="timeline">
+                    {% for tracking in delivery.tracking_records.all %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h6>{{ tracking.get_event_type_display }}</h6>
+                            <p>{{ tracking.event_description }}</p>
+                            <small class="text-muted">{{ tracking.event_time|date:"Y-m-d H:i" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
