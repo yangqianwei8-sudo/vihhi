@@ -1,0 +1,223 @@
+{% extends "customer_success/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .form-section {
+        margin-bottom: 32px;
+    }
+    .form-section h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+        font-size: 14px;
+        display: block;
+    }
+    .required-field::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-text {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:opportunity_management' %}">商机管理</a></li>
+<li class="breadcrumb-item active">{% if opportunity %}编辑商机{% else %}创建商机{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <div class="hero-icon">{{ page_icon }}</div>
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- 表单 -->
+    <form method="post" class="form-card">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-section">
+            <h5>基本信息</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label required-field">商机名称</label>
+                        <input type="text" name="name" class="form-control" value="{{ opportunity.name|default:'' }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label required-field">关联客户</label>
+                        <select name="client_id" class="form-select" required>
+                            <option value="">请选择客户</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}" {% if opportunity.client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">负责商务</label>
+                        <select name="business_manager_id" class="form-select">
+                            {% for manager in business_managers %}
+                            <option value="{{ manager.id }}" {% if opportunity.business_manager_id == manager.id or not opportunity and default_business_manager.id == manager.id %}selected{% endif %}>
+                                {{ manager.get_full_name|default:manager.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">商机状态</label>
+                        <select name="status" class="form-select">
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if opportunity.status == value or not opportunity and value == 'potential' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 项目信息 -->
+        <div class="form-section">
+            <h5>项目信息</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">项目名称</label>
+                        <input type="text" name="project_name" class="form-control" value="{{ opportunity.project_name|default:'' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">项目地址</label>
+                        <input type="text" name="project_address" class="form-control" value="{{ opportunity.project_address|default:'' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">项目业态</label>
+                        <input type="text" name="project_type" class="form-control" value="{{ opportunity.project_type|default:'' }}" placeholder="住宅/综合体/商业等">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">建筑面积（平方米）</label>
+                        <input type="number" name="building_area" class="form-control" value="{{ opportunity.building_area|default:'' }}" step="0.01">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">图纸阶段</label>
+                        <input type="text" name="drawing_stage" class="form-control" value="{{ opportunity.drawing_stage|default:'' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 金额和概率 -->
+        <div class="form-section">
+            <h5>金额和概率</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label required-field">预计金额（万元）</label>
+                        <input type="number" name="estimated_amount" class="form-control" value="{{ opportunity.estimated_amount|default:0 }}" step="0.01" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label required-field">成功概率（%）</label>
+                        <select name="success_probability" class="form-select" required>
+                            <option value="10" {% if opportunity.success_probability == 10 or not opportunity %}selected{% endif %}>10%</option>
+                            <option value="30" {% if opportunity.success_probability == 30 %}selected{% endif %}>30%</option>
+                            <option value="50" {% if opportunity.success_probability == 50 %}selected{% endif %}>50%</option>
+                            <option value="70" {% if opportunity.success_probability == 70 %}selected{% endif %}>70%</option>
+                            <option value="90" {% if opportunity.success_probability == 90 %}selected{% endif %}>90%</option>
+                        </select>
+                        <div class="form-text">根据商机当前阶段选择对应的成功概率</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">紧急程度</label>
+                        <select name="urgency" class="form-select">
+                            {% for value, label in urgency_choices %}
+                            <option value="{{ value }}" {% if opportunity.urgency == value or not opportunity and value == 'normal' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">预计签约时间</label>
+                        <input type="date" name="expected_sign_date" class="form-control" value="{{ opportunity.expected_sign_date|default:''|date:'Y-m-d' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 其他信息 -->
+        <div class="form-section">
+            <h5>其他信息</h5>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label">商机描述</label>
+                        <textarea name="description" class="form-control" rows="4">{{ opportunity.description|default:'' }}</textarea>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label">备注</label>
+                        <textarea name="notes" class="form-control" rows="3">{{ opportunity.notes|default:'' }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="d-flex justify-content-between">
+            <a href="{% if opportunity %}{% url 'business_pages:opportunity_detail' opportunity.id %}{% else %}{% url 'business_pages:opportunity_management' %}{% endif %}" class="btn btn-outline-secondary">
+                取消
+            </a>
+            <button type="submit" class="btn btn-primary">
+                {% if opportunity %}保存修改{% else %}创建商机{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
