@@ -116,6 +116,12 @@ def _build_production_top_nav(permission_set):
     # 定义生产管理功能模块（从左到右的顺序）
     production_modules = [
         {
+            'label': '生产启动',
+            'url_name': 'production_quality_pages:production_startup_list',
+            'permission': None,
+            'icon': '🚀',
+        },
+        {
             'label': '意见填报',
             'url_name': 'production_quality_pages:opinion_create',
             'permission': None,  # 意见填报无需权限

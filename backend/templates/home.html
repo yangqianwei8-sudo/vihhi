@@ -5,50 +5,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>维海科技信息化管理平台 · 我的工作台</title>
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
     <style>
         :root {
             --nav-expanded-width: 260px;
             --nav-collapsed-width: 80px;
             --nav-width: var(--nav-expanded-width);
-            /* Brand theme */
-            --brand-primary: #1F2A57;          /* Logo navy */
-            --brand-primary-600: #0F1E3A;      /* Deeper navy for hover/active */
-            --brand-accent: #C92B2B;           /* Logo red accent */
-            --brand-surface: #F2F5FB;          /* Soft bluish surface */
-            --brand-deep: #1F2A57;             /* Text/decorative navy */
-            /* Legacy mapping */
-            --primary: var(--brand-deep);
-            --primary-light: var(--brand-primary-600);
-            --accent: var(--brand-accent);
-            --bg: #F6F8FC;
-            --card-bg: #ffffff;
-            --text: #1f2937;
-            --muted: #6b7280;
-            --border: #e5e7eb;
-            --shadow: 0 8px 24px rgba(15, 30, 58, 0.12);
+            /* Legacy mapping for home page compatibility */
+            --brand-primary: var(--vh-primary);
+            --brand-primary-600: var(--vh-primary-dark);
+            --brand-accent: var(--vh-accent);
+            --brand-surface: var(--vh-surface);
+            --brand-deep: var(--vh-primary);
+            --primary: var(--vh-primary);
+            --primary-light: var(--vh-primary-light);
+            --accent: var(--vh-accent);
+            --bg: var(--vh-bg);
+            --card-bg: var(--vh-card-bg);
+            --text: var(--vh-text);
+            --muted: var(--vh-text-muted);
+            --border: var(--vh-border);
+            --shadow: var(--shadow-md);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        
-        body {
-            font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-        }
-
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        ul {
-            list-style: none;
-        }
+        /* 基础样式已在common.css中定义，这里只保留home页特有的样式 */
 
         .app-shell {
             min-height: 100vh;
@@ -305,25 +285,7 @@
             gap: 12px;
         }
 
-        .btn-primary {
-            background: var(--brand-primary);
-            color: #fff;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 10px;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 20px rgba(26,115,232,0.25);
-            background: var(--brand-primary-600);
-        }
+        /* .btn-primary 样式已在common.css中定义 */
         a, button, .sidenav-link, .notify-item, .task-card { outline: none; }
         a:focus-visible, button:focus-visible, .sidenav-link:focus-visible, .notify-item:focus-visible, .task-card:focus-visible{
             box-shadow: 0 0 0 3px rgba(26,115,232,.35);
@@ -508,14 +470,11 @@
         }
         .main-area { padding-top: 0; margin-top: 0; }
 
+        /* .card 基础样式已在common.css中定义 */
         .card {
-            background: var(--card-bg);
-            border-radius: 16px; /* 统一圆角 */
-            box-shadow: var(--shadow);
-            padding: 20px 24px; /* 稍减内边距，提升信息密度 */
-            transition: box-shadow .2s ease, transform .2s ease;
+            padding: 20px 24px; /* home页特定的内边距 */
         }
-        .card:hover{ box-shadow: 0 10px 28px rgba(20,47,91,0.16); }
+        .card:hover{ box-shadow: var(--shadow-lg); }
         .welcome-card { margin-top: -16px; }
 
         .notify-block + .notify-block {
@@ -595,10 +554,9 @@
             font-size: 12px;
             color: var(--accent);
         }
-        /* 颜色语义统一 */
-        .text-danger { color:#E23D3D !important; }
-        .text-success{ color:#16A34A !important; }
+        /* 颜色语义统一 - 已在common.css中定义 */
 
+        /* .card-header 基础样式已在common.css中定义 */
         .card-header {
             display: flex;
             align-items: center;
@@ -607,13 +565,13 @@
         }
 
         .card-header h3 {
-            font-size: 18px;
+            font-size: var(--font-size-lg);
             font-weight: 600;
         }
 
+        /* .muted 样式已在common.css中定义 */
         .muted {
-            color: var(--muted);
-            font-size: 13px;
+            font-size: var(--font-size-sm);
         }
 
          .welcome-panel {
@@ -978,26 +936,19 @@
                             {% url 'task_collaboration:task_board' as task_board_url %}
                             {% url 'production_quality_pages:opinion_review' as opinion_review_url %}
                             {% url 'resource_standard:standard_list' as standard_list_url %}
-                            {% url 'delivery:customer_portal' as customer_portal_url %}
                             {% url 'business_pages:contract_management' as contract_management_url %}
                             <a class="sidenav-link" href="#">💼 商机管理</a>
                             <a class="sidenav-link" href="/business/contracts/"{% if request.path|slice:':17' == '/business/contracts' %} data-active="true"{% endif %}>📄 合同管理</a>
-                            {% url 'project_pages:project_initiation_create' as project_initiation_create_url %}
-                            <a class="sidenav-link" href="{{ project_initiation_create_url }}"{% if request.path|slice:':20' == '/project/initiation' %} data-active="true"{% endif %}>📋 项目立项</a>
+                            {% url 'project_pages:project_initiation_list' as project_initiation_list_url %}
+                            <a class="sidenav-link" href="{{ project_initiation_list_url }}"{% if request.path|slice:':22' == '/project/initiation' %} data-active="true"{% endif %}>📋 立项管理</a>
                             <a class="sidenav-link" href="{{ project_list_url }}"{% if request.path == project_list_url %} data-active="true"{% endif %}>🏗️ 生产管理</a>
-                            {% url 'settlement_pages:project_settlement_list' as project_settlement_list_url %}
-                            <a class="sidenav-link" href="{{ project_settlement_list_url }}"{% if request.path|slice:':22' == '/settlement/project-settlement' %} data-active="true"{% endif %}>🧾 结算管理</a>
-                            <a class="sidenav-link" href="#">💳 回款管理</a>
-                            {% url 'settlement_pages:output_value_template_manage' as output_value_template_url %}
-                            <a class="sidenav-link" href="{{ output_value_template_url }}"{% if request.path|slice:':20' == '/settlement/output-value' %} data-active="true"{% endif %}>📈 产值管理</a>
                             <a class="sidenav-link" href="#">🗂️ 资源管理</a>
                             <a class="sidenav-link" href="#">📁 档案管理</a>
                             <a class="sidenav-link" href="#">⚠️ 风险管理</a>
-                            {# 财务管理模块已移除 #}
-                            {# <a class="sidenav-link" href="{% url 'finance_pages:financial_home' %}"{% if request.path|slice:':10' == '/financial/' %} data-active="true"{% endif %}>💵 财务管理</a> #}
+                            {% url 'settlement_pages:project_settlement_list' as project_settlement_list_url %}
+                            <a class="sidenav-link" href="{{ project_settlement_list_url }}"{% if request.path|slice:':22' == '/settlement/project-settlement' %} data-active="true"{% endif %}>💵 财务管理</a>
                             <a class="sidenav-link" href="{% url 'personnel_pages:personnel_home' %}"{% if request.path|slice:':11' == '/personnel/' %} data-active="true"{% endif %}>👥 人事管理</a>
-                            {# 行政管理模块已移除 #}
-                            {# <a class="sidenav-link" href="{% url 'admin_pages:administrative_home' %}"{% if request.path|slice:':17' == '/administrative/' %} data-active="true"{% endif %}>🏢 行政管理</a> #}
+                            <a class="sidenav-link" href="{% url 'admin_pages:administrative_home' %}"{% if request.path|slice:':17' == '/administrative/' %} data-active="true"{% endif %}>🏢 行政管理</a>
                             <a class="sidenav-link" href="#">📅 计划管理</a>
                             
                         </div>
@@ -1022,7 +973,7 @@
                                     <div class="task-meta">
                                         <span>{{ task.project_number }} {{ task.project_name }}</span>
                                         {% if task.due_time %}
-                                        <span style="color:#f97316;">{{ task.due_time|date:"m-d H:i" }}</span>
+                                        <span class="text-warning">{{ task.due_time|date:"m-d H:i" }}</span>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -1083,26 +1034,26 @@
                     </div>
                     <div class="project-cards">
                         <div class="project-card">
-                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <div style="font-size:15px;font-weight:600;">VIH-2025-018 海天广场改造</div>
-                                    <div class="muted" style="margin-top:6px;">项目负责人：李伟 · 商务经理：唐晓</div>
+                                    <div style="font-size:var(--font-size-md);font-weight:600;">VIH-2025-018 海天广场改造</div>
+                                    <div class="muted mt-1">项目负责人：李伟 · 商务经理：唐晓</div>
                                 </div>
-                                <div style="text-align:right;">
-                                    <div style="font-size:22px;font-weight:600;color:var(--primary);">{{ project.progress }}%</div>
-                                    <div class="muted" style="font-size:12px;">健康度 良好</div>
+                                <div class="text-end">
+                                    <div class="text-primary" style="font-size:var(--font-size-xl);font-weight:600;">{{ project.progress }}%</div>
+                                    <div class="muted" style="font-size:var(--font-size-sm);">健康度 良好</div>
                                 </div>
                             </div>
                         </div>
                         <div class="project-card">
-                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <div style="font-size:15px;font-weight:600;">VIH-2025-022 智慧校园全过程咨询</div>
-                                    <div class="muted" style="margin-top:6px;">项目负责人：王倩 · 专业负责人：刘航</div>
+                                    <div style="font-size:var(--font-size-md);font-weight:600;">VIH-2025-022 智慧校园全过程咨询</div>
+                                    <div class="muted mt-1">项目负责人：王倩 · 专业负责人：刘航</div>
                                 </div>
-                                <div style="text-align:right;">
-                                    <div style="font-size:22px;font-weight:600;color:var(--accent);">{{ project.progress }}%</div>
-                                    <div class="muted" style="font-size:12px;color:var(--accent);">风险：{{ project.risk }}</div>
+                                <div class="text-end">
+                                    <div class="text-accent" style="font-size:var(--font-size-xl);font-weight:600;">{{ project.progress }}%</div>
+                                    <div class="muted text-accent" style="font-size:var(--font-size-sm);">风险：{{ project.risk }}</div>
                                 </div>
                             </div>
                         </div>

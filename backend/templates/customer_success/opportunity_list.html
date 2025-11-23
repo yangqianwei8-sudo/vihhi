@@ -1,0 +1,236 @@
+{% extends "customer_success/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .opportunity-nav {
+        background: #fff;
+        border-radius: 12px;
+        padding: 0;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .opportunity-table {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .table {
+        margin-bottom: 0;
+    }
+    .table thead th {
+        background: #f9fafb;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #374151;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .table tbody td {
+        font-size: 13px;
+        vertical-align: middle;
+    }
+    .badge-status {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .badge-potential { background: #f3f4f6; color: #374151; }
+    .badge-initial_contact { background: #dbeafe; color: #1e40af; }
+    .badge-requirement_confirmed { background: #fef3c7; color: #92400e; }
+    .badge-quotation { background: #ddd6fe; color: #5b21b6; }
+    .badge-negotiation { background: #fce7f3; color: #9f1239; }
+    .badge-won { background: #d1fae5; color: #065f46; }
+    .badge-lost { background: #fee2e2; color: #991b1b; }
+    .badge-cancelled { background: #f3f4f6; color: #6b7280; }
+    .badge-urgency {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+    .badge-normal { background: #e5e7eb; color: #374151; }
+    .badge-urgent { background: #fef3c7; color: #92400e; }
+    .badge-very_urgent { background: #fee2e2; color: #991b1b; }
+    .health-score {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .health-score.high { color: #16a34a; }
+    .health-score.medium { color: #d97706; }
+    .health-score.low { color: #dc2626; }
+    .filter-bar {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">{{ page_title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <div class="hero-icon">{{ page_icon }}</div>
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    {% if summary_cards %}
+    <div class="row mb-4">
+        {% for card in summary_cards %}
+        <div class="col-md-3 mb-3">
+            <div class="summary-card">
+                <h3>{{ card.label }}</h3>
+                <p class="summary-value">{{ card.value }}</p>
+                <p class="summary-hint">{{ card.hint }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+        <form method="get" action="{% url 'business_pages:opportunity_management' %}" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" name="search" class="form-control" placeholder="搜索商机编号、名称、项目、客户..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="">全部状态</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="client_id" class="form-select">
+                    <option value="">全部客户</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="urgency" class="form-select">
+                    <option value="">全部紧急程度</option>
+                    {% for value, label in urgency_choices %}
+                    <option value="{{ value }}" {% if urgency == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary me-2">搜索</button>
+                <a href="{% url 'business_pages:opportunity_management' %}" class="btn btn-outline-secondary">重置</a>
+                <a href="{% url 'business_pages:opportunity_create' %}" class="btn btn-success ms-2">新建商机</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- 商机列表 -->
+    <div class="opportunity-table">
+        {% if page_obj %}
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>商机编号</th>
+                    <th>商机名称</th>
+                    <th>关联客户</th>
+                    <th>项目名称</th>
+                    <th>预计金额</th>
+                    <th>成功概率</th>
+                    <th>加权金额</th>
+                    <th>状态</th>
+                    <th>紧急程度</th>
+                    <th>健康度</th>
+                    <th>负责商务</th>
+                    <th>预计签约</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for opportunity in page_obj %}
+                <tr>
+                    <td><strong>{{ opportunity.opportunity_number|default:"未编号" }}</strong></td>
+                    <td>{{ opportunity.name }}</td>
+                    <td>{{ opportunity.client.name }}</td>
+                    <td>{{ opportunity.project_name|default:"—" }}</td>
+                    <td>¥{{ opportunity.estimated_amount|floatformat:2 }}万</td>
+                    <td>{{ opportunity.success_probability }}%</td>
+                    <td><strong>¥{{ opportunity.weighted_amount|floatformat:2 }}万</strong></td>
+                    <td>
+                        <span class="badge-status badge-{{ opportunity.status }}">
+                            {{ opportunity.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge-urgency badge-{{ opportunity.urgency }}">
+                            {{ opportunity.get_urgency_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="health-score {% if opportunity.health_score >= 80 %}high{% elif opportunity.health_score >= 60 %}medium{% else %}low{% endif %}">
+                            {% if opportunity.health_score >= 80 %}🟢{% elif opportunity.health_score >= 60 %}🟡{% else %}🔴{% endif %}
+                            {{ opportunity.health_score }}分
+                        </span>
+                    </td>
+                    <td>{{ opportunity.business_manager.get_full_name|default:opportunity.business_manager.username }}</td>
+                    <td>{{ opportunity.expected_sign_date|default:"—"|date:"Y-m-d" }}</td>
+                    <td>
+                        <a href="{% url 'business_pages:opportunity_detail' opportunity.id %}" class="btn btn-sm btn-outline-primary">查看</a>
+                        {% if opportunity.business_manager == user or user.is_superuser %}
+                        <a href="{% url 'business_pages:opportunity_edit' opportunity.id %}" class="btn btn-sm btn-outline-secondary">编辑</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- 分页 -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination p-3">
+            <span class="step-links">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if urgency %}&urgency={{ urgency }}{% endif %}">&laquo; 首页</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if urgency %}&urgency={{ urgency }}{% endif %}">上一页</a>
+                {% endif %}
+
+                <span class="current">
+                    第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页
+                </span>
+
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if urgency %}&urgency={{ urgency }}{% endif %}">下一页</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if urgency %}&urgency={{ urgency }}{% endif %}">末页 &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="p-5 text-center text-muted">
+            <p>暂无商机数据</p>
+            <a href="{% url 'business_pages:opportunity_create' %}" class="btn btn-primary">创建第一个商机</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

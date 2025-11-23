@@ -44,8 +44,9 @@ INSTALLED_APPS = [
     'backend.apps.delivery_customer',
     'backend.apps.settlement_center.apps.SettlementCenterConfig',
     'backend.apps.risk_management',
-    # 行政管理、财务管理模块已禁用
-    # 'backend.apps.administrative_management.apps.AdministrativeManagementConfig',
+    # 行政管理模块
+    'backend.apps.administrative_management.apps.AdministrativeManagementConfig',
+    # 财务管理模块已禁用
     # 'backend.apps.financial_management.apps.FinancialManagementConfig',
     'backend.apps.personnel_management.apps.PersonnelManagementConfig',
 ]

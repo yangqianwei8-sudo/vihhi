@@ -19,15 +19,56 @@ class Client(models.Model):
         ('bad', '很差'),
     ]
     
+    # 商机管理新增分级（战略客户/核心客户/潜力客户/常规客户/培育客户/观察客户）
+    GRADE_CHOICES = [
+        ('strategic', '战略客户'),
+        ('core', '核心客户'),
+        ('potential', '潜力客户'),
+        ('regular', '常规客户'),
+        ('nurturing', '培育客户'),
+        ('observing', '观察客户'),
+    ]
+    
+    CLIENT_TYPE_CHOICES = [
+        ('developer', '开发商'),
+        ('government', '政府单位'),
+        ('design_institute', '设计院'),
+        ('general_contractor', '总包单位'),
+        ('other', '其他'),
+    ]
+    
+    COMPANY_SCALE_CHOICES = [
+        ('large', '大型'),
+        ('medium', '中型'),
+        ('small', '小型'),
+    ]
+    
+    SOURCE_CHOICES = [
+        ('self_development', '自主开发'),
+        ('customer_referral', '老客户推荐'),
+        ('industry_exhibition', '行业展会'),
+        ('online_promotion', '网络推广'),
+        ('other', '其他'),
+    ]
+    
     # 基础信息
     name = models.CharField(max_length=200, verbose_name='客户名称')
     short_name = models.CharField(max_length=100, blank=True, verbose_name='客户简称')
     code = models.CharField(max_length=50, unique=True, verbose_name='客户编码')
+    unified_credit_code = models.CharField(max_length=50, blank=True, verbose_name='统一信用代码')
     
     # 分类信息
     client_level = models.CharField(max_length=20, choices=CLIENT_LEVELS, default='general', verbose_name='客户等级')
+    grade = models.CharField(max_length=20, choices=GRADE_CHOICES, blank=True, null=True, verbose_name='客户分级', help_text='用于商机管理的客户分级')
     credit_level = models.CharField(max_length=20, choices=CREDIT_LEVELS, default='normal', verbose_name='信用等级')
+    client_type = models.CharField(max_length=20, choices=CLIENT_TYPE_CHOICES, blank=True, verbose_name='客户类型')
+    company_scale = models.CharField(max_length=20, choices=COMPANY_SCALE_CHOICES, blank=True, verbose_name='企业规模')
     industry = models.CharField(max_length=100, blank=True, verbose_name='所属行业')
+    region = models.CharField(max_length=100, blank=True, verbose_name='所属区域')
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, blank=True, verbose_name='客户来源')
+    
+    # 评分信息（用于自动分级）
+    score = models.IntegerField(default=0, verbose_name='客户评分', help_text='0-100分，用于自动计算客户分级')
     
     # 联系信息
     address = models.TextField(blank=True, verbose_name='地址')
@@ -57,6 +98,82 @@ class Client(models.Model):
     
     def __str__(self):
         return self.name
+    
+    def calculate_score(self):
+        """计算客户评分（0-100分）"""
+        from decimal import Decimal
+        score = 0
+        
+        # 企业规模（0-30分）
+        if self.company_scale == 'large':
+            score += 30
+        elif self.company_scale == 'medium':
+            score += 15
+        elif self.company_scale == 'small':
+            score += 5
+        
+        # 合作历史（0-25分）- 从项目数量判断
+        project_count = ClientProject.objects.filter(client=self).count()
+        if project_count >= 5:
+            score += 25
+        elif project_count >= 3:
+            score += 15
+        elif project_count >= 1:
+            score += 8
+        
+        # 项目规模（0-20分）- 从累计合同金额判断
+        if self.total_contract_amount:
+            amount = float(self.total_contract_amount)
+            if amount >= 10000000:  # 1000万以上
+                score += 20
+            elif amount >= 5000000:  # 500万以上
+                score += 12
+            elif amount >= 1000000:  # 100万以上
+                score += 6
+        
+        # 付款信誉（0-15分）- 从回款率判断
+        if self.total_contract_amount and float(self.total_contract_amount) > 0:
+            payment_rate = (float(self.total_payment_amount) / float(self.total_contract_amount)) * 100
+            if payment_rate >= 95:
+                score += 15
+            elif payment_rate >= 80:
+                score += 10
+            elif payment_rate >= 60:
+                score += 5
+        
+        # 战略价值（0-10分）- 根据客户类型和等级判断
+        if self.client_type == 'government' or self.client_level == 'vip':
+            score += 10
+        elif self.client_level == 'important':
+            score += 6
+        elif self.client_level == 'general':
+            score += 3
+        
+        return min(score, 100)  # 最高100分
+    
+    def calculate_grade(self):
+        """根据评分自动计算客户分级"""
+        score = self.calculate_score()
+        if score >= 80:
+            return 'strategic'  # 战略客户
+        elif score >= 60:
+            return 'core'  # 核心客户
+        elif score >= 40:
+            return 'potential'  # 潜力客户
+        elif score >= 20:
+            return 'regular'  # 常规客户
+        elif score >= 10:
+            return 'nurturing'  # 培育客户
+        else:
+            return 'observing'  # 观察客户
+    
+    def save(self, *args, **kwargs):
+        # 自动计算评分和分级
+        if not self.score or kwargs.get('update_score', False):
+            self.score = self.calculate_score()
+        if not self.grade or kwargs.get('update_grade', False):
+            self.grade = self.calculate_grade()
+        super().save(*args, **kwargs)
 
 class ClientContact(models.Model):
     """客户联系人"""
@@ -426,3 +543,384 @@ class ContractStatusLog(models.Model):
         from_label = dict(BusinessContract.CONTRACT_STATUS_CHOICES).get(self.from_status, '未知')
         to_label = dict(BusinessContract.CONTRACT_STATUS_CHOICES).get(self.to_status, '未知')
         return f"{self.contract.contract_number} - {from_label} → {to_label}"
+
+
+# ==================== 商机管理模块 ====================
+
+class BusinessOpportunity(models.Model):
+    """商机管理"""
+    STATUS_CHOICES = [
+        ('potential', '潜在客户'),           # 10%
+        ('initial_contact', '初步接触'),     # 30%
+        ('requirement_confirmed', '需求确认'), # 50%
+        ('quotation', '方案报价'),          # 70%
+        ('negotiation', '商务谈判'),         # 90%
+        ('won', '赢单'),
+        ('lost', '输单'),
+        ('cancelled', '已取消'),
+    ]
+    
+    URGENCY_CHOICES = [
+        ('normal', '普通'),
+        ('urgent', '紧急'),
+        ('very_urgent', '特急'),
+    ]
+    
+    APPROVAL_STATUS_CHOICES = [
+        ('pending', '待审批'),
+        ('approved', '已审批'),
+        ('rejected', '已驳回'),
+    ]
+    
+    # 基本信息
+    opportunity_number = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name='商机编号', help_text='自动生成：OPP-YYYY-NNNN')
+    name = models.CharField(max_length=200, verbose_name='商机名称')
+    client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name='opportunities', verbose_name='关联客户')
+    business_manager = models.ForeignKey(User, on_delete=models.PROTECT, related_name='managed_opportunities', verbose_name='负责商务')
+    
+    # 项目信息
+    project_name = models.CharField(max_length=200, blank=True, verbose_name='项目名称')
+    project_address = models.CharField(max_length=500, blank=True, verbose_name='项目地址')
+    project_type = models.CharField(max_length=50, blank=True, verbose_name='项目业态', help_text='住宅/综合体/商业/写字楼等')
+    building_area = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, verbose_name='建筑面积（平方米）')
+    drawing_stage = models.CharField(max_length=50, blank=True, verbose_name='图纸阶段')
+    
+    # 金额和概率
+    estimated_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='预计金额（万元）')
+    success_probability = models.IntegerField(default=10, verbose_name='成功概率（%）', help_text='10/30/50/70/90')
+    weighted_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='加权金额', help_text='预计金额 × 成功概率')
+    
+    # 状态和时间
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='potential', verbose_name='商机状态')
+    urgency = models.CharField(max_length=20, choices=URGENCY_CHOICES, default='normal', verbose_name='紧急程度')
+    expected_sign_date = models.DateField(null=True, blank=True, verbose_name='预计签约时间')
+    actual_sign_date = models.DateField(null=True, blank=True, verbose_name='实际签约日期')
+    
+    # 审批信息
+    approval_status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='pending', verbose_name='审批状态')
+    approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_opportunities', verbose_name='审批人')
+    approved_time = models.DateTimeField(null=True, blank=True, verbose_name='审批时间')
+    approval_comment = models.TextField(blank=True, verbose_name='审批意见')
+    
+    # 赢单/输单信息
+    actual_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, verbose_name='实际签约金额（万元）')
+    contract_number = models.CharField(max_length=100, blank=True, verbose_name='合同编号')
+    win_reason = models.TextField(blank=True, verbose_name='赢单原因')
+    loss_reason = models.TextField(blank=True, verbose_name='输单原因')
+    
+    # 健康度
+    health_score = models.IntegerField(default=0, verbose_name='健康度评分', help_text='0-100分')
+    
+    # 其他信息
+    description = models.TextField(blank=True, verbose_name='商机描述')
+    notes = models.TextField(blank=True, verbose_name='备注')
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    
+    # 审计字段
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_opportunities', verbose_name='创建人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'business_opportunity'
+        verbose_name = '商机'
+        verbose_name_plural = verbose_name
+        ordering = ['-created_time']
+        indexes = [
+            models.Index(fields=['opportunity_number']),
+            models.Index(fields=['status']),
+            models.Index(fields=['business_manager', 'status']),
+            models.Index(fields=['expected_sign_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.opportunity_number or '未编号'} - {self.name}"
+    
+    def save(self, *args, **kwargs):
+        # 自动生成商机编号
+        if not self.opportunity_number:
+            from django.db.models import Max
+            from datetime import datetime
+            current_year = datetime.now().year
+            max_opp = BusinessOpportunity.objects.filter(
+                opportunity_number__startswith=f'OPP-{current_year}-'
+            ).aggregate(max_num=Max('opportunity_number'))['max_num']
+            
+            if max_opp:
+                try:
+                    seq = int(max_opp.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            
+            self.opportunity_number = f'OPP-{current_year}-{seq:04d}'
+        
+        # 自动计算加权金额
+        if self.estimated_amount and self.success_probability:
+            from decimal import Decimal
+            self.weighted_amount = (self.estimated_amount * Decimal(self.success_probability)) / 100
+        
+        # 自动计算健康度（简化版，后续可以完善）
+        if not self.health_score or kwargs.get('update_health', False):
+            self.health_score = self._calculate_health_score()
+        
+        super().save(*args, **kwargs)
+    
+    def _calculate_health_score(self):
+        """计算健康度评分"""
+        score = 0
+        
+        # 跟进及时性（25%）
+        # 这里简化处理，实际应该根据最近跟进时间计算
+        score += 25
+        
+        # 信息完整性（20%）
+        if self.project_name and self.project_address and self.estimated_amount:
+            score += 20
+        elif self.project_name or self.project_address:
+            score += 10
+        
+        # 客户互动频次（20%）
+        followup_count = self.followups.count() if hasattr(self, 'followups') else 0
+        if followup_count >= 5:
+            score += 20
+        elif followup_count >= 3:
+            score += 12
+        elif followup_count >= 1:
+            score += 6
+        
+        # 阶段推进速度（35%）
+        # 根据状态和创建时间计算
+        days_since_created = (timezone.now().date() - self.created_time.date()).days
+        if self.status == 'won':
+            score += 35
+        elif self.status == 'negotiation' and days_since_created <= 30:
+            score += 30
+        elif self.status == 'quotation' and days_since_created <= 20:
+            score += 25
+        elif self.status == 'requirement_confirmed' and days_since_created <= 15:
+            score += 20
+        else:
+            score += 10
+        
+        return min(score, 100)
+    
+    @classmethod
+    def get_valid_transitions(cls, current_status):
+        """获取当前状态可以流转到的状态列表"""
+        transitions = {
+            'potential': ['initial_contact', 'cancelled'],
+            'initial_contact': ['requirement_confirmed', 'potential', 'cancelled'],
+            'requirement_confirmed': ['quotation', 'initial_contact', 'cancelled'],
+            'quotation': ['negotiation', 'requirement_confirmed', 'cancelled'],
+            'negotiation': ['won', 'lost', 'quotation', 'cancelled'],
+            'won': [],
+            'lost': [],
+            'cancelled': [],
+        }
+        return transitions.get(current_status, [])
+    
+    def can_transition_to(self, target_status):
+        """检查是否可以流转到目标状态"""
+        valid_transitions = self.get_valid_transitions(self.status)
+        return target_status in valid_transitions
+    
+    def transition_to(self, target_status, actor=None, comment=''):
+        """执行状态流转"""
+        if not self.can_transition_to(target_status):
+            raise ValueError(f"无法从 {self.get_status_display()} 流转到 {dict(self.STATUS_CHOICES).get(target_status, target_status)}")
+        
+        old_status = self.status
+        self.status = target_status
+        self._status_change_actor = actor
+        self._status_change_comment = comment
+        self.save()
+        
+        # 记录状态流转日志
+        if self.pk:
+            OpportunityStatusLog.objects.create(
+                opportunity=self,
+                from_status=old_status,
+                to_status=target_status,
+                actor=actor,
+                comment=comment,
+            )
+        
+        return True
+
+
+class OpportunityFollowUp(models.Model):
+    """商机跟进记录"""
+    FOLLOW_TYPE_CHOICES = [
+        ('phone', '电话沟通'),
+        ('visit', '上门拜访'),
+        ('online_meeting', '线上会议'),
+        ('email', '邮件沟通'),
+        ('other', '其他'),
+    ]
+    
+    opportunity = models.ForeignKey(BusinessOpportunity, on_delete=models.CASCADE, related_name='followups', verbose_name='商机')
+    follow_date = models.DateField(verbose_name='跟进日期')
+    follow_type = models.CharField(max_length=20, choices=FOLLOW_TYPE_CHOICES, default='phone', verbose_name='跟进方式')
+    participants = models.CharField(max_length=500, blank=True, verbose_name='参与人员')
+    content = models.TextField(verbose_name='跟进内容')
+    customer_feedback = models.TextField(blank=True, verbose_name='客户反馈')
+    next_plan = models.TextField(blank=True, verbose_name='下一步计划')
+    next_follow_date = models.DateField(null=True, blank=True, verbose_name='预计下次跟进')
+    
+    # 审计字段
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_followups', verbose_name='创建人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    
+    class Meta:
+        db_table = 'business_opportunity_followup'
+        verbose_name = '商机跟进记录'
+        verbose_name_plural = verbose_name
+        ordering = ['-follow_date', '-created_time']
+    
+    def __str__(self):
+        return f"{self.opportunity.opportunity_number} - {self.follow_date}"
+
+
+class QuotationRule(models.Model):
+    """报价规则配置"""
+    RULE_TYPE_CHOICES = [
+        ('rate', '费率'),
+        ('unit_price', '单价'),
+        ('fixed', '固定金额'),
+    ]
+    
+    name = models.CharField(max_length=100, verbose_name='规则名称')
+    rule_type = models.CharField(max_length=20, choices=RULE_TYPE_CHOICES, verbose_name='规则类型')
+    project_type = models.CharField(max_length=50, blank=True, verbose_name='项目业态')
+    service_type = models.CharField(max_length=50, blank=True, verbose_name='服务类型')
+    structure_type = models.CharField(max_length=50, blank=True, verbose_name='结构形式')
+    
+    # 规则参数（JSON格式存储复杂规则）
+    rule_params = models.JSONField(default=dict, verbose_name='规则参数', help_text='存储费率、单价等参数')
+    
+    # 适用范围
+    min_area = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, verbose_name='最小面积')
+    max_area = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, verbose_name='最大面积')
+    
+    # 调整系数
+    adjustment_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.0, verbose_name='调整系数')
+    
+    # 状态
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    description = models.TextField(blank=True, verbose_name='规则说明')
+    
+    # 审计字段
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_quotation_rules', verbose_name='创建人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'business_quotation_rule'
+        verbose_name = '报价规则'
+        verbose_name_plural = verbose_name
+        ordering = ['-created_time']
+    
+    def __str__(self):
+        return self.name
+
+
+class OpportunityQuotation(models.Model):
+    """商机报价"""
+    VERSION_TYPE_CHOICES = [
+        ('draft', '初稿报价'),
+        ('customer', '客户报价'),
+        ('final', '最终报价'),
+    ]
+    
+    opportunity = models.ForeignKey(BusinessOpportunity, on_delete=models.CASCADE, related_name='quotations', verbose_name='商机')
+    version_type = models.CharField(max_length=20, choices=VERSION_TYPE_CHOICES, default='draft', verbose_name='版本类型')
+    version_number = models.IntegerField(default=1, verbose_name='版本号')
+    
+    # 报价参数
+    building_area = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, verbose_name='建筑面积（平方米）')
+    project_type = models.CharField(max_length=50, blank=True, verbose_name='项目业态')
+    service_type = models.CharField(max_length=50, blank=True, verbose_name='服务类型')
+    structure_type = models.CharField(max_length=50, blank=True, verbose_name='结构形式')
+    
+    # 报价结果
+    base_quotation = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='基准报价（万元）')
+    adjustment_factor = models.DecimalField(max_digits=5, decimal_places=2, default=1.0, verbose_name='调整系数')
+    final_quotation = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='最终报价（万元）')
+    quotation_note = models.TextField(blank=True, verbose_name='报价说明')
+    
+    # 使用的规则
+    quotation_rule = models.ForeignKey(QuotationRule, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='使用的报价规则')
+    
+    # 文件
+    quotation_file = models.FileField(upload_to='quotations/%Y/%m/', blank=True, null=True, verbose_name='报价文件')
+    
+    # 审计字段
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_quotations', verbose_name='创建人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'business_opportunity_quotation'
+        verbose_name = '商机报价'
+        verbose_name_plural = verbose_name
+        ordering = ['-version_number', '-created_time']
+        unique_together = [['opportunity', 'version_number']]
+    
+    def __str__(self):
+        return f"{self.opportunity.opportunity_number} - {self.get_version_type_display()} v{self.version_number}"
+    
+    def save(self, *args, **kwargs):
+        # 自动计算最终报价
+        if self.base_quotation and self.adjustment_factor:
+            from decimal import Decimal
+            self.final_quotation = self.base_quotation * Decimal(str(self.adjustment_factor))
+        super().save(*args, **kwargs)
+
+
+class OpportunityApproval(models.Model):
+    """商机审批记录"""
+    APPROVAL_RESULT_CHOICES = [
+        ('approved', '通过'),
+        ('rejected', '驳回'),
+        ('pending', '待审核'),
+    ]
+    
+    opportunity = models.ForeignKey(BusinessOpportunity, on_delete=models.CASCADE, related_name='approvals', verbose_name='商机')
+    approver = models.ForeignKey(User, on_delete=models.PROTECT, related_name='opportunity_approvals', verbose_name='审核人')
+    approval_level = models.IntegerField(default=1, verbose_name='审核层级', help_text='1=商务部经理, 2=商务总监, 3=总经理')
+    result = models.CharField(max_length=20, choices=APPROVAL_RESULT_CHOICES, default='pending', verbose_name='审核结果')
+    comment = models.TextField(blank=True, verbose_name='审核意见')
+    approval_time = models.DateTimeField(null=True, blank=True, verbose_name='审核时间')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    
+    class Meta:
+        db_table = 'business_opportunity_approval'
+        verbose_name = '商机审批记录'
+        verbose_name_plural = verbose_name
+        ordering = ['approval_level', '-created_time']
+    
+    def __str__(self):
+        return f"{self.opportunity.opportunity_number} - {self.approver.username} - {self.get_result_display()}"
+
+
+class OpportunityStatusLog(models.Model):
+    """商机状态流转日志"""
+    opportunity = models.ForeignKey(BusinessOpportunity, on_delete=models.CASCADE, related_name='status_logs', verbose_name='商机')
+    from_status = models.CharField(max_length=30, choices=BusinessOpportunity.STATUS_CHOICES, blank=True, verbose_name='原状态')
+    to_status = models.CharField(max_length=30, choices=BusinessOpportunity.STATUS_CHOICES, verbose_name='目标状态')
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='opportunity_status_actions', verbose_name='操作人')
+    comment = models.TextField(blank=True, verbose_name='备注说明')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='操作时间')
+    
+    class Meta:
+        db_table = 'business_opportunity_status_log'
+        verbose_name = '商机状态流转日志'
+        verbose_name_plural = verbose_name
+        ordering = ['-created_time']
+    
+    def __str__(self):
+        from_label = dict(BusinessOpportunity.STATUS_CHOICES).get(self.from_status, '未知')
+        to_label = dict(BusinessOpportunity.STATUS_CHOICES).get(self.to_status, '未知')
+        return f"{self.opportunity.opportunity_number} - {from_label} → {to_label}"

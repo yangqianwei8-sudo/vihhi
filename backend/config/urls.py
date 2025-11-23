@@ -40,7 +40,7 @@ urlpatterns = [
     path('system-center/', include(('backend.apps.system_management.urls_pages', 'system_pages'), namespace='system_pages')),
     path('settlement/', include(('backend.apps.settlement_center.urls_pages', 'settlement_pages'), namespace='settlement_pages')),
     # 行政管理、财务管理模块已移除
-    # path('administrative/', include(('backend.apps.administrative_management.urls', 'admin_pages'), namespace='admin_pages')),
+    path('administrative/', include(('backend.apps.administrative_management.urls', 'admin_pages'), namespace='admin_pages')),
     # path('financial/', include(('backend.apps.financial_management.urls', 'finance_pages'), namespace='finance_pages')),
     path('personnel/', include(('backend.apps.personnel_management.urls', 'personnel_pages'), namespace='personnel_pages')),
 ]

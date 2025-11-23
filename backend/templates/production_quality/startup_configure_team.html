@@ -1,0 +1,139 @@
+{% extends "production_quality/base.html" %}
+{% load static %}
+
+{% block title %}配置团队 - {{ project.name }}{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'production_quality_pages:production_startup_list' %}">生产启动</a></li>
+<li class="breadcrumb-item"><a href="{% url 'production_quality_pages:production_startup_detail' startup.id %}">详情</a></li>
+<li class="breadcrumb-item active">配置团队</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">👥</div>
+        <h1 class="hero-title">配置团队</h1>
+        <p class="hero-subtitle">{{ project.name }}（{{ project.project_number }}）</p>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">当前团队成员</h5>
+        </div>
+        <div class="card-body">
+            {% if team_members %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>姓名</th>
+                            <th>角色</th>
+                            <th>专业</th>
+                            <th>所属团队</th>
+                            <th>加入时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in team_members %}
+                        <tr>
+                            <td>{{ member.user.get_full_name|default:member.user.username }}</td>
+                            <td>{{ member.get_role_display }}</td>
+                            <td>{{ member.service_profession.name|default:"--" }}</td>
+                            <td>{{ member.get_unit_display }}</td>
+                            <td>{{ member.join_date|date:"Y-m-d" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center mb-0">暂无团队成员</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">添加团队成员</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="teamForm">
+                {% csrf_token %}
+                <div id="teamMembersContainer">
+                    <div class="team-member-item mb-3 p-3 border rounded">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label required">选择人员</label>
+                                <select name="team_members" class="form-select" required>
+                                    <option value="">-- 请选择 --</option>
+                                    {% for user in available_users %}
+                                    <option value="{{ user.id }}">
+                                        {{ user.get_full_name|default:user.username }}
+                                        {% if user.department %}（{{ user.department.name }}）{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label required">角色</label>
+                                <select name="roles" class="form-select" required>
+                                    <option value="">-- 请选择 --</option>
+                                    <option value="professional_leader">专业负责人</option>
+                                    <option value="engineer">专业工程师</option>
+                                    <option value="technical_assistant">技术助理</option>
+                                    <option value="cost_engineer_civil">土建造价师</option>
+                                    <option value="cost_engineer_installation">安装造价师</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">专业</label>
+                                <select name="professions" class="form-select">
+                                    <option value="">-- 请选择 --</option>
+                                    {% for profession in service_professions %}
+                                    <option value="{{ profession.id }}">{{ profession.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-primary" onclick="addTeamMember()">+ 添加成员</button>
+                    <button type="submit" class="btn btn-primary">保存配置</button>
+                    <a href="{% url 'production_quality_pages:production_startup_detail' startup.id %}" class="btn btn-secondary">返回</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+let memberIndex = 1;
+
+function addTeamMember() {
+    const container = document.getElementById('teamMembersContainer');
+    const template = container.querySelector('.team-member-item').cloneNode(true);
+    
+    // 重置选择框
+    template.querySelectorAll('select').forEach(select => {
+        select.value = '';
+        select.name = select.name.replace(/\[\d+\]/, '') + '[]';
+    });
+    
+    // 添加删除按钮
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'btn btn-sm btn-danger mt-2';
+    deleteBtn.textContent = '删除';
+    deleteBtn.onclick = function() {
+        this.closest('.team-member-item').remove();
+    };
+    template.appendChild(deleteBtn);
+    
+    container.appendChild(template);
+    memberIndex++;
+}
+</script>
+{% endblock %}
+

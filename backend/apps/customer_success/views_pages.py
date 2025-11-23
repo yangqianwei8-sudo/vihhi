@@ -12,6 +12,12 @@ from backend.apps.customer_success.models import (
     BusinessPaymentPlan,
     Client,
     ClientProject,
+    BusinessOpportunity,
+    OpportunityFollowUp,
+    OpportunityQuotation,
+    OpportunityApproval,
+    OpportunityStatusLog,
+    QuotationRule,
 )
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted
@@ -608,4 +614,380 @@ def _calc_ratio(value, base):
     if not base:
         return "--"
     return f"{(value / base * 100):.1f}%"
+
+
+# ==================== 商机管理视图 ====================
+
+@login_required
+def opportunity_management(request):
+    """商机管理列表页面"""
+    from django.core.paginator import Paginator
+    
+    # 获取筛选参数
+    search = request.GET.get('search', '')
+    status = request.GET.get('status', '')
+    client_id = request.GET.get('client_id', '')
+    business_manager_id = request.GET.get('business_manager_id', '')
+    urgency = request.GET.get('urgency', '')
+    
+    # 获取权限
+    permission_set = get_user_permission_codes(request.user)
+    
+    # 获取商机列表
+    try:
+        opportunities = BusinessOpportunity.objects.select_related(
+            'client', 'business_manager', 'created_by'
+        ).prefetch_related('followups').order_by('-created_time')
+        
+        # 权限过滤：普通商务经理只能看自己负责的商机
+        if not _permission_granted('customer_success.opportunity.view_all', permission_set):
+            opportunities = opportunities.filter(business_manager=request.user)
+        
+        # 应用筛选条件
+        if search:
+            opportunities = opportunities.filter(
+                Q(opportunity_number__icontains=search) |
+                Q(name__icontains=search) |
+                Q(project_name__icontains=search) |
+                Q(client__name__icontains=search)
+            )
+        if status:
+            opportunities = opportunities.filter(status=status)
+        if client_id:
+            opportunities = opportunities.filter(client_id=client_id)
+        if business_manager_id:
+            opportunities = opportunities.filter(business_manager_id=business_manager_id)
+        if urgency:
+            opportunities = opportunities.filter(urgency=urgency)
+        
+        # 分页
+        paginator = Paginator(opportunities, 20)
+        page_number = request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception('获取商机列表失败: %s', str(e))
+        messages.error(request, f'获取商机列表失败：{str(e)}')
+        page_obj = None
+    
+    # 统计信息
+    try:
+        total_opportunities = BusinessOpportunity.objects.count()
+        active_opportunities = BusinessOpportunity.objects.exclude(
+            status__in=['won', 'lost', 'cancelled']
+        ).count()
+        total_weighted_amount = BusinessOpportunity.objects.exclude(
+            status__in=['won', 'lost', 'cancelled']
+        ).aggregate(total=Sum('weighted_amount'))['total'] or Decimal('0')
+        won_count = BusinessOpportunity.objects.filter(status='won').count()
+        
+        summary_cards = [
+            {"label": "商机总数", "value": total_opportunities, "hint": "系统中维护的商机数量"},
+            {"label": "活跃商机", "value": active_opportunities, "hint": "状态为活跃的商机数量"},
+            {"label": "加权金额", "value": f"¥{total_weighted_amount:,.0f}万", "hint": "按成功概率加权的预计金额"},
+            {"label": "赢单数量", "value": won_count, "hint": "已赢单的商机数量"},
+        ]
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception('获取统计信息失败: %s', str(e))
+        summary_cards = []
+    
+    # 获取筛选选项
+    clients = Client.objects.filter(is_active=True).order_by('name')
+    business_managers = request.user.__class__.objects.filter(
+        roles__code='business_manager'
+    ).distinct().order_by('username')
+    
+    context = _context(
+        "商机管理",
+        "💼",
+        "从潜在客户到签约项目的全流程数字化管理，实现销售漏斗可视化和过程标准化。",
+        summary_cards=summary_cards,
+        request=request,
+    )
+    context.update({
+        'page_obj': page_obj,
+        'search': search,
+        'status': status,
+        'client_id': client_id,
+        'business_manager_id': business_manager_id,
+        'urgency': urgency,
+        'clients': clients,
+        'business_managers': business_managers,
+        'status_choices': BusinessOpportunity.STATUS_CHOICES,
+        'urgency_choices': BusinessOpportunity.URGENCY_CHOICES,
+    })
+    return render(request, "customer_success/opportunity_list.html", context)
+
+
+@login_required
+def opportunity_detail(request, opportunity_id):
+    """商机详情页面"""
+    opportunity = get_object_or_404(
+        BusinessOpportunity.objects.select_related('client', 'business_manager', 'created_by', 'approver'),
+        id=opportunity_id
+    )
+    
+    # 权限检查
+    permission_set = get_user_permission_codes(request.user)
+    if not _permission_granted('customer_success.opportunity.view', permission_set):
+        if opportunity.business_manager != request.user:
+            messages.error(request, '您没有权限查看此商机')
+            return redirect('business_pages:opportunity_management')
+    
+    # 获取关联数据
+    followups = opportunity.followups.select_related('created_by').order_by('-follow_date', '-created_time')
+    quotations = opportunity.quotations.select_related('created_by', 'quotation_rule').order_by('-version_number')
+    approvals = opportunity.approvals.select_related('approver').order_by('approval_level', '-created_time')
+    status_logs = opportunity.status_logs.select_related('actor').order_by('-created_time')
+    
+    context = _context(
+        f"商机详情 - {opportunity.name}",
+        "💼",
+        f"商机编号：{opportunity.opportunity_number}",
+        request=request,
+    )
+    context.update({
+        'opportunity': opportunity,
+        'followups': followups,
+        'quotations': quotations,
+        'approvals': approvals,
+        'status_logs': status_logs,
+        'can_edit': _permission_granted('customer_success.opportunity.manage', permission_set) or opportunity.business_manager == request.user,
+        'can_approve': _permission_granted('customer_success.opportunity.approve', permission_set),
+    })
+    return render(request, "customer_success/opportunity_detail.html", context)
+
+
+@login_required
+def opportunity_create(request):
+    """创建商机"""
+    from django import forms
+    
+    # 权限检查
+    permission_set = get_user_permission_codes(request.user)
+    if not _permission_granted('customer_success.opportunity.create', permission_set):
+        messages.error(request, '您没有权限创建商机')
+        return redirect('business_pages:opportunity_management')
+    
+    if request.method == 'POST':
+        try:
+            opportunity = BusinessOpportunity.objects.create(
+                name=request.POST.get('name'),
+                client_id=request.POST.get('client_id'),
+                business_manager_id=request.POST.get('business_manager_id') or request.user.id,
+                project_name=request.POST.get('project_name', ''),
+                project_address=request.POST.get('project_address', ''),
+                project_type=request.POST.get('project_type', ''),
+                building_area=request.POST.get('building_area') or None,
+                drawing_stage=request.POST.get('drawing_stage', ''),
+                estimated_amount=request.POST.get('estimated_amount') or 0,
+                success_probability=int(request.POST.get('success_probability', 10)),
+                status=request.POST.get('status', 'potential'),
+                urgency=request.POST.get('urgency', 'normal'),
+                expected_sign_date=request.POST.get('expected_sign_date') or None,
+                description=request.POST.get('description', ''),
+                notes=request.POST.get('notes', ''),
+                created_by=request.user,
+            )
+            messages.success(request, f'商机 {opportunity.opportunity_number} 创建成功')
+            return redirect('business_pages:opportunity_detail', opportunity_id=opportunity.id)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception('创建商机失败: %s', str(e))
+            messages.error(request, f'创建商机失败：{str(e)}')
+    
+    # GET请求，显示创建表单
+    clients = Client.objects.filter(is_active=True).order_by('name')
+    business_managers = request.user.__class__.objects.filter(
+        roles__code='business_manager'
+    ).distinct().order_by('username')
+    
+    context = _context(
+        "创建商机",
+        "➕",
+        "录入新的商机信息，开始跟踪销售机会。",
+        request=request,
+    )
+    context.update({
+        'clients': clients,
+        'business_managers': business_managers,
+        'status_choices': BusinessOpportunity.STATUS_CHOICES,
+        'urgency_choices': BusinessOpportunity.URGENCY_CHOICES,
+        'default_business_manager': request.user,
+    })
+    return render(request, "customer_success/opportunity_form.html", context)
+
+
+@login_required
+def opportunity_edit(request, opportunity_id):
+    """编辑商机"""
+    opportunity = get_object_or_404(BusinessOpportunity, id=opportunity_id)
+    
+    # 权限检查
+    permission_set = get_user_permission_codes(request.user)
+    can_edit = _permission_granted('customer_success.opportunity.manage', permission_set) or opportunity.business_manager == request.user
+    if not can_edit:
+        messages.error(request, '您没有权限编辑此商机')
+        return redirect('business_pages:opportunity_detail', opportunity_id=opportunity_id)
+    
+    if request.method == 'POST':
+        try:
+            opportunity.name = request.POST.get('name')
+            opportunity.client_id = request.POST.get('client_id')
+            opportunity.business_manager_id = request.POST.get('business_manager_id')
+            opportunity.project_name = request.POST.get('project_name', '')
+            opportunity.project_address = request.POST.get('project_address', '')
+            opportunity.project_type = request.POST.get('project_type', '')
+            opportunity.building_area = request.POST.get('building_area') or None
+            opportunity.drawing_stage = request.POST.get('drawing_stage', '')
+            opportunity.estimated_amount = request.POST.get('estimated_amount') or 0
+            opportunity.success_probability = int(request.POST.get('success_probability', 10))
+            opportunity.status = request.POST.get('status', 'potential')
+            opportunity.urgency = request.POST.get('urgency', 'normal')
+            opportunity.expected_sign_date = request.POST.get('expected_sign_date') or None
+            opportunity.description = request.POST.get('description', '')
+            opportunity.notes = request.POST.get('notes', '')
+            opportunity.save(update_health=True)
+            messages.success(request, '商机信息已更新')
+            return redirect('business_pages:opportunity_detail', opportunity_id=opportunity.id)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception('更新商机失败: %s', str(e))
+            messages.error(request, f'更新商机失败：{str(e)}')
+    
+    # GET请求，显示编辑表单
+    clients = Client.objects.filter(is_active=True).order_by('name')
+    business_managers = request.user.__class__.objects.filter(
+        roles__code='business_manager'
+    ).distinct().order_by('username')
+    
+    context = _context(
+        f"编辑商机 - {opportunity.name}",
+        "✏️",
+        f"商机编号：{opportunity.opportunity_number}",
+        request=request,
+    )
+    context.update({
+        'opportunity': opportunity,
+        'clients': clients,
+        'business_managers': business_managers,
+        'status_choices': BusinessOpportunity.STATUS_CHOICES,
+        'urgency_choices': BusinessOpportunity.URGENCY_CHOICES,
+    })
+    return render(request, "customer_success/opportunity_form.html", context)
+
+
+@login_required
+def opportunity_delete(request, opportunity_id):
+    """删除商机"""
+    opportunity = get_object_or_404(BusinessOpportunity, id=opportunity_id)
+    
+    # 权限检查
+    permission_set = get_user_permission_codes(request.user)
+    can_delete = _permission_granted('customer_success.opportunity.manage', permission_set) or opportunity.business_manager == request.user
+    if not can_delete:
+        messages.error(request, '您没有权限删除此商机')
+        return redirect('business_pages:opportunity_detail', opportunity_id=opportunity_id)
+    
+    if request.method == 'POST':
+        try:
+            opportunity_number = opportunity.opportunity_number
+            opportunity.delete()
+            messages.success(request, f'商机 {opportunity_number} 已删除')
+            return redirect('business_pages:opportunity_management')
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception('删除商机失败: %s', str(e))
+            messages.error(request, f'删除商机失败：{str(e)}')
+    
+    context = _context(
+        f"删除商机 - {opportunity.name}",
+        "🗑️",
+        f"确认删除商机：{opportunity.opportunity_number}",
+        request=request,
+    )
+    context.update({
+        'opportunity': opportunity,
+    })
+    return render(request, "customer_success/opportunity_delete_confirm.html", context)
+
+
+@login_required
+def opportunity_status_transition(request, opportunity_id):
+    """商机状态流转"""
+    opportunity = get_object_or_404(BusinessOpportunity, id=opportunity_id)
+    
+    # 权限检查
+    permission_set = get_user_permission_codes(request.user)
+    can_manage = _permission_granted('customer_success.opportunity.manage', permission_set) or opportunity.business_manager == request.user
+    if not can_manage:
+        messages.error(request, '您没有权限操作此商机')
+        return redirect('business_pages:opportunity_detail', opportunity_id=opportunity_id)
+    
+    if request.method == 'POST':
+        target_status = request.POST.get('target_status')
+        comment = request.POST.get('comment', '')
+        
+        try:
+            # 执行状态流转
+            opportunity.transition_to(target_status, actor=request.user, comment=comment)
+            
+            # 如果状态变为赢单，创建待办事项
+            if target_status == 'won':
+                actual_amount = request.POST.get('actual_amount')
+                contract_number = request.POST.get('contract_number', '')
+                win_reason = request.POST.get('win_reason', '')
+                
+                if actual_amount:
+                    opportunity.actual_amount = Decimal(actual_amount)
+                if contract_number:
+                    opportunity.contract_number = contract_number
+                if win_reason:
+                    opportunity.win_reason = win_reason
+                opportunity.actual_sign_date = timezone.now().date()
+                opportunity.save()
+                
+                # 创建待办事项通知商务经理
+                from backend.apps.project_center.models import ProjectTeamNotification
+                ProjectTeamNotification.objects.create(
+                    project=None,
+                    recipient_user=opportunity.business_manager,
+                    title=f'商机赢单：{opportunity.name}',
+                    message=f'商机已赢单，实际签约金额：{opportunity.actual_amount or opportunity.estimated_amount}万元，请及时处理后续事项。',
+                    notification_type='business_opportunity_won',
+                    action_url=reverse('business_pages:opportunity_detail', args=[opportunity.id]),
+                    operator=request.user,
+                )
+            
+            messages.success(request, f'商机状态已更新为：{opportunity.get_status_display()}')
+            return redirect('business_pages:opportunity_detail', opportunity_id=opportunity.id)
+        except ValueError as e:
+            messages.error(request, str(e))
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception('状态流转失败: %s', str(e))
+            messages.error(request, f'状态流转失败：{str(e)}')
+    
+    # GET请求，显示状态流转表单
+    valid_transitions = opportunity.get_valid_transitions(opportunity.status)
+    
+    context = _context(
+        f"状态流转 - {opportunity.name}",
+        "🔄",
+        f"当前状态：{opportunity.get_status_display()}",
+        request=request,
+    )
+    context.update({
+        'opportunity': opportunity,
+        'valid_transitions': valid_transitions,
+        'status_choices': BusinessOpportunity.STATUS_CHOICES,
+    })
+    return render(request, "customer_success/opportunity_status_transition.html", context)
 

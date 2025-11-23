@@ -1,0 +1,60 @@
+{% extends "production_quality/base.html" %}
+{% load static %}
+
+{% block title %}生产启动列表{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">🚀</div>
+        <h1 class="hero-title">生产启动列表</h1>
+        <p class="hero-subtitle">管理项目生产启动流程</p>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>项目编号</th>
+                            <th>项目名称</th>
+                            <th>项目经理</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for startup in startups %}
+                        <tr>
+                            <td>{{ startup.project.project_number }}</td>
+                            <td>{{ startup.project.name }}</td>
+                            <td>
+                                {% if startup.project_manager_assigned %}
+                                    {{ startup.project_manager_assigned.get_full_name|default:startup.project_manager_assigned.username }}
+                                {% else %}
+                                    <span class="text-muted">未分配</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ startup.get_status_display }}</span>
+                            </td>
+                            <td>{{ startup.created_time|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <a href="{% url 'production_quality_pages:production_startup_detail' startup.id %}" class="btn btn-sm btn-primary">查看详情</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">暂无数据</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

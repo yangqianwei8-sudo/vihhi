@@ -588,3 +588,13 @@ class ProductionStatistic(models.Model):
     def __str__(self) -> str:
         return f"{self.statistic_type}-{self.snapshot_date}"
 
+
+# 导入生产启动相关模型
+from .models_startup import (
+    ProjectStartup,
+    ProjectDrawingDirectory,
+    ProjectDrawingFile,
+    ProjectTaskBreakdown,
+    ProjectStartupApproval,
+)
+

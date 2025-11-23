@@ -1,0 +1,102 @@
+{% extends "production_quality/base.html" %}
+{% load static %}
+
+{% block title %}图纸载入 - {{ project.name }}{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'production_quality_pages:production_startup_list' %}">生产启动</a></li>
+<li class="breadcrumb-item"><a href="{% url 'production_quality_pages:production_startup_detail' startup.id %}">详情</a></li>
+<li class="breadcrumb-item active">图纸载入</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">📁</div>
+        <h1 class="hero-title">图纸载入</h1>
+        <p class="hero-subtitle">{{ project.name }}（{{ project.project_number }}）</p>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">上传图纸</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group mb-3">
+                    <label class="form-label">选择目录（可选）</label>
+                    <select name="directory_id" class="form-select">
+                        <option value="">根目录</option>
+                        {% for directory in directories %}
+                        <option value="{{ directory.id }}">{{ directory.path }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">可以选择将文件上传到指定目录，或上传到根目录</div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label required">选择文件</label>
+                    <input type="file" name="drawing_files" class="form-control" multiple accept=".dwg,.pdf,.jpg,.jpeg,.png,.rvt" required>
+                    <div class="form-text">支持格式：DWG、PDF、JPG、PNG、RVT，可多选（最多50个）</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">上传</button>
+                    <a href="{% url 'production_quality_pages:production_startup_detail' startup.id %}" class="btn btn-secondary">返回</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">已上传文件（{{ drawing_files.count }}）</h5>
+        </div>
+        <div class="card-body">
+            {% if drawing_files %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>文件名</th>
+                            <th>目录</th>
+                            <th>类型</th>
+                            <th>大小</th>
+                            <th>上传时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in drawing_files %}
+                        <tr>
+                            <td>{{ file.file_name }}</td>
+                            <td>{{ file.directory.path|default:"根目录" }}</td>
+                            <td>{{ file.get_file_type_display }}</td>
+                            <td>{{ file.file_size|filesizeformat }}</td>
+                            <td>{{ file.uploaded_time|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center mb-0">暂无已上传的文件</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.querySelector('input[name="drawing_files"]');
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            const files = this.files;
+            if (files.length > 50) {
+                alert('最多只能选择50个文件');
+                this.value = '';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+

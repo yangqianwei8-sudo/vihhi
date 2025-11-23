@@ -56,7 +56,7 @@ HOME_NAV_STRUCTURE = [{'label': '项目中心',
   'children': [{'label': '项目总览',
                 'url_name': 'project_pages:project_list',
                 'permission': 'project_center.view_assigned'},
-               {'label': '项目立项', 'url_name': 'project_pages:project_create', 'permission': 'project_center.create'},
+               {'label': '项目立项', 'url_name': 'project_pages:project_initiation_list', 'permission': 'project_center.create'},
                {'label': '项目创建', 'url_name': 'project_pages:project_create', 'permission': 'project_center.create'},
                {'label': '团队配置', 'url_name': 'project_pages:project_list', 'permission': 'project_center.configure_team'},
                {'label': '项目监控', 'url_name': 'project_pages:project_monitor', 'permission': 'project_center.monitor'},
@@ -64,7 +64,8 @@ HOME_NAV_STRUCTURE = [{'label': '项目中心',
  {'label': '生产中心',
   'icon': '🏭',
   'permission': None,
-  'children': [{'label': '意见填报', 'url_name': 'production_quality_pages:opinion_create', 'permission': None},
+  'children': [{'label': '生产启动', 'url_name': 'production_quality_pages:production_startup_list', 'permission': None},
+               {'label': '意见填报', 'url_name': 'production_quality_pages:opinion_create', 'permission': None},
                {'label': '质量审核',
                 'url_name': 'production_quality_pages:opinion_review',
                 'permission': 'production_quality.professional_review'},
@@ -73,17 +74,7 @@ HOME_NAV_STRUCTURE = [{'label': '项目中心',
                 'permission': 'production_quality.generate_report'},
                {'label': '生产统计',
                 'url_name': 'production_quality_pages:production_stats',
-                'permission': 'production_quality.view_statistics'},
-               {'label': '任务看板',
-                'url_name': 'collaboration_pages:task_board',
-                'permission': 'task_collaboration.assign'}]},
- {'label': '交付中心',
-  'icon': '📦',
-  'permission': 'delivery_center.view',
-  'children': [{'label': '报告交付', 'url_name': 'delivery_pages:report_delivery', 'permission': 'delivery_portal.submit'},
-               {'label': '客户协同', 'url_name': 'delivery_pages:customer_collaboration', 'permission': 'delivery_portal.submit'},
-               {'label': '客户门户', 'url_name': 'delivery_pages:customer_portal', 'permission': 'delivery_portal.configure'},
-               {'label': '电子签章', 'url_name': 'delivery_pages:electronic_signature', 'permission': 'delivery_portal.approve'}]},
+                'permission': 'production_quality.view_statistics'}]},
  {'label': '商务中心',
   'icon': '💼',
   'permission': 'customer_success.view',
@@ -113,31 +104,7 @@ HOME_NAV_STRUCTURE = [{'label': '项目中心',
                {'label': '知识案例库', 'url_name': 'resource_standard:risk_case_list', 'permission': 'resource_center.view'},
                {'label': '专业分类库',
                 'url_name': 'resource_standard:professional_category_list',
-                'permission': 'resource_center.data_maintenance'}]},
- {'label': '系统管理',
-  'icon': '⚙️',
-  'permission': 'system_management.view_settings',
-  'children': [{'label': '用户与权限',
-                'url_name': 'system_pages:system_settings',
-                'permission': 'system_management.manage_users'},
-               {'label': '系统设置', 'url_name': 'system_pages:system_settings', 'permission': 'system_management.manage_settings'},
-               {'label': '操作日志', 'url_name': 'system_pages:operation_logs', 'permission': 'system_management.manage_settings'},
-               {'label': '数据字典', 'url_name': 'system_pages:data_dictionary', 'permission': 'system_management.manage_settings'}]},
- {'label': '结算中心',
-  'icon': '💰',
-  'permission': 'settlement_center.view_analysis',
-  'children': [{'label': '项目结算管理',
-                'url_name': 'settlement_pages:project_settlement_list',
-                'permission': 'settlement_center.settlement.view'},
-               {'label': '产值模板管理',
-                'url_name': 'settlement_pages:output_value_template_manage',
-                'permission': 'settlement_center.manage_output'},
-               {'label': '产值记录查询',
-                'url_name': 'settlement_pages:output_value_record_list',
-                'permission': 'settlement_center.view_analysis'},
-               {'label': '产值统计报表',
-                'url_name': 'settlement_pages:output_value_statistics',
-                'permission': 'settlement_center.view_analysis'}]}]
+                'permission': 'resource_center.data_maintenance'}]}]
 
 
 def _serialize_task_for_home(task):
@@ -381,18 +348,13 @@ def home(request):
                             url = '#'
                     else:
                         url = '#'
-                # 特殊处理：系统设置相关功能仅对系统管理员可见
+                # 已移除系统管理、交付中心、行政管理模块（但保留在home页侧边栏的链接）
                 url_name = child.get("url_name")
-                if url_name and url_name.startswith('system_pages:'):
-                    system_settings_pages = [
-                        'system_pages:system_settings',
-                        'system_pages:operation_logs',
-                        'system_pages:data_dictionary',
-                    ]
-                    if url_name in system_settings_pages:
-                        is_system_admin = request.user.is_superuser or request.user.roles.filter(code='system_admin').exists()
-                        if not is_system_admin:
-                            continue  # 跳过系统设置相关菜单项
+                # 跳过已移除的模块（仅从顶部导航菜单移除，侧边栏链接保留）
+                if url_name and (url_name.startswith('system_pages:') or 
+                                 url_name.startswith('delivery_pages:') or
+                                 url_name.startswith('admin_pages:')):
+                    continue
                 
                 # 移除所有二级子菜单
                 child_payload = {

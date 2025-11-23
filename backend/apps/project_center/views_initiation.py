@@ -234,44 +234,237 @@ def project_initiation_receive(request, project_id):
 # 占位函数 - 需要恢复完整实现
 @login_required
 def project_initiation_create(request):
-    """创建项目立项"""
-    messages.error(request, '功能正在恢复中，请稍后再试')
-    return redirect('project_pages:project_initiation_list')
+    """创建项目立项 - 第一步：上传凭证"""
+    if request.method == 'POST':
+        form = ProjectInitiationStep1Form(request.POST, request.FILES)
+        if form.is_valid():
+            project = form.save(commit=False)
+            project.created_by = request.user
+            project.status = 'draft'
+            project.save()
+            messages.success(request, '立项凭证上传成功，请继续填写基本信息')
+            return redirect('project_pages:project_initiation_step2', project_id=project.id)
+        else:
+            messages.error(request, '表单验证失败，请检查输入')
+    else:
+        form = ProjectInitiationStep1Form()
+    
+    context = {
+        'page_title': '创建项目立项',
+        'page_icon': '📋',
+        'description': '第一步：上传立项凭证',
+        'form': form,
+        'step': 1,
+    }
+    return render(request, 'project_center/initiation_step1.html', context)
 
 
 @login_required
 def project_initiation_step2(request, project_id):
-    """项目立项 - 第二步"""
-    messages.error(request, '功能正在恢复中，请稍后再试')
-    return redirect('project_pages:project_initiation_list')
+    """项目立项 - 第二步：填写基本信息"""
+    project = get_object_or_404(Project, id=project_id)
+    
+    # 权限检查：只有创建人可以编辑
+    if project.created_by != request.user:
+        messages.error(request, '您没有权限编辑此项目立项')
+        return redirect('project_pages:project_initiation_list')
+    
+    if request.method == 'POST':
+        form = ProjectInitiationStep2Form(request.POST, instance=project)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '基本信息保存成功，请继续填写联系信息')
+            return redirect('project_pages:project_initiation_step3', project_id=project.id)
+        else:
+            messages.error(request, '表单验证失败，请检查输入')
+    else:
+        form = ProjectInitiationStep2Form(instance=project)
+    
+    # 获取服务类型和专业数据
+    service_types = ServiceType.objects.prefetch_related('professions').order_by('order', 'id')
+    
+    context = {
+        'page_title': '填写基本信息',
+        'page_icon': '📋',
+        'description': '第二步：填写项目基本信息',
+        'form': form,
+        'project': project,
+        'service_types': service_types,
+        'step': 2,
+    }
+    return render(request, 'project_center/initiation_step2.html', context)
 
 
 @login_required
 def project_initiation_step3(request, project_id):
-    """项目立项 - 第三步"""
-    messages.error(request, '功能正在恢复中，请稍后再试')
-    return redirect('project_pages:project_initiation_list')
+    """项目立项 - 第三步：填写联系信息"""
+    project = get_object_or_404(Project, id=project_id)
+    
+    # 权限检查：只有创建人可以编辑
+    if project.created_by != request.user:
+        messages.error(request, '您没有权限编辑此项目立项')
+        return redirect('project_pages:project_initiation_list')
+    
+    if request.method == 'POST':
+        form = ProjectInitiationStep3Form(request.POST, instance=project)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '联系信息保存成功，请继续填写合同信息')
+            return redirect('project_pages:project_initiation_step4', project_id=project.id)
+        else:
+            messages.error(request, '表单验证失败，请检查输入')
+    else:
+        form = ProjectInitiationStep3Form(instance=project)
+    
+    context = {
+        'page_title': '填写联系信息',
+        'page_icon': '📋',
+        'description': '第三步：填写委托单位和设计单位信息',
+        'form': form,
+        'project': project,
+        'step': 3,
+    }
+    return render(request, 'project_center/initiation_step3.html', context)
 
 
 @login_required
 def project_initiation_step4(request, project_id):
-    """项目立项 - 第四步"""
-    messages.error(request, '功能正在恢复中，请稍后再试')
-    return redirect('project_pages:project_initiation_list')
+    """项目立项 - 第四步：填写合同信息"""
+    project = get_object_or_404(Project, id=project_id)
+    
+    # 权限检查：只有创建人可以编辑
+    if project.created_by != request.user:
+        messages.error(request, '您没有权限编辑此项目立项')
+        return redirect('project_pages:project_initiation_list')
+    
+    if request.method == 'POST':
+        form = ProjectInitiationStep4Form(request.POST, instance=project)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '合同信息保存成功，可以提交审批了')
+            return redirect('project_pages:project_initiation_detail', project_id=project.id)
+        else:
+            messages.error(request, '表单验证失败，请检查输入')
+    else:
+        form = ProjectInitiationStep4Form(instance=project)
+    
+    context = {
+        'page_title': '填写合同信息',
+        'page_icon': '📋',
+        'description': '第四步：填写合同金额和结算方式',
+        'form': form,
+        'project': project,
+        'step': 4,
+    }
+    return render(request, 'project_center/initiation_step4.html', context)
 
 
 @login_required
 def project_initiation_submit(request, project_id):
     """提交项目立项审批"""
-    messages.error(request, '功能正在恢复中，请稍后再试')
-    return redirect('project_pages:project_initiation_list')
+    project = get_object_or_404(Project, id=project_id)
+    
+    # 权限检查：只有创建人可以提交
+    if project.created_by != request.user:
+        messages.error(request, '您没有权限提交此项目立项')
+        return redirect('project_pages:project_initiation_list')
+    
+    # 状态检查：只有草稿或被驳回的项目可以提交
+    if project.status not in ['draft', 'initiation_rejected']:
+        messages.error(request, '当前状态不允许提交审批')
+        return redirect('project_pages:project_initiation_detail', project_id=project.id)
+    
+    if request.method == 'POST':
+        form = ProjectInitiationSubmitForm(request.POST, instance=project)
+        if form.is_valid():
+            with transaction.atomic():
+                project = form.save(commit=False)
+                project.status = 'waiting_initiation_approval'
+                project.save()
+                
+                # 创建或更新审批记录
+                approval, created = ProjectInitiationApproval.objects.get_or_create(
+                    project=project,
+                    defaults={
+                        'status': 'pending_supervisor',
+                        'submitted_by': request.user,
+                        'submitted_at': timezone.now(),
+                        'submission_comment': form.cleaned_data.get('submission_comment', ''),
+                    }
+                )
+                if not created:
+                    # 如果是重新提交，重置审批状态
+                    approval.status = 'pending_supervisor'
+                    approval.submitted_by = request.user
+                    approval.submitted_at = timezone.now()
+                    approval.submission_comment = form.cleaned_data.get('submission_comment', '')
+                    approval.approved_by = None
+                    approval.approved_at = None
+                    approval.approval_comment = None
+                    approval.rejected_by = None
+                    approval.rejected_at = None
+                    approval.rejection_reason = None
+                    approval.save()
+                
+                # 发送通知给商务部经理
+                business_manager = _get_business_manager()
+                if business_manager:
+                    ProjectTeamNotification.objects.create(
+                        recipient=business_manager,
+                        title='项目立项待审批',
+                        message=f'项目 {project.name} 已提交立项审批，请及时处理',
+                        category='project_initiation',
+                        action_url=reverse('project_pages:project_initiation_approve', args=[project.id]),
+                        project=project,
+                        context={'action': 'pending_approval', 'project_id': project.id},
+                    )
+                
+                messages.success(request, '项目立项已提交审批')
+                return redirect('project_pages:project_initiation_detail', project_id=project.id)
+        else:
+            messages.error(request, '表单验证失败，请检查输入')
+    else:
+        form = ProjectInitiationSubmitForm(instance=project)
+    
+    # 如果没有提交模板，重定向到详情页
+    # 实际提交通过POST请求处理，这里只是显示确认页面
+    context = {
+        'page_title': '提交审批',
+        'page_icon': '📋',
+        'description': '确认信息无误后提交审批',
+        'form': form,
+        'project': project,
+    }
+    # 如果模板不存在，重定向到详情页，详情页会有提交按钮
+    try:
+        return render(request, 'project_center/initiation_submit.html', context)
+    except:
+        return redirect('project_pages:project_initiation_detail', project_id=project.id)
 
 
 @login_required
 def project_initiation_list(request):
     """项目立项列表"""
-    messages.error(request, '功能正在恢复中，请稍后再试')
-    return redirect('home')
+    # 查询所有项目立项记录（按创建时间倒序）
+    projects = Project.objects.filter(
+        initiation_document_type__isnull=False
+    ).select_related('created_by').order_by('-created_time')
+    
+    # 可以根据用户权限过滤
+    # 如果是商务部员工，可以看到所有立项
+    # 如果是其他部门，只能看到自己创建的
+    if not _is_business_department_user(request.user):
+        projects = projects.filter(created_by=request.user)
+    
+    context = {
+        'page_title': '项目立项管理',
+        'page_icon': '📋',
+        'description': '管理项目立项申请，包括创建、查看、编辑和删除',
+        'projects': projects,
+        'user': request.user,
+    }
+    
+    return render(request, 'project_center/initiation_list.html', context)
 
 
 @login_required
@@ -361,8 +554,20 @@ def project_initiation_withdraw(request, project_id):
 @require_http_methods(["POST"])
 def project_initiation_delete(request, project_id):
     """删除项目立项"""
-    messages.error(request, '功能正在恢复中，请稍后再试')
-    return redirect('project_pages:project_initiation_list')
+    project = get_object_or_404(Project, id=project_id)
+    
+    # 权限检查：只有创建人可以删除，且项目状态必须是草稿
+    if project.created_by != request.user:
+        return JsonResponse({'success': False, 'message': '您没有权限删除此项目立项'}, status=403)
+    
+    if project.status != 'draft':
+        return JsonResponse({'success': False, 'message': '只能删除草稿状态的项目立项'}, status=400)
+    
+    try:
+        project.delete()
+        return JsonResponse({'success': True, 'message': '项目立项已删除'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'删除失败：{str(e)}'}, status=500)
 
 
 @login_required

@@ -1,0 +1,152 @@
+{% extends "production_quality/base.html" %}
+{% load static %}
+
+{% block title %}审批项目启动 - {{ project.name }}{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'production_quality_pages:production_startup_list' %}">生产启动</a></li>
+<li class="breadcrumb-item"><a href="{% url 'production_quality_pages:production_startup_detail' startup.id %}">详情</a></li>
+<li class="breadcrumb-item active">审批</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <div class="hero-icon">✅</div>
+        <h1 class="hero-title">审批项目启动</h1>
+        <p class="hero-subtitle">{{ project.name }}（{{ project.project_number }}）</p>
+    </div>
+
+    <!-- 项目信息概览 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">项目信息</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-row">
+                        <span class="info-label">项目编号：</span>
+                        <span class="info-value">{{ project.project_number }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">项目名称：</span>
+                        <span class="info-value">{{ project.name }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">项目经理：</span>
+                        <span class="info-value">
+                            {% if startup.project_manager_assigned %}
+                                {{ startup.project_manager_assigned.get_full_name|default:startup.project_manager_assigned.username }}
+                            {% else %}
+                                <span class="text-muted">未分配</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-row">
+                        <span class="info-label">合同金额：</span>
+                        <span class="info-value">¥{{ project.contract_amount|default:"0"|floatformat:2 }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">合同节省目标：</span>
+                        <span class="info-value">¥{{ project.estimated_savings|default:"0"|floatformat:2 }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">任务节省目标总额：</span>
+                        <span class="info-value">¥{{ startup.total_saving_target|default:"0"|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 审批表单 -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">审批意见</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="approvalForm">
+                {% csrf_token %}
+                <div class="form-group mb-3">
+                    <label class="form-label required">审批决定</label>
+                    <div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="decision" id="decision_approved" value="approved" required>
+                            <label class="form-check-label" for="decision_approved">通过</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="decision" id="decision_rejected" value="rejected" required>
+                            <label class="form-check-label" for="decision_rejected">驳回</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">审批意见</label>
+                    <textarea name="comment" class="form-control" rows="4" placeholder="请输入审批意见..."></textarea>
+                </div>
+                <div class="form-group mb-3" id="rejectionReasonGroup" style="display: none;">
+                    <label class="form-label required">驳回原因</label>
+                    <textarea name="rejection_reason" class="form-control" rows="3" placeholder="请详细说明驳回原因..."></textarea>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">提交审批</button>
+                    <a href="{% url 'production_quality_pages:production_startup_detail' startup.id %}" class="btn btn-secondary">返回</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const decisionInputs = document.querySelectorAll('input[name="decision"]');
+    const rejectionReasonGroup = document.getElementById('rejectionReasonGroup');
+    const rejectionReasonInput = document.querySelector('textarea[name="rejection_reason"]');
+    
+    decisionInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            if (this.value === 'rejected') {
+                rejectionReasonGroup.style.display = 'block';
+                rejectionReasonInput.required = true;
+            } else {
+                rejectionReasonGroup.style.display = 'none';
+                rejectionReasonInput.required = false;
+                rejectionReasonInput.value = '';
+            }
+        });
+    });
+    
+    document.getElementById('approvalForm').addEventListener('submit', function(e) {
+        const decision = document.querySelector('input[name="decision"]:checked');
+        if (!decision) {
+            e.preventDefault();
+            alert('请选择审批决定');
+            return;
+        }
+        
+        if (decision.value === 'rejected') {
+            const rejectionReason = rejectionReasonInput.value.trim();
+            if (!rejectionReason) {
+                e.preventDefault();
+                alert('请填写驳回原因');
+                return;
+            }
+        }
+        
+        if (decision.value === 'approved') {
+            if (!confirm('确认通过此项目启动申请？')) {
+                e.preventDefault();
+            }
+        } else {
+            if (!confirm('确认驳回此项目启动申请？')) {
+                e.preventDefault();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
+

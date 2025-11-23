@@ -48,6 +48,13 @@ from backend.apps.system_management.models import User, Department
 from backend.apps.system_management.services import get_user_permission_codes
 # calculate_output_value 改为延迟导入，避免在数据库表不存在时导致模块加载失败
 
+# 延迟导入 production_quality 模块，避免循环依赖
+try:
+    from backend.apps.production_quality.models import Opinion, OpinionStatus
+except ImportError:
+    Opinion = None
+    OpinionStatus = None
+
 logger = logging.getLogger(__name__)
 ROLE_LABELS = dict(ProjectTeam.ROLE_CHOICES)
 UNIT_LABELS = dict(ProjectTeam.UNIT_CHOICES)
@@ -4225,4 +4232,108 @@ def _build_service_timeline(project, milestone_list):
             stages[current_index]["status"] = "current"
     completion_rate = int(round(completed / len(stages) * 100)) if stages else 0
     return stages, completion_rate
+
+
+@login_required
+def production_management(request):
+    """生产管理主页面"""
+    permission_set = get_user_permission_codes(request.user)
+    if not _require_permission(request, permission_set, '您没有查看生产管理的权限。', 'project_center.view_all', 'project_center.view_assigned'):
+        return redirect('home')
+    
+    # 获取用户可访问的项目
+    accessible_ids = _project_ids_user_can_access(request.user)
+    projects = Project.objects.filter(id__in=accessible_ids).select_related(
+        'service_type', 'project_manager', 'business_manager'
+    ).prefetch_related('service_professions', 'team_members__user')
+    
+    # 查询条件
+    project_number = request.GET.get('project_number', '').strip()
+    project_name = request.GET.get('project_name', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    flow_step_filter = request.GET.get('flow_step', '').strip()
+    
+    if project_number:
+        projects = projects.filter(project_number__icontains=project_number)
+    if project_name:
+        projects = projects.filter(name__icontains=project_name)
+    if status_filter:
+        projects = projects.filter(status=status_filter)
+    if flow_step_filter:
+        projects = projects.filter(current_flow_step=flow_step_filter)
+    
+    # 只显示已开工或进行中的项目
+    production_projects = projects.filter(
+        status__in=['in_progress', 'waiting_start', 'configuring']
+    ).order_by('-updated_time')
+    
+    # 统计信息
+    total_projects = production_projects.count()
+    in_progress_count = production_projects.filter(status='in_progress').count()
+    waiting_start_count = production_projects.filter(status='waiting_start').count()
+    configuring_count = production_projects.filter(status='configuring').count()
+    
+    # 意见统计（如果 Opinion 模型可用）
+    opinion_stats = {}
+    if Opinion:
+        try:
+            opinion_projects = Opinion.objects.filter(
+                project_id__in=accessible_ids
+            ).values('project_id', 'status').annotate(count=Count('id'))
+            
+            for stat in opinion_projects:
+                project_id = stat['project_id']
+                if project_id not in opinion_stats:
+                    opinion_stats[project_id] = {}
+                opinion_stats[project_id][stat['status']] = stat['count']
+        except Exception as e:
+            logger.warning(f'获取意见统计失败: {e}')
+    
+    # 任务统计
+    task_stats = {}
+    try:
+        active_tasks = ProjectTask.objects.filter(
+            project_id__in=accessible_ids,
+            status__in=ProjectTask.ACTIVE_STATUSES
+        ).values('project_id').annotate(count=Count('id'))
+        
+        for stat in active_tasks:
+            task_stats[stat['project_id']] = stat['count']
+    except Exception as e:
+        logger.warning(f'获取任务统计失败: {e}')
+    
+    # 为每个项目添加统计信息
+    project_list = []
+    for project in production_projects[:50]:  # 限制显示数量
+        project_data = {
+            'project': project,
+            'opinion_count': sum(opinion_stats.get(project.id, {}).values()) if project.id in opinion_stats else 0,
+            'opinion_stats': opinion_stats.get(project.id, {}),
+            'task_count': task_stats.get(project.id, 0),
+        }
+        project_list.append(project_data)
+    
+    # 流程步骤统计
+    flow_step_stats = {}
+    for project in production_projects:
+        step = project.current_flow_step or 'unknown'
+        flow_step_stats[step] = flow_step_stats.get(step, 0) + 1
+    
+    context = _with_nav({
+        'page_title': '生产管理',
+        'projects': project_list,
+        'total_projects': total_projects,
+        'in_progress_count': in_progress_count,
+        'waiting_start_count': waiting_start_count,
+        'configuring_count': configuring_count,
+        'flow_step_stats': flow_step_stats,
+        'status_filter': status_filter,
+        'flow_step_filter': flow_step_filter,
+        'project_number': project_number,
+        'project_name': project_name,
+        'FLOW_STEPS': Project.FLOW_STEPS,
+        'PROJECT_STATUS': Project.PROJECT_STATUS,
+    }, permission_set, 'production_management', request.user)
+    
+    return render(request, 'project_center/production_management.html', context)
 
