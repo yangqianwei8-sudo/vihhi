@@ -67,16 +67,17 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'home' %}">首页</a>
                     </li>
-                    {% for section in full_top_nav %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="dropdown{{ forloop.counter }}" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            {% if section.section_icon %}{{ section.section_icon }} {% endif %}{{ section.section_label }}
+                    {% for item in full_top_nav %}
+                    <li class="nav-item">
+                        {% if item.url and item.url != '#' %}
+                        <a class="nav-link" href="{{ item.url }}">
+                            {% if item.icon %}{{ item.icon }} {% endif %}{{ item.label }}
                         </a>
-                        <ul class="dropdown-menu" aria-labelledby="dropdown{{ forloop.counter }}">
-                            {% for item in section.items %}
-                            <li><a class="dropdown-item" href="{{ item.url }}">{{ item.label }}</a></li>
-                            {% endfor %}
-                        </ul>
+                        {% else %}
+                        <span class="nav-link text-muted" style="cursor: not-allowed;" title="功能开发中">
+                            {% if item.icon %}{{ item.icon }} {% endif %}{{ item.label }}
+                        </span>
+                        {% endif %}
                     </li>
                     {% empty %}
                     {% endfor %}
@@ -115,7 +116,6 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{% url 'home' %}">首页</a></li>
-                <li class="breadcrumb-item"><a href="{% url 'business_pages:contract_management' %}">商务中心</a></li>
                 {% block breadcrumb_items %}{% endblock %}
             </ol>
         </nav>

@@ -81,6 +81,16 @@ PERMISSION_DEFINITIONS = [
     {"code": "customer_success.view", "module": "客户成功", "action": "view", "name": "客户成功-查看", "description": "查看客户信息、跟踪记录"},
     {"code": "customer_success.analyze", "module": "客户成功", "action": "analyze", "name": "客户成功-价值分析", "description": "分析客户价值、满意度"},
     {"code": "customer_success.opportunity", "module": "客户成功", "action": "opportunity", "name": "客户成功-商机挖掘", "description": "商机识别与跟进"},
+    
+    # 商机管理
+    {"code": "customer_success.opportunity.view", "module": "客户成功", "action": "opportunity.view", "name": "商机管理-查看", "description": "查看商机列表和详情"},
+    {"code": "customer_success.opportunity.view_all", "module": "客户成功", "action": "opportunity.view_all", "name": "商机管理-查看全部", "description": "查看所有商机（不限负责商务）"},
+    {"code": "customer_success.opportunity.create", "module": "客户成功", "action": "opportunity.create", "name": "商机管理-创建", "description": "创建新商机"},
+    {"code": "customer_success.opportunity.manage", "module": "客户成功", "action": "opportunity.manage", "name": "商机管理-管理", "description": "编辑和删除商机"},
+    {"code": "customer_success.opportunity.approve", "module": "客户成功", "action": "opportunity.approve", "name": "商机管理-审批", "description": "审批商机报价"},
+    {"code": "customer_success.quotation.view", "module": "客户成功", "action": "quotation.view", "name": "报价管理-查看", "description": "查看报价记录"},
+    {"code": "customer_success.quotation.create", "module": "客户成功", "action": "quotation.create", "name": "报价管理-创建", "description": "创建报价记录"},
+    {"code": "customer_success.quotation.manage", "module": "客户成功", "action": "quotation.manage", "name": "报价管理-管理", "description": "管理报价记录"},
 
     # 风险管理
     {"code": "risk_management.view", "module": "风险管理", "action": "view", "name": "风控中心-查看", "description": "查看风险事件、预警信息"},
@@ -118,3 +128,40 @@ PERMISSION_DEFINITIONS = [
     {"code": "personnel_management.contract.create", "module": "人事管理", "action": "contract.create", "name": "合同-创建", "description": "创建劳动合同"},
     {"code": "personnel_management.contract.manage", "module": "人事管理", "action": "contract.manage", "name": "合同-管理", "description": "管理劳动合同"},
 ]
+
+
+class Command(BaseCommand):
+    help = "Seed permission items from PERMISSION_DEFINITIONS"
+
+    def handle(self, *args, **options):
+        created_count = 0
+        updated_count = 0
+        
+        with transaction.atomic():
+            for perm_def in PERMISSION_DEFINITIONS:
+                perm_item, created = PermissionItem.objects.update_or_create(
+                    code=perm_def['code'],
+                    defaults={
+                        'module': perm_def['module'],
+                        'action': perm_def['action'],
+                        'name': perm_def['name'],
+                        'description': perm_def['description'],
+                        'is_active': True,
+                    }
+                )
+                if created:
+                    created_count += 1
+                    self.stdout.write(
+                        self.style.SUCCESS(f'✓ 创建权限: {perm_def["code"]}')
+                    )
+                else:
+                    updated_count += 1
+                    self.stdout.write(
+                        self.style.WARNING(f'↻ 更新权限: {perm_def["code"]}')
+                    )
+        
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'\n完成！创建 {created_count} 个权限，更新 {updated_count} 个权限。'
+            )
+        )

@@ -50,62 +50,21 @@ HOME_ACTION_DEFINITIONS = [
     },
 ]
 
-HOME_NAV_STRUCTURE = [{'label': '项目中心',
-  'icon': '📊',
-  'permission': 'project_center.view_assigned',
-  'children': [{'label': '项目总览',
-                'url_name': 'project_pages:project_list',
-                'permission': 'project_center.view_assigned'},
-               {'label': '项目立项', 'url_name': 'project_pages:project_initiation_list', 'permission': 'project_center.create'},
-               {'label': '项目创建', 'url_name': 'project_pages:project_create', 'permission': 'project_center.create'},
-               {'label': '团队配置', 'url_name': 'project_pages:project_list', 'permission': 'project_center.configure_team'},
-               {'label': '项目监控', 'url_name': 'project_pages:project_monitor', 'permission': 'project_center.monitor'},
-               {'label': '项目档案', 'url_name': 'project_pages:project_list', 'permission': 'project_center.archive'}]},
- {'label': '生产中心',
-  'icon': '🏭',
-  'permission': None,
-  'children': [{'label': '生产启动', 'url_name': 'production_quality_pages:production_startup_list', 'permission': None},
-               {'label': '意见填报', 'url_name': 'production_quality_pages:opinion_create', 'permission': None},
-               {'label': '质量审核',
-                'url_name': 'production_quality_pages:opinion_review',
-                'permission': 'production_quality.professional_review'},
-               {'label': '报告生成',
-                'url_name': 'production_quality_pages:report_generate',
-                'permission': 'production_quality.generate_report'},
-               {'label': '生产统计',
-                'url_name': 'production_quality_pages:production_stats',
-                'permission': 'production_quality.view_statistics'}]},
- {'label': '商务中心',
-  'icon': '💼',
-  'permission': 'customer_success.view',
-  'children': [{'label': '商机管理', 'url_name': 'business_pages:opportunity_management', 'permission': 'customer_success.opportunity.view'},
-               {'label': '客户管理', 'url_name': 'business_pages:customer_management', 'permission': 'customer_success.manage'},
-               {'label': '合同管理', 'url_name': 'business_pages:contract_management', 'permission': 'customer_success.manage'},
-               {'label': '项目结算', 'url_name': 'business_pages:project_settlement', 'permission': 'settlement_center.initiate'},
-               {'label': '产值分析', 'url_name': 'business_pages:output_analysis', 'permission': 'settlement_center.view_analysis'},
-               {'label': '收款跟踪', 'url_name': 'business_pages:payment_tracking', 'permission': 'settlement_center.manage_finance'}]},
- {'label': '协作中心',
-  'icon': '🤝',
-  'permission': 'task_collaboration.execute',
-  'children': [{'label': '协作空间', 'url_name': 'collaboration_pages:workspace', 'permission': 'task_collaboration.assign'},
-               {'label': '流程引擎', 'url_name': 'collaboration_pages:process_engine', 'permission': 'task_collaboration.manage'},
-               {'label': '工时填报',
-                'url_name': 'collaboration_pages:timesheet',
-                'permission': 'task_collaboration.audit_timesheet'},
-               {'label': '消息中心', 'url_name': 'collaboration_pages:message_center', 'permission': 'task_collaboration.assign'}]},
- {'label': '知识中心',
-  'icon': '📚',
-  'permission': 'resource_center.view',
-  'children': [{'label': '标准规范库',
-                'url_name': 'resource_standard:standard_list',
-                'permission': 'resource_center.manage_library'},
-               {'label': '报告模板库',
-                'url_name': 'resource_standard:report_template_list',
-                'permission': 'resource_center.manage_library'},
-               {'label': '知识案例库', 'url_name': 'resource_standard:risk_case_list', 'permission': 'resource_center.view'},
-               {'label': '专业分类库',
-                'url_name': 'resource_standard:professional_category_list',
-                'permission': 'resource_center.data_maintenance'}]}]
+# 菜单结构：直接对应home页左侧菜单，取消所有"中心"概念
+HOME_NAV_STRUCTURE = [
+    {'label': '商机管理', 'icon': '💼', 'url_name': 'business_pages:opportunity_management', 'permission': 'customer_success.opportunity.view'},
+    {'label': '合同管理', 'icon': '📄', 'url_name': 'business_pages:contract_management', 'permission': 'customer_success.manage'},
+    {'label': '立项管理', 'icon': '📋', 'url_name': 'project_pages:project_initiation_list', 'permission': 'project_center.create'},
+    {'label': '生产管理', 'icon': '🏗️', 'url_name': 'project_pages:project_list', 'permission': 'project_center.view_assigned'},
+    {'label': '资源管理', 'icon': '🗂️', 'url_name': 'resource_standard_pages:standard_list', 'permission': 'resource_center.view'},
+    {'label': '档案管理', 'icon': '📁', 'url_name': 'project_pages:project_list', 'permission': 'project_center.archive'},
+    {'label': '风险管理', 'icon': '⚠️', 'url_name': '#', 'permission': 'risk_management.view'},  # 待实现
+    {'label': '财务管理', 'icon': '💵', 'url_name': 'settlement_pages:project_settlement_list', 'permission': 'settlement_center.initiate'},
+    {'label': '人事管理', 'icon': '👥', 'url_name': 'personnel_pages:personnel_home', 'permission': 'personnel_management.view'},
+    {'label': '行政管理', 'icon': '🏢', 'url_name': 'admin_pages:administrative_home', 'permission': None},
+    {'label': '交付管理', 'icon': '📦', 'url_name': 'delivery_pages:report_delivery', 'permission': 'delivery_center.view'},
+    {'label': '计划管理', 'icon': '📅', 'url_name': '#', 'permission': None},  # 待实现
+]
 
 
 def _serialize_task_for_home(task):
@@ -330,46 +289,31 @@ def home(request):
         except Exception:
             pass
 
+        # 新的菜单结构：直接使用HOME_NAV_STRUCTURE，不再按中心分组
         centers_navigation = []
-        for section in HOME_NAV_STRUCTURE:
-            if not _permission_granted(section["permission"], user_permissions):
+        for menu_item in HOME_NAV_STRUCTURE:
+            # 检查权限
+            permission = menu_item.get("permission")
+            if permission and not _permission_granted(permission, user_permissions):
                 continue
-            children = []
-            for child in section["children"]:
-                permission = child.get("permission")
-                if permission and not _permission_granted(permission, user_permissions):
-                    continue
-                url = child.get("url")
-                if not url:
-                    url_name = child.get("url_name")
-                    if url_name:
-                        try:
-                            url = reverse(url_name)
-                        except NoReverseMatch:
-                            url = '#'
-                    else:
-                        url = '#'
-                # 已移除系统管理、交付中心、行政管理模块（但保留在home页侧边栏的链接）
-                url_name = child.get("url_name")
-                # 跳过已移除的模块（仅从顶部导航菜单移除，侧边栏链接保留）
-                if url_name and (url_name.startswith('system_pages:') or 
-                                 url_name.startswith('delivery_pages:') or
-                                 url_name.startswith('admin_pages:')):
-                    continue
-                
-                # 移除所有二级子菜单
-                child_payload = {
-                    "label": child["label"],
-                    "url": url,
-                    "subitems": [],  # 清空二级子菜单
-                }
-                children.append(child_payload)
-            if not children:
+            
+            # 获取URL
+            url_name = menu_item.get("url_name")
+            url = menu_item.get("url", '#')
+            if url_name and url_name != '#':
+                try:
+                    url = reverse(url_name)
+                except NoReverseMatch:
+                    url = url or '#'
+            
+            # 跳过系统管理相关（但保留在侧边栏）
+            if url_name and url_name.startswith('system_pages:'):
                 continue
+            
             centers_navigation.append({
-                "label": section["label"],
-                "icon": section["icon"],
-                "items": children,
+                "label": menu_item["label"],
+                "icon": menu_item.get("icon", ""),
+                "url": url,
             })
 
         quick_actions = []
@@ -545,40 +489,19 @@ def home(request):
                 ]
             }
         ]
-        for section in centers_navigation:
-            module_entries = []
-            for module in section['items']:
-                subgroups = []
-                for sub in module.get('subitems', []):
-                    if isinstance(sub, dict):
-                        subgroups.append(
-                            {
-                                'label': sub.get('label', '功能开发中'),
-                                'url': sub.get('url', '#'),
-                                'subitems': sub.get('subitems', []),
-                            }
-                        )
-                    else:
-                        subgroups.append(
-                            {
-                                'label': str(sub),
-                                'url': module.get('url', '#'),
-                                'subitems': [],
-                            }
-                        )
-                module_entries.append(
-                    {
-                        'label': module['label'],
-                        'url': module.get('url', '#'),
-                        'subitems': subgroups,
-                    }
-                )
-            if module_entries:
-                nav_sections.append({
-                    'title': section['label'],
-                    'items': module_entries,
-                    'icon': section['icon'],
-                })
+        # 新的菜单结构：直接使用centers_navigation，不再有分组
+        # centers_navigation已经是平铺的菜单项列表，直接使用
+        # 这里保留nav_sections结构以兼容现有模板，但每个section只有一个item
+        for menu_item in centers_navigation:
+            nav_sections.append({
+                'title': menu_item['label'],
+                'items': [{
+                    'label': menu_item['label'],
+                    'url': menu_item.get('url', '#'),
+                    'subitems': [],
+                }],
+                'icon': menu_item.get('icon', ''),
+            })
 
         stats_cards = [
             {

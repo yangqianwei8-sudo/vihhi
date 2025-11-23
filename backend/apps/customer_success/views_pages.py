@@ -24,62 +24,39 @@ from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted
 
 
 def _build_full_top_nav(permission_set, user):
-    """生成完整的顶部导航菜单，包含所有用户有权限的模块菜单项（按模块分类）"""
+    """生成完整的顶部导航菜单，直接对应home页左侧菜单项（平铺结构，不再按中心分组）"""
     full_nav = []
     
-    for section in HOME_NAV_STRUCTURE:
-        # 检查模块权限
-        if not _permission_granted(section.get("permission"), permission_set):
+    for menu_item in HOME_NAV_STRUCTURE:
+        # 检查权限
+        permission = menu_item.get("permission")
+        if permission and not _permission_granted(permission, permission_set):
             continue
         
-        # 收集该模块下有权限的子菜单项
-        section_items = []
-        for child in section.get("children", []):
-            # 检查子菜单项权限
-            permission = child.get("permission")
-            if permission and not _permission_granted(permission, permission_set):
-                continue
-            
-            # 获取URL
-            url_name = child.get("url_name")
-            url = child.get("url")
-            if url_name:
-                try:
-                    url = reverse(url_name)
-                except NoReverseMatch:
-                    url = url or '#'
-            elif not url:
+        # 获取URL
+        url_name = menu_item.get("url_name")
+        url = '#'
+        if url_name and url_name != '#':
+            try:
+                url = reverse(url_name)
+            except NoReverseMatch:
+                # URL反向解析失败，使用默认值
                 url = '#'
-            
-            # 特殊处理：新建项目仅对商务经理可见
-            if url_name == 'project_pages:project_create':
-                if user and not user.roles.filter(code='business_manager').exists():
-                    continue
-            
-            # 特殊处理：系统设置相关功能仅对系统管理员可见
-            if url_name and url_name.startswith('system_pages:'):
-                system_settings_pages = [
-                    'system_pages:system_settings',
-                    'system_pages:operation_logs',
-                    'system_pages:data_dictionary',
-                ]
-                if url_name in system_settings_pages:
-                    is_system_admin = user.is_superuser or (user.roles.filter(code='system_admin').exists() if hasattr(user, 'roles') else False)
-                    if not is_system_admin:
-                        continue
-            
-            section_items.append({
-                'label': child.get("label", ""),
-                'url': url,
-            })
+        elif url_name == '#':
+            # 明确标记为无链接
+            url = '#'
         
-        # 如果该模块有可访问的子菜单项，添加到导航
-        if section_items:
-            full_nav.append({
-                'section_label': section.get("label", ""),
-                'section_icon': section.get("icon", ""),
-                'items': section_items,
-            })
+        # 特殊处理：新建项目仅对商务经理可见
+        if url_name == 'project_pages:project_create':
+            if user and not user.roles.filter(code='business_manager').exists():
+                continue
+        
+        # 添加到导航（每个菜单项作为独立的导航项）
+        full_nav.append({
+            'label': menu_item.get("label", ""),
+            'icon': menu_item.get("icon", ""),
+            'url': url,
+        })
     
     return full_nav
 
@@ -707,6 +684,11 @@ def opportunity_management(request):
         summary_cards=summary_cards,
         request=request,
     )
+    # 使用完整的顶部菜单（不再限制只显示商务相关）
+    if request and request.user.is_authenticated:
+        context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+    else:
+        context['full_top_nav'] = []
     context.update({
         'page_obj': page_obj,
         'search': search,
@@ -749,6 +731,12 @@ def opportunity_detail(request, opportunity_id):
         f"商机编号：{opportunity.opportunity_number}",
         request=request,
     )
+    # 使用完整的顶部菜单（不再限制只显示商务相关）
+    if request and request.user.is_authenticated:
+        permission_set = get_user_permission_codes(request.user)
+        context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+    else:
+        context['full_top_nav'] = []
     context.update({
         'opportunity': opportunity,
         'followups': followups,
@@ -812,6 +800,12 @@ def opportunity_create(request):
         "录入新的商机信息，开始跟踪销售机会。",
         request=request,
     )
+    # 使用完整的顶部菜单（不再限制只显示商务相关）
+    if request and request.user.is_authenticated:
+        permission_set = get_user_permission_codes(request.user)
+        context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+    else:
+        context['full_top_nav'] = []
     context.update({
         'clients': clients,
         'business_managers': business_managers,
@@ -872,6 +866,12 @@ def opportunity_edit(request, opportunity_id):
         f"商机编号：{opportunity.opportunity_number}",
         request=request,
     )
+    # 使用完整的顶部菜单（不再限制只显示商务相关）
+    if request and request.user.is_authenticated:
+        permission_set = get_user_permission_codes(request.user)
+        context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+    else:
+        context['full_top_nav'] = []
     context.update({
         'opportunity': opportunity,
         'clients': clients,
@@ -912,6 +912,12 @@ def opportunity_delete(request, opportunity_id):
         f"确认删除商机：{opportunity.opportunity_number}",
         request=request,
     )
+    # 使用完整的顶部菜单（不再限制只显示商务相关）
+    if request and request.user.is_authenticated:
+        permission_set = get_user_permission_codes(request.user)
+        context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+    else:
+        context['full_top_nav'] = []
     context.update({
         'opportunity': opportunity,
     })
@@ -954,16 +960,21 @@ def opportunity_status_transition(request, opportunity_id):
                 opportunity.save()
                 
                 # 创建待办事项通知商务经理
-                from backend.apps.project_center.models import ProjectTeamNotification
-                ProjectTeamNotification.objects.create(
-                    project=None,
-                    recipient_user=opportunity.business_manager,
-                    title=f'商机赢单：{opportunity.name}',
-                    message=f'商机已赢单，实际签约金额：{opportunity.actual_amount or opportunity.estimated_amount}万元，请及时处理后续事项。',
-                    notification_type='business_opportunity_won',
-                    action_url=reverse('business_pages:opportunity_detail', args=[opportunity.id]),
-                    operator=request.user,
-                )
+                # 注意：由于ProjectTeamNotification需要关联项目，而商机赢单时可能还没有项目
+                # 这里暂时注释掉，后续可以创建专门的商机通知模型或使用其他通知机制
+                # from backend.apps.project_center.models import ProjectTeamNotification
+                # ProjectTeamNotification.objects.create(
+                #     project=None,  # 商机赢单时可能还没有关联项目
+                #     recipient=opportunity.business_manager,
+                #     title=f'商机赢单：{opportunity.name}',
+                #     message=f'商机已赢单，实际签约金额：{opportunity.actual_amount or opportunity.estimated_amount}万元，请及时处理后续事项。',
+                #     category='team_change',
+                #     action_url=reverse('business_pages:opportunity_detail', args=[opportunity.id]),
+                #     operator=request.user,
+                # )
+                
+                # TODO: 实现商机赢单后的待办事项创建功能
+                # 可以创建专门的商机通知模型，或使用系统消息/邮件通知
             
             messages.success(request, f'商机状态已更新为：{opportunity.get_status_display()}')
             return redirect('business_pages:opportunity_detail', opportunity_id=opportunity.id)
@@ -984,6 +995,12 @@ def opportunity_status_transition(request, opportunity_id):
         f"当前状态：{opportunity.get_status_display()}",
         request=request,
     )
+    # 使用完整的顶部菜单（不再限制只显示商务相关）
+    if request and request.user.is_authenticated:
+        permission_set = get_user_permission_codes(request.user)
+        context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+    else:
+        context['full_top_nav'] = []
     context.update({
         'opportunity': opportunity,
         'valid_transitions': valid_transitions,
