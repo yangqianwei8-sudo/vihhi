@@ -44,6 +44,11 @@ PERMISSION_DEFINITIONS = [
 
     # 交付客户
     {"code": "delivery_center.view", "module": "交付客户", "action": "view", "name": "交付中心-访问", "description": "查看交付中心导航与相关功能入口"},
+    {"code": "delivery_center.view_all", "module": "交付客户", "action": "view_all", "name": "交付中心-查看全部", "description": "查看所有交付记录（不限创建人）"},
+    {"code": "delivery_center.create", "module": "交付客户", "action": "create", "name": "交付中心-创建", "description": "创建交付记录"},
+    {"code": "delivery_center.edit", "module": "交付客户", "action": "edit", "name": "交付中心-编辑", "description": "编辑交付记录"},
+    {"code": "delivery_center.edit_assigned", "module": "交付客户", "action": "edit_assigned", "name": "交付中心-编辑分配", "description": "编辑自己创建的交付记录"},
+    {"code": "delivery_center.view_statistics", "module": "交付客户", "action": "view_statistics", "name": "交付中心-查看统计", "description": "查看交付统计信息"},
     {"code": "delivery_portal.view", "module": "交付客户", "action": "view", "name": "交付门户-查看", "description": "查看交付成果、客户协同记录"},
     {"code": "delivery_portal.submit", "module": "交付客户", "action": "submit", "name": "交付门户-成果提交", "description": "提交交付成果、上传报告"},
     {"code": "delivery_portal.approve", "module": "交付客户", "action": "approve", "name": "交付门户-成果审核", "description": "审核或确认交付成果"},

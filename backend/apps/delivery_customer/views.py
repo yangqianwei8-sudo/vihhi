@@ -33,11 +33,22 @@ class DeliveryRecordViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
     
     def get_queryset(self):
+        from backend.apps.system_management.services import get_user_permission_codes
+        from backend.core.views import _permission_granted
+        from django.db.models import Q
+        
         queryset = DeliveryRecord.objects.all()
         
         # 根据权限过滤
         user = self.request.user
-        # TODO: 添加权限检查逻辑
+        permission_set = get_user_permission_codes(user)
+        
+        # 如果没有查看全部权限，只能查看自己创建的或负责项目的
+        if not _permission_granted('delivery_center.view_all', permission_set):
+            queryset = queryset.filter(
+                Q(created_by=user) | 
+                Q(project__team_members__user=user)
+            ).distinct()
         
         return queryset.select_related('project', 'client', 'created_by', 'sent_by', 'delivery_person').prefetch_related('files', 'tracking_records', 'feedbacks')
     

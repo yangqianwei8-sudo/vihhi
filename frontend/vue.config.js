@@ -16,13 +16,14 @@ module.exports = defineConfig({
     // 如果需要完全禁用 WebSocket，取消下面的注释
     // webSocketServer: false,
     // hot: false,
+    // 配置代理，将API请求转发到后端
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+        ws: true
+      }
+    }
   },
-  // 配置代理（如果需要）
-  // proxy: {
-  //   '/api': {
-  //     target: 'http://localhost:8000',
-  //     changeOrigin: true
-  //   }
-  // }
 })
 

@@ -7,7 +7,6 @@ app_name = "delivery"
 urlpatterns = [
     # 交付管理首页
     path("", views_pages.report_delivery, name="report_delivery"),
-    path("report/", views_pages.report_delivery, name="report_delivery"),
     
     # 交付记录管理页面
     path("list/", views_pages.delivery_list, name="delivery_list"),

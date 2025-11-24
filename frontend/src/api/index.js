@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // 创建 axios 实例
 const api = axios.create({
-  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000/api',
+  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:8001/api',
   timeout: 10000,
   withCredentials: true, // 支持 cookie/session
   headers: {

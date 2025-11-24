@@ -81,7 +81,8 @@ export default {
         try {
           const response = await login(this.loginForm.username, this.loginForm.password)
           
-          if (response.success) {
+          // login函数现在返回Promise，需要await
+          if (response && response.success) {
             // 保存用户信息
             if (response.user) {
               localStorage.setItem('user', JSON.stringify(response.user))
@@ -94,7 +95,7 @@ export default {
             // 跳转到首页
             this.$router.push('/')
           } else {
-            this.errorMessage = response.message || '登录失败，请检查用户名和密码'
+            this.errorMessage = response?.message || '登录失败，请检查用户名和密码'
             ElMessage.error(this.errorMessage)
           }
         } catch (error) {
