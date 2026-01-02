@@ -15,8 +15,13 @@ RUN apt-get update --fix-missing && \
 # 安装ODA File Converter（用于DWG文件转换）
 # 支持两种格式：DEB包（推荐）或TAR.GZ压缩包
 # 先将ODAFileConverter安装包放到 deployment/docker/oda/ 目录
-COPY deployment/docker/oda/ODAFileConverter_*.deb /tmp/oda.deb 2>/dev/null || true
-COPY deployment/docker/oda/ODAFileConverter_*.tar.gz /tmp/oda.tar.gz 2>/dev/null || true
+COPY deployment/docker/oda/ /tmp/oda-files/
+RUN if ls /tmp/oda-files/ODAFileConverter_*.deb 1> /dev/null 2>&1; then \
+        cp /tmp/oda-files/ODAFileConverter_*.deb /tmp/oda.deb; \
+    fi && \
+    if ls /tmp/oda-files/ODAFileConverter_*.tar.gz 1> /dev/null 2>&1; then \
+        cp /tmp/oda-files/ODAFileConverter_*.tar.gz /tmp/oda.tar.gz; \
+    fi
 RUN if [ -f /tmp/oda.deb ]; then \
         echo "安装ODA File Converter (DEB包)..."; \
         mkdir -p /tmp/oda-extract && \
