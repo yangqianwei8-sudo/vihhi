@@ -3,10 +3,51 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # 安装系统依赖
-RUN apt-get update && apt-get install -y \
+RUN apt-get update --fix-missing && \
+    apt-get install -y --no-install-recommends \
     gcc \
-    postgresql-dev \
+    libpq-dev \
+    wget \
+    tar \
+    dpkg \
     && rm -rf /var/lib/apt/lists/*
+
+# 安装ODA File Converter（用于DWG文件转换）
+# 支持两种格式：DEB包（推荐）或TAR.GZ压缩包
+# 先将ODAFileConverter安装包放到 deployment/docker/oda/ 目录
+COPY deployment/docker/oda/ODAFileConverter_*.deb /tmp/oda.deb 2>/dev/null || true
+COPY deployment/docker/oda/ODAFileConverter_*.tar.gz /tmp/oda.tar.gz 2>/dev/null || true
+RUN if [ -f /tmp/oda.deb ]; then \
+        echo "安装ODA File Converter (DEB包)..."; \
+        mkdir -p /tmp/oda-extract && \
+        dpkg-deb -x /tmp/oda.deb /tmp/oda-extract && \
+        if [ -d /tmp/oda-extract/usr/bin/ODAFileConverter_* ]; then \
+            ODA_VERSION_DIR=$(ls -d /tmp/oda-extract/usr/bin/ODAFileConverter_* | head -1) && \
+            mkdir -p /opt/ODAFileConverter && \
+            cp -r "$ODA_VERSION_DIR"/* /opt/ODAFileConverter/ && \
+            chmod +x /opt/ODAFileConverter/ODAFileConverter && \
+            ln -sf /opt/ODAFileConverter/ODAFileConverter /usr/local/bin/DWGConvert && \
+            ln -sf /opt/ODAFileConverter/ODAFileConverter /usr/local/bin/ODAFileConverter && \
+            rm -rf /tmp/oda.deb /tmp/oda-extract && \
+            (DWGConvert --version 2>/dev/null || ODAFileConverter --version 2>/dev/null || echo "安装完成，请验证命令") && \
+            echo "✓ ODA File Converter (DEB) 安装成功"; \
+        else \
+            echo "⚠ 警告: 在DEB包中未找到ODAFileConverter目录"; \
+            rm -rf /tmp/oda.deb /tmp/oda-extract; \
+        fi; \
+    elif [ -f /tmp/oda.tar.gz ]; then \
+        echo "安装ODA File Converter (TAR.GZ包)..."; \
+        mkdir -p /opt/ODAFileConverter && \
+        tar -xzf /tmp/oda.tar.gz -C /opt/ODAFileConverter --strip-components=1 && \
+        chmod +x /opt/ODAFileConverter/bin/DWGConvert && \
+        ln -s /opt/ODAFileConverter/bin/DWGConvert /usr/local/bin/DWGConvert && \
+        rm -f /tmp/oda.tar.gz && \
+        DWGConvert --version && \
+        echo "✓ ODA File Converter (TAR.GZ) 安装成功"; \
+    else \
+        echo "⚠ 警告: ODA File Converter未安装，DWG文件解析功能将不可用"; \
+        echo "安装方法: 将ODAFileConverter_*.deb或ODAFileConverter_*.tar.gz放到deployment/docker/oda/目录"; \
+    fi
 
 # 复制依赖文件并安装
 COPY requirements.txt .
