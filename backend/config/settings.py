@@ -286,11 +286,12 @@ WHITENOISE_MANIFEST_STRICT = False  # 允许静态文件即使不在 manifest �
 # 在生产环境使用 Whitenoise 压缩存储，但需要确保 manifest 文件正确
 if not DEBUG:
     try:
-        # 生产环境：使用 Whitenoise 的压缩 manifest 存储
-        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+        # 生产环境：使用 Whitenoise 的压缩存储（不使用 manifest，避免 .map 文件问题）
+        # 如果遇到 .map 文件缺失问题，可以使用 CompressedStaticFilesStorage 而不是 CompressedManifestStaticFilesStorage
+        STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
     except ImportError:
-        # 如果 Whitenoise 不可用，使用 Django 的 manifest 存储
-        STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+        # 如果 Whitenoise 不可用，使用 Django 的默认存储
+        STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 else:
     # 开发环境：使用默认存储，避免 manifest 文件问题
     # 这样可以直接访问原始文件名（如 base.css），而不需要带哈希的文件名
