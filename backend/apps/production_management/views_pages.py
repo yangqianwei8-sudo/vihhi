@@ -4688,6 +4688,8 @@ def pre_optimization_materials_create(request):
                     import django
                     from django.db import connection
                     from django.core.wsgi import get_wsgi_application
+                    import logging
+                    thread_logger = logging.getLogger(__name__)
                     
                     material_id = material.id  # 保存 ID，避免在后台线程中使用对象
                     
@@ -4697,46 +4699,38 @@ def pre_optimization_materials_create(request):
                             os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.config.settings')
                             django.setup()
                         
-                        print(f"[CAD解析任务] 线程已启动，文件ID: {material_id}", flush=True)
-                        sys.stdout.flush()
+                        thread_logger.info(f"[CAD解析任务] 线程已启动，文件ID: {material_id}")
                         
                         # 关闭当前线程的数据库连接，创建新连接
                         connection.close()
                         
-                        print(f"[CAD解析任务] 开始解析任务，文件ID: {material_id}", flush=True)
-                        sys.stdout.flush()
+                        thread_logger.info(f"[CAD解析任务] 开始解析任务，文件ID: {material_id}")
                         
                         # 重新获取 material 对象（在后台线程中）
                         from .models import PreOptimizationMaterial
                         material = PreOptimizationMaterial.objects.get(id=material_id)
                         
-                        print(f"[CAD解析任务] 文件路径: {material.cad_file.path}", flush=True)
-                        sys.stdout.flush()
+                        thread_logger.info(f"[CAD解析任务] 文件路径: {material.cad_file.path}")
                         
                         material.parse_status = 'processing'
                         material.parse_progress = 0
                         material.parse_progress_message = '准备开始解析...'
                         material.save()
-                        print(f"[CAD解析任务] 状态已更新为 processing", flush=True)
-                        sys.stdout.flush()
+                        thread_logger.info(f"[CAD解析任务] 状态已更新为 processing")
                         
-                        print(f"[CAD解析任务] 创建 CADParserService 实例", flush=True)
-                        sys.stdout.flush()
+                        thread_logger.info(f"[CAD解析任务] 创建 CADParserService 实例")
                         _update_parse_progress(material_id, 10, '初始化解析服务...')
                         parser = CADParserService()
-                        print(f"[CAD解析任务] CADParserService 创建成功，cad2image_available: {parser.cad2image_available}", flush=True)
-                        sys.stdout.flush()
+                        thread_logger.info(f"[CAD解析任务] CADParserService 创建成功，cad2image_available: {parser.cad2image_available}")
                         
-                        print(f"[CAD解析任务] 调用 parse_for_pre_optimization", flush=True)
-                        sys.stdout.flush()
+                        thread_logger.info(f"[CAD解析任务] 调用 parse_for_pre_optimization")
                         _update_parse_progress(material_id, 20, '开始解析CAD文件...')
                         
                         def progress_callback(progress, message):
                             _update_parse_progress(material_id, progress, message)
                         
                         result = parser.parse_for_pre_optimization(material.cad_file.path, progress_callback=progress_callback)
-                        print(f"[CAD解析任务] 解析完成，结果: success={result.get('success')}", flush=True)
-                        sys.stdout.flush()
+                        thread_logger.info(f"[CAD解析任务] 解析完成，结果: success={result.get('success')}")
                         
                         # 重新获取 material 对象（可能已被其他进程修改）
                         material = PreOptimizationMaterial.objects.get(id=material_id)
@@ -4762,23 +4756,21 @@ def pre_optimization_materials_create(request):
                             material.parse_progress_message = '解析完成！'
                             material.parsed_time = timezone.now()
                             material.parse_error = ''
-                            print(f"[CAD解析任务] 解析成功，保存结果", flush=True)
+                            thread_logger.info(f"[CAD解析任务] 解析成功，保存结果")
                         else:
                             material.parse_status = 'failed'
                             material.parse_error = result.get('error', '解析失败')
                             material.parse_progress_message = '解析失败！'
-                            print(f"[CAD解析任务] 解析失败: {result.get('error', '未知错误')}", flush=True)
+                            thread_logger.error(f"[CAD解析任务] 解析失败: {result.get('error', '未知错误')}")
                         
                         material.save()
-                        print(f"[CAD解析任务] 最终状态已保存", flush=True)
-                        sys.stdout.flush()
+                        thread_logger.info(f"[CAD解析任务] 最终状态已保存")
                     except Exception as e:
                         import traceback
                         error_msg = f"CAD解析失败: {str(e)}"
-                        print(f"[CAD解析任务] 异常: {error_msg}", flush=True)
-                        print(f"[CAD解析任务] 异常堆栈: {traceback.format_exc()}", flush=True)
-                        sys.stdout.flush()
-                        logger.error(f"CAD解析失败: {str(e)}", exc_info=True)
+                        thread_logger.error(f"[CAD解析任务] 异常: {error_msg}")
+                        thread_logger.error(f"[CAD解析任务] 异常堆栈: {traceback.format_exc()}")
+                        thread_logger.error(f"CAD解析失败: {str(e)}", exc_info=True)
                         
                         # 尝试更新状态
                         try:
@@ -4788,15 +4780,12 @@ def pre_optimization_materials_create(request):
                             material.parse_error = str(e)
                             material.parse_progress_message = '解析过程中发生错误！'
                             material.save()
-                            print(f"[CAD解析任务] 错误状态已保存", flush=True)
+                            thread_logger.info(f"[CAD解析任务] 错误状态已保存")
                         except Exception as save_error:
-                            print(f"[CAD解析任务] 保存错误状态失败: {save_error}", flush=True)
+                            thread_logger.error(f"[CAD解析任务] 保存错误状态失败: {save_error}")
                 
                 # 在后台线程中执行解析
-                import sys
-                print(f"[CAD解析] 准备启动后台线程，Material ID: {material.id}", flush=True)
-                sys.stdout.flush()
-                sys.stderr.flush()
+                logger.info(f"[CAD解析] 准备启动后台线程，Material ID: {material.id}")
                 
                 # 立即更新状态为 processing（在主线程中，确保用户立即看到状态变化）
                 try:
@@ -4804,25 +4793,20 @@ def pre_optimization_materials_create(request):
                     material.parse_progress = 0
                     material.parse_progress_message = '准备开始解析...'
                     material.save(update_fields=['parse_status', 'parse_progress', 'parse_progress_message'])
-                    print(f"[CAD解析] 主线程中状态已更新为 processing", flush=True)
-                    sys.stdout.flush()
+                    logger.info(f"[CAD解析] 主线程中状态已更新为 processing")
                 except Exception as e:
-                    print(f"[CAD解析] 主线程中更新状态失败: {e}", flush=True)
-                    sys.stderr.flush()
-                    logger.error(f"主线程中更新状态失败: {e}", exc_info=True)
+                    logger.error(f"[CAD解析] 主线程中更新状态失败: {e}", exc_info=True)
                 
                 # 启动后台线程
                 thread = threading.Thread(target=parse_cad, name=f"CADParse-{material.id}")
                 thread.daemon = True
                 thread.start()
-                print(f"[CAD解析] 后台线程已启动，线程名: {thread.name}, 是否存活: {thread.is_alive()}, 线程ID: {thread.ident}", flush=True)
-                sys.stdout.flush()
+                logger.info(f"[CAD解析] 后台线程已启动，线程名: {thread.name}, 是否存活: {thread.is_alive()}, 线程ID: {thread.ident}")
                 
                 # 等待一小段时间，确保线程开始执行
                 import time
                 time.sleep(0.1)
-                print(f"[CAD解析] 线程启动后检查，是否存活: {thread.is_alive()}", flush=True)
-                sys.stdout.flush()
+                logger.info(f"[CAD解析] 线程启动后检查，是否存活: {thread.is_alive()}")
                 
                 messages.success(request, '优化前资料创建成功，CAD文件正在后台解析中，请稍后查看详情。')
             except Exception as e:
@@ -5010,10 +4994,7 @@ def pre_optimization_materials_reparse(request, material_id):
                     material.save()
             
             # 在后台线程中执行解析
-            import sys
-            print(f"[CAD解析] 准备启动重新解析后台线程，Material ID: {material.id}", flush=True)
-            sys.stdout.flush()
-            sys.stderr.flush()
+            logger.info(f"[CAD解析] 准备启动重新解析后台线程，Material ID: {material.id}")
             
             # 立即更新状态为 processing（在主线程中，确保用户立即看到状态变化）
             try:
@@ -5021,25 +5002,20 @@ def pre_optimization_materials_reparse(request, material_id):
                 material.parse_progress = 0
                 material.parse_progress_message = '准备开始解析...'
                 material.save(update_fields=['parse_status', 'parse_progress', 'parse_progress_message'])
-                print(f"[CAD解析] 主线程中重新解析状态已更新为 processing", flush=True)
-                sys.stdout.flush()
+                logger.info(f"[CAD解析] 主线程中重新解析状态已更新为 processing")
             except Exception as e:
-                print(f"[CAD解析] 主线程中更新重新解析状态失败: {e}", flush=True)
-                sys.stderr.flush()
-                logger.error(f"主线程中更新重新解析状态失败: {e}", exc_info=True)
+                logger.error(f"[CAD解析] 主线程中更新重新解析状态失败: {e}", exc_info=True)
             
             # 启动后台线程
             thread = threading.Thread(target=parse_cad, name=f"CADReparse-{material.id}")
             thread.daemon = True
             thread.start()
-            print(f"[CAD解析] 重新解析后台线程已启动，线程名: {thread.name}, 是否存活: {thread.is_alive()}, 线程ID: {thread.ident}", flush=True)
-            sys.stdout.flush()
+            logger.info(f"[CAD解析] 重新解析后台线程已启动，线程名: {thread.name}, 是否存活: {thread.is_alive()}, 线程ID: {thread.ident}")
             
             # 等待一小段时间，确保线程开始执行
             import time
             time.sleep(0.1)
-            print(f"[CAD解析] 重新解析线程启动后检查，是否存活: {thread.is_alive()}", flush=True)
-            sys.stdout.flush()
+            logger.info(f"[CAD解析] 重新解析线程启动后检查，是否存活: {thread.is_alive()}")
             
             messages.success(request, '已开始重新解析CAD文件，请稍后刷新页面查看结果。')
         except Exception as e:
