@@ -109,7 +109,7 @@ TEMPLATES = [
 # 注意：生产环境部署时，必须通过环境变量设置 DATABASE_URL，不要依赖此默认值
 DEVELOPMENT_DATABASE_URL = os.getenv(
     'DEVELOPMENT_DATABASE_URL',
-    "postgresql://postgres:zdg7xx28@dbconn.sealosbja.site:38013/postgres?directConnection=true"
+    "postgresql://postgres:zdg7xx28@dbconn.sealosbja.site:38013/postgres"
 )
 
 # 优先使用 DATABASE_URL 环境变量
