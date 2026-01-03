@@ -63,6 +63,10 @@ RUN if [ -f /tmp/oda.deb ]; then \
             mkdir -p /opt/ODAFileConverter && \
             cp -r "$ODA_VERSION_DIR"/* /opt/ODAFileConverter/ && \
             chmod +x /opt/ODAFileConverter/ODAFileConverter && \
+            # 设置 Qt 插件路径（如果存在）
+            if [ -d /opt/ODAFileConverter/plugins ]; then \
+                echo "Qt plugins directory found"; \
+            fi && \
             ln -sf /opt/ODAFileConverter/ODAFileConverter /usr/local/bin/DWGConvert && \
             ln -sf /opt/ODAFileConverter/ODAFileConverter /usr/local/bin/ODAFileConverter && \
             rm -rf /tmp/oda.deb /tmp/oda-extract && \
@@ -100,6 +104,8 @@ RUN python manage.py collectstatic --noinput
 ENV DISPLAY=:99
 ENV XDG_RUNTIME_DIR=/tmp/runtime-root
 ENV QT_X11_NO_MITSHM=1
+ENV QT_PLUGIN_PATH=/opt/ODAFileConverter/plugins
+ENV LD_LIBRARY_PATH=/opt/ODAFileConverter/lib:${LD_LIBRARY_PATH}
 RUN mkdir -p /tmp/runtime-root && chmod 700 /tmp/runtime-root
 
 EXPOSE 8000
