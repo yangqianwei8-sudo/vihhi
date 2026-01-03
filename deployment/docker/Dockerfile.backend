@@ -90,7 +90,7 @@ ENV DISPLAY=:99
 EXPOSE 8000
 
 # 启动 xvfb 虚拟显示服务器（后台运行）
-RUN echo '#!/bin/bash\nXvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &\nexec "$@"' > /usr/local/bin/entrypoint.sh && \
+RUN echo '#!/bin/bash\nset -e\n# 启动 xvfb\nXvfb :99 -screen 0 1024x768x24 -ac +extension GLX +render -noreset &\nXVFB_PID=$!\n# 等待 xvfb 启动\nsleep 2\n# 检查 xvfb 是否运行\nif ! kill -0 $XVFB_PID 2>/dev/null; then\n    echo "Error: Xvfb failed to start"\n    exit 1\nfi\n# 设置 DISPLAY\nexport DISPLAY=:99\n# 执行主命令\nexec "$@"' > /usr/local/bin/entrypoint.sh && \
     chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
