@@ -4793,21 +4793,36 @@ def pre_optimization_materials_create(request):
                             print(f"[CAD解析任务] 保存错误状态失败: {save_error}", flush=True)
                 
                 # 在后台线程中执行解析
+                import sys
                 print(f"[CAD解析] 准备启动后台线程，Material ID: {material.id}", flush=True)
-                thread = threading.Thread(target=parse_cad, name=f"CADParse-{material.id}")
-                thread.daemon = True
-                thread.start()
-                print(f"[CAD解析] 后台线程已启动，线程名: {thread.name}, 是否存活: {thread.is_alive()}", flush=True)
+                sys.stdout.flush()
+                sys.stderr.flush()
                 
-                # 立即更新状态为 processing（在主线程中）
+                # 立即更新状态为 processing（在主线程中，确保用户立即看到状态变化）
                 try:
                     material.parse_status = 'processing'
                     material.parse_progress = 0
                     material.parse_progress_message = '准备开始解析...'
                     material.save(update_fields=['parse_status', 'parse_progress', 'parse_progress_message'])
                     print(f"[CAD解析] 主线程中状态已更新为 processing", flush=True)
+                    sys.stdout.flush()
                 except Exception as e:
                     print(f"[CAD解析] 主线程中更新状态失败: {e}", flush=True)
+                    sys.stderr.flush()
+                    logger.error(f"主线程中更新状态失败: {e}", exc_info=True)
+                
+                # 启动后台线程
+                thread = threading.Thread(target=parse_cad, name=f"CADParse-{material.id}")
+                thread.daemon = True
+                thread.start()
+                print(f"[CAD解析] 后台线程已启动，线程名: {thread.name}, 是否存活: {thread.is_alive()}, 线程ID: {thread.ident}", flush=True)
+                sys.stdout.flush()
+                
+                # 等待一小段时间，确保线程开始执行
+                import time
+                time.sleep(0.1)
+                print(f"[CAD解析] 线程启动后检查，是否存活: {thread.is_alive()}", flush=True)
+                sys.stdout.flush()
                 
                 messages.success(request, '优化前资料创建成功，CAD文件正在后台解析中，请稍后查看详情。')
             except Exception as e:
@@ -4995,21 +5010,36 @@ def pre_optimization_materials_reparse(request, material_id):
                     material.save()
             
             # 在后台线程中执行解析
+            import sys
             print(f"[CAD解析] 准备启动重新解析后台线程，Material ID: {material.id}", flush=True)
-            thread = threading.Thread(target=parse_cad, name=f"CADReparse-{material.id}")
-            thread.daemon = True
-            thread.start()
-            print(f"[CAD解析] 重新解析后台线程已启动，线程名: {thread.name}, 是否存活: {thread.is_alive()}", flush=True)
+            sys.stdout.flush()
+            sys.stderr.flush()
             
-            # 立即更新状态为 processing（在主线程中）
+            # 立即更新状态为 processing（在主线程中，确保用户立即看到状态变化）
             try:
                 material.parse_status = 'processing'
                 material.parse_progress = 0
                 material.parse_progress_message = '准备开始解析...'
                 material.save(update_fields=['parse_status', 'parse_progress', 'parse_progress_message'])
                 print(f"[CAD解析] 主线程中重新解析状态已更新为 processing", flush=True)
+                sys.stdout.flush()
             except Exception as e:
                 print(f"[CAD解析] 主线程中更新重新解析状态失败: {e}", flush=True)
+                sys.stderr.flush()
+                logger.error(f"主线程中更新重新解析状态失败: {e}", exc_info=True)
+            
+            # 启动后台线程
+            thread = threading.Thread(target=parse_cad, name=f"CADReparse-{material.id}")
+            thread.daemon = True
+            thread.start()
+            print(f"[CAD解析] 重新解析后台线程已启动，线程名: {thread.name}, 是否存活: {thread.is_alive()}, 线程ID: {thread.ident}", flush=True)
+            sys.stdout.flush()
+            
+            # 等待一小段时间，确保线程开始执行
+            import time
+            time.sleep(0.1)
+            print(f"[CAD解析] 重新解析线程启动后检查，是否存活: {thread.is_alive()}", flush=True)
+            sys.stdout.flush()
             
             messages.success(request, '已开始重新解析CAD文件，请稍后刷新页面查看结果。')
         except Exception as e:
