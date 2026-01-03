@@ -104,17 +104,34 @@ urlpatterns = [
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # 前端构建文件的静态资源路径（/js/, /css/, /img/等）
-# 无论 DEBUG 状态如何，都需要提供前端静态文件
+# 优先从 STATIC_ROOT 提供（通过 WhiteNoise），如果不存在则从 frontend/dist 提供
 from django.views.static import serve
 import os
+
+# 方法1：从 STATIC_ROOT 提供（如果前端文件已复制到 staticfiles）
+static_js = os.path.join(settings.STATIC_ROOT, 'js')
+static_css = os.path.join(settings.STATIC_ROOT, 'css')
+static_img = os.path.join(settings.STATIC_ROOT, 'img')
+
+# 方法2：从 frontend/dist 提供（开发环境或直接访问）
 frontend_dist = os.path.join(settings.BASE_DIR.parent, 'frontend', 'dist')
-if os.path.exists(frontend_dist):
-    urlpatterns += [
-        path('js/<path:path>', serve, {'document_root': os.path.join(frontend_dist, 'js')}),
-        path('css/<path:path>', serve, {'document_root': os.path.join(frontend_dist, 'css')}),
-        path('img/<path:path>', serve, {'document_root': os.path.join(frontend_dist, 'img')}),
-        # 注意：favicon.ico 已经在上面通过 favicon_view 处理，这里不再重复定义
-    ]
+frontend_js = os.path.join(frontend_dist, 'js')
+frontend_css = os.path.join(frontend_dist, 'css')
+frontend_img = os.path.join(frontend_dist, 'img')
+
+# 选择可用的路径
+js_path = static_js if os.path.exists(static_js) else frontend_js
+css_path = static_css if os.path.exists(static_css) else frontend_css
+img_path = static_img if os.path.exists(static_img) else frontend_img
+
+# 如果任一路径存在，添加路由
+if os.path.exists(js_path) or os.path.exists(css_path) or os.path.exists(img_path):
+    if os.path.exists(js_path):
+        urlpatterns += [path('js/<path:path>', serve, {'document_root': js_path})]
+    if os.path.exists(css_path):
+        urlpatterns += [path('css/<path:path>', serve, {'document_root': css_path})]
+    if os.path.exists(img_path):
+        urlpatterns += [path('img/<path:path>', serve, {'document_root': img_path})]
 
 if settings.DEBUG:
     # 开发环境：Django 开发服务器提供静态文件

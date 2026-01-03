@@ -97,6 +97,19 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制项目代码
 COPY . .
 
+# 将前端构建文件复制到静态文件目录（如果存在）
+# 这样 WhiteNoise 可以自动提供这些文件
+RUN if [ -d "frontend/dist" ]; then \
+        echo "前端 dist 目录存在，复制到静态文件目录..."; \
+        mkdir -p backend/static/js backend/static/css backend/static/img; \
+        cp -r frontend/dist/js/* backend/static/js/ 2>/dev/null || true; \
+        cp -r frontend/dist/css/* backend/static/css/ 2>/dev/null || true; \
+        cp -r frontend/dist/img/* backend/static/img/ 2>/dev/null || true; \
+        echo "前端文件复制完成"; \
+    else \
+        echo "警告: 前端 dist 目录不存在"; \
+    fi
+
 # 收集静态文件
 RUN python manage.py collectstatic --noinput
 
