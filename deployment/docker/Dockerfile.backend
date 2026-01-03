@@ -89,4 +89,9 @@ ENV DISPLAY=:99
 
 EXPOSE 8000
 
+# 启动 xvfb 虚拟显示服务器（后台运行）
+RUN echo '#!/bin/bash\nXvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &\nexec "$@"' > /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "backend.config.wsgi:application"]
