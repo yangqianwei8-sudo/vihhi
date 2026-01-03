@@ -4810,10 +4810,11 @@ def pre_optimization_materials_progress(request, material_id):
     material = get_object_or_404(PreOptimizationMaterial, id=material_id)
     
     return JsonResponse({
-        'parse_status': material.parse_status,
-        'parse_progress': material.parse_progress,
-        'parse_progress_message': material.parse_progress_message or '',
-        'parse_error': material.parse_error or '',
+        'status': material.parse_status,
+        'progress': material.parse_progress,
+        'message': material.parse_progress_message or '',
+        'error': material.parse_error or '',
+        'is_finished': material.parse_status in ['success', 'failed'],
     })
 
 

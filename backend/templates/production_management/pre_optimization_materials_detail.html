@@ -85,24 +85,22 @@
                         <tr>
                             <th>解析状态：</th>
                             <td>
-                                <span class="badge bg-{{ material.get_parse_status_display_class }}">
+                                <span id="parse-status-badge" class="badge bg-{{ material.get_parse_status_display_class }}">
                                     {{ material.get_parse_status_display }}
                                 </span>
-                                {% if material.parse_status == 'processing' %}
+                                {% if material.parse_status == 'processing' or material.parse_status == 'pending' %}
                                 <div class="mt-2">
                                     <div class="progress" style="height: 20px; width: 300px;">
-                                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                        <div id="parse-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
                                              role="progressbar" 
                                              style="width: {{ material.parse_progress }}%"
                                              aria-valuenow="{{ material.parse_progress }}" 
                                              aria-valuemin="0" 
                                              aria-valuemax="100">
-                                            <span class="ms-2">{{ material.parse_progress }}%</span>
+                                            <span id="parse-progress-text" class="ms-2">{{ material.parse_progress }}%</span>
                                         </div>
                                     </div>
-                                    {% if material.parse_progress_message %}
-                                    <small class="text-muted d-block mt-1">{{ material.parse_progress_message }}</small>
-                                    {% endif %}
+                                    <small id="parse-progress-message" class="text-muted d-block mt-1">{{ material.parse_progress_message|default:"等待解析..." }}</small>
                                 </div>
                                 {% endif %}
                             </td>
