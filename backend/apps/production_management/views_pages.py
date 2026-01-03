@@ -4600,14 +4600,21 @@ def pre_optimization_materials_list(request):
     return render(request, 'production_management/pre_optimization_materials_list.html', context)
 
 
-def _update_parse_progress(material, progress, message=''):
-    """更新解析进度的辅助函数"""
+def _update_parse_progress(material_id, progress, message=''):
+    """更新解析进度的辅助函数（支持后台线程）"""
     try:
+        from .models import PreOptimizationMaterial
+        # 重新从数据库获取对象，避免后台线程中的连接问题
+        material = PreOptimizationMaterial.objects.get(id=material_id)
         material.parse_progress = progress
         material.parse_progress_message = message
         material.save(update_fields=['parse_progress', 'parse_progress_message'])
+        print(f"[CAD解析进度更新] Material ID: {material_id}, Progress: {progress}%, Message: {message}", flush=True)
+    except PreOptimizationMaterial.DoesNotExist:
+        print(f"[CAD解析进度更新] 警告: Material ID {material_id} 不存在，无法更新进度。", flush=True)
     except Exception as e:
-        logger.error(f"更新解析进度失败: {str(e)}")
+        print(f"[CAD解析进度更新] 更新进度时发生错误: {e}", flush=True)
+        logger.error(f"更新解析进度失败: {str(e)}", exc_info=True)
 
 
 @login_required
@@ -4699,7 +4706,7 @@ def pre_optimization_materials_create(request):
                         material.save()
                         
                         def progress_callback(progress, message):
-                            _update_parse_progress(material, progress, message)
+                            _update_parse_progress(material.id, progress, message)
                         
                         result = parser.parse_for_pre_optimization(material.cad_file.path, progress_callback=progress_callback)
                         print(f"[CAD解析任务] 解析完成，结果: success={result.get('success')}", flush=True)
