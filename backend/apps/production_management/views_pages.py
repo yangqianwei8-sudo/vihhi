@@ -4839,6 +4839,11 @@ def pre_optimization_materials_reparse(request, material_id):
                     
                     material.save()
                 except Exception as e:
+                    import traceback
+                    error_msg = f"CAD重新解析失败: {str(e)}"
+                    print(f"[CAD解析任务] 异常: {error_msg}", flush=True)
+                    print(f"[CAD解析任务] 异常堆栈: {traceback.format_exc()}", flush=True)
+                    sys.stdout.flush()
                     logger.error(f"CAD重新解析失败: {str(e)}", exc_info=True)
                     material.parse_status = 'failed'
                     material.parse_error = str(e)
