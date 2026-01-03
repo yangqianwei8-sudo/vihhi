@@ -102,18 +102,20 @@ urlpatterns = [
 # 在生产模式下，使用 Whitenoise 中间件提供静态文件
 # 注意：无论 DEBUG 状态如何，都添加静态文件路由以确保文件可访问
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# 前端构建文件的静态资源路径（/js/, /css/, /img/等）
+# 无论 DEBUG 状态如何，都需要提供前端静态文件
+from django.views.static import serve
+import os
+frontend_dist = os.path.join(settings.BASE_DIR.parent, 'frontend', 'dist')
+if os.path.exists(frontend_dist):
+    urlpatterns += [
+        path('js/<path:path>', serve, {'document_root': os.path.join(frontend_dist, 'js')}),
+        path('css/<path:path>', serve, {'document_root': os.path.join(frontend_dist, 'css')}),
+        path('img/<path:path>', serve, {'document_root': os.path.join(frontend_dist, 'img')}),
+        # 注意：favicon.ico 已经在上面通过 favicon_view 处理，这里不再重复定义
+    ]
+
 if settings.DEBUG:
     # 开发环境：Django 开发服务器提供静态文件
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    
-    # 前端构建文件的静态资源路径（/js/, /css/, /img/等）
-    from django.views.static import serve
-    import os
-    frontend_dist = os.path.join(settings.BASE_DIR.parent, 'frontend', 'dist')
-    if os.path.exists(frontend_dist):
-        urlpatterns += [
-            path('js/<path:path>', serve, {'document_root': os.path.join(frontend_dist, 'js')}),
-            path('css/<path:path>', serve, {'document_root': os.path.join(frontend_dist, 'css')}),
-            path('img/<path:path>', serve, {'document_root': os.path.join(frontend_dist, 'img')}),
-            # 注意：favicon.ico 已经在上面通过 favicon_view 处理，这里不再重复定义
-        ]
