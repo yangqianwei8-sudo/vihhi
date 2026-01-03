@@ -1,67 +1,18 @@
-{% extends "administrative_management/base.html" %}
+{% extends "shared/module_base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:expense_management' %}">报销管理</a></li>
-<li class="breadcrumb-item active">{{ expense.reimbursement_number }}</li>
-{% endblock %}
+
 
 {% block extra_css %}
-<style>
-    .info-card {
-        background: var(--vh-card-bg);
-        border-radius: var(--radius-xl);
-        padding: var(--spacing-lg);
-        margin-bottom: var(--spacing-lg);
-        box-shadow: var(--shadow-lg);
-        border: 1px solid rgba(20, 47, 91, 0.08);
-    }
-    .info-card h5 {
-        margin-bottom: 20px;
-        padding-bottom: var(--spacing-md);
-        border-bottom: 2px solid var(--vh-border);
-        font-weight: 600;
-        color: var(--vh-text);
-    }
-    .info-row {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
-        margin-bottom: var(--spacing-md);
-    }
-    .info-item {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-xs);
-    }
-    .info-label {
-        font-size: var(--font-size-sm);
-        color: var(--vh-text-muted);
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .info-value {
-        font-size: var(--font-size-base);
-        color: var(--vh-text);
-        font-weight: 500;
-    }
-    .item-row {
-        background: var(--vh-surface);
-        border: 1px solid var(--vh-border);
-        border-radius: var(--radius-sm);
-        padding: var(--spacing-md);
-        margin-bottom: var(--spacing-md);
-    }
-</style>
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
 {% endblock %}
 
-{% block content %}
+{% block module_content %}
 <div class="container-fluid py-4">
     <!-- 页面标题区域 -->
     <div class="center-hero">
-        <div class="hero-icon">{{ page_icon }}</div>
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
     </div>
@@ -80,8 +31,11 @@
 
     <!-- 基本信息 -->
     <div class="info-card">
-        <h5>基本信息</h5>
-        <div class="info-row">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
             <div class="info-item">
                 <span class="info-label">报销单号</span>
                 <span class="info-value"><code>{{ expense.reimbursement_number }}</code></span>
@@ -120,14 +74,18 @@
                     {% endif %}
                 </span>
             </div>
+            </div>
         </div>
     </div>
 
     <!-- 审批信息 -->
     {% if expense.approver or expense.finance_reviewer %}
     <div class="info-card">
-        <h5>审批信息</h5>
-        <div class="info-row">
+        <div class="info-card-header">
+            <h5 class="info-card-title">审批信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
             {% if expense.approver %}
             <div class="info-item">
                 <span class="info-label">审批人</span>
@@ -149,9 +107,10 @@
             {% if expense.finance_reviewed_time %}
             <div class="info-item">
                 <span class="info-label">财务审核时间</span>
-                <span class="info-value">{{ expense.finance_reviewed_time|date:"Y-m-d H:i:s" }}</span>
+                <span class="info-value">{{ expense.finance_reviewed_time|date:"Y-m-d H:i:s" }}                </span>
             </div>
             {% endif %}
+            </div>
         </div>
     </div>
     {% endif %}
@@ -159,8 +118,11 @@
     <!-- 支付信息 -->
     {% if expense.payment_date %}
     <div class="info-card">
-        <h5>支付信息</h5>
-        <div class="info-row">
+        <div class="info-card-header">
+            <h5 class="info-card-title">支付信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
             <div class="info-item">
                 <span class="info-label">支付日期</span>
                 <span class="info-value">{{ expense.payment_date|date:"Y-m-d" }}</span>
@@ -169,6 +131,7 @@
                 <span class="info-label">支付方式</span>
                 <span class="info-value">{{ expense.get_payment_method_display|default:"-" }}</span>
             </div>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -176,7 +139,10 @@
     <!-- 费用明细 -->
     {% if items %}
     <div class="info-card">
-        <h5>费用明细 ({{ items|length }} 项)</h5>
+        <div class="info-card-header">
+            <h5 class="info-card-title">费用明细 ({{ items|length }} 项)</h5>
+        </div>
+        <div class="info-card-body">
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -220,24 +186,33 @@
                 </tfoot>
             </table>
         </div>
+        </div>
     </div>
     {% endif %}
 
     <!-- 备注信息 -->
     {% if expense.notes %}
     <div class="info-card">
-        <h5>备注信息</h5>
-        <p style="color: #374151; white-space: pre-wrap;">{{ expense.notes }}</p>
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注信息</h5>
+        </div>
+        <div class="info-card-body">
+            <p style="color: #374151; white-space: pre-wrap;">{{ expense.notes }}</p>
+        </div>
     </div>
     {% endif %}
 
     <!-- 其他信息 -->
     <div class="info-card">
-        <h5>其他信息</h5>
-        <div class="info-row">
+        <div class="info-card-header">
+            <h5 class="info-card-title">其他信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
             <div class="info-item">
                 <span class="info-label">创建时间</span>
                 <span class="info-value">{{ expense.created_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
             </div>
         </div>
     </div>

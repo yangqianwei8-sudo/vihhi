@@ -1,0 +1,1445 @@
+{% extends "customer_management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+        display: block;
+    }
+    .required-field::after {
+        content: " *";
+        color: #ef4444;
+    }
+    .party-item {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    .party-item-header {
+    
+
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item"><a href="{% url 'business_pages:contract_management_list' %}">合同管理</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
+
+{% block content %}<div class="container-fluid py-4">
+    <div class="form-page-title">
+            <h1>{{ page_title }}</h1>
+            {% if page_description %}
+            <p>{{ page_description }}</p>
+            {% endif %}
+        </div>
+
+    <form method="post" enctype="multipart/form-data" id="contract-form" class="form-card">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+        {% endif %}
+            {{ form.non_field_errors }}
+        </div>
+        
+        <!-- 合同识别功能 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>🤖 AI合同识别</h5>
+                <button type="button" id="recognize-contract-btn" class="btn btn-primary">
+                    <i class="bi bi-magic"></i> 开始识别
+                </button>
+            </div>
+            <div class="alert alert-info" style="margin-bottom: 16px; font-size: 13px;">
+                <i class="bi bi-info-circle"></i> 上传合同文件（PDF、图片），AI将自动识别并填充表单信息
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label" for="contract-file-input">上传合同文件</label>
+                        <input type="file" id="contract-file-input" class="form-control"
+                               accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                               style="padding: 8px;">
+                        <small class="form-text text-muted">支持格式：PDF、JPG、PNG、DOC、DOCX，最大10MB</small>
+                    </div>
+                </div>
+            </div>
+            <div id="recognition-status" style="display: none; margin-top: 12px;">
+                <div class="alert alert-warning">
+                    <i class="bi bi-hourglass-split"></i> <span id="recognition-message">正在识别中，请稍候...</span>
+                </div>
+            </div>
+            <div id="recognition-result" style="display: none; margin-top: 12px;">
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i> 识别完成！已自动填充表单信息，请检查并确认。
+                </div>
+            </div>
+        </div>
+        
+        <!-- 一、基础信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>基础信息</h5>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="approval_number">审批单号</label>
+                        <input type="text" id="approval_number" name="approval_number" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" placeholder="系统自动生成">
+                        <small class="form-text text-muted">系统自动生成</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="submit_department">提交部门</label>
+                        <input type="text" id="submit_department" name="submit_department" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" value="{% if request.user.department %}{{ request.user.department.name }}{% else %}未设置部门{% endif %}">
+                        <small class="form-text text-muted">系统默认</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="submitter">提交人</label>
+                        <input type="text" id="submitter" name="submitter" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" value="{{ request.user.get_full_name|default:request.user.username }}">
+                        <small class="form-text text-muted">系统默认</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="submit_date">提交日期</label>
+                        <input type="date" id="submit_date" name="submit_date" class="form-control" value="{% now 'Y-m-d' %}" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
+                        <small class="form-text text-muted">当天</small>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field" for="{{ form.project_number.id_for_label }}">项目编号</label>
+                        {{ form.project_number }}
+                        {% if form.project_number.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.project_number.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">YYYY-系统自动四位连接编号，不得重复</small>
+                    </div>
+                </div>
+                <!-- 合同编号 -->
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="contract_number_display">合同编号</label>
+                        <input type="text" id="contract_number_display" name="contract_number_display" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" placeholder="HT+项目编号">
+                        <small class="form-text text-muted">HT+项目编号，自动生成</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field" for="{{ form.project_name.id_for_label }}">项目名称</label>
+                        {{ form.project_name }}
+                        {% if form.project_name.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.project_name.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="project_business_type">项目业态</label>
+                        <select id="project_business_type" name="project_business_type" class="form-select">
+                            <option value="">-- 请选择项目业态 --</option>
+                            {% for business_type in business_types %}
+                            <option value="{{ business_type.id }}">{{ business_type.name }}</option>
+        }
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">后台引入</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="provisional_price">合同暂定价款</label>
+                        <input type="number" id="provisional_price" name="provisional_price" class="form-control" step="0.01" placeholder="0.00">
+                        <small class="form-text text-muted">单位：元</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="governing_law">约定管辖</label>
+                        <select id="governing_law" name="governing_law" class="form-select">
+                            <option value="">-- 请选择约定管辖 --</option>
+                            {% for value, label in governing_law_choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                </div>
+            </div>
+        </div>
+        <!-- 二、主体信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>主体信息</h5>
+            </div>
+            <!-- 客户方信息 -->
+            <div style="margin-bottom: 24px;">
+                <h6 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #1f2937;">客户方信息</h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label required-field" for="{{ form.client.id_for_label }}">客户公司</label>
+                            {{ form.client }}
+                            {% if form.client.errors %}
+                            <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.client.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">根据客户管理</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label" for="client_credit_code">统一社会信用代码</label>
+                            <input type="text" id="client_credit_code" name="client_credit_code" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" placeholder="自动带入">
+                            <small class="form-text text-muted">自动带入，客户管理</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label" for="client_legal_representative">法定代表人</label>
+                            <input type="text" id="client_legal_representative" name="client_legal_representative" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" placeholder="自动带入">
+                            <small class="form-text text-muted">自动带入，客户管理</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label" for="client_project_representative">项目代表</label>
+                            <select id="client_project_representative" name="client_project_representative" class="form-select">
+                                <option value="">-- 请选择项目代表 --</option>
+                            </select>
+                            <small class="form-text text-muted">选择，客户管理</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label" for="client_contact">联系方式</label>
+                            <input type="text" id="client_contact" name="client_contact" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" placeholder="自动带入">
+                            <small class="form-text text-muted">自动带入，客户管理</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 我方信息 -->
+            <div>
+                <h6 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #1f2937;">我方信息</h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label" for="our_signing_party">我方签约主体</label>
+                            <select id="our_signing_party" name="our_signing_party" class="form-select">
+                                                                                        <option value="">-- 请选择我方签约主体 --</option></select>
+                            <small class="form-text text-muted">选择，后台引入</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label" for="project_manager">项目负责人</label>
+                            <select id="project_manager" name="project_manager" class="form-select">
+                                                            <option value="">-- 请选择项目负责人 --</option>
+                            {% for manager in project_managers %}
+                            <option value="{{ manager.id }}">{{ manager.get_full_name|default:manager.username }}</option>
+        }
+                            {% endfor %}</select>
+                            <small class="form-text text-muted">选择</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label" for="business_manager">商务负责人</label>
+                            <select id="business_manager" name="business_manager" class="form-select">
+                                                            <option value="">-- 请选择商务负责人 --</option>
+                            {% for manager in business_managers %}
+                            <option value="{{ manager.id }}" {% if manager.id == user.id %}selected{% endif %}>{{ manager.get_full_name|default:manager.username }}</option>
+        }
+                            {% endfor %}</select>
+                            <small class="form-text text-muted">选择，默认</small>
+        </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <!-- 签约主体 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>👥 签约主体</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="parties-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;">序号</th>
+                            <th id="party-type-header" style="width: 100px;">单位类型 <span class="text-danger">*</span></th>
+                            <th id="party-name-header" style="width: 180px;">单位名称 <span class="text-danger">*</span></th>
+                            <th id="party-credit-code-header" style="width: 150px;">统一社会信用代码</th>
+                            <th id="party-legal-rep-header" style="width: 120px;">法定代表人</th>
+                            <th id="party-project-manager-header" style="width: 120px;">项目负责人</th>
+                            <th id="party-contact-phone-header" style="width: 120px;">联系电话</th>
+                            <th id="party-contact-email-header" style="width: 150px;">联系邮箱</th>
+                            <th id="party-address-header" style="width: 200px;">办公地址</th>
+                            <th style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="parties-container">
+                        <!-- 签约主体列表将通过JavaScript动态添加 -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 16px; text-align: left;">
+                <button type="button" class="btn btn-sm btn-primary" id="add-party-btn">
+                    <i class="bi bi-plus-circle"></i> 添加签约主体
+                </button>
+            </div>
+        </div>
+
+        <!-- 四、服务信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>服务信息</h5>
+                <button type="button" class="btn btn-sm btn-primary" id="add-service-content-btn">
+                    <i class="bi bi-plus-circle"></i> 添加服务信息
+                </button>
+            </div>
+            <div id="service-contents-container">
+                <!-- 服务信息将通过JavaScript动态添加 -->
+            </div>
+        </div>
+
+                <!-- 五、价款信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>价款信息</h5>
+            </div>
+            
+            <!-- 结算方式选择 -->
+            <div class="row" style="margin-bottom: 20px;">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="settlement_method">结算方式</label>
+                        <select id="settlement_method" name="settlement_method" class="form-select">
+                            <option value="">-- 请选择结算方式 --</option>
+                            {% for method in settlement_methods %}
+                            <option value="{{ method.code }}" data-name="{{ method.name }}">{{ method.name }}</option>
+        }
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">后台引入，未选择时隐藏列表</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 根据结算方式显示不同的列表 -->
+            <!-- 包干总价列表 -->
+            <div id="fixed-total-list" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 60px;">序号</th>
+                                <th id="fixed-total-area-scale-header" style="width: 150px;">面积规模</th>
+                                <th id="fixed-total-area-type-header" style="width: 120px;">面积类型</th>
+                                <th id="fixed-total-service-fee-header" style="width: 150px;">服务费</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fixed-total-container">
+                            <!-- 包干总价列表将通过JavaScript动态添加 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 16px; text-align: left;">
+                    <button type="button" class="btn btn-sm btn-primary" id="add-fixed-total-btn">
+                        <i class="bi bi-plus-circle"></i> 增加行
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- 七、回款信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>回款信息</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="payment-info-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;">序号</th>
+                            <th id="payment-name-header" style="width: 120px;">款项名称</th>
+                            <th id="payment-trigger-header" style="width: 150px;">触发节点 <span class="text-danger">*</span></th>
+                            <th id="payment-method-header" style="width: 150px;">付款方式 <span class="text-danger">*</span></th>
+                            <th id="payment-amount-header" style="width: 150px;">回款金额（元）</th>
+                            <th id="payment-condition-header" style="width: 200px;">付款条件</th>
+                            <th style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payment-info-container">
+                        <!-- 回款信息列表将通过JavaScript动态添加 -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 16px; text-align: left;">
+                <button type="button" class="btn btn-sm btn-primary" id="add-payment-info-btn">
+                    <i class="bi bi-plus-circle"></i> 添加回款信息
+                </button>
+            </div>
+        </div>
+        <!-- 三、合同信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>合同信息</h5>
+
+            </div>
+            <!-- 合同名称 -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field" for="{{ form.contract_name.id_for_label }}">{{ form.contract_name.label }}</label>
+                        {{ form.contract_name }}
+                        {% if form.contract_name.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.contract_name.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- 合同类型 -->
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.contract_type.id_for_label }}">{{ form.contract_type.label }}</label>
+                        {{ form.contract_type }}
+                        {% if form.contract_type.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.contract_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- 结构形式 -->
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.structure_type.id_for_label }}">{{ form.structure_type.label }}</label>
+                        {{ form.structure_type }}
+                        {% if form.structure_type.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.structure_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- 设计单位分类 -->
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.design_unit_category.id_for_label }}">{{ form.design_unit_category.label }}</label>
+                        {{ form.design_unit_category }}
+                        {% if form.design_unit_category.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.design_unit_category.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <!-- 金额信息 -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.contract_amount.id_for_label }}">{{ form.contract_amount.label }}</label>
+                        {{ form.contract_amount }}
+                        {% if form.contract_amount.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.contract_amount.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">单位：元</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.tax_rate.id_for_label }}">{{ form.tax_rate.label }}</label>
+                        {{ form.tax_rate }}
+                        {% if form.tax_rate.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.tax_rate.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">默认6%</small>
+                    </div>
+                </div>
+            </div>
+            <!-- 时间信息 -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.contract_date.id_for_label }}">{{ form.contract_date.label }}</label>
+                        {{ form.contract_date }}
+                        {% if form.contract_date.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.contract_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.effective_date.id_for_label }}">{{ form.effective_date.label }}</label>
+                        {{ form.effective_date }}
+                        {% if form.effective_date.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.effective_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.start_date.id_for_label }}">{{ form.start_date.label }}</label>
+                        {{ form.start_date }}
+                        {% if form.start_date.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.start_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.end_date.id_for_label }}">{{ form.end_date.label }}</label>
+                        {{ form.end_date }}
+                        {% if form.end_date.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.end_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <!-- 其他信息 -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.description.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.notes.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+<script>
+    const contractFileInput = document.getElementById('contract-file-input');
+    const recognizeBtn = document.getElementById('recognize-contract-btn');
+    const recognitionStatus = document.getElementById('recognition-status');
+    const recognitionResult = document.getElementById('recognition-result');
+    const recognitionMessage = document.getElementById('recognition-message');
+    
+    if (recognizeBtn && contractFileInput) {
+        recognizeBtn.addEventListener('click', async function() {
+            const file = contractFileInput.files[0];
+            if (!file) {
+                alert('请先选择合同文件');
+                return;
+            }
+            
+            // 检查文件大小
+            if (file.size > 10 * 1024 * 1024) {
+                alert('文件大小不能超过10MB');
+                return;
+            }
+            
+            // 显示识别状态
+            recognitionStatus.style.display = 'block';
+            recognitionResult.style.display = 'none';
+            recognitionMessage.textContent = '正在识别中，请稍候...';
+            recognizeBtn.disabled = true;
+            
+            // 创建FormData
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                // 调用识别API
+                const response = await fetch('/api/customer/contracts/recognize/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // 识别成功，填充表单
+                    fillFormWithRecognitionResult(result.data);
+                    recognitionMessage.textContent = '识别完成！';
+                    recognitionStatus.style.display = 'none';
+                    recognitionResult.style.display = 'block';
+                } else {
+                    // 识别失败
+                    recognitionMessage.textContent = '识别失败：' + (result.error || '未知错误');
+                    recognitionStatus.querySelector('.alert').className = 'alert alert-danger';
+                }
+            } catch (error) {
+                recognitionMessage.textContent = '识别失败：' + error.message;
+                recognitionStatus.querySelector('.alert').className = 'alert alert-danger';
+            } finally {
+                recognizeBtn.disabled = false;
+            }
+        });
+    }
+    
+    // 填充表单数据
+    function fillFormWithRecognitionResult(data) {
+        // 合同名称
+        if (data.contract_name) {
+            const contractNameField = document.querySelector('[name=]"contract_name"]');
+            if (contractNameField && !contractNameField.value) {
+                contractNameField.value = data.contract_name;
+            }
+        
+        // 项目编号（合同编号）
+        if (data.contract_number) {
+            const contractNumberField = document.querySelector('[name="project_number"]');
+            if (contractNumberField && !contractNumberField.value) {
+                contractNumberField.value = data.contract_number;
+            }
+        
+        // 合同类型
+        if (data.contract_type) {
+            const contractTypeField = document.querySelector('[name="contract_type"]');
+            if (contractTypeField) {
+                // 尝试匹配合同类型
+                const options = contractTypeField.querySelectorAll('option');
+                for (let opt of options) {
+                    if (opt.textContent.includes(data.contract_type) || data.contract_type.includes(opt.textContent)) {
+                        contractTypeField.value = opt.value;
+                        break;
+                    }
+                }
+            }
+        
+        // 合同描述
+        if (data.description) {
+            const descField = document.querySelector('[name="description"]');
+            if (descField && !descField.value) {
+                descField.value = data.description;
+            }
+        
+        if (data.party_a && data.party_a.name) {
+            if (partyRows.length > 0) {
+                const firstRow = partyRows[0];
+                const partyNameInput = firstCard.querySelector('input[name*="[party_name]"]');
+                if (partyNameInput && !partyNameInput.value) {
+                    partyNameInput.value = data.party_a.name;
+                }
+                if (data.party_a.contact) {
+                    const contactInput = firstCard.querySelector('input[name*="[party_contact]"]');
+                if (data.party_a.phone) {
+                    const phoneInput = firstCard.querySelector('input[name*="[contact_phone]"]');
+                if (data.party_a.email) {
+                    const emailInput = firstCard.querySelector('input[name*="[contact_email]"]');
+                if (data.party_a.address) {
+                    const addressInput = firstCard.querySelector('input[name*="[address]"]');
+                if (data.party_a.credit_code) {
+                    const creditCodeInput = firstCard.querySelector('input[name*="[credit_code]"]');
+                if (data.party_a.legal_representative) {
+                    const legalRepInput = firstCard.querySelector('input[name*="[legal_representative]"]');
+            }
+        
+        if (data.party_b && data.party_b.name) {
+            let secondRow = null;
+            if (partyRows.length > 1) {
+                secondRow = partyRows[1];
+                    if (newRows.length > 1) {
+                        secondRow = newRows[1];
+                    }
+                }, 300);
+            }
+            
+            if (secondRow) {
+                const partyNameInput = secondRow.querySelector('input[name*="[party_name]"]');
+                if (partyNameInput && !partyNameInput.value) {
+                    partyNameInput.value = data.party_b.name;
+                }
+                if (data.party_b.contact) {
+                    const contactInput = secondRow.querySelector('input[name*="[party_contact]"]');
+                if (data.party_b.phone) {
+                    const phoneInput = secondRow.querySelector('input[name*="[contact_phone]"]');
+                if (data.party_b.email) {
+                    const emailInput = secondRow.querySelector('input[name*="[contact_email]"]');
+                if (data.party_b.address) {
+                    const addressInput = secondRow.querySelector('input[name*="[address]"]');
+                if (data.party_b.credit_code) {
+                    const creditCodeInput = secondRow.querySelector('input[name*="[credit_code]"]');
+                if (data.party_b.legal_representative) {
+                    const legalRepInput = secondRow.querySelector('input[name*="[legal_representative]"]');
+            }
+        
+        // 如果有合同金额，可以尝试填充到结算方式中（固定总价）
+    }
+    
+// ========== 结算方式管理（表格形式） ==========
+    
+    
+    
+    // 结算方式选项（从模板中获取）
+    const settlementMethodOptions = [
+        {% for method in settlement_methods %}
+        { value: "{{ method.id }}", label: "{{ method.name }}" },
+        {% endfor %}
+    ];
+
+    // 封顶类型选项
+
+    const serviceTypeOptions = [
+        {% for st in service_types %}
+        { value: '{{ st.id }}', label: '{{ st.name }}' },
+        {% endfor %}
+    ];
+
+    // 添加结算方式卡片
+    
+        // 更新结算方式相关字段的显示
+    // 添加分段取费行
+    function addSegmentedRate(cardIndex, rateData = null) {
+        const rate = rateData || {};
+        if (!container) return;
+        
+        const row = document.createElement('tr');
+        row.setAttribute('data-rate-index', rateIndex);
+        
+        // TODO: 使用DOMPurify清理HTML
+            row.innerHTML = `
+            <td>
+                       class="form-control form-control-sm" step="0.01"
+                       value="${rate.greater_than || ''}" placeholder="0.00">
+            </td>
+            <td>
+                       class="form-control form-control-sm" step="0.01"
+                       value="${rate.less_than || ''}" placeholder="0.00">
+            </td>
+            <td>
+                       class="form-control form-control-sm" step="0.01"
+                       value="${rate.rate || ''}" placeholder="0.00" required>
+            </td>
+            <td>
+                       class="form-control form-control-sm" step="0.01"
+                       value="${rate.service_fee || ''}" placeholder="0.00">
+            </td>
+            <td style="text-align: center;">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        container.appendChild(row);
+
+        // 绑定服务费输入框的change事件，自动计算小计
+        const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+        if (serviceFeeInput) {
+            serviceFeeInput.addEventListener('input', function() {
+                calculateFixedTotalSum(cardIndex);
+            });
+        // 绑定删除按钮事件
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                row.remove();
+                updateSegmentedRateNumbers(cardIndex);
+            });
+    }
+    
+    // 更新分段序号
+    // 添加总价包干条目
+    function addFixedTotalItem(cardIndex, itemData = null) {
+        const item = itemData || {};
+        if (!container) return;
+        
+        const row = document.createElement('tr');
+        row.setAttribute('data-item-index', itemIndex);
+        
+        // TODO: 使用DOMPurify清理HTML
+            row.innerHTML = `
+            <td>
+                       class="form-control form-control-sm" step="0.01"
+                       value="${item.area_scale || ''}" placeholder="0.00" required>
+            </td>
+            <td>
+                       class="form-control form-control-sm" step="0.01"
+                       value="${item.service_fee || ''}" placeholder="0.00" required>
+            </td>
+            <td>
+                    <i class="bi bi-trash"></i> 删除
+                </button>
+            </td>
+        `;
+        
+        container.appendChild(row);
+        
+        // 绑定服务费输入框的change事件，自动计算小计
+        const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+        if (serviceFeeInput) {
+            serviceFeeInput.addEventListener('input', function() {
+                calculateFixedTotalSum(cardIndex);
+            });
+        
+        // 计算小计
+        calculateFixedTotalSum(cardIndex);
+        
+        // 更新序号
+        updateFixedTotalNumbers(cardIndex);
+        
+    }
+    
+    // 更新总价包干条目序号
+    
+    
+    
+    function updateFixedTotalNumbers(cardIndex) {
+        if (!container) return;
+        
+        rows.forEach(function(row, index) {
+            row.setAttribute('data-item-index', index);
+            // 更新name属性中的索引
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(function(input) {
+                const name = input.getAttribute('name');
+                if (name) {
+                    // 替换索引部分
+                    const newName = name.replace(/\[fixed_total_items\]\[\d+\]/, '[fixed_total_items][' + index + ']');
+                    input.setAttribute('name', newName);
+                }
+            });
+            // 更新删除按钮的data-item-index
+            if (removeBtn) {
+                removeBtn.setAttribute('data-item-index', index);
+            }
+        });
+    }
+
+    
+    // 计算总价包干服务费小计
+    function calculateFixedTotalSum(cardIndex) {
+        if (!container || !sumElement) return;
+        
+        let total = 0;
+        
+        rows.forEach(function(row) {
+            const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+            if (serviceFeeInput && serviceFeeInput.value) {
+                const value = parseFloat(serviceFeeInput.value) || 0;
+                total += value;
+            }
+        });
+        
+        // 更新小计显示，保留两位小数
+        sumElement.textContent = total.toFixed(2);
+        // console.log(...) // 已移除}`);
+    }
+    function updateSegmentedRateNumbers(cardIndex) {
+        if (!container) return;
+        
+        rows.forEach((row, idx) => {
+            row.setAttribute('data-rate-index', idx);
+            // 更新所有输入框的name属性
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(input => {
+                const name = input.getAttribute('name');
+                if (name) {
+                    const newName = name.replace(/\[segmented_rates\]\[\d+\]/, '[segmented_rates][' + idx + ']');
+                    input.setAttribute('name', newName);
+                }
+            });
+        });
+    }
+
+    
+    
+    // 更新卡片序号
+    function updateSettlementMethodNumbers() {
+        cards.forEach((card, idx) => {
+            const titleElement = card.querySelector('.card-title');
+            if (titleElement) {
+                titleElement.textContent = `结算方式 #${idx + 1}`;
+            }
+            // 更新data-index
+            card.setAttribute('data-index', idx);
+            // 更新所有输入框的name属性中的index
+            const inputs = card.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                const name = input.getAttribute('name');
+                if (name && name.includes('[')) {
+                    const newName = name.replace(/\[(\d+)\]/, '[' + idx + ']');
+                    input.setAttribute('name', newName);
+                }
+            });
+        });
+    }
+    
+    // 添加按钮事件
+    
+
+        // 如果是总价包干，加载总价包干条目列表
+    });
+        cards.forEach(function(card) {
+            const indexAttr = card.getAttribute('data-index');
+            if (indexAttr !== null) {
+                const index = parseInt(indexAttr);
+            }
+        });
+    }, 300);
+    
+    }
+    
+    
+                // 累计提成：需要节省金额，暂时无法计算
+                hasUncalculableMethod = true;
+                    const unitPrice = parseFloat(fixedUnitPrice.value) || 0;
+                    const totalArea = getTotalBuildingArea();
+                    rowPrice += unitPrice * totalArea;
+                }
+                // 按实结算部分暂时无法计算
+                hasUncalculableMethod = true;
+            } else {
+                // 其他结算方式（分段递增提成、跳点提成等）需要节省金额，暂时无法计算
+                hasUncalculableMethod = true;
+            }
+            
+            totalPrice += rowPrice;
+        });
+        
+        if (hasUncalculableMethod && totalPrice === 0) {
+            contractPriceInput.value = '需按实结算';
+        } else if (hasUncalculableMethod) {
+            contractPriceInput.value = totalPrice.toFixed(2) + '（部分需按实结算）';
+        } else if (totalPrice > 0) {
+            contractPriceInput.value = totalPrice.toFixed(2);
+        } else {
+            contractPriceInput.value = '';
+    }
+    
+    function getTotalBuildingArea() {
+        let totalArea = 0;
+        
+            const areaInput = card.querySelector('input[name*="[area_scale]"]');
+            if (areaInput && areaInput.value) {
+                totalArea += parseFloat(areaInput.value) || 0;
+            }
+        });
+        
+        return totalArea;
+    }
+    
+        // 使用事件委托监听所有结算方式相关字段的变化
+        
+        // 监听结算方式表格中面积规模的变化
+        
+        
+        // 页面加载时计算一次
+
+        // ========== 绑定所有缺失的添加行按钮 ==========
+        // 辅助函数：更新行序号
+        function updateRowNumbers(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const rows = container.querySelectorAll('tr');
+            rows.forEach(function(row, index) {
+                const numCell = row.querySelector('td:first-child strong');
+                if (numCell) {
+                    numCell.textContent = index + 1;
+                }
+            });
+
+        // 绑定总价包干添加按钮
+        const addFixedTotalBtn = document.getElementById('add-fixed-total-btn');
+        if (addFixedTotalBtn) {
+            addFixedTotalBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const container = document.getElementById('fixed-total-container');
+                if (!container) return;
+                const rows = container.querySelectorAll('tr');
+                const index = rows.length;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="text-align: center; vertical-align: middle;"><strong>${index + 1}</strong></td>
+                    <td>
+                        <select name="fixed_total_items[${index}][service_type]" id="fixed_total_service_type_${index}" class="form-select form-select-sm" aria-label="服务类型" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="fixed_total_items[${index}][area_scale]" id="fixed_total_area_scale_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="面积规模" required></td>
+                    <td><input type="number" name="fixed_total_items[${index}][service_fee]" id="fixed_total_service_fee_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="服务费" required></td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn btn-sm btn-danger remove-row-btn" aria-label="删除此行"><i class="bi bi-trash"></i> 删除</button>
+                    </td>
+                `;
+                container.appendChild(row);
+                    // 填充服务类型选项
+                    const serviceTypeSelect = row.querySelector('select[name*="[service_type]"]');
+                    if (serviceTypeSelect && typeof serviceTypeOptions !== 'undefined') {
+                        serviceTypeOptions.forEach(function(opt) {
+                            const option = document.createElement('option');
+                            option.value = opt.value;
+                            option.textContent = opt.label;
+                            serviceTypeSelect.appendChild(option);
+                        });
+                    }
+                const removeBtn = row.querySelector('.remove-row-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        row.remove();
+                        updateRowNumbers('fixed-total-container');
+                        calculateFixedTotalSubtotal();
+                    });
+                }
+                const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+                if (serviceFeeInput) {
+                    serviceFeeInput.addEventListener('input', calculateFixedTotalSubtotal);
+                }
+                updateRowNumbers('fixed-total-container');
+                calculateFixedTotalSubtotal();
+            });
+
+        // 绑定包干单价添加按钮
+        const addFixedUnitBtn = document.getElementById('add-fixed-unit-btn');
+        if (addFixedUnitBtn) {
+            addFixedUnitBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const container = document.getElementById('fixed-unit-container');
+                if (!container) return;
+                const rows = container.querySelectorAll('tr');
+                const index = rows.length;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="text-align: center; vertical-align: middle;"><strong>${index + 1}</strong></td>
+                    <td>
+                        <select name="fixed_unit_items[${index}][service_type]" id="fixed_unit_service_type_${index}" class="form-select form-select-sm" aria-label="服务类型" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="fixed_unit_items[${index}][area_size]" id="fixed_unit_area_size_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="面积规模" required></td>
+                    <td>
+                        <select name="fixed_unit_items[${index}][area_type]" id="fixed_unit_area_type_${index}" class="form-select form-select-sm" aria-label="面积类型" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="fixed_unit_items[${index}][unit_price]" id="fixed_unit_unit_price_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="包干单价" required></td>
+                    <td><input type="number" name="fixed_unit_items[${index}][service_fee]" id="fixed_unit_service_fee_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="服务费" required></td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn btn-sm btn-danger remove-row-btn" aria-label="删除此行"><i class="bi bi-trash"></i> 删除</button>
+                    </td>
+                `;
+                container.appendChild(row);
+                    // 填充服务类型选项
+                    const serviceTypeSelect = row.querySelector('select[name*="[service_type]"]');
+                    if (serviceTypeSelect && typeof serviceTypeOptions !== 'undefined') {
+                        serviceTypeOptions.forEach(function(opt) {
+                            const option = document.createElement('option');
+                            option.value = opt.value;
+                            option.textContent = opt.label;
+                            serviceTypeSelect.appendChild(option);
+                        });
+                    }
+                const removeBtn = row.querySelector('.remove-row-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        row.remove();
+                        updateRowNumbers('fixed-unit-container');
+                        calculateFixedUnitSubtotal();
+                    });
+                }
+                const inputs = row.querySelectorAll('input[name*="[area_size]"], input[name*="[unit_price]"], input[name*="[service_fee]"]');
+                inputs.forEach(function(input) {
+                    input.addEventListener('input', function() {
+                        const areaInput = row.querySelector('input[name*="[area_size]"]');
+                        const unitPriceInput = row.querySelector('input[name*="[unit_price]"]');
+                        const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+                        if (areaInput && unitPriceInput && serviceFeeInput) {
+                            const area = parseFloat(areaInput.value) || 0;
+                            const unitPrice = parseFloat(unitPriceInput.value) || 0;
+                            serviceFeeInput.value = (area * unitPrice).toFixed(2);
+                        }
+                        calculateFixedUnitSubtotal();
+                    });
+                });
+                updateRowNumbers('fixed-unit-container');
+                calculateFixedUnitSubtotal();
+
+        // 绑定累计提成添加按钮
+        const addCumulativeCommissionBtn = document.getElementById('add-cumulative-commission-btn');
+        if (addCumulativeCommissionBtn) {
+            addCumulativeCommissionBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const container = document.getElementById('cumulative-commission-container');
+                if (!container) return;
+                const rows = container.querySelectorAll('tr');
+                const index = rows.length;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="text-align: center; vertical-align: middle;"><strong>${index + 1}</strong></td>
+                    <td>
+                        <select name="cumulative_commission_items[${index}][service_type]" id="cumulative_service_type_${index}" class="form-select form-select-sm" aria-label="服务类型" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="cumulative_commission_items[${index}][area_scale]" id="cumulative_area_scale_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="面积规模" required></td>
+                    <td>
+                        <select name="cumulative_commission_items[${index}][area_type]" id="cumulative_area_type_${index}" class="form-select form-select-sm" aria-label="面积类型" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="cumulative_commission_items[${index}][commission_rate]" id="cumulative_commission_rate_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="累计提成系数" required></td>
+                    <td><input type="number" name="cumulative_commission_items[${index}][adjustment_rate]" id="cumulative_adjustment_rate_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="综合调整系数"></td>
+                    <td><input type="number" name="cumulative_commission_items[${index}][service_fee]" id="cumulative_service_fee_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="服务费" required></td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn btn-sm btn-danger remove-row-btn" aria-label="删除此行"><i class="bi bi-trash"></i> 删除</button>
+                    </td>
+                `;
+                container.appendChild(row);
+                    // 填充服务类型选项
+                    const serviceTypeSelect = row.querySelector('select[name*="[service_type]"]');
+                    if (serviceTypeSelect && typeof serviceTypeOptions !== 'undefined') {
+                        serviceTypeOptions.forEach(function(opt) {
+                            const option = document.createElement('option');
+                            option.value = opt.value;
+                            option.textContent = opt.label;
+                            serviceTypeSelect.appendChild(option);
+                        });
+                    }
+                const removeBtn = row.querySelector('.remove-row-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        row.remove();
+                        updateRowNumbers('cumulative-commission-container');
+                    });
+                }
+                updateRowNumbers('cumulative-commission-container');
+            });
+
+        // 绑定分段提成添加按钮
+        const addSegmentedCommissionBtn = document.getElementById('add-segmented-commission-btn');
+        if (addSegmentedCommissionBtn) {
+            addSegmentedCommissionBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const container = document.getElementById('segmented-commission-container');
+                if (!container) return;
+                const rows = container.querySelectorAll('tr');
+                const index = rows.length;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="text-align: center; vertical-align: middle;"><strong>${index + 1}</strong></td>
+                    <td>
+                        <select name="segmented_commission_items[${index}][service_type]" id="segmented_service_type_${index}" class="form-select form-select-sm" aria-label="服务类型" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="segmented_commission_items[${index}][area_scale]" id="segmented_area_scale_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="面积规模" required></td>
+                    <td>
+                        <select name="segmented_commission_items[${index}][area_type]" id="segmented_area_type_${index}" class="form-select form-select-sm" aria-label="面积类型" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="segmented_commission_items[${index}][amount_range]" id="segmented_amount_range_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="区间金额" required></td>
+                    <td><input type="number" name="segmented_commission_items[${index}][commission_rate]" id="segmented_commission_rate_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="区间提成系数" required></td>
+                    <td><input type="number" name="segmented_commission_items[${index}][adjustment_rate]" id="segmented_adjustment_rate_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="综合调整系数"></td>
+                    <td><input type="number" name="segmented_commission_items[${index}][service_fee]" id="segmented_service_fee_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="服务费" required></td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn btn-sm btn-danger remove-row-btn" aria-label="删除此行"><i class="bi bi-trash"></i> 删除</button>
+                    </td>
+                `;
+                container.appendChild(row);
+                    // 填充服务类型选项
+                    const serviceTypeSelect = row.querySelector('select[name*="[service_type]"]');
+                    if (serviceTypeSelect && typeof serviceTypeOptions !== 'undefined') {
+                        serviceTypeOptions.forEach(function(opt) {
+                            const option = document.createElement('option');
+                            option.value = opt.value;
+                            option.textContent = opt.label;
+                            serviceTypeSelect.appendChild(option);
+                        });
+                    }
+                const removeBtn = row.querySelector('.remove-row-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        row.remove();
+                        updateRowNumbers('segmented-commission-container');
+                    });
+                }
+                updateRowNumbers('segmented-commission-container');
+            });
+
+        // 绑定跳点提成添加按钮
+        const addJumpPointCommissionBtn = document.getElementById('add-jump-point-commission-btn');
+        if (addJumpPointCommissionBtn) {
+            addJumpPointCommissionBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const container = document.getElementById('jump-point-commission-container');
+                if (!container) return;
+                const rows = container.querySelectorAll('tr');
+                const index = rows.length;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="text-align: center; vertical-align: middle;"><strong>${index + 1}</strong></td>
+                    <td>
+                        <select name="jump_point_commission_items[${index}][service_type]" id="jump_point_service_type_${index}" class="form-select form-select-sm" aria-label="服务类型" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="jump_point_commission_items[${index}][area_scale]" id="jump_point_area_scale_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="面积规模" required></td>
+                    <td>
+                        <select name="jump_point_commission_items[${index}][area_type]" id="jump_point_area_type_${index}" class="form-select form-select-sm" aria-label="面积类型" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="jump_point_commission_items[${index}][jump_point_amount]" id="jump_point_amount_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="跳点金额" required></td>
+                    <td><input type="number" name="jump_point_commission_items[${index}][commission_rate]" id="jump_point_commission_rate_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="跳点提成系数" required></td>
+                    <td><input type="number" name="jump_point_commission_items[${index}][adjustment_rate]" id="jump_point_adjustment_rate_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="综合调整系数"></td>
+                    <td><input type="number" name="jump_point_commission_items[${index}][service_fee]" id="jump_point_service_fee_${index}" class="form-control form-control-sm" step="0.01" placeholder="0.00" aria-label="服务费" required></td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn btn-sm btn-danger remove-row-btn" aria-label="删除此行"><i class="bi bi-trash"></i> 删除</button>
+                    </td>
+                `;
+                container.appendChild(row);
+                    // 填充服务类型选项
+                    const serviceTypeSelect = row.querySelector('select[name*="[service_type]"]');
+                    if (serviceTypeSelect && typeof serviceTypeOptions !== 'undefined') {
+                        serviceTypeOptions.forEach(function(opt) {
+                            const option = document.createElement('option');
+                            option.value = opt.value;
+                            option.textContent = opt.label;
+                            serviceTypeSelect.appendChild(option);
+                        });
+                    }
+                const removeBtn = row.querySelector('.remove-row-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        row.remove();
+                        updateRowNumbers('jump-point-commission-container');
+                    });
+                }
+                updateRowNumbers('jump-point-commission-container');
+            });
+            });
+
+            
+        (function() {
+            const ourUnits = {{ our_units|safe|default:"[]" }};
+            const select = document.getElementById('our_signing_party');
+            if (select && Array.isArray(ourUnits)) {
+                ourUnits.forEach(function(unit) {
+                    const option = document.createElement('option');
+                    option.value = unit;
+                    option.textContent = unit;
+                    select.appendChild(option);
+                
+    
+
+    // ========== 服务信息管理（使用Bootstrap Grid布局） ==========
+    let serviceContentIndex = 0;
+    
+    // 服务信息数据（从后端传入）
+    const serviceTypesData = [
+        {% for st in service_types %}
+        { id: {{ st.id }}, name: "{{ st.name|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const designStagesData = [
+        {% for ds in design_stages %}
+        { id: {{ ds.id }}, name: "{{ ds.name|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const businessTypesData = [
+        {% for bt in business_types %}
+        { id: {{ bt.id }}, name: "{{ bt.name|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const serviceProfessionsData = [
+        {% for sp in service_professions %}
+        { id: {{ sp.id }}, name: "{{ sp.name|escapejs }}", service_type_id: {{ sp.service_type_id|default:"null" }} }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    // 添加服务信息行（使用Bootstrap Grid布局）
+    function addServiceContentRow(serviceData = null) {
+        const container = document.getElementById("service-contents-container");
+        if (!container) {
+            console.error("service-contents-container 未找到");
+            return;
+        }
+        
+        const index = serviceContentIndex++;
+        const service = serviceData || {};
+        
+        // 创建服务信息行（使用Bootstrap Grid布局）
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "service-content-row mb-3 p-3 border rounded";
+        rowDiv.setAttribute("data-service-index", index);
+        rowDiv.style.backgroundColor = "#f9fafb";
+        
+        rowDiv.innerHTML = `
+            <div class="row mb-2">
+                <div class="col-md-12 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0" style="font-size: 14px; font-weight: 600; color: #374151;">服务信息 #${index + 1}</h6>
+                    <button type="button" class="btn btn-sm btn-danger remove-service-content-btn">
+                        <i class="bi bi-trash"></i> 删除
+                    </button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="service_type_${index}">服务类型</label>
+                        <select id="service_type_${index}" name="service_contents[${index}][service_type]" class="form-select form-select-sm">
+                            <option value="">-- 请选择 --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="design_stage_${index}">图纸阶段</label>
+                        <select id="design_stage_${index}" name="service_contents[${index}][design_stage]" class="form-select form-select-sm">
+                            <option value="">-- 请选择 --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="building_area_${index}">建筑面积（㎡）</label>
+                        <input type="number" id="building_area_${index}" name="service_contents[${index}][building_area]" class="form-control form-control-sm" step="0.01" placeholder="0.00" value="${service.building_area || 0}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="business_type_${index}">项目业态</label>
+                        <select id="business_type_${index}" name="service_contents[${index}][business_type]" class="form-select form-select-sm">
+                            <option value="">-- 请选择 --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="service_professions_${index}">服务专业</label>
+                        <select id="service_professions_${index}" name="service_contents[${index}][service_professions]" class="form-select form-select-sm" multiple style="min-height: 80px;">
+                            <option value="">-- 请选择 --</option>
+                        </select>
+                        <small class="form-text text-muted">可多选，按住Ctrl/Cmd键选择多个</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="description_${index}">服务内容描述</label>
+                        <textarea id="description_${index}" name="service_contents[${index}][description]" class="form-control form-control-sm" rows="3" placeholder="请输入服务内容描述">${(service.description || "").replace(/"/g, "&quot;").replace(/'/g, "&#39;")}</textarea>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(rowDiv);
+        
+        // 填充下拉选项
+        const serviceTypeSelect = rowDiv.querySelector(`select[name="service_contents[${index}][service_type]"]`);
+        if (serviceTypeSelect) {
+            serviceTypesData.forEach(function(st) {
+                const option = document.createElement("option");
+                option.value = st.id;
+                option.textContent = st.name;
+                if (service.service_type_id == st.id) option.selected = true;
+                serviceTypeSelect.appendChild(option);
+            });
+        }
+        
+        const designStageSelect = rowDiv.querySelector(`select[name="service_contents[${index}][design_stage]"]`);
+        if (designStageSelect) {
+            designStagesData.forEach(function(ds) {
+                const option = document.createElement("option");
+                option.value = ds.id;
+                option.textContent = ds.name;
+                if (service.design_stage_id == ds.id) option.selected = true;
+                designStageSelect.appendChild(option);
+            });
+        }
+        
+        const businessTypeSelect = rowDiv.querySelector(`select[name="service_contents[${index}][business_type]"]`);
+        if (businessTypeSelect) {
+            businessTypesData.forEach(function(bt) {
+                const option = document.createElement("option");
+                option.value = bt.id;
+                option.textContent = bt.name;
+                if (service.business_type_id == bt.id) option.selected = true;
+                businessTypeSelect.appendChild(option);
+            });
+        }
+        
+        const serviceProfessionSelect = rowDiv.querySelector(`select[name="service_contents[${index}][service_professions]"]`);
+        if (serviceProfessionSelect) {
+            serviceProfessionsData.forEach(function(sp) {
+                const option = document.createElement("option");
+                option.value = sp.id;
+                option.textContent = sp.name;
+                if (service.service_profession_ids && service.service_profession_ids.includes(sp.id)) option.selected = true;
+                serviceProfessionSelect.appendChild(option);
+            });
+        }
+        
+        // 绑定删除按钮
+        const removeBtn = rowDiv.querySelector(".remove-service-content-btn");
+        if (removeBtn) {
+            removeBtn.addEventListener("click", function() {
+                rowDiv.remove();
+                updateServiceContentRowNumbers();
+            });
+        }
+        
+        updateServiceContentRowNumbers();
+    }
+    
+    // 更新服务信息行序号
+    function updateServiceContentRowNumbers() {
+        const rows = document.querySelectorAll(".service-content-row");
+        rows.forEach(function(row, idx) {
+            const title = row.querySelector("h6");
+            if (title) {
+                title.textContent = `服务信息 #${idx + 1}`;
+            }
+        });
+    }
+    
+    // 绑定添加服务信息按钮
+    const addServiceContentBtn = document.getElementById("add-service-content-btn");
+    if (addServiceContentBtn) {
+        addServiceContentBtn.addEventListener("click", function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            addServiceContentRow();
+        });
+    }
+
+
+    });
+            }
+        })();
+
+</script>
+{% endblock %}

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}维海科技信息化管理平台{% endblock %}</title>
+    {% load static %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+    <style>
+        /* body padding-top 已在 core/base.css 中定义，无需重复 */
+        /* 下拉菜单样式已在 navigation.css 中定义，无需重复 */
+        
+        /* ============================================
+           生产管理布局样式 - 使用与客户管理一致的格式
+           ============================================ */
+        /* 所有布局样式已迁移到统一样式模板 layouts/workspace.css */
+        /* 这里只保留生产管理特有的分组菜单样式 */
+        
+        /* 分组菜单样式 */
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        /* 左侧菜单容器样式 - 位置锁定，不允许改变 */
+        
+        
+        /* 移除workspace-nav的margin-top和margin-bottom，让菜单顶住上下端 */
+        
+        
+        /* 调整workspace布局，让菜单可以延伸到底部 */
+        .production-management-layout {
+            align-items: stretch;
+        }
+        
+        /* 左侧菜单容器样式 - 位置锁定，不允许改变 */
+        
+        
+        
+        
+        /* 美化滚动条 */
+        
+        
+        
+        
+        
+        
+        
+        
+        /* 收起导航按钮样式 */
+        
+        
+        
+        
+        
+        
+        /* 菜单项美化样式 - 压缩行距 */
+        
+        
+        /* 子菜单项额外缩进 */
+        
+        
+        
+        
+        
+        
+        
+        
+        /* 子菜单项激活指示器位置调整 */
+        
+        
+        .nav-icon {
+            font-size: 1em;
+            width: 18px;
+            text-align: center;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        
+        .nav-label {
+            flex: 1;
+            line-height: 1.4;
+        }
+        
+        /* 菜单项内边距优化 */
+        
+        
+        
+        
+        /* 确保链接可点击 */
+        
+        
+        /* 链接内的子元素不响应点击，让点击事件冒泡到链接本身 */
+        
+        
+        /* 菜单组样式 - 添加间距避免重叠 */
+        
+        
+        /* 菜单组标题样式 */
+        
+        
+        /* 菜单组子项容器样式 */
+        
+        
+        /* 菜单收起状态 */
+        
+        
+        /* 收起导航后，主内容区域自动扩展填充空白 */
+        .production-management-layout.collapsed {
+            grid-template-columns: 60px 1fr !important;
+        }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% include "shared/_top_nav.html" %}
+
+    <div class="container-fluid py-3">
+        {% if messages %}
+        <div class="alert-container">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block breadcrumb %}
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">首页</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'production_pages:project_list' %}">生产管理</a></li>
+                {% block breadcrumb_items %}{% endblock %}
+            </ol>
+        </nav>
+        {% endblock %}
+        
+        {# 生产管理布局 - 使用与客户管理一致的格式 #}
+        <div class="workspace workspace-two-column production-management-layout">
+            <!-- 左侧导航菜单 -->
+                                    <aside class="workspace-nav">
+                <nav class="sidenav">
+                    <div class="sidenav-section">
+                        <div class="sidenav-links">
+                        {% if production_sidebar_nav %}
+                            {% for menu_group in production_sidebar_nav %}
+                            <div class="sidenav-item {% if menu_group.active or menu_group.expanded %}expanded{% endif %}">
+                                <a class="sidenav-link" 
+                                   href="{% if menu_group.url %}{{ menu_group.url }}{% else %}#{% endif %}" 
+                                   {% if menu_group.active %}data-active="true"{% endif %}>
+                                    {% if menu_group.icon %}<span>{{ menu_group.icon }}</span>{% endif %}
+                                    <span>{{ menu_group.label }}</span>
+                                    {% if menu_group.children %}<span class="menu-arrow">▶</span>{% endif %}
+                                </a>
+                                {% if menu_group.children %}
+                                <div class="submenu">
+                                    {% for child in menu_group.children %}
+                                    <a class="sidenav-link sidenav-sub-link" 
+                                       href="{{ child.url }}" 
+                                       {% if child.active %}data-active="true"{% endif %}>
+                                        {% if child.icon %}<span>{{ child.icon }}</span>{% endif %}
+                                        <span>{{ child.label }}</span>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                        </div>
+                    </div>
+                </nav>
+            </aside>
+            
+            <!-- 主内容区域 -->
+            <main class="workspace-main production-content">
+            {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 导航栏折叠功能已由sidebar.js统一处理 -->
+    {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/sidebar.js' %}"></script>
+</body>
+</html>
+

@@ -1,0 +1,265 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block page_title %}工作流引擎{% endblock %}
+
+{% block module_extra_css %}
+<style>
+    .workflow-stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        padding: 24px;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .workflow-stats-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    }
+    .workflow-stats-card .stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 12px 0;
+    }
+    .workflow-stats-card .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    .workflow-stats-card .stat-icon {
+        font-size: 3rem;
+        opacity: 0.8;
+    }
+    .quick-action-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.3s ease;
+        background: white;
+        cursor: pointer;
+        height: 100%;
+    }
+    .quick-action-card:hover {
+        border-color: #667eea;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        transform: translateY(-2px);
+    }
+    .quick-action-card .action-icon {
+        font-size: 2.5rem;
+        margin-bottom: 12px;
+    }
+    .quick-action-card .action-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+    }
+    .quick-action-card .action-desc {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    .pending-approval-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #ff4757;
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    .page-hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        padding: 32px;
+        color: white;
+        margin-bottom: 32px;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+    .page-hero h1 {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+    .page-hero p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="page-hero">
+        <h1>🔄 工作流引擎</h1>
+        <p>管理审批流程和工单，提升工作效率</p>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row g-4 mb-4">
+        <!-- 流程模板统计 -->
+        <div class="col-md-3">
+            <div class="workflow-stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-label">流程模板</div>
+                        <div class="stat-value">{{ summary_cards.0.value|default:"0" }}</div>
+                        <div class="stat-label">{{ summary_cards.0.subvalue|default:"" }}</div>
+                    </div>
+                    <div class="stat-icon">🔄</div>
+                </div>
+                {% if summary_cards.0.url %}
+                <a href="{{ summary_cards.0.url }}" class="text-white text-decoration-none mt-3 d-block">
+                    查看全部 →
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 待我审批 -->
+        <div class="col-md-3">
+            <div class="workflow-stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); position: relative;">
+                {% if summary_cards.1.value|default:"0" != "0" %}
+                <div class="pending-approval-badge">{{ summary_cards.1.value }}</div>
+                {% endif %}
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-label">待我审批</div>
+                        <div class="stat-value">{{ summary_cards.1.value|default:"0" }}</div>
+                        <div class="stat-label">{{ summary_cards.1.subvalue|default:"待处理的审批" }}</div>
+                    </div>
+                    <div class="stat-icon">📝</div>
+                </div>
+                {% if summary_cards.1.url %}
+                <a href="{{ summary_cards.1.url }}" class="text-white text-decoration-none mt-3 d-block">
+                    立即处理 →
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 我的申请 -->
+        <div class="col-md-3">
+            <div class="workflow-stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-label">我的申请</div>
+                        <div class="stat-value">{{ summary_cards.2.value|default:"0" }}</div>
+                        <div class="stat-label">{{ summary_cards.2.subvalue|default:"进行中的申请" }}</div>
+                    </div>
+                    <div class="stat-icon">📋</div>
+                </div>
+                {% if summary_cards.2.url %}
+                <a href="{{ summary_cards.2.url }}" class="text-white text-decoration-none mt-3 d-block">
+                    查看详情 →
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 审批统计 -->
+        <div class="col-md-3">
+            <div class="workflow-stats-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-label">本月审批</div>
+                        <div class="stat-value">{{ summary_cards.3.value|default:"0" }}</div>
+                        <div class="stat-label">{{ summary_cards.3.subvalue|default:"已完成审批" }}</div>
+                    </div>
+                    <div class="stat-icon">✅</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 快捷操作 -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <a href="{% url 'workflow_engine:workflow_list' %}" class="text-decoration-none">
+                <div class="quick-action-card">
+                    <div class="action-icon">🔄</div>
+                    <div class="action-title">流程模板</div>
+                    <div class="action-desc">管理和配置审批流程模板</div>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-md-3">
+            <a href="{% url 'workflow_engine:workflow_create' %}" class="text-decoration-none">
+                <div class="quick-action-card">
+                    <div class="action-icon">➕</div>
+                    <div class="action-title">创建流程</div>
+                    <div class="action-desc">创建新的审批流程模板</div>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-md-3">
+            <a href="{% url 'workflow_engine:approval_list' %}" class="text-decoration-none">
+                <div class="quick-action-card" style="position: relative;">
+                    {% if summary_cards.1.value|default:"0" != "0" %}
+                    <div class="pending-approval-badge" style="background: #ff4757;">{{ summary_cards.1.value }}</div>
+                    {% endif %}
+                    <div class="action-icon">📝</div>
+                    <div class="action-title">我的审批</div>
+                    <div class="action-desc">查看待审批和我的申请</div>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-md-3">
+            <a href="{% url 'workflow_engine:workflow_list' %}?status=active" class="text-decoration-none">
+                <div class="quick-action-card">
+                    <div class="action-icon">📊</div>
+                    <div class="action-title">审批统计</div>
+                    <div class="action-desc">查看审批数据和报表</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- 功能模块 -->
+    {% if sections %}
+    {% for section in sections %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">{{ section.title }}</h5>
+            <small class="text-muted">{{ section.description }}</small>
+        </div>
+        <div class="card-body">
+            {% if section.layout == 'grid' %}
+            <div class="row g-4">
+                {% for item in section.items %}
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="fs-2 me-3">{{ item.icon }}</span>
+                                <div>
+                                    <h5 class="card-title mb-0">{{ item.label }}</h5>
+                                </div>
+                            </div>
+                            <p class="card-text text-muted">{{ item.description }}</p>
+                            {% if item.url %}
+                            <a href="{{ item.url }}" class="btn btn-primary btn-sm">{{ item.link_label|default:"进入" }}</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-直接执行SQL创建交付管理模块的表
+直接执行SQL创建收发管理模块的表
 绕过Django迁移系统的依赖问题
 """
 import os
@@ -98,7 +98,7 @@ if __name__ == '__main__':
         print(f"❌ SQL文件不存在: {sql_file}")
         sys.exit(1)
     
-    print("🚀 开始创建交付管理模块的数据库表...")
+    print("🚀 开始创建收发管理模块的数据库表...")
     print(f"📄 SQL文件: {sql_file}\n")
     
     # 检查现有表

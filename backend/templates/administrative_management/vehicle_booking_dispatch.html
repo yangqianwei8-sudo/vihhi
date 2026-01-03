@@ -1,0 +1,86 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">申请信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">申请单号</span>
+                    <span class="info-value"><code>{{ booking.booking_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请人</span>
+                    <span class="info-value">{{ booking.applicant.get_full_name|default:booking.applicant.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">用车时间</span>
+                    <span class="info-value">{{ booking.start_time|date:"Y-m-d H:i" }} 至 {{ booking.end_time|date:"Y-m-d H:i" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">目的地</span>
+                    <span class="info-value">{{ booking.destination|default:"-" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-card">
+            <h5>调度信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">分配车辆</label>
+                    <select name="vehicle" class="form-select">
+                        <option value="">保持原车辆</option>
+                        {% for vehicle in available_vehicles %}
+                        <option value="{{ vehicle.id }}" {% if booking.vehicle.id == vehicle.id %}selected{% endif %}>
+                            {{ vehicle.plate_number }} - {{ vehicle.brand }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">分配驾驶员</label>
+                    <select name="driver" class="form-select">
+                        <option value="">保持原驾驶员</option>
+                        {% for driver in available_drivers %}
+                        <option value="{{ driver.id }}" {% if booking.driver.id == driver.id %}selected{% endif %}>
+                            {{ driver.get_full_name|default:driver.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">出发里程数</label>
+                    <input type="number" name="mileage_before" class="form-control" value="{{ booking.mileage_before|default:'' }}" placeholder="请输入出发里程数">
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'admin_pages:vehicle_booking_detail' booking.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-info">
+                <i class="bi bi-truck"></i> 确认调度
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

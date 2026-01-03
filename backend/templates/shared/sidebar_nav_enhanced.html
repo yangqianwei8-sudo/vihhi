@@ -1,0 +1,92 @@
+{% comment %}
+增强版左侧导航栏模板片段
+基于 module_base.html 的实现，包含完整的功能特性
+
+使用方式：
+{% include 'shared/sidebar_nav_enhanced.html' with menu_items=module_sidebar_nav %}
+
+参数说明：
+- menu_items: 菜单项列表，每个菜单项包含：
+    - label: 菜单标签（必需）
+    - icon: 图标（可选）
+    - url: 链接地址（可选，默认'#'）
+    - active: 是否激活（布尔值，可选）
+    - expanded: 是否展开（布尔值，可选）
+    - children: 子菜单项列表（可选）
+
+特性：
+- 完整的无障碍支持（aria-expanded, aria-controls, aria-current）
+- 支持与 sidebar.js 交互（sidenav-toggle 类）
+- 规范的类名结构（sidenav-icon, sidenav-label）
+- 精确的子菜单控制（唯一ID）
+- 支持展开/折叠状态管理
+{% endcomment %}
+
+{% if menu_items %}
+<aside class="workspace-nav" role="complementary" aria-label="模块导航">
+    <nav class="sidenav" aria-label="模块导航">
+        <div class="sidenav-section">
+            <div class="sidenav-links">
+                {% for menu_group in menu_items %}
+                {% with has_children=menu_group.children|length|default:0 %}
+                {% with is_active=menu_group.active|default:False is_expanded=menu_group.expanded|default:False %}
+                {% with menu_group_id=menu_group.id|default:forloop.counter %}
+                <div class="sidenav-item 
+                            {% if is_active %}active{% endif %}
+                            {% if is_active or is_expanded %}expanded{% endif %}
+                            {% if has_children > 0 %}has-children{% endif %}"
+                     data-menu-id="{{ menu_group_id }}">
+                    
+                    {% if has_children > 0 %}
+                    {# 有子菜单：使用链接，点击展开/折叠 #}
+                    <a class="sidenav-link sidenav-toggle" 
+                       href="{{ menu_group.url|default:'#' }}"
+                       role="button"
+                       aria-expanded="{% if is_active or is_expanded %}true{% else %}false{% endif %}"
+                       aria-controls="submenu-{{ menu_group_id }}"
+                       id="menu-link-{{ menu_group_id }}"
+                       {% if is_active %}data-active="true" aria-current="page"{% endif %}
+                       title="{{ menu_group.label }}">
+                        {% if menu_group.icon %}<span class="sidenav-icon" aria-hidden="true">{{ menu_group.icon }}</span>{% endif %}
+                        <span class="sidenav-label">{{ menu_group.label }}</span>
+                    </a>
+                    
+                    <div id="submenu-{{ menu_group_id }}" 
+                         class="submenu" 
+                         role="menu"
+                         aria-labelledby="menu-link-{{ menu_group_id }}"
+                         {% if not is_active and not is_expanded %}style="display: none;"{% endif %}>
+                        {% for child in menu_group.children %}
+                        <a class="sidenav-link sidenav-sub-link {% if child.active %}active{% endif %}" 
+                           href="{{ child.url|default:'#' }}" 
+                           role="menuitem"
+                           {% if child.active %}data-active="true" aria-current="page"{% endif %}
+                           title="{{ child.label }}">
+                            {% if child.icon %}<span class="sidenav-icon" aria-hidden="true">{{ child.icon }}</span>{% endif %}
+                            <span class="sidenav-label">{{ child.label }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    
+                    {% else %}
+                    {# 无子菜单：使用普通链接 #}
+                    <a class="sidenav-link {% if is_active %}active{% endif %}" 
+                       href="{{ menu_group.url|default:'#' }}"
+                       {% if is_active %}data-active="true" aria-current="page"{% endif %}
+                       title="{{ menu_group.label }}">
+                        {% if menu_group.icon %}<span class="sidenav-icon" aria-hidden="true">{{ menu_group.icon }}</span>{% endif %}
+                        <span class="sidenav-label">{{ menu_group.label }}</span>
+                    </a>
+                    {% endif %}
+                    
+                </div>
+                {% endwith %}
+                {% endwith %}
+                {% endwith %}
+                {% endfor %}
+            </div>
+        </div>
+    </nav>
+</aside>
+{% endif %}
+

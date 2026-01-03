@@ -1,0 +1,318 @@
+/**
+ * 维海科技信息化管理平台 - 导航组件样式
+ * 版本: 3.0
+ */
+
+/* ============================================
+   导航栏样式
+   ============================================ */
+
+.navbar {
+    background: linear-gradient(135deg, var(--vh-primary) 0%, var(--vh-primary-dark) 100%);
+    box-shadow: 0 4px 20px rgba(15, 30, 58, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1030 !important;
+    width: 100%;
+    height: var(--navbar-height) !important;
+    min-height: var(--navbar-height) !important;
+    padding: 0;
+    backdrop-filter: blur(10px);
+    transition: all var(--transition-base);
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+.navbar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.navbar:hover {
+    box-shadow: 0 6px 24px rgba(15, 30, 58, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+.navbar-brand {
+    color: #fff !important;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-base);
+    position: relative;
+    z-index: 1;
+    font-size: var(--font-size-lg);
+}
+
+.navbar-brand:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+    color: #fff !important;
+}
+
+.navbar-brand i {
+    font-size: 24px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.navbar-nav {
+    position: relative;
+    z-index: 1;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center;
+}
+
+.nav-item {
+    margin: 0 2px;
+    position: relative;
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: var(--spacing-xs) var(--spacing-sm) !important;
+    border-radius: var(--radius-sm);
+    position: relative;
+    font-weight: 500;
+    font-size: var(--font-size-base);
+    white-space: nowrap;
+}
+
+.nav-link::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+    transition: width var(--transition-base);
+    border-radius: 2px;
+}
+
+.nav-link:hover,
+.nav-link:focus {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+}
+
+.nav-link:hover::before {
+    width: calc(100% - var(--spacing-md));
+}
+
+.nav-link.active {
+    color: #fff !important;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 确保激活状态不使用红色主题色 */
+.navbar .nav-link.active {
+    color: #fff !important;
+}
+
+.navbar .nav-link.active:hover {
+    color: #fff !important;
+}
+
+.nav-link.active::before {
+    width: calc(100% - var(--spacing-md));
+    background: linear-gradient(90deg, transparent, #fff, transparent);
+    height: 3px;
+}
+
+/* 面包屑导航 */
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.breadcrumb-item a {
+    color: var(--vh-text-muted);
+    transition: color var(--transition-base);
+}
+
+.breadcrumb-item a:hover {
+    color: var(--vh-primary);
+}
+
+.breadcrumb-item.active {
+    color: var(--vh-text);
+}
+
+/* 面包屑导航容器 - 统一间距控制 */
+.breadcrumb-nav {
+    margin-bottom: var(--spacing-md);
+}
+
+/* 面包屑分隔符 - 使用伪元素自动生成 */
+.breadcrumb-item:not(:last-child)::after {
+    content: '/';
+    margin-left: var(--spacing-sm);
+    margin-right: var(--spacing-sm);
+    color: var(--vh-text-light);
+    font-size: var(--font-size-sm);
+}
+
+/* 响应式优化 - 移动端 */
+@media (max-width: 576px) {
+    .breadcrumb {
+        font-size: var(--font-size-sm);
+    }
+    
+    .breadcrumb-item {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 120px;
+    }
+}
+
+/* ============================================
+   下拉菜单样式
+   ============================================ */
+.navbar-nav .nav-item.dropdown {
+    position: relative;
+}
+
+.dropdown-menu {
+    background: #fff;
+    border: 1px solid rgba(20, 47, 91, 0.15);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm) 0;
+    min-width: 180px;
+}
+
+.dropdown-item {
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--vh-text);
+    font-size: var(--font-size-base);
+    transition: background var(--transition-base);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background: rgba(20, 47, 91, 0.08);
+    color: var(--vh-primary);
+}
+
+.dropdown-divider {
+    margin: var(--spacing-xs) 0;
+    border-top: 1px solid var(--vh-border);
+}
+
+.dropdown-toggle::after {
+    margin-left: var(--spacing-xs);
+    vertical-align: 0.2em;
+}
+
+/* ============================================
+   确保导航栏在所有屏幕尺寸下都保持横向布局
+   ============================================ */
+.navbar .container-fluid {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 0 var(--spacing-md);
+    box-sizing: border-box;
+}
+
+.navbar-collapse {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-grow: 1;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* 确保导航菜单项横向排列，不换行 */
+.navbar-nav {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* 左侧导航菜单 */
+.navbar-nav.me-auto {
+    flex: 1;
+    margin-right: var(--spacing-md);
+}
+
+/* 右侧导航菜单（用户信息和退出登录） */
+.navbar-nav:not(.me-auto) {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.navbar-nav::-webkit-scrollbar {
+    height: 4px;
+}
+
+.navbar-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.navbar-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+.navbar-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* 隐藏移动端的折叠按钮，强制显示横向菜单 */
+@media (max-width: 991.98px) {
+    .navbar-toggler {
+        display: none !important;
+    }
+    
+    .navbar-collapse {
+        display: flex !important;
+        flex-direction: row !important;
+    }
+}
+

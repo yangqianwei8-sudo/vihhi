@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}维海科技信息化管理平台{% endblock %}</title>
+    {% load static %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+    <style>
+        body {
+            padding-top: 56px; /* 为固定导航栏留出空间 */
+        }
+        
+        /* 行政管理模块布局 - 使用工作台布局样式 */
+        .administrative-layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 24px;
+            margin-top: 12px;
+        }
+        
+        /* 主内容区域 */
+        .administrative-content {
+            background: var(--vh-card-bg);
+            border-radius: 0;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--vh-border);
+            padding: var(--spacing-lg);
+            min-width: 0;
+        }
+        
+        /* 分组菜单标题样式 */
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        /* 分组子菜单容器 */
+        
+        
+        
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% include "shared/_top_nav.html" %}
+
+    <div class="container-fluid py-3">
+        {% if messages %}
+        <div class="alert-container">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block breadcrumb %}
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">首页</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'admin_pages:administrative_home' %}">行政管理</a></li>
+                {% block breadcrumb_items %}{% endblock %}
+            </ol>
+        </nav>
+        {% endblock %}
+
+        {% comment %}行政管理模块左侧菜单布局 - 使用样式文件设计规范{% endcomment %}
+        <div class="administrative-layout">
+                        <aside class="workspace-nav">
+                <nav class="sidenav">
+                    <div class="sidenav-section">
+                        <div class="sidenav-links">
+                        {% if sidebar_menu %}
+                            {% for menu_group in sidebar_menu %}
+                            <div class="sidenav-item {% if menu_group.active or menu_group.expanded %}expanded{% endif %}">
+                                <a class="sidenav-link" 
+                                   href="{% if menu_group.url %}{{ menu_group.url }}{% else %}#{% endif %}" 
+                                   {% if menu_group.active %}data-active="true"{% endif %}>
+                                    {% if menu_group.icon %}<span>{{ menu_group.icon }}</span>{% endif %}
+                                    <span>{{ menu_group.label }}</span>
+                                    {% if menu_group.children %}<span class="menu-arrow">▶</span>{% endif %}
+                                </a>
+                                {% if menu_group.children %}
+                                <div class="submenu">
+                                    {% for child in menu_group.children %}
+                                    <a class="sidenav-link sidenav-sub-link" 
+                                       href="{{ child.url }}" 
+                                       {% if child.active %}data-active="true"{% endif %}>
+                                        {% if child.icon %}<span>{{ child.icon }}</span>{% endif %}
+                                        <span>{{ child.label }}</span>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                        </div>
+                    </div>
+                </nav>
+            </aside>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-info m-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            暂无可用菜单
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="workspace-main">
+                <div class="administrative-content">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleGroup(header) {
+            const items = header.nextElementSibling;
+            const isCollapsed = items.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                items.classList.remove('collapsed');
+                header.classList.add('expanded');
+            } else {
+                items.classList.add('collapsed');
+                header.classList.remove('expanded');
+            }
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/sidebar.js' %}"></script>
+</body>
+</html>
+

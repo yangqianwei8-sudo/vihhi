@@ -1,0 +1,232 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card-header {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    .info-card-title {
+        margin: 0;
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .info-grid {
+        display: grid;
+        gap: var(--spacing-md);
+    }
+    .info-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+    .info-label {
+        font-size: var(--font-size-sm);
+        color: var(--vh-text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: var(--font-size-base);
+        color: var(--vh-text);
+        font-weight: 500;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-draft { background: #f3f4f6; color: #374151; }
+    .status-pending_approval { background: #fff3cd; color: #856404; }
+    .status-approved { background: #cfe2ff; color: #084298; }
+    .status-rejected { background: #f8d7da; color: #842029; }
+    .status-executed { background: #d1e7dd; color: #0f5132; }
+    .adjust-positive { color: var(--vh-success); }
+    .adjust-negative { color: var(--vh-error); }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:inventory_adjust_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if can_edit %}
+            <a href="{% url 'admin_pages:inventory_adjust_update' adjust.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+            {% if can_approve %}
+            <a href="{% url 'admin_pages:inventory_adjust_approve' adjust.id %}" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> 审批
+            </a>
+            {% endif %}
+            {% if can_execute %}
+            <a href="{% url 'admin_pages:inventory_adjust_execute' adjust.id %}" class="btn btn-info">
+                <i class="bi bi-gear"></i> 执行
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">调整单号</span>
+                    <span class="info-value"><code>{{ adjust.adjust_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">调整日期</span>
+                    <span class="info-value">{{ adjust.adjust_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">创建人</span>
+                    <span class="info-value">{{ adjust.created_by.get_full_name|default:adjust.created_by.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge status-{{ adjust.status }}">
+                            {{ adjust.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">调整原因</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ adjust.reason }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 调整明细 -->
+    {% if items %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">调整明细</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>用品编码</th>
+                            <th>用品名称</th>
+                            <th>调整数量</th>
+                            <th>调整金额</th>
+                            <th>备注</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td><code>{{ item.supply.code }}</code></td>
+                            <td>{{ item.supply.name }}</td>
+                            <td>
+                                {% if item.adjust_quantity > 0 %}
+                                <span class="adjust-positive">+{{ item.adjust_quantity }}</span>
+                                {% elif item.adjust_quantity < 0 %}
+                                <span class="adjust-negative">{{ item.adjust_quantity }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td>¥{{ item.adjust_amount|floatformat:2 }}</td>
+                            <td>{{ item.notes|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 审批信息 -->
+    {% if adjust.approver %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">审批信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">审批人</span>
+                    <span class="info-value">{{ adjust.approver.get_full_name|default:adjust.approver.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">审批时间</span>
+                    <span class="info-value">{{ adjust.approved_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 执行信息 -->
+    {% if adjust.executed_by %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">执行信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">执行人</span>
+                    <span class="info-value">{{ adjust.executed_by.get_full_name|default:adjust.executed_by.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">执行时间</span>
+                    <span class="info-value">{{ adjust.executed_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注 -->
+    {% if adjust.notes %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <p style="white-space: pre-wrap; margin: 0;">{{ adjust.notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

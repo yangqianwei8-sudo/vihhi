@@ -1,0 +1,186 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}快递公司详情 - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题和操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">🚚 快递公司详情</h2>
+            <p class="text-muted mb-0">{{ company.name }}</p>
+        </div>
+        <div>
+            <a href="{% url 'delivery_pages:express_company_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if can_edit %}
+            <a href="{% url 'delivery_pages:express_company_edit' company.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            <a href="{% url 'delivery_pages:express_company_delete' company.id %}" 
+               class="btn btn-danger" 
+               onclick="return confirm('确定要删除快递公司\"{{ company.name }}\"吗？');">
+                <i class="bi bi-trash"></i> 删除
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息卡片 -->
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">快递公司名称</span>
+                    <span class="info-value">
+                        <strong>{{ company.name }}</strong>
+                        {% if company.is_default %}
+                            <span class="badge bg-warning text-dark ms-2">默认</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        {% if company.is_active %}
+                            <span class="badge bg-success">启用</span>
+                        {% else %}
+                            <span class="badge bg-danger">禁用</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">快递公司代码</span>
+                    <span class="info-value">
+                        {% if company.code %}
+                            <code>{{ company.code }}</code>
+                        {% else %}
+                            <span class="text-muted">未设置</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">排序</span>
+                    <span class="info-value">{{ company.sort_order }}</span>
+                </div>
+                {% if company.alias %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">别名</span>
+                    <span class="info-value">
+                        {% for alias in company.get_aliases_list %}
+                            <span class="badge bg-secondary me-1">{{ alias }}</span>
+                        {% endfor %}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 联系方式卡片 -->
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">联系方式</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                {% if company.contact_phone %}
+                <div class="info-item">
+                    <span class="info-label">联系电话</span>
+                    <span class="info-value">
+                        <a href="tel:{{ company.contact_phone }}">{{ company.contact_phone }}</a>
+                    </span>
+                </div>
+                {% endif %}
+                {% if company.contact_email %}
+                <div class="info-item">
+                    <span class="info-label">联系邮箱</span>
+                    <span class="info-value">
+                        <a href="mailto:{{ company.contact_email }}">{{ company.contact_email }}</a>
+                    </span>
+                </div>
+                {% endif %}
+                {% if company.website %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">官网</span>
+                    <span class="info-value">
+                        <a href="{{ company.website }}" target="_blank" rel="noopener noreferrer">
+                            {{ company.website }}
+                            <i class="bi bi-box-arrow-up-right ms-1"></i>
+                        </a>
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 使用统计卡片 -->
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">使用统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">使用次数</span>
+                    <span class="info-value">
+                        <strong>{{ usage_count }}</strong> 次
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 备注卡片 -->
+    {% if company.notes %}
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-item info-item-full-width">
+                <span class="info-value">{{ company.notes|linebreaks }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 时间信息卡片 -->
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">时间信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ company.created_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">更新时间</span>
+                    <span class="info-value">{{ company.updated_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% if company.created_by %}
+                <div class="info-item">
+                    <span class="info-label">创建人</span>
+                    <span class="info-value">{{ company.created_by.get_full_name|default:company.created_by.username }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

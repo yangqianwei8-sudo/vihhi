@@ -1,0 +1,350 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    /* 时间轴样式 */
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    .timeline-item {
+        position: relative;
+        padding-bottom: var(--spacing-lg);
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -25px;
+        top: 8px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--vh-primary);
+        border: 2px solid var(--vh-card-bg);
+        z-index: 2;
+    }
+    .timeline-item::after {
+        content: '';
+        position: absolute;
+        left: -20px;
+        top: 20px;
+        width: 2px;
+        height: calc(100% - 8px);
+        background: var(--vh-border);
+    }
+    .timeline-item:last-child::after {
+        display: none;
+    }
+    /* 优先级徽章样式 */
+    .priority-badge {
+        padding: 2px 8px;
+        border-radius: 8px;
+        font-size: var(--font-size-xs);
+        font-weight: 500;
+    }
+    .priority-low { background: #e7f3ff; color: #0066cc; }
+    .priority-normal { background: #f0f0f0; color: #666; }
+    .priority-high { background: #fff4e6; color: #cc6600; }
+    .priority-urgent { background: #ffe6e6; color: #cc0000; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:affair_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if can_start %}
+            <a href="{% url 'admin_pages:affair_start' affair_id=affair.id %}" class="btn btn-success" onclick="return confirm('确认开始处理此事务？');">
+                <i class="bi bi-play-circle"></i> 开始处理
+            </a>
+            {% endif %}
+            {% if can_complete %}
+            <a href="{% url 'admin_pages:affair_complete' affair_id=affair.id %}" class="btn btn-success" onclick="return confirm('确认完成此事务？');">
+                <i class="bi bi-check-circle"></i> 完成
+            </a>
+            {% endif %}
+            {% if can_edit %}
+            <a href="{% url 'admin_pages:affair_update' affair_id=affair.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+            {% if can_cancel %}
+            <a href="{% url 'admin_pages:affair_cancel' affair_id=affair.id %}" class="btn btn-danger" onclick="return confirm('确认取消此事务？');">
+                <i class="bi bi-x-circle"></i> 取消
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">事务编号</span>
+                    <span class="info-value"><code>{{ affair.affair_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">事务标题</span>
+                    <span class="info-value">{{ affair.title }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">事务类型</span>
+                    <span class="info-value">{{ affair.get_affair_type_display }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">优先级</span>
+                    <span class="info-value">
+                        <span class="priority-badge priority-{{ affair.priority }}">
+                            {{ affair.get_priority_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        {% if affair.status == 'pending' %}
+                            <span class="badge bg-warning">待处理</span>
+                        {% elif affair.status == 'in_progress' %}
+                            <span class="badge bg-info">处理中</span>
+                        {% elif affair.status == 'completed' %}
+                            <span class="badge bg-success">已完成</span>
+                        {% elif affair.status == 'cancelled' %}
+                            <span class="badge bg-secondary">已取消</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ affair.get_status_display }}</span>
+                        {% endif %}
+                        {% if affair.is_overdue %}
+                            <span class="badge bg-danger ms-2">已逾期</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">进度</span>
+                    <span class="info-value">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: {{ affair.progress }}%">
+                                    {{ affair.progress }}%
+                                </div>
+                            </div>
+                        </div>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">负责人</span>
+                    <span class="info-value">{{ affair.responsible_user.get_full_name|default:affair.responsible_user.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">创建人</span>
+                    <span class="info-value">{{ affair.created_by.get_full_name|default:affair.created_by.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ affair.created_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">更新时间</span>
+                    <span class="info-value">{{ affair.updated_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 事务内容 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">事务内容</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-item">
+                <span class="info-value" style="white-space: pre-wrap;">{{ affair.content }}</span>
+            </div>
+            {% if affair.attachment %}
+            <div class="info-item mt-3">
+                <span class="info-label">附件</span>
+                <span class="info-value">
+                    <a href="{{ affair.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-file-earmark"></i> 下载附件
+                    </a>
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 参与人员 -->
+    {% if affair.participants.exists %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">参与人员</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% for participant in affair.participants.all %}
+                <div class="info-item">
+                    <span class="info-value">{{ participant.get_full_name|default:participant.username }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 时间安排 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">时间安排</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">计划开始时间</span>
+                    <span class="info-value">{{ affair.planned_start_time|date:"Y-m-d H:i" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">计划完成时间</span>
+                    <span class="info-value">{{ affair.planned_end_time|date:"Y-m-d H:i" }}</span>
+                </div>
+                {% if affair.actual_start_time %}
+                <div class="info-item">
+                    <span class="info-label">实际开始时间</span>
+                    <span class="info-value">{{ affair.actual_start_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                {% if affair.actual_end_time %}
+                <div class="info-item">
+                    <span class="info-label">实际完成时间</span>
+                    <span class="info-value">{{ affair.actual_end_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 处理说明 -->
+    {% if affair.processing_notes %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">处理说明</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-item">
+                <span class="info-value" style="white-space: pre-wrap;">{{ affair.processing_notes }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 完成说明 -->
+    {% if affair.completion_notes %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">完成说明</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-item">
+                <span class="info-value" style="white-space: pre-wrap;">{{ affair.completion_notes }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 进度记录 -->
+    {% if progress_records %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">进度记录</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="timeline">
+                {% for record in progress_records %}
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <strong>{{ record.recorder.get_full_name|default:record.recorder.username }}</strong>
+                            <span class="text-muted ms-2">{{ record.record_time|date:"Y-m-d H:i:s" }}</span>
+                        </div>
+                        <span class="badge bg-primary">{{ record.progress }}%</span>
+                    </div>
+                    {% if record.notes %}
+                    <div class="text-muted mb-2" style="white-space: pre-wrap;">{{ record.notes }}</div>
+                    {% endif %}
+                    {% if record.attachment %}
+                    <div>
+                        <a href="{{ record.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-file-earmark"></i> 查看附件
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 状态历史 -->
+    {% if status_history %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">状态历史</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="timeline">
+                {% for history in status_history %}
+                <div class="timeline-item">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <strong>{{ history.operator.get_full_name|default:history.operator.username }}</strong>
+                            <span class="text-muted ms-2">{{ history.operation_time|date:"Y-m-d H:i:s" }}</span>
+                        </div>
+                        <div>
+                            {% if history.old_status %}
+                            <span class="badge bg-secondary">
+                                {% if history.old_status == 'pending' %}待处理
+                                {% elif history.old_status == 'in_progress' %}处理中
+                                {% elif history.old_status == 'completed' %}已完成
+                                {% elif history.old_status == 'cancelled' %}已取消
+                                {% else %}{{ history.old_status }}{% endif %}
+                            </span>
+                            <i class="bi bi-arrow-right mx-1"></i>
+                            {% endif %}
+                            <span class="badge bg-primary">
+                                {% if history.new_status == 'pending' %}待处理
+                                {% elif history.new_status == 'in_progress' %}处理中
+                                {% elif history.new_status == 'completed' %}已完成
+                                {% elif history.new_status == 'cancelled' %}已取消
+                                {% else %}{{ history.new_status }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% if history.notes %}
+                    <div class="text-muted" style="white-space: pre-wrap;">{{ history.notes }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

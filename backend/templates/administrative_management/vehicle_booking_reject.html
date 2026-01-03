@@ -1,0 +1,62 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">申请信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">申请单号</span>
+                    <span class="info-value"><code>{{ booking.booking_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请人</span>
+                    <span class="info-value">{{ booking.applicant.get_full_name|default:booking.applicant.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">车辆</span>
+                    <span class="info-value">{{ booking.vehicle.plate_number }} - {{ booking.vehicle.brand }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">用车时间</span>
+                    <span class="info-value">{{ booking.start_time|date:"Y-m-d H:i" }} 至 {{ booking.end_time|date:"Y-m-d H:i" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-card">
+            <h5>拒绝原因</h5>
+            <div class="mb-3">
+                <label class="form-label required">请填写拒绝原因</label>
+                <textarea name="approval_notes" class="form-control" rows="4" placeholder="请输入拒绝原因..." required></textarea>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'admin_pages:vehicle_booking_detail' booking.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-x-circle"></i> 确认拒绝
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

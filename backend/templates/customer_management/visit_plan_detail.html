@@ -1,0 +1,289 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    .step-indicator::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e0e0e0;
+        z-index: 0;
+    }
+    .step-item {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e0e0e0;
+        color: #666;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.5rem;
+        font-weight: bold;
+        border: 3px solid #fff;
+    }
+    .step-item.active .step-number {
+        background: #0d6efd;
+        color: #fff;
+    }
+    .step-item.completed .step-number {
+        background: #198754;
+        color: #fff;
+    }
+    .step-label {
+        font-size: 0.875rem;
+        color: #666;
+    }
+    .step-item.active .step-label {
+        color: #0d6efd;
+        font-weight: bold;
+    }
+    .step-item.completed .step-label {
+        color: #198754;
+    }
+    .step-content {
+        margin-top: 2rem;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <div class="container-fluid py-4">
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-end gap-2 mb-3">
+            {% if can_edit %}
+                {% if current_step == 1 %}
+                <a href="{% url 'business_pages:visit_plan_checkin' visit_plan.id %}" class="btn btn-primary">继续：拜访定位打卡</a>
+                {% elif current_step == 2 %}
+                <a href="{% url 'business_pages:visit_plan_review' visit_plan.id %}" class="btn btn-primary">继续：拜访结果复盘</a>
+                {% endif %}
+            {% endif %}
+            <a href="{% url 'business_pages:customer_visit' %}" class="btn btn-outline-secondary">返回列表</a>
+        </div>
+
+        <!-- 步骤指示器 -->
+        <div class="step-indicator">
+            <div class="step-item {% if current_step >= 1 %}completed{% endif %} {% if current_step == 1 %}active{% endif %}">
+                <div class="step-number">1</div>
+                <div class="step-label">创建计划</div>
+            </div>
+            <div class="step-item {% if current_step >= 2 %}completed{% endif %} {% if current_step == 2 %}active{% endif %}">
+                <div class="step-number">2</div>
+                <div class="step-label">拜访定位打卡</div>
+            </div>
+            <div class="step-item {% if current_step >= 3 %}completed{% endif %} {% if current_step == 3 %}active{% endif %}">
+                <div class="step-number">3</div>
+                <div class="step-label">拜访结果复盘</div>
+            </div>
+        </div>
+
+        <!-- 第一步：创建计划 -->
+        <div class="info-card mb-3">
+            <div class="info-card-header">
+                <h5 class="info-card-title">
+                    <span class="badge bg-primary me-2">步骤 1</span>创建计划
+                    {% if current_step >= 1 %}
+                    <span class="badge bg-success ms-2">已完成</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">客户</span>
+                        <span class="info-value">
+                            <a href="{% url 'business_pages:customer_detail' visit_plan.client.id %}" class="text-decoration-none">
+                                {{ visit_plan.client.name }}
+                            </a>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">计划日期</span>
+                        <span class="info-value">{{ visit_plan.plan_date|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">计划标题</span>
+                        <span class="info-value">{{ visit_plan.plan_title }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">状态</span>
+                        <span class="info-value">
+                            <span class="badge bg-{% if visit_plan.status == 'completed' %}success{% elif visit_plan.status == 'in_progress' %}warning{% else %}secondary{% endif %}">
+                                {{ visit_plan.get_status_display }}
+                            </span>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">地点</span>
+                        <span class="info-value">{{ visit_plan.location|default:"—" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">参与人员</span>
+                        <span class="info-value">{{ visit_plan.participants|default:"—" }}</span>
+                    </div>
+                    {% if visit_plan.related_opportunity %}
+                    <div class="info-item">
+                        <span class="info-label">关联商机</span>
+                        <span class="info-value">
+                            <a href="{% url 'business_pages:opportunity_detail' visit_plan.related_opportunity.id %}" class="text-decoration-none">
+                                {{ visit_plan.related_opportunity.name }}
+                            </a>
+                        </span>
+                    </div>
+                    {% endif %}
+                    <div class="info-item">
+                        <span class="info-label">创建人</span>
+                        <span class="info-value">{{ visit_plan.created_by.get_full_name|default:visit_plan.created_by.username }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">创建时间</span>
+                        <span class="info-value">{{ visit_plan.created_time|date:"Y-m-d H:i" }}</span>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <span class="info-label">拜访目的</span>
+                    <div class="info-value" style="white-space: pre-wrap;">{{ visit_plan.plan_purpose }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第二步：拜访定位打卡 -->
+        <div class="info-card mb-3">
+            <div class="info-card-header">
+                <h5 class="info-card-title">
+                    <span class="badge bg-primary me-2">步骤 2</span>拜访定位打卡
+                    {% if checkin %}
+                    <span class="badge bg-success ms-2">已完成</span>
+                    {% else %}
+                    <span class="badge bg-secondary ms-2">未完成</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="info-card-body">
+                {% if checkin %}
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">打卡时间</span>
+                        <span class="info-value">{{ checkin.checkin_time|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">打卡地点</span>
+                        <span class="info-value">{{ checkin.checkin_location }}</span>
+                    </div>
+                    {% if checkin.latitude and checkin.longitude %}
+                    <div class="info-item">
+                        <span class="info-label">坐标</span>
+                        <span class="info-value font-monospace small">
+                            纬度 {{ checkin.latitude }}，经度 {{ checkin.longitude }}
+                        </span>
+                    </div>
+                    {% endif %}
+                    <div class="info-item">
+                        <span class="info-label">打卡人</span>
+                        <span class="info-value">{{ checkin.created_by.get_full_name|default:checkin.created_by.username }}</span>
+                    </div>
+                    {% if checkin.notes %}
+                    <div class="info-item" style="grid-column: 1 / -1;">
+                        <span class="info-label">备注</span>
+                        <span class="info-value" style="white-space: pre-wrap;">{{ checkin.notes }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-muted">尚未进行拜访定位打卡</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 第四步：拜访结果复盘 -->
+        <div class="info-card mb-3">
+            <div class="info-card-header">
+                <h5 class="info-card-title">
+                    <span class="badge bg-primary me-2">步骤 3</span>拜访结果复盘
+                    {% if review %}
+                    <span class="badge bg-success ms-2">已完成</span>
+                    {% else %}
+                    <span class="badge bg-secondary ms-2">未完成</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="info-card-body">
+                {% if review %}
+                <div class="info-grid">
+                    {% if review.satisfaction_score %}
+                    <div class="info-item">
+                        <span class="info-label">满意度评分</span>
+                        <span class="info-value">
+                            <span class="badge bg-info">{{ review.satisfaction_score }}/10</span>
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if review.effectiveness %}
+                    <div class="info-item">
+                        <span class="info-label">拜访效果</span>
+                        <span class="info-value">
+                            <span class="badge bg-{% if review.effectiveness == 'excellent' %}success{% elif review.effectiveness == 'good' %}info{% elif review.effectiveness == 'average' %}warning{% else %}danger{% endif %}">
+                                {{ review.get_effectiveness_display }}
+                            </span>
+                        </span>
+                    </div>
+                    {% endif %}
+                    <div class="info-item">
+                        <span class="info-label">复盘时间</span>
+                        <span class="info-value">{{ review.created_time|date:"Y-m-d H:i" }}</span>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="mb-3">
+                        <span class="info-label">拜访结果</span>
+                        <div class="info-value" style="white-space: pre-wrap;">{{ review.visit_result }}</div>
+                    </div>
+                    {% if review.customer_feedback %}
+                    <div class="mb-3">
+                        <span class="info-label">客户反馈</span>
+                        <div class="info-value" style="white-space: pre-wrap;">{{ review.customer_feedback }}</div>
+                    </div>
+                    {% endif %}
+                    {% if review.key_points %}
+                    <div class="mb-3">
+                        <span class="info-label">关键要点</span>
+                        <div class="info-value" style="white-space: pre-wrap;">{{ review.key_points }}</div>
+                    </div>
+                    {% endif %}
+                    {% if review.next_actions %}
+                    <div class="mb-3">
+                        <span class="info-label">下一步行动</span>
+                        <div class="info-value" style="white-space: pre-wrap;">{{ review.next_actions }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-muted">尚未进行拜访结果复盘</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,364 @@
+{% comment %}
+筛选字段设置模态框模板 (Filter Fields Settings Modal Template)
+
+功能说明：
+- 提供筛选字段自定义设置的模态框界面
+- 支持显示/隐藏筛选字段、拖拽排序
+- 提供全选、反选、搜索等辅助功能
+- 设置保存在localStorage中，按页面路径区分
+
+使用方法：
+- 在list_page_base.html的modals块中包含此模板
+- 通过筛选区域的设置按钮（#settingsFilterFieldsBtn）触发打开
+- JavaScript初始化代码在list_page_base.html中已提供
+
+主要元素：
+- #filterFieldsSettingsModal: 模态框容器
+- #filterFieldsList: 筛选字段列表容器（动态生成）
+- #saveFilterFieldsSettings: 保存设置按钮
+- #resetFilterFieldsSettings: 重置为默认按钮
+- #selectAllFilterFields: 全选字段按钮
+- #invertFilterFieldsSelection: 反选字段按钮
+- #filterFieldsSearchInput: 字段名搜索输入框
+
+样式说明：
+- 使用Bootstrap模态框样式
+- 包含自定义的筛选字段设置项样式（.filter-field-settings-item）
+- 支持拖拽排序（需要额外的拖拽库支持）
+{% endcomment %}
+<div class="modal fade" 
+     id="filterFieldsSettingsModal" 
+     tabindex="-1" 
+     aria-labelledby="filterFieldsSettingsModalLabel" 
+     aria-hidden="true"
+     data-bs-backdrop="true"
+     data-bs-keyboard="true"
+     data-bs-focus="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filterFieldsSettingsModalLabel">
+                    <i class="bi bi-funnel"></i> 设置筛选字段
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 工具栏 -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex gap-2 align-items-center">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllFilterFields">
+                            <i class="bi bi-check-square"></i> 全选
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="invertFilterFieldsSelection">
+                            <i class="bi bi-arrow-left-right"></i> 反选
+                        </button>
+                    </div>
+                    <div class="input-group input-group-sm" style="width: 250px;">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="filterFieldsSearchInput">
+                    </div>
+                </div>
+                
+                <!-- 提示信息 -->
+                <div class="alert alert-info alert-sm mb-3 py-2">
+                    <i class="bi bi-info-circle"></i>
+                    <small>勾选复选框可显示/隐藏筛选字段，拖动可调整顺序。最多可选择 <span id="maxFieldsCount" class="fw-bold">10</span> 个字段。</small>
+                </div>
+                
+                <!-- 已选字段计数提示 -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small">
+                        已选择 <span id="selectedFieldsCount" class="fw-bold text-primary">0</span> / <span id="maxFieldsCountDisplay" class="fw-bold">10</span> 个字段
+                    </span>
+                    <span id="maxFieldsWarning" class="text-danger small d-none">
+                        <i class="bi bi-exclamation-triangle"></i> 已达到最大选择数量
+                    </span>
+                </div>
+                
+                <!-- 筛选字段列表（可拖拽排序） -->
+                <div class="filter-fields-settings-container" style="max-height: 400px; overflow-y: auto; position: relative;">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th style="width: 60px;">启用</th>
+                                    <th>字段名称</th>
+                                    <th style="width: 50px;">排序</th>
+                                </tr>
+                            </thead>
+                            <tbody id="filterFieldsList">
+                                <!-- 筛选字段列表将在这里动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="filter-fields-settings-empty d-none text-center py-5" id="filterFieldsEmpty" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%;">
+                        <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.5;"></i>
+                        <p class="text-muted mt-2 mb-0">暂无筛选字段</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" id="resetFilterFieldsSettings">
+                    <i class="bi bi-arrow-counterclockwise"></i> 重置为默认
+                </button>
+                <div class="ms-auto">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveFilterFieldsSettings">
+                        <i class="bi bi-check-lg"></i> 保存设置
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* 筛选字段设置项样式 */
+.filter-fields-settings-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    cursor: move;
+    position: relative;
+}
+
+.filter-fields-settings-item:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-fields-settings-item.dragging {
+    opacity: 0.5;
+    background: #e9ecef;
+    border-color: #0d6efd;
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.2);
+}
+
+.filter-fields-settings-item.disabled {
+    opacity: 0.6;
+    background: #e9ecef;
+    cursor: not-allowed;
+}
+
+.filter-fields-settings-item.required {
+    background: #f8f9fa;
+    border-color: #6c757d;
+}
+
+.filter-fields-settings-item.required:hover {
+    background: #e9ecef;
+}
+
+/* 拖拽手柄 */
+.filter-field-drag-handle {
+    margin-right: 12px;
+    color: #6c757d;
+    cursor: grab;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+}
+
+.filter-field-drag-handle:active {
+    cursor: grabbing;
+}
+
+.filter-fields-settings-item.dragging .filter-field-drag-handle {
+    cursor: grabbing;
+}
+
+/* 复选框 */
+.filter-field-checkbox-wrapper {
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+}
+
+.filter-field-checkbox-wrapper input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.filter-fields-settings-item.disabled .filter-field-checkbox-wrapper input[type="checkbox"] {
+    cursor: not-allowed;
+}
+
+/* 字段名 */
+.filter-field-name {
+    flex: 1;
+    font-weight: 500;
+    color: #212529;
+    margin-right: 12px;
+}
+
+.filter-fields-settings-item.disabled .filter-field-name {
+    color: #6c757d;
+    text-decoration: line-through;
+}
+
+.filter-fields-settings-item.required .filter-field-name {
+    color: #212529;
+}
+
+.filter-fields-settings-item.required .filter-field-name::after {
+    content: " *";
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* 字段标签/描述 */
+.filter-field-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-left: 8px;
+}
+
+/* 排序指示器 */
+.filter-field-order {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-right: 12px;
+    min-width: 40px;
+    justify-content: center;
+}
+
+.filter-field-order-number {
+    font-weight: 600;
+    color: #0d6efd;
+}
+
+/* 操作按钮 */
+.filter-field-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.filter-field-action-btn {
+    padding: 4px 8px;
+    font-size: 0.875rem;
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.filter-field-action-btn:hover {
+    background: #e9ecef;
+    color: #0d6efd;
+}
+
+/* 空状态 */
+.filter-fields-settings-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+}
+
+.filter-fields-settings-empty i {
+    font-size: 3rem;
+    margin-bottom: 12px;
+    display: block;
+    opacity: 0.5;
+}
+
+.filter-fields-settings-empty p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* 滚动条样式 */
+.filter-fields-settings-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.filter-fields-settings-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.filter-fields-settings-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.filter-fields-settings-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 表格样式优化 */
+.filter-fields-settings-container .table tbody tr {
+    cursor: move;
+    transition: all 0.2s ease;
+}
+
+.filter-fields-settings-container .table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.filter-fields-settings-container .table tbody tr.dragging {
+    opacity: 0.5;
+    background-color: #e9ecef;
+    border: 2px dashed #0d6efd;
+}
+
+.filter-fields-settings-container .table tbody tr.filter-field-row.required {
+    background-color: #f8f9fa;
+}
+
+.filter-fields-settings-container .table tbody tr.filter-field-row.required:hover {
+    background-color: #e9ecef;
+}
+
+.filter-fields-settings-container .table tbody tr.filter-field-row.required td,
+.filter-fields-settings-container .table tbody tr.filter-field-row.required label {
+    color: #212529 !important;
+}
+
+.filter-fields-settings-container .table tbody tr.filter-field-row.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.filter-fields-settings-container .table tbody tr.filter-field-row.disabled:hover {
+    background-color: transparent;
+}
+
+/* 固定表头 */
+.filter-fields-settings-container .table thead.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f8f9fa;
+}
+
+/* 搜索过滤隐藏的行 */
+.filter-fields-settings-container .table tbody tr.filter-field-row.filtered-out {
+    display: none;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .filter-fields-settings-item {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .filter-field-label {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 4px;
+    }
+}
+</style>

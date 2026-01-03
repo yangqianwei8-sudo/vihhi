@@ -240,7 +240,7 @@ class FundFlow(models.Model):
     account_name = models.CharField(max_length=100, verbose_name='账户名称')
     counterparty = models.CharField(max_length=200, blank=True, verbose_name='对方单位')
     summary = models.CharField(max_length=200, verbose_name='摘要')
-    project = models.ForeignKey('project_center.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='fund_flows', verbose_name='关联项目')
+    project = models.ForeignKey('production_management.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='fund_flows', verbose_name='关联项目')
     voucher = models.ForeignKey(Voucher, on_delete=models.SET_NULL, null=True, blank=True, related_name='fund_flows', verbose_name='关联凭证')
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_fund_flows', verbose_name='创建人')
     created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
@@ -258,3 +258,146 @@ class FundFlow(models.Model):
     
     def __str__(self):
         return f"{self.flow_number} - {self.amount}"
+
+
+class FinancialReport(models.Model):
+    """财务报表生成记录"""
+    REPORT_TYPE_CHOICES = [
+        ('balance_sheet', '资产负债表'),
+        ('income_statement', '利润表'),
+        ('cash_flow', '现金流量表'),
+    ]
+    
+    report_number = models.CharField(max_length=50, unique=True, verbose_name='报表编号')
+    report_type = models.CharField(max_length=20, choices=REPORT_TYPE_CHOICES, verbose_name='报表类型')
+    period_year = models.IntegerField(verbose_name='会计年度')
+    period_month = models.IntegerField(null=True, blank=True, verbose_name='会计期间')
+    report_date = models.DateField(verbose_name='报表日期')
+    report_data = models.JSONField(default=dict, verbose_name='报表数据')
+    generated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='generated_reports', verbose_name='生成人')
+    generated_time = models.DateTimeField(default=timezone.now, verbose_name='生成时间')
+    notes = models.TextField(blank=True, verbose_name='备注')
+    
+    class Meta:
+        db_table = 'financial_report'
+        verbose_name = '财务报表'
+        verbose_name_plural = verbose_name
+        ordering = ['-report_date', '-generated_time']
+        indexes = [
+            models.Index(fields=['report_number']),
+            models.Index(fields=['report_type']),
+            models.Index(fields=['period_year', 'period_month']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_report_type_display()} - {self.report_date}"
+
+
+class ReceivableAccount(models.Model):
+    """应收账款"""
+    STATUS_CHOICES = [
+        ('pending', '待收款'),
+        ('partial', '部分收款'),
+        ('completed', '已完成'),
+        ('overdue', '已逾期'),
+        ('cancelled', '已取消'),
+    ]
+    
+    account_number = models.CharField(max_length=50, unique=True, verbose_name='应收单号')
+    customer = models.ForeignKey('customer_management.Client', on_delete=models.PROTECT, null=True, blank=True, related_name='receivables', verbose_name='客户')
+    project = models.ForeignKey('production_management.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='receivables', verbose_name='关联项目')
+    receivable_amount = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='应收金额')
+    received_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), verbose_name='已收金额')
+    remaining_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), verbose_name='未收金额')
+    receivable_date = models.DateField(verbose_name='应收日期')
+    due_date = models.DateField(null=True, blank=True, verbose_name='到期日期')
+    payment_terms = models.IntegerField(default=0, verbose_name='账期（天）')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='状态')
+    description = models.TextField(blank=True, verbose_name='备注说明')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_receivables', verbose_name='创建人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    
+    class Meta:
+        db_table = 'financial_receivable'
+        verbose_name = '应收账款'
+        verbose_name_plural = verbose_name
+        ordering = ['-receivable_date', '-account_number']
+        indexes = [
+            models.Index(fields=['account_number']),
+            models.Index(fields=['receivable_date']),
+            models.Index(fields=['status']),
+            models.Index(fields=['due_date']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        # 自动计算未收金额
+        self.remaining_amount = self.receivable_amount - self.received_amount
+        # 自动更新状态
+        if self.remaining_amount <= 0:
+            self.status = 'completed'
+        elif self.received_amount > 0:
+            self.status = 'partial'
+        # 检查是否逾期
+        if self.due_date and self.remaining_amount > 0:
+            from django.utils import timezone
+            if timezone.now().date() > self.due_date:
+                self.status = 'overdue'
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.account_number} - {self.receivable_amount}"
+
+
+class PayableAccount(models.Model):
+    """应付账款"""
+    STATUS_CHOICES = [
+        ('pending', '待付款'),
+        ('partial', '部分付款'),
+        ('completed', '已完成'),
+        ('overdue', '已逾期'),
+        ('cancelled', '已取消'),
+    ]
+    
+    account_number = models.CharField(max_length=50, unique=True, verbose_name='应付单号')
+    supplier = models.CharField(max_length=200, verbose_name='供应商')
+    project = models.ForeignKey('production_management.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='payables', verbose_name='关联项目')
+    payable_amount = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='应付金额')
+    paid_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), verbose_name='已付金额')
+    remaining_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), verbose_name='未付金额')
+    payable_date = models.DateField(verbose_name='应付日期')
+    due_date = models.DateField(null=True, blank=True, verbose_name='到期日期')
+    payment_terms = models.IntegerField(default=0, verbose_name='账期（天）')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='状态')
+    description = models.TextField(blank=True, verbose_name='备注说明')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_payables', verbose_name='创建人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    
+    class Meta:
+        db_table = 'financial_payable'
+        verbose_name = '应付账款'
+        verbose_name_plural = verbose_name
+        ordering = ['-payable_date', '-account_number']
+        indexes = [
+            models.Index(fields=['account_number']),
+            models.Index(fields=['payable_date']),
+            models.Index(fields=['status']),
+            models.Index(fields=['due_date']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        # 自动计算未付金额
+        self.remaining_amount = self.payable_amount - self.paid_amount
+        # 自动更新状态
+        if self.remaining_amount <= 0:
+            self.status = 'completed'
+        elif self.paid_amount > 0:
+            self.status = 'partial'
+        # 检查是否逾期
+        if self.due_date and self.remaining_amount > 0:
+            from django.utils import timezone
+            if timezone.now().date() > self.due_date:
+                self.status = 'overdue'
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.account_number} - {self.payable_amount}"

@@ -1,0 +1,101 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ page_title }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">所属里程碑 <span class="text-danger">*</span></label>
+                            <select name="milestone" class="form-select" required>
+                                <option value="">请选择里程碑</option>
+                                {% for milestone in milestones %}
+                                <option value="{{ milestone.id }}" {% if event.milestone_id == milestone.id %}selected{% endif %}>
+                                    {{ milestone.stage.name }} - {{ milestone.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">事件名称 <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" value="{{ event.name|default:'' }}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">事件编码 <span class="text-danger">*</span></label>
+                            <input type="text" name="code" class="form-control" value="{{ event.code|default:'' }}" required>
+                            <small class="text-muted">唯一标识，例如：first_visit, requirement_communication</small>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">事件比例(%) <span class="text-danger">*</span></label>
+                                <input type="number" name="event_percentage" class="form-control" 
+                                       value="{{ event.event_percentage|default:'0' }}" 
+                                       step="0.01" min="0" max="100" required>
+                                <small class="text-muted">该事件在该里程碑内的比例</small>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">排序</label>
+                                <input type="number" name="order" class="form-control" 
+                                       value="{{ event.order|default:'0' }}" min="0">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">责任岗位编码 <span class="text-danger">*</span></label>
+                            <input type="text" name="responsible_role_code" class="form-control" 
+                                   value="{{ event.responsible_role_code|default:'' }}" required
+                                   placeholder="例如：business_manager, project_manager, professional_engineer">
+                            <small class="text-muted">用于自动分配责任人</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">触发条件</label>
+                            <input type="text" name="trigger_condition" class="form-control" 
+                                   value="{{ event.trigger_condition|default:'' }}"
+                                   placeholder="关联项目流程事件的标识">
+                            <small class="text-muted">用于自动触发产值计算</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">事件描述</label>
+                            <textarea name="description" class="form-control" rows="3">{{ event.description|default:'' }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="is_active" 
+                                       {% if not event or event.is_active %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">
+                                    启用
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'settlement_pages:output_value_event_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> 返回列表
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> 保存
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

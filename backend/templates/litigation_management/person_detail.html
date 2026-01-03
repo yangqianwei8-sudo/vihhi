@@ -1,0 +1,204 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}人员详情 - {{ person.name }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                {% if perms.litigation_management.person.manage %}
+                <a href="{% url 'litigation_pages:person_edit' person.id %}" class="btn btn-secondary">
+                    <i class="bi bi-pencil"></i> 编辑
+                </a>
+                {% endif %}
+                <a href="{% url 'litigation_pages:person_list' case.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">姓名</span>
+                    <span class="info-value"><strong>{{ person.name }}</strong></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">人员类型</span>
+                    <span class="info-value">
+                        <span class="badge bg-info">{{ person.get_person_type_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">关联案件</span>
+                    <span class="info-value">
+                        <a href="{% url 'litigation_pages:case_detail' case.id %}" class="text-decoration-none">
+                            {{ case.case_number }} - {{ case.case_name }}
+                        </a>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 律师信息 -->
+    {% if person.person_type == 'lawyer' %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">律师信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% if person.law_firm %}
+                <div class="info-item">
+                    <span class="info-label">律师事务所</span>
+                    <span class="info-value">{{ person.law_firm }}</span>
+                </div>
+                {% endif %}
+                {% if person.license_number %}
+                <div class="info-item">
+                    <span class="info-label">执业证号</span>
+                    <span class="info-value">{{ person.license_number }}</span>
+                </div>
+                {% endif %}
+                {% if person.specialty %}
+                <div class="info-item">
+                    <span class="info-label">专业领域</span>
+                    <span class="info-value">{{ person.specialty }}</span>
+                </div>
+                {% endif %}
+                {% if person.role %}
+                <div class="info-item">
+                    <span class="info-label">代理角色</span>
+                    <span class="info-value">{{ person.role }}</span>
+                </div>
+                {% endif %}
+                {% if person.rating %}
+                <div class="info-item">
+                    <span class="info-label">评价等级</span>
+                    <span class="info-value">
+                        {% for i in "12345" %}
+                        {% if forloop.counter <= person.rating %}
+                        <i class="bi bi-star-fill text-warning"></i>
+                        {% else %}
+                        <i class="bi bi-star text-muted"></i>
+                        {% endif %}
+                        {% endfor %}
+                    </span>
+                </div>
+                {% endif %}
+                {% if person.evaluation %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">评价</span>
+                    <span class="info-value">{{ person.evaluation|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 法官信息 -->
+    {% if person.person_type == 'judge' %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">法官信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% if person.court_name %}
+                <div class="info-item">
+                    <span class="info-label">法院名称</span>
+                    <span class="info-value">{{ person.court_name }}</span>
+                </div>
+                {% endif %}
+                {% if person.position %}
+                <div class="info-item">
+                    <span class="info-label">职务</span>
+                    <span class="info-value">{{ person.position }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 当事人信息 -->
+    {% if person.person_type == 'party' %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">当事人信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% if person.party_type %}
+                <div class="info-item">
+                    <span class="info-label">当事人类型</span>
+                    <span class="info-value">{{ person.get_party_type_display }}</span>
+                </div>
+                {% endif %}
+                {% if person.role %}
+                <div class="info-item">
+                    <span class="info-label">角色</span>
+                    <span class="info-value">{{ person.role }}</span>
+                </div>
+                {% endif %}
+                {% if person.address %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">地址</span>
+                    <span class="info-value">{{ person.address }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 联系信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">联系信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% if person.contact_phone %}
+                <div class="info-item">
+                    <span class="info-label">联系电话</span>
+                    <span class="info-value">
+                        <i class="bi bi-telephone"></i> {{ person.contact_phone }}
+                    </span>
+                </div>
+                {% endif %}
+                {% if person.contact_email %}
+                <div class="info-item">
+                    <span class="info-label">联系邮箱</span>
+                    <span class="info-value">
+                        <i class="bi bi-envelope"></i> {{ person.contact_email }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

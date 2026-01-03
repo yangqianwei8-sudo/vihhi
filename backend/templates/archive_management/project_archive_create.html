@@ -1,0 +1,221 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}创建项目归档 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">➕ 创建项目归档</h2>
+            <p class="text-muted mb-0">创建项目归档申请，提交后将进入审批流程</p>
+        </div>
+        <div>
+            <a href="{% url 'archive_management:project_archive_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <!-- 表单卡片 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">归档信息</h5>
+        </div>
+        <div class="info-card-body">
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <h6><i class="bi bi-exclamation-triangle"></i> 表单验证失败</h6>
+                <ul class="mb-0">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                        <li>{{ field }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" id="archiveForm">
+                {% csrf_token %}
+                
+                <div class="row g-3">
+                    <!-- 项目选择 -->
+                    <div class="col-md-12">
+                        <label for="{{ form.project.id_for_label }}" class="form-label">
+                            {{ form.project.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.project }}
+                        {% if form.project.errors %}
+                        <div class="text-danger small">{{ form.project.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 归档原因 -->
+                    <div class="col-md-12">
+                        <label for="{{ form.archive_reason.id_for_label }}" class="form-label">
+                            {{ form.archive_reason.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.archive_reason }}
+                        {% if form.archive_reason.errors %}
+                        <div class="text-danger small">{{ form.archive_reason.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 归档说明 -->
+                    <div class="col-md-12">
+                        <label for="{{ form.archive_description.id_for_label }}" class="form-label">
+                            {{ form.archive_description.label }}
+                        </label>
+                        {{ form.archive_description }}
+                        {% if form.archive_description.errors %}
+                        <div class="text-danger small">{{ form.archive_description.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'archive_management:project_archive_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> 取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> 提交归档申请
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 可归档项目列表（辅助选择） -->
+    {% if available_projects %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">可归档项目列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">共 {{ available_projects|length }} 个项目</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm">
+                    <thead>
+                        <tr>
+                            <th>项目编号</th>
+                            <th>项目名称</th>
+                            <th>客户名称</th>
+                            <th>项目状态</th>
+                            <th>更新时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in available_projects %}
+                        <tr>
+                            <td><code>{{ project.project_number|default:"-" }}</code></td>
+                            <td>{{ project.project_name|default:"-" }}</td>
+                            <td>{{ project.client.client_name|default:"-" }}</td>
+                            <td>
+                                <span class="badge bg-{% if project.status == 'settled' %}success{% elif project.status == 'completed' %}info{% else %}secondary{% endif %}">
+                                    {{ project.get_status_display|default:"-" }}
+                                </span>
+                            </td>
+                            <td>{{ project.updated_time|date:"Y-m-d H:i"|default:"-" }}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="selectProject({{ project.id }}, '{{ project.project_name }}')">
+                                    <i class="bi bi-check-circle"></i> 选择
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 归档说明 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">归档说明</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="alert alert-info">
+                <h6><i class="bi bi-info-circle"></i> 归档流程说明</h6>
+                <ol class="mb-0">
+                    <li><strong>提交归档申请</strong>：填写归档原因和说明，提交后将进入审批流程</li>
+                    <li><strong>审批流程</strong>：归档申请需要经过审批，审批通过后进入归档执行阶段</li>
+                    <li><strong>归档执行</strong>：系统自动收集项目相关文件（图纸、意见、交付、结算、回款等）</li>
+                    <li><strong>归档确认</strong>：档案管理员确认归档完成，归档状态更新为"已归档"</li>
+                </ol>
+            </div>
+            <div class="alert alert-warning">
+                <h6><i class="bi bi-exclamation-triangle"></i> 注意事项</h6>
+                <ul class="mb-0">
+                    <li>归档原因为必填项，请详细说明归档原因</li>
+                    <li>仅已结算或已完成的项目可以归档</li>
+                    <li>归档后项目数据将变为只读，请谨慎操作</li>
+                    <li>归档编号将自动生成，格式：ARCH-PROJ-YYYYMMDD-序号</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectProject(projectId, projectName) {
+    // 设置项目选择框的值
+    const projectSelect = document.getElementById('{{ form.project.id_for_label }}');
+    if (projectSelect) {
+        projectSelect.value = projectId;
+        // 触发change事件以更新UI
+        projectSelect.dispatchEvent(new Event('change'));
+    }
+    
+    // 显示提示信息
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+    alertDiv.innerHTML = `
+        <i class="bi bi-check-circle"></i> 已选择项目：${projectName}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector('.info-card-body').insertBefore(alertDiv, document.querySelector('form'));
+    
+    // 滚动到表单
+    document.querySelector('form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// 表单提交确认
+document.getElementById('archiveForm').addEventListener('submit', function(e) {
+    const projectSelect = document.getElementById('{{ form.project.id_for_label }}');
+    const archiveReason = document.getElementById('{{ form.archive_reason.id_for_label }}');
+    
+    if (!projectSelect.value) {
+        e.preventDefault();
+        alert('请选择要归档的项目');
+        return false;
+    }
+    
+    if (!archiveReason.value.trim()) {
+        e.preventDefault();
+        alert('请填写归档原因');
+        archiveReason.focus();
+        return false;
+    }
+    
+    if (!confirm('确定要提交归档申请吗？提交后将进入审批流程。')) {
+        e.preventDefault();
+        return false;
+    }
+});
+</script>
+{% endblock %}

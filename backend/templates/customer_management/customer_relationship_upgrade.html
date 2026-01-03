@@ -1,0 +1,111 @@
+{% extends "shared/list_page_base.html" %}
+{% load static %}
+
+{% block list_page_title %}{{ page_title }}{% endblock %}
+
+{% block list_page_actions %}
+{% if can_create %}
+<a href="{% url 'business_pages:customer_relationship_upgrade_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i> 新增升级
+</a>
+{% endif %}
+{% endblock %}
+
+{% block list_page_filter_fields %}
+<!-- 客户 -->
+<div class="list-page-filter-item" data-filter-key="client">
+    <label>客户:</label>
+    <select name="client" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}" {% if client_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- 审批状态 -->
+<div class="list-page-filter-item" data-filter-key="approval_status">
+    <label>审批状态:</label>
+    <select name="approval_status" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for value, label in approval_status_choices %}
+        <option value="{{ value }}" {% if approval_status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- 目标等级 -->
+<div class="list-page-filter-item" data-filter-key="to_level">
+    <label>目标等级:</label>
+    <select name="to_level" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for value, label in relationship_level_choices %}
+        <option value="{{ value }}" {% if to_level == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endblock %}
+
+{% block search_placeholder %}客户名称、升级原因{% endblock %}
+
+{% block list_page_table_headers %}
+<th>客户名称</th>
+<th>原等级</th>
+<th>目标等级</th>
+<th>审批状态</th>
+<th>申请人</th>
+<th>创建时间</th>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td>
+    <a href="{% url 'business_pages:customer_detail' item.client.id %}" class="text-decoration-none">
+        {{ item.client.name }}
+    </a>
+</td>
+<td>
+    <span class="badge bg-secondary">{{ item.get_from_level_display }}</span>
+</td>
+<td>
+    <span class="badge bg-primary">{{ item.get_to_level_display }}</span>
+</td>
+<td>
+    <span class="badge bg-{% if item.approval_status == 'approved' %}success{% elif item.approval_status == 'rejected' %}danger{% elif item.approval_status == 'withdrawn' %}secondary{% else %}warning{% endif %}">
+        {{ item.get_approval_status_display }}
+    </span>
+</td>
+<td class="small">{{ item.created_by.get_full_name|default:item.created_by.username }}</td>
+<td class="small text-muted">{{ item.created_time|date:"Y-m-d" }}</td>
+{% endblock %}
+
+{% block list_page_table_actions_cell %}
+<td>
+    <div class="list-page-table-actions">
+        <a href="#" class="action-view" title="查看">
+            <i class="bi bi-eye"></i>
+        </a>
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_colspan %}7{% endblock %}
+
+{% block empty_table_message %}暂无关系升级记录{% endblock %}
+
+{% block pagination_params %}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}{% if to_level %}&to_level={{ to_level }}{% endif %}{% endblock %}
+
+{% block list_page_custom_js %}
+// 筛选字段设置配置
+window.listFiltersConfig = {
+    enableFieldsSettings: true,
+    fieldsSettingsStorageKey: 'relationship_upgrade_filter_fields',
+    fieldsSettingsContainerId: 'filterFieldsContainer',
+    fieldsSettingsModalId: 'filterFieldsSettingsModal',
+    fieldsSettingsListId: 'filterFieldsList',
+    fieldsSettingsBtnId: 'settingsFilterFieldsBtn',
+    fieldsSettingsSaveBtnId: 'saveFilterFieldsSettings',
+    fieldsSettingsResetBtnId: 'resetFilterFieldsSettings',
+    maxEnabledFields: 10,
+    defaultEnabledFields: ['client', 'approval_status', 'to_level']
+};
+{% endblock %}

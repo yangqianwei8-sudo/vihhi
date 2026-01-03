@@ -1,0 +1,292 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}档案操作日志 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📋 档案操作日志</h2>
+            <p class="text-muted mb-0">记录所有档案操作，包括上传、下载、编辑、删除、归档、借阅、归还等操作</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-secondary" onclick="exportLogs()">
+                <i class="bi bi-download"></i> 导出日志
+            </button>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="info-card info-card-primary">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">全部日志</div>
+                            <div class="info-value info-value-large">{{ total_count|default:0 }}</div>
+                        </div>
+                        <div class="text-primary" style="font-size: 2rem;">
+                            <i class="bi bi-journal-text"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card info-card-success">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">成功操作</div>
+                            <div class="info-value info-value-large">{{ success_count|default:0 }}</div>
+                        </div>
+                        <div class="text-success" style="font-size: 2rem;">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card info-card-danger">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">失败操作</div>
+                            <div class="info-value info-value-large">{{ failed_count|default:0 }}</div>
+                        </div>
+                        <div class="text-danger" style="font-size: 2rem;">
+                            <i class="bi bi-x-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card info-card-info">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">近7天</div>
+                            <div class="info-value info-value-large">{{ recent_count|default:0 }}</div>
+                        </div>
+                        <div class="text-info" style="font-size: 2rem;">
+                            <i class="bi bi-calendar-week"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作类型统计 -->
+    {% if operation_type_stats %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">操作类型统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="row">
+                {% for op_type, stat in operation_type_stats.items %}
+                {% if stat.count > 0 %}
+                <div class="col-md-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                        <span>{{ stat.name }}</span>
+                        <span class="badge bg-primary">{{ stat.count }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 日志列表 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">操作日志列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">共 {{ page.paginator.count }} 条</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            <!-- 筛选器 -->
+            <form method="get" class="row g-3 mb-3">
+                <div class="col-md-2">
+                    <label class="form-label">操作类型</label>
+                    <select name="operation_type" class="form-select">
+                        <option value="">全部</option>
+                        <option value="upload" {% if operation_type == 'upload' %}selected{% endif %}>上传</option>
+                        <option value="download" {% if operation_type == 'download' %}selected{% endif %}>下载</option>
+                        <option value="edit" {% if operation_type == 'edit' %}selected{% endif %}>编辑</option>
+                        <option value="delete" {% if operation_type == 'delete' %}selected{% endif %}>删除</option>
+                        <option value="archive" {% if operation_type == 'archive' %}selected{% endif %}>归档</option>
+                        <option value="borrow" {% if operation_type == 'borrow' %}selected{% endif %}>借阅</option>
+                        <option value="return" {% if operation_type == 'return' %}selected{% endif %}>归还</option>
+                        <option value="destroy" {% if operation_type == 'destroy' %}selected{% endif %}>销毁</option>
+                        <option value="view" {% if operation_type == 'view' %}selected{% endif %}>查看</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">操作结果</label>
+                    <select name="operation_result" class="form-select">
+                        <option value="">全部</option>
+                        <option value="success" {% if operation_result == 'success' %}selected{% endif %}>成功</option>
+                        <option value="failed" {% if operation_result == 'failed' %}selected{% endif %}>失败</option>
+                        <option value="pending" {% if operation_result == 'pending' %}selected{% endif %}>待处理</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">操作人</label>
+                    <select name="operator" class="form-select">
+                        <option value="">全部</option>
+                        {% for op in operators %}
+                        <option value="{{ op.id }}" {% if operator_id == op.id|stringformat:"s" %}selected{% endif %}>
+                            {{ op.get_full_name|default:op.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">开始日期</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">结束日期</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> 查询
+                    </button>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">搜索</label>
+                    <input type="text" name="search" class="form-control" placeholder="操作内容、档案名称、操作人" value="{{ search }}">
+                </div>
+            </form>
+
+            <!-- 日志列表 -->
+            {% if page.object_list %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>操作时间</th>
+                            <th>操作类型</th>
+                            <th>操作人</th>
+                            <th>操作内容</th>
+                            <th>关联档案</th>
+                            <th>操作结果</th>
+                            <th>IP地址</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in page.object_list %}
+                        <tr>
+                            <td>{{ log.operation_time|date:"Y-m-d H:i:s" }}</td>
+                            <td>
+                                <span class="badge bg-{% if log.operation_type == 'delete' or log.operation_type == 'destroy' %}danger{% elif log.operation_type == 'download' %}warning{% elif log.operation_type == 'upload' or log.operation_type == 'archive' %}success{% else %}primary{% endif %}">
+                                    {{ log.get_operation_type_display }}
+                                </span>
+                            </td>
+                            <td>{{ log.operator.get_full_name|default:log.operator.username|default:"系统" }}</td>
+                            <td>
+                                <div style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ log.operation_content }}">
+                                    {{ log.operation_content|truncatewords:15|default:"-" }}
+                                </div>
+                            </td>
+                            <td>
+                                {% if log.project_document %}
+                                    <a href="{% url 'archive_management:project_document_detail' log.project_document.pk %}">
+                                        {{ log.project_document.document_name|truncatewords:5 }}
+                                    </a>
+                                {% elif log.administrative_archive %}
+                                    <a href="{% url 'archive_management:administrative_archive_detail' log.administrative_archive.pk %}">
+                                        {{ log.administrative_archive.archive_name|truncatewords:5 }}
+                                    </a>
+                                {% elif log.project_archive %}
+                                    <a href="{% url 'archive_management:project_archive_detail' log.project_archive.pk %}">
+                                        {{ log.project_archive.archive_number }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if log.operation_result == 'success' %}success{% elif log.operation_result == 'failed' %}danger{% else %}warning{% endif %}">
+                                    {{ log.get_operation_result_display }}
+                                </span>
+                                {% if log.error_message %}
+                                <br><small class="text-danger" title="{{ log.error_message }}">{{ log.error_message|truncatewords:5 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ log.ip_address|default:"-" }}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-info" onclick="viewLogDetail({{ log.id }})" title="查看详情">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if page.has_other_pages %}
+            <nav aria-label="分页导航">
+                <ul class="pagination justify-content-center">
+                    {% if page.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page.previous_page_number }}{% if operation_type %}&operation_type={{ operation_type }}{% endif %}{% if operation_result %}&operation_result={{ operation_result }}{% endif %}{% if operator_id %}&operator={{ operator_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search %}&search={{ search }}{% endif %}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page.paginator.page_range %}
+                    {% if page.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page.number|add:'-3' and num < page.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if operation_type %}&operation_type={{ operation_type }}{% endif %}{% if operation_result %}&operation_result={{ operation_result }}{% endif %}{% if operator_id %}&operator={{ operator_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page.next_page_number }}{% if operation_type %}&operation_type={{ operation_type }}{% endif %}{% if operation_result %}&operation_result={{ operation_result }}{% endif %}{% if operator_id %}&operator={{ operator_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search %}&search={{ search }}{% endif %}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 暂无操作日志。
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function exportLogs() {
+    alert('日志导出功能正在开发中');
+}
+
+function viewLogDetail(logId) {
+    alert('日志详情查看功能正在开发中，日志ID: ' + logId);
+}
+</script>
+{% endblock %}

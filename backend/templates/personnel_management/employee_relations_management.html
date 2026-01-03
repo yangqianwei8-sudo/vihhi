@@ -1,0 +1,202 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block personnel_content %}
+<!-- 统计卡片 -->
+{% if summary_cards %}
+<div class="row g-3 mb-4">
+    {% for card in summary_cards %}
+    <div class="col-md-2 col-sm-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="text-muted mb-2" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">{{ card.label }}</h6>
+                <div class="value" style="font-size: 28px; font-weight: 700; color: #142F5B; margin-bottom: 4px;">{{ card.value }}</div>
+                <div class="hint" style="font-size: 12px; color: #6b7280;">{{ card.hint }}</div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 内容区域 -->
+<div class="row g-4">
+    <!-- 员工沟通 -->
+    <div class="col-md-6">
+        <div class="content-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">最近沟通记录</h5>
+                <a href="#" class="btn btn-sm btn-outline-primary">查看全部</a>
+            </div>
+            {% if recent_communications %}
+            <div class="list-group">
+                {% for comm in recent_communications %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ comm.employee.name }}</h6>
+                            <p class="mb-1">{{ comm.subject }}</p>
+                            <small class="text-muted">{{ comm.communication_date|date:"Y-m-d H:i" }}</small>
+                        </div>
+                        <span class="badge bg-info">{{ comm.get_method_display }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                暂无沟通记录
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 员工关怀 -->
+    <div class="col-md-6">
+        <div class="content-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">最近关怀记录</h5>
+                <a href="#" class="btn btn-sm btn-outline-primary">查看全部</a>
+            </div>
+            {% if recent_cares %}
+            <div class="list-group">
+                {% for care in recent_cares %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ care.employee.name }}</h6>
+                            <p class="mb-1">{{ care.content|truncatewords:15 }}</p>
+                            <small class="text-muted">{{ care.care_date|date:"Y-m-d" }}</small>
+                        </div>
+                        <span class="badge bg-success">{{ care.get_care_type_display }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                暂无关怀记录
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 员工活动 -->
+    <div class="col-md-6">
+        <div class="content-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">最近员工活动</h5>
+                <a href="#" class="btn btn-sm btn-outline-primary">查看全部</a>
+            </div>
+            {% if recent_activities %}
+            <div class="list-group">
+                {% for activity in recent_activities %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ activity.title }}</h6>
+                            <p class="mb-1">{{ activity.description|truncatewords:15 }}</p>
+                            <small class="text-muted">{{ activity.activity_date|date:"Y-m-d H:i" }}</small>
+                        </div>
+                        <span class="badge bg-primary">{{ activity.get_status_display }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                暂无活动记录
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 员工投诉 -->
+    <div class="col-md-6">
+        <div class="content-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">待处理投诉</h5>
+                <a href="#" class="btn btn-sm btn-outline-primary">查看全部</a>
+            </div>
+            {% if recent_complaints %}
+            <div class="list-group">
+                {% for complaint in recent_complaints %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ complaint.employee.name }}</h6>
+                            <p class="mb-1">{{ complaint.content|truncatewords:15 }}</p>
+                            <small class="text-muted">{{ complaint.complaint_date|date:"Y-m-d H:i" }}</small>
+                        </div>
+                        <span class="badge bg-warning">{{ complaint.get_status_display }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-success mb-0">
+                <i class="bi bi-check-circle me-2"></i>
+                暂无待处理投诉
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 员工建议 -->
+    <div class="col-md-12">
+        <div class="content-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">待处理建议</h5>
+                <a href="#" class="btn btn-sm btn-outline-primary">查看全部</a>
+            </div>
+            {% if recent_suggestions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>建议编号</th>
+                            <th>建议人</th>
+                            <th>建议内容</th>
+                            <th>建议时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for suggestion in recent_suggestions %}
+                        <tr>
+                            <td><code>{{ suggestion.suggestion_number }}</code></td>
+                            <td>{{ suggestion.employee.name }}</td>
+                            <td>{{ suggestion.content|truncatewords:20 }}</td>
+                            <td>{{ suggestion.suggestion_date|date:"Y-m-d H:i" }}</td>
+                            <td><span class="badge bg-warning">{{ suggestion.get_status_display }}</span></td>
+                            <td>
+                                <a href="#" class="btn btn-sm btn-outline-primary me-1" title="查看详情">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="#" class="btn btn-sm btn-outline-success" title="审核">
+                                    <i class="bi bi-check-circle"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-success mb-0">
+                <i class="bi bi-check-circle me-2"></i>
+                暂无待处理建议
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

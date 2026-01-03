@@ -1,0 +1,192 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}交付归档详情 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <!-- 归档基本信息 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-file-earmark"></i> 交付归档详情
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>归档编号：</strong>{{ archive.archive_number }}</p>
+                            <p><strong>交付单号：</strong>{{ archive.delivery_record.delivery_number }}</p>
+                            <p><strong>交付标题：</strong>{{ archive.delivery_record.title }}</p>
+                            <p><strong>项目：</strong>
+                                {% if archive.project %}
+                                    {{ archive.project.name }} ({{ archive.project.project_number }})
+                                {% else %}
+                                    <span class="text-muted">未关联项目</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>归档分类：</strong>{{ archive.category.name|default:"未分类" }}</p>
+                            <p><strong>归档状态：</strong>
+                                <span class="badge bg-{% if archive.status == 'pending' %}warning{% elif archive.status == 'approving' %}info{% elif archive.status == 'archiving' %}primary{% elif archive.status == 'archived' %}success{% else %}danger{% endif %}">
+                                    {{ archive.get_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>申请人：</strong>{{ archive.applicant.get_full_name|default:archive.applicant.username }}</p>
+                            <p><strong>申请时间：</strong>{{ archive.applied_time|date:"Y-m-d H:i" }}</p>
+                            {% if archive.executor %}
+                            <p><strong>执行人：</strong>{{ archive.executor.get_full_name|default:archive.executor.username }}</p>
+                            <p><strong>执行时间：</strong>{{ archive.executed_time|date:"Y-m-d H:i" }}</p>
+                            {% endif %}
+                            {% if archive.confirmed_by %}
+                            <p><strong>确认人：</strong>{{ archive.confirmed_by.get_full_name|default:archive.confirmed_by.username }}</p>
+                            <p><strong>确认时间：</strong>{{ archive.confirmed_time|date:"Y-m-d H:i" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if archive.archive_reason %}
+                    <div class="mt-3">
+                        <strong>归档原因：</strong>
+                        <p class="text-muted">{{ archive.archive_reason }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if archive.archive_description %}
+                    <div class="mt-3">
+                        <strong>归档说明：</strong>
+                        <p class="text-muted">{{ archive.archive_description }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 交付记录信息 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-text"></i> 交付记录信息
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>交付方式：</strong>{{ archive.delivery_record.get_delivery_method_display }}</p>
+                            <p><strong>交付状态：</strong>
+                                <span class="badge bg-{% if archive.delivery_record.status == 'confirmed' or archive.delivery_record.status == 'feedback_received' %}success{% elif archive.delivery_record.status == 'archived' %}secondary{% else %}warning{% endif %}">
+                                    {{ archive.delivery_record.get_status_display }}
+                                </span>
+                            </p>
+                            {% if archive.delivery_record.client %}
+                            <p><strong>客户：</strong>{{ archive.delivery_record.client.name }}</p>
+                            {% endif %}
+                            <p><strong>收件人：</strong>{{ archive.delivery_record.recipient_name }}</p>
+                            {% if archive.delivery_record.recipient_email %}
+                            <p><strong>收件邮箱：</strong>{{ archive.delivery_record.recipient_email }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>创建时间：</strong>{{ archive.delivery_record.created_at|date:"Y-m-d H:i" }}</p>
+                            {% if archive.delivery_record.sent_at %}
+                            <p><strong>发送时间：</strong>{{ archive.delivery_record.sent_at|date:"Y-m-d H:i" }}</p>
+                            {% endif %}
+                            {% if archive.delivery_record.delivered_at %}
+                            <p><strong>送达时间：</strong>{{ archive.delivery_record.delivered_at|date:"Y-m-d H:i" }}</p>
+                            {% endif %}
+                            {% if archive.delivery_record.confirmed_at %}
+                            <p><strong>确认时间：</strong>{{ archive.delivery_record.confirmed_at|date:"Y-m-d H:i" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if archive.delivery_record.description %}
+                    <div class="mt-3">
+                        <strong>交付说明：</strong>
+                        <p class="text-muted">{{ archive.delivery_record.description }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 交付文件列表 -->
+            {% if delivery_files %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-files"></i> 交付文件
+                        <span class="badge bg-primary">{{ delivery_files|length }} 个</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>文件名称</th>
+                                    <th>文件类型</th>
+                                    <th>文件大小</th>
+                                    <th>上传时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in delivery_files %}
+                                <tr>
+                                    <td>{{ file.file_name }}</td>
+                                    <td>
+                                        {% if file.file_type %}
+                                            <span class="badge bg-secondary">{{ file.file_type }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if file.file_size %}
+                                            {{ file.file_size|filesizeformat }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ file.uploaded_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if file.file %}
+                                        <a href="{{ file.file.url }}" class="btn btn-sm btn-primary" target="_blank">
+                                            <i class="bi bi-download"></i> 下载
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 操作按钮 -->
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'archive_management:project_delivery_archive_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </a>
+                <div>
+                    {% if archive.status == 'pending' or archive.status == 'rejected' %}
+                    <a href="{% url 'archive_management:project_delivery_archive_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> 创建新归档
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

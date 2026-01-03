@@ -1,0 +1,45 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="info-card">
+    <div class="info-card-header">
+        <h5 class="info-card-title">完成拜访计划</h5>
+    </div>
+    <div class="info-card-body">
+        <div class="info-section mb-4">
+            <h6 class="info-section-title">计划信息</h6>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">客户</span>
+                    <span class="info-value">{{ plan.client.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">计划标题</span>
+                    <span class="info-value">{{ plan.plan_title }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">计划日期</span>
+                    <span class="info-value">{{ plan.plan_date|date:"Y-m-d H:i" }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 确认后将此拜访计划标记为已完成。
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{% url 'business_pages:visit_plan_detail' plan.id %}" class="btn btn-outline-secondary">取消</a>
+                <button type="submit" class="btn btn-success">确认完成</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

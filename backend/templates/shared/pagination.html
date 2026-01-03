@@ -1,0 +1,347 @@
+{% comment %}
+翻页功能共享模板
+使用方式：
+{% include "shared/pagination.html" with page_obj=page_obj %}
+
+可选参数：
+- page_obj: Django分页对象（必需）
+- pagination_class: 自定义CSS类名（可选，默认：pagination）
+- show_info: 是否显示分页信息（可选，默认：true）
+- show_first_last: 是否显示首页/末页按钮（可选，默认：true）
+- page_range: 显示页码范围（可选，默认：3，表示当前页前后各3页）
+- extra_params: 额外的URL参数（可选，字典格式）
+{% endcomment %}
+
+{% load static %}
+
+{% if page_obj %}
+<nav aria-label="分页导航" class="pagination-wrapper">
+    <div class="pagination-container">
+        {% comment %} 分页信息 {% endcomment %}
+        {% if show_info|default:True %}
+        <div class="pagination-info">
+            <span class="pagination-info-text">
+                共 <strong>{{ page_obj.paginator.count }}</strong> 条记录，
+                第 <strong>{{ page_obj.number }}</strong> / <strong>{{ page_obj.paginator.num_pages }}</strong> 页
+            </span>
+        </div>
+        {% endif %}
+
+        {% comment %} 分页控件 - 只有多页时才显示 {% endcomment %}
+        {% if page_obj.has_other_pages %}
+        <ul class="pagination {{ pagination_class|default:'' }}" id="paginationNav">
+            {% comment %} 首页按钮 {% endcomment %}
+            {% if show_first_last|default:True %}
+            <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                <a class="page-link" 
+                   href="{% if page_obj.has_previous %}?page=1{% include "shared/pagination_params_snippet.html" %}{% else %}#{% endif %}"
+                   aria-label="首页"
+                   {% if not page_obj.has_previous %}tabindex="-1" aria-disabled="true"{% endif %}>
+                    <i class="bi bi-chevron-double-left"></i>
+                    <span class="d-none d-sm-inline">首页</span>
+                </a>
+            </li>
+            {% endif %}
+
+            {% comment %} 上一页按钮 {% endcomment %}
+            <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                <a class="page-link" 
+                   href="{% if page_obj.has_previous %}?page={{ page_obj.previous_page_number }}{% include "shared/pagination_params_snippet.html" %}{% else %}#{% endif %}"
+                   aria-label="上一页"
+                   {% if not page_obj.has_previous %}tabindex="-1" aria-disabled="true"{% endif %}>
+                    <i class="bi bi-chevron-left"></i>
+                    <span class="d-none d-sm-inline">上一页</span>
+                </a>
+            </li>
+
+            {% comment %} 页码 {% endcomment %}
+            {% with page_range|default:3 as range %}
+            {% with current=page_obj.number total=page_obj.paginator.num_pages %}
+                {% comment %} 计算显示范围 {% endcomment %}
+                {% widthratio range 1 -1 as range_negative %}
+                {% with start=current|add:range_negative end=current|add:range %}
+                    {% comment %} 显示第一页（如果不在范围内） {% endcomment %}
+                    {% if current > range|add:1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% include "shared/pagination_params_snippet.html" %}">1</a>
+                        </li>
+                        {% if current > range|add:2 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                    
+                    {% comment %} 显示当前页附近的页码 {% endcomment %}
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if num == current %}
+                            <li class="page-item active" aria-current="page">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num >= start and num <= end and num > 1 and num < total %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% include "shared/pagination_params_snippet.html" %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% comment %} 显示最后一页（如果不在范围内） {% endcomment %}
+                    {% if current < total|add:range_negative %}
+                        {% if current < total|add:range_negative|add:"-1" %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ total }}{% include "shared/pagination_params_snippet.html" %}">{{ total }}</a>
+                        </li>
+                    {% elif current == total and total > 1 %}
+                        <li class="page-item active" aria-current="page">
+                            <span class="page-link">{{ total }}</span>
+                        </li>
+                    {% endif %}
+                {% endwith %}
+            {% endwith %}
+            {% endwith %}
+
+            {% comment %} 下一页按钮 {% endcomment %}
+            <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                <a class="page-link" 
+                   href="{% if page_obj.has_next %}?page={{ page_obj.next_page_number }}{% include "shared/pagination_params_snippet.html" %}{% else %}#{% endif %}"
+                   aria-label="下一页"
+                   {% if not page_obj.has_next %}tabindex="-1" aria-disabled="true"{% endif %}>
+                    <span class="d-none d-sm-inline">下一页</span>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+
+            {% comment %} 末页按钮 {% endcomment %}
+            {% if show_first_last|default:True %}
+            <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                <a class="page-link" 
+                   href="{% if page_obj.has_next %}?page={{ page_obj.paginator.num_pages }}{% include "shared/pagination_params_snippet.html" %}{% else %}#{% endif %}"
+                   aria-label="末页"
+                   {% if not page_obj.has_next %}tabindex="-1" aria-disabled="true"{% endif %}>
+                    <span class="d-none d-sm-inline">末页</span>
+                    <i class="bi bi-chevron-double-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+        {% endif %}
+
+        {% comment %} 快速跳转（可选） {% endcomment %}
+        {% if show_jump|default:False %}
+        <div class="pagination-jump">
+            <label for="pageJumpInput" class="pagination-jump-label">跳转到</label>
+            <input type="number" 
+                   id="pageJumpInput" 
+                   class="form-control form-control-sm pagination-jump-input" 
+                   min="1" 
+                   max="{{ page_obj.paginator.num_pages }}"
+                   value="{{ page_obj.number }}"
+                   aria-label="跳转页码">
+            <button type="button" 
+                    class="btn btn-sm btn-primary pagination-jump-btn"
+                    onclick="jumpToPage()"
+                    aria-label="跳转">
+                跳转
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</nav>
+
+{% comment %} 快速跳转脚本 {% endcomment %}
+{% if show_jump|default:False %}
+<script>
+function jumpToPage() {
+    const input = document.getElementById('pageJumpInput');
+    const page = parseInt(input.value);
+    const maxPage = parseInt(input.max);
+    
+    if (isNaN(page) || page < 1 || page > maxPage) {
+        alert('请输入有效的页码（1-' + maxPage + '）');
+        return;
+    }
+    
+    // 从第一个分页链接中提取参数，而不是从当前URL中获取所有参数
+    // 这样可以避免携带从其他页面带来的无关参数
+    const firstPageLink = document.querySelector('.pagination .page-link[href*="page="]');
+    let paramsString = '';
+    
+    if (firstPageLink && firstPageLink.href) {
+        try {
+            const url = new URL(firstPageLink.href, window.location.origin);
+            paramsString = url.search.substring(1); // 移除开头的 '?'
+        } catch (e) {
+            // 如果解析失败，使用空字符串
+            paramsString = '';
+        }
+    }
+    
+    // 创建URL参数对象
+    const urlParams = new URLSearchParams(paramsString);
+    urlParams.set('page', page);
+    
+    // 跳转
+    window.location.href = window.location.pathname + '?' + urlParams.toString();
+}
+</script>
+{% endif %}
+
+{% comment %} 分页样式 {% endcomment %}
+<style>
+.pagination-wrapper {
+    margin-top: var(--spacing-md, 1rem);
+    margin-bottom: var(--spacing-md, 1rem);
+}
+
+.pagination-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md, 1rem);
+}
+
+.pagination-info {
+    display: flex;
+    align-items: center;
+    color: var(--vh-text-secondary, #6c757d);
+    font-size: 0.875rem;
+}
+
+.pagination-info-text {
+    white-space: nowrap;
+}
+
+.pagination-info strong {
+    color: var(--vh-text-primary, #212529);
+    font-weight: 600;
+}
+
+.pagination {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.pagination .page-item {
+    margin: 0;
+}
+
+.pagination .page-link {
+    min-width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.375rem 0.75rem;
+    color: var(--vh-text-primary, #212529);
+    background-color: var(--vh-surface, #fff);
+    border: 1px solid var(--vh-border, #dee2e6);
+    border-radius: var(--radius-sm, 0.25rem);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.pagination .page-link:hover:not(.disabled):not([aria-disabled="true"]) {
+    color: var(--vh-primary, #0d6efd);
+    background-color: var(--vh-surface-hover, #e9ecef);
+    border-color: var(--vh-primary, #0d6efd);
+    transform: translateY(-1px);
+}
+
+.pagination .page-link:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    outline: 0;
+}
+
+.pagination .page-item.active .page-link {
+    color: #fff;
+    background-color: var(--vh-primary, #0d6efd);
+    border-color: var(--vh-primary, #0d6efd);
+    font-weight: 600;
+    z-index: 1;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: var(--vh-text-muted, #6c757d);
+    background-color: var(--vh-surface-disabled, #e9ecef);
+    border-color: var(--vh-border, #dee2e6);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.pagination .page-link i {
+    font-size: 1rem;
+}
+
+.pagination-jump {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pagination-jump-label {
+    margin: 0;
+    color: var(--vh-text-secondary, #6c757d);
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.pagination-jump-input {
+    width: 60px;
+    text-align: center;
+}
+
+.pagination-jump-btn {
+    white-space: nowrap;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .pagination-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .pagination-info {
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .pagination {
+        justify-content: center;
+    }
+    
+    .pagination .page-link {
+        min-width: 34px;
+        height: 34px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .pagination-jump {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 576px) {
+    .pagination .page-link {
+        min-width: 32px;
+        height: 32px;
+        padding: 0.25rem 0.375rem;
+        font-size: 0.8125rem;
+    }
+    
+    .pagination-info {
+        font-size: 0.8125rem;
+    }
+}
+</style>
+{% endif %}
+

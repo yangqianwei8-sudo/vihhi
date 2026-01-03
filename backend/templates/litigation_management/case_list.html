@@ -1,0 +1,487 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}案件列表 - 诉讼管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题和操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            {% if perms.litigation_management.case.view %}
+            <a href="{% url 'litigation_pages:case_list_export' %}?{{ request.GET.urlencode }}" class="btn btn-success me-2">
+                <i class="bi bi-download"></i> 导出Excel
+            </a>
+            {% endif %}
+            {% if perms.litigation_management.case.create %}
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCaseModal">
+                <i class="bi bi-plus-circle"></i> 案件登记
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    {% if summary_cards %}
+    <div class="info-grid info-grid-4 info-grid-responsive mb-4">
+        {% for card in summary_cards %}
+        <div class="info-item">
+            <div class="info-label">{{ card.label }}</div>
+            <div class="info-value info-value-large">{{ card.value }}</div>
+            {% if card.hint %}
+            <div class="info-hint">{{ card.hint }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 筛选和列表 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">案件列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">共 {{ cases.paginator.count }} 条</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            <!-- 筛选器 -->
+            <form method="get" class="row g-3 mb-3">
+                <div class="col-md-2">
+                    <label class="form-label">案件类型</label>
+                    <select name="case_type" class="form-select form-select-sm">
+                        <option value="">全部类型</option>
+                        <option value="contract_dispute" {% if case_type == 'contract_dispute' %}selected{% endif %}>合同纠纷</option>
+                        <option value="labor_dispute" {% if case_type == 'labor_dispute' %}selected{% endif %}>劳动争议</option>
+                        <option value="ip_dispute" {% if case_type == 'ip_dispute' %}selected{% endif %}>知识产权</option>
+                        <option value="tort_dispute" {% if case_type == 'tort_dispute' %}selected{% endif %}>侵权纠纷</option>
+                        <option value="other" {% if case_type == 'other' %}selected{% endif %}>其他纠纷</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">案件性质</label>
+                    <select name="case_nature" class="form-select form-select-sm">
+                        <option value="">全部性质</option>
+                        <option value="plaintiff" {% if case_nature == 'plaintiff' %}selected{% endif %}>原告</option>
+                        <option value="defendant" {% if case_nature == 'defendant' %}selected{% endif %}>被告</option>
+                        <option value="third_party" {% if case_nature == 'third_party' %}selected{% endif %}>第三人</option>
+                        <option value="other" {% if case_nature == 'other' %}selected{% endif %}>其他</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">案件状态</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">全部状态</option>
+                        <option value="pending_filing" {% if status == 'pending_filing' %}selected{% endif %}>待立案</option>
+                        <option value="filed" {% if status == 'filed' %}selected{% endif %}>已立案</option>
+                        <option value="trial" {% if status == 'trial' %}selected{% endif %}>审理中</option>
+                        <option value="judged" {% if status == 'judged' %}selected{% endif %}>已判决</option>
+                        <option value="executing" {% if status == 'executing' %}selected{% endif %}>执行中</option>
+                        <option value="closed" {% if status == 'closed' %}selected{% endif %}>已结案</option>
+                        <option value="withdrawn" {% if status == 'withdrawn' %}selected{% endif %}>已撤诉</option>
+                        <option value="settled" {% if status == 'settled' %}selected{% endif %}>已和解</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">优先级</label>
+                    <select name="priority" class="form-select form-select-sm">
+                        <option value="">全部优先级</option>
+                        <option value="low" {% if priority == 'low' %}selected{% endif %}>低</option>
+                        <option value="medium" {% if priority == 'medium' %}selected{% endif %}>中</option>
+                        <option value="high" {% if priority == 'high' %}selected{% endif %}>高</option>
+                        <option value="urgent" {% if priority == 'urgent' %}selected{% endif %}>紧急</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">搜索</label>
+                    <input type="text" name="search" class="form-control form-control-sm" 
+                           placeholder="案件编号、案件名称、项目名称、客户名称..." value="{{ search }}">
+                </div>
+                <div class="col-md-12">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-search"></i> 搜索
+                        </button>
+                        <a href="{% url 'litigation_pages:case_list' %}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-arrow-counterclockwise"></i> 重置
+                        </a>
+                    </div>
+                </div>
+            </form>
+
+            <!-- 列表表格 -->
+            {% if cases %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>案件编号</th>
+                            <th>案件名称</th>
+                            <th>案件类型</th>
+                            <th>案件性质</th>
+                            <th>状态</th>
+                            <th>优先级</th>
+                            <th>案件负责人</th>
+                            <th>登记日期</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for case in cases %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'litigation_pages:case_detail' case.id %}" class="text-decoration-none">
+                                    <strong>{{ case.case_number }}</strong>
+                                </a>
+                            </td>
+                            <td>{{ case.case_name }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ case.get_case_type_display }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ case.get_case_nature_display }}</span>
+                            </td>
+                            <td>
+                                <span class="status-badge {{ case.status }}">
+                                    {{ case.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if case.priority == 'urgent' %}
+                                <span class="badge bg-danger">紧急</span>
+                                {% elif case.priority == 'high' %}
+                                <span class="badge bg-warning">高</span>
+                                {% elif case.priority == 'medium' %}
+                                <span class="badge bg-info">中</span>
+                                {% else %}
+                                <span class="badge bg-secondary">低</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if case.case_manager %}
+                                {{ case.case_manager.name|default:case.case_manager.username }}
+                                {% else %}
+                                <span class="text-muted">未分配</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ case.registration_date|date:"Y-m-d" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'litigation_pages:case_detail' case.id %}" class="btn btn-outline-primary" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if perms.litigation_management.case.edit %}
+                                    <a href="{% url 'litigation_pages:case_edit' case.id %}" class="btn btn-outline-secondary" title="编辑">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if cases.has_other_pages %}
+            <nav aria-label="案件列表分页">
+                <ul class="pagination justify-content-center">
+                    {% if cases.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ cases.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if case_type %}&case_type={{ case_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in cases.paginator.page_range %}
+                    {% if cases.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > cases.number|add:'-3' and num < cases.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if case_type %}&case_type={{ case_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if cases.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ cases.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if case_type %}&case_type={{ case_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: var(--vh-text-muted);"></i>
+                <p class="text-muted mt-3">暂无案件记录</p>
+                {% if perms.litigation_management.case.create %}
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCaseModal">
+                    <i class="bi bi-plus-circle"></i> 创建第一个案件
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 创建案件弹窗 -->
+    {% if perms.litigation_management.case.create %}
+    {% include "common/modal_create_form.html" with 
+        modal_id="createCaseModal" 
+        modal_title="案件登记" 
+        modal_title_icon="bi-plus-circle"
+        form_action="{% url 'litigation_pages:case_create' %}"
+        modal_size="xl"
+        show_alert=true
+        alert_type="info"
+        alert_message="请填写以下信息登记新的诉讼案件。"
+        submit_button_text="登记案件"
+    %}
+    
+    {% block modal_form_content %}
+    <!-- 基本信息 -->
+    <div class="modal-form-section">
+        <h6 class="modal-form-section-title">基本信息</h6>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label required">案件名称</label>
+                    <input type="text" name="case_name" class="form-control" 
+                           placeholder="请输入案件名称" required>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label required">案件类型</label>
+                    <select name="case_type" class="form-select" required>
+                        <option value="">请选择</option>
+                        <option value="contract_dispute">合同纠纷</option>
+                        <option value="labor_dispute">劳动争议</option>
+                        <option value="ip_dispute">知识产权</option>
+                        <option value="tort_dispute">侵权纠纷</option>
+                        <option value="other">其他纠纷</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label required">案件性质</label>
+                    <select name="case_nature" class="form-select" required>
+                        <option value="">请选择</option>
+                        <option value="plaintiff">原告</option>
+                        <option value="defendant">被告</option>
+                        <option value="third_party">第三人</option>
+                        <option value="other">其他</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label">案件状态</label>
+                    <select name="status" class="form-select">
+                        <option value="pending_filing" selected>待立案</option>
+                        <option value="filed">已立案</option>
+                        <option value="trial">审理中</option>
+                        <option value="judged">已判决</option>
+                        <option value="executing">执行中</option>
+                        <option value="closed">已结案</option>
+                        <option value="withdrawn">已撤诉</option>
+                        <option value="settled">已和解</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label">优先级</label>
+                    <select name="priority" class="form-select">
+                        <option value="low">低</option>
+                        <option value="medium" selected>中</option>
+                        <option value="high">高</option>
+                        <option value="urgent">紧急</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label">登记日期</label>
+                    <input type="date" name="registration_date" class="form-control" 
+                           value="{{ 'now'|date:'Y-m-d' }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label">案件负责人</label>
+                    <select name="case_manager" class="form-select">
+                        <option value="">请选择</option>
+                        {% for user in case_managers %}
+                        <option value="{{ user.id }}">{{ user.name|default:user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="form-group">
+                    <label class="form-label">案件描述</label>
+                    <textarea name="description" class="form-control" rows="3" 
+                              placeholder="请输入案件详细描述..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 关联信息 -->
+    <div class="modal-form-section">
+        <h6 class="modal-form-section-title">关联信息</h6>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="form-label">关联项目</label>
+                    <select name="project" class="form-select">
+                        <option value="">请选择</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}">{{ project.name }} ({{ project.project_number }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="form-label">关联客户</label>
+                    <select name="client" class="form-select">
+                        <option value="">请选择</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}">{{ client.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="form-label">关联合同</label>
+                    <select name="contract" class="form-select">
+                        <option value="">请选择</option>
+                        {% for contract in contracts %}
+                        <option value="{{ contract.id }}">{{ contract.contract_number }} - {{ contract.client.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 金额信息 -->
+    <div class="modal-form-section">
+        <h6 class="modal-form-section-title">金额信息</h6>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">诉讼标的额</label>
+                    <input type="number" name="litigation_amount" class="form-control" 
+                           step="0.01" placeholder="请输入诉讼标的额">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">争议金额</label>
+                    <input type="number" name="dispute_amount" class="form-control" 
+                           step="0.01" placeholder="请输入争议金额">
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+    {% endif %}
+</div>
+
+<script>
+// 案件登记表单提交处理
+document.addEventListener('DOMContentLoaded', function() {
+    const createCaseForm = document.getElementById('createCaseModalForm');
+    if (createCaseForm) {
+        createCaseForm.addEventListener('submit', function(e) {
+            e.preventDefault(); // 阻止默认表单提交
+            
+            const formData = new FormData(this);
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton ? submitButton.innerHTML : '';
+            
+            // 显示加载状态
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>提交中...';
+            }
+            
+            // 发送AJAX请求
+            fetch(this.action, {
+                method: this.method,
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 显示成功消息
+                    alert(data.message || '案件创建成功！');
+                    
+                    // 关闭弹窗
+                    const modalElement = document.getElementById('createCaseModal');
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // 刷新页面以显示新案件
+                    window.location.reload();
+                } else {
+                    // 显示错误消息
+                    alert('案件创建失败：' + (data.message || '请检查输入信息'));
+                    
+                    // 恢复提交按钮
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalText;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('案件创建失败，请稍后再试。');
+                
+                // 恢复提交按钮
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalText;
+                }
+            });
+        });
+        
+        // 弹窗关闭时重置表单
+        const createCaseModal = document.getElementById('createCaseModal');
+        if (createCaseModal) {
+            createCaseModal.addEventListener('hidden.bs.modal', function() {
+                createCaseForm.reset();
+                // 清除表单验证状态
+                const invalidFields = createCaseForm.querySelectorAll('.is-invalid');
+                invalidFields.forEach(field => field.classList.remove('is-invalid'));
+            });
+        }
+    }
+});
+</script>
+{% endblock %}
+

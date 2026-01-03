@@ -1,0 +1,531 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}案件详情 - {{ case.case_number }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题和操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                {% if approval_status.can_submit and perms.litigation_management.case.create %}
+                <a href="{% url 'litigation_pages:case_submit_approval' case.id %}" class="btn btn-warning">
+                    <i class="bi bi-check-circle"></i> 提交审批
+                </a>
+                {% endif %}
+                {% if case.status == 'pending_filing' and perms.litigation_management.process.manage %}
+                <a href="{% url 'litigation_pages:case_submit_filing' case.id %}" class="btn btn-info">
+                    <i class="bi bi-file-earmark-check"></i> 提交立案
+                </a>
+                {% endif %}
+                {% if perms.litigation_management.case.edit %}
+                <a href="{% url 'litigation_pages:case_edit' case.id %}" class="btn btn-secondary">
+                    <i class="bi bi-pencil"></i> 编辑
+                </a>
+                {% endif %}
+                <a href="{% url 'litigation_pages:case_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 审批状态 -->
+    {% if approval_instance %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">审批状态</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">审批实例编号</span>
+                    <span class="info-value">
+                        <a href="{% url 'workflow_pages:approval_detail' approval_instance.id %}" class="text-decoration-none">
+                            {{ approval_instance.instance_number }}
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">审批状态</span>
+                    <span class="info-value">
+                        {% if approval_instance.status == 'pending' %}
+                            <span class="status-badge warning">审批中</span>
+                        {% elif approval_instance.status == 'approved' %}
+                            <span class="status-badge success">已通过</span>
+                        {% elif approval_instance.status == 'rejected' %}
+                            <span class="status-badge danger">已驳回</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ approval_instance.get_status_display }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请人</span>
+                    <span class="info-value">{{ approval_instance.applicant.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请时间</span>
+                    <span class="info-value">{{ approval_instance.apply_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 基本信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">案件编号</span>
+                    <span class="info-value"><strong>{{ case.case_number }}</strong></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">案件名称</span>
+                    <span class="info-value">{{ case.case_name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">案件类型</span>
+                    <span class="info-value">
+                        <span class="badge bg-info">{{ case.get_case_type_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">案件性质</span>
+                    <span class="info-value">
+                        <span class="badge bg-secondary">{{ case.get_case_nature_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">案件状态</span>
+                    <span class="info-value">
+                        <span class="status-badge {{ case.status }}">
+                            {{ case.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">优先级</span>
+                    <span class="info-value">
+                        {% if case.priority == 'urgent' %}
+                        <span class="badge bg-danger">紧急</span>
+                        {% elif case.priority == 'high' %}
+                        <span class="badge bg-warning">高</span>
+                        {% elif case.priority == 'medium' %}
+                        <span class="badge bg-info">中</span>
+                        {% else %}
+                        <span class="badge bg-secondary">低</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">诉讼标的额</span>
+                    <span class="info-value">
+                        {% if case.litigation_amount %}
+                        ¥{{ case.litigation_amount|floatformat:2 }}
+                        {% else %}
+                        <span class="text-muted">未设置</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">争议金额</span>
+                    <span class="info-value">
+                        {% if case.dispute_amount %}
+                        ¥{{ case.dispute_amount|floatformat:2 }}
+                        {% else %}
+                        <span class="text-muted">未设置</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">案件负责人</span>
+                    <span class="info-value">
+                        {% if case.case_manager %}
+                        {{ case.case_manager.name|default:case.case_manager.username }}
+                        {% else %}
+                        <span class="text-muted">未分配</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">登记日期</span>
+                    <span class="info-value">{{ case.registration_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">登记人</span>
+                    <span class="info-value">
+                        {% if case.registered_by %}
+                        {{ case.registered_by.name|default:case.registered_by.username }}
+                        {% else %}
+                        <span class="text-muted">未知</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">登记部门</span>
+                    <span class="info-value">
+                        {% if case.registered_department %}
+                        {{ case.registered_department.name }}
+                        {% else %}
+                        <span class="text-muted">未设置</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% if case.description %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">案件描述</span>
+                    <span class="info-value">{{ case.description|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 关联信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">关联信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">关联项目</span>
+                    <span class="info-value">
+                        {% if case.project %}
+                        <a href="{% url 'production_pages:project_detail' case.project.id %}" class="text-decoration-none">
+                            {{ case.project.project_number }} - {{ case.project.name }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">未关联</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">关联客户</span>
+                    <span class="info-value">
+                        {% if case.client %}
+                        <a href="{% url 'business_pages:customer_detail' case.client.id %}" class="text-decoration-none">
+                            {{ case.client.name }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">未关联</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">关联合同</span>
+                    <span class="info-value">
+                        {% if case.contract %}
+                        <a href="{% url 'business_pages:contract_detail' case.contract.id %}" class="text-decoration-none">
+                            {{ case.contract.contract_number }} - {{ case.contract.name }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">未关联</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 时间信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">时间信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">登记日期</span>
+                    <span class="info-value">{{ case.registration_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">立案日期</span>
+                    <span class="info-value">
+                        {% if case.filing_date %}
+                        {{ case.filing_date|date:"Y-m-d" }}
+                        {% else %}
+                        <span class="text-muted">未设置</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">开庭日期</span>
+                    <span class="info-value">
+                        {% if case.trial_date %}
+                        {{ case.trial_date|date:"Y-m-d" }}
+                        {% else %}
+                        <span class="text-muted">未设置</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">判决日期</span>
+                    <span class="info-value">
+                        {% if case.judgment_date %}
+                        {{ case.judgment_date|date:"Y-m-d" }}
+                        {% else %}
+                        <span class="text-muted">未设置</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">执行日期</span>
+                    <span class="info-value">
+                        {% if case.execution_date %}
+                        {{ case.execution_date|date:"Y-m-d" }}
+                        {% else %}
+                        <span class="text-muted">未设置</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">结案日期</span>
+                    <span class="info-value">
+                        {% if case.closing_date %}
+                        {{ case.closing_date|date:"Y-m-d" }}
+                        {% else %}
+                        <span class="text-muted">未设置</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 诉讼流程 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">诉讼流程</h5>
+            <div class="info-card-actions">
+                <a href="{% url 'litigation_pages:process_create' case.id %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-circle"></i> 添加流程
+                </a>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if processes %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>流程类型</th>
+                            <th>流程日期</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for process in processes %}
+                        <tr>
+                            <td>{{ process.get_process_type_display }}</td>
+                            <td>{{ process.process_date|date:"Y-m-d" }}</td>
+                            <td>
+                                <span class="status-badge {{ process.status }}">
+                                    {{ process.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'litigation_pages:process_detail' process.id %}" class="btn btn-sm btn-outline-primary">
+                                    查看
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-3">暂无流程记录</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 保全续封 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">保全续封</h5>
+            <div class="info-card-actions">
+                <a href="{% url 'litigation_pages:preservation_create' case.id %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-circle"></i> 添加保全
+                </a>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if preservation_seals %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>保全类型</th>
+                            <th>保全金额</th>
+                            <th>法院名称</th>
+                            <th>到期日期</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for seal in preservation_seals %}
+                        <tr {% if seal.is_expiring_soon %}class="table-warning"{% endif %}>
+                            <td>{{ seal.get_seal_type_display }}</td>
+                            <td>
+                                {% if seal.seal_amount %}
+                                ¥{{ seal.seal_amount|floatformat:2 }}
+                                {% else %}
+                                <span class="text-muted">未设置</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ seal.court_name }}</td>
+                            <td>{{ seal.end_date|date:"Y-m-d" }}</td>
+                            <td>
+                                <span class="status-badge {{ seal.status }}">
+                                    {{ seal.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'litigation_pages:preservation_detail' seal.id %}" class="btn btn-sm btn-outline-primary">
+                                    查看
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-3">暂无保全续封记录</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 时间节点 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">时间节点</h5>
+            <div class="info-card-actions">
+                <a href="{% url 'litigation_pages:timeline_create' case.id %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-circle"></i> 添加节点
+                </a>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if timelines %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>节点名称</th>
+                            <th>节点类型</th>
+                            <th>节点时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for timeline in timelines %}
+                        <tr>
+                            <td>{{ timeline.timeline_name }}</td>
+                            <td>{{ timeline.get_timeline_type_display }}</td>
+                            <td>{{ timeline.timeline_date|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <span class="status-badge {{ timeline.status }}">
+                                    {{ timeline.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'litigation_pages:timeline_detail' timeline.id %}" class="btn btn-sm btn-outline-primary">
+                                    查看
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-3">暂无时间节点</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 费用统计 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">费用统计</h5>
+            <div class="info-card-actions">
+                <a href="{% url 'litigation_pages:expense_create' case.id %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-circle"></i> 添加费用
+                </a>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if expenses %}
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="info-item">
+                        <span class="info-label">费用总额</span>
+                        <span class="info-value info-value-large">
+                            ¥{{ expenses|length|default:0 }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>费用名称</th>
+                            <th>费用类型</th>
+                            <th>金额</th>
+                            <th>费用日期</th>
+                            <th>支付状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in expenses %}
+                        <tr>
+                            <td>{{ expense.expense_name }}</td>
+                            <td>{{ expense.get_expense_type_display }}</td>
+                            <td>¥{{ expense.amount|floatformat:2 }}</td>
+                            <td>{{ expense.expense_date|date:"Y-m-d" }}</td>
+                            <td>
+                                <span class="status-badge {{ expense.payment_status }}">
+                                    {{ expense.get_payment_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'litigation_pages:expense_detail' expense.id %}" class="btn btn-sm btn-outline-primary">
+                                    查看
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-3">暂无费用记录</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

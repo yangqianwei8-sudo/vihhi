@@ -1,0 +1,59 @@
+{% load i18n %}
+<button class="sticky toggle-nav-sidebar" id="toggle-nav-sidebar" aria-label="{% translate 'Toggle navigation' %}"></button>
+<nav class="sticky" id="nav-sidebar" aria-label="{% translate 'Sidebar' %}">
+  <input type="search" id="nav-filter"
+         placeholder="{% translate 'Start typing to filter…' %}"
+         aria-label="{% translate 'Filter navigation items' %}">
+  
+  {% if admin_menu_structure %}
+    {# 使用自定义菜单结构，添加合同管理一级菜单 #}
+    {% for main_menu, sub_menus in admin_menu_structure.items %}
+      {% if main_menu != '_metadata' and main_menu != '_sorted_list' %}
+        <div class="app-{{ main_menu|slugify }} module{% if main_menu in request.path %} current-app{% endif %}">
+          <table>
+            <caption>
+              {% if main_menu == '合同管理' %}
+                <a href="{% url 'admin:app_list' 'production_management' %}" class="section" title="{{ main_menu }}">{{ main_menu }}</a>
+              {% else %}
+                <a href="#" class="section" title="{{ main_menu }}">{{ main_menu }}</a>
+              {% endif %}
+            </caption>
+            {% if main_menu == '合同管理' %}
+              {# 在合同管理下添加合同类型子菜单 #}
+              <tr class="model-contracttype">
+                <th scope="row">
+                  <a href="{% url 'admin:production_management_businesscontract_changelist' %}" title="合同类型">合同类型</a>
+                </th>
+                <td></td>
+                <td></td>
+              </tr>
+            {% endif %}
+            {% for sub_menu, models in sub_menus.items %}
+              {% if sub_menu != '默认' %}
+                <tr class="model-{{ sub_menu|slugify }}">
+                  <th scope="row" colspan="3" style="font-weight: bold; padding-left: 10px; color: #666;">
+                    {{ sub_menu }}
+                  </th>
+                </tr>
+              {% endif %}
+              {% for model in models %}
+                <tr class="model-{{ model.object_name|lower }}{% if model.admin_url in request.path|urlencode %} current-model{% endif %}">
+                  {% if model.admin_url %}
+                    <th scope="row"><a href="{{ model.admin_url }}"{% if model.admin_url in request.path|urlencode %} aria-current="page"{% endif %}>{{ model.name }}</a></th>
+                  {% else %}
+                    <th scope="row">{{ model.name }}</th>
+                  {% endif %}
+                  <td></td>
+                  <td></td>
+                </tr>
+              {% endfor %}
+            {% endfor %}
+          </table>
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    {# 如果没有自定义菜单结构，使用默认的 app_list #}
+    {% include 'admin/app_list.html' with app_list=available_apps show_changelinks=False %}
+  {% endif %}
+</nav>

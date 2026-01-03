@@ -1,0 +1,170 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .filter-bar {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    .table th {
+        background: var(--vh-surface);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+        font-size: var(--font-size-sm);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+        <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" placeholder="搜索应收单号、备注..." value="{{ current_search }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="">全部状态</option>
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if current_status == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="date_from" class="form-control" placeholder="开始日期" value="{{ current_date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="date_to" class="form-control" placeholder="结束日期" value="{{ current_date_to }}">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a href="{% url 'finance_pages:receivable_management' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 清除
+                    </a>
+                </div>
+            </div>
+        </form>
+        <div class="d-flex justify-content-end mt-3">
+            <a href="{% url 'finance_pages:receivable_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> 新增应收账款
+            </a>
+        </div>
+    </div>
+
+    {% if page_obj %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">应收账款列表</h5>
+        </div>
+        <div class="info-card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>应收单号</th>
+                        <th>客户</th>
+                        <th>关联项目</th>
+                        <th>应收金额</th>
+                        <th>已收金额</th>
+                        <th>未收金额</th>
+                        <th>应收日期</th>
+                        <th>到期日期</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for receivable in receivables %}
+                    <tr>
+                        <td><code>{{ receivable.account_number }}</code></td>
+                        <td>{{ receivable.customer.name|default:"-" }}</td>
+                        <td>{{ receivable.project.name|default:"-" }}</td>
+                        <td>¥{{ receivable.receivable_amount|floatformat:2 }}</td>
+                        <td>¥{{ receivable.received_amount|floatformat:2 }}</td>
+                        <td><strong>¥{{ receivable.remaining_amount|floatformat:2 }}</strong></td>
+                        <td>{{ receivable.receivable_date|date:"Y-m-d" }}</td>
+                        <td>{{ receivable.due_date|date:"Y-m-d"|default:"-" }}</td>
+                        <td>
+                            {% if receivable.status == 'pending' %}
+                            <span class="badge bg-secondary">待收款</span>
+                            {% elif receivable.status == 'partial' %}
+                            <span class="badge bg-warning">部分收款</span>
+                            {% elif receivable.status == 'completed' %}
+                            <span class="badge bg-success">已完成</span>
+                            {% elif receivable.status == 'overdue' %}
+                            <span class="badge bg-danger">已逾期</span>
+                            {% else %}
+                            <span class="badge bg-dark">已取消</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'finance_pages:receivable_detail' receivable.id %}" class="btn btn-sm btn-outline-primary" title="查看详情">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'finance_pages:receivable_update' receivable.id %}" class="btn btn-sm btn-outline-secondary" title="编辑">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center text-muted py-4">暂无数据</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航">
+            <ul class="pagination justify-content-center mt-4">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}">下一页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            暂无数据或加载失败
+        </div>
+        {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

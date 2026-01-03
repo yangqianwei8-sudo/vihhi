@@ -10,6 +10,8 @@ from decimal import Decimal
 
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.apps.system_management.models import Department
+from backend.core.views import _build_full_top_nav, _build_unified_sidebar_nav
+from backend.core.sidebar_utils import normalize_sidebar_menu, build_sidebar_menu_item, build_sidebar_menu_group
 from .models import (
     Employee, Attendance, Leave, Training, TrainingParticipant,
     Performance, Salary, LaborContract,
@@ -29,7 +31,7 @@ def _permission_granted(required_code, user_permissions: set) -> bool:
     return required_code in user_permissions
 
 
-def _context(page_title, page_icon, description, summary_cards=None, request=None, use_personnel_nav=False):
+def _context(page_title, page_icon, description, summary_cards=None, request=None, use_personnel_nav=False, active_menu_id=None):
     """构建页面上下文"""
     context = {
         "page_title": page_title,
@@ -40,12 +42,15 @@ def _context(page_title, page_icon, description, summary_cards=None, request=Non
     
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
-        if use_personnel_nav:
-            context['full_top_nav'] = _build_personnel_top_nav(permission_set)
-        else:
-            context['full_top_nav'] = []
+        context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+        # 添加左侧菜单（统一使用module_sidebar_nav，与其他模块保持一致）
+        context['module_sidebar_nav'] = _build_personnel_sidebar_nav(permission_set, request.path, active_id=active_menu_id)
+        # 保留personnel_menu以兼容旧模板（逐步迁移）
+        context['personnel_menu'] = context['module_sidebar_nav']
     else:
         context['full_top_nav'] = []
+        context['module_sidebar_nav'] = []
+        context['personnel_menu'] = []
     
     return context
 
@@ -113,6 +118,199 @@ def _build_personnel_top_nav(permission_set):
             })
     
     return nav_items
+
+
+def _build_personnel_sidebar_nav(permission_set, request_path=None, active_id=None):
+    """生成人事管理模块的左侧菜单导航（标准模板格式）
+    
+    Args:
+        permission_set: 用户权限集合
+        request_path: 当前请求路径，用于判断激活状态
+        active_id: 当前激活的菜单项ID（优先使用此参数）
+    
+    Returns:
+        list: 标准化后的分组菜单项列表
+    """
+    # 定义人事管理菜单结构（标准格式，使用children和id字段）
+    PERSONNEL_MANAGEMENT_MENU = [
+        {
+            'id': 'personnel_home',
+            'label': '人事管理首页',
+            'icon': '🏠',
+            'url_name': 'personnel_pages:personnel_home',
+            'permission': 'personnel_management.view',
+        },
+        {
+            'id': 'organization',
+            'label': '组织架构',
+            'icon': '🏢',
+            'permission': 'personnel_management.organization.view',
+            'children': [
+                {
+                    'id': 'organization_management',
+                    'label': '组织架构',
+                    'url_name': 'personnel_pages:organization_management',
+                    'permission': 'personnel_management.organization.view',
+                    'icon': '🏢',
+                    'path_keywords': ['organization'],
+                    'children': [
+                        {'id': 'department_management', 'label': '部门管理', 'icon': '🏛️', 'url_name': 'personnel_pages:department_management', 'permission': 'personnel_management.organization.manage_department', 'path_keywords': ['department']},
+                        {'id': 'position_management', 'label': '职位管理', 'icon': '💼', 'url_name': 'personnel_pages:position_management', 'permission': 'personnel_management.organization.manage_position', 'path_keywords': ['position']},
+                        {'id': 'org_chart', 'label': '组织架构图', 'icon': '📊', 'url_name': 'personnel_pages:org_chart', 'permission': 'personnel_management.organization.view_chart', 'path_keywords': ['org-chart', 'chart']},
+                    ],
+                },
+                {
+                    'id': 'employee_management',
+                    'label': '员工管理',
+                    'url_name': 'personnel_pages:employee_management',
+                    'permission': 'personnel_management.employee.view',
+                    'icon': '👥',
+                    'path_keywords': ['employee', 'employees'],
+                    'children': [
+                        {'id': 'employee_list', 'label': '员工列表', 'icon': '📋', 'url_name': 'personnel_pages:employee_management', 'permission': 'personnel_management.employee.view', 'path_keywords': ['employee']},
+                        {'id': 'employee_archive', 'label': '员工档案', 'icon': '📁', 'url_name': 'personnel_pages:employee_archive_management', 'permission': 'personnel_management.employee_archive.view', 'path_keywords': ['archive']},
+                        {'id': 'employee_archive_create', 'label': '上传档案', 'icon': '📤', 'url_name': 'personnel_pages:employee_archive_create', 'permission': 'personnel_management.employee_archive.create', 'path_keywords': ['archive/create']},
+                        {'id': 'employee_movement', 'label': '员工异动', 'icon': '🔄', 'url_name': 'personnel_pages:employee_movement_management', 'permission': 'personnel_management.employee_movement.view', 'path_keywords': ['movement']},
+                        {'id': 'employee_movement_create', 'label': '新增异动', 'icon': '➕', 'url_name': 'personnel_pages:employee_movement_create', 'permission': 'personnel_management.movement.create', 'path_keywords': ['movement/create']},
+                    ],
+                },
+            ],
+        },
+        {
+            'id': 'attendance',
+            'label': '考勤管理',
+            'icon': '⏰',
+            'permission': 'personnel_management.attendance.view',
+            'children': [
+                {'id': 'attendance_list', 'label': '考勤记录', 'icon': '📋', 'url_name': 'personnel_pages:attendance_management', 'permission': 'personnel_management.attendance.view', 'path_keywords': ['attendance']},
+            ],
+        },
+        {
+            'id': 'leave',
+            'label': '请假管理',
+            'icon': '📅',
+            'permission': 'personnel_management.leave.view',
+            'children': [
+                {'id': 'leave_list', 'label': '请假列表', 'icon': '📋', 'url_name': 'personnel_pages:leave_management', 'permission': 'personnel_management.leave.view', 'path_keywords': ['leave', 'leaves']},
+            ],
+        },
+        {
+            'id': 'training',
+            'label': '培训管理',
+            'icon': '🎓',
+            'permission': 'personnel_management.training.view',
+            'children': [
+                {'id': 'training_list', 'label': '培训列表', 'icon': '📋', 'url_name': 'personnel_pages:training_management', 'permission': 'personnel_management.training.view', 'path_keywords': ['training', 'trainings']},
+            ],
+        },
+        {
+            'id': 'performance',
+            'label': '绩效考核',
+            'icon': '📊',
+            'permission': 'personnel_management.performance.view',
+            'children': [
+                {'id': 'performance_list', 'label': '考核列表', 'icon': '📋', 'url_name': 'personnel_pages:performance_management', 'permission': 'personnel_management.performance.view', 'path_keywords': ['performance', 'performances']},
+            ],
+        },
+        {
+            'id': 'salary',
+            'label': '薪资管理',
+            'icon': '💵',
+            'permission': 'personnel_management.salary.view',
+            'children': [
+                {'id': 'salary_list', 'label': '薪资列表', 'icon': '📋', 'url_name': 'personnel_pages:salary_management', 'permission': 'personnel_management.salary.view', 'path_keywords': ['salary', 'salaries']},
+                {'id': 'salary_create', 'label': '新增薪资', 'icon': '➕', 'url_name': 'personnel_pages:salary_create', 'permission': 'personnel_management.salary.manage', 'path_keywords': ['salary/create']},
+            ],
+        },
+        {
+            'id': 'contract',
+            'label': '劳动合同',
+            'icon': '📄',
+            'permission': 'personnel_management.contract.view',
+            'children': [
+                {'id': 'contract_list', 'label': '合同列表', 'icon': '📋', 'url_name': 'personnel_pages:contract_management', 'permission': 'personnel_management.contract.view', 'path_keywords': ['contract', 'contracts']},
+                {'id': 'contract_create', 'label': '新增合同', 'icon': '➕', 'url_name': 'personnel_pages:contract_create', 'permission': 'personnel_management.contract.create', 'path_keywords': ['contract/create']},
+            ],
+        },
+        {
+            'id': 'welfare',
+            'label': '福利管理',
+            'icon': '🎁',
+            'permission': 'personnel_management.welfare.view',
+            'children': [
+                {'id': 'welfare_list', 'label': '发放列表', 'icon': '📋', 'url_name': 'personnel_pages:welfare_management', 'permission': 'personnel_management.welfare.view', 'path_keywords': ['welfare']},
+                {'id': 'welfare_project_create', 'label': '新增项目', 'icon': '➕', 'url_name': 'personnel_pages:welfare_project_create', 'permission': 'personnel_management.welfare.create', 'path_keywords': ['welfare/project/create']},
+                {'id': 'welfare_distribution_create', 'label': '新增发放', 'icon': '➕', 'url_name': 'personnel_pages:welfare_distribution_create', 'permission': 'personnel_management.welfare.create', 'path_keywords': ['welfare/distribution/create']},
+            ],
+        },
+        {
+            'id': 'recruitment',
+            'label': '招聘管理',
+            'icon': '📝',
+            'permission': 'personnel_management.recruitment.view',
+            'children': [
+                {'id': 'recruitment_list', 'label': '需求列表', 'icon': '📋', 'url_name': 'personnel_pages:recruitment_management', 'permission': 'personnel_management.recruitment.view', 'path_keywords': ['recruitment']},
+                {'id': 'recruitment_requirement_create', 'label': '新增需求', 'icon': '➕', 'url_name': 'personnel_pages:recruitment_requirement_create', 'permission': 'personnel_management.recruitment.create', 'path_keywords': ['recruitment/requirement/create']},
+                {'id': 'resume_create', 'label': '新增简历', 'icon': '➕', 'url_name': 'personnel_pages:resume_create', 'permission': 'personnel_management.recruitment.create', 'path_keywords': ['recruitment/resume/create']},
+                {'id': 'interview_create', 'label': '新增面试', 'icon': '➕', 'url_name': 'personnel_pages:interview_create', 'permission': 'personnel_management.recruitment.create', 'path_keywords': ['recruitment/interview/create']},
+            ],
+        },
+        {
+            'id': 'employee_relations',
+            'label': '员工关系',
+            'icon': '🤝',
+            'permission': 'personnel_management.employee_relations.view',
+            'children': [
+                {'id': 'employee_relations_list', 'label': '关系管理', 'icon': '📋', 'url_name': 'personnel_pages:employee_relations_management', 'permission': 'personnel_management.employee_relations.view', 'path_keywords': ['employee-relations']},
+                {'id': 'employee_communication_create', 'label': '新增沟通', 'icon': '➕', 'url_name': 'personnel_pages:employee_communication_create', 'permission': 'personnel_management.employee_relations.create', 'path_keywords': ['employee-relations/communication/create']},
+                {'id': 'employee_care_create', 'label': '新增关怀', 'icon': '➕', 'url_name': 'personnel_pages:employee_care_create', 'permission': 'personnel_management.employee_relations.create', 'path_keywords': ['employee-relations/care/create']},
+                {'id': 'employee_activity_create', 'label': '新增活动', 'icon': '➕', 'url_name': 'personnel_pages:employee_activity_create', 'permission': 'personnel_management.employee_relations.create', 'path_keywords': ['employee-relations/activity/create']},
+                {'id': 'employee_complaint_create', 'label': '新增投诉', 'icon': '➕', 'url_name': 'personnel_pages:employee_complaint_create', 'permission': 'personnel_management.employee_relations.create', 'path_keywords': ['employee-relations/complaint/create']},
+                {'id': 'employee_suggestion_create', 'label': '新增建议', 'icon': '➕', 'url_name': 'personnel_pages:employee_suggestion_create', 'permission': 'personnel_management.employee_relations.create', 'path_keywords': ['employee-relations/suggestion/create']},
+            ],
+        },
+    ]
+    
+    # 使用标准化工具函数构建菜单
+    menu = []
+    for menu_group_data in PERSONNEL_MANAGEMENT_MENU:
+        # 处理顶级独立项（如首页）
+        if 'url_name' in menu_group_data and not menu_group_data.get('children'):
+            item = build_sidebar_menu_item(
+                label=menu_group_data['label'],
+                url_name=menu_group_data['url_name'],
+                icon=menu_group_data.get('icon', ''),
+                permission=menu_group_data.get('permission'),
+                permission_set=permission_set,
+                active=menu_group_data.get('id') == active_id if active_id else False,
+                path_keywords=menu_group_data.get('path_keywords'),
+                request_path=request_path,
+            )
+            if item:
+                item['id'] = menu_group_data.get('id')
+                menu.append(item)
+        # 处理菜单分组（有children）
+        elif 'children' in menu_group_data:
+            group = build_sidebar_menu_group(
+                label=menu_group_data['label'],
+                icon=menu_group_data.get('icon', ''),
+                children=menu_group_data['children'],
+                permission=menu_group_data.get('permission'),
+                permission_set=permission_set,
+                request_path=request_path,
+                expanded=any(
+                    child.get('id') == active_id or 
+                    (child.get('path_keywords') and request_path and any(kw in request_path for kw in child['path_keywords']))
+                    for child in menu_group_data['children']
+                ) if active_id or request_path else False
+            )
+            if group:
+                group['id'] = menu_group_data.get('id')
+                menu.append(group)
+    
+    # 标准化菜单数据
+    normalized_menu = normalize_sidebar_menu(menu)
+    return normalized_menu
 
 
 @login_required

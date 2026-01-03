@@ -1,0 +1,71 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; <a href="{% url 'admin:workflow_engine_approvalinstance_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<fieldset class="module aligned">
+    <h2>审批实例信息</h2>
+    <div class="form-row">
+        <div>
+            <label>审批编号：</label>
+            <p>{{ instance.instance_number }}</p>
+        </div>
+    </div>
+    <div class="form-row">
+        <div>
+            <label>流程名称：</label>
+            <p>{{ instance.workflow.name }}</p>
+        </div>
+    </div>
+    <div class="form-row">
+        <div>
+            <label>申请人：</label>
+            <p>{{ instance.applicant.username }}</p>
+        </div>
+    </div>
+    <div class="form-row">
+        <div>
+            <label>当前节点：</label>
+            <p>{{ instance.current_node.name|default:"-" }}</p>
+        </div>
+    </div>
+    {% if instance.apply_comment %}
+    <div class="form-row">
+        <div>
+            <label>申请说明：</label>
+            <p>{{ instance.apply_comment }}</p>
+        </div>
+    </div>
+    {% endif %}
+</fieldset>
+
+<form method="post">
+    {% csrf_token %}
+    <fieldset class="module aligned">
+        <h2>审批意见</h2>
+        <div class="form-row">
+            <div>
+                <label for="comment">审批意见：</label>
+                <textarea name="comment" id="comment" rows="4" cols="80" placeholder="请输入审批意见（可选）"></textarea>
+            </div>
+        </div>
+    </fieldset>
+    
+    <div class="submit-row">
+        <input type="submit" value="确认通过" class="default" />
+        <a href="{% url 'admin:workflow_engine_approvalinstance_changelist' %}" class="button">取消</a>
+    </div>
+</form>
+{% endblock %}

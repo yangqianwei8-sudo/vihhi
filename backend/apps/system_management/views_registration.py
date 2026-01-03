@@ -10,7 +10,7 @@ from .forms import (
     ProfileCompletionForm,
     SERVICE_CATEGORY_CHOICES,
 )
-from .models import RegistrationRequest
+from backend.apps.system_management.models import RegistrationRequest
 from .services_registration import assign_roles, create_user_from_request
 
 
@@ -92,14 +92,14 @@ def registration_detail(request, pk):
 def complete_profile(request):
     user = request.user
     if user.profile_completed:
-        return redirect('home')
+        return redirect('admin:index')
 
     if request.method == 'POST':
         form = ProfileCompletionForm(request.POST, user=user)
         if form.is_valid():
             form.save()
             messages.success(request, '个人资料已完善')
-            return redirect('home')
+            return redirect('admin:index')
     else:
         form = ProfileCompletionForm(user=user)
 

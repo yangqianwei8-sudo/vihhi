@@ -1,0 +1,163 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-container {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+        display: block;
+    }
+    .form-control, .form-select {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #1f2937;
+        box-shadow: 0 0 0 3px rgba(31, 42, 87, 0.1);
+        outline: none;
+    }
+    .btn-group {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+    }
+    .info-box {
+        background: #f3f4f6;
+        border-left: 4px solid #3b82f6;
+        padding: 12px 16px;
+        margin-bottom: 24px;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">记录合同变更信息</p>
+        </div>
+    </div>
+
+    <!-- 表单容器 -->
+    <div class="form-container">
+        <div class="info-box">
+            <strong>合同信息：</strong>{{ contract.contract_number }} - {{ contract.contract_name }}
+            <br>
+            <small>当前金额：¥{{ contract.contract_amount|floatformat:2 }}</small>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.change_type.id_for_label }}">{{ form.change_type.label }}</label>
+                {{ form.change_type }}
+                {% if form.change_type.errors %}
+                <div class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{ form.change_type.errors }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.change_reason.id_for_label }}">{{ form.change_reason.label }}</label>
+                {{ form.change_reason }}
+                {% if form.change_reason.errors %}
+                <div class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{ form.change_reason.errors }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.before_content.id_for_label }}">{{ form.before_content.label }}</label>
+                {{ form.before_content }}
+                {% if form.before_content.errors %}
+                <div class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{ form.before_content.errors }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.after_content.id_for_label }}">{{ form.after_content.label }}</label>
+                {{ form.after_content }}
+                {% if form.after_content.errors %}
+                <div class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{ form.after_content.errors }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.change_amount.id_for_label }}">{{ form.change_amount.label }}</label>
+                {{ form.change_amount }}
+                {% if form.change_amount.errors %}
+                <div class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{ form.change_amount.errors }}
+                </div>
+                {% endif %}
+                <small class="text-muted">金额变更时必填，正数表示增加，负数表示减少</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.change_date.id_for_label }}">{{ form.change_date.label }}</label>
+                {{ form.change_date }}
+                {% if form.change_date.errors %}
+                <div class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{ form.change_date.errors }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                <div class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{ form.notes.errors }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">创建变更</button>
+                <a href="{% url 'business_pages:contract_detail' contract.id %}" class="btn btn-outline-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

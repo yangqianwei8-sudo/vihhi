@@ -1,0 +1,212 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+
+<!-- 基本信息 -->
+<div class="info-section">
+    <h6 class="info-section-title">基本信息</h6>
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="info-label">客户名称</span>
+            <span class="info-value"><strong>{{ client.name }}</strong></span>
+        </div>
+        {% if client.unified_credit_code %}
+        <div class="info-item">
+            <span class="info-label">统一信用代码</span>
+            <span class="info-value">{{ client.unified_credit_code }}</span>
+        </div>
+        {% endif %}
+        {% if client.legal_representative %}
+        <div class="info-item">
+            <span class="info-label">法定代表人</span>
+            <span class="info-value">{{ client.legal_representative }}</span>
+        </div>
+        {% endif %}
+        {% if client.established_date %}
+        <div class="info-item">
+            <span class="info-label">成立日期</span>
+            <span class="info-value">{{ client.established_date|date:"Y-m-d" }}</span>
+        </div>
+        {% endif %}
+        {% if client.registered_capital %}
+        <div class="info-item">
+            <span class="info-label">注册资本（万元）</span>
+            <span class="info-value">{{ client.registered_capital|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+        <div class="info-item">
+            <span class="info-label">客户等级</span>
+            <span class="info-value">{{ client.get_client_level_display }}</span>
+        </div>
+        {% if client.grade %}
+        <div class="info-item">
+            <span class="info-label">客户分级</span>
+            <span class="info-value">{{ client.get_grade_display }}</span>
+        </div>
+        {% endif %}
+        <div class="info-item">
+            <span class="info-label">信用等级</span>
+            <span class="info-value">{{ client.get_credit_level_display }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">状态</span>
+            <span class="info-value">
+                {% if client.is_active %}
+                <span class="badge bg-success">活跃</span>
+                {% else %}
+                <span class="badge bg-secondary">非活跃</span>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- 联系信息 -->
+{% if client.company_phone or client.company_email or client.company_address or client.phone %}
+<div class="info-section">
+    <h6 class="info-section-title">联系信息</h6>
+    <div class="info-grid">
+        {% if client.company_phone %}
+        <div class="info-item">
+            <span class="info-label">联系电话</span>
+            <span class="info-value">{{ client.company_phone }}</span>
+        </div>
+        {% endif %}
+        {% if client.phone %}
+        <div class="info-item">
+            <span class="info-label">手机</span>
+            <span class="info-value">{{ client.phone }}</span>
+        </div>
+        {% endif %}
+        {% if client.company_email %}
+        <div class="info-item">
+            <span class="info-label">邮箱</span>
+            <span class="info-value">{{ client.company_email }}</span>
+        </div>
+        {% endif %}
+        {% if client.company_address %}
+        <div class="info-item" style="grid-column: 1 / -1;">
+            <span class="info-label">地址</span>
+            <span class="info-value">{{ client.company_address }}</span>
+        </div>
+        {% endif %}
+        {% if client.contact_name %}
+        <div class="info-item">
+            <span class="info-label">联系人</span>
+            <span class="info-value">{{ client.contact_name }}</span>
+        </div>
+        {% endif %}
+        {% if client.contact_position %}
+        <div class="info-item">
+            <span class="info-label">联系人职位</span>
+            <span class="info-value">{{ client.contact_position }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 分类信息 -->
+<div class="info-section">
+    <h6 class="info-section-title">分类信息</h6>
+    <div class="info-grid">
+        {% if client.client_type %}
+        <div class="info-item">
+            <span class="info-label">客户类型</span>
+            <span class="info-value">{{ client.get_client_type_display }}</span>
+        </div>
+        {% endif %}
+        {% if client.region %}
+        <div class="info-item">
+            <span class="info-label">所属区域</span>
+            <span class="info-value">{{ client.region }}</span>
+        </div>
+        {% endif %}
+        {% if client.source %}
+        <div class="info-item">
+            <span class="info-label">客户来源</span>
+            <span class="info-value">{{ client.get_source_display }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 法律风险信息 -->
+{% if client.litigation_count or client.executed_person_count or client.final_case_count or client.consumption_limit_count %}
+<div class="info-section">
+    <h6 class="info-section-title">法律风险信息</h6>
+    <div class="info-grid">
+        {% if client.litigation_count %}
+        <div class="info-item">
+            <span class="info-label">司法案件数量</span>
+            <span class="info-value">{{ client.litigation_count }}</span>
+        </div>
+        {% endif %}
+        {% if client.executed_person_count %}
+        <div class="info-item">
+            <span class="info-label">被执行人数量</span>
+            <span class="info-value">{{ client.executed_person_count }}</span>
+        </div>
+        {% endif %}
+        {% if client.final_case_count %}
+        <div class="info-item">
+            <span class="info-label">终本案件数量</span>
+            <span class="info-value">{{ client.final_case_count }}</span>
+        </div>
+        {% endif %}
+        {% if client.consumption_limit_count %}
+        <div class="info-item">
+            <span class="info-label">限制高消费数量</span>
+            <span class="info-value">{{ client.consumption_limit_count }}</span>
+        </div>
+        {% endif %}
+        {% if client.legal_risk_level %}
+        <div class="info-item">
+            <span class="info-label">风险等级</span>
+            <span class="info-value">
+                {% if client.legal_risk_level == 'low' %}
+                <span class="badge bg-success">低风险</span>
+                {% elif client.legal_risk_level == 'medium' %}
+                <span class="badge bg-warning">中风险</span>
+                {% elif client.legal_risk_level == 'high' %}
+                <span class="badge bg-danger">高风险</span>
+                {% else %}
+                <span class="badge bg-secondary">{{ client.get_legal_risk_level_display }}</span>
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 财务信息 -->
+<div class="info-section">
+    <h6 class="info-section-title">财务信息</h6>
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="info-label">累计合同金额</span>
+            <span class="info-value"><strong>¥{{ client.total_contract_amount|floatformat:2 }}</strong></span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">累计回款金额</span>
+            <span class="info-value"><strong>¥{{ client.total_payment_amount|floatformat:2 }}</strong></span>
+        </div>
+        {% if client.score %}
+        <div class="info-item">
+            <span class="info-label">客户评分</span>
+            <span class="info-value">{{ client.score }}分</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 客户描述 -->
+{% if client.description %}
+<div class="info-section">
+    <h6 class="info-section-title">客户描述</h6>
+    <div class="info-item">
+        <span class="info-value" style="white-space: pre-wrap;">{{ client.description }}</span>
+    </div>
+</div>
+{% endif %}
+

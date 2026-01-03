@@ -1,0 +1,185 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}保全续封详情 - {{ seal.get_seal_type_display }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                {% if perms.litigation_management.process.manage %}
+                <a href="{% url 'litigation_pages:preservation_edit' seal.id %}" class="btn btn-secondary">
+                    <i class="bi bi-pencil"></i> 编辑
+                </a>
+                {% endif %}
+                {% if seal.status == 'active' %}
+                <a href="{% url 'litigation_pages:preservation_renew' seal.id %}" class="btn btn-warning">
+                    <i class="bi bi-arrow-repeat"></i> 申请续封
+                </a>
+                {% endif %}
+                <a href="{% url 'litigation_pages:preservation_list' case.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 紧急提醒 -->
+    {% if is_expiring_soon %}
+    <div class="info-card info-card-danger mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">⚠️ 紧急提醒</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="alert alert-danger">
+                <h5><i class="bi bi-exclamation-triangle-fill"></i> 保全续封即将到期！</h5>
+                <p class="mb-2"><strong>剩余天数：{{ days_until_expiry }} 天</strong></p>
+                <p class="mb-0"><strong>⚠️ 如未及时续封将导致保全失效，造成重大损失！</strong></p>
+                <div class="mt-3">
+                    <a href="{% url 'litigation_pages:preservation_renew' seal.id %}" class="btn btn-danger">
+                        <i class="bi bi-arrow-repeat"></i> 立即申请续封
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 基本信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">保全类型</span>
+                    <span class="info-value">
+                        <span class="badge bg-info">{{ seal.get_seal_type_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge {{ seal.status }}">
+                            {{ seal.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                {% if seal.seal_amount %}
+                <div class="info-item">
+                    <span class="info-label">保全金额</span>
+                    <span class="info-value">¥{{ seal.seal_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                {% if seal.seal_number %}
+                <div class="info-item">
+                    <span class="info-label">保全案号</span>
+                    <span class="info-value">{{ seal.seal_number }}</span>
+                </div>
+                {% endif %}
+                <div class="info-item">
+                    <span class="info-label">开始日期</span>
+                    <span class="info-value">{{ seal.start_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">结束日期</span>
+                    <span class="info-value">
+                        {{ seal.end_date|date:"Y-m-d" }}
+                        {% if is_expiring_soon %}
+                        <span class="badge bg-danger ms-2">即将到期</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% if days_until_expiry >= 0 %}
+                <div class="info-item">
+                    <span class="info-label">剩余天数</span>
+                    <span class="info-value">
+                        <span class="badge {% if days_until_expiry <= 7 %}bg-danger{% elif days_until_expiry <= 15 %}bg-warning{% else %}bg-info{% endif %}">
+                            {{ days_until_expiry }} 天
+                        </span>
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 法院信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">法院信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% if seal.court_name %}
+                <div class="info-item">
+                    <span class="info-label">法院名称</span>
+                    <span class="info-value">{{ seal.court_name }}</span>
+                </div>
+                {% endif %}
+                {% if seal.renewal_deadline %}
+                <div class="info-item">
+                    <span class="info-label">续封申请截止日期</span>
+                    <span class="info-value">{{ seal.renewal_deadline|date:"Y-m-d" }}</span>
+                </div>
+                {% endif %}
+                {% if seal.renewal_materials %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">续封所需材料</span>
+                    <span class="info-value">{{ seal.renewal_materials|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 关联案件 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">关联案件</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">案件编号</span>
+                    <span class="info-value">
+                        <a href="{% url 'litigation_pages:case_detail' case.id %}" class="text-decoration-none">
+                            {{ case.case_number }}
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">案件名称</span>
+                    <span class="info-value">{{ case.case_name }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 备注信息 -->
+    {% if seal.notes %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注信息</h5>
+        </div>
+        <div class="info-card-body">
+            <p>{{ seal.notes|linebreaks }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

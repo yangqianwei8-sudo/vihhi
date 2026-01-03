@@ -1,0 +1,126 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .form-card h5 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-md);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .form-label.required::after {
+        content: " *";
+        color: var(--vh-error);
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- 会议信息 -->
+    <div class="form-card mb-4">
+        <h5>会议信息</h5>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">会议编号</label>
+                <div class="form-control-plaintext"><code>{{ meeting.meeting_number }}</code></div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">会议主题</label>
+                <div class="form-control-plaintext">{{ meeting.title }}</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">会议时间</label>
+                <div class="form-control-plaintext">
+                    {{ meeting.meeting_date|date:"Y-m-d" }} {{ meeting.start_time|time:"H:i" }} - {{ meeting.end_time|time:"H:i" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 会议记录表单 -->
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-card">
+            <h5>会议记录</h5>
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label required">会议纪要</label>
+                    {{ form.minutes }}
+                    {% if form.minutes.errors %}
+                    <div class="text-danger small mt-1">{{ form.minutes.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">请详细记录会议的主要内容、讨论要点等</small>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">会议决议</label>
+                    {{ form.resolutions }}
+                    {% if form.resolutions.errors %}
+                    <div class="text-danger small mt-1">{{ form.resolutions.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">记录会议达成的决议、决定等</small>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">记录附件</label>
+                    {{ form.attachment }}
+                    {% if form.attachment.errors %}
+                    <div class="text-danger small mt-1">{{ form.attachment.errors }}</div>
+                    {% endif %}
+                    {% if record and record.attachment %}
+                    <div class="mt-2">
+                        <small class="text-muted">当前附件：</small>
+                        <a href="{{ record.attachment.url }}" target="_blank" class="ms-2">
+                            <i class="bi bi-file-earmark"></i> {{ record.attachment.name|slice:"20:" }}
+                        </a>
+                    </div>
+                    {% endif %}
+                    <small class="text-muted">可上传会议记录相关的文件、截图等</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 表单错误 -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% url 'admin_pages:meeting_detail' meeting.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i> 保存记录
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -1,0 +1,267 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}档案利用统计 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📈 档案利用统计</h2>
+            <p class="text-muted mb-0">统计档案的借阅、下载、检索等利用情况，分析档案利用效率</p>
+        </div>
+        <div>
+            <form method="get" class="d-inline">
+                <select name="date_range" class="form-select d-inline-block" style="width: auto;" onchange="this.form.submit()">
+                    <option value="7" {% if date_range == '7' %}selected{% endif %}>最近7天</option>
+                    <option value="30" {% if date_range == '30' %}selected{% endif %}>最近30天</option>
+                    <option value="90" {% if date_range == '90' %}selected{% endif %}>最近90天</option>
+                    <option value="365" {% if date_range == '365' %}selected{% endif %}>最近一年</option>
+                    <option value="all" {% if date_range == 'all' %}selected{% endif %}>全部</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <!-- 总体统计 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="info-card info-card-primary">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">借阅次数</div>
+                            <div class="info-value info-value-large">{{ borrow_total|default:0 }}</div>
+                        </div>
+                        <div class="text-primary" style="font-size: 2rem;">
+                            <i class="bi bi-book"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card info-card-success">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">下载次数</div>
+                            <div class="info-value info-value-large">{{ download_total|default:0 }}</div>
+                        </div>
+                        <div class="text-success" style="font-size: 2rem;">
+                            <i class="bi bi-download"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card info-card-info">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">检索次数</div>
+                            <div class="info-value info-value-large">{{ search_total|default:0 }}</div>
+                        </div>
+                        <div class="text-info" style="font-size: 2rem;">
+                            <i class="bi bi-search"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card info-card-warning">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">利用效率</div>
+                            <div class="info-value info-value-large">{{ utilization_rate|default:0 }}%</div>
+                        </div>
+                        <div class="text-warning" style="font-size: 2rem;">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 借阅统计 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">借阅状态统计</h5>
+                </div>
+                <div class="info-card-body">
+                    {% if borrow_by_status %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>状态</th>
+                                    <th>数量</th>
+                                    <th>占比</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in borrow_by_status %}
+                                <tr>
+                                    <td>
+                                        {% if item.status == 'out' %}已出库
+                                        {% elif item.status == 'approved' %}已批准
+                                        {% elif item.status == 'returned' %}已归还
+                                        {% elif item.status == 'rejected' %}已拒绝
+                                        {% else %}{{ item.status }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.count }}</td>
+                                    <td>
+                                        {% if borrow_total > 0 %}
+                                            {{ item.count|mul:100|div:borrow_total|floatformat:1 }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 暂无借阅数据
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">借阅类型统计</h5>
+                </div>
+                <div class="info-card-body">
+                    {% if borrow_by_type %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>借阅类型</th>
+                                    <th>数量</th>
+                                    <th>占比</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in borrow_by_type %}
+                                <tr>
+                                    <td>
+                                        {% if item.borrow_type == 'view' %}现场查阅
+                                        {% elif item.borrow_type == 'borrow' %}借出
+                                        {% elif item.borrow_type == 'copy' %}复印
+                                        {% elif item.borrow_type == 'scan' %}扫描
+                                        {% else %}{{ item.borrow_type|default:"未指定" }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.count }}</td>
+                                    <td>
+                                        {% if borrow_total > 0 %}
+                                            {{ item.count|mul:100|div:borrow_total|floatformat:1 }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 暂无借阅类型数据
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 检索统计 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">检索类型统计</h5>
+                </div>
+                <div class="info-card-body">
+                    {% if search_by_type %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>检索类型</th>
+                                    <th>次数</th>
+                                    <th>占比</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in search_by_type %}
+                                <tr>
+                                    <td>
+                                        {% if item.search_type == 'fulltext' %}全文检索
+                                        {% elif item.search_type == 'advanced' %}高级检索
+                                        {% elif item.search_type == 'simple' %}简单检索
+                                        {% else %}{{ item.search_type }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.count }}</td>
+                                    <td>
+                                        {% if search_total > 0 %}
+                                            {{ item.count|mul:100|div:search_total|floatformat:1 }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 暂无检索数据
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">热门检索关键词</h5>
+                </div>
+                <div class="info-card-body">
+                    {% if popular_keywords %}
+                    <div class="list-group">
+                        {% for keyword in popular_keywords %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ keyword.search_keyword }}</span>
+                            <span class="badge bg-primary rounded-pill">{{ keyword.count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 暂无热门关键词
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,200 +1,234 @@
-{% extends "settlement_center/base.html" %}
+{% extends "shared/form_page_base.html" %}
+{% load static %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+{% block form_page_title_text %}{{ page_title|default:"新增项目结算单" }}{% endblock %}
+{% block form_page_description %}{% endblock %}
 
-{% block breadcrumb_items %}
-{% if is_create %}
-<li class="breadcrumb-item"><a href="{% url 'settlement_pages:project_settlement_list' %}">项目结算管理</a></li>
-<li class="breadcrumb-item active">新增</li>
-{% else %}
-<li class="breadcrumb-item"><a href="{% url 'settlement_pages:project_settlement_list' %}">项目结算管理</a></li>
-<li class="breadcrumb-item"><a href="{% url 'settlement_pages:project_settlement_detail' settlement.id %}">{{ settlement.settlement_number }}</a></li>
-<li class="breadcrumb-item active">编辑</li>
-{% endif %}
-{% endblock %}
+{% block form_id %}settlementForm{% endblock %}
 
-{% block extra_css %}
-{% endblock %}
+{% block form_has_files %}True{% endblock %}
 
-{% block content %}
-<div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
-    <div class="center-hero">
-        <div class="hero-icon">{{ page_icon }}</div>
-        <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
-        <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
-    </div>
-
-    <!-- 表单 -->
-    <form method="post" enctype="multipart/form-data" id="settlementForm">
-        {% csrf_token %}
-        
+{% block form_content %}
         <!-- 基本信息 -->
-        <div class="form-card">
-            <h5>基本信息</h5>
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>基本信息</h5>
+            </div>
             <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label required">关联项目</label>
-                    {{ form.project }}
-                    {% if form.project.errors %}
-                    <div class="text-danger small mt-1">{{ form.project.errors }}</div>
-                    {% endif %}
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field">关联项目</label>
+                        {{ form.project }}
+                        {% if form.project.errors %}
+                        <div class="text-danger small mt-1">{{ form.project.errors }}</div>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">关联合同</label>
-                    {{ form.contract }}
-                    {% if form.contract.errors %}
-                    <div class="text-danger small mt-1">{{ form.contract.errors }}</div>
-                    {% endif %}
-                    <small class="text-muted">选择项目后自动加载相关合同</small>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">关联合同</label>
+                        {{ form.contract }}
+                        {% if form.contract.errors %}
+                        <div class="text-danger small mt-1">{{ form.contract.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">选择项目后自动加载相关合同</small>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label required">结算类型</label>
-                    {{ form.settlement_type }}
-                    {% if form.settlement_type.errors %}
-                    <div class="text-danger small mt-1">{{ form.settlement_type.errors }}</div>
-                    {% endif %}
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field">结算类型</label>
+                        {{ form.settlement_type }}
+                        {% if form.settlement_type.errors %}
+                        <div class="text-danger small mt-1">{{ form.settlement_type.errors }}</div>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label required">结算周期开始日期</label>
-                    {{ form.settlement_period_start }}
-                    {% if form.settlement_period_start.errors %}
-                    <div class="text-danger small mt-1">{{ form.settlement_period_start.errors }}</div>
-                    {% endif %}
-                    <small class="text-muted">结算周期开始日期</small>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field">结算周期开始日期</label>
+                        {{ form.settlement_period_start }}
+                        {% if form.settlement_period_start.errors %}
+                        <div class="text-danger small mt-1">{{ form.settlement_period_start.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">结算周期开始日期</small>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label required">结算周期结束日期</label>
-                    {{ form.settlement_period_end }}
-                    {% if form.settlement_period_end.errors %}
-                    <div class="text-danger small mt-1">{{ form.settlement_period_end.errors }}</div>
-                    {% endif %}
-                    <small class="text-muted">结算周期结束日期</small>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field">结算周期结束日期</label>
+                        {{ form.settlement_period_end }}
+                        {% if form.settlement_period_end.errors %}
+                        <div class="text-danger small mt-1">{{ form.settlement_period_end.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">结算周期结束日期</small>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label required">结算日期</label>
-                    {{ form.settlement_date }}
-                    {% if form.settlement_date.errors %}
-                    <div class="text-danger small mt-1">{{ form.settlement_date.errors }}</div>
-                    {% endif %}
-                    <small class="text-muted">默认当前日期</small>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field">结算日期</label>
+                        {{ form.settlement_date }}
+                        {% if form.settlement_date.errors %}
+                        <div class="text-danger small mt-1">{{ form.settlement_date.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">默认当前日期</small>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- 参考信息 -->
-        <div class="form-card">
-            <h5>参考信息</h5>
-            <div class="info-box">
-                <i class="bi bi-info-circle"></i> <strong>提示：</strong>合同金额用于参考；结算金额、节省金额汇总、服务费等信息将在创建结算单后，从Opinion明细项自动生成和计算。
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>参考信息</h5>
             </div>
             <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">合同金额</label>
-                    {{ form.contract_amount }}
-                    {% if form.contract_amount.errors %}
-                    <div class="text-danger small mt-1">{{ form.contract_amount.errors }}</div>
-                    {% endif %}
-                    <small class="text-muted">用于参考，选择合同后自动填充</small>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">合同金额</label>
+                        {{ form.contract_amount }}
+                        {% if form.contract_amount.errors %}
+                        <div class="text-danger small mt-1">{{ form.contract_amount.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">用于参考，选择合同后自动填充</small>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">税率(%)</label>
-                    {{ form.tax_rate }}
-                    {% if form.tax_rate.errors %}
-                    <div class="text-danger small mt-1">{{ form.tax_rate.errors }}</div>
-                    {% endif %}
-                    <small class="text-muted">默认6%，用于税额计算</small>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">税率(%)</label>
+                        {{ form.tax_rate }}
+                        {% if form.tax_rate.errors %}
+                        <div class="text-danger small mt-1">{{ form.tax_rate.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">默认6%，用于税额计算</small>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- 产值信息 -->
-        <div class="form-card">
-            <h5>产值信息</h5>
-            <div class="info-box">
-                <i class="bi bi-info-circle"></i> <strong>提示：</strong>累计产值为项目已计算的产值总和（从产值管理模块自动获取），确认产值为本次结算确认的产值金额。
-                {% if not is_create and form.project.value %}
-                <a href="{% url 'settlement_pages:project_output_value_detail' form.project.value %}" class="btn btn-sm btn-outline-primary ms-2" target="_blank">
-                    <i class="bi bi-eye"></i> 查看产值详情
-                </a>
-                {% endif %}
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>产值信息</h5>
             </div>
             <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">累计产值</label>
-                    {{ form.total_output_value }}
-                    {% if form.total_output_value.errors %}
-                    <div class="text-danger small mt-1">{{ form.total_output_value.errors }}</div>
-                    {% endif %}
-                    <small class="text-muted">从产值管理模块自动统计</small>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">累计产值</label>
+                        {{ form.total_output_value }}
+                        {% if form.total_output_value.errors %}
+                        <div class="text-danger small mt-1">{{ form.total_output_value.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">从产值管理模块自动统计</small>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label required">确认产值</label>
-                    {{ form.confirmed_output_value }}
-                    {% if form.confirmed_output_value.errors %}
-                    <div class="text-danger small mt-1">{{ form.confirmed_output_value.errors }}</div>
-                    {% endif %}
-                    <small class="text-muted">本次结算确认的产值金额</small>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field">确认产值</label>
+                        {{ form.confirmed_output_value }}
+                        {% if form.confirmed_output_value.errors %}
+                        <div class="text-danger small mt-1">{{ form.confirmed_output_value.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">本次结算确认的产值金额</small>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- 附件和备注 -->
-        <div class="form-card">
-            <h5>附件和备注</h5>
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>附件和备注</h5>
+            </div>
             <div class="row g-3">
                 <div class="col-md-12">
-                    <label class="form-label">结算文件</label>
-                    {{ form.settlement_file }}
-                    {% if form.settlement_file.errors %}
-                    <div class="text-danger small mt-1">{{ form.settlement_file.errors }}</div>
-                    {% endif %}
-                    {% if not is_create and settlement.settlement_file %}
-                    <div class="mt-2">
-                        <a href="{{ settlement.settlement_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-file-earmark"></i> 查看现有文件
-                        </a>
+                    <div class="form-group">
+                        <label class="form-label">结算文件</label>
+                        {{ form.settlement_file }}
+                        {% if form.settlement_file.errors %}
+                        <div class="text-danger small mt-1">{{ form.settlement_file.errors }}</div>
+                        {% endif %}
+                        {% if not is_create and settlement.settlement_file %}
+                        <div class="mt-2">
+                            <a href="{{ settlement.settlement_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-file-earmark"></i> 查看现有文件
+                            </a>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
                 <div class="col-md-12">
-                    <label class="form-label">结算说明</label>
-                    {{ form.description }}
-                    {% if form.description.errors %}
-                    <div class="text-danger small mt-1">{{ form.description.errors }}</div>
-                    {% endif %}
+                    <div class="form-group">
+                        <label class="form-label">结算说明</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="col-md-12">
-                    <label class="form-label">备注</label>
-                    {{ form.notes }}
-                    {% if form.notes.errors %}
-                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
-                    {% endif %}
+                    <div class="form-group">
+                        <label class="form-label">备注</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                        <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- 操作按钮 -->
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{% url 'settlement_pages:project_settlement_list' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> 返回列表
-            </a>
-            <div>
-                <button type="submit" class="btn btn-primary btn-submit">
-                    <i class="bi bi-check-circle"></i> 保存
-                </button>
-            </div>
-        </div>
-    </form>
-</div>
 {% endblock %}
 
-{% block extra_js %}
+{% block cancel_url %}{% url 'settlement_pages:project_settlement_list' %}{% endblock %}
+{% block submit_button_text %}保存{% endblock %}
+
+{% block form_page_extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const projectSelect = document.getElementById('id_project');
     const contractSelect = document.getElementById('id_contract');
     const contractAmountInput = document.getElementById('id_contract_amount');
+
+    // 数字格式化函数：格式化为两位小数
+    function formatToTwoDecimals(value) {
+        if (!value || value === '' || value === null) return '';
+        // 移除所有非数字字符（除了小数点）
+        let numStr = value.toString().replace(/[^\d.]/g, '');
+        // 如果有多个小数点，只保留第一个
+        const parts = numStr.split('.');
+        if (parts.length > 2) {
+            numStr = parts[0] + '.' + parts.slice(1).join('');
+        }
+        // 转换为数字
+        const num = parseFloat(numStr);
+        if (isNaN(num)) return '';
+        // 格式化为两位小数
+        return num.toFixed(2);
+    }
+
+    // 为数字输入框添加格式化功能
+    function setupNumberFormatting(inputId) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        
+        // 失去焦点时格式化
+        input.addEventListener('blur', function() {
+            if (this.value) {
+                this.value = formatToTwoDecimals(this.value);
+            }
+        });
+        
+        // 页面加载时格式化已有值
+        if (input.value) {
+            input.value = formatToTwoDecimals(input.value);
+        }
+    }
+
+    // 设置所有数字字段的格式化
+    setupNumberFormatting('id_contract_amount');      // 合同金额
+    setupNumberFormatting('id_tax_rate');            // 税率（百分比）
+    setupNumberFormatting('id_total_output_value');  // 累计产值
+    setupNumberFormatting('id_confirmed_output_value'); // 确认产值
+
     const settlementDateInput = document.getElementById('id_settlement_date');
     const periodStartInput = document.getElementById('id_settlement_period_start');
     const periodEndInput = document.getElementById('id_settlement_period_end');
@@ -290,4 +324,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

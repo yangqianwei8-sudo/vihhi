@@ -1,0 +1,131 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-container {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+        display: block;
+    }
+    .form-control, .form-select {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #1f2937;
+        box-shadow: 0 0 0 3px rgba(31, 42, 87, 0.1);
+        outline: none;
+    }
+    .btn-group {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">上传合同相关文件</p>
+        </div>
+    </div>
+
+    <!-- 表单容器 -->
+    <div class="form-container">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.file.id_for_label }}">{{ form.file.label }}</label>
+                {{ form.file }}
+                {% if form.file.errors %}
+                <div class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{ form.file.errors }}
+                </div>
+                {% endif %}
+                <small class="text-muted">支持格式：PDF、Word、Excel、PPT、图片、压缩包等，最大50MB</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.file_type.id_for_label }}">{{ form.file_type.label }}</label>
+                {{ form.file_type }}
+                {% if form.file_type.errors %}
+                <div class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{ form.file_type.errors }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.file_name.id_for_label }}">{{ form.file_name.label }}</label>
+                {{ form.file_name }}
+                {% if form.file_name.errors %}
+                <div class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{ form.file_name.errors }}
+                </div>
+                {% endif %}
+                <small class="text-muted">如未填写，将使用上传文件名</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.version.id_for_label }}">{{ form.version.label }}</label>
+                {{ form.version }}
+                {% if form.version.errors %}
+                <div class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{ form.version.errors }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                <div class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{ form.description.errors }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">上传文件</button>
+                <a href="{% url 'business_pages:contract_detail' contract.id %}" class="btn btn-outline-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

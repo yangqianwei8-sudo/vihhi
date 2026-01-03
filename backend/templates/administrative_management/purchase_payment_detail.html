@@ -1,0 +1,212 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card-header {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    .info-card-title {
+        margin: 0;
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .info-grid {
+        display: grid;
+        gap: var(--spacing-md);
+    }
+    .info-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+    .info-label {
+        font-size: var(--font-size-sm);
+        color: var(--vh-text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: var(--font-size-base);
+        color: var(--vh-text);
+        font-weight: 500;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-paid { background: #d1e7dd; color: #0f5132; }
+    .status-cancelled { background: #f8d7da; color: #842029; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:purchase_payment_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if can_pay %}
+            <a href="{% url 'admin_pages:purchase_payment_confirm' payment.id %}" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> 确认付款
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">付款单号</span>
+                    <span class="info-value"><code>{{ payment.payment_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">付款日期</span>
+                    <span class="info-value">{{ payment.payment_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge status-{{ payment.status }}">
+                            {{ payment.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">付款金额</span>
+                    <span class="info-value" style="font-size: var(--font-size-lg); font-weight: 700; color: var(--vh-primary);">
+                        ¥{{ payment.amount|floatformat:2 }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 合同信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">关联合同</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">合同编号</span>
+                    <span class="info-value">
+                        <a href="{% url 'admin_pages:purchase_contract_detail' payment.contract.id %}">
+                            <code>{{ payment.contract.contract_number }}</code>
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">合同名称</span>
+                    <span class="info-value">{{ payment.contract.contract_name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">供应商</span>
+                    <span class="info-value">{{ payment.contract.supplier.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">合同金额</span>
+                    <span class="info-value">¥{{ payment.contract.contract_amount|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 付款信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">付款信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">付款方式</span>
+                    <span class="info-value">{{ payment.get_payment_method_display|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">凭证号</span>
+                    <span class="info-value">{{ payment.voucher_number|default:"-" }}</span>
+                </div>
+                {% if payment.voucher_file %}
+                <div class="info-item">
+                    <span class="info-label">凭证文件</span>
+                    <span class="info-value">
+                        <a href="{{ payment.voucher_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-file-earmark"></i> 查看凭证
+                        </a>
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 付款信息 -->
+    {% if payment.paid_by %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">付款确认信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">付款人</span>
+                    <span class="info-value">{{ payment.paid_by.get_full_name|default:payment.paid_by.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">付款时间</span>
+                    <span class="info-value">{{ payment.paid_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注 -->
+    {% if payment.notes %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <p style="white-space: pre-wrap; margin: 0;">{{ payment.notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

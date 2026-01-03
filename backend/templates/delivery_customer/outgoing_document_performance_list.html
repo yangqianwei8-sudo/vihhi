@@ -1,0 +1,178 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}发文责任人绩效统计 - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📈 发文责任人绩效统计</h2>
+            <p class="text-muted mb-0">查看发文责任人的绩效统计和排名</p>
+        </div>
+    </div>
+
+    <!-- 筛选栏 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">筛选条件</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">开始日期</label>
+                    <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">结束日期</label>
+                    <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">责任人</label>
+                    <select name="user_id" class="form-select form-select-sm">
+                        <option value="">全部</option>
+                        {% for person in responsible_persons %}
+                        <option value="{{ person.id }}" {% if selected_user_id == person.id %}selected{% endif %}>
+                            {{ person.get_full_name|default:person.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary btn-sm me-2">
+                        <i class="bi bi-search"></i> 查询
+                    </button>
+                    <a href="{% url 'delivery_pages:outgoing_document_performance_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-clockwise"></i> 重置
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 绩效列表 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">
+                {% if selected_user_id %}责任人绩效详情{% else %}绩效排名{% endif %}
+            </h5>
+            <div class="info-card-actions">
+                <span class="badge bg-primary">共 {{ performance_list|length }} 人</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if performance_list %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            {% if not selected_user_id %}<th>排名</th>{% endif %}
+                            <th>责任人</th>
+                            <th>总发文数</th>
+                            <th>已发送</th>
+                            <th>已签收</th>
+                            <th>延迟数</th>
+                            <th>平均得分</th>
+                            <th>签收率</th>
+                            <th>延迟率</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for perf in performance_list %}
+                        <tr>
+                            {% if not selected_user_id %}
+                            <td>
+                                <strong class="text-primary">#{{ forloop.counter }}</strong>
+                            </td>
+                            {% endif %}
+                            <td>
+                                <strong>{{ perf.user_name }}</strong>
+                            </td>
+                            <td>{{ perf.summary.total_documents }}</td>
+                            <td>{{ perf.summary.sent_documents }}</td>
+                            <td>{{ perf.summary.receipt_confirmed }}</td>
+                            <td>
+                                <span class="badge {% if perf.summary.delayed_count > 0 %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ perf.summary.delayed_count }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {% if perf.performance.avg_score >= 80 %}bg-success{% elif perf.performance.avg_score >= 60 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ perf.performance.avg_score }}分
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {% if perf.efficiency.receipt_rate >= 80 %}bg-success{% elif perf.efficiency.receipt_rate >= 60 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ perf.efficiency.receipt_rate }}%
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {% if perf.efficiency.delay_rate <= 10 %}bg-success{% elif perf.efficiency.delay_rate <= 20 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ perf.efficiency.delay_rate }}%
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'delivery_pages:outgoing_document_performance_detail' perf.user_id %}{% if start_date %}?start_date={{ start_date }}{% endif %}{% if end_date %}{% if start_date %}&{% else %}?{% endif %}end_date={{ end_date }}{% endif %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> 详情
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                <p class="text-muted mt-3">暂无绩效数据</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 表格行点击高亮
+    const tableRows = document.querySelectorAll('table tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('click', function() {
+            tableRows.forEach(r => r.classList.remove('table-active'));
+            this.classList.add('table-active');
+        });
+    });
+    
+    // 得分颜色提示
+    const scoreBadges = document.querySelectorAll('.badge');
+    scoreBadges.forEach(badge => {
+        const text = badge.textContent;
+        if (text.includes('分')) {
+            const score = parseInt(text);
+            if (score >= 80) {
+                badge.classList.add('bg-success');
+            } else if (score >= 60) {
+                badge.classList.add('bg-warning');
+            } else {
+                badge.classList.add('bg-danger');
+            }
+        }
+    });
+});
+
+function printPage() {
+    window.print();
+}
+</script>
+{% endblock %}
+
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "shared/list_page_base.html" %}
+{% comment %}
+库存调整列表页面模板 (Inventory Adjust List Template)
+
+功能说明：
+- 展示库存调整记录的列表页面
+- 支持按状态、调整日期等多维度筛选
+- 支持库存调整的查看、编辑操作
+
+主要功能：
+1. 筛选功能：
+   - 状态筛选：草稿、待审批、已批准、已拒绝、已执行、已取消
+   - 调整日期筛选：按日期筛选
+2. 表格展示：调整单号、调整日期、调整原因、创建人、状态、操作
+3. 操作功能：查看详情、编辑（仅草稿/待审批状态）
+{% endcomment %}
+{% load static %}
+
+{% block list_page_title %}库存调整管理{% endblock %}
+
+{% block list_page_actions %}
+{% if can_create %}
+<a href="{% url 'admin_pages:inventory_adjust_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> 创建调整
+</a>
+{% endif %}
+{% endblock %}
+
+{% block search_placeholder %}搜索调整单号、调整原因...{% endblock %}
+
+{% block reset_url %}{% url 'admin_pages:inventory_adjust_list' %}{% endblock %}
+
+{% block list_page_table_headers %}
+<th style="width: 12%;">调整单号</th>
+<th style="width: 10%;">调整日期</th>
+<th style="width: 20%;">调整原因</th>
+<th style="width: 10%;">创建人</th>
+<th style="width: 10%;">状态</th>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td><code>{{ item.adjust_number }}</code></td>
+<td>{{ item.adjust_date|date:"Y-m-d" }}</td>
+<td>{{ item.reason|truncatewords:10|default:"-" }}</td>
+<td>{{ item.created_by.get_full_name|default:item.created_by.username }}</td>
+<td>
+    {% if item.status == 'draft' %}
+        <span class="badge bg-secondary">草稿</span>
+    {% elif item.status == 'pending_approval' %}
+        <span class="badge bg-warning">待审批</span>
+    {% elif item.status == 'approved' %}
+        <span class="badge bg-info">已批准</span>
+    {% elif item.status == 'rejected' %}
+        <span class="badge bg-danger">已拒绝</span>
+    {% elif item.status == 'executed' %}
+        <span class="badge bg-success">已执行</span>
+    {% elif item.status == 'cancelled' %}
+        <span class="badge bg-secondary">已取消</span>
+    {% else %}
+        <span class="badge bg-secondary">{{ item.get_status_display }}</span>
+    {% endif %}
+</td>
+<td>
+    <div class="list-page-table-actions">
+        <a href="{% url 'admin_pages:inventory_adjust_detail' adjust_id=item.id %}" class="action-view" title="查看">
+            <i class="bi bi-eye"></i>
+        </a>
+        {% if item.status in 'draft,pending_approval' %}
+        <span class="action-separator">|</span>
+        <a href="{% url 'admin_pages:inventory_adjust_update' adjust_id=item.id %}" class="action-edit" title="编辑">
+            <i class="bi bi-pencil"></i>
+        </a>
+        {% endif %}
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_colspan %}6{% endblock %}
+
+{% block empty_table_message %}暂无数据{% endblock %}
+
+{% block empty_message %}暂无数据{% endblock %}
+
+{% block empty_create_url %}{% url 'admin_pages:inventory_adjust_create' %}{% endblock %}

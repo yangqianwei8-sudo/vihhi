@@ -1,0 +1,129 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .approval-warning {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    .approval-warning h5 {
+        color: #dc2626;
+        margin-bottom: 12px;
+    }
+    .approval-info {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    .approval-info h5 {
+        color: #1e40af;
+        margin-bottom: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">提交合同进行审批</p>
+        </div>
+    </div>
+
+    <div class="form-card">
+        {% if existing_instance %}
+        <div class="approval-warning">
+            <h5>⚠️ 已有正在进行的审批</h5>
+            <p>该合同已有正在进行的审批流程：</p>
+            <ul>
+                <li>审批编号：<strong>{{ existing_instance.instance_number }}</strong></li>
+                <li>申请时间：{{ existing_instance.apply_time|date:"Y-m-d H:i" }}</li>
+                <li>当前状态：{{ existing_instance.get_status_display }}</li>
+                {% if existing_instance.current_node %}
+                <li>当前节点：{{ existing_instance.current_node.name }}</li>
+                {% endif %}
+            </ul>
+            <div class="d-flex gap-2 mt-3">
+                <a href="{% url 'business_pages:contract_detail' contract.id %}" class="btn btn-primary">返回合同详情</a>
+            </div>
+        </div>
+        {% else %}
+        <div class="approval-info">
+            <h5>ℹ️ 审批流程说明</h5>
+            <p>提交审批后，将启动合同审批流程：</p>
+            <ol>
+                <li>部门经理审批（商务部经理角色）</li>
+                <li>总经理审批（总经理角色）</li>
+            </ol>
+            <p class="text-muted mb-0">审批通过后，合同状态将更新为"已签订"。</p>
+        </div>
+
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">合同信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">合同编号</span>
+                        <span class="info-value">{{ contract.contract_number }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">合同名称</span>
+                        <span class="info-value">{{ contract.contract_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">合同类型</span>
+                        <span class="info-value">{{ contract.get_contract_type_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">合同金额</span>
+                        <span class="info-value">¥{{ contract.contract_amount|floatformat:2 }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">客户名称</span>
+                        <span class="info-value">{{ contract.client.name|default:"—" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">当前状态</span>
+                        <span class="info-value">{{ contract.get_status_display }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            <div class="info-section">
+                <h6 class="info-section-title">申请说明</h6>
+                <div class="info-item">
+                    <label class="info-label">审批说明（可选）</label>
+                    <textarea name="comment" class="form-control" rows="3" placeholder="请输入审批说明，如：申请审批合同、合同信息已更新需要审批等">申请审批合同：{{ contract.contract_number }} - {{ contract.contract_name }}</textarea>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{% url 'business_pages:contract_detail' contract.id %}" class="btn btn-outline-secondary">取消</a>
+                <button type="submit" class="btn btn-primary">确认提交审批</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+

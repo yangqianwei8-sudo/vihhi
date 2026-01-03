@@ -1,0 +1,153 @@
+{% extends "shared/list_page_base.html" %}
+{% comment %}
+快递公司列表页面模板 (Express Company List Template)
+
+功能说明：
+- 展示快递公司的列表页面
+- 支持按状态筛选
+- 支持搜索快递公司名称、代码、别名、联系电话
+- 支持查看详情、编辑、删除操作
+
+主要功能：
+1. 筛选功能：
+   - 搜索：快递公司名称、代码、别名、联系电话
+   - 状态筛选：下拉选择状态（全部、启用、禁用）
+2. 表格展示：序号、快递公司名称、代码、别名、联系电话、状态、默认、排序、操作
+3. 操作功能：查看详情、编辑、删除
+{% endcomment %}
+{% load static %}
+
+{% block list_page_title %}快递公司列表{% endblock %}
+
+{% block list_page_actions %}
+<a href="{% url 'delivery_pages:express_company_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> 新建快递公司
+</a>
+{% endblock %}
+
+{% block search_placeholder %}搜索快递公司名称、代码、别名、联系电话...{% endblock %}
+
+{% block list_page_filter_fields %}
+<!-- 状态筛选 -->
+<div class="filter-row" data-filter-key="status">
+    <label class="filter-label">状态:</label>
+    <div class="filter-control">
+        <select name="status" class="form-control form-control-sm" id="statusSelect">
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+{% endblock %}
+
+{% block list_page_table_checkbox_header %}
+<th style="width: 40px;">
+    <input type="checkbox" id="selectAll" aria-label="全选">
+</th>
+{% endblock %}
+
+{% block list_page_table_headers %}
+<th style="width: 5%;">#</th>
+<th style="width: 15%;">快递公司名称</th>
+<th style="width: 12%;">代码</th>
+<th style="width: 15%;">别名</th>
+<th style="width: 12%;">联系电话</th>
+<th style="width: 8%;">状态</th>
+<th style="width: 8%;">默认</th>
+<th style="width: 8%;">排序</th>
+{% endblock %}
+
+{% block list_page_table_checkbox_cell %}
+<td>
+    <input type="checkbox" class="row-checkbox" value="{{ item.id }}" aria-label="选择">
+</td>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td>{{ forloop.counter0|add:page_obj.start_index }}</td>
+<td>
+    <strong>{{ item.name }}</strong>
+</td>
+<td>
+    {% if item.code %}
+        <code class="small">{{ item.code }}</code>
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>
+    {% if item.alias %}
+        <small>{{ item.alias|truncatewords:5 }}</small>
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>
+    {% if item.contact_phone %}
+        {{ item.contact_phone }}
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>
+    {% if item.is_active %}
+        <span class="badge bg-success">启用</span>
+    {% else %}
+        <span class="badge bg-danger">禁用</span>
+    {% endif %}
+</td>
+<td>
+    {% if item.is_default %}
+        <span class="badge bg-warning">默认</span>
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>{{ item.sort_order }}</td>
+{% endblock %}
+
+{% block list_page_table_actions_cell %}
+<td>
+    <div class="list-page-table-actions">
+        <a href="{% url 'delivery_pages:express_company_detail' item.id %}" 
+           class="action-view" 
+           title="查看详情">
+            <i class="bi bi-eye"></i>
+        </a>
+        <span class="action-separator">|</span>
+        <a href="{% url 'delivery_pages:express_company_edit' item.id %}" 
+           class="action-edit" 
+           title="编辑">
+            <i class="bi bi-pencil"></i>
+        </a>
+        <span class="action-separator">|</span>
+        <a href="{% url 'delivery_pages:express_company_delete' item.id %}" 
+           class="action-delete" 
+           onclick="return confirm('确定要删除快递公司\"{{ item.name }}\"吗？');" 
+           title="删除">
+            <i class="bi bi-trash"></i>
+        </a>
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_colspan %}10{% endblock %}
+
+{% block empty_message %}暂无快递公司数据{% endblock %}
+
+{% block empty_create_url %}{% url 'delivery_pages:express_company_create' %}{% endblock %}
+
+{% block list_page_custom_js %}
+// 配置筛选字段设置功能（继承自 list_page_base.html）
+window.listPageFilterFieldsSettingsConfig = {
+    enableFieldsSettings: true,
+    storageKey: 'express_company_list_filter_fields',
+    defaultEnabledFields: ['status'],
+    maxEnabledFields: 10,
+    requiredFields: [],
+    containerId: 'filterFieldsContainer',
+    modalId: 'filterFieldsSettingsModal',
+    settingsBtnId: 'settingsFilterFieldsBtn'
+};
+{% endblock %}

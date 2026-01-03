@@ -1,0 +1,679 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .autocomplete-wrapper {
+        position: relative;
+    }
+    .autocomplete-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid var(--vh-border);
+        border-radius: var(--radius-sm);
+        box-shadow: var(--shadow-lg);
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        margin-top: 4px;
+        display: none;
+    }
+    .autocomplete-dropdown.show {
+        display: block;
+    }
+    .autocomplete-item {
+        padding: var(--spacing-sm) var(--spacing-md);
+        cursor: pointer;
+        border-bottom: 2px solid var(--vh-primary);
+        transition: background-color var(--transition-base);
+    }
+    .autocomplete-item:hover,
+    .autocomplete-item.selected {
+        background-color: var(--vh-surface);
+    }
+    .autocomplete-item:last-child {
+        border-bottom: none;
+    }
+    .duplicate-check-status {
+        margin-top: 4px;
+        font-size: var(--font-size-xs);
+        min-height: 18px;
+    }
+    .duplicate-check-status.error {
+        color: var(--vh-danger);
+    }
+    .duplicate-check-status.success {
+        color: var(--vh-success);
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="info-card info-card-compact">
+    <div class="info-card-header">
+        <h5 class="info-card-title">{{ page_title }}</h5>
+    </div>
+    <div class="info-card-body">
+        <form method="post" id="leadForm">
+            {% csrf_token %}
+            
+            <!-- 基本信息 -->
+            <div class="info-section">
+                <h6 class="info-section-title">基本信息</h6>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label class="info-label info-label-required">公司名称</label>
+                        <div class="autocomplete-wrapper">
+                            <input type="text" name="company_name" id="companyName" class="form-control" value="{{ lead.company_name|default:'' }}" required placeholder="输入公司名称，自动搜索企业信息">
+                            <div class="autocomplete-dropdown" id="companyDropdown"></div>
+                        </div>
+                        <div class="duplicate-check-status" id="nameDuplicateStatus"></div>
+                        <small class="text-muted">输入公司名称后，系统将自动搜索并填充企业信息</small>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">统一社会信用代码</label>
+                        <input type="text" name="unified_credit_code" id="unifiedCreditCode" class="form-control" value="{% if lead.converted_client %}{{ lead.converted_client.unified_credit_code|default:'' }}{% endif %}" maxlength="18" placeholder="18位统一社会信用代码">
+                        <div class="duplicate-check-status" id="creditCodeDuplicateStatus"></div>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">法定代表人</label>
+                        <input type="text" name="legal_representative" id="legalRepresentative" class="form-control" value="{% if lead.converted_client %}{{ lead.converted_client.legal_representative|default:'' }}{% endif %}" placeholder="从启信宝API自动填充">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">成立日期</label>
+                        <input type="date" name="established_date" id="establishedDate" class="form-control" value="{% if lead.converted_client and lead.converted_client.established_date %}{{ lead.converted_client.established_date|date:'Y-m-d' }}{% endif %}" placeholder="从启信宝API自动填充">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">注册资本（万元）</label>
+                        <input type="number" name="registered_capital" id="registeredCapital" class="form-control" value="{% if lead.converted_client %}{{ lead.converted_client.registered_capital|default:'' }}{% endif %}" step="0.01" min="0" placeholder="从启信宝API自动填充">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">公司电话</label>
+                        <input type="text" name="company_phone" id="companyPhone" class="form-control" value="{% if lead.converted_client %}{{ lead.converted_client.company_phone|default:'' }}{% endif %}" placeholder="从启信宝API自动填充">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">公司邮箱</label>
+                        <input type="email" name="company_email" id="companyEmail" class="form-control" value="{% if lead.converted_client %}{{ lead.converted_client.company_email|default:'' }}{% endif %}" placeholder="从启信宝API自动填充">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">公司地址</label>
+                        <input type="text" name="company_address" id="companyAddress" class="form-control" value="{% if lead.converted_client %}{{ lead.converted_client.company_address|default:'' }}{% endif %}" placeholder="从启信宝API自动填充">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 法律风险 -->
+            <div class="info-section">
+                <h6 class="info-section-title">法律风险</h6>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label class="info-label">法律风险等级</label>
+                        <input type="text" id="legalRiskLevel" class="form-control" value="{% if lead.converted_client %}{% if lead.converted_client.legal_risk_level == 'low' %}低风险{% elif lead.converted_client.legal_risk_level == 'medium_low' %}中低风险{% elif lead.converted_client.legal_risk_level == 'medium' %}中风险{% elif lead.converted_client.legal_risk_level == 'medium_high' %}中高风险{% elif lead.converted_client.legal_risk_level == 'high' %}高风险{% else %}未知{% endif %}{% else %}未知{% endif %}" readonly style="background-color: var(--vh-surface);">
+                        <input type="hidden" name="legal_risk_level" id="legalRiskLevelHidden" value="{% if lead.converted_client %}{{ lead.converted_client.legal_risk_level|default:'unknown' }}{% else %}unknown{% endif %}">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">司法案件数量</label>
+                        <input type="number" name="litigation_count" id="litigationCount" class="form-control" value="{% if lead.converted_client %}{{ lead.converted_client.litigation_count|default:0 }}{% else %}0{% endif %}" min="0" readonly style="background-color: var(--vh-surface);">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">被执行人数量</label>
+                        <input type="number" name="executed_person_count" id="executedPersonCount" class="form-control" value="{% if lead.converted_client %}{{ lead.converted_client.executed_person_count|default:0 }}{% else %}0{% endif %}" min="0" readonly style="background-color: var(--vh-surface);">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">终本案件数量</label>
+                        <input type="number" name="final_case_count" id="finalCaseCount" class="form-control" value="{% if lead.converted_client %}{{ lead.converted_client.final_case_count|default:0 }}{% else %}0{% endif %}" min="0" readonly style="background-color: var(--vh-surface);">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">限制高消费数量</label>
+                        <input type="number" name="consumption_limit_count" id="consumptionLimitCount" class="form-control" value="{% if lead.converted_client %}{{ lead.converted_client.consumption_limit_count|default:0 }}{% else %}0{% endif %}" min="0" readonly style="background-color: var(--vh-surface);">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 客户分类 -->
+            <div class="info-section">
+                <h6 class="info-section-title">客户分类</h6>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label class="info-label">客户分级</label>
+                        <select name="grade" class="form-select">
+                            <option value="">请选择</option>
+                            {% for value, label in grade_choices %}
+                            <option value="{{ value }}" {% if lead.converted_client and lead.converted_client.grade == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">客户类型</label>
+                        <select name="client_type" class="form-select">
+                            <option value="">请选择</option>
+                            {% for value, label in client_type_choices %}
+                            <option value="{{ value }}" {% if lead.converted_client and lead.converted_client.client_type == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 联系人信息 -->
+            <div class="info-section">
+                <h6 class="info-section-title">联系人信息</h6>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label class="info-label">联系人姓名</label>
+                        <input type="text" name="contact_name" class="form-control" value="{{ lead.contact_name|default:'' }}" placeholder="请输入联系人姓名">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">联系电话</label>
+                        <input type="text" name="contact_phone" class="form-control" value="{{ lead.contact_phone|default:'' }}" placeholder="请输入联系电话">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">联系邮箱</label>
+                        <input type="email" name="contact_email" class="form-control" value="{{ lead.contact_email|default:'' }}" placeholder="请输入联系邮箱">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 地区信息 -->
+            <div class="info-section">
+                <h6 class="info-section-title">地区信息</h6>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label class="info-label">省份</label>
+                        <input type="text" name="province" class="form-control" value="{{ lead.province|default:'' }}" placeholder="请输入省份">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">城市</label>
+                        <input type="text" name="city" class="form-control" value="{{ lead.city|default:'' }}" placeholder="请输入城市">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">区县</label>
+                        <input type="text" name="district" class="form-control" value="{{ lead.district|default:'' }}" placeholder="请输入区县">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 线索信息 -->
+            <div class="info-section">
+                <h6 class="info-section-title">线索信息</h6>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label class="info-label">线索来源</label>
+                        <select name="lead_source" class="form-select">
+                            {% for value, label in lead_source_choices %}
+                            <option value="{{ value }}" {% if lead.lead_source == value or not lead and value == 'new_employee_resource' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">渠道</label>
+                        <input type="text" name="channel" class="form-control" value="{{ lead.channel|default:'' }}" placeholder="请输入渠道信息">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">跟进状态</label>
+                        <select name="follow_status" class="form-select">
+                            {% for value, label in follow_status_choices %}
+                            <option value="{{ value }}" {% if lead.follow_status == value or not lead and value == 'unhandled' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{% if lead %}{% url 'business_pages:customer_lead_detail' lead.id %}{% else %}{% url 'business_pages:customer_list' %}{% endif %}" class="btn btn-outline-secondary">取消</a>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{% static 'js/qixinbao.js' %}">
+    // 安全的HTML设置函数
+    function setSafeHTML(element, html) {
+        if (!element) return;
+        // 如果内容不包含HTML标签，使用textContent
+        if (!/<[^>]+>/.test(html)) {
+            element.textContent = html;
+        } else {
+            // 对于包含HTML的内容，使用innerHTML（假设内容已清理）
+            // 在生产环境中，应该使用DOMPurify等库清理HTML
+            element.innerHTML = html;
+        }
+    }
+    
+    // 安全的文本设置函数（推荐使用）
+    function setSafeText(element, text) {
+        if (element) {
+            element.textContent = text;
+        }
+    }
+</script>
+<script>
+    // 获取Cookie的工具函数
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // 公司名称自动搜索和启信宝API集成
+    document.addEventListener('DOMContentLoaded', function() {
+        const companyNameInput = document.getElementById('companyName');
+        const companyDropdown = document.getElementById('companyDropdown');
+        const unifiedCreditCodeInput = document.getElementById('unifiedCreditCode');
+        const nameDuplicateStatus = document.getElementById('nameDuplicateStatus');
+        const creditCodeDuplicateStatus = document.getElementById('creditCodeDuplicateStatus');
+        
+        if (!companyNameInput || !companyDropdown) return;
+        
+        let searchTimeout = null;
+        let selectedIndex = -1;
+        let searchResults = [];
+        
+        // 公司名称自动搜索
+        companyNameInput.addEventListener('input', function() {
+            const keyword = this.value.trim();
+            
+            if (nameDuplicateStatus) {
+                nameDuplicateStatus.textContent = '';
+                nameDuplicateStatus.className = 'duplicate-check-status';
+            }
+            
+            if (keyword.length < 2) {
+                companyDropdown.classList.remove('show');
+                return;
+            }
+            
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            searchTimeout = setTimeout(function() {
+                searchCompany(keyword);
+            }, 500);
+        });
+        
+        // 公司名称失焦时检查重复
+        companyNameInput.addEventListener('blur', function() {
+            setTimeout(() => {
+                const name = this.value.trim();
+                if (name && name.length >= 2) {
+                    checkDuplicate('name', name, null);
+                }
+            }, 200);
+        });
+        
+        // 统一社会信用代码失焦时检查重复
+        if (unifiedCreditCodeInput) {
+            unifiedCreditCodeInput.addEventListener('blur', function() {
+                const code = this.value.trim();
+                if (code && code.length === 18) {
+                    checkDuplicate('code', null, code);
+                }
+            });
+        }
+        
+        // 搜索公司
+        function searchCompany(keyword) {
+            // TODO: 使用DOMPurify清理HTML
+            companyDropdown.innerHTML = '<div class="autocomplete-item"><div class="text-center text-muted">搜索中...</div></div>';
+            companyDropdown.classList.add('show');
+            
+            const url = `/api/customer/search-company/?keyword=${encodeURIComponent(keyword)}&match_type=ename`;
+            
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                
+                if (!data || !data.success) {
+                    // TODO: 使用DOMPurify清理HTML
+            companyDropdown.innerHTML = '<div class="autocomplete-item"><div class="text-center text-muted">' + (data.message || '搜索失败，请稍后重试') + '</div></div>';
+                    return;
+                }
+                
+                const items = data.data && data.data.items ? data.data.items : (data.data && Array.isArray(data.data) ? data.data : []);
+                
+                if (items.length > 0) {
+                    searchResults = items;
+                    renderDropdown(items);
+                } else {
+                    // TODO: 使用DOMPurify清理HTML
+            companyDropdown.innerHTML = '<div class="autocomplete-item"><div class="text-center text-muted">未找到相关企业</div></div>';
+                }
+            })
+            .catch(error => {
+                // TODO: 使用DOMPurify清理HTML
+            companyDropdown.innerHTML = '<div class="autocomplete-item"><div class="text-center text-muted">搜索失败：' + error.message + '</div></div>';
+            });
+        }
+        
+        // 渲染下拉列表
+        function renderDropdown(results) {
+            companyDropdown.textContent = '';
+            results.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-item';
+                const creditCode = item.creditCode || item.credit_no || item.credit_code || '—';
+                const legalRep = item.legalRepresentative || item.oper_name || item.operName || '—';
+                // TODO: 使用DOMPurify清理HTML
+            div.innerHTML = `
+                    <div class="autocomplete-item-name">${item.name || '—'}</div>
+                    <div class="autocomplete-item-meta">
+                        <span>统一信用代码: ${creditCode}</span>
+                        <span>法定代表人: ${legalRep}</span>
+                    </div>
+                `;
+                div.addEventListener('click', function() {
+                    selectCompany(item);
+                });
+                companyDropdown.appendChild(div);
+            });
+            companyDropdown.classList.add('show');
+        }
+        
+        // 选择公司
+        function selectCompany(company) {
+            companyNameInput.value = company.name || '';
+            
+            // 填充统一社会信用代码
+            const creditCode = company.credit_no || company.creditCode || company.credit_code || '';
+            if (unifiedCreditCodeInput && creditCode) {
+                unifiedCreditCodeInput.value = creditCode;
+            }
+            
+            // 填充从搜索结果中直接获取的信息
+            const legalRepInput = document.getElementById('legalRepresentative');
+            if (legalRepInput && company.oper_name) {
+                legalRepInput.value = company.oper_name;
+            }
+            
+            const establishedDateInput = document.getElementById('establishedDate');
+            if (establishedDateInput && company.start_date) {
+                establishedDateInput.value = company.start_date;
+            }
+            
+            companyDropdown.classList.remove('show');
+            
+            // 获取详细信息（使用企业ID、统一社会信用代码或公司名称）
+            if (company.id || creditCode || company.name) {
+                fetchCompanyDetail(company.id, creditCode, company.name);
+                fetchLegalRiskInfo(company.id, creditCode, company.name);
+            }
+        }
+        
+        // 获取企业详情信息
+        function fetchCompanyDetail(companyId, creditCode, companyName) {
+            if (!companyId && !creditCode && !companyName) {
+                return;
+            }
+            
+            const params = new URLSearchParams();
+            if (companyId) {
+                params.append('company_id', companyId);
+            }
+            if (creditCode) {
+                params.append('credit_code', creditCode);
+            }
+            if (companyName) {
+                params.append('company_name', companyName);
+            }
+            
+            const url = `/api/customer/get-company-detail/?${params.toString()}`;
+            
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                
+                if (data.success && data.data) {
+                    fillCompanyDetails(data.data);
+                } else {
+                }
+            })
+            .catch(error => {
+            });
+        }
+        
+        // 获取法律风险信息
+        function fetchLegalRiskInfo(companyId, creditCode, companyName) {
+            if (!companyId && !creditCode && !companyName) {
+                return;
+            }
+            
+            const params = new URLSearchParams();
+            if (companyId) {
+                params.append('company_id', companyId);
+            }
+            if (creditCode) {
+                params.append('credit_code', creditCode);
+            }
+            if (companyName) {
+                params.append('company_name', companyName);
+            }
+            
+            const url = `/api/customer/get-legal-risk/?${params.toString()}`;
+            
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                
+                if (data.success && data.data) {
+                    fillLegalRiskInfo(data.data);
+                } else {
+                }
+            })
+            .catch(error => {
+            });
+        }
+        
+        // 填充公司详细信息
+        function fillCompanyDetails(details) {
+            let filledCount = 0;
+            
+            // 填充法定代表人（如果还没有填充）
+            const legalRepInput = document.getElementById('legalRepresentative');
+            if (legalRepInput && !legalRepInput.value) {
+                const legalRep = details.legal_representative || details.oper_name || details.operName || '';
+                if (legalRep) {
+                    legalRepInput.value = legalRep;
+                    filledCount++;
+                }
+            }
+            
+            // 填充成立日期（如果还没有填充）
+            const establishedDateInput = document.getElementById('establishedDate');
+            if (establishedDateInput && !establishedDateInput.value) {
+                const date = details.established_date || details.start_date || details.startDate || '';
+                if (date) {
+                    establishedDateInput.value = date.split(' ')[0].split('T')[0];
+                    filledCount++;
+                }
+            }
+            
+            // 填充注册资本（优先使用解析后的数值）
+            const registeredCapitalInput = document.getElementById('registeredCapital');
+            if (registeredCapitalInput) {
+                if (details.reg_capital_value !== undefined && details.reg_capital_value !== null) {
+                    // 使用解析后的数值（已经是万元单位）
+                    registeredCapitalInput.value = parseFloat(details.reg_capital_value).toFixed(2);
+                    filledCount++;
+                } else if (details.reg_capital) {
+                    // 如果没有解析后的数值，尝试解析原始字符串
+                    let capital = parseFloat(details.reg_capital) || 0;
+                    // 如果注册资本大于10000，可能是以元为单位，转换为万元
+                    if (capital > 10000) {
+                        capital = capital / 10000;
+                    }
+                    registeredCapitalInput.value = capital.toFixed(2);
+                    filledCount++;
+                } else {
+                }
+            } else {
+                // console.error(...) // 已移除');
+            }
+            
+            // 填充联系电话
+            const companyPhoneInput = document.getElementById('companyPhone');
+            if (companyPhoneInput && details.phone) {
+                companyPhoneInput.value = details.phone;
+                filledCount++;
+            }
+            
+            // 填充邮箱
+            const companyEmailInput = document.getElementById('companyEmail');
+            if (companyEmailInput && details.email) {
+                companyEmailInput.value = details.email;
+                filledCount++;
+            }
+            
+            // 填充地址
+            const companyAddressInput = document.getElementById('companyAddress');
+            if (companyAddressInput && details.address) {
+                companyAddressInput.value = details.address;
+                filledCount++;
+            }
+            
+        }
+        
+        // 填充法律风险信息
+        function fillLegalRiskInfo(riskData) {
+            let filledCount = 0;
+            
+            // 填充司法案件数量
+            const litigationEl = document.getElementById('litigationCount');
+            if (litigationEl && riskData.litigation_count !== undefined) {
+                litigationEl.value = riskData.litigation_count || 0;
+                filledCount++;
+            }
+            
+            // 填充被执行人数量
+            const executedEl = document.getElementById('executedPersonCount');
+            if (executedEl && riskData.executed_person_count !== undefined) {
+                executedEl.value = riskData.executed_person_count || 0;
+                filledCount++;
+            }
+            
+            // 填充终本案件数量
+            const finalCaseEl = document.getElementById('finalCaseCount');
+            if (finalCaseEl && riskData.final_case_count !== undefined) {
+                finalCaseEl.value = riskData.final_case_count || 0;
+                filledCount++;
+            }
+            
+            // 填充限制高消费数量
+            const consumptionEl = document.getElementById('consumptionLimitCount');
+            if (consumptionEl && riskData.consumption_limit_count !== undefined) {
+                consumptionEl.value = riskData.consumption_limit_count || 0;
+                filledCount++;
+            }
+            
+            // 填充法律风险等级
+            const riskLevel = riskData.risk_level || riskData.legal_risk_level || 'unknown';
+            const riskHiddenEl = document.getElementById('legalRiskLevelHidden');
+            if (riskHiddenEl) {
+                riskHiddenEl.value = riskLevel;
+            }
+            
+            const riskLabels = {
+                'low': '低风险',
+                'medium_low': '中低风险',
+                'medium': '中风险',
+                'medium_high': '中高风险',
+                'high': '高风险',
+                'unknown': '未知'
+            };
+            const riskLabelEl = document.getElementById('legalRiskLevel');
+            if (riskLabelEl) {
+                riskLabelEl.value = riskLabels[riskLevel] || '未知';
+                filledCount++;
+            }
+            
+        }
+        
+        // 检查重复
+        function checkDuplicate(type, name, code) {
+            const url = type === 'name' 
+                ? `/api/customer/check-duplicate/?name=${encodeURIComponent(name)}`
+                : `/api/customer/check-duplicate/?credit_code=${encodeURIComponent(code)}`;
+            
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const statusEl = type === 'name' ? nameDuplicateStatus : creditCodeDuplicateStatus;
+                if (data.exists) {
+                    statusEl.textContent = `⚠️ ${data.message}`;
+                    statusEl.className = 'duplicate-check-status error';
+                } else {
+                    statusEl.textContent = '✓ 可用';
+                    statusEl.className = 'duplicate-check-status success';
+                }
+            })
+            .catch(error => {
+            });
+        }
+        
+        // 点击外部关闭下拉框
+        document.addEventListener('click', function(e) {
+            if (!companyDropdown.contains(e.target) && e.target !== companyNameInput) {
+                companyDropdown.classList.remove('show');
+            }
+        });
+        
+        
+        // 移除不再需要的companyInfoSection相关代码
+    });
+</script>
+{% endblock %}

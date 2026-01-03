@@ -1,0 +1,297 @@
+{% comment %}
+动态表单表格模板 (Dynamic Form Table Template)
+
+功能说明：
+- 专门用于表单输入场景的动态表格
+- 支持动态添加/删除行
+- 支持自动更新行号
+- 支持表单验证
+- 支持自定义字段渲染
+- 支持行数据初始化
+
+使用方式：
+1. 在视图中准备配置：
+   form_table_config = {
+       'id': 'myFormTable',
+       'container_id': 'my-table-container',
+       'add_button_id': 'add-row-btn',
+       'row_class': 'form-table-row',
+       'remove_button_class': 'remove-row-btn',
+       'min_rows': 1,
+       'columns': [
+           {
+               'key': 'name',
+               'label': '名称',
+               'type': 'text',
+               'required': True,
+               'placeholder': '请输入名称',
+               'width': '200px'
+           },
+           {
+               'key': 'phone',
+               'label': '电话',
+               'type': 'tel',
+               'required': False,
+               'placeholder': '请输入电话'
+           }
+       ],
+       'initial_data': []  # 初始数据（编辑模式）
+   }
+
+2. 在模板中引入：
+   {% include 'shared/_dynamic_form_table.html' with form_table_config=form_table_config %}
+{% endcomment %}
+
+{% load customer_tags %}
+
+<div class="dynamic-form-table-container" id="{{ form_table_config.container_id }}">
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover" id="{{ form_table_config.id }}">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 60px;">序号</th>
+                    {% for column in form_table_config.columns %}
+                    <th style="{% if column.width %}width: {{ column.width }};{% endif %}">
+                        {{ column.label }}
+                        {% if column.required %}<span class="text-danger">*</span>{% endif %}
+                    </th>
+                    {% endfor %}
+                    <th style="width: 100px;">操作</th>
+                </tr>
+            </thead>
+            <tbody id="{{ form_table_config.container_id }}-body">
+                <!-- 行将通过JavaScript动态添加 -->
+            </tbody>
+        </table>
+    </div>
+    <div style="margin-top: 16px; text-align: left;">
+        <button type="button" class="btn btn-sm btn-primary" id="{{ form_table_config.add_button_id }}">
+            <i class="bi bi-plus-circle"></i> 添加行
+        </button>
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+    
+    const config = {
+        id: '{{ form_table_config.id }}',
+        containerId: '{{ form_table_config.container_id }}-body',
+        rowClass: '{{ form_table_config.row_class|default:"form-table-row" }}',
+        addButtonId: '{{ form_table_config.add_button_id }}',
+        removeButtonClass: '{{ form_table_config.remove_button_class|default:"remove-row-btn" }}',
+        minRows: {{ form_table_config.min_rows|default:1 }},
+        namePrefix: '{{ form_table_config.namePrefix|default:"items" }}',  // 表单字段名前缀
+        extraData: {% if form_table_config.extra_data %}{{ form_table_config.extra_data|safe }}{% else %}null{% endif %},  // 额外数据
+        columns: [
+            {% for column in form_table_config.columns %}
+            {
+                key: '{{ column.key }}',
+                label: '{{ column.label }}',
+                type: '{{ column.type|default:"text" }}',
+                required: {{ column.required|default:False|lower }},
+                placeholder: '{{ column.placeholder|default:"" }}',
+                width: '{{ column.width|default:"" }}',
+                options: {{ column.options|default:"[]"|safe }},
+                render: '{{ column.render|default:"" }}',
+                multiple: {{ column.multiple|default:False|lower }},
+                step: '{{ column.step|default:"" }}'
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        initialData: {% if form_table_config.initial_data %}{{ form_table_config.initial_data|safe }}{% else %}[]{% endif %}
+    };
+    
+    // 行模板函数
+    function rowTemplate(index, data) {
+        const rowData = data || {};
+        let html = '<tr class="' + config.rowClass + '" data-row-index="' + index + '">';
+        
+        // 序号列
+        html += '<td class="dynamic-table-row-number"><strong>' + (index + 1) + '</strong></td>';
+        
+        // 数据列
+        config.columns.forEach(function(column) {
+            html += '<td>';
+            const value = rowData[column.key] || '';
+            // 使用配置中的namePrefix（如果提供），否则使用默认格式
+            const namePrefix = config.namePrefix || 'parties';
+            const nameAttr = namePrefix + '[' + index + '][' + column.key + ']';
+            const requiredAttr = column.required ? ' required' : '';
+            const placeholderAttr = column.placeholder ? ' placeholder="' + column.placeholder + '"' : '';
+            
+            if (column.render && window.dynamicFormTableRenderers && window.dynamicFormTableRenderers[column.render]) {
+                // 使用自定义渲染函数
+                html += window.dynamicFormTableRenderers[column.render](index, column, value, nameAttr, requiredAttr, placeholderAttr);
+            } else if (column.type === 'select' && column.options && column.options.length > 0) {
+                // 下拉选择框
+                const multipleAttr = column.multiple ? ' multiple' : '';
+                const selectClass = column.multiple ? 'form-select form-select-sm' : 'form-control form-control-sm';
+                const selectStyle = column.multiple ? ' style="min-height: 60px; max-height: 80px;"' : '';
+                html += '<select name="' + nameAttr + (column.multiple ? '[]' : '') + '" class="' + selectClass + '"' + requiredAttr + multipleAttr + selectStyle + '>';
+                if (!column.multiple) {
+                    html += '<option value="">-- 请选择 --</option>';
+                }
+                column.options.forEach(function(option) {
+                    const optionValue = typeof option === 'object' ? (option.id || option.value) : option;
+                    const optionLabel = typeof option === 'object' ? (option.name || option.label) : option;
+                    let selected = '';
+                    if (column.multiple && Array.isArray(value)) {
+                        selected = value.includes(optionValue) || value.includes(String(optionValue)) ? ' selected' : '';
+                    } else {
+                        selected = value == optionValue ? ' selected' : '';
+                    }
+                    html += '<option value="' + optionValue + '"' + selected;
+                    // 如果是服务专业，添加service_type_id属性用于过滤
+                    if (typeof option === 'object' && option.service_type_id !== undefined) {
+                        html += ' data-service-type-id="' + option.service_type_id + '"';
+                    }
+                    html += '>' + optionLabel + '</option>';
+                });
+                html += '</select>';
+                if (column.multiple) {
+                    html += '<small class="form-text text-muted" style="font-size: 10px;">可多选</small>';
+                }
+            } else if (column.type === 'textarea') {
+                // 文本域
+                html += '<textarea name="' + nameAttr + '" class="form-control form-control-sm"' + requiredAttr + placeholderAttr + ' rows="2">' + value + '</textarea>';
+            } else {
+                // 普通输入框
+                const inputType = column.type || 'text';
+                const stepAttr = column.step ? ' step="' + column.step + '"' : '';
+                const readonlyAttr = column.readonly ? ' readonly style="background-color: #f5f5f5; cursor: not-allowed;"' : '';
+                html += '<input type="' + inputType + '" name="' + nameAttr + '" class="form-control form-control-sm" value="' + value + '"' + requiredAttr + placeholderAttr + stepAttr + readonlyAttr + '>';
+            }
+            html += '</td>';
+        });
+        
+        // 操作列
+        html += '<td style="text-align: center;">';
+        html += '<button type="button" class="btn btn-sm btn-danger ' + config.removeButtonClass + '">';
+        html += '<i class="bi bi-trash"></i> 删除';
+        html += '</button>';
+        html += '</td>';
+        
+        html += '</tr>';
+        return html;
+    }
+    
+    // 初始化表格管理器
+    function initFormTable() {
+        // 检查DynamicTableManager是否已加载
+        if (typeof DynamicTableManager === 'undefined') {
+            console.error('DynamicTableManager 未加载，请检查 dynamic-table.js 文件');
+            // 延迟重试
+            setTimeout(initFormTable, 100);
+            return;
+        }
+        
+        // 创建表格管理器实例
+        window[config.id + 'Manager'] = new DynamicTableManager({
+            containerId: config.containerId,
+            rowClass: config.rowClass,
+            addButtonId: config.addButtonId,
+            removeButtonClass: config.removeButtonClass,
+            minRows: config.minRows,
+            rowTemplate: rowTemplate,
+            autoUpdateNumbers: true,
+            numberCellSelector: 'td:first-child',
+            onAdd: function(row, index) {
+                // 添加行后的回调
+                if (window.dynamicFormTableEvents && window.dynamicFormTableEvents.onAdd) {
+                    window.dynamicFormTableEvents.onAdd(config.id, row, index);
+                }
+            },
+            onRemove: function(row, index) {
+                // 删除行前的回调
+                if (window.dynamicFormTableEvents && window.dynamicFormTableEvents.onRemove) {
+                    const result = window.dynamicFormTableEvents.onRemove(config.id, row, index);
+                    if (result === false) {
+                        return false; // 阻止删除
+                    }
+                }
+                return true; // 允许删除
+            },
+            onUpdateNumbers: function(rows) {
+                // 更新行号后的回调
+                if (window.dynamicFormTableEvents && window.dynamicFormTableEvents.onUpdateNumbers) {
+                    window.dynamicFormTableEvents.onUpdateNumbers(config.id, rows);
+                }
+            }
+        });
+        
+        // 加载初始数据
+        if (config.initialData && config.initialData.length > 0) {
+            config.initialData.forEach(function(data) {
+                window[config.id + 'Manager'].addRow(data);
+            });
+        } else {
+            // 如果没有初始数据，至少添加一行空行
+            window[config.id + 'Manager'].addRow();
+        }
+    }
+    
+    // DOM加载完成后初始化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFormTable);
+    } else {
+        initFormTable();
+    }
+    
+    // 暴露API
+    if (!window.dynamicFormTables) {
+        window.dynamicFormTables = {};
+    }
+    
+    window.dynamicFormTables[config.id] = {
+        getManager: function() {
+            return window[config.id + 'Manager'];
+        },
+        getAllData: function() {
+            const manager = window[config.id + 'Manager'];
+            return manager ? manager.getAllRowData() : [];
+        },
+        addRow: function(data) {
+            const manager = window[config.id + 'Manager'];
+            return manager ? manager.addRow(data) : null;
+        },
+        clear: function() {
+            const manager = window[config.id + 'Manager'];
+            if (manager) manager.clear();
+        }
+    };
+})();
+</script>
+
+<style>
+.dynamic-form-table-container {
+    margin: 16px 0;
+}
+
+.dynamic-form-table-container table {
+    margin-bottom: 0;
+}
+
+.dynamic-form-table-container .table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.dynamic-form-table-container .table td {
+    vertical-align: middle;
+}
+
+.dynamic-form-table-container .form-control-sm {
+    font-size: 0.875rem;
+}
+
+.dynamic-form-table-container .dynamic-table-row-number {
+    text-align: center;
+    font-weight: 600;
+}
+</style>
+
+{% block dynamic_form_table_custom_js %}{% endblock %}
+

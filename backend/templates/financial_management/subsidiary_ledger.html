@@ -1,0 +1,142 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .filter-bar {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    .table th {
+        background: var(--vh-surface);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+        font-size: var(--font-size-sm);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+        <div class="filter-bar">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">会计科目</label>
+                <select name="account_subject_id" class="form-select" required>
+                    <option value="">请选择科目</option>
+                    {% for subject in account_subjects %}
+                    <option value="{{ subject.id }}" {% if current_account_subject_id == subject.id|stringformat:"s" %}selected{% endif %}>
+                        {{ subject.code }} - {{ subject.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">会计年度</label>
+                <select name="period_year" class="form-select">
+                    {% for year in years %}
+                    <option value="{{ year }}" {% if current_period_year == year %}selected{% endif %}>{{ year }}年</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">会计期间</label>
+                <select name="period_month" class="form-select">
+                    {% for month in months %}
+                    <option value="{{ month }}" {% if current_period_month == month %}selected{% endif %}>{{ month }}月</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">开始日期</label>
+                <input type="date" name="date_from" class="form-control" value="{{ current_date_from }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">结束日期</label>
+                <input type="date" name="date_to" class="form-control" value="{{ current_date_to }}">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> 查询
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="info-card">
+
+        {% if account_subject %}
+        <div class="alert alert-info mb-4">
+            <strong>科目信息：</strong>{{ account_subject.code }} - {{ account_subject.name }} 
+            <span class="ms-3"><strong>期初余额：</strong>¥{{ opening_balance|floatformat:2 }}</span>
+            <span class="ms-3"><strong>期末余额：</strong>¥{{ closing_balance|floatformat:2 }}</span>
+        </div>
+
+        {% if entries %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>凭证字号</th>
+                        <th>摘要</th>
+                        <th>借方金额</th>
+                        <th>贷方金额</th>
+                        <th>余额</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="5" class="text-end"><strong>期初余额</strong></td>
+                        <td><strong>¥{{ opening_balance|floatformat:2 }}</strong></td>
+                    </tr>
+                    {% for item in entries %}
+                    <tr>
+                        <td>{{ item.entry.voucher.voucher_date|date:"Y-m-d" }}</td>
+                        <td><a href="{% url 'finance_pages:voucher_detail' item.entry.voucher.id %}">{{ item.entry.voucher.voucher_number }}</a></td>
+                        <td>{{ item.entry.summary }}</td>
+                        <td>{% if item.entry.debit_amount > 0 %}¥{{ item.entry.debit_amount|floatformat:2 }}{% else %}-{% endif %}</td>
+                        <td>{% if item.entry.credit_amount > 0 %}¥{{ item.entry.credit_amount|floatformat:2 }}{% else %}-{% endif %}</td>
+                        <td><strong>¥{{ item.balance|floatformat:2 }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-info">
+                        <td colspan="3" class="text-end"><strong>合计</strong></td>
+                        <td><strong>¥{{ total_debit|floatformat:2 }}</strong></td>
+                        <td><strong>¥{{ total_credit|floatformat:2 }}</strong></td>
+                        <td><strong>¥{{ closing_balance|floatformat:2 }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="bi bi-info-circle me-2"></i>
+            该科目在选定期间内没有凭证分录记录
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            请选择会计科目并点击查询按钮查看明细账
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

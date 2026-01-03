@@ -1,0 +1,52 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .delete-warning {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    .delete-warning h5 {
+        color: #dc2626;
+        margin-bottom: 12px;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <div class="delete-warning">
+            <h5>⚠️ 确认删除</h5>
+            <p>您即将删除客户线索：<strong>{{ lead.company_name }}</strong></p>
+            <p class="text-muted">联系人：{{ lead.contact_name }}{% if lead.contact_phone %} · {{ lead.contact_phone }}{% endif %}</p>
+            <p class="text-muted">此操作不可恢复，请确认是否继续？</p>
+        </div>
+
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'business_pages:customer_lead_detail' lead.id %}" class="btn btn-outline-secondary">取消</a>
+                <button type="submit" class="btn btn-danger">确认删除</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

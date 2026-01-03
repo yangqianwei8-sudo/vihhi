@@ -1,0 +1,258 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}满意度评价 - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">⭐ 满意度评价</h2>
+            <p class="text-muted mb-0">管理客户满意度评价，跟踪服务质量</p>
+        </div>
+        <div>
+            <a href="{% url 'delivery_pages:delivery_satisfaction_statistics' %}" class="btn btn-outline-info">
+                <i class="bi bi-bar-chart"></i> 满意度统计
+            </a>
+            <a href="{% url 'delivery_pages:delivery_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="info-card info-card-warning">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">待评价</div>
+                            <div class="info-value info-value-large">{{ pending_count }}</div>
+                        </div>
+                        <div class="text-warning" style="font-size: 2rem;">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="info-card info-card-success">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">已评价</div>
+                            <div class="info-value info-value-large">{{ rated_count }}</div>
+                        </div>
+                        <div class="text-success" style="font-size: 2rem;">
+                            <i class="bi bi-star-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选栏 - 使用样式模板 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">筛选条件</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" id="filterForm" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">评价状态</label>
+                    <select name="satisfaction_status" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="all" {% if satisfaction_status == 'all' %}selected{% endif %}>全部</option>
+                        <option value="pending" {% if satisfaction_status == 'pending' %}selected{% endif %}>待评价</option>
+                        <option value="rated" {% if satisfaction_status == 'rated' %}selected{% endif %}>已评价</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 满意度评价列表 - 使用样式模板 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">
+                {% if satisfaction_status == 'pending' %}待评价列表
+                {% elif satisfaction_status == 'rated' %}已评价列表
+                {% else %}全部评价列表
+                {% endif %}
+            </h5>
+            <div class="info-card-actions">
+                <span class="badge bg-primary">共 {{ satisfaction_deliveries.paginator.count }} 条</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if satisfaction_deliveries %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>交付单号</th>
+                            <th>交付标题</th>
+                            <th>关联项目</th>
+                            <th>交付状态</th>
+                            <th>评价状态</th>
+                            <th>满意度评分</th>
+                            <th>评价人</th>
+                            <th>评价时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for delivery in satisfaction_deliveries %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'delivery_pages:delivery_detail' delivery.id %}" class="text-decoration-none">
+                                    <strong>{{ delivery.delivery_number }}</strong>
+                                </a>
+                            </td>
+                            <td>
+                                <div class="text-truncate" style="max-width: 200px;" title="{{ delivery.title }}">
+                                    {{ delivery.title }}
+                                </div>
+                            </td>
+                            <td>
+                                {% if delivery.project %}
+                                <a href="#" class="text-decoration-none">
+                                    {{ delivery.project.project_number }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if delivery.status == 'confirmed' %}
+                                    <span class="status-badge confirmed">已确认</span>
+                                {% elif delivery.status == 'received' %}
+                                    <span class="status-badge received">已接收</span>
+                                {% else %}
+                                    <span class="status-badge {{ delivery.status }}">{{ delivery.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if satisfaction_status == 'rated' or delivery.feedbacks.filter.content__icontains='满意度评分' %}
+                                    <span class="status-badge received">已评价</span>
+                                {% else %}
+                                    <span class="status-badge pending">待评价</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% for feedback in delivery.feedbacks.all %}
+                                    {% if '满意度评分' in feedback.content %}
+                                        {% with rating_match=feedback.content|slice:":20" %}
+                                        {% if '5星' in feedback.content %}
+                                            <span class="text-warning">⭐⭐⭐⭐⭐</span>
+                                        {% elif '4星' in feedback.content %}
+                                            <span class="text-warning">⭐⭐⭐⭐☆</span>
+                                        {% elif '3星' in feedback.content %}
+                                            <span class="text-warning">⭐⭐⭐☆☆</span>
+                                        {% elif '2星' in feedback.content %}
+                                            <span class="text-warning">⭐⭐☆☆☆</span>
+                                        {% elif '1星' in feedback.content %}
+                                            <span class="text-warning">⭐☆☆☆☆</span>
+                                        {% endif %}
+                                        {% endwith %}
+                                        {% break %}
+                                    {% endif %}
+                                {% empty %}
+                                    <span class="text-muted">-</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% for feedback in delivery.feedbacks.all %}
+                                    {% if '满意度评分' in feedback.content %}
+                                        {{ feedback.feedback_by }}
+                                        {% break %}
+                                    {% endif %}
+                                {% empty %}
+                                    <span class="text-muted">-</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% for feedback in delivery.feedbacks.all %}
+                                    {% if '满意度评分' in feedback.content %}
+                                        {{ feedback.created_at|date:"Y-m-d H:i" }}
+                                        {% break %}
+                                    {% endif %}
+                                {% empty %}
+                                    <span class="text-muted">-</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'delivery_pages:delivery_detail' delivery.id %}" 
+                                       class="btn btn-outline-primary" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if satisfaction_status == 'pending' %}
+                                    <a href="{% url 'delivery_pages:delivery_satisfaction_create' delivery.id %}" 
+                                       class="btn btn-outline-success" title="评价">
+                                        <i class="bi bi-star"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if satisfaction_deliveries.has_other_pages %}
+            <nav aria-label="满意度评价分页">
+                <ul class="pagination justify-content-center">
+                    {% if satisfaction_deliveries.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?satisfaction_status={{ satisfaction_status }}&page=1">首页</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?satisfaction_status={{ satisfaction_status }}&page={{ satisfaction_deliveries.previous_page_number }}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in satisfaction_deliveries.paginator.page_range %}
+                        {% if satisfaction_deliveries.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > satisfaction_deliveries.number|add:'-3' and num < satisfaction_deliveries.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?satisfaction_status={{ satisfaction_status }}&page={{ num }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if satisfaction_deliveries.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?satisfaction_status={{ satisfaction_status }}&page={{ satisfaction_deliveries.next_page_number }}">下一页</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?satisfaction_status={{ satisfaction_status }}&page={{ satisfaction_deliveries.paginator.num_pages }}">末页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-3">暂无评价记录</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

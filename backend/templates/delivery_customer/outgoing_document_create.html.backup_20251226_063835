@@ -1,0 +1,626 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}创建发文 - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+        display: block;
+    }
+    .required-field::after {
+        content: " *";
+        color: #ef4444;
+    }
+    
+    /* 可搜索下拉框样式 */
+    .searchable-select-wrapper {
+        position: relative;
+    }
+    
+    .searchable-select-input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .searchable-select-input:focus {
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .searchable-select-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ced4da;
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .searchable-select-dropdown.show {
+        display: block;
+    }
+    
+    .searchable-select-option {
+        padding: 10px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .searchable-select-option:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .searchable-select-option:last-child {
+        border-bottom: none;
+    }
+    
+    .searchable-select-option.selected {
+        background-color: #e7f3ff;
+    }
+    
+    .searchable-select-option.highlight {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .searchable-select-no-results {
+        padding: 10px 12px;
+        color: #6c757d;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="form-page-title">
+        <h1>创建发文</h1>
+        <p>创建新的发文记录</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="outgoing-document-form" >
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- 基础信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>基础信息</h5>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">负责部门</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="responsible_department" 
+                               name="responsible_department"
+                               value="{% if request.user.department %}{{ request.user.department.name }}{% else %}未设置部门{% endif %}"
+                               readonly 
+                               style="background-color: #f5f5f5; cursor: not-allowed;">
+                        <small class="form-text text-muted">系统自动填充</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">负责人</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="responsible_person" 
+                               name="responsible_person"
+                               value="{{ request.user.get_full_name|default:request.user.username }}"
+                               readonly 
+                               style="background-color: #f5f5f5; cursor: not-allowed;">
+                        <small class="form-text text-muted">系统自动填充</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                <!-- 一、文件信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>文件信息</h5>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">项目编号</label>
+                        <div class="searchable-select-wrapper">
+                            <input type="text" 
+                                   class="form-control searchable-select-input" 
+                                   id="project_search_input" 
+                                   placeholder="输入项目编号或名称搜索..."
+                                   autocomplete="off"
+                                   onfocus="showProjectDropdown()"
+                                   onblur="hideProjectDropdown()"
+                                   onkeyup="filterProjects(event)"
+                                   onkeydown="handleProjectKeydown(event)">
+                            <input type="hidden" name="project" id="project_select" value="">
+                            <div class="searchable-select-dropdown" id="project_dropdown">
+                                {% for project in projects %}
+                                <div class="searchable-select-option" 
+                                     data-value="{{ project.id }}" 
+                                     data-number="{{ project.project_number }}" 
+                                     data-name="{{ project.name }}"
+                                     onclick="selectProject({{ project.id }}, '{{ project.project_number }}', '{{ project.name|escapejs }}')">
+                                    <strong>{{ project.project_number }}</strong> - {{ project.name }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">输入项目编号或名称进行搜索</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">项目名称</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="project_name_display" 
+                               readonly 
+                               style="background-color: #f5f5f5; cursor: not-allowed; font-weight: 500;"
+                               placeholder="项目名称将在此显示">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">阶段</label>
+                        <select name="stage" class="form-select" id="stage_select" onchange="updateCategoryOptions()">
+                            <option value="">请选择阶段</option>
+                            {% for code, label in stage_choices %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">文件分类</label>
+                        <select name="file_category" class="form-select" id="category_select">
+                            <option value="">请选择文件分类</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" data-stage="{{ category.stage }}" style="display: none;">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label required-field">文件标题</label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label">上传附件</label>
+                        <input type="file" name="attachment" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label">文件内容</label>
+                        <textarea name="content" class="form-control" rows="5"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<!-- 三、联系方式 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>联系方式</h5>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field">收文单位</label>
+                        <select name="recipient" class="form-select" id="recipient_select" required>
+                            <option value="">请先选择项目</option>
+                        </select>
+                        <small class="form-text text-muted">根据项目编号自动过滤：关联客户、设计单位、人民法院</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">收件人姓名</label>
+                        <select name="recipient_contact" class="form-select" id="recipient_contact_select" onchange="fillContactInfo()">
+                            <option value="">请先选择收文单位</option>
+                        </select>
+                        <small class="form-text text-muted">根据收文单位自动加载联系人</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">联系电话</label>
+                        <input type="text" name="recipient_phone" id="recipient_phone" class="form-control">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">联系邮箱</label>
+                        <input type="email" name="recipient_email" id="recipient_email" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label">收文地址</label>
+                        <textarea name="recipient_address" id="recipient_address" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 四、报送方式 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>报送方式</h5>
+            </div>
+            <div class="row">
+                {% if delivery_methods %}
+                    {% for method in delivery_methods %}
+                        <div class="col-md-6">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="delivery_methods" value="{{ method.code }}" id="delivery_method_{{ method.code }}">
+                                <label class="form-check-label" for="delivery_method_{{ method.code }}">
+                                    {{ method.name }}
+                                </label>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-md-12">
+                        <p class="text-muted">暂无报送方式，请在后台管理中添加。</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> 创建
+            </button>
+        </div>
+
+
+<script>
+// 项目搜索相关变量
+let allProjects = [];
+let filteredProjects = [];
+let currentHighlightIndex = -1;
+
+// 初始化项目列表
+document.addEventListener('DOMContentLoaded', function() {
+    const options = document.querySelectorAll('#project_dropdown .searchable-select-option');
+    allProjects = Array.from(options).map(option => ({
+        element: option,
+        value: option.getAttribute('data-value'),
+        number: option.getAttribute('data-number'),
+        name: option.getAttribute('data-name'),
+        text: option.textContent.trim()
+    }));
+    filteredProjects = allProjects;
+});
+
+// 显示下拉框
+function showProjectDropdown() {
+    const dropdown = document.getElementById('project_dropdown');
+    if (dropdown) {
+        dropdown.classList.add('show');
+        // 如果没有项目，显示提示
+        if (filteredProjects.length === 0) {
+            if (!dropdown.querySelector('.searchable-select-no-results')) {
+                const noResults = document.createElement('div');
+                noResults.className = 'searchable-select-no-results';
+                noResults.textContent = '暂无项目';
+                dropdown.appendChild(noResults);
+            }
+        }
+    }
+}
+
+// 隐藏下拉框
+function hideProjectDropdown() {
+    // 延迟隐藏，以便点击选项时能触发
+    setTimeout(() => {
+        const dropdown = document.getElementById('project_dropdown');
+        if (dropdown) {
+            dropdown.classList.remove('show');
+        }
+        currentHighlightIndex = -1;
+    }, 200);
+}
+
+// 过滤项目
+function filterProjects(event) {
+    const input = document.getElementById('project_search_input');
+    const dropdown = document.getElementById('project_dropdown');
+    const searchTerm = input.value.toLowerCase().trim();
+    
+    currentHighlightIndex = -1;
+    
+    if (searchTerm === '') {
+        filteredProjects = allProjects;
+        allProjects.forEach(project => {
+            project.element.style.display = '';
+        });
+            // 如果输入框被清空，也清空项目选择
+            if (input.value.trim() === '') {
+                document.getElementById('project_select').value = '';
+                document.getElementById('project_name_display').value = '';
+            }
+    } else {
+        filteredProjects = allProjects.filter(project => {
+            const matches = project.number.toLowerCase().includes(searchTerm) || 
+                          project.name.toLowerCase().includes(searchTerm) ||
+                          project.text.toLowerCase().includes(searchTerm);
+            project.element.style.display = matches ? '' : 'none';
+            return matches;
+        });
+    }
+    
+    // 更新下拉框显示 - 总是显示下拉框
+    if (dropdown) {
+        dropdown.classList.add('show');
+        // 如果没有匹配项，显示提示
+        if (filteredProjects.length === 0) {
+            let noResults = dropdown.querySelector('.searchable-select-no-results');
+            if (!noResults) {
+                noResults = document.createElement('div');
+                noResults.className = 'searchable-select-no-results';
+                dropdown.appendChild(noResults);
+            }
+            if (searchTerm === '') {
+                noResults.textContent = '暂无项目';
+            } else {
+                noResults.textContent = '未找到匹配的项目';
+            }
+        } else {
+            // 隐藏"无结果"提示
+            const noResults = dropdown.querySelector('.searchable-select-no-results');
+            if (noResults) {
+                noResults.remove();
+            }
+        }
+    }
+}
+
+// 处理键盘事件
+function handleProjectKeydown(event) {
+    const dropdown = document.getElementById('project_dropdown');
+    if (!dropdown.classList.contains('show') || filteredProjects.length === 0) {
+        return;
+    }
+    
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        currentHighlightIndex = Math.min(currentHighlightIndex + 1, filteredProjects.length - 1);
+        highlightOption();
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        currentHighlightIndex = Math.max(currentHighlightIndex - 1, -1);
+        highlightOption();
+    } else if (event.key === 'Enter') {
+        event.preventDefault();
+        if (currentHighlightIndex >= 0 && currentHighlightIndex < filteredProjects.length) {
+            const project = filteredProjects[currentHighlightIndex];
+            selectProject(project.value, project.number, project.name);
+        }
+    } else if (event.key === 'Escape') {
+        dropdown.classList.remove('show');
+        currentHighlightIndex = -1;
+    }
+}
+
+// 高亮选项
+function highlightOption() {
+    filteredProjects.forEach((project, index) => {
+        if (index === currentHighlightIndex) {
+            project.element.classList.add('highlight');
+            project.element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } else {
+            project.element.classList.remove('highlight');
+        }
+    });
+}
+
+// 选择项目
+function selectProject(projectId, projectNumber, projectName) {
+    document.getElementById('project_select').value = projectId;
+    document.getElementById('project_search_input').value = projectNumber;
+    document.getElementById('project_name_display').value = projectName;
+    document.getElementById('project_dropdown').classList.remove('show');
+    currentHighlightIndex = -1;
+    // 更新收文单位列表
+    loadRecipientUnits(projectId);
+}
+
+// 更新文件分类选项（根据选择的阶段）
+function updateCategoryOptions() {
+    const stageSelect = document.getElementById('stage_select');
+    const categorySelect = document.getElementById('category_select');
+    const selectedStage = stageSelect.value;
+    
+    // 显示/隐藏分类选项
+    const options = categorySelect.querySelectorAll('option[data-stage]');
+    options.forEach(option => {
+        if (selectedStage && option.getAttribute('data-stage') === selectedStage) {
+            option.style.display = '';
+        } else {
+            option.style.display = 'none';
+            // 如果当前选中的分类不在当前阶段，重置为"请选择文件分类"
+            if (option.selected && option.getAttribute('data-stage') !== selectedStage) {
+                categorySelect.value = '';
+            }
+        }
+    });
+}
+
+// 填充联系人信息
+function fillContactInfo() {
+    const contactSelect = document.getElementById('recipient_contact_select');
+    const selectedOption = contactSelect.options[contactSelect.selectedIndex];
+    
+    if (selectedOption && selectedOption.value) {
+        const phone = selectedOption.getAttribute('data-phone') || '';
+        const email = selectedOption.getAttribute('data-email') || '';
+        const address = selectedOption.getAttribute('data-address') || '';  // 获取联系人的办公地址
+        document.getElementById('recipient_phone').value = phone;
+        document.getElementById('recipient_email').value = email;
+        // 收文地址应该是对应联系人的办公地址
+        document.getElementById('recipient_address').value = address;
+    } else {
+        // 清空联系信息
+        document.getElementById('recipient_phone').value = '';
+        document.getElementById('recipient_email').value = '';
+        // 清空收文地址（因为收文地址是对应联系人的办公地址）
+        document.getElementById('recipient_address').value = '';
+    }
+}
+
+// 加载收文单位的联系人列表
+function loadRecipientContacts(recipientName, projectId) {
+    const contactSelect = document.getElementById('recipient_contact_select');
+    
+    // 显示加载状态
+    contactSelect.innerHTML = '<option value="">加载中...</option>';
+    contactSelect.disabled = true;
+    
+    // 调用API获取联系人列表
+    const url = `/delivery/outgoing-document/recipient-contacts/?recipient_name=${encodeURIComponent(recipientName)}&project_id=${projectId}`;
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            contactSelect.disabled = false;
+            if (data.success && data.contacts && data.contacts.length > 0) {
+                contactSelect.innerHTML = '<option value="">请选择收件人姓名</option>';
+                data.contacts.forEach(contact => {
+                    const option = document.createElement('option');
+                    option.value = contact.name;
+                    option.textContent = contact.label;
+                    option.setAttribute('data-phone', contact.phone || '');
+                    option.setAttribute('data-email', contact.email || '');
+                    option.setAttribute('data-address', contact.address || '');
+                    contactSelect.appendChild(option);
+                });
+                
+            } else {
+                contactSelect.innerHTML = '<option value="">未找到联系人</option>';
+            }
+        })
+        .catch(error => {
+            console.error('加载联系人列表失败:', error);
+            contactSelect.disabled = false;
+            contactSelect.innerHTML = '<option value="">加载失败</option>';
+        });
+}
+
+// 加载收文单位列表
+function loadRecipientUnits(projectId) {
+    const recipientSelect = document.getElementById('recipient_select');
+    const contactSelect = document.getElementById('recipient_contact_select');
+    
+    if (!projectId) {
+        recipientSelect.innerHTML = '<option value="">请先选择项目</option>';
+        contactSelect.innerHTML = '<option value="">请先选择收文单位</option>';
+        return;
+    }
+    
+    // 显示加载状态
+    recipientSelect.innerHTML = '<option value="">加载中...</option>';
+    recipientSelect.disabled = true;
+    
+    // 清空联系人选择框
+    contactSelect.innerHTML = '<option value="">请先选择收文单位</option>';
+    
+    // 调用API获取收文单位列表
+    fetch(`/delivery/outgoing-document/recipient-units/?project_id=${projectId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            recipientSelect.disabled = false;
+            if (data.success && data.recipient_units && data.recipient_units.length > 0) {
+                recipientSelect.innerHTML = '<option value="">请选择收文单位</option>';
+                data.recipient_units.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.name;
+                    option.textContent = unit.label;
+                    option.setAttribute('data-address', unit.address || '');  // 存储地址信息
+                    recipientSelect.appendChild(option);
+                });
+                
+                // 添加onchange事件，选择收文单位后加载联系人和地址
+                recipientSelect.onchange = function() {
+                    const selectedRecipient = recipientSelect.value;
+                    const selectedOption = recipientSelect.options[recipientSelect.selectedIndex];
+                    
+                    if (selectedRecipient) {
+                        // 加载联系人（收文地址等选择联系人后再填充）
+                        loadRecipientContacts(selectedRecipient, projectId);
+                    } else {
+                        // 清空联系人和收文地址
+                        contactSelect.innerHTML = '<option value="">请先选择收文单位</option>';
+                        document.getElementById('recipient_address').value = '';
+                    }
+                };
+            } else {
+                recipientSelect.innerHTML = '<option value="">未找到收文单位</option>';
+            }
+        })
+        .catch(error => {
+            console.error('加载收文单位列表失败:', error);
+            recipientSelect.disabled = false;
+            recipientSelect.innerHTML = '<option value="">加载失败，请重试</option>';
+        });
+}
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    updateCategoryOptions();
+});
+</script>
+</div>
+    </form>
+</div>
+{% endblock %}

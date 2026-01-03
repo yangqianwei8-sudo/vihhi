@@ -1,0 +1,113 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}{% if timeline %}编辑时间节点{% else %}创建时间节点{% endif %} - {{ case.case_number }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:timeline_list' case.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <!-- 表单 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">时间节点信息</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" id="timelineForm">
+                {% csrf_token %}
+                
+                <!-- 基本信息 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">基本信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">节点名称 <span class="text-danger">*</span></label>
+                        <input type="text" name="timeline_name" class="form-control" 
+                               value="{% if timeline %}{{ timeline.timeline_name }}{% endif %}" required placeholder="请输入节点名称">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">节点类型 <span class="text-danger">*</span></label>
+                        <select name="timeline_type" class="form-select" required>
+                            <option value="">请选择</option>
+                            <option value="trial" {% if timeline and timeline.timeline_type == 'trial' %}selected{% endif %}>开庭时间</option>
+                            <option value="appeal" {% if timeline and timeline.timeline_type == 'appeal' %}selected{% endif %}>上诉期限</option>
+                            <option value="evidence" {% if timeline and timeline.timeline_type == 'evidence' %}selected{% endif %}>举证期限</option>
+                            <option value="defense" {% if timeline and timeline.timeline_type == 'defense' %}selected{% endif %}>答辩期限</option>
+                            <option value="other" {% if timeline and timeline.timeline_type == 'other' %}selected{% endif %}>其他</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">节点时间 <span class="text-danger">*</span></label>
+                        <input type="date" name="timeline_date" class="form-control" 
+                               value="{% if timeline %}{{ timeline.timeline_date|date:'Y-m-d' }}{% endif %}" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">状态</label>
+                        <select name="status" class="form-select">
+                            <option value="pending" {% if timeline and timeline.status == 'pending' %}selected{% elif not timeline %}selected{% endif %}>待处理</option>
+                            <option value="in_progress" {% if timeline and timeline.status == 'in_progress' %}selected{% endif %}>处理中</option>
+                            <option value="completed" {% if timeline and timeline.status == 'completed' %}selected{% endif %}>已完成</option>
+                            <option value="cancelled" {% if timeline and timeline.status == 'cancelled' %}selected{% endif %}>已取消</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">提醒设置</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="reminder_enabled" id="reminderEnabled" 
+                                   {% if timeline and timeline.reminder_enabled %}checked{% elif not timeline %}checked{% endif %}>
+                            <label class="form-check-label" for="reminderEnabled">
+                                启用提醒（系统将自动发送多方式通知）
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">提醒天数（提前提醒）</label>
+                        <input type="text" name="reminder_days_before" class="form-control" 
+                               value="{% if timeline and timeline.reminder_days_before %}{{ timeline.reminder_days_before|join:',' }}{% else %}7,3,1,0{% endif %}" 
+                               placeholder="请输入提醒天数，用逗号分隔，如：7,3,1,0">
+                        <small class="form-text text-muted">例如：7,3,1,0 表示提前7天、3天、1天和当天提醒</small>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">节点描述</label>
+                        <textarea name="description" class="form-control" rows="3" 
+                                  placeholder="请输入节点描述">{% if timeline %}{{ timeline.description }}{% endif %}</textarea>
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'litigation_pages:timeline_list' case.id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> 取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {% if timeline %}保存{% else %}创建{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

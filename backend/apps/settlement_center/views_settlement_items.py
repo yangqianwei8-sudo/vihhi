@@ -10,7 +10,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from decimal import Decimal
 
-from .models import ProjectSettlement, SettlementItem
+from backend.apps.settlement_management.models import ProjectSettlement, SettlementItem
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.core.views import _permission_granted
 
@@ -127,11 +127,12 @@ def generate_items_from_opinions(request, settlement_id):
     period_start = request.POST.get('period_start')
     period_end = request.POST.get('period_end')
     
-    from backend.apps.production_quality.models import Opinion
-    from .views_pages import _generate_settlement_items_from_opinions
+    # from backend.apps.production_quality.models import Opinion  # 已删除生产质量模块
+    # from .views_pages import _generate_settlement_items_from_opinions  # 已删除生产质量模块
     
-    # 生成明细项
-    count = _generate_settlement_items_from_opinions(settlement, request.user)
+    # 生成明细项（已禁用：生产质量模块已删除）
+    count = 0
+    # count = _generate_settlement_items_from_opinions(settlement, request.user)
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({
@@ -170,19 +171,24 @@ def _recalculate_settlement_savings(settlement):
     # 服务费计算
     settlement.fee_base_amount = reviewed_total
     
-    # 如果有关联合同，从合同费率表匹配服务费率
-    if settlement.contract_id:
-        fee_rate = settlement._match_service_fee_rate(reviewed_total)
-        if fee_rate:
-            settlement.service_fee_rate = fee_rate.service_rate
-            if hasattr(settlement.contract, 'base_service_fee'):
-                settlement.base_service_fee = settlement.contract.base_service_fee or Decimal('0')
-    
-    # 计算服务费金额
-    if settlement.service_fee_rate and settlement.fee_base_amount:
-        settlement.service_fee_amount = settlement.fee_base_amount * settlement.service_fee_rate
+    # 优先使用服务费结算方案，否则使用合同费率表
+    if settlement.service_fee_scheme_id and settlement.service_fee_scheme.is_active:
+        # 使用新的结算方案计算服务费
+        settlement._calculate_service_fee_by_scheme()
     else:
-        settlement.service_fee_amount = Decimal('0')
+        # 使用旧的费率表方式
+        if settlement.contract_id:
+            fee_rate = settlement._match_service_fee_rate(reviewed_total)
+            if fee_rate:
+                settlement.service_fee_rate = fee_rate.service_rate
+                if hasattr(settlement.contract, 'base_service_fee'):
+                    settlement.base_service_fee = settlement.contract.base_service_fee or Decimal('0')
+        
+        # 计算服务费金额
+        if settlement.service_fee_rate and settlement.fee_base_amount:
+            settlement.service_fee_amount = settlement.fee_base_amount * settlement.service_fee_rate
+        else:
+            settlement.service_fee_amount = Decimal('0')
     
     # 计算结算总金额
     settlement.total_settlement_amount = settlement.base_service_fee + settlement.service_fee_amount

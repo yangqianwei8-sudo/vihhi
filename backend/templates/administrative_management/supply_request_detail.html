@@ -1,0 +1,188 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-draft { background: #e7f3ff; color: #0066cc; }
+    .status-pending_approval { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d1e7dd; color: #0f5132; }
+    .status-rejected { background: #f8d7da; color: #842029; }
+    .status-issued { background: #d1e7dd; color: #0f5132; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:supply_request_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if request_obj.status in 'draft,pending_approval' and request_obj.applicant == request.user %}
+            <a href="{% url 'admin_pages:supply_request_update' request_id=request_obj.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+            {% if request_obj.status == 'pending_approval' %}
+            <a href="{% url 'admin_pages:supply_request_approve' request_id=request_obj.id %}" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> 审批
+            </a>
+            {% endif %}
+            {% if request_obj.status == 'approved' %}
+            <a href="{% url 'admin_pages:supply_request_issue' request_id=request_obj.id %}" class="btn btn-info">
+                <i class="bi bi-box-arrow-up"></i> 发放
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">申请单号</span>
+                    <span class="info-value"><code>{{ request_obj.request_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请人</span>
+                    <span class="info-value">{{ request_obj.applicant.get_full_name|default:request_obj.applicant.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请日期</span>
+                    <span class="info-value">{{ request_obj.request_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge status-{{ request_obj.status }}">
+                            {{ request_obj.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                {% if request_obj.approver %}
+                <div class="info-item">
+                    <span class="info-label">审批人</span>
+                    <span class="info-value">{{ request_obj.approver.get_full_name|default:request_obj.approver.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">审批时间</span>
+                    <span class="info-value">{{ request_obj.approved_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                {% if request_obj.issued_by %}
+                <div class="info-item">
+                    <span class="info-label">发放人</span>
+                    <span class="info-value">{{ request_obj.issued_by.get_full_name|default:request_obj.issued_by.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">发放时间</span>
+                    <span class="info-value">{{ request_obj.issued_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ request_obj.created_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用途说明 -->
+    {% if request_obj.purpose %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">用途说明</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-item">
+                <span class="info-value" style="white-space: pre-wrap;">{{ request_obj.purpose }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 领用明细 -->
+    {% if items %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">领用明细</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>办公用品</th>
+                            <th>申请数量</th>
+                            <th>已发放</th>
+                            <th>单位</th>
+                            <th>备注</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.supply.name }}（{{ item.supply.code }}）</td>
+                            <td>{{ item.requested_quantity }} {{ item.supply.unit }}</td>
+                            <td>
+                                {% if item.issued_quantity > 0 %}
+                                <span class="text-success">{{ item.issued_quantity }} {{ item.supply.unit }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.supply.unit }}</td>
+                            <td>{{ item.notes|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注 -->
+    {% if request_obj.notes %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-item">
+                <span class="info-value" style="white-space: pre-wrap;">{{ request_obj.notes }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

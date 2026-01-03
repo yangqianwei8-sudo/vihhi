@@ -1,0 +1,147 @@
+{% extends "shared/list_page_base.html" %}
+{% load static %}
+
+{% block list_page_title %}{{ page_title }}{% endblock %}
+
+{% block list_page_actions %}
+{% if can_create %}
+<a href="{% url 'business_pages:customer_relationship_collaboration_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i> 创建人员关系协作申请
+</a>
+{% endif %}
+{% endblock %}
+
+{% block list_page_filter_fields %}
+<!-- 客户 -->
+<div class="list-page-filter-item" data-filter-key="client">
+    <label>客户:</label>
+    <select name="client" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}" {% if client_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- 申请类型 -->
+<div class="list-page-filter-item" data-filter-key="task_type">
+    <label>申请类型:</label>
+    <select name="task_type" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for value, label in task_type_choices %}
+        <option value="{{ value }}" {% if task_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- 申请状态 -->
+<div class="list-page-filter-item" data-filter-key="status">
+    <label>申请状态:</label>
+    <select name="status" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- 优先级 -->
+<div class="list-page-filter-item" data-filter-key="priority">
+    <label>优先级:</label>
+    <select name="priority" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for value, label in priority_choices %}
+        <option value="{{ value }}" {% if priority == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- 负责人 -->
+<div class="list-page-filter-item" data-filter-key="responsible_user">
+    <label>负责人:</label>
+    <select name="responsible_user" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for u in users %}
+        <option value="{{ u.id }}" {% if responsible_user_id == u.id|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endblock %}
+
+{% block search_placeholder %}客户名称{% endblock %}
+
+{% block list_page_table_headers %}
+<th>客户名称</th>
+<th>申请类型</th>
+<th>负责人</th>
+<th>优先级</th>
+<th>状态</th>
+<th>进度</th>
+<th>截止时间</th>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td>
+    <a href="{% url 'business_pages:customer_detail' item.client.id %}" class="text-decoration-none">
+        {{ item.client.name }}
+    </a>
+</td>
+<td>
+    <span class="badge bg-info">{{ item.get_task_type_display }}</span>
+</td>
+<td class="small">
+    {% for user in item.responsible_users.all %}
+        {{ user.get_full_name|default:user.username }}{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+</td>
+<td>
+    <span class="badge bg-{% if item.priority == 'high' %}danger{% elif item.priority == 'medium' %}warning{% else %}secondary{% endif %}">
+        {{ item.get_priority_display }}
+    </span>
+</td>
+<td>
+    <span class="badge bg-{% if item.status == 'completed' %}success{% elif item.status == 'cancelled' %}secondary{% elif item.status == 'in_progress' %}primary{% else %}warning{% endif %}">
+        {{ item.get_status_display }}
+    </span>
+</td>
+<td>
+    <div class="progress" style="height: 20px; width: 80px;">
+        <div class="progress-bar" role="progressbar" style="width: {{ item.progress }}%">{{ item.progress }}%</div>
+    </div>
+</td>
+<td class="small text-muted">
+    {% if item.due_date %}{{ item.due_date|date:"Y-m-d H:i" }}{% else %}--{% endif %}
+</td>
+{% endblock %}
+
+{% block list_page_table_actions_cell %}
+<td>
+    <div class="list-page-table-actions">
+        <a href="{% url 'business_pages:customer_relationship_collaboration_detail' item.id %}" class="action-view" title="查看">
+            <i class="bi bi-eye"></i>
+        </a>
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_colspan %}8{% endblock %}
+
+{% block empty_table_message %}暂无人员关系协作申请{% endblock %}
+
+{% block pagination_params %}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if task_type %}&task_type={{ task_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if priority %}&priority={{ priority }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% endblock %}
+
+{% block list_page_custom_js %}
+// 筛选字段设置配置
+window.listFiltersConfig = {
+    enableFieldsSettings: true,
+    fieldsSettingsStorageKey: 'relationship_collaboration_filter_fields',
+    fieldsSettingsContainerId: 'filterFieldsContainer',
+    fieldsSettingsModalId: 'filterFieldsSettingsModal',
+    fieldsSettingsListId: 'filterFieldsList',
+    fieldsSettingsBtnId: 'settingsFilterFieldsBtn',
+    fieldsSettingsSaveBtnId: 'saveFilterFieldsSettings',
+    fieldsSettingsResetBtnId: 'resetFilterFieldsSettings',
+    maxEnabledFields: 10,
+    defaultEnabledFields: ['client', 'task_type', 'status', 'priority', 'responsible_user']
+};
+{% endblock %}

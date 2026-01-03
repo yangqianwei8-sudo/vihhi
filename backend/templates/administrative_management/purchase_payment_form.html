@@ -1,0 +1,142 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: var(--spacing-lg);
+    }
+    .form-card h5 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .form-label.required::after {
+        content: " *";
+        color: var(--vh-error);
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    {% if contract %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">关联合同信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">合同编号</span>
+                    <span class="info-value"><code>{{ contract.contract_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">合同金额</span>
+                    <span class="info-value">¥{{ contract.contract_amount|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">已付款金额</span>
+                    <span class="info-value">¥{{ contract.paid_amount|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">未付款金额</span>
+                    <span class="info-value" style="font-size: var(--font-size-lg); font-weight: 700; color: var(--vh-error);">
+                        ¥{{ contract.unpaid_amount|floatformat:2 }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <h5>付款信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">合同</label>
+                    {{ form.contract }}
+                    {% if form.contract.errors %}
+                    <div class="text-danger small mt-1">{{ form.contract.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">付款日期</label>
+                    {{ form.payment_date }}
+                    {% if form.payment_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.payment_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">付款金额</label>
+                    {{ form.amount }}
+                    {% if form.amount.errors %}
+                    <div class="text-danger small mt-1">{{ form.amount.errors }}</div>
+                    {% endif %}
+                    {% if contract %}
+                    <small class="text-muted">未付款金额：¥{{ contract.unpaid_amount|floatformat:2 }}</small>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">付款方式</label>
+                    {{ form.payment_method }}
+                    {% if form.payment_method.errors %}
+                    <div class="text-danger small mt-1">{{ form.payment_method.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">凭证号</label>
+                    {{ form.voucher_number }}
+                    {% if form.voucher_number.errors %}
+                    <div class="text-danger small mt-1">{{ form.voucher_number.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">凭证文件</label>
+                    {{ form.voucher_file }}
+                    {% if form.voucher_file.errors %}
+                    <div class="text-danger small mt-1">{{ form.voucher_file.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">备注</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a href="{% if contract %}{% url 'admin_pages:purchase_contract_detail' contract.id %}{% else %}{% url 'admin_pages:purchase_payment_list' %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> 保存
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

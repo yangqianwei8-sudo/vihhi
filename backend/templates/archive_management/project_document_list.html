@@ -1,0 +1,138 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}项目档案文档 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="list-page-container">
+    <!-- 页面标题和操作按钮 -->
+    <div class="list-page-header">
+        <div>
+            <h2 class="list-page-title">📚 项目档案文档</h2>
+            <p class="text-muted mb-0">管理项目档案文档，支持上传、归档和借阅</p>
+        </div>
+        <div class="list-page-actions">
+            <a href="{% url 'archive_management:project_document_upload' %}" class="btn btn-primary">
+                <i class="bi bi-upload"></i> 上传文档
+            </a>
+        </div>
+    </div>
+
+    <!-- 筛选和列表 -->
+    <div class="list-page-filters">
+        <div class="list-page-filters-header">
+            <h5 class="list-page-filters-title">筛选条件</h5>
+            
+        </div>
+        <div class="list-page-filter-row">
+            <!-- 筛选器 -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <form method="get" class="d-flex gap-2 flex-wrap">
+                        <select name="document_type" class="form-select" style="max-width: 180px;">
+                            <option value="">全部类型</option>
+                            <option value="project_doc" {% if document_type == 'project_doc' %}selected{% endif %}>项目文档</option>
+                            <option value="drawing" {% if document_type == 'drawing' %}selected{% endif %}>图纸</option>
+                            <option value="delivery_file" {% if document_type == 'delivery_file' %}selected{% endif %}>交付文件</option>
+                            <option value="process_file" {% if document_type == 'process_file' %}selected{% endif %}>过程文件</option>
+                            <option value="other" {% if document_type == 'other' %}selected{% endif %}>其他</option>
+                        </select>
+                        <select name="status" class="form-select" style="max-width: 150px;">
+                            <option value="">全部状态</option>
+                            <option value="draft" {% if status == 'draft' %}selected{% endif %}>草稿</option>
+                            <option value="pending_archive" {% if status == 'pending_archive' %}selected{% endif %}>待归档</option>
+                            <option value="archived" {% if status == 'archived' %}selected{% endif %}>已归档</option>
+                            <option value="borrowed" {% if status == 'borrowed' %}selected{% endif %}>已借出</option>
+                        </select>
+                        <input type="text" name="search" class="form-control" placeholder="搜索文档编号、名称、项目..." value="{{ search }}" style="max-width: 300px;">
+                        <button type="submit" class="btn btn-primary">搜索</button>
+                        <a href="{% url 'archive_management:project_document_list' %}" class="btn btn-secondary">重置</a>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 列表表格 -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>文档编号</th>
+                            <th>文档名称</th>
+                            <th>文档类型</th>
+                            <th>项目</th>
+                            <th>分类</th>
+                            <th>状态</th>
+                            <th>上传人</th>
+                            <th>上传时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in page %}
+                        <tr>
+                            <td>{{ doc.document_number }}</td>
+                            <td>{{ doc.document_name }}</td>
+                            <td>{{ doc.get_document_type_display }}</td>
+                            <td>{{ doc.project.project_name|default:"-" }}</td>
+                            <td>{{ doc.category.name|default:"-" }}</td>
+                            <td>
+                                <span class="status-badge status-{{ doc.status }}">
+                                    {{ doc.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ doc.uploaded_by.username }}</td>
+                            <td>{{ doc.uploaded_time|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <a href="{% url 'archive_management:project_document_detail' doc.pk %}" class="btn btn-sm btn-outline-primary">查看</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">暂无数据</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if page.has_other_pages %}
+            <nav aria-label="分页">
+                <ul class="pagination justify-content-center">
+                    {% if page.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page.previous_page_number }}{% if document_type %}&document_type={{ document_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if search %}&search={{ search }}{% endif %}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page.paginator.page_range %}
+                    {% if page.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page.number|add:'-3' and num < page.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if document_type %}&document_type={{ document_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page.next_page_number }}{% if document_type %}&document_type={{ document_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if search %}&search={{ search }}{% endif %}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

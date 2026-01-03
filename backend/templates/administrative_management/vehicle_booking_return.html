@@ -1,0 +1,76 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">申请信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">申请单号</span>
+                    <span class="info-value"><code>{{ booking.booking_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">车辆</span>
+                    <span class="info-value">{{ booking.vehicle.plate_number }} - {{ booking.vehicle.brand }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">出发里程数</span>
+                    <span class="info-value">{{ booking.mileage_before|default:"-" }} km</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-card">
+            <h5>归还信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">返回里程数</label>
+                    <input type="number" name="mileage_after" class="form-control" value="{{ booking.mileage_after|default:'' }}" placeholder="请输入返回里程数" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">燃油费用</label>
+                    <input type="number" name="fuel_cost" class="form-control" step="0.01" value="{{ booking.fuel_cost|default:'0' }}" placeholder="0.00">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">停车费用</label>
+                    <input type="number" name="parking_fee" class="form-control" step="0.01" value="{{ booking.parking_fee|default:'0' }}" placeholder="0.00">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">过路费用</label>
+                    <input type="number" name="toll_fee" class="form-control" step="0.01" value="{{ booking.toll_fee|default:'0' }}" placeholder="0.00">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">其他费用</label>
+                    <input type="number" name="other_cost" class="form-control" step="0.01" value="{{ booking.other_cost|default:'0' }}" placeholder="0.00">
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'admin_pages:vehicle_booking_detail' booking.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-warning">
+                <i class="bi bi-arrow-counterclockwise"></i> 确认归还
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

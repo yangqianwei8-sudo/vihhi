@@ -1,0 +1,132 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-card h5 {
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+    .file-upload-hint {
+        font-size: 13px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block personnel_content %}
+<div class="info-card">
+    <div class="info-card-header">
+        <h5 class="info-card-title">{{ page_title }}</h5>
+    </div>
+    <div class="info-card-body">
+        <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-card">
+            <h5>档案信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">员工</label>
+                    {{ form.employee }}
+                    {% if form.employee.errors %}
+                    <div class="text-danger small mt-1">{{ form.employee.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">档案分类</label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                    <div class="text-danger small mt-1">{{ form.category.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label required">档案文件</label>
+                    {{ form.file }}
+                    {% if form.file.errors %}
+                    <div class="text-danger small mt-1">{{ form.file.errors }}</div>
+                    {% endif %}
+                    <div class="file-upload-hint">
+                        支持格式：PDF、Word文档、图片（JPG、PNG），文件大小不超过50MB
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">文件名称</label>
+                    {{ form.file_name }}
+                    {% if form.file_name.errors %}
+                    <div class="text-danger small mt-1">{{ form.file_name.errors }}</div>
+                    {% endif %}
+                    <div class="file-upload-hint">
+                        如不填写，将使用上传文件的原始名称
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">到期日期</label>
+                    {{ form.expiry_date }}
+                    {% if form.expiry_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.expiry_date.errors }}</div>
+                    {% endif %}
+                    <div class="file-upload-hint">
+                        适用于有有效期的证件（如身份证、资格证书等）
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">档案描述</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="d-flex justify-content-end gap-3 mt-4">
+            <a href="{% url 'personnel_pages:employee_archive_management' %}" class="btn btn-outline-secondary btn-submit">
+                <i class="bi bi-x-circle"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary btn-submit">
+                <i class="bi bi-upload"></i> 上传
+            </button>
+        </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

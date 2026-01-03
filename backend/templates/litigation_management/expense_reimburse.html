@@ -1,0 +1,75 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}费用报销 - {{ expense.expense_name }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:expense_detail' expense.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回详情
+            </a>
+        </div>
+    </div>
+
+    <!-- 费用信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">费用信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">费用名称</span>
+                    <span class="info-value">{{ expense.expense_name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">费用类型</span>
+                    <span class="info-value">{{ expense.get_expense_type_display }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">报销金额</span>
+                    <span class="info-value info-value-large">¥{{ expense.amount|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">费用日期</span>
+                    <span class="info-value">{{ expense.expense_date|date:"Y-m-d" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 报销申请表单 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">报销申请</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>提示：</strong>提交报销申请后，将进入审批流程。
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'litigation_pages:expense_detail' expense.id %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> 取消
+                    </a>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-credit-card"></i> 提交报销申请
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

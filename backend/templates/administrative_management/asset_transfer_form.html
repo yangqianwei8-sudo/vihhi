@@ -1,0 +1,141 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .form-card h5 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-md);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .form-label.required::after {
+        content: " *";
+        color: var(--vh-error);
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- 资产信息 -->
+    <div class="form-card mb-4">
+        <h5>资产信息</h5>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">资产编号</label>
+                <div class="form-control-plaintext"><code>{{ asset.asset_number }}</code></div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">资产名称</label>
+                <div class="form-control-plaintext">{{ asset.asset_name }}</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">当前使用人</label>
+                <div class="form-control-plaintext">{{ asset.current_user.get_full_name|default:asset.current_user.username|default:"-" }}</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">当前位置</label>
+                <div class="form-control-plaintext">{{ asset.current_location|default:"-" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表单 -->
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- 转移信息 -->
+        <div class="form-card">
+            <h5>转移信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">新使用人</label>
+                    {{ form.to_user }}
+                    {% if form.to_user.errors %}
+                    <div class="text-danger small mt-1">{{ form.to_user.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">转移日期</label>
+                    {{ form.transfer_date }}
+                    {% if form.transfer_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.transfer_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">原位置</label>
+                    {{ form.from_location }}
+                    {% if form.from_location.errors %}
+                    <div class="text-danger small mt-1">{{ form.from_location.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">默认为资产当前位置</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">新位置</label>
+                    {{ form.to_location }}
+                    {% if form.to_location.errors %}
+                    <div class="text-danger small mt-1">{{ form.to_location.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label required">转移原因</label>
+                    {{ form.transfer_reason }}
+                    {% if form.transfer_reason.errors %}
+                    <div class="text-danger small mt-1">{{ form.transfer_reason.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">备注</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 表单错误 -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% url 'admin_pages:asset_detail' asset.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i> 提交申请
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -1,0 +1,88 @@
+{% extends "shared/list_page_base.html" %}
+{% comment %}
+库存盘点列表页面模板 (Inventory Check List Template)
+
+功能说明：
+- 展示库存盘点记录的列表页面
+- 支持按状态、盘点日期等多维度筛选
+- 支持库存盘点的查看、编辑操作
+
+主要功能：
+1. 筛选功能：
+   - 状态筛选：草稿、进行中、已完成、已审核、已取消
+   - 盘点日期筛选：按日期筛选
+2. 表格展示：盘点单号、盘点日期、盘点范围、盘点人、盘点项数、完成项数、准确率、状态、操作
+3. 操作功能：查看详情、编辑（仅草稿状态）
+{% endcomment %}
+{% load static %}
+
+{% block list_page_title %}库存盘点管理{% endblock %}
+
+{% block list_page_actions %}
+{% if can_create %}
+<a href="{% url 'admin_pages:inventory_check_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> 创建盘点
+</a>
+{% endif %}
+{% endblock %}
+
+{% block search_placeholder %}搜索盘点单号、盘点范围...{% endblock %}
+
+{% block reset_url %}{% url 'admin_pages:inventory_check_list' %}{% endblock %}
+
+{% block list_page_table_headers %}
+<th style="width: 12%;">盘点单号</th>
+<th style="width: 10%;">盘点日期</th>
+<th style="width: 15%;">盘点范围</th>
+<th style="width: 10%;">盘点人</th>
+<th style="width: 8%;">盘点项数</th>
+<th style="width: 8%;">完成项数</th>
+<th style="width: 8%;">准确率</th>
+<th style="width: 10%;">状态</th>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td><code>{{ item.check_number }}</code></td>
+<td>{{ item.check_date|date:"Y-m-d" }}</td>
+<td>{{ item.check_scope|default:"-" }}</td>
+<td>{{ item.checker.get_full_name|default:item.checker.username }}</td>
+<td>{{ item.total_items }}</td>
+<td>{{ item.completed_items }}</td>
+<td>{{ item.accuracy_rate|floatformat:1 }}%</td>
+<td>
+    {% if item.status == 'draft' %}
+        <span class="badge bg-secondary">草稿</span>
+    {% elif item.status == 'in_progress' %}
+        <span class="badge bg-warning">进行中</span>
+    {% elif item.status == 'completed' %}
+        <span class="badge bg-info">已完成</span>
+    {% elif item.status == 'approved' %}
+        <span class="badge bg-success">已审核</span>
+    {% elif item.status == 'cancelled' %}
+        <span class="badge bg-danger">已取消</span>
+    {% else %}
+        <span class="badge bg-secondary">{{ item.get_status_display }}</span>
+    {% endif %}
+</td>
+<td>
+    <div class="list-page-table-actions">
+        <a href="{% url 'admin_pages:inventory_check_detail' check_id=item.id %}" class="action-view" title="查看">
+            <i class="bi bi-eye"></i>
+        </a>
+        {% if item.status == 'draft' %}
+        <span class="action-separator">|</span>
+        <a href="{% url 'admin_pages:inventory_check_update' check_id=item.id %}" class="action-edit" title="编辑">
+            <i class="bi bi-pencil"></i>
+        </a>
+        {% endif %}
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_colspan %}9{% endblock %}
+
+{% block empty_table_message %}暂无数据{% endblock %}
+
+{% block empty_message %}暂无数据{% endblock %}
+
+{% block empty_create_url %}{% url 'admin_pages:inventory_check_create' %}{% endblock %}

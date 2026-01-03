@@ -1,0 +1,194 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}保全续封管理 - 诉讼管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:case_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回案件列表
+            </a>
+        </div>
+    </div>
+
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">{{ card.label }}</div>
+                            <div class="info-value info-value-large">{{ card.value }}</div>
+                            {% if card.hint %}
+                            <div class="info-hint">{{ card.hint }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 筛选器 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">筛选条件</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">状态</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">全部状态</option>
+                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>有效</option>
+                        <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>已过期</option>
+                        <option value="released" {% if status_filter == 'released' %}selected{% endif %}>已解除</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">即将到期</label>
+                    <select name="expiring" class="form-select form-select-sm">
+                        <option value="">全部</option>
+                        <option value="1" {% if expiring_filter == '1' %}selected{% endif %}>7天内到期</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-search"></i> 筛选
+                        </button>
+                        <a href="{% url 'litigation_pages:preservation_list_all' %}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-arrow-counterclockwise"></i> 重置
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 保全续封列表 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">保全续封列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">共 {{ seals.paginator.count }} 条</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if seals %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>案件编号</th>
+                            <th>案件名称</th>
+                            <th>保全类型</th>
+                            <th>保全金额</th>
+                            <th>保全案号</th>
+                            <th>法院名称</th>
+                            <th>开始日期</th>
+                            <th>结束日期</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for seal in seals %}
+                        <tr {% if seal.status == 'active' and seal.end_date <= warning_date %}class="table-warning"{% endif %}>
+                            <td>
+                                <a href="{% url 'litigation_pages:case_detail' seal.case.id %}" class="text-decoration-none">
+                                    {{ seal.case.case_number }}
+                                </a>
+                            </td>
+                            <td>{{ seal.case.case_name }}</td>
+                            <td>{{ seal.get_seal_type_display }}</td>
+                            <td>
+                                {% if seal.seal_amount %}
+                                ¥{{ seal.seal_amount|floatformat:2 }}
+                                {% else %}
+                                <span class="text-muted">未设置</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ seal.seal_number|default:"未设置" }}</td>
+                            <td>{{ seal.court_name|default:"未设置" }}</td>
+                            <td>{{ seal.start_date|date:"Y-m-d" }}</td>
+                            <td>
+                                {{ seal.end_date|date:"Y-m-d" }}
+                                {% if seal.status == 'active' and seal.end_date <= warning_date %}
+                                <span class="badge bg-danger ms-1">即将到期</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="status-badge {{ seal.status }}">
+                                    {{ seal.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'litigation_pages:preservation_detail' seal.id %}" class="btn btn-outline-primary" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'litigation_pages:case_detail' seal.case.id %}" class="btn btn-outline-info" title="查看案件">
+                                        <i class="bi bi-folder"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if seals.has_other_pages %}
+            <nav aria-label="保全续封列表分页">
+                <ul class="pagination justify-content-center">
+                    {% if seals.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ seals.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if expiring_filter %}&expiring={{ expiring_filter }}{% endif %}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in seals.paginator.page_range %}
+                    {% if seals.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > seals.number|add:'-3' and num < seals.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if expiring_filter %}&expiring={{ expiring_filter }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if seals.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ seals.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if expiring_filter %}&expiring={{ expiring_filter }}{% endif %}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: var(--vh-text-muted);"></i>
+                <p class="text-muted mt-3">暂无保全续封记录</p>
+                <a href="{% url 'litigation_pages:case_list' %}" class="btn btn-primary">
+                    <i class="bi bi-folder"></i> 查看案件列表
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

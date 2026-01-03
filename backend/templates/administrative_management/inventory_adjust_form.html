@@ -1,0 +1,125 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: var(--spacing-lg);
+    }
+    .form-card h5 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .form-label.required::after {
+        content: " *";
+        color: var(--vh-error);
+    }
+    .formset-item {
+        background: var(--vh-surface);
+        padding: var(--spacing-md);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--spacing-md);
+        border: 1px solid var(--vh-border-light);
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <form method="post" id="adjustForm">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <h5>调整信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">调整日期</label>
+                    {{ form.adjust_date }}
+                    {% if form.adjust_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.adjust_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label required">调整原因</label>
+                    {{ form.reason }}
+                    {% if form.reason.errors %}
+                    <div class="text-danger small mt-1">{{ form.reason.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">备注</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <h5>调整明细</h5>
+            {{ formset.management_form }}
+            <div id="formset-container">
+                {% for item_form in formset %}
+                <div class="formset-item">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">用品</label>
+                            {{ item_form.supply }}
+                            {% if item_form.supply.errors %}
+                            <div class="text-danger small mt-1">{{ item_form.supply.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">调整数量</label>
+                            {{ item_form.adjust_quantity }}
+                            <small class="text-muted">正数为增加，负数为减少</small>
+                            {% if item_form.adjust_quantity.errors %}
+                            <div class="text-danger small mt-1">{{ item_form.adjust_quantity.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">备注</label>
+                            {{ item_form.notes }}
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">删除</label>
+                            {{ item_form.DELETE }}
+                        </div>
+                    </div>
+                    {{ item_form.id }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a href="{% if is_create %}{% url 'admin_pages:inventory_adjust_list' %}{% else %}{% url 'admin_pages:inventory_adjust_detail' adjust.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> 保存
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

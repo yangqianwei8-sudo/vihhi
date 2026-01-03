@@ -1,0 +1,179 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .content-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .report-type-badge {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">资产负债表</h5>
+                    <p class="text-muted">反映企业在特定日期的财务状况</p>
+                    <a href="{% url 'finance_pages:balance_sheet_report' %}" class="btn btn-primary">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> 生成报表
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">利润表</h5>
+                    <p class="text-muted">反映企业在一定期间的经营成果</p>
+                    <a href="{% url 'finance_pages:income_statement_report' %}" class="btn btn-success">
+                        <i class="bi bi-file-earmark-bar-graph"></i> 生成报表
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">现金流量表</h5>
+                    <p class="text-muted">反映企业在一定期间的现金流入流出</p>
+                    <a href="{% url 'finance_pages:cash_flow_report' %}" class="btn btn-info">
+                        <i class="bi bi-file-earmark-arrow-up"></i> 生成报表
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <select name="report_type" class="form-select">
+                    <option value="">全部类型</option>
+                    {% for code, label in report_type_choices %}
+                    <option value="{{ code }}" {% if current_report_type == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="period_year" class="form-select">
+                    <option value="">全部年度</option>
+                    {% for year in years %}
+                    <option value="{{ year }}" {% if current_period_year == year|stringformat:"s" %}selected{% endif %}>{{ year }}年</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-7">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-search"></i> 搜索
+                </button>
+                <a href="{% url 'finance_pages:report_management' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> 清除
+                </a>
+            </div>
+        </form>
+    </div>
+
+    {% if page_obj %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">报表生成记录</h5>
+        </div>
+        <div class="info-card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>报表编号</th>
+                        <th>报表类型</th>
+                        <th>会计期间</th>
+                        <th>报表日期</th>
+                        <th>生成人</th>
+                        <th>生成时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for report in reports %}
+                    <tr>
+                        <td><code>{{ report.report_number }}</code></td>
+                        <td>
+                            {% if report.report_type == 'balance_sheet' %}
+                            <span class="badge bg-primary report-type-badge">资产负债表</span>
+                            {% elif report.report_type == 'income_statement' %}
+                            <span class="badge bg-success report-type-badge">利润表</span>
+                            {% elif report.report_type == 'cash_flow' %}
+                            <span class="badge bg-info report-type-badge">现金流量表</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ report.period_year }}年{% if report.period_month %}{{ report.period_month }}月{% endif %}</td>
+                        <td>{{ report.report_date|date:"Y-m-d" }}</td>
+                        <td>{{ report.generated_by.username|default:"-" }}</td>
+                        <td>{{ report.generated_time|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <a href="{% url 'finance_pages:report_detail' report.id %}" class="btn btn-sm btn-outline-primary" title="查看详情">
+                                <i class="bi bi-eye"></i> 查看
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">暂无报表记录</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航">
+            <ul class="pagination justify-content-center mt-4">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_report_type %}&report_type={{ current_report_type }}{% endif %}{% if current_period_year %}&period_year={{ current_period_year }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_report_type %}&report_type={{ current_report_type }}{% endif %}{% if current_period_year %}&period_year={{ current_period_year }}{% endif %}">下一页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            暂无数据或加载失败
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

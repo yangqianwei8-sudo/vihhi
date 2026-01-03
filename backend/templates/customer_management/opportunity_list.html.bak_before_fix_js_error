@@ -1,0 +1,1048 @@
+{% extends "customer_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+<style>
+.filter-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.filter-label {
+    min-width: 70px;
+    font-size: 13px;
+    color: #666;
+    padding-top: 4px;
+    flex-shrink: 0;
+}
+
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    flex: 1;
+}
+
+.filter-btn {
+    padding: 3px 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #333;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.filter-btn:hover {
+    border-color: #ff6b35;
+    color: #ff6b35;
+}
+
+.filter-btn.active {
+    background: #ff6b35;
+    border-color: #ff6b35;
+    color: #fff;
+}
+</style>
+
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="workspace-content">
+    <!-- 使用列表页面布局模板（根据商机管理专项设计方案） -->
+    <div class="list-page-container">
+    <!-- 页面标题区域 -->
+        <div class="list-page-header">
+            <div>
+                <h2 class="mb-0">
+                    商机管理
+                </h2>
+            </div>
+            <div class="list-page-actions">
+                {% if can_create %}
+                <a href="{% url 'business_pages:opportunity_create' %}" class="btn btn-primary">
+                    + 新增商机
+                </a>
+                <a href="{% url 'business_pages:opportunity_import' %}" class="btn btn-outline-primary ms-2">
+                    <i class="bi bi-upload"></i> 批量导入
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+
+        <!-- 业务类型和标签页区域 -->
+        <div class="list-page-tabs-section">
+            <div class="list-page-type-selector">
+                <label>业务类型:</label>
+                <select name="project_type" class="form-select form-select-sm" id="projectTypeSelect">
+                    <option value="">全部业务类型</option>
+                    <option value="result_optimization">结果优化</option>
+                    <option value="process_optimization">过程优化</option>
+                </select>
+            </div>
+            <div class="list-page-tabs">
+                <a href="?tab=all{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if urgency %}&urgency={{ urgency }}{% endif %}" 
+                   class="list-page-tab {% if tab == 'all' or not tab %}active{% endif %}">全部</a>
+                <a href="?tab=my{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if urgency %}&urgency={{ urgency }}{% endif %}" 
+                   class="list-page-tab {% if tab == 'my' %}active{% endif %}">我负责的</a>
+                <a href="?tab=subordinate{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if urgency %}&urgency={{ urgency }}{% endif %}" 
+                   class="list-page-tab {% if tab == 'subordinate' %}active{% endif %}">下属负责的</a>
+            </div>
+        </div>
+        
+        <!-- 筛选栏区域 -->
+        <div class="list-page-filters mb-1" style="margin-bottom: 8px !important;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 small fw-semibold">筛选条件</h6>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="toggleFilterCollapse">
+                        <span id="filterCollapseText">展开</span>
+                        <span id="filterCollapseIcon">▼</span>
+                    </button>
+                </div>
+            </div>
+            <form method="get" id="filterForm">
+                <!-- 保留标签页参数 -->
+                {% if tab %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
+                <div id="basicFilters" style="display: none;">
+                    <!-- 商机状态 - 使用按钮组 -->
+                    <div class="filter-row mb-3" data-filter-key="status">
+                        <label class="filter-label">商机状态:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not status %}active{% endif %}" data-filter="status" data-value="">
+                                全部
+                            </button>
+                            {% for value, label in status_choices %}
+                            <button type="button" class="filter-btn {% if status == value %}active{% endif %}" data-filter="status" data-value="{{ value }}">
+                                {{ label }}
+                            </button>
+                            {% endfor %}
+                            <input type="hidden" name="status" id="filter_status" value="{{ status|default:'' }}">
+                        </div>
+                    </div>
+
+                    <!-- 紧急程度 - 使用按钮组 -->
+                    <div class="filter-row mb-3" data-filter-key="urgency">
+                        <label class="filter-label">紧急程度:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not urgency %}active{% endif %}" data-filter="urgency" data-value="">
+                                全部
+                            </button>
+                            {% for value, label in urgency_choices %}
+                            <button type="button" class="filter-btn {% if urgency == value %}active{% endif %}" data-filter="urgency" data-value="{{ value }}">
+                                {{ label }}
+                            </button>
+                            {% endfor %}
+                            <input type="hidden" name="urgency" id="filter_urgency" value="{{ urgency|default:'' }}">
+                        </div>
+                    </div>
+
+                    <!-- 关联客户 - 保持select下拉框（选项较多） -->
+                    <div class="filter-row mb-3" data-filter-key="client_id">
+                        <label class="filter-label">关联客户:</label>
+                        <div class="filter-buttons">
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <select name="client_id" class="form-select form-select-sm" style="width: 250px;" id="clientSelect">
+                                    <option value="">全部客户</option>
+                                    {% for client in clients %}
+                                    <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ client.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <input type="hidden" name="client_id" id="filter_client_id" value="{{ client_id|default:'' }}">
+                        </div>
+                    </div>
+
+                    <!-- 负责商务 - 保持select下拉框（选项较多） -->
+                    <div class="filter-row mb-3" data-filter-key="business_manager_id">
+                        <label class="filter-label">负责商务:</label>
+                        <div class="filter-buttons">
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <select name="business_manager_id" class="form-select form-select-sm" style="width: 200px;" id="businessManagerSelect">
+                                    <option value="">全部</option>
+                                    {% for manager in business_managers %}
+                                    <option value="{{ manager.id }}" {% if business_manager_id == manager.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ manager.get_full_name|default:manager.username }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <input type="hidden" name="business_manager_id" id="filter_business_manager_id" value="{{ business_manager_id|default:'' }}">
+                        </div>
+                    </div>
+
+                    <!-- 预计签约时间 - 保持日期输入框 -->
+                    <div class="filter-row mb-3" data-filter-key="expected_sign_date">
+                        <label class="filter-label">预计签约时间:</label>
+                        <div class="filter-buttons">
+                            <div class="d-inline-flex align-items-center gap-2">
+                                <input type="date" name="expected_sign_date_from" class="form-control form-control-sm" 
+                                       value="{{ expected_sign_date_from }}" style="width: 150px;">
+                                <span>~</span>
+                                <input type="date" name="expected_sign_date_to" class="form-control form-control-sm" 
+                                       value="{{ expected_sign_date_to }}" style="width: 150px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="list-page-filter-search">
+                    <div class="list-page-filter-search-input">
+                        <input type="text" name="search" class="form-control form-control-sm" 
+                               placeholder="搜索商机编号、名称、项目、客户..." value="{{ search }}">
+                    </div>
+                    <div class="list-page-filter-actions">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="bi bi-search"></i> 搜索
+                </button>
+                        <a href="{% url 'business_pages:opportunity_management' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+                    </div>
+            </div>
+            </form>
+        </div>
+
+        <!-- 操作栏区域（批量操作） -->
+        <div class="list-page-actions-bar" style="display: flex;" id="batchActionsBar">
+            <div class="list-page-selection-info">
+                <span>已选 <strong id="selectedCount">0</strong> 个</span>
+            </div>
+            <div class="list-page-action-buttons">
+                <button class="btn btn-sm list-page-action-btn list-page-action-btn-secondary" id="batchEditBtn">编辑</button>
+                <button class="btn btn-sm list-page-action-btn list-page-action-btn-secondary" id="batchTransferBtn">转移</button>
+                <button class="btn btn-sm list-page-action-btn list-page-action-btn-secondary" id="batchExportBtn">导出</button>
+                <button class="btn btn-sm list-page-action-btn list-page-action-btn-secondary" id="batchDeleteBtn">删除</button>
+                <div class="dropdown list-page-action-more">
+                    <button class="btn btn-sm list-page-action-btn list-page-action-btn-secondary dropdown-toggle" 
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        更多操作
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" id="batchStatusChangeBtn">批量修改状态</a></li>
+                        <li><a class="dropdown-item" href="#" id="batchUrgencyChangeBtn">批量修改紧急程度</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#" id="batchCancelBtn">批量取消</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 数据表格区域 -->
+        {% if page_obj %}
+        <div class="list-page-table-container">
+            <div class="list-page-table-wrapper">
+                <table class="list-page-table">
+            <thead>
+                <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="selectAll">
+                            </th>
+                            <th class="sortable" data-sort="name" style="width: 200px; position: relative;">
+                                商机名称
+                                <i class="bi bi-gear column-settings-btn" 
+                                   data-bs-toggle="modal" data-bs-target="#columnSettingsModal" 
+                                   title="自定义显示列"></i>
+                                <span class="sort-icon">
+                                    <i class="bi bi-arrow-down-up"></i>
+                                </span>
+                            </th>
+                            <th style="width: 120px;">商机编号</th>
+                            <th style="width: 150px;">关联客户</th>
+                            <th style="width: 100px;">负责商务</th>
+                            <th style="width: 100px; text-align: center;">商机状态</th>
+                            <th style="width: 120px; text-align: right;">预计金额（万元）</th>
+                            <th style="width: 100px; text-align: center;">成功概率</th>
+                            <th style="width: 120px; text-align: right;">加权金额（万元）</th>
+                            <th style="width: 100px; text-align: center;">紧急程度</th>
+                            <th style="width: 120px; text-align: center;">预计签约时间</th>
+                            <th style="width: 150px; text-align: center;">创建时间</th>
+                            <th style="width: 150px; text-align: center;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for opportunity in page_obj %}
+                <tr>
+                            <td><input type="checkbox" class="row-checkbox" value="{{ opportunity.id }}"></td>
+                            <td>
+                                <a href="{% url 'business_pages:opportunity_detail' opportunity.id %}" class="info-value-link">
+                                    {{ opportunity.name }}
+                                </a>
+                    </td>
+                            <td>{{ opportunity.opportunity_number|default:'未编号' }}</td>
+                            <td>
+                                <a href="{% url 'business_pages:customer_detail' opportunity.client.id %}" class="info-value-link">
+                                    {{ opportunity.client.name }}
+                                </a>
+                            </td>
+                            <td>{{ opportunity.business_manager.get_full_name|default:opportunity.business_manager.username }}</td>
+                            <td style="text-align: center;">
+                                <span class="badge bg-primary">{{ opportunity.get_status_display }}</span>
+                            </td>
+                            <td style="text-align: right;" class="info-value-numeric">
+                                {{ opportunity.estimated_amount|floatformat:2 }}
+                            </td>
+                            <td style="text-align: center;">{{ opportunity.success_probability }}%</td>
+                            <td style="text-align: right;" class="info-value-numeric info-value-bold">
+                                {{ opportunity.weighted_amount|floatformat:2 }}
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="badge {% if opportunity.urgency == 'very_urgent' %}bg-danger{% elif opportunity.urgency == 'urgent' %}bg-warning{% else %}bg-secondary{% endif %}">
+                            {{ opportunity.get_urgency_display }}
+                        </span>
+                    </td>
+                            <td style="text-align: center;">
+                                {{ opportunity.expected_sign_date|date:'Y-m-d'|default:'未设置' }}
+                    </td>
+                            <td style="text-align: center;">{{ opportunity.created_time|date:'Y-m-d H:i' }}</td>
+                            <td style="text-align: center;">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'business_pages:opportunity_detail' opportunity.id %}" class="btn btn-sm btn-outline-primary" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if can_create or opportunity.business_manager == user %}
+                                    <a href="{% url 'business_pages:opportunity_edit' opportunity.id %}" class="btn btn-sm btn-outline-secondary" title="编辑">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'business_pages:opportunity_delete' opportunity.id %}" class="btn btn-sm btn-outline-danger" title="删除"data-click="handle_onclick_0"确定要删除此商机吗？');">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                        {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="13" style="text-align: center; padding: 40px;">
+                                <p class="text-muted">暂无商机数据</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+            </div>
+        </div>
+
+        <!-- 分页区域 -->
+        {% if page_obj.has_other_pages %}
+        <div class="list-page-pagination">
+            <div class="list-page-pagination-info">
+                <span>共 <strong>{{ page_obj.paginator.count }}</strong> 条</span>
+            </div>
+            <div class="list-page-pagination-controls">
+                <nav class="list-page-pagination-nav">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if urgency %}&urgency={{ urgency }}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}" class="list-page-pagination-page">&laquo; 首页</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if urgency %}&urgency={{ urgency }}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}" class="list-page-pagination-page">上一页</a>
+                {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <span class="list-page-pagination-page active">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if urgency %}&urgency={{ urgency }}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}" class="list-page-pagination-page">{{ num }}</a>
+                    {% endif %}
+                    {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if urgency %}&urgency={{ urgency }}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}" class="list-page-pagination-page">下一页</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if urgency %}&urgency={{ urgency }}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}" class="list-page-pagination-page">末页 &raquo;</a>
+                {% endif %}
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <!-- 空状态 -->
+        <div class="list-page-empty">
+            <div class="list-page-empty-icon">📭</div>
+            <p class="list-page-empty-text">暂无商机数据</p>
+            {% if can_create %}
+            <a href="{% url 'business_pages:opportunity_create' %}" class="btn btn-primary mt-3">
+                <i class="bi bi-plus-circle"></i> 创建第一个商机
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // 安全的HTML设置函数
+    function setSafeHTML(element, html) {
+        if (!element) return;
+        // 如果内容不包含HTML标签，使用textContent
+        if (!/<[^>]+>/.test(html)) {
+            element.textContent = html;
+        } else {
+            // 对于包含HTML的内容，使用innerHTML（假设内容已清理）
+            // 在生产环境中，应该使用DOMPurify等库清理HTML
+            element.innerHTML = html;
+        }
+    }
+    
+    // 安全的文本设置函数（推荐使用）
+    function setSafeText(element, text) {
+        if (element) {
+            element.textContent = text;
+        }
+    }
+
+
+    function getCsrfToken() {
+        const token = document.querySelector('[name=csrfmiddlewaretoken]');
+        return token ? token.value : '';
+    }
+// 批量选择功能
+document.addEventListener('DOMContentLoaded', function() {
+    // 使用函数来初始化，确保元素已加载
+    function initBatchSelect() {
+        const selectAll = document.getElementById('selectAll');
+        const batchActionsBar = document.getElementById('batchActionsBar');
+        const selectedCount = document.getElementById('selectedCount');
+        
+        if (!selectAll) {
+            console.warn('selectAll元素未找到，延迟重试...');
+            setTimeout(initBatchSelect, 100);
+            return;
+        }
+        
+        // 确保复选框可点击（移除可能阻止点击的样式）
+        if (selectAll) {
+            selectAll.style.pointerEvents = 'auto';
+            selectAll.style.zIndex = '10';
+            selectAll.style.position = 'relative';
+        }
+        
+        // 确保所有row-checkbox可点击
+        const allCheckboxes = document.querySelectorAll('.row-checkbox');
+        allCheckboxes.forEach(cb => {
+            cb.style.pointerEvents = 'auto';
+            cb.style.zIndex = '10';
+            cb.style.position = 'relative';
+        });
+        
+        console.log('初始化批量选择功能，找到', allCheckboxes.length, '个复选框');
+        
+        // 更新选中数量和显示/隐藏批量操作栏
+        function updateBatchActions() {
+            const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            const checked = document.querySelectorAll('.row-checkbox:checked');
+            const count = checked.length;
+            
+            if (selectedCount) {
+                selectedCount.textContent = count;
+            }
+            
+            // 更新全选checkbox状态
+            if (selectAll) {
+                selectAll.checked = count > 0 && count === rowCheckboxes.length;
+                selectAll.indeterminate = count > 0 && count < rowCheckboxes.length;
+            }
+        }
+        
+        // 全选/取消全选 - 使用事件委托，确保动态元素也能工作
+        selectAll.addEventListener('change', function(e) {
+            e.stopPropagation();
+            const isChecked = this.checked;
+            const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            rowCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+            updateBatchActions();
+        });
+        
+        // 使用事件委托处理单个checkbox变化 - 这样动态添加的元素也能工作
+        const table = document.querySelector('.list-page-table');
+        if (table) {
+            table.addEventListener('change', function(e) {
+                if (e.target && e.target.classList.contains('row-checkbox')) {
+                    e.stopPropagation();
+                    updateBatchActions();
+                }
+            });
+        }
+        
+        // 也直接绑定现有checkbox（兼容性）
+        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        rowCheckboxes.forEach(checkbox => {
+            // 直接添加事件监听器（事件委托已经处理了，这里作为备用）
+            checkbox.addEventListener('change', function(e) {
+                e.stopPropagation();
+                updateBatchActions();
+            });
+        });
+        
+        // 初始化更新
+        updateBatchActions();
+    }
+    
+    // 立即初始化
+    initBatchSelect();
+    
+    // 批量删除
+    const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+    if (batchDeleteBtn) {
+        batchDeleteBtn.addEventListener('click', function() {
+            const checked = document.querySelectorAll('.row-checkbox:checked');
+            if (checked.length === 0) {
+                alert('请先选择要删除的商机');
+                return;
+            }
+            
+            if (!confirm(`确定要删除选中的 ${checked.length} 个商机吗？此操作不可恢复。`)) {
+                return;
+            }
+            
+            const ids = Array.from(checked).map(cb => cb.value);
+            
+            // 显示加载状态
+            const btn = this;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '删除中...';
+            
+            // 调用批量删除API
+            fetch('/api/customer/opportunities/batch-delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    opportunity_ids: ids
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || `成功删除 ${data.deleted_count} 个商机`);
+                    // 刷新页面
+                    window.location.reload();
+                } else {
+                    alert(data.message || '删除失败');
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            })
+            .catch(error => {
+                console.error('批量删除失败:', error);
+                alert('删除失败，请重试');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        });
+    }
+    
+    // 批量导出
+    const batchExportBtn = document.getElementById('batchExportBtn');
+    if (batchExportBtn) {
+        batchExportBtn.addEventListener('click', function() {
+            const checked = document.querySelectorAll('.row-checkbox:checked');
+            if (checked.length === 0) {
+                alert('请先选择要导出的商机');
+                return;
+            }
+            
+            const ids = Array.from(checked).map(cb => cb.value);
+            
+            // 显示加载状态
+            const btn = this;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '导出中...';
+            
+            // 调用批量导出API
+            fetch('/api/customer/opportunities/batch-export/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    opportunity_ids: ids
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    // 下载文件
+                    return response.blob().then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `商机列表_${new Date().toISOString().slice(0,10)}.xlsx`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    });
+                } else {
+                    return response.json().then(data => {
+                        alert(data.message || '导出失败');
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('批量导出失败:', error);
+                alert('导出失败，请重试');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            });
+        });
+    }
+});
+                this.classList.add('active');
+                
+                // 提交表单
+                document.getElementById('filterForm').submit();
+            });
+        });
+        
+        // 下拉框变化时提交表单
+        document.getElementById('clientSelect')?.addEventListener('change', function() {
+            document.getElementById('filter_client_id').value = this.value;
+            document.getElementById('filterForm').submit();
+        });
+        
+        document.getElementById('businessManagerSelect')?.addEventListener('change', function() {
+            document.getElementById('filter_business_manager_id').value = this.value;
+            document.getElementById('filterForm').submit();
+        });
+        
+        // 筛选栏折叠/展开
+        const toggleFilterBtn = document.getElementById('toggleFilterCollapse');
+        const basicFilters = document.getElementById('basicFilters');
+        const filterCollapseText = document.getElementById('filterCollapseText');
+        const filterCollapseIcon = document.getElementById('filterCollapseIcon');
+        
+        if (toggleFilterBtn && basicFilters) {
+            toggleFilterBtn.addEventListener('click', function() {
+                if (basicFilters.style.display === 'none') {
+                    basicFilters.style.display = 'block';
+                    filterCollapseText.textContent = '收起';
+                    filterCollapseIcon.textContent = '▲';
+                } else {
+                    basicFilters.style.display = 'none';
+                    filterCollapseText.textContent = '展开';
+                    filterCollapseIcon.textContent = '▼';
+                }
+            });
+        }
+    });
+    
+// 自定义筛选字段功能（根据样式模板统一方案）
+document.addEventListener('DOMContentLoaded', function() {
+    // 定义所有可用的筛选字段
+    const allFilterFields = {
+        'status': { label: '商机状态', default: true },
+        'client_id': { label: '关联客户', default: true },
+        'business_manager_id': { label: '负责商务', default: true },
+        'urgency': { label: '紧急程度', default: true },
+        'expected_sign_date': { label: '预计签约时间', default: false },
+        'created_time': { label: '创建时间', default: false },
+        'estimated_amount': { label: '预计金额', default: false },
+    };
+    
+    // 获取存储的筛选字段设置
+    function getStoredFilterFields() {
+        const stored = localStorage.getItem('opportunity_filter_fields');
+        if (stored) {
+            try {
+                const data = JSON.parse(stored);
+                return {
+                    enabled: data.enabled || [],
+                    order: data.order || Object.keys(allFilterFields).filter(key => allFilterFields[key].default)
+                };
+            } catch (e) {
+            }
+        }
+        // 返回默认设置
+        const defaultEnabled = Object.keys(allFilterFields).filter(key => allFilterFields[key].default);
+        return {
+            enabled: defaultEnabled,
+            order: defaultEnabled
+        };
+    }
+    
+    // 保存筛选字段设置
+    function saveFilterFields(enabled, order) {
+        localStorage.setItem('opportunity_filter_fields', JSON.stringify({
+            enabled: enabled,
+            order: order
+        }));
+    }
+    
+    // 应用筛选字段显示/隐藏和顺序
+    function applyFilterFieldsVisibility() {
+        const settings = getStoredFilterFields();
+        const container = document.getElementById('filterFieldsContainer');
+        if (!container) return;
+        
+        // 获取所有筛选项并按顺序重新排列
+        const filterItems = Array.from(container.querySelectorAll('.list-page-filter-item'));
+        const orderedItems = [];
+        
+        settings.order.forEach(fieldKey => {
+            const item = filterItems.find(item => item.getAttribute('data-filter-field') === fieldKey);
+            if (item) {
+                orderedItems.push(item);
+            }
+        });
+        
+        // 清空容器并重新添加
+        container.textContent = '';
+        orderedItems.forEach(item => {
+            const fieldKey = item.getAttribute('data-filter-field');
+            if (settings.enabled.includes(fieldKey)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+            container.appendChild(item);
+        });
+    }
+    
+    // 渲染筛选字段列表（在模态框中）
+    function renderFilterFieldsList() {
+        const container = document.getElementById('filterFieldsList');
+        if (!container) return;
+        
+        const settings = getStoredFilterFields();
+        container.textContent = '';
+        
+        settings.order.forEach(fieldKey => {
+            const fieldInfo = allFilterFields[fieldKey];
+            if (!fieldInfo) return;
+            
+            const isEnabled = settings.enabled.includes(fieldKey);
+            const row = document.createElement('tr');
+            row.className = 'filter-field-row';
+            row.setAttribute('data-field-key', fieldKey);
+            // TODO: 使用DOMPurify清理HTML
+            row.innerHTML = `
+                <td>
+                    <input type="checkbox" class="form-check-input filter-field-checkbox" 
+                           ${isEnabled ? 'checked' : ''} 
+                           data-field-key="${fieldKey}">
+                </td>
+                <td class="filter-field-label">${fieldInfo.label}</td>
+                <td>
+                    <i class="bi bi-grip-vertical filter-field-drag-handle" style="cursor: move; color: var(--vh-text-muted);"></i>
+                </td>
+            `;
+            container.appendChild(row);
+        });
+    }
+    
+    // 初始化筛选字段功能
+    applyFilterFieldsVisibility();
+    
+    // 打开模态框时渲染列表
+    const filterFieldsModal = document.getElementById('filterFieldsModal');
+    if (filterFieldsModal) {
+        filterFieldsModal.addEventListener('show.bs.modal', function() {
+            renderFilterFieldsList();
+        });
+    }
+    
+    // 保存筛选字段设置
+    const saveFilterFieldsBtn = document.getElementById('saveFilterFields');
+    if (saveFilterFieldsBtn) {
+        saveFilterFieldsBtn.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('#filterFieldsList .filter-field-checkbox:checked');
+            const enabled = Array.from(checkboxes).map(cb => cb.getAttribute('data-field-key'));
+            const rows = Array.from(document.querySelectorAll('#filterFieldsList .filter-field-row'));
+            const order = rows.map(row => row.getAttribute('data-field-key'));
+            
+            saveFilterFields(enabled, order);
+            applyFilterFieldsVisibility();
+            
+            const modal = bootstrap.Modal.getInstance(filterFieldsModal);
+            if (modal) modal.hide();
+        });
+    }
+    
+    // 重置筛选字段设置
+    const resetFilterFieldsBtn = document.getElementById('resetFilterFields');
+    if (resetFilterFieldsBtn) {
+        resetFilterFieldsBtn.addEventListener('click', function() {
+            const defaultEnabled = Object.keys(allFilterFields).filter(key => allFilterFields[key].default);
+            const defaultOrder = defaultEnabled;
+            
+            saveFilterFields(defaultEnabled, defaultOrder);
+            applyFilterFieldsVisibility();
+            renderFilterFieldsList();
+        });
+    }
+    
+    // 列设置功能（类似筛选字段功能）
+    const allColumns = {
+        'checkbox': { label: '选择', default: true, thIndex: 0 },
+        'name': { label: '商机名称', default: true, thIndex: 1 },
+        'code': { label: '商机编号', default: true, thIndex: 2 },
+        'client': { label: '关联客户', default: true, thIndex: 3 },
+        'business_manager': { label: '负责商务', default: true, thIndex: 4 },
+        'status': { label: '商机状态', default: true, thIndex: 5 },
+        'estimated_amount': { label: '预计金额', default: true, thIndex: 6 },
+        'success_probability': { label: '成功概率', default: true, thIndex: 7 },
+        'weighted_amount': { label: '加权金额', default: true, thIndex: 8 },
+        'urgency': { label: '紧急程度', default: false, thIndex: 9 },
+        'expected_sign_date': { label: '预计签约时间', default: true, thIndex: 10 },
+        'created_time': { label: '创建时间', default: false, thIndex: 11 },
+        'actions': { label: '操作', default: true, thIndex: 12 },
+    };
+    
+    // 获取存储的列设置
+    function getStoredColumnSettings() {
+        const stored = localStorage.getItem('opportunity_column_settings');
+        if (stored) {
+            try {
+                const data = JSON.parse(stored);
+                return {
+                    visible: data.visible || [],
+                    order: data.order || Object.keys(allColumns).filter(key => allColumns[key].default)
+                };
+            } catch (e) {
+            }
+        }
+        // 返回默认设置
+        const defaultVisible = Object.keys(allColumns).filter(key => allColumns[key].default);
+        return {
+            visible: defaultVisible,
+            order: defaultVisible
+        };
+    }
+    
+    // 保存列设置
+    function saveColumnSettings(visible, order) {
+        localStorage.setItem('opportunity_column_settings', JSON.stringify({
+            visible: visible,
+            order: order
+        }));
+    }
+    
+    // 应用列设置显示/隐藏和顺序
+    function applyColumnSettings() {
+        const settings = getStoredColumnSettings();
+        const table = document.querySelector('.list-page-table');
+        if (!table) return;
+        
+        const thead = table.querySelector('thead tr');
+        const tbody = table.querySelector('tbody');
+        if (!thead || !tbody) return;
+        
+        // 获取所有表头列
+        const ths = Array.from(thead.querySelectorAll('th'));
+        const tbodyRows = Array.from(tbody.querySelectorAll('tr'));
+        
+        // 创建列索引映射
+        const columnMap = {};
+        ths.forEach((th, index) => {
+            const columnKey = Object.keys(allColumns).find(key => {
+                const col = allColumns[key];
+                return col && col.thIndex === index;
+            });
+            if (columnKey) {
+                columnMap[columnKey] = { th, index };
+            }
+        });
+        
+        // 按顺序重新排列列
+        const orderedColumns = [];
+        settings.order.forEach(columnKey => {
+            if (columnMap[columnKey]) {
+                orderedColumns.push(columnMap[columnKey]);
+            }
+        });
+        
+        // 应用显示/隐藏和顺序
+        Object.keys(allColumns).forEach(columnKey => {
+            const col = allColumns[columnKey];
+            const map = columnMap[columnKey];
+            if (!map) return;
+            
+            const isVisible = settings.visible.includes(columnKey);
+            const newIndex = settings.order.indexOf(columnKey);
+            
+            // 显示/隐藏表头
+            if (isVisible) {
+                map.th.style.display = '';
+            } else {
+                map.th.style.display = 'none';
+            }
+            
+            // 显示/隐藏表体列
+            tbodyRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells[map.index]) {
+                    if (isVisible) {
+                        cells[map.index].style.display = '';
+                    } else {
+                        cells[map.index].style.display = 'none';
+                    }
+                }
+            });
+        });
+    }
+    
+    // 渲染列设置列表（在模态框中）
+    function renderColumnSettingsList() {
+        const container = document.getElementById('columnSettingsList');
+        if (!container) return;
+        
+        const settings = getStoredColumnSettings();
+        container.textContent = '';
+        
+        settings.order.forEach(columnKey => {
+            const colInfo = allColumns[columnKey];
+            if (!colInfo) return;
+            
+            const isVisible = settings.visible.includes(columnKey);
+            const row = document.createElement('tr');
+            row.className = 'column-setting-row';
+            row.setAttribute('data-column-key', columnKey);
+            // TODO: 使用DOMPurify清理HTML
+            row.innerHTML = `
+                <td>
+                    <input type="checkbox" class="form-check-input column-setting-checkbox" 
+                           ${isVisible ? 'checked' : ''} 
+                           data-column-key="${columnKey}">
+                </td>
+                <td class="column-setting-label">${colInfo.label}</td>
+                <td>
+                    <i class="bi bi-grip-vertical column-setting-drag-handle" style="cursor: move; color: var(--vh-text-muted);"></i>
+                </td>
+            `;
+            container.appendChild(row);
+        });
+    }
+    
+    // 初始化列设置功能
+    applyColumnSettings();
+    
+    // 打开列设置模态框时渲染列表
+    const columnSettingsModal = document.getElementById('columnSettingsModal');
+    if (columnSettingsModal) {
+        columnSettingsModal.addEventListener('show.bs.modal', function() {
+            renderColumnSettingsList();
+        });
+    }
+    
+    // 保存列设置
+    const saveColumnSettingsBtn = document.getElementById('saveColumnSettings');
+    if (saveColumnSettingsBtn) {
+        saveColumnSettingsBtn.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('#columnSettingsList .column-setting-checkbox:checked');
+            const visible = Array.from(checkboxes).map(cb => cb.getAttribute('data-column-key'));
+            const rows = Array.from(document.querySelectorAll('#columnSettingsList .column-setting-row'));
+            const order = rows.map(row => row.getAttribute('data-column-key'));
+            
+            saveColumnSettings(visible, order);
+            applyColumnSettings();
+            
+            const modal = bootstrap.Modal.getInstance(columnSettingsModal);
+            if (modal) modal.hide();
+        });
+    }
+    
+    // 重置列设置
+    const resetColumnSettingsBtn = document.getElementById('resetColumnSettings');
+    if (resetColumnSettingsBtn) {
+        resetColumnSettingsBtn.addEventListener('click', function() {
+            const defaultVisible = Object.keys(allColumns).filter(key => allColumns[key].default);
+            const defaultOrder = defaultVisible;
+            
+            saveColumnSettings(defaultVisible, defaultOrder);
+            applyColumnSettings();
+            renderColumnSettingsList();
+        });
+    }
+    
+    // 初始化拖动排序功能（使用SortableJS库）
+    let filterFieldsSortable = null;
+    let columnSettingsSortable = null;
+    
+    function initSortable() {
+        // 筛选字段拖动排序
+        const filterFieldsList = document.getElementById('filterFieldsList');
+        if (filterFieldsList && typeof Sortable !== 'undefined') {
+            filterFieldsSortable = new Sortable(filterFieldsList, {
+                animation: 150,
+                handle: '.filter-field-drag-handle',
+                onStart: function(evt) {
+                    evt.item.classList.add('dragging');
+                },
+                onEnd: function(evt) {
+                    evt.item.classList.remove('dragging');
+                }
+            });
+        }
+        
+        // 列设置拖动排序
+        const columnSettingsList = document.getElementById('columnSettingsList');
+        if (columnSettingsList && typeof Sortable !== 'undefined') {
+            columnSettingsSortable = new Sortable(columnSettingsList, {
+                animation: 150,
+                handle: '.column-setting-drag-handle',
+                onStart: function(evt) {
+                    evt.item.classList.add('dragging');
+                },
+                onEnd: function(evt) {
+                    evt.item.classList.remove('dragging');
+                }
+            });
+        }
+    }
+    
+    // 打开模态框时初始化拖动排序
+    const filterFieldsModal = document.getElementById('filterFieldsModal');
+    if (filterFieldsModal) {
+        filterFieldsModal.addEventListener('shown.bs.modal', function() {
+            setTimeout(initSortable, 100);
+        });
+    }
+    
+    const columnSettingsModal = document.getElementById('columnSettingsModal');
+    if (columnSettingsModal) {
+        columnSettingsModal.addEventListener('shown.bs.modal', function() {
+            setTimeout(initSortable, 100);
+        });
+    }
+});
+</script>
+
+<!-- 引入SortableJS用于拖拽排序 -->
+<script src="{% static 'js/lib/Sortable.min.js' %}">
+    // 事件处理器: handle_onclick_0
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                return confirm(
+            });
+        }
+    });
+
+</script>
+
+    <!-- 引入列表筛选功能模块 -->
+    <script src="{% static 'js/list-filters.js' %}"></script>
+{% endblock %}
+

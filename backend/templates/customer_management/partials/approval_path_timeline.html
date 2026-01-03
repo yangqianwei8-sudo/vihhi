@@ -1,0 +1,123 @@
+{% comment %}
+审批路径时间轴组件
+使用方式：{% include 'customer_management/partials/approval_path_timeline.html' with approval_instance=approval_instance approval_path_nodes=approval_path_nodes %}
+{% endcomment %}
+
+{% if approval_instance and approval_path_nodes %}
+<div class="approval-path-timeline">
+    <div class="approval-path-header">
+        <h6 class="mb-0">
+            <i class="bi bi-diagram-3"></i> 审批路径
+        </h6>
+        <div class="approval-status-badge">
+            {% if approval_instance.status == 'approved' %}
+            <span class="badge bg-success">已通过</span>
+            {% elif approval_instance.status == 'rejected' %}
+            <span class="badge bg-danger">已驳回</span>
+            {% elif approval_instance.status == 'pending' %}
+            <span class="badge bg-warning">审批中</span>
+            {% else %}
+            <span class="badge bg-secondary">{{ approval_instance.get_status_display }}</span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="approval-path-body">
+        <div class="approval-path-flow">
+            {% for path_node in approval_path_nodes %}
+            <div class="approval-path-step {% if path_node.is_current %}current{% endif %} status-{{ path_node.status }}">
+                <div class="step-indicator">
+                    {% if path_node.status == 'approved' %}
+                    <div class="step-icon approved">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    {% elif path_node.status == 'rejected' %}
+                    <div class="step-icon rejected">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </div>
+                    {% elif path_node.status == 'pending' or path_node.is_current %}
+                    <div class="step-icon pending">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    {% elif path_node.status == 'completed' %}
+                    <div class="step-icon completed">
+                        <i class="bi bi-circle-fill"></i>
+                    </div>
+                    {% else %}
+                    <div class="step-icon waiting">
+                        <i class="bi bi-circle"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="step-content">
+                    <div class="step-header">
+                        <span class="step-title">{{ path_node.node.name }}</span>
+                        {% if path_node.is_current %}
+                        <span class="badge bg-primary ms-2">当前节点</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if path_node.records %}
+                    <div class="step-records">
+                        {% for record in path_node.records %}
+                        <div class="step-record">
+                            <div class="record-header">
+                                <span class="record-approver">
+                                    <i class="bi bi-person"></i>
+                                    {{ record.approver.get_full_name|default:record.approver.username }}
+                                </span>
+                                <span class="record-result">
+                                    {% if record.result == 'approved' %}
+                                    <span class="badge bg-success">通过</span>
+                                    {% elif record.result == 'rejected' %}
+                                    <span class="badge bg-danger">驳回</span>
+                                    {% elif record.result == 'pending' %}
+                                    <span class="badge bg-warning">待审批</span>
+                                    {% elif record.result == 'transferred' %}
+                                    <span class="badge bg-info">转交</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ record.get_result_display }}</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% if record.approval_time %}
+                            <div class="record-time">
+                                <i class="bi bi-clock"></i>
+                                {{ record.approval_time|date:"Y-m-d H:i:s" }}
+                            </div>
+                            {% endif %}
+                            {% if record.comment %}
+                            <div class="record-comment">
+                                <i class="bi bi-chat-left-text"></i>
+                                {{ record.comment }}
+                            </div>
+                            {% endif %}
+                            {% if record.transferred_to %}
+                            <div class="record-transfer">
+                                <i class="bi bi-arrow-right-circle"></i>
+                                转交给：{{ record.transferred_to.get_full_name|default:record.transferred_to.username }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="step-no-records">
+                        <span class="text-muted">暂无审批记录</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if not forloop.last %}
+            <div class="step-connector status-{{ path_node.status }}">
+                <div class="connector-line"></div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+

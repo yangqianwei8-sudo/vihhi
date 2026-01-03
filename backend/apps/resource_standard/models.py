@@ -526,7 +526,7 @@ class RiskCase(models.Model):
     title = models.CharField("案例标题", max_length=200)
     case_type = models.CharField("案例类型", max_length=20, choices=CASE_TYPE_CHOICES)
     project = models.ForeignKey(
-        "project_center.Project",
+        "production_management.Project",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

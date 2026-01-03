@@ -1,0 +1,149 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}诉讼人员 - {{ case.case_number }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                {% if perms.litigation_management.person.manage %}
+                <a href="{% url 'litigation_pages:person_create' case.id %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> 添加人员
+                </a>
+                {% endif %}
+                <a href="{% url 'litigation_pages:case_detail' case.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回案件
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选器 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">人员筛选</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">人员类型</label>
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">全部类型</option>
+                        <option value="lawyer" {% if person_type == 'lawyer' %}selected{% endif %}>律师</option>
+                        <option value="judge" {% if person_type == 'judge' %}selected{% endif %}>法官</option>
+                        <option value="party" {% if person_type == 'party' %}selected{% endif %}>当事人</option>
+                        <option value="other" {% if person_type == 'other' %}selected{% endif %}>其他</option>
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-search"></i> 筛选
+                        </button>
+                        <a href="{% url 'litigation_pages:person_list' case.id %}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-arrow-counterclockwise"></i> 重置
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 人员列表 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">人员列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">共 {{ persons.count }} 条</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if persons %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>姓名</th>
+                            <th>类型</th>
+                            <th>角色/职务</th>
+                            <th>联系方式</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for person in persons %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'litigation_pages:person_detail' person.id %}" class="text-decoration-none">
+                                    <strong>{{ person.name }}</strong>
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ person.get_person_type_display }}</span>
+                            </td>
+                            <td>
+                                {% if person.person_type == 'lawyer' %}
+                                {{ person.role|default:"律师" }}
+                                {% elif person.person_type == 'judge' %}
+                                {{ person.position|default:"法官" }}
+                                {% elif person.person_type == 'party' %}
+                                {{ person.party_type|default:"当事人" }}
+                                {% else %}
+                                {{ person.role|default:"-" }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if person.contact_phone %}
+                                <i class="bi bi-telephone"></i> {{ person.contact_phone }}
+                                {% endif %}
+                                {% if person.contact_email %}
+                                <br><i class="bi bi-envelope"></i> {{ person.contact_email }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'litigation_pages:person_detail' person.id %}" class="btn btn-outline-primary" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if perms.litigation_management.person.manage %}
+                                    <a href="{% url 'litigation_pages:person_edit' person.id %}" class="btn btn-outline-secondary" title="编辑">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: var(--vh-text-muted);"></i>
+                <p class="text-muted mt-3">暂无人员记录</p>
+                {% if perms.litigation_management.person.manage %}
+                <a href="{% url 'litigation_pages:person_create' case.id %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> 创建第一个人员记录
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

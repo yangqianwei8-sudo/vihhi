@@ -1,0 +1,162 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .alignment-score {
+        font-size: 48px;
+        font-weight: 700;
+        text-align: center;
+        padding: 20px;
+    }
+    .score-excellent { color: #28a745; }
+    .score-good { color: #20c997; }
+    .score-medium { color: #ffc107; }
+    .score-low { color: #dc3545; }
+    .suggestion-item {
+        padding: 12px;
+        margin-bottom: 8px;
+        background: #f8f9fa;
+        border-left: 4px solid #0d6efd;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">
+                {{ plan.name }}
+            </h2>
+            <p class="text-muted mb-0 mt-1">{{ plan.plan_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>返回详情
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- 左侧：对齐度评估 -->
+        <div class="col-md-8">
+            <!-- 对齐度评分 -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">目标对齐度评估</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alignment-score score-{% if alignment_score >= 80 %}excellent{% elif alignment_score >= 60 %}good{% elif alignment_score >= 40 %}medium{% else %}low{% endif %}">
+                        {{ alignment_score }}分
+                    </div>
+                    <div class="text-center mb-3">
+                        <p class="mb-0">
+                            {% if alignment_score >= 80 %}
+                            <span class="badge bg-success">高度对齐</span>
+                            {% elif alignment_score >= 60 %}
+                            <span class="badge bg-info">基本对齐</span>
+                            {% elif alignment_score >= 40 %}
+                            <span class="badge bg-warning">部分对齐</span>
+                            {% else %}
+                            <span class="badge bg-danger">对齐度低</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    {% if plan.related_goal %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">关联战略目标</h6>
+                            <p class="card-text mb-2">
+                                <a href="{% url 'plan_pages:strategic_goal_detail' plan.related_goal.id %}" class="text-decoration-none">
+                                    <strong>{{ plan.related_goal.name }}</strong>
+                                </a>
+                            </p>
+                            <div class="small text-muted">
+                                <div>目标编号：{{ plan.related_goal.goal_number }}</div>
+                                <div>目标类型：{{ plan.related_goal.get_goal_type_display }}</div>
+                                <div>目标指标：{{ plan.related_goal.indicator_name }}</div>
+                                <div>目标值：{{ plan.related_goal.target_value }}{% if plan.related_goal.indicator_unit %} {{ plan.related_goal.indicator_unit }}{% endif %}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- 对齐度分析 -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">对齐度分析</h5>
+                </div>
+                <div class="card-body">
+                    {% if alignment_analysis %}
+                    <p>{{ alignment_analysis }}</p>
+                    {% else %}
+                    <p class="text-muted">暂无分析数据</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- 计划信息 -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">计划信息</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>计划名称：</strong>{{ plan.name }}<br>
+                            <strong>计划类型：</strong>{{ plan.get_plan_type_display }}<br>
+                            <strong>计划周期：</strong>{{ plan.get_plan_period_display }}<br>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>计划目标：</strong><br>
+                            <div class="small text-muted">{{ plan.plan_objective|truncatewords:30 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧：提升建议 -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">对齐度提升建议</h5>
+                </div>
+                <div class="card-body">
+                    {% if suggestions %}
+                    {% for suggestion in suggestions %}
+                    <div class="suggestion-item">
+                        <i class="bi bi-lightbulb me-2"></i>{{ suggestion }}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted text-center py-4">当前对齐度良好，无需特别优化</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- 贡献度评估 -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">贡献度评估</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <div class="h3 mb-2">{{ plan.contribution_score }}分</div>
+                        <p class="text-muted small">计划对战略目标的贡献度</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

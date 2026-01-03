@@ -1,0 +1,128 @@
+{% extends "shared/list_page_base.html" %}
+{% comment %}
+商机入库列表页面模板 (Opportunity Warehouse List Template)
+
+功能说明：
+- 展示商机入库申请的列表页面
+- 支持按关联商机、状态筛选
+- 支持搜索入库申请编号、商机名称
+- 支持查看入库申请详情
+
+主要功能：
+1. 筛选功能：
+   - 搜索：入库申请编号、商机名称
+   - 关联商机筛选：下拉选择商机
+   - 状态筛选：下拉选择状态（待审批、已审批、已拒绝）
+2. 表格展示：序号、入库申请编号、关联商机、客户、申请日期、状态、申请人、操作
+3. 操作功能：查看详情
+
+JavaScript功能：
+- 筛选字段设置功能（继承自list_page_base.html）
+{% endcomment %}
+{% load static %}
+
+{% block list_page_title %}入库管理{% endblock %}
+
+{% block list_page_actions %}
+{% if can_create %}
+<a href="{% url 'business_pages:opportunity_warehouse_application' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> 新增入库
+</a>
+{% endif %}
+{% endblock %}
+
+{% block search_placeholder %}搜索入库申请编号、商机名称...{% endblock %}
+
+{% block list_page_filter_fields %}
+<!-- 关联商机筛选 -->
+<div class="filter-row" data-filter-key="opportunity_id">
+    <label class="filter-label">关联商机:</label>
+    <div class="filter-control">
+        <select name="opportunity_id" class="form-control form-control-sm" id="opportunitySelect">
+            <option value="">全部商机</option>
+            {% for opp in opportunities %}
+            <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>{{ opp.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- 状态筛选 -->
+<div class="filter-row" data-filter-key="status">
+    <label class="filter-label">状态:</label>
+    <div class="filter-control">
+        <select name="status" class="form-control form-control-sm" id="statusSelect">
+            <option value="">全部状态</option>
+            <option value="pending" {% if status == 'pending' %}selected{% endif %}>待审批</option>
+            <option value="approved" {% if status == 'approved' %}selected{% endif %}>已审批</option>
+            <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>已拒绝</option>
+        </select>
+    </div>
+</div>
+{% endblock %}
+
+{% block list_page_table_headers %}
+<th style="width: 5%;">#</th>
+<th style="width: 15%;">入库申请编号</th>
+<th style="width: 20%;">关联商机</th>
+<th style="width: 15%;">客户</th>
+<th style="width: 10%;">申请日期</th>
+<th style="width: 10%;">状态</th>
+<th style="width: 12%;">申请人</th>
+{% endblock %}
+
+{% block list_page_table_actions_header %}
+<th style="width: 8%;">
+    操作
+    <span id="columnSettingsBtn"
+          data-bs-toggle="modal"
+          data-bs-target="#columnSettingsModal"
+          aria-label="设置表格字段"
+          title="设置表格字段"
+          style="cursor: pointer; color: #000000 !important; font-size: 16px; vertical-align: middle; margin-left: 8px; display: inline-block;">
+        <i class="bi bi-gear" style="color: #000000 !important;"></i>
+    </span>
+</th>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td>{{ forloop.counter0|add:page_obj.start_index }}</td>
+<td>{{ item.application_number|default:"-" }}</td>
+<td>{{ item.opportunity.name|default:"-" }}</td>
+<td>{{ item.opportunity.client.name|default:"-" }}</td>
+<td>{{ item.application_date|date:"Y-m-d"|default:"-" }}</td>
+<td>
+    <span class="badge bg-secondary">{{ item.status|default:"-" }}</span>
+</td>
+<td class="small">{{ item.created_by.get_full_name|default:item.created_by.username|default:"-" }}</td>
+{% endblock %}
+
+{% block list_page_table_actions_cell %}
+<td>
+    <div class="list-page-table-actions">
+        <a href="#" class="action-view" title="查看详情">
+            <i class="bi bi-eye"></i>
+        </a>
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_table_message %}暂无入库申请记录{% endblock %}
+
+{% block empty_message %}暂无入库申请记录{% endblock %}
+
+{% block empty_create_url %}{% url 'business_pages:opportunity_warehouse_application' %}{% endblock %}
+
+{% block list_page_custom_js %}
+// 配置筛选字段设置功能（继承自 list_page_base.html）
+window.listPageFilterFieldsSettingsConfig = {
+    enableFieldsSettings: true,
+    storageKey: 'opportunity_warehouse_list_filter_fields',
+    defaultEnabledFields: ['opportunity_id', 'status'],
+    maxEnabledFields: 10,
+    requiredFields: [],
+    containerId: 'filterFieldsContainer',
+    modalId: 'filterFieldsSettingsModal',
+    settingsBtnId: 'settingsFilterFieldsBtn'
+};
+{% endblock %}

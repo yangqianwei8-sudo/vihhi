@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate, password_validation
-from .models import User, Department, Role, DataDictionary, SystemConfig
+from backend.apps.system_management.models import User, Department, Role, DataDictionary, SystemConfig
 
 class UserSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)

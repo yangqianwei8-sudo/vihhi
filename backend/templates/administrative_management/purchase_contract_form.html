@@ -1,0 +1,130 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: var(--spacing-lg);
+    }
+    .form-card h5 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .form-label.required::after {
+        content: " *";
+        color: var(--vh-error);
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <h5>合同信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">供应商</label>
+                    {{ form.supplier }}
+                    {% if form.supplier.errors %}
+                    <div class="text-danger small mt-1">{{ form.supplier.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">关联采购单</label>
+                    {{ form.purchase }}
+                    {% if form.purchase.errors %}
+                    <div class="text-danger small mt-1">{{ form.purchase.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">合同名称</label>
+                    {{ form.contract_name }}
+                    {% if form.contract_name.errors %}
+                    <div class="text-danger small mt-1">{{ form.contract_name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">合同金额</label>
+                    {{ form.contract_amount }}
+                    {% if form.contract_amount.errors %}
+                    <div class="text-danger small mt-1">{{ form.contract_amount.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">签约日期</label>
+                    {{ form.signed_date }}
+                    {% if form.signed_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.signed_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">到期日期</label>
+                    {{ form.expiry_date }}
+                    {% if form.expiry_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.expiry_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">合同文件</label>
+                    {{ form.contract_file }}
+                    {% if form.contract_file.errors %}
+                    <div class="text-danger small mt-1">{{ form.contract_file.errors }}</div>
+                    {% endif %}
+                    {% if not is_create and contract.contract_file %}
+                    <div class="mt-2">
+                        <a href="{{ contract.contract_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-file-earmark"></i> 查看当前文件
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">合同内容</label>
+                    {{ form.contract_content }}
+                    {% if form.contract_content.errors %}
+                    <div class="text-danger small mt-1">{{ form.contract_content.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">备注</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a href="{% if is_create %}{% url 'admin_pages:purchase_contract_list' %}{% else %}{% url 'admin_pages:purchase_contract_detail' contract.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> 保存
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

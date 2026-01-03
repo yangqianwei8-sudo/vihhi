@@ -1,0 +1,84 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}确认通知 - 诉讼管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">确认收到通知：{{ notification.notification_title }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:notification_detail' notification.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回详情
+            </a>
+        </div>
+    </div>
+
+    <!-- 确认提示 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">确认通知</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="alert alert-warning">
+                <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> 确认提示</h5>
+                <p>您即将确认收到以下通知。确认后，系统将记录您的确认时间和确认人信息。</p>
+            </div>
+
+            <!-- 通知信息 -->
+            <div class="info-grid info-grid-2 mb-4">
+                <div class="info-item">
+                    <span class="info-label">通知标题</span>
+                    <span class="info-value">{{ notification.notification_title }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">通知类型</span>
+                    <span class="info-value">
+                        <span class="badge bg-info">{{ notification.get_notification_type_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">案件编号</span>
+                    <span class="info-value">
+                        <a href="{% url 'litigation_pages:case_detail' notification.case.id %}" class="text-decoration-none">
+                            {{ notification.case.case_number }}
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">发送时间</span>
+                    <span class="info-value">{{ notification.sent_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+
+            <!-- 通知内容 -->
+            <div class="mb-4">
+                <label class="form-label fw-bold">通知内容</label>
+                <div class="alert alert-info">
+                    <pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">{{ notification.notification_content }}</pre>
+                </div>
+            </div>
+
+            <!-- 确认表单 -->
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'litigation_pages:notification_detail' notification.id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 取消
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> 确认收到
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

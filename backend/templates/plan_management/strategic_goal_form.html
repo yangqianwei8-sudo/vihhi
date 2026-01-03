@@ -1,0 +1,337 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<script src="{% static 'js/department-user-filter.js' %}"></script>
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid #e5e7eb;
+        margin-bottom: 20px;
+    }
+    .form-card h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: #1f2937;
+        font-size: 16px;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .form-text {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+    .btn-submit {
+        padding: 10px 24px;
+        font-size: 15px;
+        font-weight: 600;
+    }
+    .section-icon {
+        font-size: 18px;
+        margin-right: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">{{ page_title }}</h4>
+            <a href="{% if goal %}{% url 'plan_pages:strategic_goal_detail' goal.id %}{% else %}{% url 'plan_pages:strategic_goal_list' %}{% endif %}" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>返回
+            </a>
+        </div>
+        <div class="card-body">
+            <form method="post" id="goalForm">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+                
+                <!-- 基本信息 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">📋</span>基本信息</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">目标编号</label>
+                            {{ form.goal_number }}
+                            {% if form.goal_number.errors %}
+                            <div class="text-danger small mt-1">{{ form.goal_number.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">目标名称</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                            <div class="text-danger small mt-1">{{ form.name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label required">目标类型</label>
+                            {{ form.goal_type }}
+                            {% if form.goal_type.errors %}
+                            <div class="text-danger small mt-1">{{ form.goal_type.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label required">目标周期</label>
+                            {{ form.goal_period }}
+                            {% if form.goal_period.errors %}
+                            <div class="text-danger small mt-1">{{ form.goal_period.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label required">目标状态</label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                            <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 目标指标 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">📊</span>目标指标</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label required">目标指标名称</label>
+                            {{ form.indicator_name }}
+                            {% if form.indicator_name.errors %}
+                            <div class="text-danger small mt-1">{{ form.indicator_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label required">指标类型</label>
+                            {{ form.indicator_type }}
+                            {% if form.indicator_type.errors %}
+                            <div class="text-danger small mt-1">{{ form.indicator_type.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">指标单位</label>
+                            {{ form.indicator_unit }}
+                            {% if form.indicator_unit.errors %}
+                            <div class="text-danger small mt-1">{{ form.indicator_unit.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label required">目标值</label>
+                            {{ form.target_value }}
+                            {% if form.target_value.errors %}
+                            <div class="text-danger small mt-1">{{ form.target_value.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">当前值</label>
+                            {{ form.current_value }}
+                            {% if form.current_value.errors %}
+                            <div class="text-danger small mt-1">{{ form.current_value.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">完成率</label>
+                            <input type="text" class="form-control" value="自动计算" readonly title="根据目标值和当前值自动计算">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 责任人信息 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">👤</span>责任人信息</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">负责部门</label>
+                            {{ form.responsible_department }}
+                            {% if form.responsible_department.errors %}
+                            <div class="text-danger small mt-1">{{ form.responsible_department.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">目标负责人</label>
+                            {{ form.responsible_person }}
+                            {% if form.responsible_person.errors %}
+                            <div class="text-danger small mt-1">{{ form.responsible_person.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">参与人员</label>
+                            {{ form.participants }}
+                            {% if form.participants.errors %}
+                            <div class="text-danger small mt-1">{{ form.participants.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 目标描述 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">📝</span>目标描述</h5>
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label required">目标描述</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">目标背景</label>
+                            {{ form.background }}
+                            {% if form.background.errors %}
+                            <div class="text-danger small mt-1">{{ form.background.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">目标意义</label>
+                            {{ form.significance }}
+                            {% if form.significance.errors %}
+                            <div class="text-danger small mt-1">{{ form.significance.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 权重设置 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">⚖️</span>权重设置</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label required">目标权重</label>
+                            {{ form.weight }}
+                            {% if form.weight.errors %}
+                            <div class="text-danger small mt-1">{{ form.weight.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">权重说明</label>
+                            {{ form.weight_description }}
+                            {% if form.weight_description.errors %}
+                            <div class="text-danger small mt-1">{{ form.weight_description.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 时间信息 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">📅</span>时间信息</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label required">开始日期</label>
+                            {{ form.start_date }}
+                            {% if form.start_date.errors %}
+                            <div class="text-danger small mt-1">{{ form.start_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">结束日期</label>
+                            {{ form.end_date }}
+                            {% if form.end_date.errors %}
+                            <div class="text-danger small mt-1">{{ form.end_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 关联信息 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">🔗</span>关联信息</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">上级目标</label>
+                            {{ form.parent_goal }}
+                            {% if form.parent_goal.errors %}
+                            <div class="text-danger small mt-1">{{ form.parent_goal.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">关联项目</label>
+                            {{ form.related_projects }}
+                            {% if form.related_projects.errors %}
+                            <div class="text-danger small mt-1">{{ form.related_projects.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">备注</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                            <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 提交按钮 -->
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% if goal %}{% url 'plan_pages:strategic_goal_detail' goal.id %}{% else %}{% url 'plan_pages:strategic_goal_list' %}{% endif %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle me-1"></i>取消
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-submit">
+                        <i class="bi bi-check-circle me-1"></i>保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// 自动计算完成率
+document.addEventListener('DOMContentLoaded', function() {
+    const targetValueInput = document.querySelector('#id_target_value');
+    const currentValueInput = document.querySelector('#id_current_value');
+    
+    function calculateCompletionRate() {
+        const targetValue = parseFloat(targetValueInput.value) || 0;
+        const currentValue = parseFloat(currentValueInput.value) || 0;
+        
+        if (targetValue > 0) {
+            const rate = (currentValue / targetValue) * 100;
+            return Math.min(rate, 100).toFixed(2);
+        }
+        return '0.00';
+    }
+    
+    if (targetValueInput && currentValueInput) {
+        [targetValueInput, currentValueInput].forEach(input => {
+            input.addEventListener('input', function() {
+                // 这里可以添加实时显示完成率的逻辑
+            });
+        });
+    }
+    
+    // 初始化部门-人员过滤功能
+    const departmentField = document.getElementById('id_responsible_department');
+    const personField = document.getElementById('id_responsible_person');
+    if (departmentField && personField) {
+        initDepartmentUserFilter(departmentField, personField);
+    }
+});
+</script>
+{% endblock %}

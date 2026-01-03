@@ -1,0 +1,146 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}新增文件分类 - {{ stage_name }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<style>
+.form-container {
+    width: 100%;
+    padding: 20px;
+}
+
+.form-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--vh-primary);
+    color: var(--vh-primary);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: #495057;
+}
+
+.required-field::after {
+    content: " *";
+    color: #dc3545;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.form-text {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.btn-group {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="form-container">
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="bi bi-plus-circle"></i> 新增文件分类 - {{ stage_name }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- 基本信息 -->
+                <div class="form-section">
+                    <div class="form-section-title">基本信息</div>
+                    
+                    <div class="form-group">
+                        <label for="name" class="form-label required-field">分类名称</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="请输入分类名称" required maxlength="100">
+                        <div class="form-text">同一阶段内分类名称不能重复</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="code" class="form-label">分类代码</label>
+                        <input type="text" class="form-control" id="code" name="code" 
+                               placeholder="可选，用于系统识别" maxlength="50">
+                        <div class="form-text">可选字段，用于系统内部识别</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description" class="form-label">分类描述</label>
+                        <textarea class="form-control" id="description" name="description" 
+                                  rows="3" placeholder="请输入分类描述"></textarea>
+                        <div class="form-text">可选，用于说明该分类的用途和特点</div>
+                    </div>
+                </div>
+                
+                <!-- 排序和状态 -->
+                <div class="form-section">
+                    <div class="form-section-title">排序和状态</div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="sort_order" class="form-label">排序</label>
+                                <input type="number" class="form-control" id="sort_order" name="sort_order" 
+                                       value="0" min="0">
+                                <div class="form-text">数字越小越靠前，默认为0</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">状态</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                                    <label class="form-check-label" for="is_active">
+                                        启用
+                                    </label>
+                                </div>
+                                <div class="form-text">禁用后该分类将不会在列表中显示</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> 保存
+                    </button>
+                    <a href="{% url 'delivery_pages:file_category_list' stage_code=stage_code %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> 取消
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

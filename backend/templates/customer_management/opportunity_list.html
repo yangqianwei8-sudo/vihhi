@@ -1,0 +1,668 @@
+{% extends "shared/list_page_base.html" %}
+{% comment %}
+商机列表页面模板 (Opportunity List Template)
+
+功能说明：
+- 展示商机的列表页面
+- 支持按状态、客户、负责商务、紧急程度、预计签约时间筛选
+- 支持搜索商机编号、名称、项目、客户
+- 支持批量操作（删除、导出、修改状态、修改紧急程度）
+
+主要功能：
+1. 筛选功能：状态、关联客户、负责商务、紧急程度、预计签约时间
+2. 表格展示：商机名称、编号、关联客户、负责商务、状态、预计金额、成功概率、加权金额、紧急程度、预计签约时间、创建时间、操作
+3. 操作功能：查看详情、编辑
+4. 批量操作：批量删除、批量导出、批量修改状态、批量修改紧急程度
+{% endcomment %}
+{% load static %}
+
+{% block list_page_title %}商机管理{% endblock %}
+
+{% block list_page_actions %}
+{% comment %}新增商机按钮已移除{% endcomment %}
+{% endblock %}
+
+{% comment %}标签页切换功能已移除{% endcomment %}
+
+{% block search_placeholder %}搜索商机编号、名称、项目、客户...{% endblock %}
+
+{% block list_page_filter_fields %}
+<!-- 状态筛选 -->
+<div class="filter-row" data-filter-key="status">
+    <label class="filter-label">状态:</label>
+    <div class="filter-control">
+        <select name="status" class="form-control form-control-sm" id="statusSelect">
+            <option value="">全部</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- 关联客户筛选 -->
+<div class="filter-row" data-filter-key="client_id">
+    <label class="filter-label">关联客户:</label>
+    <div class="filter-control">
+        <select name="client_id" class="form-control form-control-sm" id="clientSelect">
+            <option value="">全部客户</option>
+            {% for client in clients %}
+            <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- 负责商务筛选 -->
+<div class="filter-row" data-filter-key="business_manager_id">
+    <label class="filter-label">负责商务:</label>
+    <div class="filter-control">
+        <select name="business_manager_id" class="form-control form-control-sm" id="businessManagerSelect">
+            <option value="">全部</option>
+            {% for manager in business_managers %}
+            <option value="{{ manager.id }}" {% if business_manager_id == manager.id|stringformat:"s" %}selected{% endif %}>
+                {{ manager.get_full_name|default:manager.username }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- 紧急程度筛选 -->
+<div class="filter-row" data-filter-key="urgency">
+    <label class="filter-label">紧急程度:</label>
+    <div class="filter-control">
+        <select name="urgency" class="form-control form-control-sm" id="urgencySelect">
+            <option value="">全部</option>
+            {% for value, label in urgency_choices %}
+            <option value="{{ value }}" {% if urgency == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- 预计签约时间筛选 -->
+<div class="filter-row" data-filter-key="expected_sign_date">
+    <label class="filter-label">预计签约时间:</label>
+    <div class="filter-control">
+        <div class="d-flex gap-2 align-items-center">
+            <input type="date" name="expected_sign_date_from" class="form-control form-control-sm" 
+                   value="{{ expected_sign_date_from }}" placeholder="开始日期">
+            <span>至</span>
+            <input type="date" name="expected_sign_date_to" class="form-control form-control-sm" 
+                   value="{{ expected_sign_date_to }}" placeholder="结束日期">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block list_page_table_checkbox_header %}
+<th style="width: 40px;">
+    <input type="checkbox" id="selectAll" title="全选/取消全选">
+</th>
+{% endblock %}
+
+{% block list_page_table_headers %}
+<th style="width: 200px;">商机名称</th>
+<th style="width: 120px;">商机编号</th>
+<th style="width: 150px;">关联客户</th>
+<th style="width: 100px;">负责商务</th>
+<th style="width: 100px; text-align: center;">状态</th>
+<th style="width: 100px; text-align: right;">预计金额（万元）</th>
+<th style="width: 80px; text-align: center;">成功概率</th>
+<th style="width: 100px; text-align: right;">加权金额（万元）</th>
+<th style="width: 100px; text-align: center;">紧急程度</th>
+<th style="width: 120px; text-align: center;">预计签约时间</th>
+<th style="width: 150px; text-align: center;">创建时间</th>
+{% endblock %}
+
+{% block list_page_table_actions_header %}
+<th style="width: 150px; text-align: center;">
+    操作
+    <span id="columnSettingsBtn"
+          data-bs-toggle="modal"
+          data-bs-target="#columnSettingsModal"
+          aria-label="设置表格字段"
+          title="设置表格字段"
+          style="cursor: pointer; color: #000000 !important; font-size: 16px; vertical-align: middle; margin-left: 8px; display: inline-block;">
+        <i class="bi bi-gear" style="color: #000000 !important;"></i>
+    </span>
+</th>
+{% endblock %}
+
+{% block list_page_table_checkbox_cell %}
+<td>
+    <input type="checkbox" class="row-checkbox" value="{{ item.id }}" title="选择此项">
+</td>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td>
+    <a href="{% url 'business_pages:opportunity_detail' item.id %}" class="text-decoration-none">
+        {{ item.name }}
+    </a>
+</td>
+<td>{{ item.opportunity_number|default:'未编号' }}</td>
+<td>
+    <a href="{% url 'business_pages:customer_detail' item.client.id %}" class="text-decoration-none">
+        {{ item.client.name }}
+    </a>
+</td>
+<td>{{ item.business_manager.get_full_name|default:item.business_manager.username }}</td>
+<td style="text-align: center;">
+    {% comment %}状态徽章显示{% endcomment %}
+    {% if item.status == 'potential' %}
+    <span class="badge bg-secondary">潜在客户</span>
+    {% elif item.status == 'initial_contact' %}
+    <span class="badge bg-info">初步接触</span>
+    {% elif item.status == 'requirement_confirmed' %}
+    <span class="badge bg-primary">需求确认</span>
+    {% elif item.status == 'quotation' %}
+    <span class="badge bg-warning text-dark">方案报价</span>
+    {% elif item.status == 'negotiation' %}
+    <span class="badge bg-warning">商务谈判</span>
+    {% elif item.status == 'won' %}
+    <span class="badge bg-success">赢单</span>
+    {% elif item.status == 'lost' %}
+    <span class="badge bg-danger">输单</span>
+    {% elif item.status == 'cancelled' %}
+    <span class="badge bg-dark">已取消</span>
+    {% else %}
+    <span class="badge bg-secondary">{{ item.get_status_display }}</span>
+    {% endif %}
+</td>
+<td style="text-align: right;" class="info-value-numeric">{{ item.estimated_amount|floatformat:2|default:'0.00' }}</td>
+<td style="text-align: center;">{{ item.success_probability }}%</td>
+<td style="text-align: right;" class="info-value-numeric">{{ item.weighted_amount|floatformat:2|default:'0.00' }}</td>
+<td style="text-align: center;">
+    {% comment %}紧急程度徽章显示{% endcomment %}
+    {% if item.urgency == 'normal' %}
+    <span class="badge bg-secondary">普通</span>
+    {% elif item.urgency == 'urgent' %}
+    <span class="badge bg-warning text-dark">紧急</span>
+    {% elif item.urgency == 'very_urgent' %}
+    <span class="badge bg-danger">特急</span>
+    {% else %}
+    <span class="badge bg-secondary">{{ item.get_urgency_display }}</span>
+    {% endif %}
+</td>
+<td style="text-align: center;">{{ item.expected_sign_date|date:'Y-m-d'|default:'未设置' }}</td>
+<td style="text-align: center;" class="small text-muted">{{ item.created_time|date:'Y-m-d H:i' }}</td>
+{% endblock %}
+
+{% block list_page_table_actions_cell %}
+<td>
+    <div class="list-page-table-actions">
+        <a href="{% url 'business_pages:opportunity_detail' item.id %}" 
+           class="action-view" 
+           title="查看详情">
+            <i class="bi bi-eye"></i>
+        </a>
+        {% if can_create %}
+        <span class="action-separator">|</span>
+        <a href="{% url 'business_pages:opportunity_edit' item.id %}" 
+           class="action-edit" 
+           title="编辑">
+            <i class="bi bi-pencil"></i>
+        </a>
+        {% endif %}
+        {% if can_delete %}
+        <span class="action-separator">|</span>
+        <a href="{% url 'business_pages:opportunity_delete' item.id %}" 
+           class="action-delete" 
+           title="删除"
+           onclick="return confirm('确定要删除此商机吗？此操作不可恢复。');">
+            <i class="bi bi-trash"></i>
+        </a>
+        {% endif %}
+    </div>
+</td>
+{% endblock %}
+
+{% block list_page_batch_dropdown_items %}
+<li><a class="dropdown-item" href="#" id="batchStatusChangeBtn">批量修改状态</a></li>
+<li><a class="dropdown-item" href="#" id="batchUrgencyChangeBtn">批量修改紧急程度</a></li>
+{% endblock %}
+
+{% block empty_colspan %}13{% endblock %}
+
+{% block empty_table_message %}暂无商机数据{% endblock %}
+
+{% block empty_message %}暂无商机数据{% endblock %}
+
+{% block empty_create_url %}{% url 'business_pages:opportunity_create' %}{% endblock %}
+
+{% block list_page_batch_import_modal %}
+{% include "shared/modals/batch_import_modal.html" %}
+{% endblock %}
+
+{% block batch_import_modal_title %}批量导入商机{% endblock %}
+
+{% block batch_import_instructions %}
+<div class="alert alert-info">
+    <h6 class="alert-heading">导入说明：</h6>
+    <ul class="mb-0">
+        <li>Excel文件第一行应为表头，包含：商机名称、关联客户、负责商务、预计金额等字段</li>
+        <li>导入前请确保数据格式正确</li>
+        <li>建议先导出模板查看格式要求</li>
+        <li>支持的文件格式：.xlsx, .xls, .csv</li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block list_page_batch_import_js %}
+// 商机列表批量导入功能
+(function() {
+    const batchImportBtn = document.getElementById('batchImportBtn');
+    const batchImportConfirmBtn = document.getElementById('batchImportConfirmBtn');
+    const batchImportForm = document.getElementById('batchImportForm');
+    const importFile = document.getElementById('importFile');
+    const importProgress = document.getElementById('importProgress');
+    const importProgressBar = document.getElementById('importProgressBar');
+    const importStatus = document.getElementById('importStatus');
+    const downloadTemplateBtn = document.getElementById('downloadTemplateBtn');
+    
+    if (!batchImportBtn || !batchImportConfirmBtn) return;
+    
+    // 下载模板按钮
+    if (downloadTemplateBtn) {
+        downloadTemplateBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            // 跳转到导入页面下载模板
+            window.location.href = '{% url "business_pages:opportunity_import" %}';
+        });
+    }
+    
+    // 导入确认按钮点击事件
+    batchImportConfirmBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        if (!importFile || !importFile.files || importFile.files.length === 0) {
+            showError('请选择要导入的文件');
+            return;
+        }
+        
+        const file = importFile.files[0];
+        const fileSize = file.size / 1024 / 1024; // MB
+        
+        if (fileSize > 10) {
+            showError('文件大小不能超过 10MB');
+            return;
+        }
+        
+        const formData = new FormData(batchImportForm);
+        const mode = document.getElementById('importMode')?.value || 'create';
+        formData.append('mode', mode);
+        
+        // 显示进度条
+        if (importProgress) {
+            importProgress.classList.remove('d-none');
+        }
+        if (importProgressBar) {
+            importProgressBar.style.width = '10%';
+            importProgressBar.textContent = '10%';
+        }
+        if (importStatus) {
+            importStatus.textContent = '正在上传文件...';
+        }
+        
+        // 禁用按钮
+        const btn = this;
+        const spinner = document.getElementById('batchImportSpinner');
+        const confirmText = document.getElementById('batchImportConfirmText');
+        btn.disabled = true;
+        if (spinner) spinner.classList.remove('d-none');
+        if (confirmText) confirmText.textContent = '导入中...';
+        
+        // 发送请求（使用导入页面的URL）
+        fetch('{% url "business_pages:opportunity_import" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            // 更新进度条
+            if (importProgressBar) {
+                importProgressBar.style.width = '100%';
+                importProgressBar.textContent = '100%';
+            }
+            
+            if (data.success) {
+                if (importStatus) {
+                    importStatus.textContent = data.message || '导入完成';
+                }
+                
+                // 显示详细结果
+                let resultMessage = `导入完成：成功 ${data.success_count || 0} 条，失败 ${data.failure_count || 0} 条`;
+                
+                if (data.failure_count > 0 && data.results) {
+                    const errors = data.results.filter(r => r.status === 'error').slice(0, 10);
+                    if (errors.length > 0) {
+                        resultMessage += '\n\n失败详情：\n';
+                        errors.forEach(err => {
+                            resultMessage += `第 ${err.row} 行：${err.message}\n`;
+                        });
+                        if (data.failure_count > 10) {
+                            resultMessage += `\n... 还有 ${data.failure_count - 10} 条失败记录`;
+                        }
+                    }
+                }
+                
+                if (data.success_count > 0) {
+                    showSuccess(resultMessage);
+                    // 延迟刷新页面
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showError(resultMessage);
+                }
+            } else {
+                if (importStatus) {
+                    importStatus.textContent = data.error || '导入失败';
+                }
+                showError(data.error || '导入失败');
+            }
+        })
+        .catch(error => {
+            // 错误已通过 showError 显示给用户，无需控制台输出
+            if (importStatus) {
+                importStatus.textContent = '导入失败：' + error.message;
+            }
+            showError('导入失败：' + error.message);
+        })
+        .finally(() => {
+            // 恢复按钮
+            btn.disabled = false;
+            if (spinner) spinner.classList.add('d-none');
+            if (confirmText) confirmText.textContent = '开始导入';
+        });
+    });
+})();
+{% endblock %}
+
+{% block list_page_batch_delete_js %}
+// 商机列表批量删除
+(function() {
+    const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+    if (!batchDeleteBtn) return;
+    
+    batchDeleteBtn.addEventListener('click', function(e) {
+        if (this.disabled) return;
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        if (checked.length === 0) {
+            showError('请先选择要删除的商机');
+            return;
+        }
+        
+        if (!confirm(`确定要删除选中的 ${checked.length} 个商机吗？此操作不可恢复。`)) {
+            return;
+        }
+        
+        const ids = Array.from(checked).map(cb => cb.value);
+        const btn = this;
+        const originalText = btn.textContent;
+        
+        // 设置按钮状态
+        btn.disabled = true;
+        btn.textContent = '删除中...';
+        showLoading('正在删除...');
+        
+        // 发送请求
+        fetch('/api/customer/opportunities/batch-delete/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({opportunity_ids: ids})
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || err.detail || `请求失败: ${response.status}`);
+                }).catch(() => {
+                    throw new Error(`请求失败: ${response.status} ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                showSuccess(data.message || `成功删除 ${data.deleted_count} 个商机`);
+                setTimeout(() => {
+                    window.location.href = window.location.pathname;
+                }, 1000);
+            } else {
+                showError(data.message || '删除失败');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            // 错误已通过 showError 显示给用户，无需控制台输出
+            showError('删除失败，请重试');
+            btn.disabled = false;
+            btn.textContent = originalText;
+        });
+    });
+})();
+{% endblock %}
+
+{% block list_page_batch_export_js %}
+// 商机列表批量导出
+(function() {
+    const batchExportBtn = document.getElementById('batchExportBtn');
+    if (!batchExportBtn) return;
+    
+    batchExportBtn.addEventListener('click', function() {
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        if (checked.length === 0) {
+            showError('请先选择要导出的商机');
+            return;
+        }
+        
+        const ids = Array.from(checked).map(cb => cb.value);
+        const btn = this;
+        const originalText = btn.textContent;
+        
+        // 设置按钮状态
+        btn.disabled = true;
+        btn.textContent = '导出中...';
+        showLoading('正在导出...');
+        
+        // 发送请求
+        fetch('/api/customer/opportunities/batch-export/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({opportunity_ids: ids})
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.blob().then(blob => {
+                    hideLoading();
+                    // 创建下载链接
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = '商机列表_' + new Date().toISOString().slice(0,10) + '.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    // 恢复按钮状态
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                    showSuccess('导出成功');
+                });
+            } else {
+                return response.json().then(data => {
+                    hideLoading();
+                    showError(data.message || '导出失败');
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                });
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            // 错误已通过 showError 显示给用户，无需控制台输出
+            showError('导出失败，请重试');
+            btn.disabled = false;
+            btn.textContent = originalText;
+        });
+    });
+})();
+{% endblock %}
+
+{% block list_page_custom_js %}
+// 批量操作通用函数：处理API请求
+function handleBatchUpdate(ids, field, value, fieldName) {
+    return fetch('/api/customer/opportunities/batch-update/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+            opportunity_ids: ids,
+            [field]: value
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || err.detail || `请求失败: ${response.status}`);
+            }).catch(() => {
+                throw new Error(`请求失败: ${response.status} ${response.statusText}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showSuccess(data.message || `成功修改 ${data.updated_count || ids.length} 个商机的${fieldName}`);
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+            return data;
+        } else {
+            showError(data.message || '修改失败');
+            throw new Error(data.message || '修改失败');
+        }
+    })
+    .catch(error => {
+        // 错误已通过 showError 显示给用户，无需控制台输出
+        showError(`修改失败：${error.message}`);
+        throw error;
+    });
+}
+
+// 批量修改状态
+(function() {
+    const batchStatusChangeBtn = document.getElementById('batchStatusChangeBtn');
+    if (!batchStatusChangeBtn) return;
+    
+    batchStatusChangeBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        if (checked.length === 0) {
+            showError('请先选择要修改状态的商机');
+            return;
+        }
+        
+        showBatchActionModal('status', '批量修改状态', {
+            statusChoices: [
+                {% for value, label in status_choices %}
+                ['{{ value }}', '{{ label }}']{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            onConfirm: function() {
+                return new Promise(function(resolve, reject) {
+                    const statusSelect = document.getElementById('batchStatusSelect');
+                    if (!statusSelect || !statusSelect.value) {
+                        showError('请选择新的状态');
+                        reject(new Error('未选择状态'));
+                        return;
+                    }
+                    
+                    const ids = Array.from(checked).map(cb => cb.value);
+                    showLoading('正在修改状态...');
+                    
+                    handleBatchUpdate(ids, 'status', statusSelect.value, '状态')
+                        .then(resolve)
+                        .catch(reject)
+                        .finally(() => {
+                            hideLoading();
+                        });
+                });
+            }
+        });
+    });
+})();
+
+// 批量修改紧急程度
+(function() {
+    const batchUrgencyChangeBtn = document.getElementById('batchUrgencyChangeBtn');
+    if (!batchUrgencyChangeBtn) return;
+    
+    batchUrgencyChangeBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        if (checked.length === 0) {
+            showError('请先选择要修改紧急程度的商机');
+            return;
+        }
+        
+        showBatchActionModal('urgency', '批量修改紧急程度', {
+            urgencyChoices: [
+                {% for value, label in urgency_choices %}
+                ['{{ value }}', '{{ label }}']{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            onConfirm: function() {
+                return new Promise(function(resolve, reject) {
+                    const urgencySelect = document.getElementById('batchUrgencySelect');
+                    if (!urgencySelect || !urgencySelect.value) {
+                        showError('请选择新的紧急程度');
+                        reject(new Error('未选择紧急程度'));
+                        return;
+                    }
+                    
+                    const ids = Array.from(checked).map(cb => cb.value);
+                    showLoading('正在修改紧急程度...');
+                    
+                    handleBatchUpdate(ids, 'urgency', urgencySelect.value, '紧急程度')
+                        .then(resolve)
+                        .catch(reject)
+                        .finally(() => {
+                            hideLoading();
+                        });
+                });
+            }
+        });
+    });
+})();
+{% endblock %}

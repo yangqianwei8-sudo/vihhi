@@ -1,0 +1,139 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 凭证信息预览 -->
+    <div class="info-card mb-4">
+        <h5>凭证信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">凭证字号</span>
+                <span class="info-value"><code>{{ voucher.voucher_number }}</code></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">凭证日期</span>
+                <span class="info-value">{{ voucher.voucher_date|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">状态</span>
+                <span class="info-value">
+                    {% if voucher.status == 'submitted' %}
+                    <span class="badge bg-warning">已提交</span>
+                    {% else %}
+                    <span class="badge bg-secondary">草稿</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">借方合计</span>
+                <span class="info-value">¥{{ voucher.total_debit|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">贷方合计</span>
+                <span class="info-value">¥{{ voucher.total_credit|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">借贷平衡</span>
+                <span class="info-value">
+                    {% if voucher.total_debit == voucher.total_credit %}
+                    <span class="badge bg-success">✓ 平衡</span>
+                    {% else %}
+                    <span class="badge bg-danger">✗ 不平衡</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 凭证分录 -->
+    {% if voucher.entries.all %}
+    <div class="info-card mb-4">
+        <h5>凭证分录</h5>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>行号</th>
+                        <th>会计科目</th>
+                        <th>摘要</th>
+                        <th class="text-end">借方金额</th>
+                        <th class="text-end">贷方金额</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in voucher.entries.all %}
+                    <tr>
+                        <td>{{ entry.line_number }}</td>
+                        <td><code>{{ entry.account_subject.code }}</code> {{ entry.account_subject.name }}</td>
+                        <td>{{ entry.summary }}</td>
+                        <td class="text-end">
+                            {% if entry.debit_amount > 0 %}
+                            ¥{{ entry.debit_amount|floatformat:2 }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if entry.credit_amount > 0 %}
+                            ¥{{ entry.credit_amount|floatformat:2 }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr style="background-color: #f9fafb; font-weight: 700;">
+                        <td colspan="3" class="text-end">合计：</td>
+                        <td class="text-end">¥{{ voucher.total_debit|floatformat:2 }}</td>
+                        <td class="text-end">¥{{ voucher.total_credit|floatformat:2 }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 审核操作 -->
+    <div class="info-card">
+        <h5>审核操作</h5>
+        {% if voucher.total_debit != voucher.total_credit %}
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle"></i> 警告：凭证借贷不平衡，无法审核通过！
+        </div>
+        {% endif %}
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">审核结果</label>
+                <div>
+                    <button type="submit" name="action" value="approve" class="btn btn-success me-2" 
+                            {% if voucher.total_debit != voucher.total_credit %}disabled{% endif %}>
+                        <i class="bi bi-check-circle"></i> 审核通过
+                    </button>
+                    <button type="submit" name="action" value="reject" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> 拒绝
+                    </button>
+                </div>
+            </div>
+            <div class="text-end">
+                <a href="{% url 'finance_pages:voucher_detail' voucher.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

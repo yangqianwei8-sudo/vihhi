@@ -1,0 +1,161 @@
+{% extends "shared/form_page_base.html" %}
+{% load static %}
+
+{% block form_page_title_text %}创建优化前资料{% endblock %}
+
+{% block form_page_description %}
+上传CAD文件（支持DWG、DXF、PDF格式），系统将自动解析提取设计信息
+{% endblock %}
+
+{% block form_has_files %}True{% endblock %}
+
+{% block form_enctype %}enctype="multipart/form-data"{% endblock %}
+
+{% block form_content %}
+<div class="form-section">
+    <div class="form-section-header">
+        <h5>基本信息</h5>
+    </div>
+    
+    <div class="form-group">
+        <label class="form-label required">关联项目</label>
+        <select name="project_id" class="form-select" required id="project-select">
+            <option value="">请选择项目</option>
+            {% for project in available_projects %}
+            <option value="{{ project.id }}">
+                {{ project.project_number }} - {{ project.name }}
+            </option>
+            {% endfor %}
+        </select>
+        <div class="form-text">选择要关联的项目</div>
+    </div>
+    
+    <div class="form-group">
+        <label class="form-label required">CAD文件</label>
+        <input type="file" name="cad_file" class="form-control" accept=".dwg,.dxf,.pdf" required id="cad-file-input">
+        <div class="form-text">
+            支持格式：DWG、DXF、PDF<br>
+            文件大小限制：100MB<br>
+            <span class="text-danger">注意：系统将自动解析CAD文件，提取技术经济指标、图纸目录、图层信息等</span>
+        </div>
+        <div id="file-info" class="mt-2" style="display: none;">
+            <div class="alert alert-info">
+                <i class="bi bi-file-earmark"></i> <span id="file-name"></span>
+                <span class="ms-2"><span id="file-size"></span></span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label class="form-label">备注说明</label>
+        <textarea name="description" class="form-control" rows="3" placeholder="可选：添加备注说明"></textarea>
+    </div>
+</div>
+{% endblock %}
+
+{% block form_actions_left %}
+<button type="submit" class="btn btn-primary" id="form-submit-btn">
+    <i class="bi bi-upload me-1"></i> 上传并解析
+</button>
+<a href="{% url 'production_pages:pre_optimization_materials' %}" class="btn btn-secondary">
+    <i class="bi bi-x-circle me-1"></i> 取消
+</a>
+{% endblock %}
+
+{% block form_page_extra_js %}
+<script>
+(function() {
+    const fileInput = document.getElementById('cad-file-input');
+    const fileInfo = document.getElementById('file-info');
+    const fileName = document.getElementById('file-name');
+    const fileSize = document.getElementById('file-size');
+    
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            fileName.textContent = file.name;
+            
+            // 格式化文件大小
+            let size = file.size;
+            let unit = 'B';
+            if (size >= 1024 * 1024 * 1024) {
+                size = (size / (1024 * 1024 * 1024)).toFixed(2);
+                unit = 'GB';
+            } else if (size >= 1024 * 1024) {
+                size = (size / (1024 * 1024)).toFixed(2);
+                unit = 'MB';
+            } else if (size >= 1024) {
+                size = (size / 1024).toFixed(2);
+                unit = 'KB';
+            }
+            fileSize.textContent = `(${size} ${unit})`;
+            
+            fileInfo.style.display = 'block';
+            
+            // 验证文件类型
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['dwg', 'dxf', 'pdf'].includes(ext)) {
+                alert('不支持的文件格式，仅支持DWG、DXF、PDF格式');
+                fileInput.value = '';
+                fileInfo.style.display = 'none';
+                return;
+            }
+            
+            // 验证文件大小（100MB）
+            const maxSize = 100 * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert(`文件大小不能超过100MB，当前文件大小：${size} ${unit}`);
+                fileInput.value = '';
+                fileInfo.style.display = 'none';
+                return;
+            }
+        } else {
+            fileInfo.style.display = 'none';
+        }
+    });
+    
+    // 表单提交处理
+    const form = document.getElementById('form-page-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const projectId = document.getElementById('project-select').value;
+            const cadFile = fileInput ? fileInput.files[0] : null;
+            
+            console.log('表单提交检查:', {
+                projectId: projectId,
+                hasFile: !!cadFile,
+                fileName: cadFile ? cadFile.name : null,
+                fileSize: cadFile ? cadFile.size : null,
+                formEnctype: form.enctype
+            });
+            
+            if (!projectId) {
+                e.preventDefault();
+                alert('请选择关联项目');
+                return false;
+            }
+            
+            if (!cadFile) {
+                e.preventDefault();
+                alert('请上传CAD文件');
+                return false;
+            }
+            
+            // 检查表单enctype
+            if (form.enctype !== 'multipart/form-data') {
+                console.warn('表单enctype不正确:', form.enctype);
+                form.enctype = 'multipart/form-data';
+            }
+            
+            // 显示提交提示
+            const submitBtn = document.getElementById('form-submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>上传中...';
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}
+

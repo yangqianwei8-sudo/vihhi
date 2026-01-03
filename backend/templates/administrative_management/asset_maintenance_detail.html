@@ -1,0 +1,105 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:asset_detail' asset_id=maintenance.asset.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回资产详情
+            </a>
+            {% if maintenance.performed_by == request.user %}
+            <a href="{% url 'admin_pages:asset_maintenance_update' maintenance_id=maintenance.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 资产信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">资产信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">资产编号</span>
+                    <span class="info-value">
+                        <a href="{% url 'admin_pages:asset_detail' asset_id=maintenance.asset.id %}" class="text-decoration-none">
+                            <code>{{ maintenance.asset.asset_number }}</code>
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">资产名称</span>
+                    <span class="info-value">
+                        <a href="{% url 'admin_pages:asset_detail' asset_id=maintenance.asset.id %}" class="text-decoration-none">
+                            {{ maintenance.asset.asset_name }}
+                        </a>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 维护信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">维护信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">维护日期</span>
+                    <span class="info-value">{{ maintenance.maintenance_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">维护类型</span>
+                    <span class="info-value">{{ maintenance.get_maintenance_type_display }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">执行人</span>
+                    <span class="info-value">{{ maintenance.performed_by.get_full_name|default:maintenance.performed_by.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">服务商</span>
+                    <span class="info-value">{{ maintenance.service_provider|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">维护费用</span>
+                    <span class="info-value">¥{{ maintenance.cost|floatformat:2 }}</span>
+                </div>
+                {% if maintenance.next_maintenance_date %}
+                <div class="info-item">
+                    <span class="info-label">下次维护日期</span>
+                    <span class="info-value">{{ maintenance.next_maintenance_date|date:"Y-m-d" }}</span>
+                </div>
+                {% endif %}
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">维护描述</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ maintenance.description }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ maintenance.created_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,112 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .change-table {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .table {
+        margin-bottom: 0;
+    }
+    .table thead th {
+        background: #f9fafb;
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: #374151;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .table tbody td {
+        font-size: 13px;
+        vertical-align: middle;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .status-badge.draft { background: #f3f4f6; color: #6b7280; }
+    .status-badge.approved { background: #d1fae5; color: #065f46; }
+    .status-badge.submitted { background: #dbeafe; color: #1e40af; }
+    .status-badge.rejected { background: #fee2e2; color: #991b1b; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="list-page-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding: 6px 0;">
+        <div>
+            <h2 class="mb-0">客户信息变更</h2>
+            <p class="text-muted mb-0" style="font-size: 14px; margin-top: 4px;">查看和管理客户信息变更记录</p>
+        </div>
+        <div class="list-page-actions" style="display: flex; gap: 8px; align-items: center;">
+            <a href="{% url 'business_pages:customer_info_change_create' %}" class="btn btn-primary">+ 创建信息变更</a>
+        </div>
+    </div>
+
+    <div class="change-table">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>客户名称</th>
+                    <th>变更类型</th>
+                    <th>变更原因</th>
+                    <th>变更人</th>
+                    <th>变更时间</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if change_records %}
+                    {% for record in change_records %}
+                    <tr>
+                        <td><a href="{% url 'business_pages:customer_detail' client_id=record.client.id %}">{{ record.client.name }}</a></td>
+                        <td>{{ record.get_change_type_display }}</td>
+                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ record.change_reason }}">{{ record.change_reason|truncatechars:30 }}</td>
+                        <td>{{ record.created_by.username }}</td>
+                        <td>{{ record.created_time|date:"Y-m-d H:i" }}</td>
+                        <td><span class="status-badge {{ record.approval_status }}">{{ record.get_approval_status_display }}</span></td>
+                        <td>
+                            <a href="{% url 'business_pages:customer_info_change_detail' change_id=record.id %}" class="btn btn-sm btn-outline-primary">查看详情</a>
+                            <a href="{% url 'business_pages:customer_detail' client_id=record.client.id %}" class="btn btn-sm btn-outline-secondary">查看客户</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">暂无变更记录</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">快速创建变更</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for client in clients|slice:":20" %}
+                <div class="col-md-3 mb-2">
+                    <a href="{% url 'business_pages:customer_info_change_create' %}?client_id={{ client.id }}" class="btn btn-outline-primary btn-sm w-100">{{ client.name }}</a>
+                </div>
+                {% empty %}
+                <div class="col-12 text-muted">暂无客户</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

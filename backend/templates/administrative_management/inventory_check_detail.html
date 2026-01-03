@@ -1,0 +1,257 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card-header {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    .info-card-title {
+        margin: 0;
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .info-grid {
+        display: grid;
+        gap: var(--spacing-md);
+    }
+    .info-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+    .info-label {
+        font-size: var(--font-size-sm);
+        color: var(--vh-text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: var(--font-size-base);
+        color: var(--vh-text);
+        font-weight: 500;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-draft { background: #f3f4f6; color: #374151; }
+    .status-in_progress { background: #fff3cd; color: #856404; }
+    .status-completed { background: #cfe2ff; color: #084298; }
+    .status-approved { background: #d1e7dd; color: #0f5132; }
+    .difference-positive { color: var(--vh-success); }
+    .difference-negative { color: var(--vh-error); }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:inventory_check_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if can_edit %}
+            <a href="{% url 'admin_pages:inventory_check_update' check.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+            {% if can_approve %}
+            <a href="{% url 'admin_pages:inventory_check_approve' check.id %}" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> 审核
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">盘点单号</span>
+                    <span class="info-value"><code>{{ check.check_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">盘点日期</span>
+                    <span class="info-value">{{ check.check_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">盘点人</span>
+                    <span class="info-value">{{ check.checker.get_full_name|default:check.checker.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge status-{{ check.status }}">
+                            {{ check.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">盘点范围</span>
+                    <span class="info-value">{{ check.check_scope|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">盘点地点</span>
+                    <span class="info-value">{{ check.check_location|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">盘点项数</span>
+                    <span class="info-value">{{ check.total_items }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">完成项数</span>
+                    <span class="info-value">{{ check.completed_items }}</span>
+                </div>
+                {% if check.completed_items > 0 %}
+                <div class="info-item">
+                    <span class="info-label">准确率</span>
+                    <span class="info-value">{{ check.accuracy_rate|floatformat:1 }}%</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 盘点明细 -->
+    {% if items %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">盘点明细</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>用品编码</th>
+                            <th>用品名称</th>
+                            <th>账面数量</th>
+                            <th>实际数量</th>
+                            <th>差异数量</th>
+                            <th>差异金额</th>
+                            <th>状态</th>
+                            <th>备注</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td><code>{{ item.supply.code }}</code></td>
+                            <td>{{ item.supply.name }}</td>
+                            <td>{{ item.book_quantity }}</td>
+                            <td>
+                                {% if item.actual_quantity is not None %}
+                                {{ item.actual_quantity }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.actual_quantity is not None %}
+                                {% if item.difference > 0 %}
+                                <span class="difference-positive">+{{ item.difference }}</span>
+                                {% elif item.difference < 0 %}
+                                <span class="difference-negative">{{ item.difference }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.actual_quantity is not None %}
+                                ¥{{ item.difference_amount|floatformat:2 }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.actual_quantity is not None %}
+                                {% if item.is_surplus %}
+                                <span class="badge bg-success">盘盈</span>
+                                {% elif item.is_shortage %}
+                                <span class="badge bg-danger">盘亏</span>
+                                {% else %}
+                                <span class="badge bg-secondary">无差异</span>
+                                {% endif %}
+                                {% else %}
+                                <span class="badge bg-warning">待盘点</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.notes|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 审核信息 -->
+    {% if check.approver %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">审核信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">审核人</span>
+                    <span class="info-value">{{ check.approver.get_full_name|default:check.approver.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">审核时间</span>
+                    <span class="info-value">{{ check.approved_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注 -->
+    {% if check.notes %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <p style="white-space: pre-wrap; margin: 0;">{{ check.notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

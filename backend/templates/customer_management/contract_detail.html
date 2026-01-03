@@ -1,0 +1,1001 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .contract-detail-nav {
+        background: #fff;
+        border-radius: 12px;
+        padding: 0;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .contract-detail-nav-tabs {
+        display: flex;
+        gap: 0;
+    }
+    .contract-detail-nav-item {
+        flex: 1;
+    }
+    .contract-detail-nav-link {
+        display: block;
+        padding: 16px 24px;
+        text-align: center;
+        color: #6b7280;
+        text-decoration: none;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        font-size: 14px;
+    }
+    .contract-detail-nav-link:hover {
+        color: #1f2937;
+        background: #f9fafb;
+    }
+    .contract-detail-nav-link.active {
+        color: #1f2937;
+        border-bottom-color: #1f2937;
+        background: #f9fafb;
+    }
+    .payment-plan-item {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .file-item {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #6b7280;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .status-badge.draft {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+    .status-badge.pending_review {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    .status-badge.reviewing {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    .status-badge.signed {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    .status-badge.effective {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    .status-badge.executing {
+        background: #e0e7ff;
+        color: #3730a3;
+    }
+    .status-badge.completed {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    .status-badge.terminated {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    .status-badge.cancelled {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+    /* 进度标签样式 */
+    .contract-progress {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .progress-steps {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+    }
+    .progress-step {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+    }
+    .progress-step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background: #e5e7eb;
+        z-index: 0;
+    }
+    .progress-step.completed:not(:last-child)::after {
+        background: #10b981;
+    }
+    .progress-step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+        background: #f3f4f6;
+        color: #6b7280;
+        border: 2px solid #e5e7eb;
+        position: relative;
+        z-index: 1;
+        margin-bottom: 8px;
+    }
+    .progress-step.active .progress-step-circle {
+        background: #142F5B;
+        color: #fff;
+        border-color: #142F5B;
+    }
+    .progress-step.completed .progress-step-circle {
+        background: #10b981;
+        color: #fff;
+        border-color: #10b981;
+    }
+    .progress-step-label {
+        font-size: 13px;
+        color: #6b7280;
+        text-align: center;
+        font-weight: 500;
+    }
+    .progress-step.active .progress-step-label {
+        color: #142F5B;
+        font-weight: 600;
+    }
+    .progress-step.completed .progress-step-label {
+        color: #10b981;
+    }
+    .progress-section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<!-- DEBUG_MARKER_START_合同详情模板已加载 -->
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">合同详细信息与关联数据</p>
+        </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="text-end mb-4">
+        <!-- 状态流转按钮 -->
+        <div class="btn-group me-2" role="group">
+            <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                状态流转
+            </button>
+            <ul class="dropdown-menu">
+                {% if valid_transitions %}
+                    {% for transition in valid_transitions %}
+                        {% if transition.code != 'party_b_signed' and transition.code != 'signed' %}
+                        <li>
+                            <button class="dropdown-item" type="button"data-click="handle_onclick_0"{{ transition.code }}', '{{ transition.label }}')">
+                                → {{ transition.label }}
+                            </button>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <li><span class="dropdown-item text-muted">当前状态无可用流转</span></li>
+                {% endif %}
+            </ul>
+        </div>
+        {% if can_edit %}
+        <a href="{% url 'business_pages:contract_edit' contract.id %}" class="btn btn-primary me-2">编辑合同</a>
+        {% endif %}
+        {% if can_manage %}
+        {% if contract.status in 'pending_review,reviewing' %}
+        <button type="button" class="btn btn-success me-2"data-click="handle_onclick_1"signed', '已签订')">
+            <i class="bi bi-pen"></i> 签署合同
+        </button>
+        {% endif %}
+        <a href="{% url 'admin:customer_management_businesspaymentplan_add' %}?contract={{ contract.id }}" class="btn btn-outline-primary me-2" target="_blank">添加回款计划</a>
+        <a href="{% url 'business_pages:contract_file_upload' contract.id %}" class="btn btn-outline-primary me-2">上传文件</a>
+        <a href="{% url 'business_pages:contract_change_create' contract.id %}" class="btn btn-outline-warning me-2">创建变更</a>
+        {% if approval_instance %}
+        <a href="{% url 'workflow_engine:approval_detail' approval_instance.id %}" class="btn btn-info me-2">查看审批详情</a>
+        {% elif can_submit_approval %}
+        <a href="{% url 'business_pages:contract_submit_approval' contract.id %}" class="btn btn-info me-2">提交审批</a>
+        {% endif %}
+        {% if contract.status == 'draft' %}
+        <form method="post" action="{% url 'business_pages:contract_delete' contract.id %}" style="display: inline;" onsubmit="return confirm('确定要删除合同 {{ contract.contract_number }} 吗？此操作不可恢复！');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger me-2">删除合同</button>
+        </form>
+        {% endif %}
+        {% endif %}
+        <a href="{% url 'business_pages:contract_management_list' %}" class="btn btn-outline-secondary">返回列表</a>
+    </div>
+    
+    <!-- 审批状态 -->
+    {% if approval_instance %}
+    <div class="info-card {% if approval_instance.status == 'approved' %}info-card-success{% elif approval_instance.status == 'rejected' %}info-card-danger{% elif approval_instance.status == 'pending' %}info-card-warning{% else %}info-card-info{% endif %}" style="margin-bottom: 24px;">
+        <div class="info-card-header">
+            <div>
+                <h5 class="info-card-title">审批状态</h5>
+                <p class="text-muted mb-0" style="font-size: 13px; margin-top: 4px;">审批编号：{{ approval_instance.instance_number }}</p>
+            </div>
+            <div>
+                {% if approval_instance.status == 'approved' %}
+                <span class="badge bg-success">✓ 已通过</span>
+                {% elif approval_instance.status == 'rejected' %}
+                <span class="badge bg-danger">✗ 已驳回</span>
+                {% elif approval_instance.status == 'pending' %}
+                <span class="badge bg-warning">⏳ 审批中</span>
+                {% elif approval_instance.status == 'withdrawn' %}
+                <span class="badge bg-secondary">↩ 已撤回</span>
+                {% else %}
+                <span class="badge bg-secondary">{{ approval_instance.get_status_display }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-3">
+                <div class="info-item">
+                    <span class="info-label">申请人</span>
+                    <span class="info-value">{{ approval_instance.applicant.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请时间</span>
+                    <span class="info-value">{{ approval_instance.apply_time|date:"Y-m-d H:i" }}</span>
+                </div>
+                {% if approval_instance.current_node %}
+                <div class="info-item">
+                    <span class="info-label">当前节点</span>
+                    <span class="info-value">{{ approval_instance.current_node.name }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if approval_instance.apply_comment %}
+            <div class="info-section mt-3">
+                <div class="info-item">
+                    <span class="info-label">申请说明</span>
+                    <span class="info-value">{{ approval_instance.apply_comment }}</span>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if approval_records %}
+            <div class="info-section mt-3">
+                <h6 class="info-section-title">审批记录</h6>
+                <div class="info-list">
+                    {% for record in approval_records %}
+                    <div class="info-item info-item-highlight" style="border-left-color: {% if record.result == 'approved' %}#10b981{% elif record.result == 'rejected' %}#ef4444{% elif record.result == 'transferred' %}#3b82f6{% else %}#6b7280{% endif %};">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ record.node.name }}</strong>
+                                <span class="text-muted ms-2">{{ record.approver.username }}</span>
+                            </div>
+                            <div>
+                                {% if record.result == 'approved' %}
+                                <span class="badge bg-success">通过</span>
+                                {% elif record.result == 'rejected' %}
+                                <span class="badge bg-danger">驳回</span>
+                                {% elif record.result == 'transferred' %}
+                                <span class="badge bg-info">转交</span>
+                                {% elif record.result == 'withdrawn' %}
+                                <span class="badge bg-secondary">撤回</span>
+                                {% else %}
+                                <span class="badge bg-warning">待审批</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if record.comment %}
+                        <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">{{ record.comment }}</p>
+                        {% endif %}
+                        <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">{{ record.approval_time|date:"Y-m-d H:i" }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- 状态流转模态框 -->
+    <div class="modal fade" id="statusTransitionModal" tabindex="-1" aria-labelledby="statusTransitionModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'business_pages:contract_status_transition' contract.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="target_status" id="target_status_input">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="statusTransitionModalLabel">合同状态流转</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">当前状态</label>
+                            <input type="text" class="form-control" value="{{ contract.get_status_display }}" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">目标状态</label>
+                            <input type="text" class="form-control" id="target_status_display" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">备注说明 <span class="text-muted">(可选)</span></label>
+                            <textarea name="comment" class="form-control" rows="3" placeholder="请输入状态流转的备注说明"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">确认流转</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    function showStatusTransitionModal(statusCode, statusLabel) {
+        document.getElementById('target_status_input').value = statusCode;
+        document.getElementById('target_status_display').value = statusLabel;
+        const modal = new bootstrap.Modal(document.getElementById('statusTransitionModal'));
+        modal.show();
+    }
+    
+    function showSignModal(statusCode, statusLabel) {
+        document.getElementById('sign_target_status_input').value = statusCode;
+        document.getElementById('sign_target_status_display').value = statusLabel;
+        const modal = new bootstrap.Modal(document.getElementById('signModal'));
+        modal.show();
+    }
+    
+    // 事件处理器: handle_onclick_0
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.dropdown-item');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                showStatusTransitionModal(
+            });
+        }
+    });
+
+
+    // 事件处理器: handle_onclick_1
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                showStatusTransitionModal(
+            });
+        }
+    });
+
+</script>
+
+    <!-- 签章操作模态框 -->
+    <div class="modal fade" id="signModal" tabindex="-1" aria-labelledby="signModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'business_pages:contract_status_transition' contract.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="target_status" id="sign_target_status_input">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="signModalLabel">合同签章</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">当前状态</label>
+                            <input type="text" class="form-control" value="{{ contract.get_status_display }}" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">签章操作</label>
+                            <input type="text" class="form-control" id="sign_target_status_display" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">签章说明 <span class="text-muted">(可选)</span></label>
+                            <textarea class="form-control" name="comment" rows="3" placeholder="请输入签章说明，例如：已完成我方签章，等待对方签章"></textarea>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            <strong>提示：</strong>签章操作将记录签章人和签章时间，请确认后再提交。
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-success">确认签章</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <h5>📋 基本信息</h5>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">合同编号</span>
+                <span class="info-value">{{ contract.contract_number }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">合同名称</span>
+                <span class="info-value">{{ contract.contract_name|default:contract.contract_number }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">合同类型</span>
+                <span class="info-value">{{ contract.get_contract_type_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">合同状态</span>
+                <span class="info-value"><span class="status-badge {{ contract.status }}">{{ contract.get_status_display }}</span></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">客户</span>
+                <span class="info-value">{{ contract.client.name|default:"未指定" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">关联项目</span>
+                <span class="info-value">{{ contract.project.project_number|default:"未关联" }} {{ contract.project.name|default:"" }}</span>
+            </div>
+            {% if contract.parent_contract %}
+            <div class="info-item">
+                <span class="info-label">主合同</span>
+                <span class="info-value"><a href="{% url 'business_pages:contract_detail' contract.parent_contract.id %}">{{ contract.parent_contract.contract_number }}</a></span>
+            </div>
+            {% endif %}
+        </div>
+        {% if contract.description %}
+        <div class="mt-3">
+            <span class="info-label">合同描述</span>
+            <p class="mt-2" style="color: #374151; font-size: 14px;">{{ contract.description }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 商机信息 -->
+    <!-- TEST_MARKER_商机信息卡片_2025 -->
+    <div class="info-card" style="border: 2px solid #059669; background-color: #f0fdf4;">
+        <h5>🎯 商机信息</h5>
+        {% if contract.opportunity %}
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">关联商机</span>
+                <span class="info-value"><a href="{% url 'business_pages:opportunity_detail' contract.opportunity.id %}">{{ contract.opportunity.opportunity_number|default:contract.opportunity.name }}</a> - {{ contract.opportunity.name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">商机编号</span>
+                <span class="info-value">{{ contract.opportunity.opportunity_number|default:"未编号" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">商机名称</span>
+                <span class="info-value">{{ contract.opportunity.name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">商机状态</span>
+                <span class="info-value">
+                    <span class="status-badge {% if contract.opportunity.status == 'won' %}completed{% elif contract.opportunity.status == 'lost' %}terminated{% elif contract.opportunity.status == 'cancelled' %}cancelled{% else %}pending_review{% endif %}">
+                        {{ contract.opportunity.get_status_display }}
+                    </span>
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">负责商务</span>
+                <span class="info-value">{{ contract.opportunity.business_manager.get_full_name|default:contract.opportunity.business_manager.username }}</span>
+            </div>
+            {% if contract.opportunity.project_name %}
+            <div class="info-item">
+                <span class="info-label">项目名称</span>
+                <span class="info-value">{{ contract.opportunity.project_name }}</span>
+            </div>
+            {% endif %}
+            {% if contract.opportunity.project_address %}
+            <div class="info-item">
+                <span class="info-label">项目地址</span>
+                <span class="info-value">{{ contract.opportunity.project_address }}</span>
+            </div>
+            {% endif %}
+            {% if contract.opportunity.estimated_amount %}
+            <div class="info-item">
+                <span class="info-label">预计金额</span>
+                <span class="info-value">¥{{ contract.opportunity.estimated_amount|floatformat:2 }} 万元</span>
+            </div>
+            {% endif %}
+            {% if contract.opportunity.success_probability %}
+            <div class="info-item">
+                <span class="info-label">成功概率</span>
+                <span class="info-value">{{ contract.opportunity.success_probability }}%</span>
+            </div>
+            {% endif %}
+            {% if contract.opportunity.weighted_amount %}
+            <div class="info-item">
+                <span class="info-label">加权金额</span>
+                <span class="info-value" style="color: #059669;">¥{{ contract.opportunity.weighted_amount|floatformat:2 }} 万元</span>
+            </div>
+            {% endif %}
+            {% if contract.opportunity.expected_sign_date %}
+            <div class="info-item">
+                <span class="info-label">预计签约时间</span>
+                <span class="info-value">{{ contract.opportunity.expected_sign_date|date:"Y-m-d" }}</span>
+            </div>
+            {% endif %}
+            {% if contract.opportunity.actual_sign_date %}
+            <div class="info-item">
+                <span class="info-label">实际签约日期</span>
+                <span class="info-value">{{ contract.opportunity.actual_sign_date|date:"Y-m-d" }}</span>
+            </div>
+            {% endif %}
+            {% if contract.opportunity.urgency %}
+            <div class="info-item">
+                <span class="info-label">紧急程度</span>
+                <span class="info-value">
+                    {% if contract.opportunity.urgency == 'very_urgent' %}
+                        <span style="color: #dc2626; font-weight: 600;">特急</span>
+                    {% elif contract.opportunity.urgency == 'urgent' %}
+                        <span style="color: #f59e0b; font-weight: 600;">紧急</span>
+                    {% else %}
+                        普通
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+        {% if contract.opportunity.description %}
+        <div class="mt-3">
+            <span class="info-label">商机描述</span>
+            <p class="mt-2" style="color: #374151; font-size: 14px;">{{ contract.opportunity.description|linebreaks }}</p>
+        </div>
+        {% endif %}
+        <div class="mt-3">
+            <a href="{% url 'business_pages:opportunity_detail' contract.opportunity.id %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-eye"></i> 查看商机详情
+            </a>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p style="color: #6b7280; margin: 20px 0;">未关联商机</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 金额信息 -->
+    {% if contract.contract_amount %}
+    <div class="info-card">
+        <h5>💰 金额信息</h5>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">合同金额（含税）</span>
+                <span class="info-value" style="font-size: 18px; color: #059669; font-weight: 700;">¥{{ contract.contract_amount|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">合同金额（不含税）</span>
+                <span class="info-value">¥{{ contract.contract_amount_excl_tax|default:"0.00"|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">税额</span>
+                <span class="info-value">¥{{ contract.contract_amount_tax|default:"0.00"|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">税率</span>
+                <span class="info-value">{{ contract.tax_rate|default:"0.00"|floatformat:2 }}%</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">已结算金额</span>
+                <span class="info-value">¥{{ contract.settlement_amount|default:"0.00"|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">已回款金额</span>
+                <span class="info-value" style="color: #059669;">¥{{ contract.payment_amount|default:"0.00"|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">未回款金额</span>
+                <span class="info-value" style="color: #dc2626;">¥{{ contract.unpaid_amount|default:"0.00"|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 时间信息 -->
+    <div class="info-card">
+        <h5>📅 时间信息</h5>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">合同签订日期</span>
+                <span class="info-value">{{ contract.contract_date|default:"未设置"|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">合同生效日期</span>
+                <span class="info-value">{{ contract.effective_date|default:"未设置"|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">合同开始日期</span>
+                <span class="info-value">{{ contract.start_date|default:"未设置"|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">合同结束日期</span>
+                <span class="info-value">{{ contract.end_date|default:"未设置"|date:"Y-m-d" }}</span>
+            </div>
+            {% if contract.contract_period %}
+            <div class="info-item">
+                <span class="info-label">合同期限</span>
+                <span class="info-value">{{ contract.contract_period }} 天</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 签约主体 -->
+    <div class="info-card">
+        <h5>👥 签约主体</h5>
+        {% if contract.parties.exists %}
+            {% for party in contract.parties.all %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong>{{ party.get_party_type_display }}</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <span class="info-label">主体名称</span>
+                                <span class="info-value">{{ party.party_name|default:"未设置" }}</span>
+                            </div>
+                        </div>
+                        {% if party.credit_code %}
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <span class="info-label">统一社会信用代码</span>
+                                <span class="info-value">{{ party.credit_code }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if party.legal_representative %}
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <span class="info-label">法定代表人</span>
+                                <span class="info-value">{{ party.legal_representative }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if party.party_contact %}
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <span class="info-label">签约主体代表</span>
+                                <span class="info-value">{{ party.party_contact }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if party.contact_phone %}
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <span class="info-label">联系电话</span>
+                                <span class="info-value">{{ party.contact_phone }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if party.contact_email %}
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <span class="info-label">联系邮箱</span>
+                                <span class="info-value">{{ party.contact_email }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if party.address %}
+                        <div class="col-md-12">
+                            <div class="info-item">
+                                <span class="info-label">办公地址</span>
+                                <span class="info-value">{{ party.address }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <!-- 兼容旧数据：显示原有字段 -->
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">甲方名称</span>
+                    <span class="info-value">{{ contract.party_a_name|default:"未设置" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">甲方联系人</span>
+                    <span class="info-value">{{ contract.party_a_contact|default:"未设置" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">乙方名称</span>
+                    <span class="info-value">{{ contract.party_b_name|default:"四川维海科技有限公司" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">乙方联系人</span>
+                    <span class="info-value">{{ contract.party_b_contact|default:"未设置" }}</span>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- 回款计划 -->
+    <div class="info-card">
+        <h5>💳 回款计划 ({{ payment_plans.count }})</h5>
+        {% if payment_plans %}
+        <div style="margin-bottom: 12px;">
+            {% for plan in payment_plans %}
+            <a href="{% url 'settlement_pages:payment_record_create' 'business' plan.id %}" class="btn btn-sm btn-outline-primary me-2" style="margin-bottom: 4px;">为"{{ plan.phase_name }}"添加回款记录</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if payment_plans %}
+        {% for plan in payment_plans %}
+        <div class="payment-plan-item">
+            <div>
+                <strong>{{ plan.phase_name }}</strong>
+                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">{{ plan.phase_description|default:"无描述" }}</p>
+                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">计划日期：{{ plan.planned_date|date:"Y-m-d" }} | 状态：<span class="status-badge {{ plan.status }}">{{ plan.get_status_display }}</span></p>
+                {% comment %}显示该回款计划的回款记录统计{% endcomment %}
+                {% with plan_records=payment_records|default_if_none:"" %}
+                {% if plan_records %}
+                    {% for record in plan_records %}
+                        {% if record.payment_plan_id == plan.id %}
+                            <p class="mb-0 mt-1" style="font-size: 12px; color: #059669;">✓ 已回款：¥{{ record.payment_amount|floatformat:2 }} ({{ record.payment_date|date:"Y-m-d" }})</p>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% endwith %}
+            </div>
+            <div class="text-end">
+                <div style="font-size: 18px; font-weight: 700; color: #059669;">¥{{ plan.planned_amount|floatformat:2 }}</div>
+                {% if plan.actual_amount %}
+                <div style="font-size: 14px; color: #6b7280;">实际：¥{{ plan.actual_amount|floatformat:2 }}</div>
+                {% endif %}
+                <div style="margin-top: 8px;">
+                    <a href="{% url 'settlement_pages:payment_record_create' 'business' plan.id %}" class="btn btn-sm btn-primary me-1">添加回款</a>
+                    <a href="{% url 'admin:customer_management_businesspaymentplan_change' plan.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">编辑</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <p>暂无回款计划</p>
+            <a href="{% url 'admin:customer_management_businesspaymentplan_add' %}?contract={{ contract.id }}" class="btn btn-primary" target="_blank">添加回款计划</a>
+        </div>
+        {% endif %}
+    </div>
+
+    
+    <!-- 回款记录 -->
+    <div class="info-card">
+        <h5>💰 回款记录 ({{ payment_records|length }})</h5>
+        {% if payment_plans %}
+        <div style="margin-bottom: 12px;">
+            {% for plan in payment_plans %}
+            <a href="{% url 'settlement_pages:payment_record_create' 'business' plan.id %}" class="btn btn-sm btn-outline-primary me-2" style="margin-bottom: 4px;">为"{{ plan.phase_name }}"添加回款记录</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if payment_records %}
+        {% for record in payment_records %}
+        <div class="payment-plan-item">
+            <div>
+                <strong>{{ record.payment_number }}</strong>
+                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">回款日期：{{ record.payment_date|date:"Y-m-d" }} | 回款方式：{{ record.get_payment_method_display }} | 状态：<span class="status-badge {{ record.status }}">{{ record.get_status_display }}</span></p>
+                {% if record.invoice_number %}
+                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">发票号码：{{ record.invoice_number }}</p>
+                {% endif %}
+                {% if record.bank_account %}
+                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">收款账户：{{ record.bank_account }}</p>
+                {% endif %}
+                {% if record.notes %}
+                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">备注：{{ record.notes }}</p>
+                {% endif %}
+                {% if record.confirmed_by %}
+                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">确认人：{{ record.confirmed_by.get_full_name|default:record.confirmed_by.username }} | 确认时间：{{ record.confirmed_time|date:"Y-m-d H:i" }}</p>
+                {% endif %}
+            </div>
+            <div class="text-end">
+                <div style="font-size: 18px; font-weight: 700; color: #059669;">¥{{ record.payment_amount|floatformat:2 }}</div>
+                {% if record.receipt_voucher %}
+                <a href="{{ record.receipt_voucher.url }}" class="btn btn-sm btn-outline-primary mt-2" target="_blank">查看凭证</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <p>暂无回款记录</p>
+            {% if payment_plans %}
+            <p style="font-size: 12px; color: #9ca3af; margin-top: 8px;">请先创建回款计划，然后添加回款记录</p>
+            {% else %}
+            <p style="font-size: 12px; color: #9ca3af; margin-top: 8px;">请先创建回款计划</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+<!-- 合同文件 -->
+    <div class="info-card">
+        <h5>📎 合同文件 ({{ files.count }})</h5>
+        {% if files %}
+        {% for file in files %}
+        <div class="file-item">
+            <div>
+                <strong>{{ file.file_name }}</strong>
+                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">{{ file.get_file_type_display }} | 版本：{{ file.version }} | 上传时间：{{ file.uploaded_time|date:"Y-m-d H:i" }}</p>
+                {% if file.description %}
+                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">{{ file.description }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <a href="{% url 'business_pages:contract_file_download' file.id %}" class="btn btn-sm btn-primary">下载</a>
+                {% if can_manage %}
+                <form method="post" action="{% url 'business_pages:contract_file_delete' file.id %}" style="display: inline;" onsubmit="return confirm('确定要删除文件 {{ file.file_name }} 吗？');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">删除</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <p>暂无合同文件</p>
+            <a href="{% url 'business_pages:contract_file_upload' contract.id %}" class="btn btn-primary">上传文件</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 审核记录 -->
+    {% if approvals %}
+    <div class="info-card">
+        <h5>✅ 审核记录 ({{ approvals.count }})</h5>
+        {% for approval in approvals %}
+        <div class="payment-plan-item">
+            <div>
+                <strong>{{ approval.approver.get_full_name|default:approval.approver.username }}</strong>
+                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">审核层级：{{ approval.approval_level }}级 | 审核时间：{{ approval.approval_time|date:"Y-m-d H:i"|default:"待审核" }}</p>
+                {% if approval.comment %}
+                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">审核意见：{{ approval.comment }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <span class="status-badge {{ approval.result }}">{{ approval.get_result_display }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 变更记录 -->
+    {% if changes %}
+    <div class="info-card">
+        <h5>📝 变更记录 ({{ changes.count }})</h5>
+        {% for change in changes %}
+        <div class="payment-plan-item">
+            <div>
+                <strong>{{ change.get_change_type_display }}</strong>
+                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">变更日期：{{ change.change_date|date:"Y-m-d" }} | 创建人：{{ change.created_by.get_full_name|default:change.created_by.username }}</p>
+                <p class="mb-0 mt-1" style="font-size: 12px; color: #374151;">变更原因：{{ change.change_reason }}</p>
+                {% if change.change_amount %}
+                <p class="mb-0 mt-1" style="font-size: 14px; font-weight: 600; color: #dc2626;">变更金额：¥{{ change.change_amount|floatformat:2 }}</p>
+                {% endif %}
+                {% if change.notes %}
+                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">备注：{{ change.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 状态流转历史 -->
+    {% if status_logs %}
+    <div class="info-card">
+        <h5>🔄 状态流转历史 ({{ status_logs|length }})</h5>
+        {% for log in status_logs %}
+        <div class="payment-plan-item">
+            <div>
+                <strong>{{ log.from_status_label }} → {{ log.to_status_label }}</strong>
+                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">
+                    操作人：{{ log.actor.get_full_name|default:log.actor.username|default:"系统" }} | 
+                    操作时间：{{ log.created_time|date:"Y-m-d H:i:s" }}
+                </p>
+                {% if log.comment %}
+                <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">备注：{{ log.comment }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 子合同 -->
+    {% if sub_contracts %}
+    <div class="info-card">
+        <h5>📄 子合同/补充协议 ({{ sub_contracts.count }})</h5>
+        {% for sub in sub_contracts %}
+        <div class="payment-plan-item">
+            <div>
+                <strong><a href="{% url 'business_pages:contract_detail' sub.id %}">{{ sub.contract_number }}</a></strong>
+                <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">{{ sub.contract_name|default:sub.contract_number }} | {{ sub.get_contract_type_display }} | <span class="status-badge {{ sub.status }}">{{ sub.get_status_display }}</span></p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 其他信息 -->
+    {% if contract.notes %}
+    <div class="info-card">
+        <h5>📝 备注信息</h5>
+        <p style="color: #374151; font-size: 14px; line-height: 1.6;">{{ contract.notes|linebreaks }}</p>
+    </div>
+    {% endif %}
+
+    <!-- 审计信息 -->
+    <div class="info-card">
+        <h5>🔍 审计信息</h5>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">创建人</span>
+                <span class="info-value">{{ contract.created_by.get_full_name|default:contract.created_by.username|default:"未设置" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">创建时间</span>
+                <span class="info-value">{{ contract.created_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">更新时间</span>
+                <span class="info-value">{{ contract.updated_time|date:"Y-m-d H:i:s" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

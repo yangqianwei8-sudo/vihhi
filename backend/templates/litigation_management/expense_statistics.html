@@ -1,0 +1,195 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}费用统计 - 诉讼管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:litigation_home' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回首页
+            </a>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    {% if summary_cards %}
+    <div class="info-card info-card-elevated mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">📊 费用统计概览</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-4 info-grid-responsive">
+                {% for card in summary_cards %}
+                <div class="info-item">
+                    <span class="info-label">{{ card.label }}</span>
+                    <span class="info-value info-value-large">{{ card.value }}</span>
+                    {% if card.hint %}
+                    <span class="info-hint">{{ card.hint }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 筛选器 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">统计筛选</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">开始日期</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">结束日期</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">关联案件</label>
+                    <select name="case_id" class="form-select form-select-sm">
+                        <option value="">全部案件</option>
+                        {% for case_item in cases %}
+                        <option value="{{ case_item.id }}" {% if case_id == case_item.id|stringformat:"s" %}selected{% endif %}>
+                            {{ case_item.case_number }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-search"></i> 查询
+                        </button>
+                        <a href="{% url 'litigation_pages:expense_statistics' %}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-arrow-counterclockwise"></i> 重置
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 费用类型统计 -->
+    {% if stats_by_type %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">费用类型统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>费用类型</th>
+                            <th>记录数</th>
+                            <th>总金额</th>
+                            <th>占比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in stats_by_type %}
+                        <tr>
+                            <td>{{ stat.expense_type|default:"未知" }}</td>
+                            <td><strong>{{ stat.count }}</strong></td>
+                            <td><strong>¥{{ stat.total|floatformat:2 }}</strong></td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: {% if total_amount > 0 %}{% widthratio stat.total total_amount 100 %}{% else %}0{% endif %}%">
+                                        {% if total_amount > 0 %}{% widthratio stat.total total_amount 100 %}{% else %}0{% endif %}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 案件费用统计 -->
+    {% if stats_by_case %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">案件费用统计（Top 10）</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>案件编号</th>
+                            <th>案件名称</th>
+                            <th>费用记录数</th>
+                            <th>总金额</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in stats_by_case %}
+                        <tr>
+                            <td>{{ stat.case__case_number }}</td>
+                            <td>{{ stat.case__case_name }}</td>
+                            <td><strong>{{ stat.count }}</strong></td>
+                            <td><strong>¥{{ stat.total|floatformat:2 }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 支付状态统计 -->
+    {% if stats_by_status %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">支付状态统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>支付状态</th>
+                            <th>记录数</th>
+                            <th>总金额</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in stats_by_status %}
+                        <tr>
+                            <td>
+                                <span class="status-badge {{ stat.payment_status }}">
+                                    {{ stat.payment_status|default:"未知" }}
+                                </span>
+                            </td>
+                            <td><strong>{{ stat.count }}</strong></td>
+                            <td><strong>¥{{ stat.total|floatformat:2 }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

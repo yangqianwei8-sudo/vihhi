@@ -1,0 +1,86 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+    .info-value {
+        color: #1f2937;
+        font-size: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+        <div class="row">
+        <div class="col-md-4">
+            <div class="info-card">
+                <h5 class="mb-4">报表信息</h5>
+                <div class="info-item">
+                    <div class="info-label">报表编号</div>
+                    <div class="info-value"><code>{{ report.report_number }}</code></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">报表类型</div>
+                    <div class="info-value">{{ report.get_report_type_display }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">会计期间</div>
+                    <div class="info-value">{{ report.period_year }}年{% if report.period_month %}{{ report.period_month }}月{% else %}全年{% endif %}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">报表日期</div>
+                    <div class="info-value">{{ report.report_date|date:"Y-m-d" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">生成人</div>
+                    <div class="info-value">{{ report.generated_by.username|default:"-" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">生成时间</div>
+                    <div class="info-value">{{ report.generated_time|date:"Y-m-d H:i:s" }}</div>
+                </div>
+                {% if report.notes %}
+                <div class="info-item">
+                    <div class="info-label">备注</div>
+                    <div class="info-value">{{ report.notes }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="info-card">
+                <h5 class="mb-4">报表数据</h5>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    报表数据已保存，可通过相应的报表生成页面查看详细内容。
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'finance_pages:report_management' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> 返回列表
+                    </a>
+                    {% if report.report_type == 'balance_sheet' %}
+                    <a href="{% url 'finance_pages:balance_sheet_report' %}?period_year={{ report.period_year }}{% if report.period_month %}&period_month={{ report.period_month }}{% endif %}" class="btn btn-primary">
+                        <i class="bi bi-eye"></i> 查看报表
+                    </a>
+                    {% elif report.report_type == 'income_statement' %}
+                    <a href="{% url 'finance_pages:income_statement_report' %}?period_year={{ report.period_year }}{% if report.period_month %}&period_month={{ report.period_month }}{% endif %}" class="btn btn-primary">
+                        <i class="bi bi-eye"></i> 查看报表
+                    </a>
+                    {% elif report.report_type == 'cash_flow' %}
+                    <a href="{% url 'finance_pages:cash_flow_report' %}?period_year={{ report.period_year }}{% if report.period_month %}&period_month={{ report.period_month }}{% endif %}" class="btn btn-primary">
+                        <i class="bi bi-eye"></i> 查看报表
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

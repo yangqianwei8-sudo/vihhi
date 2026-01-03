@@ -1,0 +1,149 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block personnel_content %}
+<div class="container-fluid py-4">
+    <!-- 操作按钮 -->
+    <div class="text-end mb-4">
+        <a href="{% url 'personnel_pages:salary_management' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        <a href="{% url 'personnel_pages:salary_update' salary.id %}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> 编辑
+        </a>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">员工</span>
+                    <span class="info-value">
+                        <a href="{% url 'personnel_pages:employee_detail' salary.employee.id %}">
+                            {{ salary.employee.name }} ({{ salary.employee.employee_number }})
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">薪资月份</span>
+                    <span class="info-value">{{ salary.salary_month|date:"Y年m月" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ salary.created_time|date:"Y-m-d H:i" }}</span>
+                </div>
+                {% if salary.created_by %}
+                <div class="info-item">
+                    <span class="info-label">创建人</span>
+                    <span class="info-value">{{ salary.created_by.get_full_name|default:salary.created_by.username }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 收入明细 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">收入明细</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">基本工资</span>
+                    <span class="info-value">¥{{ salary.base_salary|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">绩效奖金</span>
+                    <span class="info-value">¥{{ salary.performance_bonus|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">加班费</span>
+                    <span class="info-value">¥{{ salary.overtime_pay|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">津贴补贴</span>
+                    <span class="info-value">¥{{ salary.allowance|floatformat:2 }}</span>
+                </div>
+                <div class="info-item" style="grid-column: 1 / -1; border-top: 2px solid #e5e7eb; padding-top: 16px; margin-top: 8px;">
+                    <span class="info-label" style="font-size: 18px; font-weight: 700; color: #142F5B;">应发金额</span>
+                    <span class="info-value" style="font-size: 24px; font-weight: 700; color: #142F5B;">¥{{ salary.total_income|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 扣款明细 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">扣款明细</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">社保扣款</span>
+                    <span class="info-value">¥{{ salary.social_insurance|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">公积金扣款</span>
+                    <span class="info-value">¥{{ salary.housing_fund|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">个人所得税</span>
+                    <span class="info-value">¥{{ salary.tax|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">其他扣款</span>
+                    <span class="info-value">¥{{ salary.other_deduction|floatformat:2 }}</span>
+                </div>
+                <div class="info-item" style="grid-column: 1 / -1; border-top: 2px solid #e5e7eb; padding-top: 16px; margin-top: 8px;">
+                    <span class="info-label" style="font-size: 18px; font-weight: 700; color: #dc2626;">扣款合计</span>
+                    <span class="info-value" style="font-size: 24px; font-weight: 700; color: #dc2626;">¥{{ salary.total_deduction|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 实发金额 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">实发金额</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="text-center py-4">
+                <div style="font-size: 48px; font-weight: 700; color: #142F5B; margin-bottom: 8px;">
+                    ¥{{ salary.net_salary|floatformat:2 }}
+                </div>
+                <div style="font-size: 16px; color: #6b7280;">
+                    应发金额 - 扣款合计 = 实发金额
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 备注 -->
+    {% if salary.notes %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <p style="color: var(--vh-text); white-space: pre-wrap;">{{ salary.notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

@@ -1,0 +1,305 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    /* 会议类型徽章样式 */
+    .type-badge {
+        padding: 2px 8px;
+        border-radius: 8px;
+        font-size: var(--font-size-xs);
+        font-weight: 500;
+    }
+    .type-internal { background: #e7f3ff; color: #0066cc; }
+    .type-external { background: #fff4e6; color: #cc6600; }
+    .type-video { background: #f0f0f0; color: #666; }
+    .type-other { background: #f0f0f0; color: #666; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:meeting_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if meeting.status == 'scheduled' and meeting.created_by == request.user %}
+            <a href="{% url 'admin_pages:meeting_update' meeting_id=meeting.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+            {% if meeting.status == 'completed' and not record %}
+            <a href="{% url 'admin_pages:meeting_record_create' meeting_id=meeting.id %}" class="btn btn-info">
+                <i class="bi bi-file-text"></i> 创建记录
+            </a>
+            {% endif %}
+            {% if meeting.status not in 'completed,cancelled' and meeting.created_by == request.user %}
+            <a href="{% url 'admin_pages:meeting_cancel' meeting_id=meeting.id %}" class="btn btn-danger">
+                <i class="bi bi-x-circle"></i> 取消
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">会议编号</span>
+                    <span class="info-value"><code>{{ meeting.meeting_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">会议主题</span>
+                    <span class="info-value">{{ meeting.title }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">会议类型</span>
+                    <span class="info-value">
+                        <span class="type-badge type-{{ meeting.meeting_type }}">
+                            {{ meeting.get_meeting_type_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge status-{{ meeting.status }}">
+                            {{ meeting.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">会议室</span>
+                    <span class="info-value">{{ meeting.room.name|default:"线上会议" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">组织人</span>
+                    <span class="info-value">{{ meeting.organizer.get_full_name|default:meeting.organizer.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">创建人</span>
+                    <span class="info-value">{{ meeting.created_by.get_full_name|default:meeting.created_by.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ meeting.created_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 时间安排 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">时间安排</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">会议日期</span>
+                    <span class="info-value">{{ meeting.meeting_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">会议时间</span>
+                    <span class="info-value">{{ meeting.start_time|time:"H:i" }} - {{ meeting.end_time|time:"H:i" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">会议时长</span>
+                    <span class="info-value">{{ meeting.duration }} 分钟</span>
+                </div>
+                {% if meeting.actual_start_time %}
+                <div class="info-item">
+                    <span class="info-label">实际开始时间</span>
+                    <span class="info-value">{{ meeting.actual_start_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                {% if meeting.actual_end_time %}
+                <div class="info-item">
+                    <span class="info-label">实际结束时间</span>
+                    <span class="info-value">{{ meeting.actual_end_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 参会人员 -->
+    {% if meeting.attendees.exists %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">参会人员</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% for attendee in meeting.attendees.all %}
+                <div class="info-item">
+                    <span class="info-value">{{ attendee.get_full_name|default:attendee.username }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 会议议程 -->
+    {% if meeting.agenda %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">会议议程</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-item">
+                <span class="info-value" style="white-space: pre-wrap;">{{ meeting.agenda }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 会议附件 -->
+    {% if meeting.attachment %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">会议附件</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-item">
+                <span class="info-value">
+                    <a href="{{ meeting.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-file-earmark"></i> 下载附件
+                    </a>
+                </span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 取消信息 -->
+    {% if meeting.status == 'cancelled' %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">取消信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">取消人</span>
+                    <span class="info-value">{{ meeting.cancelled_by.get_full_name|default:meeting.cancelled_by.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">取消时间</span>
+                    <span class="info-value">{{ meeting.cancelled_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% if meeting.cancelled_reason %}
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">取消原因</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ meeting.cancelled_reason }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 会议记录 -->
+    {% if record %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">会议记录</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">记录人</span>
+                    <span class="info-value">{{ record.recorder.get_full_name|default:record.recorder.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">记录时间</span>
+                    <span class="info-value">{{ record.record_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% if record.minutes %}
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">会议纪要</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ record.minutes }}</span>
+                </div>
+                {% endif %}
+                {% if record.resolutions %}
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">会议决议</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ record.resolutions }}</span>
+                </div>
+                {% endif %}
+                {% if record.attachment %}
+                <div class="info-item">
+                    <span class="info-label">记录附件</span>
+                    <span class="info-value">
+                        <a href="{{ record.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-file-earmark"></i> 下载附件
+                        </a>
+                    </span>
+                </div>
+                {% endif %}
+                {% if record.recorder == request.user %}
+                <div class="info-item">
+                    <span class="info-value">
+                        <a href="{% url 'admin_pages:meeting_record_update' meeting_id=meeting.id %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil"></i> 编辑记录
+                        </a>
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 会议决议跟踪 -->
+    {% if resolutions %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">会议决议跟踪</h5>
+        </div>
+        <div class="info-card-body">
+            {% for resolution in resolutions %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <strong>{{ resolution.resolution_content }}</strong>
+                        </div>
+                        <span class="badge bg-{% if resolution.status == 'completed' %}success{% elif resolution.status == 'in_progress' %}warning{% else %}secondary{% endif %}">
+                            {{ resolution.get_status_display }}
+                        </span>
+                    </div>
+                    <div class="small text-muted mb-2">
+                        负责人：{{ resolution.responsible_user.get_full_name|default:resolution.responsible_user.username }}
+                        {% if resolution.due_date %}
+                        | 截止日期：{{ resolution.due_date|date:"Y-m-d" }}
+                        {% endif %}
+                    </div>
+                    {% if resolution.completion_notes %}
+                    <div class="text-muted" style="white-space: pre-wrap;">{{ resolution.completion_notes }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
+

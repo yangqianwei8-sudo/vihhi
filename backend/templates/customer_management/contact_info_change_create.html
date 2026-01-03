@@ -1,0 +1,258 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-label-required::after {
+        content: " *";
+        color: #dc3545;
+    }
+    .change-field-item {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .change-field-item label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    .change-field-item .old-value {
+        color: #6c757d;
+        text-decoration: line-through;
+    }
+    .change-field-item .new-value {
+        color: #28a745;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <div class="container-fluid py-4">
+        <div class="info-card info-card-compact">
+            <div class="info-card-header">
+                <h5 class="info-card-title">{{ page_title }}</h5>
+            </div>
+            <div class="info-card-body">
+                <form method="post" id="changeForm">
+                    {% csrf_token %}
+                    
+                    <div class="info-section">
+                        <div class="info-grid info-grid-2">
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.contact.label }}</label>
+                                {{ form.contact }}
+                                {% if form.contact.errors %}
+                                <div class="text-danger small mt-1">{{ form.contact.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.change_type.label }}</label>
+                                {{ form.change_type }}
+                                {% if form.change_type.errors %}
+                                <div class="text-danger small mt-1">{{ form.change_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="info-item" style="grid-column: 1 / -1;">
+                                <label class="info-label info-label-required">{{ form.change_reason.label }}</label>
+                                {{ form.change_reason }}
+                                {% if form.change_reason.help_text %}
+                                <small class="form-text text-muted">{{ form.change_reason.help_text }}</small>
+                                {% endif %}
+                                {% if form.change_reason.errors %}
+                                <div class="text-danger small mt-1">{{ form.change_reason.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="info-item" style="grid-column: 1 / -1;">
+                                <label class="info-label">变更字段</label>
+                                <div id="changeFieldsContainer">
+                                    <p class="text-muted">请先选择联系人，然后修改需要变更的字段</p>
+                                </div>
+                                {{ form.change_content }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="submit" name="action" value="save_draft" class="btn btn-outline-secondary">保存草稿</button>
+                        <button type="submit" name="action" value="submit" class="btn btn-primary">提交申请</button>
+                        <a href="{% url 'business_pages:contact_info_change_list' %}" class="btn btn-secondary">取消</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const contactSelect = document.getElementById('id_contact');
+    const changeContentInput = document.getElementById('id_change_content');
+    const container = document.getElementById('changeFieldsContainer');
+    
+    // 可变更的字段配置
+    const changeableFields = {
+        'name': { label: '姓名', type: 'text' },
+        'gender': { label: '性别', type: 'select', options: [['male', '男'], ['female', '女'], ['unknown', '未知']] },
+        'birthplace': { label: '籍贯', type: 'text' },
+        'phone': { label: '手机', type: 'text' },
+        'email': { label: '邮箱', type: 'email' },
+        'wechat': { label: '微信号', type: 'text' },
+        'office_address': { label: '办公地址', type: 'text' },
+        'role': { label: '人员角色', type: 'select', options: [['contact_person', '对接人'], ['promoter', '推动人'], ['decision_maker', '决策人'], ['introducer', '介绍人']] },
+        'relationship_level': { label: '关系等级', type: 'select', options: [['first_contact', '首次沟通'], ['requirement_communication', '需求沟通'], ['cooperation_intention', '合作意向'], ['cooperation_recognition', '合作认可'], ['external_partner', '外部合伙人']] },
+        'decision_influence': { label: '决策影响力', type: 'select', options: [['high', '高'], ['medium', '中'], ['low', '低']] },
+        'contact_frequency': { label: '联系频率', type: 'select', options: [['daily', '每天'], ['weekly', '每周'], ['monthly', '每月'], ['quarterly', '每季度'], ['occasionally', '偶尔'], ['never', '从未']] },
+        'tracking_cycle_days': { label: '跟踪周期（天）', type: 'select', options: [[7, '每周'], [14, '每2周'], [21, '每3周'], [28, '每月'], [42, '每6周'], [56, '每8周'], [90, '每季度']] },
+        'is_primary': { label: '是否主要联系人', type: 'checkbox' },
+        'notes': { label: '备注', type: 'textarea' },
+    };
+    
+    let currentContactData = null;
+    
+    // 当选择联系人时，加载联系人信息
+    contactSelect.addEventListener('change', function() {
+        const contactId = this.value;
+        if (!contactId) {
+            // TODO: 使用DOMPurify清理HTML
+            container.innerHTML = '<p class="text-muted">请先选择联系人</p>';
+            return;
+        }
+        
+        // 获取联系人信息
+        fetch(`/api/customer/contacts/${contactId}/info/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP错误! 状态: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                currentContactData = data;
+                renderChangeFields();
+            })
+            .catch(error => {
+                // TODO: 使用DOMPurify清理HTML
+            container.innerHTML = `<p class="text-danger">获取联系人信息失败: ${error.message}</p>`;
+            });
+    });
+    
+    // 渲染变更字段
+    function renderChangeFields() {
+        if (!currentContactData) {
+            // TODO: 使用DOMPurify清理HTML
+            container.innerHTML = '<p class="text-muted">请先选择联系人</p>';
+            return;
+        }
+        
+        let html = '<div class="row g-2">';
+        for (const [fieldName, config] of Object.entries(changeableFields)) {
+            const oldValue = currentContactData[fieldName] !== undefined ? currentContactData[fieldName] : '';
+            html += `
+                <div class="col-md-6">
+                    <div class="change-field-item">
+                        <label>${config.label}</label>
+                        <div class="old-value mb-2">当前值: ${formatValue(oldValue, config.type)}</div>
+                        ${renderFieldInput(fieldName, config, oldValue)}
+                    </div>
+                </div>
+            `;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+    }
+    
+    // 渲染字段输入
+    function renderFieldInput(fieldName, config, oldValue) {
+        const inputId = `field_${fieldName}`;
+        const inputName = `field_${fieldName}`;
+        
+        if (config.type === 'select') {
+            let options = '<option value="">保持不变</option>';
+            for (const [value, label] of config.options) {
+                const selected = String(value) === String(oldValue) ? 'selected' : '';
+                options += `<option value="${value}" ${selected}>${label}</option>`;
+            }
+            return `<select class="form-select form-select-sm" id="${inputId}" name="${inputName}">${options}</select>`;
+        } else if (config.type === 'checkbox') {
+            const checked = oldValue ? 'checked' : '';
+            return `<input type="checkbox" class="form-check-input" id="${inputId}" name="${inputName}" ${checked}>`;
+        } else if (config.type === 'textarea') {
+            return `<textarea class="form-control form-control-sm" id="${inputId}" name="${inputName}" rows="2">${oldValue || ''}</textarea>`;
+        } else {
+            return `<input type="${config.type}" class="form-control form-control-sm" id="${inputId}" name="${inputName}" value="${oldValue || ''}">`;
+        }
+    }
+    
+    // 格式化值显示
+    function formatValue(value, type) {
+        if (value === null || value === undefined || value === '') {
+            return '（空）';
+        }
+        if (type === 'checkbox') {
+            return value ? '是' : '否';
+        }
+        return value;
+    }
+    
+    // 表单提交时，收集变更内容
+    document.getElementById('changeForm').addEventListener('submit', function(e) {
+        const action = document.querySelector('button[type="submit"]:focus')?.value || 'submit';
+        const isDraft = action === 'save_draft';
+        
+        if (!isDraft) {
+            const changeContent = {};
+            let hasChange = false;
+            
+            for (const fieldName of Object.keys(changeableFields)) {
+                const input = document.getElementById(`field_${fieldName}`);
+                if (!input) continue;
+                
+                let newValue;
+                if (input.type === 'checkbox') {
+                    newValue = input.checked;
+                } else {
+                    newValue = input.value;
+                }
+                
+                const oldValue = currentContactData && currentContactData[fieldName] !== undefined ? currentContactData[fieldName] : '';
+                
+                // 比较值是否变化（处理空值和null）
+                const oldValueStr = oldValue === null || oldValue === undefined ? '' : String(oldValue);
+                const newValueStr = newValue === null || newValue === undefined ? '' : String(newValue);
+                
+                if (oldValueStr !== newValueStr) {
+                    changeContent[fieldName] = {
+                        old: oldValue,
+                        new: newValue
+                    };
+                    hasChange = true;
+                }
+            }
+            
+            if (!hasChange) {
+                e.preventDefault();
+                alert('请至少选择一个字段进行变更');
+                return false;
+            }
+            
+            changeContentInput.value = JSON.stringify(changeContent);
+        }
+    });
+});
+</script>
+{% endblock %}

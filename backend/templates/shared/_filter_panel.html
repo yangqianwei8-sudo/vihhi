@@ -1,0 +1,1616 @@
+{% comment %}
+筛选面板共享模板 (Filter Panel Shared Template)
+
+功能说明：
+- 提供通用的筛选功能，支持多种筛选类型
+- 支持筛选条件的组合和重置
+- 可与动态表格、列表页等组件集成
+- 支持AJAX筛选和表单提交筛选
+
+使用方式：
+1. 在视图中准备筛选配置：
+   filter_config = {
+       'id': 'myFilterPanel',  # 筛选面板ID
+       'method': 'ajax',  # 'ajax' 或 'form'，默认 'form'
+       'submit_url': '/api/filter/',  # AJAX提交URL（method='ajax'时使用）
+       'form_action': '/list/',  # 表单提交URL（method='form'时使用）
+       'auto_submit': True,  # 是否自动提交（输入变化时）
+       'debounce_ms': 300,  # 防抖延迟（毫秒）
+       'collapsible': True,  # 是否可折叠
+       'default_collapsed': False,  # 默认是否折叠
+       'filters': [
+           {
+               'key': 'status',
+               'label': '状态',
+               'type': 'select',  # select, text, date, date_range, number, number_range
+               'options': [
+                   {'value': 'all', 'label': '全部'},
+                   {'value': 'active', 'label': '启用'},
+                   {'value': 'inactive', 'label': '禁用'}
+               ],
+               'default': 'all',
+               'required': False
+           },
+           {
+               'key': 'date_range',
+               'label': '日期范围',
+               'type': 'date_range',
+               'start_key': 'start_date',
+               'end_key': 'end_date',
+               'default': None
+           },
+           {
+               'key': 'keyword',
+               'label': '关键词',
+               'type': 'text',
+               'placeholder': '请输入关键词...',
+               'default': ''
+           }
+       ]
+   }
+
+2. 在模板中引入：
+   {% include 'shared/_filter_panel.html' with filter_config=filter_config %}
+
+3. 在JavaScript中监听筛选事件：
+   if (window.filterPanelEvents && window.filterPanelEvents.onFilter) {
+       window.filterPanelEvents.onFilter(filterId, filterData);
+   }
+
+筛选类型说明：
+- select: 下拉选择框（支持multiple属性实现多选）
+- multiselect: 多选下拉框（使用复选框样式）
+- text: 文本输入框
+- date: 日期选择器（单个日期，支持quick_select快捷选择）
+- date_range: 日期范围选择器（开始日期和结束日期，支持quick_select快捷选择）
+- number: 数字输入框
+- number_range: 数字范围输入框（最小值和最大值）
+- checkbox: 复选框组
+- radio: 单选按钮组
+
+新增功能：
+- quick_select: 日期快捷选择（today, yesterday, this_week, last_week, this_month, last_month, this_year, last_year）
+- show_filter_tags: 显示筛选条件标签（True/False）
+- enable_presets: 启用筛选预设功能（True/False）
+- enable_history: 启用筛选历史功能（True/False）
+- max_history: 最大历史记录数（默认10）
+- 字段依赖关系：使用data-depends-on和data-depends-value属性
+- 时间选择器：time类型和datetime类型
+
+筛选字段设置功能（可选）：
+- enable_field_settings: True  # 启用筛选字段设置功能
+- max_enabled_fields: 10  # 最多可启用的字段数
+- default_enabled_fields: ['field1', 'field2']  # 默认启用的字段key列表
+- required_fields: ['field1']  # 必填字段（不可隐藏）
+{% endcomment %}
+
+{% load static %}
+
+<div class="filter-panel-container" id="filterPanelContainer_{{ filter_config.id }}">
+    <!-- 筛选面板头部 -->
+    <div class="filter-panel-header">
+        <div class="filter-panel-title">
+            <i class="bi bi-funnel"></i>
+            <span>筛选条件</span>
+            {% if filter_config.collapsible %}
+            <button type="button" 
+                    class="btn btn-link btn-sm filter-toggle-btn" 
+                    id="filterToggle_{{ filter_config.id }}"
+                    aria-expanded="{% if filter_config.default_collapsed %}false{% else %}true{% endif %}">
+                <i class="bi bi-chevron-{% if filter_config.default_collapsed %}down{% else %}up{% endif %}"></i>
+            </button>
+            {% endif %}
+        </div>
+        <div class="filter-panel-actions">
+            {% if filter_config.enable_presets %}
+            <div class="btn-group">
+                <button type="button" 
+                        class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                        id="filterPresetsBtn_{{ filter_config.id }}"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        title="筛选预设">
+                    <i class="bi bi-bookmark"></i> 预设
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" id="filterPresetsMenu_{{ filter_config.id }}">
+                    <li><h6 class="dropdown-header">保存的预设</h6></li>
+                    <li><div class="dropdown-item-text text-muted small" id="presetsList_{{ filter_config.id }}">暂无预设</div></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><button class="dropdown-item" type="button" id="savePreset_{{ filter_config.id }}"><i class="bi bi-plus-circle"></i> 保存当前筛选</button></li>
+                    <li><button class="dropdown-item" type="button" id="importPreset_{{ filter_config.id }}"><i class="bi bi-upload"></i> 导入预设</button></li>
+                    <li><button class="dropdown-item" type="button" id="exportPreset_{{ filter_config.id }}"><i class="bi bi-download"></i> 导出预设</button></li>
+                </ul>
+            </div>
+            {% endif %}
+            {% if filter_config.enable_history %}
+            <div class="btn-group">
+                <button type="button" 
+                        class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                        id="filterHistoryBtn_{{ filter_config.id }}"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        title="筛选历史">
+                    <i class="bi bi-clock-history"></i> 历史
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" id="filterHistoryMenu_{{ filter_config.id }}">
+                    <li><h6 class="dropdown-header">最近使用</h6></li>
+                    <li><div class="dropdown-item-text text-muted small" id="historyList_{{ filter_config.id }}">暂无历史记录</div></li>
+                </ul>
+            </div>
+            {% endif %}
+            {% if filter_config.enable_field_settings %}
+            <button type="button" 
+                    class="btn btn-link btn-sm p-0 text-decoration-none" 
+                    id="settingsFilterFieldsBtn_{{ filter_config.id }}"
+                    aria-label="设置筛选字段"
+                    title="自定义筛选字段">
+                <i class="bi bi-gear"></i>
+            </button>
+            {% endif %}
+            <button type="button" 
+                    class="btn btn-sm btn-outline-secondary" 
+                    id="resetFilter_{{ filter_config.id }}">
+                <i class="bi bi-arrow-counterclockwise"></i> 重置
+            </button>
+            {% if filter_config.method == 'form' %}
+            <button type="button" 
+                    class="btn btn-sm btn-primary" 
+                    id="submitFilter_{{ filter_config.id }}">
+                <i class="bi bi-search"></i> 筛选
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 筛选表单 -->
+    <div class="filter-panel-body {% if filter_config.collapsible and filter_config.default_collapsed %}collapsed{% endif %}" 
+         id="filterPanelBody_{{ filter_config.id }}">
+        <!-- 筛选条件标签（显示已选择的筛选条件） -->
+        {% if filter_config.show_filter_tags %}
+        <div class="filter-tags-container" id="filterTags_{{ filter_config.id }}">
+            <!-- 筛选标签将在这里动态生成 -->
+        </div>
+        {% endif %}
+        <form id="filterForm_{{ filter_config.id }}" 
+              {% if filter_config.method == 'form' %}action="{{ filter_config.form_action|default:'#' }}" method="get"{% endif %}>
+            <div class="filter-fields-row" id="filterFieldsContainer_{{ filter_config.id }}">
+                {% for filter_item in filter_config.filters %}
+                <div class="filter-field" 
+                     data-filter-key="{{ filter_item.key }}" 
+                     data-filter-type="{{ filter_item.type }}"
+                     data-filter-label="{{ filter_item.label }}"
+                     data-filter-required="{{ filter_item.required|default:False|lower }}">
+                    <label class="filter-label">
+                        {{ filter_item.label }}
+                        {% if filter_item.required %}<span class="text-danger">*</span>{% endif %}
+                    </label>
+                    
+                    {% if filter_item.type == 'select' %}
+                    <!-- 下拉选择框 -->
+                    <select name="{{ filter_item.key }}" 
+                            class="form-control form-control-sm filter-input" 
+                            id="filter_{{ filter_config.id }}_{{ filter_item.key }}"
+                            {% if filter_item.required %}required{% endif %}>
+                        {% for option in filter_item.options %}
+                        <option value="{{ option.value }}" 
+                                {% if filter_item.default == option.value %}selected{% endif %}>
+                            {{ option.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    
+                    {% elif filter_item.type == 'text' %}
+                    <!-- 文本输入框 -->
+                    <input type="text" 
+                           name="{{ filter_item.key }}" 
+                           class="form-control form-control-sm filter-input" 
+                           id="filter_{{ filter_config.id }}_{{ filter_item.key }}"
+                           placeholder="{{ filter_item.placeholder|default:'' }}"
+                           value="{{ filter_item.default|default:'' }}"
+                           {% if filter_item.required %}required{% endif %}>
+                    
+                    {% elif filter_item.type == 'date' %}
+                    <!-- 日期选择器 -->
+                    <div class="date-input-wrapper">
+                        {% if filter_item.quick_select %}
+                        <div class="date-quick-select-btns">
+                            {% for quick in filter_item.quick_select %}
+                            <button type="button" 
+                                    class="btn btn-sm btn-outline-secondary date-quick-btn" 
+                                    data-quick="{{ quick.value }}"
+                                    data-target="filter_{{ filter_config.id }}_{{ filter_item.key }}">
+                                {{ quick.label }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <input type="date" 
+                               name="{{ filter_item.key }}" 
+                               class="form-control form-control-sm filter-input" 
+                               id="filter_{{ filter_config.id }}_{{ filter_item.key }}"
+                               value="{{ filter_item.default|default:'' }}"
+                               {% if filter_item.required %}required{% endif %}>
+                    </div>
+                    
+                    {% elif filter_item.type == 'date_range' %}
+                    <!-- 日期范围选择器 -->
+                    <div class="date-range-wrapper">
+                        {% if filter_item.quick_select %}
+                        <div class="date-quick-select-btns">
+                            {% for quick in filter_item.quick_select %}
+                            <button type="button" 
+                                    class="btn btn-sm btn-outline-secondary date-quick-btn" 
+                                    data-quick="{{ quick.value }}"
+                                    data-target-start="filter_{{ filter_config.id }}_{{ filter_item.key }}_start"
+                                    data-target-end="filter_{{ filter_config.id }}_{{ filter_item.key }}_end">
+                                {{ quick.label }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="date-range-inputs">
+                            <input type="date" 
+                                   name="{{ filter_item.start_key|default:filter_item.key }}_start" 
+                                   class="form-control form-control-sm filter-input" 
+                                   id="filter_{{ filter_config.id }}_{{ filter_item.key }}_start"
+                                   placeholder="开始日期"
+                                   value="{{ filter_item.default.start|default:'' }}">
+                            <span class="date-range-separator">至</span>
+                            <input type="date" 
+                                   name="{{ filter_item.end_key|default:filter_item.key }}_end" 
+                                   class="form-control form-control-sm filter-input" 
+                                   id="filter_{{ filter_config.id }}_{{ filter_item.key }}_end"
+                                   placeholder="结束日期"
+                                   value="{{ filter_item.default.end|default:'' }}">
+                        </div>
+                    </div>
+                    
+                    {% elif filter_item.type == 'number' %}
+                    <!-- 数字输入框 -->
+                    <input type="number" 
+                           name="{{ filter_item.key }}" 
+                           class="form-control form-control-sm filter-input" 
+                           id="filter_{{ filter_config.id }}_{{ filter_item.key }}"
+                           placeholder="{{ filter_item.placeholder|default:'' }}"
+                           value="{{ filter_item.default|default:'' }}"
+                           {% if filter_item.min is not None %}min="{{ filter_item.min }}"{% endif %}
+                           {% if filter_item.max is not None %}max="{{ filter_item.max }}"{% endif %}
+                           {% if filter_item.step is not None %}step="{{ filter_item.step }}"{% endif %}
+                           {% if filter_item.required %}required{% endif %}>
+                    
+                    {% elif filter_item.type == 'number_range' %}
+                    <!-- 数字范围输入框 -->
+                    <div class="number-range-inputs">
+                        <input type="number" 
+                               name="{{ filter_item.start_key|default:filter_item.key }}_min" 
+                               class="form-control form-control-sm filter-input" 
+                               id="filter_{{ filter_config.id }}_{{ filter_item.key }}_min"
+                               placeholder="最小值"
+                               value="{{ filter_item.default.min|default:'' }}"
+                               {% if filter_item.min is not None %}min="{{ filter_item.min }}"{% endif %}>
+                        <span class="number-range-separator">至</span>
+                        <input type="number" 
+                               name="{{ filter_item.end_key|default:filter_item.key }}_max" 
+                               class="form-control form-control-sm filter-input" 
+                               id="filter_{{ filter_config.id }}_{{ filter_item.key }}_max"
+                               placeholder="最大值"
+                               value="{{ filter_item.default.max|default:'' }}"
+                               {% if filter_item.max is not None %}max="{{ filter_item.max }}"{% endif %}>
+                    </div>
+                    
+                    {% elif filter_item.type == 'checkbox' %}
+                    <!-- 复选框组 -->
+                    <div class="checkbox-group">
+                        {% for option in filter_item.options %}
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-input" 
+                                   type="checkbox" 
+                                   name="{{ filter_item.key }}" 
+                                   value="{{ option.value }}"
+                                   id="filter_{{ filter_config.id }}_{{ filter_item.key }}_{{ forloop.counter0 }}"
+                                   {% if option.value in filter_item.default %}checked{% endif %}>
+                            <label class="form-check-label" 
+                                   for="filter_{{ filter_config.id }}_{{ filter_item.key }}_{{ forloop.counter0 }}">
+                                {{ option.label }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% elif filter_item.type == 'radio' %}
+                    <!-- 单选按钮组 -->
+                    <div class="radio-group">
+                        {% for option in filter_item.options %}
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-input" 
+                                   type="radio" 
+                                   name="{{ filter_item.key }}" 
+                                   value="{{ option.value }}"
+                                   id="filter_{{ filter_config.id }}_{{ filter_item.key }}_{{ forloop.counter0 }}"
+                                   {% if filter_item.default == option.value %}checked{% endif %}>
+                            <label class="form-check-label" 
+                                   for="filter_{{ filter_config.id }}_{{ filter_item.key }}_{{ forloop.counter0 }}">
+                                {{ option.label }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    {% if filter_item.help_text %}
+                    <small class="form-text text-muted">{{ filter_item.help_text }}</small>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 筛选面板样式 -->
+<style>
+.filter-panel-container {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+}
+
+.filter-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+    gap: 1rem;
+}
+
+.filter-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: #495057;
+    flex-shrink: 0;
+}
+
+.filter-panel-title i {
+    color: #6c757d;
+}
+
+.filter-toggle-btn {
+    padding: 0;
+    margin-left: 0.5rem;
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.filter-toggle-btn:hover {
+    color: #495057;
+}
+
+.filter-panel-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+/* 筛选字段设置按钮 - 防止初始化时的闪现 */
+.filter-panel-actions button[id^="settingsFilterFieldsBtn_"] {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+/* 初始化完成后显示按钮 */
+.filter-panel-actions button[id^="settingsFilterFieldsBtn_"][style*="position"] {
+    opacity: 1;
+    visibility: visible;
+}
+
+.filter-panel-body {
+    padding: 1rem;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    overflow: hidden;
+}
+
+.filter-panel-body.collapsed {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.filter-fields-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.filter-field {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #495057;
+}
+
+.filter-input {
+    width: 100%;
+}
+
+.date-range-inputs,
+.number-range-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.date-range-separator,
+.number-range-separator {
+    color: #6c757d;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.checkbox-group,
+.radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+}
+
+/* 日期快捷选择按钮 */
+.date-input-wrapper,
+.date-range-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.date-quick-select-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.date-quick-btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    line-height: 1.2;
+}
+
+/* 多选下拉框 */
+.multiselect-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.multiselect-display {
+    min-height: calc(1.5em + 0.5rem + 2px);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.multiselect-display:hover {
+    border-color: #adb5bd;
+}
+
+.multiselect-placeholder {
+    color: #6c757d;
+}
+
+.multiselect-options {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 0.25rem;
+}
+
+.multiselect-wrapper.active .multiselect-options {
+    display: block;
+}
+
+.multiselect-options .form-check {
+    padding: 0.5rem;
+    margin: 0;
+}
+
+.multiselect-options .form-check:hover {
+    background: #f8f9fa;
+}
+
+/* 筛选标签容器 */
+.filter-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 0.25rem;
+}
+
+.filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background: #e9ecef;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.filter-tag-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+.filter-tag-value {
+    color: #212529;
+}
+
+.filter-tag-remove {
+    cursor: pointer;
+    color: #6c757d;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+    border: none;
+    background: none;
+}
+
+.filter-tag-remove:hover {
+    color: #dc3545;
+}
+
+.filter-field-clear {
+    cursor: pointer;
+    z-index: 10;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.filter-field-clear:hover {
+    opacity: 1 !important;
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.filter-field-clear::before {
+    font-size: 10px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .filter-fields-row {
+        flex-direction: column;
+    }
+    
+    .filter-field {
+        min-width: 100%;
+    }
+    
+    .filter-panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .filter-panel-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+</style>
+
+<!-- 筛选面板脚本 -->
+<script>
+(function() {
+    'use strict';
+    
+    const filterId = '{{ filter_config.id }}';
+    const config = {
+        method: '{{ filter_config.method|default:"form" }}',
+        submitUrl: '{{ filter_config.submit_url|default:"" }}',
+        autoSubmit: {% if filter_config.auto_submit == None %}true{% else %}{{ filter_config.auto_submit|yesno:"true,false" }}{% endif %},
+        debounceMs: {{ filter_config.debounce_ms|default:300 }},
+        collapsible: {% if filter_config.collapsible == None %}true{% else %}{{ filter_config.collapsible|yesno:"true,false" }}{% endif %}
+    };
+    
+    // 防抖定时器
+    let debounceTimer = null;
+    
+    // 防抖函数
+    function debounce(func, delay) {
+        return function(...args) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+    
+    // 初始化筛选面板
+    function initFilterPanel() {
+        const form = document.getElementById('filterForm_' + filterId);
+        if (!form) return;
+        
+        // 从URL读取初始值
+        initFromURL();
+        
+        // 初始化折叠功能
+        if (config.collapsible) {
+            initCollapsible();
+        }
+        
+        // 初始化重置功能
+        initReset();
+        
+        // 初始化自动提交
+        if (config.autoSubmit) {
+            initAutoSubmit();
+        }
+        
+        // 初始化手动提交（表单模式）
+        if (config.method === 'form') {
+            initFormSubmit();
+        }
+        
+        // 初始化单个字段清除功能
+        initFieldClear();
+        
+        // 初始化日期快捷选择
+        initDateQuickSelect();
+        
+        // 初始化多选下拉框
+        initMultiselect();
+        
+        // 初始化筛选标签显示
+        {% if filter_config.show_filter_tags %}
+        if (true) {
+            initFilterTags();
+        }
+        {% endif %}
+        
+        // 初始化字段依赖关系
+        initFieldDependencies();
+        
+        // 初始化筛选预设
+        {% if filter_config.enable_presets %}
+        if (true) {
+            initFilterPresets();
+        }
+        {% endif %}
+        
+        // 初始化筛选历史
+        {% if filter_config.enable_history %}
+        if (true) {
+            initFilterHistory();
+        }
+        {% endif %}
+    }
+    
+    // 从URL读取初始值
+    function initFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const form = document.getElementById('filterForm_' + filterId);
+        if (!form) return;
+        
+        // 遍历所有筛选字段
+        const inputs = form.querySelectorAll('.filter-input, select.filter-input');
+        inputs.forEach(input => {
+            const name = input.name;
+            if (urlParams.has(name)) {
+                if (input.type === 'checkbox') {
+                    // 复选框：检查值是否在URL参数中
+                    const values = urlParams.getAll(name);
+                    input.checked = values.includes(input.value);
+                } else {
+                    input.value = urlParams.get(name);
+                }
+            }
+        });
+    }
+    
+    // 初始化单个字段清除功能
+    function initFieldClear() {
+        const form = document.getElementById('filterForm_' + filterId);
+        if (!form) return;
+        
+        const fields = form.querySelectorAll('.filter-field');
+        fields.forEach(field => {
+            // 跳过复选框组和单选按钮组（它们有自己的UI）
+            if (field.querySelector('.checkbox-group, .radio-group')) {
+                return;
+            }
+            
+            const input = field.querySelector('.filter-input, select.filter-input');
+            if (!input) return;
+            
+            const inputWrapper = input.parentElement;
+            const isRangeInput = inputWrapper.classList.contains('date-range-inputs') || 
+                                inputWrapper.classList.contains('number-range-inputs');
+            
+            // 为每个字段添加清除按钮
+            const clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.className = 'btn-close btn-close-sm filter-field-clear';
+            clearBtn.title = '清除';
+            clearBtn.setAttribute('aria-label', '清除');
+            
+            if (isRangeInput) {
+                // 范围输入：添加到容器右侧
+                inputWrapper.style.position = 'relative';
+                clearBtn.style.cssText = 'position: absolute; right: 4px; top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity 0.2s; pointer-events: none;';
+                inputWrapper.appendChild(clearBtn);
+                inputWrapper.style.paddingRight = '24px';
+            } else {
+                // 单个输入：包装input元素
+                if (input.tagName === 'SELECT' || input.type === 'text' || input.type === 'number' || input.type === 'date') {
+                    const wrapper = document.createElement('div');
+                    wrapper.style.position = 'relative';
+                    wrapper.style.display = 'inline-block';
+                    wrapper.style.width = '100%';
+                    input.parentNode.insertBefore(wrapper, input);
+                    wrapper.appendChild(input);
+                    wrapper.appendChild(clearBtn);
+                    clearBtn.style.cssText = 'position: absolute; right: 8px; top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 10;';
+                    if (input.tagName === 'SELECT') {
+                        input.style.paddingRight = '32px';
+                    } else {
+                        input.style.paddingRight = '32px';
+                    }
+                }
+            }
+            
+            // 显示/隐藏清除按钮
+            function updateClearButton() {
+                let hasValue = false;
+                if (isRangeInput) {
+                    const inputs = inputWrapper.querySelectorAll('input');
+                    hasValue = Array.from(inputs).some(inp => inp.value);
+                } else if (input.tagName === 'SELECT') {
+                    hasValue = input.value && input.value !== 'all' && input.value !== '';
+                } else {
+                    hasValue = input.value && input.value !== '';
+                }
+                
+                if (clearBtn) {
+                    clearBtn.style.opacity = hasValue ? '1' : '0';
+                    clearBtn.style.pointerEvents = hasValue ? 'auto' : 'none';
+                }
+            }
+            
+            // 监听输入变化
+            if (isRangeInput) {
+                const inputs = inputWrapper.querySelectorAll('input');
+                inputs.forEach(inp => {
+                    inp.addEventListener('input', updateClearButton);
+                    inp.addEventListener('change', updateClearButton);
+                });
+            } else {
+                input.addEventListener('input', updateClearButton);
+                input.addEventListener('change', updateClearButton);
+            }
+            
+            // 清除按钮点击事件
+            clearBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (isRangeInput) {
+                    const inputs = inputWrapper.querySelectorAll('input');
+                    inputs.forEach(inp => inp.value = '');
+                } else if (input.tagName === 'SELECT') {
+                    const allOption = input.querySelector('option[value="all"]');
+                    input.value = allOption ? 'all' : '';
+                } else {
+                    input.value = '';
+                }
+                
+                // 触发change事件以确保其他监听器被通知
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                
+                updateClearButton();
+                
+                // 触发筛选
+                if (config.autoSubmit) {
+                    submitFilter();
+                }
+            });
+            
+            // 初始更新
+            updateClearButton();
+        });
+    }
+    
+    // 初始化折叠功能
+    function initCollapsible() {
+        const toggleBtn = document.getElementById('filterToggle_' + filterId);
+        const body = document.getElementById('filterPanelBody_' + filterId);
+        if (!toggleBtn || !body) return;
+        
+        toggleBtn.addEventListener('click', function() {
+            const isCollapsed = body.classList.contains('collapsed');
+            body.classList.toggle('collapsed');
+            
+            const icon = toggleBtn.querySelector('i');
+            if (icon) {
+                icon.className = 'bi bi-chevron-' + (isCollapsed ? 'up' : 'down');
+            }
+            
+            toggleBtn.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
+        });
+    }
+    
+    // 初始化重置功能
+    function initReset() {
+        const resetBtn = document.getElementById('resetFilter_' + filterId);
+        if (!resetBtn) return;
+        
+        resetBtn.addEventListener('click', function() {
+            const form = document.getElementById('filterForm_' + filterId);
+            if (!form) return;
+            
+            // 重置所有表单字段
+            form.reset();
+            
+            // 触发筛选事件（使用重置后的值）
+            submitFilter();
+        });
+    }
+    
+    // 初始化自动提交
+    function initAutoSubmit() {
+        const form = document.getElementById('filterForm_' + filterId);
+        if (!form) return;
+        
+        // 使用防抖函数
+        const debouncedSubmit = debounce(submitFilter, config.debounceMs);
+        
+        const inputs = form.querySelectorAll('.filter-input, select.filter-input');
+        inputs.forEach(input => {
+            // 对于文本和数字输入框，监听input事件
+            if (input.type === 'text' || input.type === 'number' || input.type === 'date') {
+                input.addEventListener('input', debouncedSubmit);
+            }
+            
+            // 对于其他类型，监听change事件
+            input.addEventListener('change', debouncedSubmit);
+        });
+    }
+    
+    // 初始化表单提交
+    function initFormSubmit() {
+        const submitBtn = document.getElementById('submitFilter_' + filterId);
+        if (!submitBtn) return;
+        
+        submitBtn.addEventListener('click', function() {
+            const form = document.getElementById('filterForm_' + filterId);
+            if (form) {
+                form.submit();
+            }
+        });
+    }
+    
+    // 提交筛选
+    function submitFilter() {
+        const form = document.getElementById('filterForm_' + filterId);
+        if (!form) return;
+        
+        // 收集筛选数据
+        const filterData = collectFilterData();
+        
+        // 触发筛选事件
+        if (window.filterPanelEvents && window.filterPanelEvents.onFilter) {
+            window.filterPanelEvents.onFilter(filterId, filterData);
+        }
+        
+        // AJAX模式：发送AJAX请求
+        if (config.method === 'ajax' && config.submitUrl) {
+            submitAjaxFilter(filterData);
+        }
+    }
+    
+    // 收集筛选数据
+    function collectFilterData() {
+        const form = document.getElementById('filterForm_' + filterId);
+        if (!form) return {};
+        
+        const formData = new FormData(form);
+        const data = {};
+        
+        // FormData已经正确处理了所有字段，包括复选框（同名的会自动成为数组）
+        for (const [key, value] of formData.entries()) {
+            if (data[key]) {
+                // 如果已存在，转换为数组（处理复选框等多值情况）
+                if (Array.isArray(data[key])) {
+                    data[key].push(value);
+                } else {
+                    data[key] = [data[key], value];
+                }
+            } else {
+                data[key] = value;
+            }
+        }
+        
+        // 处理未选中的复选框和单选按钮（返回空值或'all'）
+        const selects = form.querySelectorAll('select.filter-input');
+        selects.forEach(select => {
+            const key = select.name;
+            if (!data[key] && select.value === 'all') {
+                // 如果选择的是"全部"，可以选择不传递该参数
+                // 这里保留，如果需要可以删除
+            }
+        });
+        
+        // 过滤空值（可选）
+        const cleanedData = {};
+        for (const [key, value] of Object.entries(data)) {
+            if (value !== '' && value !== null && value !== undefined) {
+                if (Array.isArray(value) && value.length > 0) {
+                    cleanedData[key] = value;
+                } else if (!Array.isArray(value)) {
+                    cleanedData[key] = value;
+                }
+            }
+        }
+        
+        return cleanedData;
+    }
+    
+    // AJAX提交筛选
+    function submitAjaxFilter(filterData) {
+        if (!config.submitUrl) return;
+        
+        // 显示加载状态
+        showLoading();
+        
+        // 构建请求参数（正确处理数组）
+        const params = new URLSearchParams();
+        for (const [key, value] of Object.entries(filterData)) {
+            if (Array.isArray(value)) {
+                // 数组类型：每个值单独添加
+                value.forEach(v => {
+                    if (v !== '' && v !== null && v !== undefined) {
+                        params.append(key, v);
+                    }
+                });
+            } else {
+                // 单个值
+                if (value !== '' && value !== null && value !== undefined) {
+                    params.append(key, value);
+                }
+            }
+        }
+        
+        // 发送AJAX请求
+        const url = config.submitUrl + (config.submitUrl.includes('?') ? '&' : '?') + params.toString();
+        
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            hideLoading();
+            
+            // 触发数据更新事件
+            if (window.filterPanelEvents && window.filterPanelEvents.onDataUpdate) {
+                window.filterPanelEvents.onDataUpdate(filterId, data);
+            }
+        })
+        .catch(error => {
+            console.error('筛选请求失败:', error);
+            hideLoading();
+            
+            // 触发错误事件
+            if (window.filterPanelEvents && window.filterPanelEvents.onError) {
+                window.filterPanelEvents.onError(filterId, error);
+            }
+        });
+    }
+    
+    // 显示加载状态
+    function showLoading() {
+        const container = document.getElementById('filterPanelContainer_' + filterId);
+        if (!container) return;
+        
+        let loading = container.querySelector('.filter-panel-loading');
+        if (!loading) {
+            loading = document.createElement('div');
+            loading.className = 'filter-panel-loading';
+            loading.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">加载中...</span></div>';
+            container.appendChild(loading);
+        }
+        loading.style.display = 'flex';
+    }
+    
+    // 隐藏加载状态
+    function hideLoading() {
+        const container = document.getElementById('filterPanelContainer_' + filterId);
+        if (!container) return;
+        
+        const loading = container.querySelector('.filter-panel-loading');
+        if (loading) {
+            loading.style.display = 'none';
+        }
+    }
+    
+    // 初始化日期快捷选择
+    function initDateQuickSelect() {
+        const form = document.getElementById('filterForm_' + filterId);
+        if (!form) return;
+        
+        const quickBtns = form.querySelectorAll('.date-quick-btn');
+        quickBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const quickValue = this.getAttribute('data-quick');
+                const targetStart = this.getAttribute('data-target-start');
+                const targetEnd = this.getAttribute('data-target-end');
+                const target = this.getAttribute('data-target');
+                
+                const today = new Date();
+                let startDate = null;
+                let endDate = null;
+                
+                // 计算日期
+                switch(quickValue) {
+                    case 'today':
+                        startDate = endDate = today;
+                        break;
+                    case 'yesterday':
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        startDate = endDate = yesterday;
+                        break;
+                    case 'this_week':
+                        const weekStart = new Date(today);
+                        weekStart.setDate(today.getDate() - today.getDay());
+                        startDate = weekStart;
+                        endDate = today;
+                        break;
+                    case 'last_week':
+                        const lastWeekEnd = new Date(today);
+                        lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
+                        const lastWeekStart = new Date(lastWeekEnd);
+                        lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
+                        startDate = lastWeekStart;
+                        endDate = lastWeekEnd;
+                        break;
+                    case 'this_month':
+                        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                        endDate = today;
+                        break;
+                    case 'last_month':
+                        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+                        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        startDate = lastMonthStart;
+                        endDate = lastMonthEnd;
+                        break;
+                    case 'this_year':
+                        startDate = new Date(today.getFullYear(), 0, 1);
+                        endDate = today;
+                        break;
+                    case 'last_year':
+                        startDate = new Date(today.getFullYear() - 1, 0, 1);
+                        endDate = new Date(today.getFullYear() - 1, 11, 31);
+                        break;
+                }
+                
+                // 格式化日期为 YYYY-MM-DD
+                function formatDate(date) {
+                    if (!date) return '';
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
+                
+                // 设置日期
+                if (targetStart && targetEnd) {
+                    // 日期范围
+                    const startInput = document.getElementById(targetStart);
+                    const endInput = document.getElementById(targetEnd);
+                    if (startInput) startInput.value = formatDate(startDate);
+                    if (endInput) endInput.value = formatDate(endDate);
+                } else if (target) {
+                    // 单个日期
+                    const input = document.getElementById(target);
+                    if (input) input.value = formatDate(startDate);
+                }
+                
+                // 触发筛选
+                if (config.autoSubmit) {
+                    submitFilter();
+                }
+            });
+        });
+    }
+    
+    // 初始化多选下拉框
+    function initMultiselect() {
+        const form = document.getElementById('filterForm_' + filterId);
+        if (!form) return;
+        
+        const multiselects = form.querySelectorAll('.multiselect-wrapper');
+        multiselects.forEach(wrapper => {
+            const display = wrapper.querySelector('.multiselect-display');
+            const options = wrapper.querySelector('.multiselect-options');
+            const checkboxes = options.querySelectorAll('.multiselect-checkbox');
+            
+            if (!display || !options) return;
+            
+            // 更新显示文本
+            function updateDisplay() {
+                const selected = Array.from(checkboxes).filter(cb => cb.checked);
+                const placeholder = display.querySelector('.multiselect-placeholder');
+                
+                if (selected.length === 0) {
+                    if (placeholder) placeholder.style.display = 'inline';
+                    display.innerHTML = '<span class="multiselect-placeholder">请选择...</span>';
+                } else {
+                    if (placeholder) placeholder.style.display = 'none';
+                    const labels = selected.map(cb => {
+                        const label = options.querySelector(`label[for="${cb.id}"]`);
+                        return label ? label.textContent : cb.value;
+                    });
+                    display.innerHTML = labels.join(', ') + (selected.length > 1 ? ` (${selected.length})` : '');
+                }
+            }
+            
+            // 点击显示区域切换下拉
+            display.addEventListener('click', function(e) {
+                e.stopPropagation();
+                wrapper.classList.toggle('active');
+            });
+            
+            // 点击外部关闭下拉
+            document.addEventListener('click', function(e) {
+                if (!wrapper.contains(e.target)) {
+                    wrapper.classList.remove('active');
+                }
+            });
+            
+            // 复选框变化时更新显示
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    updateDisplay();
+                    if (config.autoSubmit) {
+                        submitFilter();
+                    }
+                });
+            });
+            
+            // 初始更新
+            updateDisplay();
+        });
+    }
+    
+    // 初始化筛选标签显示
+    function initFilterTags() {
+        const tagsContainer = document.getElementById('filterTags_' + filterId);
+        if (!tagsContainer) return;
+        
+        function updateFilterTags() {
+            const form = document.getElementById('filterForm_' + filterId);
+            if (!form) return;
+            
+            const filterData = collectFilterData();
+            tagsContainer.innerHTML = '';
+            
+            // 获取所有筛选字段配置
+            const fields = form.querySelectorAll('.filter-field[data-filter-key]');
+            const fieldConfig = {};
+            fields.forEach(field => {
+                const key = field.getAttribute('data-filter-key');
+                const label = field.getAttribute('data-filter-label');
+                fieldConfig[key] = label;
+            });
+            
+            // 生成标签
+            for (const [key, value] of Object.entries(filterData)) {
+                if (!value || (Array.isArray(value) && value.length === 0)) continue;
+                
+                const label = fieldConfig[key] || key;
+                const values = Array.isArray(value) ? value : [value];
+                
+                values.forEach(val => {
+                    if (!val || val === 'all') return;
+                    
+                    const tag = document.createElement('div');
+                    tag.className = 'filter-tag';
+                    tag.innerHTML = `
+                        <span class="filter-tag-label">${label}:</span>
+                        <span class="filter-tag-value">${val}</span>
+                        <button type="button" class="filter-tag-remove" data-key="${key}" data-value="${val}">&times;</button>
+                    `;
+                    
+                    // 移除标签
+                    tag.querySelector('.filter-tag-remove').addEventListener('click', function() {
+                        const keyToRemove = this.getAttribute('data-key');
+                        const valToRemove = this.getAttribute('data-value');
+                        
+                        const input = form.querySelector(`[name="${keyToRemove}"]`);
+                        if (input) {
+                            if (input.type === 'checkbox' || input.tagName === 'SELECT' && input.multiple) {
+                                const checkbox = Array.from(form.querySelectorAll(`[name="${keyToRemove}"]`))
+                                    .find(inp => inp.value === valToRemove);
+                                if (checkbox) checkbox.checked = false;
+                            } else {
+                                input.value = input.type === 'select-one' && input.querySelector('option[value="all"]') ? 'all' : '';
+                            }
+                            input.dispatchEvent(new Event('change', { bubbles: true }));
+                            if (config.autoSubmit) submitFilter();
+                        }
+                    });
+                    
+                    tagsContainer.appendChild(tag);
+                });
+            }
+        }
+        
+        // 监听表单变化
+        const form = document.getElementById('filterForm_' + filterId);
+        if (form) {
+            form.addEventListener('change', updateFilterTags);
+            form.addEventListener('input', debounce(updateFilterTags, 300));
+        }
+        
+        // 初始更新
+        updateFilterTags();
+    }
+    
+    // 初始化字段依赖关系
+    function initFieldDependencies() {
+        const form = document.getElementById('filterForm_' + filterId);
+        if (!form) return;
+        
+        // 字段依赖配置（从data属性读取）
+        const fields = form.querySelectorAll('.filter-field[data-filter-key]');
+        const dependencies = {};
+        
+        fields.forEach(field => {
+            const key = field.getAttribute('data-filter-key');
+            const dependsOn = field.getAttribute('data-depends-on');
+            const dependsValue = field.getAttribute('data-depends-value');
+            
+            if (dependsOn) {
+                if (!dependencies[dependsOn]) {
+                    dependencies[dependsOn] = [];
+                }
+                dependencies[dependsOn].push({
+                    targetKey: key,
+                    targetField: field,
+                    dependsValue: dependsValue ? dependsValue.split(',') : null
+                });
+            }
+        });
+        
+        // 为每个依赖源字段添加监听器
+        for (const [sourceKey, targets] of Object.entries(dependencies)) {
+            const sourceInputs = form.querySelectorAll(`[name="${sourceKey}"]`);
+            
+            sourceInputs.forEach(sourceInput => {
+                const updateDependentFields = function() {
+                    const sourceValue = sourceInput.value || (sourceInput.checked ? sourceInput.value : '');
+                    
+                    targets.forEach(({ targetField, dependsValue }) => {
+                        if (!dependsValue || dependsValue.includes(sourceValue) || dependsValue.includes('*')) {
+                            // 显示字段
+                            targetField.style.display = '';
+                        } else {
+                            // 隐藏字段并清空值
+                            targetField.style.display = 'none';
+                            const targetInputs = targetField.querySelectorAll('input, select');
+                            targetInputs.forEach(inp => {
+                                if (inp.type === 'checkbox' || inp.type === 'radio') {
+                                    inp.checked = false;
+                                } else if (inp.tagName === 'SELECT') {
+                                    const allOption = inp.querySelector('option[value="all"]');
+                                    inp.value = allOption ? 'all' : '';
+                                } else {
+                                    inp.value = '';
+                                }
+                            });
+                        }
+                    });
+                };
+                
+                sourceInput.addEventListener('change', updateDependentFields);
+                if (sourceInput.type === 'text' || sourceInput.type === 'number') {
+                    sourceInput.addEventListener('input', debounce(updateDependentFields, 300));
+                }
+                
+                // 初始执行一次
+                updateDependentFields();
+            });
+        }
+    }
+    
+    // 暴露API到全局
+    if (!window.filterPanels) {
+        window.filterPanels = {};
+    }
+    
+    window.filterPanels[filterId] = {
+        getFilterData: collectFilterData,
+        submit: submitFilter,
+        reset: function() {
+            const resetBtn = document.getElementById('resetFilter_' + filterId);
+            if (resetBtn) resetBtn.click();
+        },
+        setFilterData: function(data) {
+            const form = document.getElementById('filterForm_' + filterId);
+            if (!form) return;
+            
+            for (const [key, value] of Object.entries(data)) {
+                const inputs = form.querySelectorAll(`[name="${key}"]`);
+                inputs.forEach(input => {
+                    if (input.type === 'checkbox') {
+                        input.checked = Array.isArray(value) ? value.includes(input.value) : value === input.value;
+                    } else if (input.type === 'radio') {
+                        input.checked = input.value === value;
+                    } else {
+                        input.value = Array.isArray(value) ? value[0] : value;
+                    }
+                });
+            }
+            
+            // 触发筛选
+            if (config.autoSubmit) {
+                submitFilter();
+            }
+        },
+        updateURL: function(replaceState = false) {
+            const filterData = collectFilterData();
+            const params = new URLSearchParams();
+            
+            for (const [key, value] of Object.entries(filterData)) {
+                if (Array.isArray(value)) {
+                    value.forEach(v => params.append(key, v));
+                } else {
+                    params.append(key, value);
+                }
+            }
+            
+            const newURL = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+            if (replaceState) {
+                window.history.replaceState({}, '', newURL);
+            } else {
+                window.history.pushState({}, '', newURL);
+            }
+        }
+    };
+    
+    // DOM加载完成后初始化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFilterPanel);
+    } else {
+        initFilterPanel();
+    }
+})();
+</script>
+
+<!-- 加载状态样式 -->
+<style>
+.filter-panel-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    border-radius: 0.375rem;
+}
+
+.filter-panel-container {
+    position: relative;
+}
+</style>
+
+{% block filter_panel_custom_content %}{% endblock %}
+
+{% if filter_config.enable_field_settings %}
+<!-- 筛选字段设置模态框 -->
+{% include 'shared/modals/filter_fields_settings_modal.html' %}
+
+<!-- 筛选字段设置脚本 -->
+<script src="{% static 'js/filter-fields-settings.js' %}"></script>
+<script>
+(function() {
+    'use strict';
+    
+    const filterId = '{{ filter_config.id }}';
+    const config = {
+        storageKey: 'filter_fields_settings_{{ filter_config.id }}',
+        containerId: 'filterFieldsContainer_' + filterId,
+        modalId: 'filterFieldsSettingsModal',
+        listId: 'filterFieldsList',
+        settingsBtnId: 'settingsFilterFieldsBtn_' + filterId,
+        saveBtnId: 'saveFilterFieldsSettings',
+        resetBtnId: 'resetFilterFieldsSettings',
+        maxEnabledFields: {{ filter_config.max_enabled_fields|default:10 }},
+        defaultEnabledFields: {{ filter_config.default_enabled_fields|default:"[]"|safe }},
+        requiredFields: {{ filter_config.required_fields|default:"[]"|safe }}
+    };
+    
+    // 扩展FilterFieldsSettings类以支持.filter-field
+    function extendFilterFieldsSettings() {
+        if (typeof window.FilterFieldsSettings === 'undefined') {
+            return;
+        }
+        
+        // 保存原始方法
+        const originalInitializeFilterFields = window.FilterFieldsSettings.prototype.initializeFilterFields;
+        const originalApplySettings = window.FilterFieldsSettings.prototype.applySettings;
+        
+        // 扩展initializeFilterFields以支持.filter-field
+        window.FilterFieldsSettings.prototype.initializeFilterFields = function() {
+            const container = document.getElementById(this.config.containerId);
+            if (!container) {
+                return originalInitializeFilterFields.call(this);
+            }
+            
+            const fields = [];
+            const processedKeys = new Set();
+            
+            // 方式1: 查找.filter-field[data-filter-key]（筛选面板格式）
+            const filterFields = container.querySelectorAll('.filter-field[data-filter-key]');
+            filterFields.forEach(field => {
+                const rawKey = field.getAttribute('data-filter-key');
+                if (rawKey && !processedKeys.has(rawKey)) {
+                    const safeKey = this.sanitizeId ? this.sanitizeId(String(rawKey).trim()) : String(rawKey).trim();
+                    if (!safeKey) return;
+                    processedKeys.add(safeKey);
+                    
+                    const label = field.getAttribute('data-filter-label') || 
+                                 (field.querySelector('.filter-label')?.textContent.replace(/[:：]/g, '').trim()) || 
+                                 safeKey;
+                    const required = field.getAttribute('data-filter-required') === 'true' || 
+                                    (this.config.requiredFields && this.config.requiredFields.includes(safeKey));
+                    
+                    const enabled = this.config.defaultEnabledFields && this.config.defaultEnabledFields.length > 0
+                        ? this.config.defaultEnabledFields.includes(safeKey)
+                        : true;
+                    
+                    fields.push({
+                        key: safeKey,
+                        label: label,
+                        enabled: required ? true : enabled,
+                        required: required
+                    });
+                }
+            });
+            
+            // 如果有.filter-field字段，直接返回
+            if (fields.length > 0) {
+                return fields;
+            }
+            
+            // 否则使用原始方法
+            return originalInitializeFilterFields.call(this);
+        };
+        
+        // 扩展applySettings以支持.filter-field
+        window.FilterFieldsSettings.prototype.applySettings = function() {
+            if (this.isApplyingSettings) {
+                return;
+            }
+            
+            this.isApplyingSettings = true;
+            
+            try {
+                const container = document.getElementById(this.config.containerId);
+                if (!container) {
+                    return;
+                }
+                
+                // 检查是否有.filter-field格式
+                const filterFields = container.querySelectorAll('.filter-field[data-filter-key]');
+                if (filterFields.length > 0) {
+                    // 使用.filter-field格式
+                    filterFields.forEach(fieldEl => {
+                        const key = fieldEl.getAttribute('data-filter-key');
+                        const field = this.filterFields.find(f => f.key === key);
+                        
+                        if (field) {
+                            const required = field.required || 
+                                           (this.config.requiredFields && this.config.requiredFields.includes(key));
+                            if (required || field.enabled) {
+                                fieldEl.style.display = '';
+                            } else {
+                                fieldEl.style.display = 'none';
+                            }
+                        }
+                    });
+                } else {
+                    // 使用原始方法
+                    originalApplySettings.call(this);
+                }
+            } finally {
+                this.isApplyingSettings = false;
+            }
+        };
+    }
+    
+    // 初始化筛选字段设置
+    function initFilterFieldsSettings() {
+        // 扩展FilterFieldsSettings类
+        extendFilterFieldsSettings();
+        
+        if (typeof window.FilterFieldsSettings === 'undefined') {
+            console.warn('FilterFieldsSettings类未找到，筛选字段设置功能将不可用');
+            return;
+        }
+        
+        try {
+            const instance = new window.FilterFieldsSettings(config);
+            instance.init();
+            
+            // 保存实例到全局
+            if (!window.filterPanelFieldSettings) {
+                window.filterPanelFieldSettings = {};
+            }
+            window.filterPanelFieldSettings[filterId] = instance;
+        } catch (error) {
+            console.error('初始化筛选字段设置失败:', error);
+        }
+    }
+    
+    // DOM加载完成后初始化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initFilterFieldsSettings, 300);
+        });
+    } else {
+        setTimeout(initFilterFieldsSettings, 300);
+    }
+})();
+</script>
+{% endif %}
+

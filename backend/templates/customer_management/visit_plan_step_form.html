@@ -1,0 +1,512 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    .step-indicator::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e0e0e0;
+        z-index: 0;
+    }
+    .step-item {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e0e0e0;
+        color: #666;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.5rem;
+        font-weight: bold;
+        border: 3px solid #fff;
+    }
+    .step-item.active .step-number {
+        background: #0d6efd;
+        color: #fff;
+    }
+    .step-item.completed .step-number {
+        background: #198754;
+        color: #fff;
+    }
+    .step-label {
+        font-size: 0.875rem;
+        color: #666;
+    }
+    .step-item.active .step-label {
+        color: #0d6efd;
+        font-weight: bold;
+    }
+    .step-item.completed .step-label {
+        color: #198754;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <div class="container-fluid py-4">
+        <!-- 步骤指示器 -->
+        <div class="step-indicator">
+            <div class="step-item {% if step >= 1 %}completed{% endif %} {% if step == 1 %}active{% endif %}">
+                <div class="step-number">1</div>
+                <div class="step-label">创建计划</div>
+            </div>
+            <div class="step-item {% if step >= 2 %}completed{% endif %} {% if step == 2 %}active{% endif %}">
+                <div class="step-number">2</div>
+                <div class="step-label">沟通清单准备</div>
+            </div>
+            <div class="step-item {% if step >= 3 %}completed{% endif %} {% if step == 3 %}active{% endif %}">
+                <div class="step-number">3</div>
+                <div class="step-label">拜访定位打卡</div>
+            </div>
+            <div class="step-item {% if step >= 4 %}completed{% endif %} {% if step == 4 %}active{% endif %}">
+                <div class="step-number">4</div>
+                <div class="step-label">拜访结果复盘</div>
+            </div>
+        </div>
+
+        <div class="info-card info-card-compact">
+            <div class="info-card-header">
+                <h5 class="info-card-title">{{ page_title }}</h5>
+            </div>
+            <div class="info-card-body">
+                {% if visit_plan %}
+                <div class="alert alert-info mb-3">
+                    <strong>客户：</strong>{{ visit_plan.client.name }}
+                </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% if step == 1 %}
+                    <!-- 第一步：创建计划 -->
+                    <div class="info-section">
+                        <div class="info-grid info-grid-2">
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.client.label }}</label>
+                                {{ form.client }}
+                                {% if form.client.errors %}
+                                <div class="text-danger small">{{ form.client.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.plan_date.label }}</label>
+                                {{ form.plan_date }}
+                                {% if form.plan_date.errors %}
+                                <div class="text-danger small">{{ form.plan_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">{{ form.location.label }}</label>
+                                {{ form.location }}
+                                <small class="text-muted">将根据客户办公地址自动填充</small>
+                            </div>
+                            <div class="info-item" style="grid-column: 1 / -1;">
+                                <label class="info-label">{{ form.participants.label }}</label>
+                                {{ form.participants }}
+                                {% if form.participants.errors %}
+                                <div class="text-danger small">{{ form.participants.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="info-item" style="grid-column: 1 / -1;">
+                                <label class="info-label">{{ form.related_opportunity.label }}</label>
+                                {{ form.related_opportunity }}
+                            </div>
+                        </div>
+                    </div>
+                    {% elif step == 2 %}
+                    <!-- 第二步：沟通清单准备 -->
+                    <div class="info-section">
+                        {% if questions_by_part %}
+                        <!-- 显示沟通清单问题 -->
+                        {% for part, questions in questions_by_part.items %}
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    {% if part == 'part1' %}第一部分：客户与项目背景信息
+                                    {% elif part == 'part2' %}第二部分：沟通目标与内容准备
+                                    {% elif part == 'part3' %}第三部分：沟通策略与风险预案
+                                    {% elif part == 'part4' %}第四部分：后勤与状态
+                                    {% else %}{{ part }}{% endif %}
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                {% for question in questions %}
+                                <div class="mb-3 pb-3 border-bottom">
+                                    <div class="d-flex align-items-start mb-2">
+                                        <span class="badge bg-secondary me-2">{{ forloop.counter }}</span>
+                                        <label class="form-label mb-0 flex-grow-1">{{ question.question_text }}</label>
+                                    </div>
+                                    <div class="ms-4">
+                                        {% with answer_data=existing_answers|default_if_none:{}|dictsort:question.id|first|default_if_none:{} %}
+                                        {% with current_answer=answer_data.answer|default:'unknown' %}
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="question_{{ question.id }}" id="question_{{ question.id }}_yes" value="yes" {% if current_answer == 'yes' %}checked{% endif %}>
+                                            <label class="form-check-label" for="question_{{ question.id }}_yes">是</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="question_{{ question.id }}" id="question_{{ question.id }}_no" value="no" {% if current_answer == 'no' %}checked{% endif %}>
+                                            <label class="form-check-label" for="question_{{ question.id }}_no">否</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="question_{{ question.id }}" id="question_{{ question.id }}_unknown" value="unknown" {% if current_answer == 'unknown' or not answer_data %}checked{% endif %}>
+                                            <label class="form-check-label" for="question_{{ question.id }}_unknown">不清楚</label>
+                                        </div>
+                                        {% endwith %}
+                                        {% endwith %}
+                                    </div>
+                                    <div class="mt-2 ms-4">
+                                        <label class="form-label small">沟通前说明：</label>
+                                        {% with answer_data=existing_answers|default_if_none:{}|dictsort:question.id|first|default_if_none:{} %}
+                                        <textarea class="form-control form-control-sm" name="note_before_{{ question.id }}" rows="2" placeholder="请输入沟通前的准备说明（可选）">{{ answer_data.note_before|default:'' }}</textarea>
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- 保存沟通清单文本 -->
+                        <div class="mt-3">
+                            <label class="info-label info-label-required">{{ form.communication_checklist.label }}</label>
+                            {{ form.communication_checklist }}
+                            {% if form.communication_checklist.errors %}
+                            <div class="text-danger small">{{ form.communication_checklist.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">请总结沟通清单的关键要点和注意事项</small>
+                        </div>
+                        {% else %}
+                        <!-- 如果没有问题模板，显示原来的文本输入框 -->
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <label class="info-label info-label-required">{{ form.communication_checklist.label }}</label>
+                            {{ form.communication_checklist }}
+                            {% if form.communication_checklist.errors %}
+                            <div class="text-danger small">{{ form.communication_checklist.errors }}</div>
+                            {% endif %}
+                            <small class="text-muted">请详细列出拜访前需要准备的沟通要点、资料和注意事项</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% elif step == 3 %}
+                    <!-- 第三步：拜访定位打卡 -->
+                    <div class="info-section">
+                        <div class="info-grid info-grid-2">
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.checkin_time.label }}</label>
+                                {{ form.checkin_time }}
+                                {% if form.checkin_time.errors %}
+                                <div class="text-danger small">{{ form.checkin_time.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.checkin_location.label }}</label>
+                                {{ form.checkin_location }}
+                                {% if form.checkin_location.errors %}
+                                <div class="text-danger small">{{ form.checkin_location.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">{{ form.latitude.label }}</label>
+                                {{ form.latitude }}
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label">{{ form.longitude.label }}</label>
+                                {{ form.longitude }}
+                            </div>
+                            <div class="info-item" style="grid-column: 1 / -1;">
+                                <label class="info-label">{{ form.notes.label }}</label>
+                                {{ form.notes }}
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 定位功能 -->
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-outline-primary"data-click="handle_onclick_0">
+                            <i class="bi bi-geo-alt-fill"></i> 获取当前位置
+                        </button>
+                    </div>
+                    <div id="locationDisplay" class="mt-3 p-3 bg-light rounded"></div>
+                    {% elif step == 4 %}
+                    <!-- 第四步：拜访结果复盘 -->
+                    <div class="info-section">
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <label class="info-label info-label-required">{{ form.visit_result.label }}</label>
+                            {{ form.visit_result }}
+                            {% if form.visit_result.errors %}
+                            <div class="text-danger small">{{ form.visit_result.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <label class="info-label">{{ form.customer_feedback.label }}</label>
+                            {{ form.customer_feedback }}
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <label class="info-label">{{ form.key_points.label }}</label>
+                            {{ form.key_points }}
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <label class="info-label">{{ form.next_actions.label }}</label>
+                            {{ form.next_actions }}
+                        </div>
+                        <div class="info-item">
+                            <label class="info-label">{{ form.satisfaction_score.label }}</label>
+                            {{ form.satisfaction_score }}
+                        </div>
+                        <div class="info-item">
+                            <label class="info-label">{{ form.effectiveness.label }}</label>
+                            {{ form.effectiveness }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between gap-2 mt-4">
+                        <div>
+                            {% if visit_plan %}
+                            <a href="{% url 'business_pages:visit_plan_detail' visit_plan.id %}" class="btn btn-outline-secondary">返回详情</a>
+                            {% else %}
+                            <a href="{% url 'business_pages:customer_visit' %}" class="btn btn-outline-secondary">取消</a>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-primary">
+                                {% if step == 4 %}完成复盘{% else %}下一步{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if step == 1 %}
+<script>
+    // 安全的HTML设置函数
+    function setSafeHTML(element, html) {
+        if (!element) return;
+        // 如果内容不包含HTML标签，使用textContent
+        if (!/<[^>]+>/.test(html)) {
+            element.textContent = html;
+        } else {
+            // 对于包含HTML的内容，使用innerHTML（假设内容已清理）
+            // 在生产环境中，应该使用DOMPurify等库清理HTML
+            element.innerHTML = html;
+        }
+    }
+    
+    // 安全的文本设置函数（推荐使用）
+    function setSafeText(element, text) {
+        if (element) {
+            element.textContent = text;
+        }
+    }
+
+    // 根据客户选择自动填充拜访地点和更新商机选项
+    (function() {
+        const clientSelect = document.getElementById('id_client');
+        const locationInput = document.getElementById('id_location');
+        const opportunitySelect = document.getElementById('id_related_opportunity');
+        const clientsWithAddress = {{ clients_with_address_json|safe|default:"{}" }};
+        const clientsOpportunities = {{ clients_opportunities_json|safe|default:"{}" }};
+        
+        function updateLocation() {
+            if (clientSelect && locationInput) {
+                const clientId = clientSelect.value;
+                if (clientId && clientsWithAddress[clientId]) {
+                    locationInput.value = clientsWithAddress[clientId];
+                } else {
+                    locationInput.value = '';
+                }
+            }
+        }
+        
+        function updateOpportunities() {
+            if (clientSelect && opportunitySelect) {
+                const clientId = clientSelect.value;
+                
+                // 清空当前选项
+                opportunitySelect.textContent = '';
+                
+                // 添加默认选项
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = '-- 选择关联商机（可选） --';
+                opportunitySelect.appendChild(defaultOption);
+                
+                // 如果选择了客户，显示该客户的商机
+                if (clientId && clientsOpportunities[clientId]) {
+                    const opportunities = clientsOpportunities[clientId];
+                    opportunities.forEach(function(opp) {
+                        const option = document.createElement('option');
+                        option.value = opp.id;
+                        option.textContent = opp.name;
+                        opportunitySelect.appendChild(option);
+                    });
+                } else if (clientId) {
+                    // 如果选择了客户但没有商机，显示提示
+                    const noOption = document.createElement('option');
+                    noOption.value = '';
+                    noOption.textContent = '-- 该客户暂无可用商机 --';
+                    noOption.disabled = true;
+                    opportunitySelect.appendChild(noOption);
+                }
+            }
+        }
+        
+        if (clientSelect) {
+            // 监听客户选择变化
+            clientSelect.addEventListener('change', function() {
+                updateLocation();
+                updateOpportunities();
+            });
+            
+            // 初始化
+            updateLocation();
+            updateOpportunities();
+        }
+    })();
+</script>
+{% elif step == 2 %}
+<script>
+    // 定位功能（第二步：拜访定位打卡）
+    const hiddenLatitude = document.getElementById('id_latitude');
+    const hiddenLongitude = document.getElementById('id_longitude');
+    const hiddenLocationAddress = document.getElementById('id_checkin_location');
+    const locationDisplay = document.getElementById('locationDisplay');
+    
+    function updateLocationDisplay(latitude, longitude, address) {
+        if (!locationDisplay) return;
+        
+        if (latitude && longitude) {
+            const lat = parseFloat(latitude).toFixed(7);
+            const lon = parseFloat(longitude).toFixed(7);
+            
+            let displayHtml = `
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    <span class="fw-bold text-success">定位成功</span>
+                </div>
+            `;
+            
+            if (address) {
+                displayHtml += `
+                    <div class="mb-2">
+                        <div class="text-muted small">地址：</div>
+                        <div class="fw-semibold">${address}</div>
+                    </div>
+                `;
+            }
+            
+            displayHtml += `
+                <div>
+                    <div class="text-muted small">坐标：</div>
+                    <div class="font-monospace small">纬度 ${lat}，经度 ${lon}</div>
+                </div>
+            `;
+            
+            locationDisplay.innerHTML = displayHtml;
+        }
+    }
+    
+    async function getAddressFromCoordinates(latitude, longitude) {
+        try {
+            const response = await fetch(`/api/customer/regeocode/?latitude=${latitude}&longitude=${longitude}`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.formatted_address) {
+                hiddenLocationAddress.value = data.formatted_address;
+                hiddenLocationAddress.removeAttribute('readonly');
+                updateLocationDisplay(latitude, longitude, data.formatted_address);
+                return true;
+            } else {
+                updateLocationDisplay(latitude, longitude, null);
+                return false;
+            }
+        } catch (error) {
+            updateLocationDisplay(latitude, longitude, null);
+            return false;
+        }
+    }
+    
+    function getLocation() {
+        if (!navigator.geolocation) {
+            alert('浏览器不支持GPS定位');
+            return;
+        }
+        
+        // TODO: 使用DOMPurify清理HTML
+            locationDisplay.innerHTML = '<div class="text-muted"><i class="bi bi-hourglass-split"></i> 正在获取位置信息...</div>';
+        
+        navigator.geolocation.getCurrentPosition(
+            async function(position) {
+                const lat = position.coords.latitude.toFixed(7);
+                const lon = position.coords.longitude.toFixed(7);
+                
+                hiddenLatitude.value = lat;
+                hiddenLongitude.value = lon;
+                
+                await getAddressFromCoordinates(lat, lon);
+            },
+            function(error) {
+                // TODO: 使用DOMPurify清理HTML
+            locationDisplay.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle"></i> 定位失败：' + error.message + '</div>';
+            },
+            {
+                enableHighAccuracy: false,
+                timeout: 30000,
+                maximumAge: 60000
+            }
+        );
+    }
+    
+    // 检查是否已有位置信息
+    if (hiddenLatitude && hiddenLatitude.value && hiddenLongitude && hiddenLongitude.value) {
+        updateLocationDisplay(hiddenLatitude.value, hiddenLongitude.value, hiddenLocationAddress.value);
+    }
+
+    // 事件处理器: handle_onclick_0
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                getLocation()
+            });
+        }
+    });
+
+</script>
+{% endif %}
+{% endblock %}
+

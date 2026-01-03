@@ -1,0 +1,132 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}文档详情 - {{ document.document_name }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                {% if document.document_file %}
+                <a href="{{ document.document_file.url }}" class="btn btn-success" download>
+                    <i class="bi bi-download"></i> 下载文档
+                </a>
+                {% endif %}
+                {% if perms.litigation_management.document.manage %}
+                <a href="{% url 'litigation_pages:document_delete' document.id %}" class="btn btn-danger" onclick="return confirm('确定要删除此文档吗？')">
+                    <i class="bi bi-trash"></i> 删除
+                </a>
+                {% endif %}
+                <a href="{% url 'litigation_pages:document_list' case.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">文档名称</span>
+                    <span class="info-value"><strong>{{ document.document_name }}</strong></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">文档类型</span>
+                    <span class="info-value">
+                        <span class="badge bg-info">{{ document.get_document_type_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">关联案件</span>
+                    <span class="info-value">
+                        <a href="{% url 'litigation_pages:case_detail' case.id %}" class="text-decoration-none">
+                            {{ case.case_number }} - {{ case.case_name }}
+                        </a>
+                    </span>
+                </div>
+                {% if document.process %}
+                <div class="info-item">
+                    <span class="info-label">关联流程</span>
+                    <span class="info-value">
+                        <a href="{% url 'litigation_pages:process_detail' document.process.id %}" class="text-decoration-none">
+                            {{ document.process.get_process_type_display }}
+                        </a>
+                    </span>
+                </div>
+                {% endif %}
+                <div class="info-item">
+                    <span class="info-label">上传时间</span>
+                    <span class="info-value">{{ document.uploaded_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">上传人</span>
+                    <span class="info-value">
+                        {% if document.uploaded_by %}
+                        {{ document.uploaded_by.name|default:document.uploaded_by.username }}
+                        {% else %}
+                        <span class="text-muted">未知</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% if document.document_file %}
+                <div class="info-item">
+                    <span class="info-label">文件大小</span>
+                    <span class="info-value">
+                        {% if document.document_file.size %}
+                        {{ document.document_file.size|filesizeformat }}
+                        {% else %}
+                        <span class="text-muted">未知</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% endif %}
+                {% if document.description %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">文档描述</span>
+                    <span class="info-value">{{ document.description|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 文档预览 -->
+    {% if document.document_file %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">文档预览</h5>
+        </div>
+        <div class="info-card-body">
+            {% if document.document_file.name|slice:"-4:" == ".pdf" %}
+            <iframe src="{{ document.document_file.url }}" width="100%" height="600px" style="border: 1px solid #ddd; border-radius: 8px;"></iframe>
+            {% elif document.document_file.name|slice:"-4:" in ".jpg,.jpeg,.png,.gif" %}
+            <img src="{{ document.document_file.url }}" alt="{{ document.document_name }}" class="img-fluid" style="max-width: 100%; border-radius: 8px;">
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                此文件类型不支持在线预览，请<a href="{{ document.document_file.url }}" download>下载</a>后查看。
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

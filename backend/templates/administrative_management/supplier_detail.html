@@ -1,0 +1,202 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card-header {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    .info-card-title {
+        margin: 0;
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .info-grid {
+        display: grid;
+        gap: var(--spacing-md);
+    }
+    .info-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+    .info-label {
+        font-size: var(--font-size-sm);
+        color: var(--vh-text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: var(--font-size-base);
+        color: var(--vh-text);
+        font-weight: 500;
+    }
+    .rating-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+    }
+    .rating-A { background: #d1e7dd; color: #0f5132; }
+    .rating-B { background: #cfe2ff; color: #084298; }
+    .rating-C { background: #fff3cd; color: #856404; }
+    .rating-D { background: #f8d7da; color: #842029; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:supplier_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            <a href="{% url 'admin_pages:supplier_update' supplier.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">供应商编码</span>
+                    <span class="info-value"><code>{{ supplier.code }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">供应商名称</span>
+                    <span class="info-value">{{ supplier.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">评级</span>
+                    <span class="info-value">
+                        <span class="rating-badge rating-{{ supplier.rating }}">
+                            {{ supplier.get_rating_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        {% if supplier.is_active %}
+                        <span class="badge bg-success">启用</span>
+                        {% else %}
+                        <span class="badge bg-secondary">停用</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 联系信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">联系信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">联系人</span>
+                    <span class="info-value">{{ supplier.contact_person|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">联系电话</span>
+                    <span class="info-value">{{ supplier.contact_phone|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">联系邮箱</span>
+                    <span class="info-value">{{ supplier.contact_email|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">地址</span>
+                    <span class="info-value">{{ supplier.address|default:"-" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 财务信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">财务信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">税号</span>
+                    <span class="info-value">{{ supplier.tax_id|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">开户银行</span>
+                    <span class="info-value">{{ supplier.bank_name|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">银行账号</span>
+                    <span class="info-value">{{ supplier.bank_account|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">信用额度</span>
+                    <span class="info-value">¥{{ supplier.credit_limit|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">付款条件</span>
+                    <span class="info-value">{{ supplier.payment_terms|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">累计采购额</span>
+                    <span class="info-value" style="font-size: var(--font-size-lg); font-weight: 700; color: var(--vh-primary);">
+                        ¥{{ supplier.total_purchase_amount|floatformat:2 }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">采购次数</span>
+                    <span class="info-value">{{ supplier.purchase_count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 描述 -->
+    {% if supplier.description %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">描述</h5>
+        </div>
+        <div class="info-card-body">
+            <p style="white-space: pre-wrap; margin: 0;">{{ supplier.description }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

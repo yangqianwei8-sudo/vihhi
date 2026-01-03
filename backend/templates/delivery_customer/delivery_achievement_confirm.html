@@ -1,0 +1,301 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}成果确认 - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题和操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">✅ 成果确认</h2>
+            <p class="text-muted mb-0">交付单号：{{ delivery.delivery_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'delivery_pages:delivery_achievement_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            <a href="{% url 'delivery_pages:delivery_detail' delivery.id %}" class="btn btn-outline-primary">
+                <i class="bi bi-eye"></i> 查看详情
+            </a>
+        </div>
+    </div>
+
+    <!-- 交付记录基本信息 - 使用样式模板 -->
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">成果确认函信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">交付单号</span>
+                    <span class="info-value info-value-bold">{{ delivery.delivery_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">确认函标题</span>
+                    <span class="info-value">{{ delivery.title }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">关联项目</span>
+                    <span class="info-value">
+                        {% if delivery.project %}
+                        <a href="#" class="text-decoration-none">
+                            {{ delivery.project.project_number }} - {{ delivery.project.name }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">交付方式</span>
+                    <span class="info-value">
+                        {% if delivery.delivery_method == 'email' %}
+                            <span class="badge bg-info">邮件</span>
+                        {% elif delivery.delivery_method == 'express' %}
+                            <span class="badge bg-primary">快递</span>
+                            {% if delivery.express_company %}
+                                <small class="text-muted ms-2">{{ delivery.express_company }}</small>
+                            {% endif %}
+                        {% elif delivery.delivery_method == 'hand_delivery' %}
+                            <span class="badge bg-success">送达</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">送达时间</span>
+                    <span class="info-value">
+                        {% if delivery.delivered_at %}
+                            {{ delivery.delivered_at|date:"Y-m-d H:i:s" }}
+                        {% elif delivery.sent_at %}
+                            {{ delivery.sent_at|date:"Y-m-d H:i:s" }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">当前状态</span>
+                    <span class="info-value">
+                        {% if delivery.status == 'confirmed' %}
+                            <span class="status-badge confirmed">已确认</span>
+                        {% elif delivery.status == 'rejected' %}
+                            <span class="status-badge rejected">已拒绝</span>
+                        {% elif delivery.status in 'delivered,sent,received' %}
+                            <span class="status-badge pending">待确认</span>
+                        {% else %}
+                            <span class="status-badge {{ delivery.status }}">{{ delivery.get_status_display }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% if delivery.description %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">确认函说明</span>
+                    <span class="info-value">{{ delivery.description|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 甲方确认表单 - 使用样式模板 -->
+    {% if can_confirm %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">甲方确认</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" id="achievementConfirmForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="confirm" id="actionInput">
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">确认人姓名 <span class="text-danger">*</span></label>
+                        <input type="text" name="confirm_by" class="form-control" 
+                               value="{{ delivery.recipient_name }}" required placeholder="请输入确认人姓名">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">确认意见</label>
+                        <textarea name="confirm_comment" class="form-control" rows="4" 
+                                  placeholder="请输入确认意见（可选）"></textarea>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'delivery_pages:delivery_achievement_list' %}" class="btn btn-outline-secondary">取消</a>
+                    <button type="button" class="btn btn-danger" onclick="showRejectForm()">拒绝</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> 确认成果
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 拒绝表单（隐藏） - 使用样式模板 -->
+    <div class="info-card info-card-danger mb-4" id="rejectForm" style="display: none;">
+        <div class="info-card-header">
+            <h5 class="info-card-title">拒绝成果</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" id="rejectFormSubmit" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reject">
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">拒绝人姓名 <span class="text-danger">*</span></label>
+                        <input type="text" name="reject_by" class="form-control" 
+                               value="{{ delivery.recipient_name }}" required placeholder="请输入拒绝人姓名">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">拒绝原因 <span class="text-danger">*</span></label>
+                        <textarea name="reject_comment" class="form-control" rows="4" 
+                                  required placeholder="请详细说明拒绝原因"></textarea>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary" onclick="hideRejectForm()">取消</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> 确认拒绝
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> 
+        该成果确认函当前状态不允许确认。只有已送达、已发送或已接收状态的记录才能进行确认。
+    </div>
+    {% endif %}
+
+    <!-- 确认历史 - 使用样式模板 -->
+    {% if confirmation_history %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">确认历史</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="list-group">
+                {% for tracking in confirmation_history %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h6 class="mb-1">
+                                {% if tracking.event_type == 'confirmed' %}
+                                    <span class="badge bg-success">已确认</span>
+                                {% elif tracking.event_type == 'rejected' %}
+                                    <span class="badge bg-danger">已拒绝</span>
+                                {% endif %}
+                            </h6>
+                            <p class="mb-1">{{ tracking.event_description }}</p>
+                            <small class="text-muted">
+                                {{ tracking.created_at|date:"Y-m-d H:i:s" }}
+                                {% if tracking.operator %}
+                                    · 操作人：{{ tracking.operator.get_full_name|default:tracking.operator.username }}
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 确认信息（如果已确认） - 使用样式模板 -->
+    {% if delivery.confirmed_at %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">确认信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">确认状态</span>
+                    <span class="info-value">
+                        {% if delivery.status == 'confirmed' %}
+                            <span class="status-badge confirmed">已确认</span>
+                        {% elif delivery.status == 'rejected' %}
+                            <span class="status-badge rejected">已拒绝</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">确认时间</span>
+                    <span class="info-value">{{ delivery.confirmed_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% if delivery.feedback_by %}
+                <div class="info-item">
+                    <span class="info-label">确认人</span>
+                    <span class="info-value">{{ delivery.feedback_by }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.feedback_content %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">确认信息</span>
+                    <span class="info-value">{{ delivery.feedback_content|linebreaks }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.error_message %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">拒绝原因</span>
+                    <span class="info-value text-danger">{{ delivery.error_message }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 关联报告文件 - 使用样式模板 -->
+    {% if delivery.files.exists %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">关联报告文件</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="list-group">
+                {% for file in delivery.files.all %}
+                {% if not file.is_deleted %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-file-earmark"></i>
+                        <span class="ms-2">{{ file.file_name }}</span>
+                        <small class="text-muted ms-2">({{ file.file_size|filesizeformat }})</small>
+                        {% if file.description %}
+                        <small class="text-muted ms-2">- {{ file.description }}</small>
+                        {% endif %}
+                    </div>
+                    <a href="{{ file.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                        <i class="bi bi-download"></i> 下载
+                    </a>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function showRejectForm() {
+    document.getElementById('achievementConfirmForm').style.display = 'none';
+    document.getElementById('rejectForm').style.display = 'block';
+}
+
+function hideRejectForm() {
+    document.getElementById('achievementConfirmForm').style.display = 'block';
+    document.getElementById('rejectForm').style.display = 'none';
+}
+</script>
+{% endblock %}
+

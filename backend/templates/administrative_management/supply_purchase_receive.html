@@ -1,0 +1,125 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .form-card h5 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-md);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .alert-info {
+        background: #cfe2ff;
+        border-color: #0d6efd;
+        color: #084298;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- 提示信息 -->
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        <strong>提示：</strong>确认收货后，系统将自动更新库存。请确认实际收货数量。
+    </div>
+
+    <!-- 采购单信息 -->
+    <div class="form-card mb-4">
+        <h5>采购单信息</h5>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">采购单号</label>
+                <div class="form-control-plaintext"><code>{{ purchase.purchase_number }}</code></div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">供应商</label>
+                <div class="form-control-plaintext">{{ purchase.supplier }}</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">采购日期</label>
+                <div class="form-control-plaintext">{{ purchase.purchase_date|date:"Y-m-d" }}</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">采购总金额</label>
+                <div class="form-control-plaintext">¥{{ purchase.total_amount|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 收货表单 -->
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-card">
+            <h5>收货明细</h5>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>办公用品</th>
+                            <th>采购数量</th>
+                            <th>已收货数量</th>
+                            <th>本次收货数量</th>
+                            <th>单位</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in purchase.items.all %}
+                        <tr>
+                            <td>{{ item.supply.name }}（{{ item.supply.code }}）</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ item.received_quantity }}</td>
+                            <td>
+                                <input type="number" 
+                                       name="received_quantity_{{ item.id }}" 
+                                       class="form-control" 
+                                       min="0" 
+                                       max="{{ item.quantity|add:item.received_quantity|add:'-'|add:item.received_quantity }}"
+                                       value="{{ item.quantity|add:'-'|add:item.received_quantity }}"
+                                       required>
+                            </td>
+                            <td>{{ item.supply.unit }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% url 'admin_pages:supply_purchase_detail' purchase.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回
+            </a>
+            <div>
+                <button type="submit" class="btn btn-info btn-lg" onclick="return confirm('确认收货？系统将自动更新库存。');">
+                    <i class="bi bi-box-arrow-in-down"></i> 确认收货
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

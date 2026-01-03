@@ -1,0 +1,95 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}档案归还 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-arrow-return-left"></i> 档案归还
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- 借阅信息 -->
+                    <div class="mb-4">
+                        <h5 class="mb-3">借阅信息</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>借阅单号：</strong>{{ borrow.borrow_number }}</p>
+                                <p><strong>档案名称：</strong>
+                                    {% if borrow.project_document %}
+                                        {{ borrow.project_document.document_name }}
+                                    {% elif borrow.administrative_archive %}
+                                        {{ borrow.administrative_archive.archive_name }}
+                                    {% endif %}
+                                </p>
+                                <p><strong>档案编号：</strong>
+                                    {% if borrow.project_document %}
+                                        {{ borrow.project_document.document_number }}
+                                    {% elif borrow.administrative_archive %}
+                                        {{ borrow.administrative_archive.archive_number }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>借阅人：</strong>{{ borrow.borrower.get_full_name|default:borrow.borrower.username }}</p>
+                                <p><strong>借阅部门：</strong>{{ borrow.borrower_department.name|default:"未设置" }}</p>
+                                <p><strong>借阅日期：</strong>{{ borrow.borrow_date|date:"Y-m-d" }}</p>
+                                <p><strong>应还日期：</strong>
+                                    {{ borrow.return_date|date:"Y-m-d" }}
+                                    {% if borrow.is_overdue %}
+                                        <span class="badge bg-danger">已逾期</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 归还表单 -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <h5 class="mb-3">归还信息</h5>
+                        
+                        <div class="mb-3">
+                            <label for="return_status" class="form-label">归还状态 <span class="text-danger">*</span></label>
+                            <select name="return_status" id="return_status" class="form-select" required>
+                                <option value="完好">完好</option>
+                                <option value="轻微损坏">轻微损坏</option>
+                                <option value="严重损坏">严重损坏</option>
+                                <option value="缺失">缺失</option>
+                                <option value="其他">其他</option>
+                            </select>
+                            <div class="form-text">请检查档案的完整性，如实选择归还状态</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="return_notes" class="form-label">归还备注</label>
+                            <textarea name="return_notes" id="return_notes" class="form-control" rows="4" placeholder="如有损坏或缺失，请详细说明情况"></textarea>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            <strong>注意：</strong>归还操作将更新档案状态为"已归档"，请确认档案已检查完毕。
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'archive_management:archive_borrow_return_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> 返回
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> 确认归还
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

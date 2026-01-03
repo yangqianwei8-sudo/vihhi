@@ -1,0 +1,260 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .page-title {
+        font-size: var(--font-size-2xl);
+        font-weight: 700;
+        margin: 0 0 var(--spacing-sm) 0;
+    }
+    .page-description {
+        font-size: var(--font-size-base);
+        opacity: 0.9;
+        margin: 0;
+    }
+    .content-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--vh-text-muted);
+    }
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: var(--spacing-md);
+        opacity: 0.5;
+    }
+    .empty-state-title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--vh-text);
+        margin-bottom: var(--spacing-sm);
+    }
+    .empty-state-text {
+        font-size: var(--font-size-base);
+        color: var(--vh-text-muted);
+        margin-bottom: var(--spacing-lg);
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-scheduled { background: #cfe2ff; color: #084298; }
+    .status-in_progress { background: #fff3cd; color: #856404; }
+    .status-completed { background: #d1e7dd; color: #0f5132; }
+    .status-cancelled { background: #f8d7da; color: #842029; }
+    .type-badge {
+        padding: 2px 8px;
+        border-radius: 8px;
+        font-size: var(--font-size-xs);
+        font-weight: 500;
+    }
+    .type-internal { background: #e7f3ff; color: #0066cc; }
+    .type-external { background: #fff4e6; color: #cc6600; }
+    .type-video { background: #f0f0f0; color: #666; }
+    .type-other { background: #f0f0f0; color: #666; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <a href="{% url 'admin_pages:meeting_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> 创建会议
+        </a>
+    </div>
+
+
+    <!-- 内容区域 -->
+    <div class="content-card">
+        <!-- 筛选栏 -->
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" placeholder="搜索会议编号、主题、议程..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="meeting_type" class="form-select">
+                        <option value="">全部类型</option>
+                        {% for code, label in meeting_type_choices %}
+                        <option value="{{ code }}" {% if meeting_type == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="">全部状态</option>
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="room_id" class="form-select">
+                        <option value="">全部会议室</option>
+                        {% for room in rooms %}
+                        <option value="{{ room.id }}" {% if room_id == room.id|stringformat:"s" %}selected{% endif %}>{{ room.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a href="{% url 'admin_pages:meeting_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 清除
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <!-- 数据表格 -->
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>会议编号</th>
+                        <th>会议主题</th>
+                        <th>会议类型</th>
+                        <th>会议室</th>
+                        <th>会议时间</th>
+                        <th>组织人</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for meeting in page_obj %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'admin_pages:meeting_detail' meeting_id=meeting.id %}" class="text-decoration-none">
+                                <code>{{ meeting.meeting_number }}</code>
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_pages:meeting_detail' meeting_id=meeting.id %}" class="text-decoration-none">
+                                {{ meeting.title|truncatewords:10 }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="type-badge type-{{ meeting.meeting_type }}">
+                                {{ meeting.get_meeting_type_display }}
+                            </span>
+                        </td>
+                        <td>{{ meeting.room.name|default:"-" }}</td>
+                        <td>
+                            <div class="small">
+                                <div>{{ meeting.meeting_date|date:"Y-m-d" }}</div>
+                                <div>{{ meeting.start_time|time:"H:i" }} - {{ meeting.end_time|time:"H:i" }}</div>
+                            </div>
+                        </td>
+                        <td>{{ meeting.organizer.get_full_name|default:meeting.organizer.username }}</td>
+                        <td>
+                            <span class="status-badge status-{{ meeting.status }}">
+                                {{ meeting.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ meeting.created_time|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'admin_pages:meeting_detail' meeting_id=meeting.id %}" class="btn btn-outline-primary" title="查看详情">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if meeting.status == 'scheduled' and meeting.created_by == request.user %}
+                                <a href="{% url 'admin_pages:meeting_update' meeting_id=meeting.id %}" class="btn btn-outline-secondary" title="编辑">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                                {% if meeting.status == 'completed' and not meeting.record %}
+                                <a href="{% url 'admin_pages:meeting_record_create' meeting_id=meeting.id %}" class="btn btn-outline-info" title="创建记录">
+                                    <i class="bi bi-file-text"></i>
+                                </a>
+                                {% endif %}
+                                {% if meeting.status not in 'completed,cancelled' and meeting.created_by == request.user %}
+                                <a href="{% url 'admin_pages:meeting_cancel' meeting_id=meeting.id %}" class="btn btn-outline-danger" title="取消">
+                                    <i class="bi bi-x-circle"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🏢</div>
+                                <div class="empty-state-title">暂无数据</div>
+                                <div class="empty-state-text">当前筛选条件下没有找到会议记录</div>
+                                <a href="{% url 'admin_pages:meeting_create' %}" class="btn btn-primary mt-3">
+                                    <i class="bi bi-plus-circle"></i> 创建第一个会议
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if meeting_type %}&meeting_type={{ meeting_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if room_id %}&room_id={{ room_id }}{% endif %}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if meeting_type %}&meeting_type={{ meeting_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if room_id %}&room_id={{ room_id }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if meeting_type %}&meeting_type={{ meeting_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if room_id %}&room_id={{ room_id }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if meeting_type %}&meeting_type={{ meeting_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if room_id %}&room_id={{ room_id }}{% endif %}">末页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🏢</div>
+            <div class="empty-state-title">暂无数据</div>
+            <div class="empty-state-text">当前筛选条件下没有找到会议记录</div>
+            <a href="{% url 'admin_pages:meeting_create' %}" class="btn btn-primary mt-3">
+                <i class="bi bi-plus-circle"></i> 创建第一个会议
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

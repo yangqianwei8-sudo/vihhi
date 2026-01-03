@@ -1,0 +1,109 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-label-required::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <div class="container-fluid py-4">
+        <div class="info-card info-card-compact">
+            <div class="info-card-header">
+                <h5 class="info-card-title">{{ page_title }}</h5>
+            </div>
+            <div class="info-card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="info-section">
+                        <div class="info-grid info-grid-2">
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.client.label }}</label>
+                                {{ form.client }}
+                                {% if form.client.errors %}
+                                <div class="text-danger small mt-1">{{ form.client.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.expense_type.label }}</label>
+                                {{ form.expense_type }}
+                                {% if form.expense_type.errors %}
+                                <div class="text-danger small mt-1">{{ form.expense_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.amount.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">¥</span>
+                                    {{ form.amount }}
+                                </div>
+                                {% if form.amount.errors %}
+                                <div class="text-danger small mt-1">{{ form.amount.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.expense_date.label }}</label>
+                                {{ form.expense_date }}
+                                {% if form.expense_date.errors %}
+                                <div class="text-danger small mt-1">{{ form.expense_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="info-item" style="grid-column: 1 / -1;">
+                                <label class="info-label">{{ form.related_contacts.label }}</label>
+                                {{ form.related_contacts }}
+                                {% if form.related_contacts.help_text %}
+                                <small class="form-text text-muted">{{ form.related_contacts.help_text }}</small>
+                                {% endif %}
+                                {% if form.related_contacts.errors %}
+                                <div class="text-danger small mt-1">{{ form.related_contacts.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="info-item" style="grid-column: 1 / -1;">
+                                <label class="info-label info-label-required">{{ form.description.label }}</label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="info-item" style="grid-column: 1 / -1;">
+                                <label class="info-label">{{ form.attachment.label }}</label>
+                                {{ form.attachment }}
+                                {% if form.attachment.help_text %}
+                                <small class="form-text text-muted">{{ form.attachment.help_text }}</small>
+                                {% endif %}
+                                {% if form.attachment.errors %}
+                                <div class="text-danger small mt-1">{{ form.attachment.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="submit" name="action" value="save_draft" class="btn btn-outline-secondary">保存草稿</button>
+                        <button type="submit" name="action" value="submit" class="btn btn-primary">提交申请</button>
+                        <a href="{% url 'business_pages:business_expense_application_list' %}" class="btn btn-secondary">取消</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

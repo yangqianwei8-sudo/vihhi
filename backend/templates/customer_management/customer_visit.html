@@ -1,0 +1,134 @@
+{% extends "shared/list_page_base.html" %}
+{% comment %}
+客户拜访列表页面模板 (Customer Visit List Template)
+
+功能说明：
+- 展示客户拜访记录的列表页面
+- 支持按客户、拜访类型筛选
+- 支持搜索客户名称、拜访内容
+- 支持查看拜访详情
+
+主要功能：
+1. 筛选功能：
+   - 搜索：客户名称、拜访内容
+   - 客户筛选：下拉选择客户
+   - 拜访类型筛选：下拉选择拜访类型
+2. 表格展示：客户名称、拜访类型、跟进方式、拜访日期、跟进人、创建时间、操作
+3. 操作功能：查看详情
+
+JavaScript功能：
+- 筛选字段设置功能（继承自list_page_base.html）
+{% endcomment %}
+{% load static %}
+
+{% block list_page_title %}客户拜访{% endblock %}
+
+{% block list_page_actions %}
+{% if can_create %}
+<a href="{% url 'business_pages:visit_plan_flow' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> 新增拜访
+</a>
+{% endif %}
+{% endblock %}
+
+{% block search_placeholder %}客户名称、拜访内容...{% endblock %}
+
+{% block list_page_filter_fields %}
+<!-- 客户筛选 -->
+<div class="filter-row" data-filter-key="client">
+    <label class="filter-label">客户:</label>
+    <div class="filter-control">
+        <select name="client" class="form-control form-control-sm" id="clientSelect">
+            <option value="">全部客户</option>
+            {% for c in clients %}
+            <option value="{{ c.id }}" {% if client_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- 拜访类型筛选 -->
+<div class="filter-row" data-filter-key="visit_type">
+    <label class="filter-label">拜访类型:</label>
+    <div class="filter-control">
+        <select name="visit_type" class="form-control form-control-sm" id="visitTypeSelect">
+            <option value="">全部类型</option>
+            {% for value, label in visit_type_choices %}
+            <option value="{{ value }}" {% if visit_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+{% endblock %}
+
+{% block list_page_table_headers %}
+<th style="width: 15%;">客户名称</th>
+<th style="width: 10%;">拜访类型</th>
+<th style="width: 10%;">跟进方式</th>
+<th style="width: 10%;">拜访日期</th>
+<th style="width: 10%;">跟进人</th>
+<th style="width: 12%;">创建时间</th>
+{% endblock %}
+
+{% block list_page_table_actions_header %}
+<th style="width: 8%;">
+    操作
+    <span id="columnSettingsBtn"
+          data-bs-toggle="modal"
+          data-bs-target="#columnSettingsModal"
+          aria-label="设置表格字段"
+          title="设置表格字段"
+          style="cursor: pointer; color: #000000 !important; font-size: 16px; vertical-align: middle; margin-left: 8px; display: inline-block;">
+        <i class="bi bi-gear" style="color: #000000 !important;"></i>
+    </span>
+</th>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td>
+    <a href="{% url 'business_pages:customer_detail' item.client.id %}" class="text-decoration-none">
+        {{ item.client.name }}
+    </a>
+</td>
+<td>
+    {% if item.visit_type %}
+    <span class="badge bg-primary">{{ item.get_visit_type_display }}</span>
+    {% else %}
+    <span class="text-muted">—</span>
+    {% endif %}
+</td>
+<td class="small">{{ item.get_followup_method_display }}</td>
+<td class="small">{{ item.followup_time|date:"Y-m-d" }}</td>
+<td class="small">{{ item.followup_person.get_full_name|default:item.followup_person.username }}</td>
+<td class="small text-muted">{{ item.created_time|date:"Y-m-d H:i" }}</td>
+{% endblock %}
+
+{% block list_page_table_actions_cell %}
+<td>
+    <div class="list-page-table-actions">
+        <a href="#" class="action-view" title="查看详情">
+            <i class="bi bi-eye"></i>
+        </a>
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_table_message %}暂无拜访记录{% endblock %}
+
+{% block empty_message %}暂无拜访记录{% endblock %}
+
+{% block empty_create_url %}{% url 'business_pages:visit_plan_flow' %}{% endblock %}
+
+{% block list_page_custom_js %}
+// 配置筛选字段设置功能（继承自 list_page_base.html）
+window.listPageFilterFieldsSettingsConfig = {
+    enableFieldsSettings: true,
+    storageKey: 'customer_visit_list_filter_fields',
+    defaultEnabledFields: ['client', 'visit_type'],
+    maxEnabledFields: 10,
+    requiredFields: [],
+    containerId: 'filterFieldsContainer',
+    modalId: 'filterFieldsSettingsModal',
+    settingsBtnId: 'settingsFilterFieldsBtn'
+};
+{% endblock %}

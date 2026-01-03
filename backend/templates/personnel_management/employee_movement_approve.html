@@ -1,0 +1,102 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block personnel_content %}
+<div class="container-fluid py-4">
+    <!-- 返回按钮 -->
+    <div class="text-end mb-4">
+        <a href="{% url 'personnel_pages:employee_movement_detail' movement.id %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回详情
+        </a>
+    </div>
+
+    <!-- 异动信息预览 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">异动信息预览</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">异动编号</span>
+                    <span class="info-value"><code>{{ movement.movement_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">员工</span>
+                    <span class="info-value">{{ movement.employee.name }} ({{ movement.employee.employee_number }})</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">异动类型</span>
+                    <span class="info-value"><span class="badge bg-primary">{{ movement.get_movement_type_display }}</span></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">异动日期</span>
+                    <span class="info-value">{{ movement.movement_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">原部门/职位</span>
+                    <span class="info-value">
+                        {% if movement.old_department %}
+                        {{ movement.old_department.name }} / {{ movement.old_position|default:"-" }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">新部门/职位</span>
+                    <span class="info-value">
+                        {% if movement.new_department %}
+                        <strong style="color: #142F5B;">{{ movement.new_department.name }} / {{ movement.new_position|default:"-" }}</strong>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">异动原因</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ movement.reason }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 审批表单 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">审批操作</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="form-label">审批意见 <span class="text-danger">*</span></label>
+                    <textarea name="comment" class="form-control" rows="4" placeholder="请输入审批意见..." required></textarea>
+                    <small class="form-text text-muted">请详细说明批准或拒绝的理由</small>
+                </div>
+                
+                <div class="d-flex gap-3">
+                    <button type="submit" name="action" value="approve" class="btn btn-success btn-lg">
+                        <i class="bi bi-check-circle"></i> 批准
+                    </button>
+                    <button type="submit" name="action" value="reject" class="btn btn-danger btn-lg">
+                        <i class="bi bi-x-circle"></i> 拒绝
+                    </button>
+                    <a href="{% url 'personnel_pages:employee_movement_detail' movement.id %}" class="btn btn-outline-secondary btn-lg">
+                        <i class="bi bi-x"></i> 取消
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

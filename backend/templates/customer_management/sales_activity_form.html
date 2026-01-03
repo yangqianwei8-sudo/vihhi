@@ -1,0 +1,159 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .form-section h4 {
+        margin-bottom: 20px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+        border-bottom: 2px solid var(--vh-primary);
+        padding-bottom: 12px;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- 页面标题区域 -->
+            <div class="center-hero mb-4">
+                <div style="position: relative; z-index: 1;">
+                    <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+                    <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+                </div>
+            </div>
+
+            <form method="post" id="activityForm">
+                {% csrf_token %}
+                
+                <div class="form-section">
+                    <h4>基本信息</h4>
+                    
+                    <div class="mb-3">
+                        <label for="activity_type" class="form-label">活动类型 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="activity_type" name="activity_type" required>
+                            <option value="">请选择活动类型</option>
+                            {% for code, name in activity_type_choices %}
+                            <option value="{{ code }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label">活动标题 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" required placeholder="例如：客户A项目方案讨论会">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="start_time" class="form-label">开始时间 <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control" id="start_time" name="start_time" value="{{ default_start_time }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="end_time" class="form-label">结束时间 <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control" id="end_time" name="end_time" value="{{ default_end_time }}" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="location" class="form-label">活动地点</label>
+                        <input type="text" class="form-control" id="location" name="location" placeholder="例如：客户公司会议室">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>关联信息</h4>
+                    
+                    <div class="mb-3">
+                        <label for="related_opportunity_id" class="form-label">关联商机</label>
+                        <select class="form-select" id="related_opportunity_id" name="related_opportunity_id">
+                            <option value="">不关联商机</option>
+                            {% for opp in opportunities %}
+                            <option value="{{ opp.id }}">{{ opp.opportunity_number|default:"" }} - {{ opp.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="related_client_id" class="form-label">关联客户</label>
+                        <select class="form-select" id="related_client_id" name="related_client_id">
+                            <option value="">不关联客户</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}">{{ client.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>活动描述</h4>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">详细描述</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" placeholder="记录活动的详细内容、讨论要点等"></textarea>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'business_pages:sales_activity_calendar' %}" class="btn btn-secondary">取消</a>
+                    <button type="submit" class="btn btn-primary">创建活动</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 如果URL中有date参数，设置默认日期
+    const urlParams = new URLSearchParams(window.location.search);
+    const dateParam = urlParams.get('date');
+    if (dateParam) {
+        const date = new Date(dateParam);
+        const startTime = date.toISOString().slice(0, 16);
+        const endTime = new Date(date.getTime() + 60 * 60 * 1000).toISOString().slice(0, 16); // 默认1小时
+        
+        document.getElementById('start_time').value = startTime;
+        document.getElementById('end_time').value = endTime;
+    } else {
+        // 默认设置为当前时间
+        const now = new Date();
+        const startTime = now.toISOString().slice(0, 16);
+        const endTime = new Date(now.getTime() + 60 * 60 * 1000).toISOString().slice(0, 16);
+        
+        document.getElementById('start_time').value = startTime;
+        document.getElementById('end_time').value = endTime;
+    }
+
+    // 表单验证
+    document.getElementById('activityForm').addEventListener('submit', function(e) {
+        const startTime = new Date(document.getElementById('start_time').value);
+        const endTime = new Date(document.getElementById('end_time').value);
+        
+        if (endTime <= startTime) {
+            e.preventDefault();
+            alert('结束时间必须晚于开始时间');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}
+

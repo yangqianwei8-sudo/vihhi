@@ -1,0 +1,138 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .content-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-table {
+        width: 100%;
+    }
+    .info-table th {
+        width: 150px;
+        padding: 12px;
+        background: #f8f9fa;
+        font-weight: 600;
+        text-align: right;
+        vertical-align: middle;
+    }
+    .info-table td {
+        padding: 12px;
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="content-card">
+        <div class="mb-4">
+            <h3 class="mb-3">{{ page_title }}</h3>
+            <p class="text-muted">{{ description }}</p>
+        </div>
+
+        <!-- 回款记录详情 -->
+        <div class="mb-4">
+            <h5 class="mb-3">回款记录详情</h5>
+            <table class="table info-table">
+                <tr>
+                    <th>回款单号</th>
+                    <td><strong>{{ record.payment_number }}</strong></td>
+                    <th>回款金额</th>
+                    <td class="text-success fw-bold">¥{{ record.payment_amount|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <th>回款日期</th>
+                    <td>{{ record.payment_date|date:"Y-m-d" }}</td>
+                    <th>回款方式</th>
+                    <td>
+                        {% for code, label in payment_method_choices %}
+                            {% if code == record.payment_method %}{{ label }}{% endif %}
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>发票号码</th>
+                    <td>{{ record.invoice_number|default:"-" }}</td>
+                    <th>收款账户</th>
+                    <td>{{ record.bank_account|default:"-" }}</td>
+                </tr>
+                <tr>
+                    <th>状态</th>
+                    <td>
+                        <span class="badge bg-warning">{{ record.get_status_display }}</span>
+                    </td>
+                    <th>创建人</th>
+                    <td>{{ record.created_by.get_full_name|default:record.created_by.username }}</td>
+                </tr>
+                <tr>
+                    <th>创建时间</th>
+                    <td>{{ record.created_time|date:"Y-m-d H:i" }}</td>
+                    <th>备注</th>
+                    <td>{{ record.notes|default:"-" }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 关联回款计划信息 -->
+        {% if plan %}
+        <div class="mb-4">
+            <h5 class="mb-3">关联回款计划</h5>
+            <table class="table info-table">
+                <tr>
+                    <th>阶段名称</th>
+                    <td>{{ plan.phase_name }}</td>
+                    <th>计划金额</th>
+                    <td>¥{{ plan.planned_amount|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <th>计划日期</th>
+                    <td>{{ plan.planned_date|date:"Y-m-d" }}</td>
+                    <th>实际金额</th>
+                    <td>
+                        {% if plan.actual_amount %}
+                            <strong class="text-success">¥{{ plan.actual_amount|floatformat:2 }}</strong>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>合同编号</th>
+                    <td>{{ plan.contract.contract_number|default:"-" }}</td>
+                    <th>客户名称</th>
+                    <td>{{ plan.contract.client.name|default:"-" }}</td>
+                </tr>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- 确认操作 -->
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>确认操作：</strong>确认后将更新回款记录状态为"已确认"，并自动更新关联回款计划的实际金额和状态。
+        </div>
+
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> 确认回款记录
+                </button>
+                <a href="{% url 'settlement_pages:payment_record_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

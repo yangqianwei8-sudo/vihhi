@@ -1,0 +1,112 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}创建交付归档 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-plus-circle"></i> 创建交付归档
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        <strong>注意：</strong>系统已有自动推送功能，当交付记录状态为"已确认"或"已反馈"时会自动推送到档案管理。此功能用于手动归档其他交付记录。
+                    </div>
+
+                    <form method="post" id="deliveryArchiveForm">
+                        {% csrf_token %}
+                        
+                        <!-- 交付记录选择 -->
+                        <h5 class="mb-3">选择交付记录</h5>
+                        <div class="mb-3">
+                            <label for="delivery_record" class="form-label">交付记录 <span class="text-danger">*</span></label>
+                            <select name="delivery_record" id="delivery_record" class="form-select" required>
+                                <option value="">请选择交付记录</option>
+                                {% for record in delivery_records %}
+                                <option value="{{ record.id }}" data-project="{{ record.project.name|default:record.project.project_number|default:'未关联项目' }}" data-status="{{ record.get_status_display }}">
+                                    {{ record.delivery_number }} - {{ record.title }}
+                                    {% if record.project %}
+                                        ({{ record.project.name|default:record.project.project_number }})
+                                    {% endif %}
+                                    - {{ record.get_status_display }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">选择要归档的交付记录</div>
+                        </div>
+
+                        <!-- 交付记录信息预览 -->
+                        <div id="deliveryInfo" class="card mb-3" style="display: none;">
+                            <div class="card-body">
+                                <h6>交付记录信息</h6>
+                                <div id="deliveryDetails"></div>
+                            </div>
+                        </div>
+
+                        <!-- 归档分类 -->
+                        <div class="mb-3">
+                            <label for="category" class="form-label">归档分类</label>
+                            <select name="category" id="category" class="form-select">
+                                <option value="">请选择分类（可选）</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- 归档原因和说明 -->
+                        <h5 class="mb-3 mt-4">归档信息</h5>
+                        <div class="mb-3">
+                            <label for="archive_reason" class="form-label">归档原因</label>
+                            <textarea name="archive_reason" id="archive_reason" class="form-control" rows="2" placeholder="请说明归档原因"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="archive_description" class="form-label">归档说明</label>
+                            <textarea name="archive_description" id="archive_description" class="form-control" rows="3" placeholder="请详细说明归档内容"></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'archive_management:project_delivery_archive_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> 返回
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> 提交归档申请
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('delivery_record').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const deliveryInfo = document.getElementById('deliveryInfo');
+    const deliveryDetails = document.getElementById('deliveryDetails');
+    
+    if (this.value) {
+        const project = selectedOption.getAttribute('data-project');
+        const status = selectedOption.getAttribute('data-status');
+        
+        deliveryDetails.innerHTML = `
+            <p><strong>项目：</strong>${project}</p>
+            <p><strong>状态：</strong>${status}</p>
+        `;
+        deliveryInfo.style.display = 'block';
+    } else {
+        deliveryInfo.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

@@ -5,6 +5,10 @@ from . import views
 app_name = "resource_standard"
 
 urlpatterns = [
+    # 首页
+    path("", views.resource_standard_home, name="resource_standard_home"),
+    path("home/", views.resource_standard_home, name="resource_standard_home"),
+    
     path("standards/", views.standard_list, name="standard_list"),
     path("standards/create/", views.standard_create, name="standard_create"),
     path("standards/<int:pk>/", views.standard_detail, name="standard_detail"),

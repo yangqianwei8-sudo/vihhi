@@ -1,0 +1,116 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: var(--spacing-lg);
+    }
+    .form-card h5 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .form-label.required::after {
+        content: " *";
+        color: var(--vh-error);
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <h5>用车信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">车辆</label>
+                    {{ form.vehicle }}
+                    {% if form.vehicle.errors %}
+                    <div class="text-danger small mt-1">{{ form.vehicle.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">驾驶员</label>
+                    {{ form.driver }}
+                    {% if form.driver.errors %}
+                    <div class="text-danger small mt-1">{{ form.driver.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">用车开始时间</label>
+                    {{ form.start_time }}
+                    {% if form.start_time.errors %}
+                    <div class="text-danger small mt-1">{{ form.start_time.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">预计结束时间</label>
+                    {{ form.end_time }}
+                    {% if form.end_time.errors %}
+                    <div class="text-danger small mt-1">{{ form.end_time.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">目的地</label>
+                    {{ form.destination }}
+                    {% if form.destination.errors %}
+                    <div class="text-danger small mt-1">{{ form.destination.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">乘车人数</label>
+                    {{ form.passenger_count }}
+                    {% if form.passenger_count.errors %}
+                    <div class="text-danger small mt-1">{{ form.passenger_count.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label required">用车事由</label>
+                    {{ form.purpose }}
+                    {% if form.purpose.errors %}
+                    <div class="text-danger small mt-1">{{ form.purpose.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">备注</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a href="{% if is_create %}{% url 'admin_pages:vehicle_booking_list' %}{% else %}{% url 'admin_pages:vehicle_booking_detail' booking.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> 保存
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

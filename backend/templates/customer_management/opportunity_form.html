@@ -1,0 +1,469 @@
+{% extends "shared/module_base.html" %}
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+        display: block;
+    }
+    .required-field::after {
+        content: " *";
+        color: #ef4444;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid">
+    <div class="form-page-title">
+        <h1>{% if opportunity %}编辑商机{% else %}创建商机{% endif %}</h1>
+        <p>{% if opportunity %}编辑商机信息{% else %}创建新的商机记录{% endif %}</p>
+    </div>
+
+    <form method="post" id="opportunityForm" class="form-card" novalidate>
+        {% csrf_token %}
+        {% if messages %}
+        <div class="alert alert-danger">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}        <!-- 一、基本信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>基本信息</h5>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">商机编号</label>
+                        <input type="text" id="opportunity_number_preview" class="form-control" 
+                            value="{% if opportunity %}{{ opportunity.opportunity_number|default:'' }}{% else %}{{ preview_opportunity_number|default:'' }}{% endif %}" 
+                            readonly 
+                            disabled
+                            style="background-color: #f8f9fa; color: #6c757d; cursor: not-allowed;">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label required-field">关联客户</label>
+
+                        <div class="input-group">
+                            <select name="client_id" class="form-select" required id="client_select">
+                                <option value="">请选择客户</option>
+                                        {% for client in clients %}
+                                        <option value="{{ client.id }}" 
+                                                {% if opportunity.client_id == client.id %}selected{% endif %}
+                                                data-responsible-user-id="{% if client.responsible_user %}{{ client.responsible_user.id }}{% else %}{% endif %}">
+                                            {{ client.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <a href="{% url 'business_pages:customer_create' %}" target="_blank" class="btn btn-outline-primary" title="新建客户">
+                                        <i class="bi bi-plus-circle"></i> 新建
+                                    </a>
+                                </div>
+                    </div>
+                        {% if not clients %}
+                        <small class="text-warning">
+                                    <i class="bi bi-exclamation-triangle"></i> 暂无客户数据，请先
+                                    <a href="{% url 'business_pages:customer_create' %}" target="_blank">创建客户</a>
+                                </small>
+                                {% endif %}
+                    </div>
+                    </div>
+                </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">商机类型</label>
+                        <select name="opportunity_type" class="form-select">
+                                    <option value="">请选择</option>
+                                    <option value="project_cooperation" {% if opportunity.opportunity_type == 'project_cooperation' %}selected{% endif %}>项目合作</option>
+                                    <option value="centralized_procurement" {% if opportunity.opportunity_type == 'centralized_procurement' %}selected{% endif %}>集中采购</option>
+                                </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">服务类型</label>
+                        <select name="service_type_id" class="form-select">
+                                    <option value="">请选择服务类型</option>
+                                    {% for service_type in service_types %}
+                                    <option value="{{ service_type.id }}" {% if opportunity.service_type_id == service_type.id %}selected{% endif %}>{{ service_type.name }}</option>
+                                    {% endfor %}
+                                </select>
+                    </div>
+                </div>
+        <!-- 二、项目信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>项目信息</h5>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">项目名称</label>
+                        <input type="text" name="project_name" class="form-control" 
+                            value="{{ opportunity.project_name|default:'' }}" 
+                            maxlength="200" 
+                            placeholder="请输入项目名称">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">项目业态</label>
+                        <select name="project_type" class="form-select">
+                                    <option value="">请选择项目业态</option>
+                                    {% for value, label in business_types %}
+                                    <option value="{{ value }}" {% if opportunity.project_type|default:'' == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                    </div>
+                    </div>
+                </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">建筑面积（平方米）</label>
+                        <input type="number" name="building_area" class="form-control" 
+                            value="{% if opportunity.building_area %}{{ opportunity.building_area }}{% endif %}" 
+                                       step="0.01" min="0" 
+                            placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">图纸阶段</label>
+                        <select name="drawing_stage" class="form-select">
+                                    <option value="">请选择</option>
+                                    {% for stage in design_stages %}
+                                    <option value="{{ stage.id }}" {% if opportunity.drawing_stage_id == stage.id %}selected{% endif %}>
+                                        {{ stage.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                    </div>
+                </div>
+                        <div class="mb-3">
+                            <label class="form-label">项目地址</label>
+                            {% include "shared/district_selector_snippet.html" with prefix="project" province_label="省份" city_label="城市" district_label="区县" address_field_id="projectAddressField" address_field_name="project_address" detail_input_id="addressDetailInput" show_detail_input=True initial_address_value=opportunity.project_address|default:"" %}
+                        </div>
+                    </div>
+                </div>
+                    </div>        <!-- 三、金额信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>金额信息</h5>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label required-field">预计金额（元）</label>
+                        <input type="number" name="estimated_amount" id="estimated_amount" class="form-control" 
+                            value="{% if opportunity.estimated_amount %}{{ opportunity.estimated_amount }}{% else %}0{% endif %}" 
+                                       step="0.01" min="0" required 
+                            placeholder="0.00">
+                                <div class="invalid-feedback">请输入有效的预计金额</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label required-field">成功概率（%）</label>
+                        <select name="success_probability" id="success_probability" class="form-select" required>
+                            <option value="10" {% if opportunity.success_probability == 10 or not opportunity %}selected{% endif %}>10%</option>
+                            <option value="30" {% if opportunity.success_probability == 30 %}selected{% endif %}>30%</option>
+                            <option value="50" {% if opportunity.success_probability == 50 %}selected{% endif %}>50%</option>
+                            <option value="70" {% if opportunity.success_probability == 70 %}selected{% endif %}>70%</option>
+                            <option value="90" {% if opportunity.success_probability == 90 %}selected{% endif %}>90%</option>
+                        </select>
+                        <small class="form-text text-muted">根据商机当前阶段选择对应的成功概率</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">加权金额（元）</label>
+                        <input type="text" id="weighted_amount_display" class="form-control" 
+                            value="{% if opportunity.weighted_amount %}{{ opportunity.weighted_amount|floatformat:2 }}{% else %}0.00{% endif %}" 
+                            readonly 
+                            style="background-color: #f8f9fa; color: #6c757d; cursor: not-allowed;">
+                        <small class="form-text text-muted">自动计算：预计金额 × 成功概率</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 四、时间信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>时间信息</h5>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">预计签约时间</label>
+                        <input type="date" name="expected_sign_date" class="form-control" 
+                            value="{{ opportunity.expected_sign_date|default:''|date:'Y-m-d' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">预计启动时间</label>
+                        <input type="date" name="expected_start_date" class="form-control" 
+                            value="{{ opportunity.expected_start_date|default:''|date:'Y-m-d' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 五、商机描述 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>商机描述</h5>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label">商机描述</label>
+                        <textarea name="description" class="form-control" rows="4" 
+                                  placeholder="请输入商机描述">{{ opportunity.description|default:'' }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <a href="{% if opportunity %}{% url 'business_pages:opportunity_detail' opportunity.id %}{% else %}{% url 'business_pages:opportunity_management' %}{% endif %}" 
+               class="btn btn-secondary">
+                <i class="bi bi-x-circle"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> {% if opportunity %}保存修改{% else %}创建{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block module_extra_js %}
+{% load static %}
+<script src="{% static 'js/amap-district-selector.js' %}"></script>
+<script>
+/**
+ * 初始化行政区域选择器
+ * @param {Object} options 配置选项
+ */
+function initDistrictSelector(options) {
+    // 参数验证
+    if (!options || typeof options !== 'object') {
+        console.error('initDistrictSelector: 参数必须是对象');
+        return null;
+    }
+    
+    if (!options.prefix || typeof options.prefix !== 'string') {
+        console.error('initDistrictSelector: 缺少必需的prefix参数或prefix不是字符串');
+        return null;
+    }
+    
+    // 验证prefix格式（只允许字母、数字、下划线、连字符）
+    const prefix = options.prefix.trim();
+    if (!/^[a-zA-Z0-9_-]+$/.test(prefix)) {
+        console.error('initDistrictSelector: prefix只能包含字母、数字、下划线和连字符');
+        return null;
+    }
+    
+    // 检查是否已经初始化过
+    if (window.districtSelectors && window.districtSelectors[prefix]) {
+        console.warn(`initDistrictSelector: 选择器 ${prefix} 已经初始化过，返回现有实例`);
+        return window.districtSelectors[prefix];
+    }
+    
+    const addressFieldId = options.addressFieldId || prefix + 'AddressField';
+    const detailInputId = options.detailInputId || prefix + 'AddressDetail';
+    let apiBaseUrl = options.apiBaseUrl || '/api/customer/districts/';
+    const autoUpdateAddress = options.autoUpdateAddress !== false;
+    const enableLogging = options.enableLogging || false;
+    
+    // 验证addressFormat参数
+    const validFormats = ['name', 'code', 'both'];
+    const addressFormat = validFormats.includes(options.addressFormat) ? options.addressFormat : 'name';
+    
+    // 验证apiBaseUrl格式
+    if (typeof apiBaseUrl !== 'string' || !apiBaseUrl.startsWith('/')) {
+        console.warn('initDistrictSelector: apiBaseUrl格式不正确，使用默认值');
+        apiBaseUrl = '/api/customer/districts/';
+    }
+    
+    // 检查AmapDistrictSelector类是否已加载
+    if (typeof AmapDistrictSelector === 'undefined') {
+        console.error('initDistrictSelector: AmapDistrictSelector类未加载，请确保已引入amap-district-selector.js');
+        return null;
+    }
+    
+    // 检查必需的DOM元素是否存在
+    const provinceSelectId = prefix + 'ProvinceSelect';
+    const citySelectId = prefix + 'CitySelect';
+    const districtSelectId = prefix + 'DistrictSelect';
+    
+    const provinceSelect = document.getElementById(provinceSelectId);
+    const citySelect = document.getElementById(citySelectId);
+    const districtSelect = document.getElementById(districtSelectId);
+    
+    if (!provinceSelect || !citySelect || !districtSelect) {
+        console.error('initDistrictSelector: 必需的DOM元素不存在', {
+            provinceSelect: !!provinceSelect,
+            citySelect: !!citySelect,
+            districtSelect: !!districtSelect,
+            provinceSelectId: provinceSelectId,
+            citySelectId: citySelectId,
+            districtSelectId: districtSelectId
+        });
+        return null;
+    }
+    
+    try {
+        // 创建选择器实例
+        const selector = new AmapDistrictSelector({
+            provinceSelectId: provinceSelectId,
+            citySelectId: citySelectId,
+            districtSelectId: districtSelectId,
+            addressFieldId: addressFieldId,
+            detailInputId: detailInputId,
+            apiBaseUrl: apiBaseUrl,
+            autoUpdateAddress: autoUpdateAddress,
+            enableLogging: enableLogging,
+            addressFormat: addressFormat
+        });
+        
+        // 初始化选择器
+        selector.init();
+        
+        // 将选择器实例存储到全局对象中，方便后续访问
+        if (!window.districtSelectors) {
+            window.districtSelectors = {};
+        }
+        window.districtSelectors[prefix] = selector;
+        
+        if (enableLogging) {
+            console.log(`行政区域选择器已初始化: ${prefix}`);
+        }
+        
+        return selector;
+    } catch (error) {
+        console.error(`initDistrictSelector: 初始化失败 (${prefix})`, error);
+        return null;
+    }
+}
+
+// 如果页面中已经有districtSelectors对象，确保不覆盖
+if (!window.districtSelectors) {
+    window.districtSelectors = {};
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const estimatedAmountInput = document.getElementById('estimated_amount');
+    const successProbabilitySelect = document.getElementById('success_probability');
+    const weightedAmountDisplay = document.getElementById('weighted_amount_display');
+    
+    function calculateWeightedAmount() {
+        const estimatedAmount = parseFloat(estimatedAmountInput.value) || 0;
+        const successProbability = parseFloat(successProbabilitySelect.value) || 0;
+        const weightedAmount = (estimatedAmount * successProbability / 100).toFixed(2);
+        weightedAmountDisplay.value = weightedAmount;
+    }
+    
+    if (estimatedAmountInput && successProbabilitySelect && weightedAmountDisplay) {
+        estimatedAmountInput.addEventListener('input', calculateWeightedAmount);
+        successProbabilitySelect.addEventListener('change', calculateWeightedAmount);
+        calculateWeightedAmount();
+    }
+    
+    // 初始化项目地址行政区域选择器
+    function initProjectSelector() {
+        if (typeof initDistrictSelector === 'undefined') {
+            console.warn('[商机表单] initDistrictSelector 函数未定义，等待中...');
+            setTimeout(initProjectSelector, 100);
+            return;
+        }
+        
+        if (typeof AmapDistrictSelector === 'undefined') {
+            console.error('[商机表单] AmapDistrictSelector 类未加载，请检查 amap-district-selector.js 文件');
+            return;
+        }
+        
+        console.log('[商机表单] 开始初始化项目地址选择器...');
+        
+        // 检查元素是否存在
+        console.log('[商机表单] 检查DOM元素:', {
+            projectAddressField: !!document.getElementById('projectAddressField'),
+            projectProvinceSelect: !!document.getElementById('projectProvinceSelect'),
+            projectCitySelect: !!document.getElementById('projectCitySelect'),
+            projectDistrictSelect: !!document.getElementById('projectDistrictSelect'),
+            addressDetailInput: !!document.getElementById('addressDetailInput')
+        });
+        
+        const projectSelector = initDistrictSelector({
+            prefix: 'project',
+            addressFieldId: 'projectAddressField',
+            detailInputId: 'addressDetailInput',
+            apiBaseUrl: '/api/customer/districts/',
+            addressFormat: 'name',
+            enableLogging: true
+        });
+        
+        console.log('[商机表单] 项目地址选择器初始化结果:', projectSelector);
+        
+        // 标记选择器已初始化（用于其他功能依赖）
+        window.districtSelectorReady = false;
+        if (projectSelector) {
+            console.log('[商机表单] 项目地址选择器初始化成功');
+            // 监听省份数据加载完成
+            const provinceSelect = document.getElementById('projectProvinceSelect');
+            if (provinceSelect) {
+                const checkProvinceLoaded = setInterval(() => {
+                    if (provinceSelect.options.length > 1) {
+                        console.log('[商机表单] 省份数据加载完成，选项数量:', provinceSelect.options.length);
+                        window.districtSelectorReady = true;
+                        clearInterval(checkProvinceLoaded);
+                    }
+                }, 200);
+                // 10秒后停止检查
+                setTimeout(() => {
+                    clearInterval(checkProvinceLoaded);
+                    if (provinceSelect.options.length <= 1) {
+                        console.warn('[商机表单] 10秒内省份数据未加载完成');
+                    }
+                }, 10000);
+            } else {
+                console.error('[商机表单] 未找到省份选择框元素 projectProvinceSelect');
+            }
+        } else {
+            console.error('[商机表单] 项目地址选择器初始化失败');
+        }
+    }
+    
+    // 开始初始化
+    initProjectSelector();
+    
+    const form = document.getElementById('opportunityForm');
+    if (form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    }
+});
+</script>
+{% endblock %}

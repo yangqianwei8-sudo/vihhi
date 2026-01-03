@@ -1,8 +1,30 @@
-{% extends "base.html" %}
+{% extends "shared/module_base.html" %}
+{% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-{% block extra_head %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    /* 产值权重表格样式 */
+    #weightDistributionTable tbody tr[data-is-subtotal="true"] {
+        background-color: #f0f0f0 !important;
+        font-weight: 600;
+    }
+    #weightDistributionTable tbody tr[data-is-subtotal="true"] td:first-child {
+        text-align: right !important;
+    }
+    #weightDistributionTable tbody tr:not([data-is-subtotal="true"]) {
+        background-color: #fff;
+    }
+    #weightDistributionTable .table {
+        margin-bottom: 0;
+    }
+    #weightDistributionTable .table thead th {
+        background-color: #f8f9fa;
+        text-align: center;
+        font-weight: 600;
+    }
 <style>
     .output-value-nav {
         background: #fff;
@@ -15,7 +37,7 @@
     .output-value-nav-tabs {
         display: flex;
         gap: 0;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 2px solid var(--vh-primary);
     }
     .output-value-nav-item {
         flex: 1;
@@ -166,29 +188,38 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block dynamic_table_custom_js %}
+<script>
+// 自定义渲染函数：权重显示
+if (!window.dynamicTableRenderers) {
+    window.dynamicTableRenderers = {};
+}
+
+window.dynamicTableRenderers.render_weight = function(row, key) {
+    const weight = row[key] || 0;
+    return weight.toFixed(2) + '%';
+};
+</script>
+{% endblock %}
+
+{% block module_content %}
 <div class="container-fluid py-4">
     <!-- 页面标题区域 -->
-    <div class="center-hero mb-4">
-        <div style="position: relative; z-index: 1;">
-            <div class="hero-icon">{{ page_icon }}</div>
-            <h1 class="hero-title">产值管理</h1>
-            <p class="hero-subtitle">配置和管理产值计算模板、查看产值记录和统计分析。</p>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">{{ page_title }}</h1>
+            <p class="text-muted mb-0">{{ description }}</p>
         </div>
-    </div>
-
-    <!-- 顶部导航栏 -->
-    <div class="output-value-nav">
-        <div class="output-value-nav-tabs">
-            <div class="output-value-nav-item">
-                <a href="{% url 'settlement_pages:output_value_template_manage' %}" class="output-value-nav-link active">产值模板</a>
-            </div>
-            <div class="output-value-nav-item">
-                <a href="{% url 'settlement_pages:output_value_record_list' %}" class="output-value-nav-link">产值记录</a>
-            </div>
-            <div class="output-value-nav-item">
-                <a href="{% url 'settlement_pages:output_value_statistics' %}" class="output-value-nav-link">产值统计</a>
-            </div>
+        <div>
+            <a href="{% url 'settlement_pages:output_value_stage_list' %}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-gear"></i> 阶段管理
+            </a>
+            <a href="{% url 'settlement_pages:output_value_milestone_list' %}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-flag"></i> 里程碑管理
+            </a>
+            <a href="{% url 'settlement_pages:output_value_event_list' %}" class="btn btn-outline-primary">
+                <i class="bi bi-lightning"></i> 事件管理
+            </a>
         </div>
     </div>
 
@@ -205,18 +236,22 @@
         {% endfor %}
     </div>
 
-    <!-- 产值模板配置 -->
+    <!-- 产值权重分配汇总 -->
+    {% if weight_table_config and weight_table_data %}
+    <div class="section-block mb-4">
+        <div style="margin-bottom: 16px;">
+            <h2 class="section-title" style="margin: 0;">产值权重分配</h2>
+            <p class="section-desc" style="margin: 8px 0 0 0;">各服务阶段的产值权重分配情况。</p>
+        </div>
+        {% include 'shared/_dynamic_table.html' with table_config=weight_table_config table_data=weight_table_data %}
+    </div>
+    {% endif %}
+
+    <!-- 产值阶段配置详情 -->
     <div class="section-block" id="stages">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <div>
-                <h2 class="section-title" style="margin: 0;">产值阶段配置</h2>
-                <p class="section-desc" style="margin: 8px 0 0 0;">查看和编辑所有产值阶段的配置详情，包括里程碑和事件的设置。</p>
-            </div>
-            <div>
-                <a href="{% url 'admin:settlement_center_outputvaluestage_changelist' %}" class="btn btn-primary me-2" target="_blank">管理阶段</a>
-                <a href="{% url 'admin:settlement_center_outputvaluemilestone_changelist' %}" class="btn btn-outline-primary me-2" target="_blank">管理里程碑</a>
-                <a href="{% url 'admin:settlement_center_outputvalueevent_changelist' %}" class="btn btn-outline-primary" target="_blank">管理事件</a>
-            </div>
+        <div style="margin-bottom: 16px;">
+            <h2 class="section-title" style="margin: 0;">阶段配置详情</h2>
+            <p class="section-desc" style="margin: 8px 0 0 0;">查看所有产值阶段的详细配置，包括里程碑和事件的设置。</p>
         </div>
         
         {% for stage in stages %}
@@ -230,7 +265,7 @@
                     </div>
                 </div>
                 <div>
-                    <a href="{% url 'admin:settlement_center_outputvaluestage_change' stage.id %}" class="btn btn-outline-primary" target="_blank" style="background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: #fff; font-size: 12px; padding: 6px 12px;">编辑阶段</a>
+                    <a href="{% url 'settlement_pages:output_value_stage_edit' stage.id %}" class="btn btn-outline-primary" style="background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: #fff; font-size: 12px; padding: 6px 12px;">编辑阶段</a>
                 </div>
             </div>
             
@@ -241,7 +276,7 @@
                         <span class="milestone-name">{{ milestone.name }}</span>
                         <span class="milestone-percentage">里程碑比例：{{ milestone.percentage }}%</span>
                     </div>
-                    <a href="{% url 'admin:settlement_center_outputvaluemilestone_change' milestone.id %}" class="btn btn-outline-primary" target="_blank" style="font-size: 12px; padding: 4px 10px;">编辑里程碑</a>
+                    <a href="{% url 'settlement_pages:output_value_milestone_edit' milestone.id %}" class="btn btn-outline-primary" style="font-size: 12px; padding: 4px 10px;">编辑里程碑</a>
                 </div>
                 
                 <div class="event-list">
@@ -254,7 +289,7 @@
                             <span>责任岗位：{{ event.role }}</span>
                             {% if event.trigger_condition %}<span>|</span><span>触发条件：{{ event.trigger_condition }}</span>{% endif %}
                         </div>
-                        <a href="{% url 'admin:settlement_center_outputvalueevent_change' event.id %}" class="btn btn-outline-primary" target="_blank" style="position: absolute; top: 8px; right: 8px; font-size: 11px; padding: 3px 8px; background: #fff;">编辑</a>
+                        <a href="{% url 'settlement_pages:output_value_event_edit' event.id %}" class="btn btn-outline-primary" style="position: absolute; top: 8px; right: 8px; font-size: 11px; padding: 3px 8px; background: #fff;">编辑</a>
                     </div>
                     {% endfor %}
                 </div>

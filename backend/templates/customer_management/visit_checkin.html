@@ -1,0 +1,176 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .filter-bar {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    
+    .checkin-table {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    
+    .checkin-table table {
+        margin-bottom: 0;
+    }
+    
+    .checkin-table thead th {
+        background: var(--vh-surface);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+    
+    .checkin-table tbody td {
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-md);
+        vertical-align: middle;
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    
+    .checkin-table tbody tr:hover {
+        background-color: var(--vh-surface);
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 操作栏 -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">{{ page_title }}</h5>
+        {% if can_create %}
+        <a href="{% url 'business_pages:visit_checkin_create' %}" class="btn btn-primary">+ 新建签到</a>
+        {% endif %}
+    </div>
+    
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" name="search" class="form-control" placeholder="搜索客户名称、签到地点..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="client_id" class="form-select">
+                    <option value="">全部客户</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}" placeholder="开始日期">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}" placeholder="结束日期">
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary">搜索</button>
+                <a href="{% url 'business_pages:visit_checkin' %}" class="btn btn-outline-secondary">重置</a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 签到记录列表 -->
+    {% if page_obj %}
+    <div class="checkin-table">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>签到时间</th>
+                        <th>客户</th>
+                        <th>签到地点</th>
+                        <th>关联计划</th>
+                        <th>签到人</th>
+                        <th>备注</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for checkin in page_obj %}
+                    <tr>
+                        <td>{{ checkin.checkin_time|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <a href="{% url 'business_pages:customer_detail' checkin.client.id %}" class="text-decoration-none">
+                                {{ checkin.client.name }}
+                            </a>
+                        </td>
+                        <td>{{ checkin.checkin_location }}</td>
+                        <td>
+                            {% if checkin.visit_plan %}
+                            {{ checkin.visit_plan.plan_title }}
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ checkin.created_by.get_full_name|default:checkin.created_by.username }}</td>
+                        <td>{{ checkin.notes|truncatewords:5|default:"—" }}</td>
+                        <td>
+                            <a href="{% url 'business_pages:visit_checkin_detail' checkin.id %}" class="btn btn-sm btn-outline-primary">查看</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination-wrapper p-3">
+            <nav aria-label="拜访签到分页">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="info-card">
+        <div class="info-card-body">
+            <p class="text-muted text-center py-5">暂无拜访签到记录</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

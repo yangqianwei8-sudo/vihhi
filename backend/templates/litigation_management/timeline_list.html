@@ -1,0 +1,176 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}时间节点 - {{ case.case_number }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                {% if perms.litigation_management.timeline.manage %}
+                <a href="{% url 'litigation_pages:timeline_create' case.id %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> 添加节点
+                </a>
+                {% endif %}
+                <a href="{% url 'litigation_pages:timeline_calendar' %}?case_id={{ case.id }}" class="btn btn-info">
+                    <i class="bi bi-calendar"></i> 日历视图
+                </a>
+                <a href="{% url 'litigation_pages:case_detail' case.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回案件
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选器 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">节点筛选</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">节点类型</label>
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">全部类型</option>
+                        <option value="trial" {% if timeline_type == 'trial' %}selected{% endif %}>开庭时间</option>
+                        <option value="appeal" {% if timeline_type == 'appeal' %}selected{% endif %}>上诉期限</option>
+                        <option value="evidence" {% if timeline_type == 'evidence' %}selected{% endif %}>举证期限</option>
+                        <option value="defense" {% if timeline_type == 'defense' %}selected{% endif %}>答辩期限</option>
+                        <option value="other" {% if timeline_type == 'other' %}selected{% endif %}>其他</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">状态</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">全部状态</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>待处理</option>
+                        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>处理中</option>
+                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>已完成</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">提醒设置</label>
+                    <select name="reminder" class="form-select form-select-sm">
+                        <option value="">全部</option>
+                        <option value="1" {% if reminder_filter == '1' %}selected{% endif %}>已启用提醒</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-search"></i> 筛选
+                        </button>
+                        <a href="{% url 'litigation_pages:timeline_list' case.id %}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-arrow-counterclockwise"></i> 重置
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 时间节点列表 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">时间节点列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">共 {{ timelines.count }} 条</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if timelines %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>节点名称</th>
+                            <th>节点类型</th>
+                            <th>节点时间</th>
+                            <th>状态</th>
+                            <th>提醒设置</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for timeline in timelines %}
+                        <tr {% if timeline.reminder_enabled and timeline.timeline_date <= warning_date and timeline.status != 'completed' %}class="table-warning"{% endif %}>
+                            <td>
+                                <a href="{% url 'litigation_pages:timeline_detail' timeline.id %}" class="text-decoration-none">
+                                    <strong>{{ timeline.timeline_name }}</strong>
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ timeline.get_timeline_type_display }}</span>
+                            </td>
+                            <td>
+                                {{ timeline.timeline_date|date:"Y-m-d" }}
+                                {% if timeline.reminder_enabled and timeline.timeline_date <= warning_date and timeline.status != 'completed' %}
+                                <span class="badge bg-danger ms-1">即将到期</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="status-badge {{ timeline.status }}">
+                                    {{ timeline.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if timeline.reminder_enabled %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-bell-fill"></i> 已启用
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">未启用</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'litigation_pages:timeline_detail' timeline.id %}" class="btn btn-outline-primary" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if perms.litigation_management.timeline.manage %}
+                                    <a href="{% url 'litigation_pages:timeline_edit' timeline.id %}" class="btn btn-outline-secondary" title="编辑">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if timeline.status != 'completed' %}
+                                    <a href="{% url 'litigation_pages:timeline_confirm' timeline.id %}" class="btn btn-outline-success" title="确认完成">
+                                        <i class="bi bi-check-circle"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: var(--vh-text-muted);"></i>
+                <p class="text-muted mt-3">暂无时间节点</p>
+                {% if perms.litigation_management.timeline.manage %}
+                <a href="{% url 'litigation_pages:timeline_create' case.id %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> 创建第一个时间节点
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

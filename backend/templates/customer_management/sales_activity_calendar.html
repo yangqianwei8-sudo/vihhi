@@ -1,0 +1,254 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<style>
+    .calendar-container {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .calendar-nav-btn {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    .calendar-nav-btn:hover {
+        background: #2563eb;
+    }
+    .today-activities {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .activity-item {
+        padding: 12px;
+        border-left: 4px solid #3b82f6;
+        background: #f9fafb;
+        border-radius: 6px;
+        margin-bottom: 8px;
+    }
+    .activity-item.completed {
+        border-left-color: #16a34a;
+        opacity: 0.7;
+    }
+    .activity-item h5 {
+        margin: 0 0 4px 0;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .activity-item .time {
+        font-size: 12px;
+        color: #6b7280;
+    }
+    .week-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+    }
+    .stat-badge {
+        background: #f3f4f6;
+        padding: 8px 12px;
+        border-radius: 6px;
+        text-align: center;
+    }
+    .stat-badge .label {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 4px;
+    }
+    .stat-badge .value {
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+    }
+    #calendar {
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- 筛选和操作栏 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">开始日期</label>
+                    <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">结束日期</label>
+                    <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">活动类型</label>
+                    <select class="form-select" name="activity_type">
+                        <option value="">全部</option>
+                        {% for code, name in activity_type_choices %}
+                        <option value="{{ code }}" {% if activity_type == code %}selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">完成状态</label>
+                    <select class="form-select" name="is_completed">
+                        <option value="">全部</option>
+                        <option value="0" {% if is_completed == '0' %}selected{% endif %}>未完成</option>
+                        <option value="1" {% if is_completed == '1' %}selected{% endif %}>已完成</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">筛选</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- 活动列表 -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">活动列表</h5>
+                    <a href="{% url 'business_pages:sales_activity_create' %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-circle"></i> 创建活动
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>活动类型</th>
+                                        <th>标题</th>
+                                        <th>开始时间</th>
+                                        <th>结束时间</th>
+                                        <th>地点</th>
+                                        <th>关联客户/商机</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for activity in page_obj %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-primary">{{ activity.get_activity_type_display }}</span>
+                                        </td>
+                                        <td><strong>{{ activity.title }}</strong></td>
+                                        <td>{{ activity.start_time|date:"Y-m-d H:i" }}</td>
+                                        <td>{{ activity.end_time|date:"Y-m-d H:i" }}</td>
+                                        <td>{{ activity.location|default:"-" }}</td>
+                                        <td>
+                                            {% if activity.related_client %}
+                                                <a href="{% url 'business_pages:customer_detail' activity.related_client.id %}">{{ activity.related_client.name }}</a>
+                                            {% elif activity.related_opportunity %}
+                                                <a href="{% url 'business_pages:opportunity_detail' activity.related_opportunity.id %}">{{ activity.related_opportunity.name }}</a>
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if activity.is_completed %}
+                                                <span class="badge bg-success">已完成</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">未完成</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- 分页 -->
+                        {% if page_obj.has_other_pages %}
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if activity_type %}&activity_type={{ activity_type }}{% endif %}{% if is_completed %}&is_completed={{ is_completed }}{% endif %}">上一页</a>
+                                </li>
+                                {% endif %}
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ num }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if activity_type %}&activity_type={{ activity_type }}{% endif %}{% if is_completed %}&is_completed={{ is_completed }}{% endif %}">{{ num }}</a></li>
+                                    {% endif %}
+                                {% endfor %}
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if activity_type %}&activity_type={{ activity_type }}{% endif %}{% if is_completed %}&is_completed={{ is_completed }}{% endif %}">下一页</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <p>暂无活动记录</p>
+                            <a href="{% url 'business_pages:sales_activity_create' %}" class="btn btn-primary">创建第一个活动</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- 统计卡片 -->
+            {% if summary_cards %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">统计信息</h5>
+                </div>
+                <div class="card-body">
+                    {% for card in summary_cards %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <div class="text-muted small">{{ card.title }}</div>
+                            <div class="h4 mb-0">{{ card.value }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+

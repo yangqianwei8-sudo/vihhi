@@ -1,0 +1,210 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .form-section h4 {
+        margin-bottom: 20px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+        border-bottom: 2px solid var(--vh-primary);
+        padding-bottom: 12px;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <form method="post" id="templateForm">
+                {% csrf_token %}
+                
+                <div class="form-section">
+                    <h4>基本信息</h4>
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label">规则名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" value="{% if rule %}{{ rule.name }}{% endif %}" required placeholder="例如：住宅项目费率规则">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="rule_type" class="form-label">规则类型 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="rule_type" name="rule_type" requireddata-change="handle_onchange_0">
+                            <option value="">请选择规则类型</option>
+                            {% for code, name in rule_type_choices %}
+                            <option value="{{ code }}" {% if rule and rule.rule_type == code %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">规则说明</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="描述此规则的用途和适用场景">{% if rule %}{{ rule.description }}{% endif %}</textarea>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>适用范围</h4>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="project_type" class="form-label">项目业态</label>
+                            <input type="text" class="form-control" id="project_type" name="project_type" value="{% if rule %}{{ rule.project_type }}{% endif %}" placeholder="例如：住宅、商业">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="service_type" class="form-label">服务类型</label>
+                            <input type="text" class="form-control" id="service_type" name="service_type" value="{% if rule %}{{ rule.service_type }}{% endif %}" placeholder="例如：优化设计">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="structure_type" class="form-label">结构形式</label>
+                            <input type="text" class="form-control" id="structure_type" name="structure_type" value="{% if rule %}{{ rule.structure_type }}{% endif %}" placeholder="例如：框架结构">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="min_area" class="form-label">最小面积（平方米）</label>
+                            <input type="number" class="form-control" id="min_area" name="min_area" step="0.01" min="0" value="{% if rule and rule.min_area %}{{ rule.min_area }}{% endif %}" placeholder="可选">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="max_area" class="form-label">最大面积（平方米）</label>
+                            <input type="number" class="form-control" id="max_area" name="max_area" step="0.01" min="0" value="{% if rule and rule.max_area %}{{ rule.max_area }}{% endif %}" placeholder="可选">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>规则参数</h4>
+                    <div id="ruleParamsContainer">
+                        <!-- 动态显示规则参数 -->
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>其他设置</h4>
+                    
+                    <div class="mb-3">
+                        <label for="adjustment_factor" class="form-label">调整系数</label>
+                        <input type="number" class="form-control" id="adjustment_factor" name="adjustment_factor" step="0.01" min="0" value="{% if rule %}{{ rule.adjustment_factor }}{% else %}1.0{% endif %}" placeholder="默认1.0">
+                        <small class="text-muted">用于对计算结果进行调整，默认值为1.0</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if rule and rule.is_active or not rule %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">
+                                启用此规则
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'business_pages:quotation_template_list' %}" class="btn btn-secondary">取消</a>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 规则参数配置
+const ruleParamsConfig = {
+    'rate': [
+        {name: 'rate', label: '费率（%）', type: 'number', step: '0.01', min: '0', max: '100', placeholder: '例如：15表示15%'}
+    ],
+    'unit_price': [
+        {name: 'unit_price', label: '单价（元/平方米）', type: 'number', step: '0.01', min: '0', placeholder: '例如：50表示50元/平方米'}
+    ],
+    'fixed': [
+        {name: 'fixed_amount', label: '固定金额（万元）', type: 'number', step: '0.01', min: '0', placeholder: '例如：10表示10万元'}
+    ]
+};
+
+function updateRuleParams() {
+    const ruleType = document.getElementById('rule_type').value;
+    const container = document.getElementById('ruleParamsContainer');
+    
+    if (ruleType && ruleParamsConfig[ruleType]) {
+        let html = '';
+        ruleParamsConfig[ruleType].forEach(param => {
+            html += '<div class="mb-3">';
+            html += `<label for="param_${param.name}" class="form-label">${param.label} <span class="text-danger">*</span></label>`;
+            html += `<input type="${param.type}" class="form-control" id="param_${param.name}" name="${param.name}" step="${param.step || ''}" min="${param.min || ''}" max="${param.max || ''}" required placeholder="${param.placeholder || ''}">`;
+            html += '</div>';
+        });
+        container.innerHTML = html;
+    } else {
+        // TODO: 使用DOMPurify清理HTML
+            container.innerHTML = '<p class="text-muted">请先选择规则类型</p>';
+    }
+}
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    {% if rule %}
+    // 编辑模式，填充规则参数
+    const ruleType = '{{ rule.rule_type }}';
+    const ruleParams = {{ rule_params_json|safe|default:"{}" }};
+    
+    updateRuleParams();
+    
+    // 填充参数值
+    setTimeout(function() {
+        if (ruleParamsConfig[ruleType]) {
+            ruleParamsConfig[ruleType].forEach(param => {
+                const input = document.getElementById('param_' + param.name);
+                if (input && ruleParams[param.name] !== undefined) {
+                    if (param.name === 'rate') {
+                        input.value = ruleParams[param.name] * 100; // 费率转换为百分比
+                    } else {
+                        input.value = ruleParams[param.name];
+                    }
+                }
+            });
+        }
+    }, 100);
+    {% else %}
+    updateRuleParams();
+    {% endif %}
+});
+
+    // 事件处理器: handle_onchange_0
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('#rule_type');
+        if (element) {
+            element.addEventListener('change', function(e) {
+                updateRuleParams()
+            });
+        }
+    });
+
+</script>
+{% endblock %}
+

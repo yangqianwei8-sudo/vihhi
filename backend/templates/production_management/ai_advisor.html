@@ -1,0 +1,292 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}AI设计优化顾问 - 维海科技信息化管理平台{% endblock %}
+
+{% block module_extra_css %}
+<link rel="stylesheet" href="{% static 'css/ai_advisor.css' %}">
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面头部 -->
+    <div class="ai-advisor-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-robot me-2"></i>设计优化AI顾问系统</h1>
+                    <p class="mb-0">结合DeepSeek AI与内部专家经验，提供专业设计优化建议</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="savings-badge">
+                        <i class="fas fa-coins me-2"></i> 累计节省: ¥ {{ stats.total_savings|floatformat:1 }} 万元
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 左侧：问题输入和AI对话 -->
+        <div class="col-lg-8">
+            <div class="ai-advisor-card ai-advisor-card-fixed">
+                <div class="ai-advisor-card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-comments me-2"></i>AI设计优化顾问</span>
+                    <button class="btn btn-sm btn-light" id="clearChatBtn">
+                        <i class="fas fa-redo me-1"></i> 清空对话
+                    </button>
+                </div>
+                <div class="card-body ai-advisor-card-body-scrollable">
+                    <!-- 聊天区域 -->
+                    <div id="chatContainer" style="min-height: 400px; max-height: 500px; overflow-y: auto; padding: 1rem;">
+                        <!-- 聊天消息将通过JavaScript动态添加 -->
+                    </div>
+                    
+                    <!-- 输入区域 -->
+                    <div class="mt-3">
+                        <div class="mb-3">
+                            <label for="problemInput" class="form-label">优化前做法</label>
+                            <textarea class="form-control" id="problemInput" rows="4" placeholder="请详细描述优化前的做法，包括当前方案、存在问题、优化目标和约束条件..."></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="constraintsInput" class="form-label">约束条件</label>
+                            <textarea class="form-control" id="constraintsInput" rows="2" placeholder="请输入设计约束条件，如预算限制、时间要求、材料限制、规范要求等..."></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button class="btn btn-primary" id="sendMessageBtn">
+                                <i class="fas fa-paper-plane me-2"></i> 提交问题并获取优化建议
+                            </button>
+                            <button class="btn btn-outline-secondary" id="quickAnalysisBtn">
+                                <i class="fas fa-bolt me-2"></i> 快速分析
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI分析结果 -->
+            <div class="ai-loading" id="aiLoading">
+                <div class="ai-spinner"></div>
+                <h5>AI正在分析中...</h5>
+                <p class="text-muted">正在检索内部案例库并结合DeepSeek AI生成优化建议</p>
+            </div>
+            
+            <div id="aiResults" style="display: none;">
+                <!-- 标签页导航 -->
+                <ul class="nav nav-tabs" id="resultsTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="solutions-tab" data-bs-toggle="tab" data-bs-target="#solutions" type="button" role="tab">
+                            <i class="fas fa-lightbulb me-2"></i>优化方案
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="cases-tab" data-bs-toggle="tab" data-bs-target="#cases" type="button" role="tab">
+                            <i class="fas fa-clone me-2"></i>相似案例
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="analysis-tab" data-bs-toggle="tab" data-bs-target="#analysis" type="button" role="tab">
+                            <i class="fas fa-chart-bar me-2"></i>分析报告
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="risks-tab" data-bs-toggle="tab" data-bs-target="#risks" type="button" role="tab">
+                            <i class="fas fa-exclamation-triangle me-2"></i>风险评估
+                        </button>
+                    </li>
+                </ul>
+                
+                <!-- 标签页内容 -->
+                <div class="tab-content ai-tab-content" id="resultsTabContent">
+                    <div class="tab-pane fade show active" id="solutions" role="tabpanel">
+                        <div id="solutionsList"></div>
+                    </div>
+                    <div class="tab-pane fade" id="cases" role="tabpanel">
+                        <div id="similarCases"></div>
+                    </div>
+                    <div class="tab-pane fade" id="analysis" role="tabpanel">
+                        <div id="analysisReport"></div>
+                    </div>
+                    <div class="tab-pane fade" id="risks" role="tabpanel">
+                        <div id="riskAssessment"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧：资源库和专家知识 -->
+        <div class="col-lg-4">
+            <!-- 参数设置 -->
+            <div class="ai-advisor-card mb-4">
+                <div class="ai-advisor-card-header">
+                    <i class="fas fa-cog me-2"></i>参数设置
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <label for="serviceTypeId" class="form-label small mb-1">服务类型</label>
+                            <select class="form-select form-select-sm" id="serviceTypeId">
+                                <option value="">请选择</option>
+                                {% for service_type in service_types %}
+                                <option value="{{ service_type.id }}">{{ service_type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label for="professionCode" class="form-label small mb-1">咨询专业</label>
+                            <select class="form-select form-select-sm" id="professionCode" disabled>
+                                <option value="">请先选择</option>
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label for="budgetImpact" class="form-label small mb-1">预算影响</label>
+                            <select class="form-select form-select-sm" id="budgetImpact">
+                                <option value="reduce">降低成本</option>
+                                <option value="optimize" selected>优化成本</option>
+                                <option value="increase">可接受增加</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 上传设计文件 -->
+            <div class="ai-advisor-card mb-4">
+                <div class="ai-advisor-card-header">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>上传设计文件
+                </div>
+                <div class="card-body">
+                    <div class="file-upload" id="fileUploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-3"></i>
+                        <p class="mb-1">点击或拖拽上传设计图纸、计算书等文件</p>
+                        <p class="text-muted small">
+                            <strong>支持格式：</strong><br>
+                            • 图片：JPG, PNG, BMP（最多3张）<br>
+                            • CAD文件：<strong>DXF（推荐）</strong>、DWG<br>
+                            • 文档：PDF<br>
+                            <small class="text-info">
+                                💡 上传DXF文件可获得最精确的设计参数分析
+                            </small>
+                        </p>
+                    </div>
+                    <div id="fileList" class="mt-2"></div>
+                    <!-- 文件大小提示 -->
+                    <div class="alert alert-info mt-2 mb-0" style="display: none;" id="fileSizeWarning">
+                        <small><i class="fas fa-info-circle me-1"></i>文件大小限制：单个文件不超过50MB</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 我的方案库 -->
+            <div class="ai-advisor-card mb-4" id="mySolutionsCard">
+                <div class="ai-advisor-card-header">
+                    <i class="fas fa-folder-open me-2"></i>我的方案库
+                    <span class="badge bg-info ms-2" id="solutionCount" style="display: none;">0</span>
+                </div>
+                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                    <div id="savedSolutionsList">
+                        <div class="text-center py-3">
+                            <p class="text-muted small">加载中...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 知识库 -->
+            <div class="ai-advisor-card">
+                <div class="ai-advisor-card-header">
+                    <i class="fas fa-book me-2"></i>专家知识库
+                </div>
+                <div class="card-body">
+                    <div class="knowledge-item">
+                        <h6>结构优化原则</h6>
+                        <p class="small mb-2">合理选择结构体系，优化构件截面，减少材料用量，提高结构效率。</p>
+                        <div>
+                            <span class="expert-tag">结构</span>
+                            <span class="expert-tag">材料优化</span>
+                        </div>
+                    </div>
+                    
+                    <div class="knowledge-item">
+                        <h6>消防系统优化</h6>
+                        <p class="small mb-2">按工作压力选择管材，优化管网布置，合理选择设备型号。</p>
+                        <div>
+                            <span class="expert-tag">消防</span>
+                            <span class="expert-tag">管材</span>
+                            <span class="expert-tag">成本</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <button class="btn btn-sm btn-outline-primary" onclick="showKnowledgeBase()">
+                            <i class="fas fa-search me-1"></i> 查看更多知识
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CSRF Token -->
+<form style="display:none">{% csrf_token %}</form>
+{% endblock %}
+
+{% block module_extra_js %}
+<script src="{% static 'js/ai_advisor.js' %}"></script>
+<script>
+    // 配置信息
+    window.AI_ADVISOR_CONFIG = {
+        analyzeUrl: '{% url "production_pages:ai_advisor_api_analyze" %}',
+        casesSearchUrl: '{% url "production_pages:ai_advisor_api_cases_search" %}',
+        saveSolutionUrl: '{% url "production_pages:ai_advisor_api_save_solution" %}',
+        listSolutionsUrl: '{% url "production_pages:ai_advisor_api_list_solutions" %}',
+        csrfToken: '{{ csrf_token }}',
+        stats: {
+            totalCases: {{ stats.total_cases }},
+            totalSavings: {{ stats.total_savings }}
+        },
+        professionMap: {{ profession_map_json|safe }}
+    };
+    
+    // 服务类型和专业联动
+    (function() {
+        const serviceTypeSelect = document.getElementById('serviceTypeId');
+        const professionSelect = document.getElementById('professionCode');
+        const professionMap = window.AI_ADVISOR_CONFIG.professionMap || {};
+        
+        if (serviceTypeSelect && professionSelect) {
+            serviceTypeSelect.addEventListener('change', function() {
+                const serviceTypeId = this.value;
+                
+                // 清空专业选项
+                professionSelect.innerHTML = '<option value="">请选择专业</option>';
+                
+                if (serviceTypeId && professionMap[serviceTypeId]) {
+                    // 启用专业选择框
+                    professionSelect.disabled = false;
+                    
+                    // 添加该服务类型下的专业选项
+                    professionMap[serviceTypeId].forEach(function(profession) {
+                        const option = document.createElement('option');
+                        option.value = profession.code;
+                        option.textContent = profession.name;
+                        professionSelect.appendChild(option);
+                    });
+                } else {
+                    // 禁用专业选择框
+                    professionSelect.disabled = true;
+                    professionSelect.innerHTML = '<option value="">请先选择服务类型</option>';
+                }
+            });
+        }
+    })();
+    
+    function showKnowledgeBase() {
+        alert('知识库功能正在开发中，敬请期待');
+    }
+</script>
+{% endblock %}
+

@@ -1,0 +1,111 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block personnel_content %}
+<div class="info-card">
+    <div class="info-card-header">
+        <h5 class="info-card-title">{{ page_title }}</h5>
+    </div>
+    <div class="info-card-body">
+        <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label required">活动主题</label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                    <div class="text-danger small mt-1">{{ form.title.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">活动时间</label>
+                    {{ form.activity_date }}
+                    {% if form.activity_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.activity_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">活动状态</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                    <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">活动地点</label>
+                    {{ form.location }}
+                    {% if form.location.errors %}
+                    <div class="text-danger small mt-1">{{ form.location.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">最大参与人数</label>
+                    {{ form.max_participants }}
+                    {% if form.max_participants.errors %}
+                    <div class="text-danger small mt-1">{{ form.max_participants.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">活动预算</label>
+                    {{ form.budget }}
+                    {% if form.budget.errors %}
+                    <div class="text-danger small mt-1">{{ form.budget.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label required">活动描述</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-3 mt-4">
+            <a href="{% url 'personnel_pages:employee_relations_management' %}" class="btn btn-outline-secondary btn-submit">
+                <i class="bi bi-x-circle"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary btn-submit">
+                <i class="bi bi-check-circle"></i> 保存
+            </button>
+        </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

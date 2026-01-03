@@ -1,0 +1,361 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}编辑交付记录 - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">✏️ 编辑交付记录</h2>
+            <p class="text-muted mb-0">交付单号：{{ delivery.delivery_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'delivery_pages:delivery_detail' delivery.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回详情
+            </a>
+        </div>
+    </div>
+
+    <!-- 编辑表单 -->
+    <form id="deliveryEditForm" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">基本信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <label class="info-label info-label-required">交付标题</label>
+                        <input type="text" name="title" class="form-control" required value="{{ delivery.title }}" placeholder="请输入交付标题">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">优先级</label>
+                        <select name="priority" class="form-select">
+                            <option value="normal" {% if delivery.priority == 'normal' %}selected{% endif %}>普通</option>
+                            <option value="low" {% if delivery.priority == 'low' %}selected{% endif %}>低</option>
+                            <option value="high" {% if delivery.priority == 'high' %}selected{% endif %}>高</option>
+                            <option value="urgent" {% if delivery.priority == 'urgent' %}selected{% endif %}>紧急</option>
+                        </select>
+                    </div>
+                    <div class="info-item info-item-full-width">
+                        <label class="info-label">交付说明</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="请输入交付说明（可选）">{{ delivery.description }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 关联信息 -->
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">关联信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    {% if delivery.project %}
+                    <div class="info-item">
+                        <label class="info-label">关联项目</label>
+                        <select name="project_id" class="form-select" id="project_select">
+                            <option value="">请选择项目</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}" {% if delivery.project.id == project.id %}selected{% endif %}>
+                                {{ project.project_number }} - {{ project.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">关联客户</label>
+                        <input type="hidden" name="client_id" id="client_id" value="{% if delivery.client %}{{ delivery.client.id }}{% endif %}">
+                        <input type="text" name="client_name" class="form-control" id="client_name" readonly value="{% if delivery.client %}{{ delivery.client.name }}{% endif %}" placeholder="将自动从项目获取">
+                    </div>
+                    {% else %}
+                    <div class="info-item">
+                        <label class="info-label">关联客户</label>
+                        <select name="client_id" class="form-select" id="client_select">
+                            <option value="">请选择客户</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}" {% if delivery.client.id == client.id %}selected{% endif %}>
+                                {{ client.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 交付方式 -->
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">交付方式</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="btn-group w-100 mb-3" role="group">
+                    <input type="radio" class="btn-check" name="delivery_method" id="method_email" value="email" {% if delivery.delivery_method == 'email' %}checked{% endif %}>
+                    <label class="btn btn-outline-primary" for="method_email">
+                        <i class="bi bi-envelope"></i> 邮件
+                    </label>
+                    <input type="radio" class="btn-check" name="delivery_method" id="method_express" value="express" {% if delivery.delivery_method == 'express' %}checked{% endif %}>
+                    <label class="btn btn-outline-primary" for="method_express">
+                        <i class="bi bi-box-seam"></i> 快递
+                    </label>
+                    <input type="radio" class="btn-check" name="delivery_method" id="method_hand_delivery" value="hand_delivery" {% if delivery.delivery_method == 'hand_delivery' %}checked{% endif %}>
+                    <label class="btn btn-outline-primary" for="method_hand_delivery">
+                        <i class="bi bi-person-walking"></i> 送达
+                    </label>
+                </div>
+
+                <!-- 邮件相关信息 -->
+                <div id="email_fields" {% if delivery.delivery_method != 'email' %}style="display: none;"{% endif %}>
+                    <div class="info-grid info-grid-2">
+                        <div class="info-item info-item-full-width">
+                            <label class="info-label">邮件主题</label>
+                            <input type="text" name="email_subject" class="form-control" value="{{ delivery.email_subject }}" placeholder="请输入邮件主题">
+                        </div>
+                        <div class="info-item">
+                            <label class="info-label">抄送邮箱</label>
+                            <input type="text" name="cc_emails" class="form-control" value="{{ delivery.cc_emails }}" placeholder="多个邮箱用逗号分隔">
+                        </div>
+                        <div class="info-item">
+                            <label class="info-label">密送邮箱</label>
+                            <input type="text" name="bcc_emails" class="form-control" value="{{ delivery.bcc_emails }}" placeholder="多个邮箱用逗号分隔">
+                        </div>
+                        <div class="info-item info-item-full-width">
+                            <label class="info-label">邮件正文</label>
+                            <textarea name="email_message" class="form-control" rows="5" placeholder="请输入邮件正文（支持HTML格式）">{{ delivery.email_message }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快递相关信息 -->
+                <div id="express_fields" {% if delivery.delivery_method != 'express' %}style="display: none;"{% endif %}>
+                    <div class="info-grid info-grid-2">
+                        <div class="info-item">
+                            <label class="info-label">快递公司</label>
+                            <select name="express_company" class="form-select">
+                                <option value="">请选择</option>
+                                <option value="顺丰" {% if delivery.express_company == '顺丰' %}selected{% endif %}>顺丰</option>
+                                <option value="圆通" {% if delivery.express_company == '圆通' %}selected{% endif %}>圆通</option>
+                                <option value="中通" {% if delivery.express_company == '中通' %}selected{% endif %}>中通</option>
+                                <option value="申通" {% if delivery.express_company == '申通' %}selected{% endif %}>申通</option>
+                                <option value="韵达" {% if delivery.express_company == '韵达' %}selected{% endif %}>韵达</option>
+                                <option value="EMS" {% if delivery.express_company == 'EMS' %}selected{% endif %}>EMS</option>
+                                <option value="其他" {% if delivery.express_company == '其他' %}selected{% endif %}>其他</option>
+                            </select>
+                        </div>
+                        <div class="info-item">
+                            <label class="info-label">快递单号</label>
+                            <input type="text" name="express_number" class="form-control" value="{{ delivery.express_number }}" placeholder="请输入快递单号">
+                        </div>
+                        <div class="info-item">
+                            <label class="info-label">快递费用</label>
+                            <input type="number" name="express_fee" class="form-control" step="0.01" value="{{ delivery.express_fee }}" placeholder="请输入快递费用">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 送达相关信息 -->
+                <div id="hand_delivery_fields" {% if delivery.delivery_method != 'hand_delivery' %}style="display: none;"{% endif %}>
+                    <div class="info-grid info-grid-2">
+                        <div class="info-item info-item-full-width">
+                            <label class="info-label">送达备注</label>
+                            <textarea name="delivery_notes" class="form-control" rows="3" placeholder="请输入送达备注">{{ delivery.delivery_notes }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 收件人信息 -->
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">收件人信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <label class="info-label info-label-required">收件人姓名</label>
+                        <input type="text" name="recipient_name" class="form-control" required value="{{ delivery.recipient_name }}" placeholder="请输入收件人姓名">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">联系电话</label>
+                        <input type="tel" name="recipient_phone" class="form-control" value="{{ delivery.recipient_phone }}" placeholder="请输入联系电话">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">邮箱地址</label>
+                        <input type="email" name="recipient_email" class="form-control" value="{{ delivery.recipient_email }}" placeholder="请输入邮箱地址">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">收件地址</label>
+                        <input type="text" name="recipient_address" class="form-control" value="{{ delivery.recipient_address }}" placeholder="快递/送达时使用">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 时间设置 -->
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">时间设置</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <label class="info-label info-label-required">计划交付时间</label>
+                        <input type="datetime-local" name="scheduled_delivery_time" class="form-control" required 
+                               value="{% if delivery.scheduled_delivery_time %}{{ delivery.scheduled_delivery_time|date:'Y-m-d\TH:i' }}{% endif %}">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label info-label-required">交付期限</label>
+                        <input type="datetime-local" name="deadline" class="form-control" required 
+                               value="{% if delivery.deadline %}{{ delivery.deadline|date:'Y-m-d\TH:i' }}{% endif %}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文件上传 -->
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">交付文件</h5>
+            </div>
+            <div class="info-card-body">
+                <!-- 现有文件列表 -->
+                {% if delivery.files.all %}
+                <div class="mb-3">
+                    <h6>已有文件：</h6>
+                    <ul class="list-group">
+                        {% for file in delivery.files.all %}
+                        {% if not file.is_deleted %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                <i class="bi bi-file-earmark"></i> {{ file.file_name }}
+                                <small class="text-muted">({{ file.file_size|filesizeformat }})</small>
+                            </span>
+                            <a href="{{ file.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-download"></i> 下载
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                <!-- 新增文件上传 -->
+                <div class="info-item">
+                    <label class="info-label">添加文件</label>
+                    <input type="file" name="files" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.dwg,.dgn,.jpg,.jpeg,.png,.zip,.rar,.7z">
+                    <small class="text-muted">支持多文件上传，最大100MB</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <a href="{% url 'delivery_pages:delivery_detail' delivery.id %}" class="btn btn-outline-secondary">取消</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> 保存修改
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 交付方式切换
+    const deliveryMethodRadios = document.querySelectorAll('input[name="delivery_method"]');
+    const emailFields = document.getElementById('email_fields');
+    const expressFields = document.getElementById('express_fields');
+    const handDeliveryFields = document.getElementById('hand_delivery_fields');
+    
+    deliveryMethodRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'email') {
+                emailFields.style.display = 'block';
+                expressFields.style.display = 'none';
+                handDeliveryFields.style.display = 'none';
+            } else if (this.value === 'express') {
+                emailFields.style.display = 'none';
+                expressFields.style.display = 'block';
+                handDeliveryFields.style.display = 'none';
+            } else {
+                emailFields.style.display = 'none';
+                expressFields.style.display = 'none';
+                handDeliveryFields.style.display = 'block';
+            }
+        });
+    });
+    
+    // 项目选择变化时自动填充客户信息
+    const projectSelect = document.getElementById('project_select');
+    if (projectSelect) {
+        projectSelect.addEventListener('change', function() {
+            const projectId = this.value;
+            const clientIdInput = document.getElementById('client_id');
+            const clientNameInput = document.getElementById('client_name');
+            
+            if (projectId) {
+                // 通过API获取项目信息
+                fetch(`/api/project/projects/${projectId}/`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('获取项目信息失败');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.client) {
+                            // 更新客户ID和客户名称
+                            if (clientIdInput) {
+                                clientIdInput.value = data.client;
+                            }
+                            if (clientNameInput) {
+                                clientNameInput.value = data.client_name || '';
+                            }
+                        } else {
+                            // 清空客户信息
+                            if (clientIdInput) {
+                                clientIdInput.value = '';
+                            }
+                            if (clientNameInput) {
+                                clientNameInput.value = '';
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取项目信息失败:', error);
+                        // 清空客户信息
+                        if (clientIdInput) {
+                            clientIdInput.value = '';
+                        }
+                        if (clientNameInput) {
+                            clientNameInput.value = '';
+                        }
+                    });
+            } else {
+                // 清空客户信息
+                if (clientIdInput) {
+                    clientIdInput.value = '';
+                }
+                if (clientNameInput) {
+                    clientNameInput.value = '';
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+

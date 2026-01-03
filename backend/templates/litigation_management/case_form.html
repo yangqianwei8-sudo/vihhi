@@ -1,0 +1,220 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}{% if case %}编辑案件{% else %}创建案件{% endif %} - 诉讼管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:case_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <!-- 表单 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">案件信息</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" id="caseForm">
+                {% csrf_token %}
+                
+                <!-- 基本信息 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">基本信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">案件名称 <span class="text-danger">*</span></label>
+                        <input type="text" name="case_name" class="form-control" 
+                               value="{% if case %}{{ case.case_name }}{% endif %}" required>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">案件类型 <span class="text-danger">*</span></label>
+                        <select name="case_type" class="form-select" required>
+                            <option value="">请选择</option>
+                            <option value="contract_dispute" {% if case and case.case_type == 'contract_dispute' %}selected{% endif %}>合同纠纷</option>
+                            <option value="labor_dispute" {% if case and case.case_type == 'labor_dispute' %}selected{% endif %}>劳动争议</option>
+                            <option value="ip_dispute" {% if case and case.case_type == 'ip_dispute' %}selected{% endif %}>知识产权</option>
+                            <option value="tort_dispute" {% if case and case.case_type == 'tort_dispute' %}selected{% endif %}>侵权纠纷</option>
+                            <option value="other" {% if case and case.case_type == 'other' %}selected{% endif %}>其他纠纷</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">案件性质 <span class="text-danger">*</span></label>
+                        <select name="case_nature" class="form-select" required>
+                            <option value="">请选择</option>
+                            <option value="plaintiff" {% if case and case.case_nature == 'plaintiff' %}selected{% endif %}>原告</option>
+                            <option value="defendant" {% if case and case.case_nature == 'defendant' %}selected{% endif %}>被告</option>
+                            <option value="third_party" {% if case and case.case_nature == 'third_party' %}selected{% endif %}>第三人</option>
+                            <option value="other" {% if case and case.case_nature == 'other' %}selected{% endif %}>其他</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">案件状态</label>
+                        <select name="status" class="form-select">
+                            <option value="pending_filing" {% if case and case.status == 'pending_filing' %}selected{% elif not case %}selected{% endif %}>待立案</option>
+                            <option value="filed" {% if case and case.status == 'filed' %}selected{% endif %}>已立案</option>
+                            <option value="trial" {% if case and case.status == 'trial' %}selected{% endif %}>审理中</option>
+                            <option value="judged" {% if case and case.status == 'judged' %}selected{% endif %}>已判决</option>
+                            <option value="executing" {% if case and case.status == 'executing' %}selected{% endif %}>执行中</option>
+                            <option value="closed" {% if case and case.status == 'closed' %}selected{% endif %}>已结案</option>
+                            <option value="withdrawn" {% if case and case.status == 'withdrawn' %}selected{% endif %}>已撤诉</option>
+                            <option value="settled" {% if case and case.status == 'settled' %}selected{% endif %}>已和解</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">优先级</label>
+                        <select name="priority" class="form-select">
+                            <option value="low" {% if case and case.priority == 'low' %}selected{% endif %}>低</option>
+                            <option value="medium" {% if case and case.priority == 'medium' %}selected{% elif not case %}selected{% endif %}>中</option>
+                            <option value="high" {% if case and case.priority == 'high' %}selected{% endif %}>高</option>
+                            <option value="urgent" {% if case and case.priority == 'urgent' %}selected{% endif %}>紧急</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">登记日期</label>
+                        <input type="date" name="registration_date" class="form-control" 
+                               value="{% if case %}{{ case.registration_date|date:'Y-m-d' }}{% else %}{{ 'now'|date:'Y-m-d' }}{% endif %}">
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">案件描述</label>
+                        <textarea name="description" class="form-control" rows="4" 
+                                  placeholder="请输入案件详细描述...">{% if case %}{{ case.description }}{% endif %}</textarea>
+                    </div>
+                </div>
+
+                <!-- 关联信息 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">关联信息</h6>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">关联项目</label>
+                        <select name="project" class="form-select">
+                            <option value="">请选择项目（可选）</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}" {% if case and case.project_id == project.id %}selected{% endif %}>
+                                {{ project.project_number }} - {{ project.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">关联客户</label>
+                        <select name="client" class="form-select">
+                            <option value="">请选择客户（可选）</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}" {% if case and case.client_id == client.id %}selected{% endif %}>
+                                {{ client.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">关联合同</label>
+                        <select name="contract" class="form-select">
+                            <option value="">请选择合同（可选）</option>
+                            {% for contract in contracts %}
+                            <option value="{{ contract.id }}" {% if case and case.contract_id == contract.id %}selected{% endif %}>
+                                {{ contract.contract_number }} - {{ contract.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 金额信息 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">金额信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">诉讼标的额</label>
+                        <input type="number" name="litigation_amount" class="form-control" step="0.01" 
+                               placeholder="请输入诉讼标的额" value="{% if case and case.litigation_amount %}{{ case.litigation_amount }}{% endif %}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">争议金额</label>
+                        <input type="number" name="dispute_amount" class="form-control" step="0.01" 
+                               placeholder="请输入争议金额" value="{% if case and case.dispute_amount %}{{ case.dispute_amount }}{% endif %}">
+                    </div>
+                </div>
+
+                <!-- 负责人信息 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">负责人信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">案件负责人</label>
+                        <select name="case_manager" class="form-select">
+                            <option value="">请选择负责人（可选）</option>
+                            <!-- 这里应该从后端获取用户列表，暂时留空 -->
+                        </select>
+                        <small class="form-text text-muted">如不选择，默认为登记人</small>
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'litigation_pages:case_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> 取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {% if case %}保存{% else %}创建{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 表单验证
+    document.getElementById('caseForm').addEventListener('submit', function(e) {
+        const caseName = document.querySelector('input[name="case_name"]').value.trim();
+        const caseType = document.querySelector('select[name="case_type"]').value;
+        const caseNature = document.querySelector('select[name="case_nature"]').value;
+        
+        if (!caseName) {
+            e.preventDefault();
+            alert('请输入案件名称');
+            return false;
+        }
+        
+        if (!caseType) {
+            e.preventDefault();
+            alert('请选择案件类型');
+            return false;
+        }
+        
+        if (!caseNature) {
+            e.preventDefault();
+            alert('请选择案件性质');
+            return false;
+        }
+    });
+</script>
+{% endblock %}
+

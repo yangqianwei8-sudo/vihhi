@@ -1,0 +1,226 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}档案高级检索 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">🔎 档案高级检索</h2>
+            <p class="text-muted mb-0">通过多条件组合精确检索档案，支持档案名称、编号、分类、状态、时间范围等条件</p>
+        </div>
+        <div>
+            <a href="{% url 'archive_management:archive_search_fulltext' %}" class="btn btn-secondary">
+                <i class="bi bi-search"></i> 全文检索
+            </a>
+        </div>
+    </div>
+
+    <!-- 检索表单 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">检索条件</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" id="advancedSearchForm">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">档案名称</label>
+                        <input type="text" name="archive_name" class="form-control" 
+                               placeholder="请输入档案名称" value="{{ archive_name }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">档案编号</label>
+                        <input type="text" name="archive_number" class="form-control" 
+                               placeholder="请输入档案编号" value="{{ archive_number }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">档案类型</label>
+                        <select name="archive_type" class="form-select">
+                            <option value="all" {% if archive_type == 'all' %}selected{% endif %}>全部</option>
+                            <option value="project" {% if archive_type == 'project' %}selected{% endif %}>项目档案</option>
+                            <option value="administrative" {% if archive_type == 'administrative' %}selected{% endif %}>行政档案</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">档案分类</label>
+                        <select name="category" class="form-select">
+                            <option value="">全部</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" {% if category_id == category.id|stringformat:"s" %}selected{% endif %}>
+                                {{ category.get_category_type_display }} - {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">档案状态</label>
+                        <select name="status" class="form-select">
+                            <option value="">全部</option>
+                            <option value="pending" {% if status == 'pending' %}selected{% endif %}>待归档</option>
+                            <option value="archived" {% if status == 'archived' %}selected{% endif %}>已归档</option>
+                            <option value="borrowed" {% if status == 'borrowed' %}selected{% endif %}>已借出</option>
+                            <option value="destroyed" {% if status == 'destroyed' %}selected{% endif %}>已销毁</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">关联项目</label>
+                        <select name="project" class="form-select">
+                            <option value="">全部</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}" {% if project_id == project.id|stringformat:"s" %}selected{% endif %}>
+                                {{ project.name|default:project.project_number }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">开始日期</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">结束日期</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> 检索
+                            </button>
+                            <button type="reset" class="btn btn-secondary" onclick="resetForm()">
+                                <i class="bi bi-arrow-counterclockwise"></i> 重置
+                            </button>
+                            <button type="button" class="btn btn-info" onclick="saveSearchConditions()">
+                                <i class="bi bi-bookmark"></i> 保存检索条件
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 检索结果 -->
+    {% if result_count is not None %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">检索结果</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-primary">找到 {{ result_count }} 条结果</span>
+                {% if search_duration %}
+                <span class="badge bg-secondary">耗时 {{ search_duration }} 秒</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if page.object_list %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>档案类型</th>
+                            <th>档案名称</th>
+                            <th>档案编号</th>
+                            <th>项目/分类</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in page.object_list %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-{% if result.type == 'project_document' %}primary{% elif result.type == 'administrative_archive' %}success{% else %}info{% endif %}">
+                                    {% if result.type == 'project_document' %}项目文档
+                                    {% elif result.type == 'administrative_archive' %}行政档案
+                                    {% elif result.type == 'project_archive' %}项目归档
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ result.url }}" class="text-decoration-none">
+                                    {{ result.title }}
+                                </a>
+                            </td>
+                            <td>{{ result.number }}</td>
+                            <td>
+                                {% if result.project %}
+                                    {{ result.project.name|default:result.project.project_number }}
+                                {% elif result.category %}
+                                    {{ result.category.name }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if result.status == 'archived' %}success{% elif result.status == 'pending' %}warning{% elif result.status == 'borrowed' %}info{% else %}secondary{% endif %}">
+                                    {{ result.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ result.created_time|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <a href="{{ result.url }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-eye"></i> 查看
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if page.has_other_pages %}
+            <nav aria-label="分页导航" class="mt-3">
+                <ul class="pagination justify-content-center">
+                    {% if page.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page.previous_page_number }}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page.paginator.page_range %}
+                    {% if page.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page.number|add:'-3' and num < page.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page.next_page_number }}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 未找到匹配的档案，请调整检索条件后重试。
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function resetForm() {
+    document.getElementById('advancedSearchForm').reset();
+}
+
+function saveSearchConditions() {
+    alert('保存检索条件功能正在开发中');
+}
+</script>
+{% endblock %}

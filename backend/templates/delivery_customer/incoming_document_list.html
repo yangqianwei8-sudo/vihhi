@@ -1,0 +1,159 @@
+{% extends "shared/list_page_base.html" %}
+{% comment %}
+收文列表页面模板 (Incoming Document List Template)
+
+功能说明：
+- 展示收文记录的列表页面
+- 支持按状态、优先级、阶段、文件分类等多维度筛选
+- 支持收文记录的查看、编辑操作
+- 包含复选框功能，支持批量操作
+
+主要功能：
+1. 筛选功能：
+   - 状态筛选：全部及各状态选项
+   - 优先级筛选：全部、紧急、高、普通、低
+   - 阶段筛选：全部及各阶段选项
+   - 文件分类筛选：根据选择的阶段动态显示对应的分类选项
+2. 表格展示：序号、收文编号、文件标题、发文单位、状态、优先级、阶段、文件分类、收文日期、处理人、操作
+3. 复选框功能：支持全选和批量操作（继承自list_page_base.html）
+4. 操作功能：查看详情、编辑
+
+特殊功能：
+- 文件分类选项根据选择的阶段动态显示/隐藏（通过筛选面板的依赖关系实现）
+- 支持创建新收文记录
+{% endcomment %}
+{% load static %}
+
+{% block list_page_title %}收文列表{% endblock %}
+
+{% block list_page_actions %}
+{% if can_create %}
+<a href="{% url 'delivery_pages:incoming_document_create' %}" 
+   class="btn btn-primary btn-sm"
+   aria-label="创建新收文">
+    <i class="bi bi-plus-circle"></i> 创建收文
+</a>
+{% endif %}
+{% endblock %}
+
+{% block empty_create_url %}{% url 'delivery_pages:incoming_document_create' %}{% endblock %}
+
+{# 筛选区域已通过 filter_config 在 list_page_base.html 中自动渲染 #}
+{# 如需自定义筛选区域，可覆盖 list_page_filters 块 #}
+
+<!-- 表格复选框列 -->
+{% block list_page_table_checkbox_header %}
+<th style="width: 40px;">
+    <input type="checkbox" id="selectAll" title="全选/取消全选">
+</th>
+{% endblock %}
+
+{% block list_page_table_headers %}
+<th style="width: 4%;">#</th>
+<th style="width: 10%;">收文编号</th>
+<th style="width: 18%;">文件标题</th>
+<th style="width: 12%;">发文单位</th>
+<th style="width: 8%;">状态</th>
+<th style="width: 8%;">优先级</th>
+<th style="width: 8%;">阶段</th>
+<th style="width: 10%;">文件分类</th>
+<th style="width: 8%;">收文日期</th>
+<th style="width: 8%;">处理人</th>
+{% endblock %}
+{% block list_page_table_actions_header %}
+<th style="width: 10%;">
+    操作
+    <span id="columnSettingsBtn"
+          data-bs-toggle="modal"
+          data-bs-target="#columnSettingsModal"
+          aria-label="设置表格字段"
+          title="设置表格字段"
+          style="cursor: pointer; color: #000000 !important; font-size: 16px; vertical-align: middle; margin-left: 8px; display: inline-block;">
+        <i class="bi bi-gear" style="color: #000000 !important;"></i>
+    </span>
+</th>
+{% endblock %}
+
+{% block list_page_table_checkbox_cell %}
+<td>
+    <input type="checkbox" class="row-checkbox" value="{{ item.id }}" title="选择此项">
+</td>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td>{{ forloop.counter0|add:page_obj.start_index }}</td>
+<td><code>{{ item.document_number }}</code></td>
+<td>
+    <strong>{{ item.title|truncatewords:10 }}</strong>
+</td>
+<td>{{ item.sender }}</td>
+<td>
+    {% if item.status %}
+        <span class="badge bg-{% if item.status == 'completed' %}success{% elif item.status == 'processing' %}warning{% elif item.status == 'archived' %}secondary{% else %}info{% endif %}">
+            {{ item.get_status_display }}
+        </span>
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>
+    {% if item.priority %}
+        <span class="badge bg-{% if item.priority == 'urgent' %}danger{% elif item.priority == 'high' %}warning{% elif item.priority == 'normal' %}info{% else %}secondary{% endif %}">
+            {{ item.get_priority_display }}
+        </span>
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>
+    {% if item.stage %}
+        <span class="badge bg-info">{{ item.get_stage_display }}</span>
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>
+    {% if item.file_category %}
+        <span class="badge bg-secondary">{{ item.file_category.name }}</span>
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>{{ item.receive_date|date:"Y-m-d"|default:"-" }}</td>
+<td>
+    {% if item.handler %}
+        {{ item.handler.get_full_name|default:item.handler.username }}
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+{% endblock %}
+
+{% block list_page_table_actions_cell %}
+<td>
+    <div class="list-page-table-actions">
+        <a href="{% url 'delivery_pages:incoming_document_detail' item.id %}" 
+           class="action-view" title="查看详情">
+            <i class="bi bi-eye"></i>
+        </a>
+        {% if can_create %}
+        <span class="action-separator">|</span>
+        <a href="{% url 'delivery_pages:incoming_document_edit' item.id %}" 
+           class="action-edit" title="编辑">
+            <i class="bi bi-pencil"></i>
+        </a>
+        <span class="action-separator">|</span>
+        <a href="{% url 'delivery_pages:incoming_document_delete' item.id %}" 
+           class="action-delete" title="删除" onclick="return confirm('确定要删除这条收文吗？');">
+            <i class="bi bi-trash"></i>
+        </a>
+        {% endif %}
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_table_message %}
+<i class="bi bi-inbox"></i> 暂无收文数据
+{% endblock %}
+
+{% block empty_colspan %}12{% endblock %}

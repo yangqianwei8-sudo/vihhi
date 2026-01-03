@@ -1,0 +1,209 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}{% if person %}编辑人员{% else %}创建人员{% endif %} - {{ case.case_number }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:person_list' case.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <!-- 表单 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">人员信息</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" id="personForm">
+                {% csrf_token %}
+                
+                <!-- 基本信息 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">基本信息</h6>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">人员类型 <span class="text-danger">*</span></label>
+                        <select name="person_type" class="form-select" required id="personType">
+                            <option value="">请选择</option>
+                            <option value="lawyer" {% if person and person.person_type == 'lawyer' %}selected{% endif %}>律师</option>
+                            <option value="judge" {% if person and person.person_type == 'judge' %}selected{% endif %}>法官</option>
+                            <option value="party" {% if person and person.person_type == 'party' %}selected{% endif %}>当事人</option>
+                            <option value="other" {% if person and person.person_type == 'other' %}selected{% endif %}>其他</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">姓名 <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" 
+                               value="{% if person %}{{ person.name }}{% endif %}" required placeholder="请输入姓名">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">联系方式</label>
+                        <input type="text" name="contact_phone" class="form-control" 
+                               value="{% if person %}{{ person.contact_phone }}{% endif %}" placeholder="请输入联系电话">
+                    </div>
+                </div>
+
+                <!-- 律师信息 -->
+                <div class="row mb-4" id="lawyerSection" style="display: none;">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">律师信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">律师事务所</label>
+                        <input type="text" name="law_firm" class="form-control" 
+                               value="{% if person %}{{ person.law_firm }}{% endif %}" placeholder="请输入律师事务所">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">执业证号</label>
+                        <input type="text" name="license_number" class="form-control" 
+                               value="{% if person %}{{ person.license_number }}{% endif %}" placeholder="请输入执业证号">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">专业领域</label>
+                        <input type="text" name="specialty" class="form-control" 
+                               value="{% if person %}{{ person.specialty }}{% endif %}" placeholder="请输入专业领域">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">代理角色</label>
+                        <input type="text" name="role" class="form-control" 
+                               value="{% if person %}{{ person.role }}{% endif %}" placeholder="请输入代理角色">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">评价等级</label>
+                        <select name="rating" class="form-select">
+                            <option value="">请选择</option>
+                            <option value="5" {% if person and person.rating == 5 %}selected{% endif %}>5星</option>
+                            <option value="4" {% if person and person.rating == 4 %}selected{% endif %}>4星</option>
+                            <option value="3" {% if person and person.rating == 3 %}selected{% endif %}>3星</option>
+                            <option value="2" {% if person and person.rating == 2 %}selected{% endif %}>2星</option>
+                            <option value="1" {% if person and person.rating == 1 %}selected{% endif %}>1星</option>
+                        </select>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">评价</label>
+                        <textarea name="evaluation" class="form-control" rows="3" 
+                                  placeholder="请输入评价">{% if person %}{{ person.evaluation }}{% endif %}</textarea>
+                    </div>
+                </div>
+
+                <!-- 法官信息 -->
+                <div class="row mb-4" id="judgeSection" style="display: none;">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">法官信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">法院名称</label>
+                        <input type="text" name="court_name" class="form-control" 
+                               value="{% if person %}{{ person.court_name }}{% endif %}" placeholder="请输入法院名称">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">职务</label>
+                        <input type="text" name="position" class="form-control" 
+                               value="{% if person %}{{ person.position }}{% endif %}" placeholder="请输入职务">
+                    </div>
+                </div>
+
+                <!-- 当事人信息 -->
+                <div class="row mb-4" id="partySection" style="display: none;">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">当事人信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">当事人类型</label>
+                        <select name="party_type" class="form-select">
+                            <option value="">请选择</option>
+                            <option value="natural_person" {% if person and person.party_type == 'natural_person' %}selected{% endif %}>自然人</option>
+                            <option value="legal_person" {% if person and person.party_type == 'legal_person' %}selected{% endif %}>法人</option>
+                            <option value="other_organization" {% if person and person.party_type == 'other_organization' %}selected{% endif %}>其他组织</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">角色</label>
+                        <input type="text" name="role" class="form-control" 
+                               value="{% if person %}{{ person.role }}{% endif %}" placeholder="请输入角色">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">地址</label>
+                        <input type="text" name="address" class="form-control" 
+                               value="{% if person %}{{ person.address }}{% endif %}" placeholder="请输入地址">
+                    </div>
+                </div>
+
+                <!-- 联系信息 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">联系信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">联系电话</label>
+                        <input type="text" name="contact_phone" class="form-control" 
+                               value="{% if person %}{{ person.contact_phone }}{% endif %}" placeholder="请输入联系电话">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">联系邮箱</label>
+                        <input type="email" name="contact_email" class="form-control" 
+                               value="{% if person %}{{ person.contact_email }}{% endif %}" placeholder="请输入联系邮箱">
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'litigation_pages:person_list' case.id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> 取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {% if person %}保存{% else %}创建{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // 根据人员类型显示/隐藏对应的表单区域
+    document.getElementById('personType').addEventListener('change', function() {
+        const personType = this.value;
+        // 隐藏所有区域
+        document.getElementById('lawyerSection').style.display = 'none';
+        document.getElementById('judgeSection').style.display = 'none';
+        document.getElementById('partySection').style.display = 'none';
+        
+        // 显示对应的区域
+        if (personType === 'lawyer') {
+            document.getElementById('lawyerSection').style.display = 'block';
+        } else if (personType === 'judge') {
+            document.getElementById('judgeSection').style.display = 'block';
+        } else if (personType === 'party') {
+            document.getElementById('partySection').style.display = 'block';
+        }
+    });
+    
+    // 页面加载时触发一次
+    document.getElementById('personType').dispatchEvent(new Event('change'));
+</script>
+{% endblock %}
+{% endblock %}
+

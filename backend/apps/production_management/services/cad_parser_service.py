@@ -1013,30 +1013,42 @@ class CADParserService:
         
         return basic_info
     
-    def parse_for_pre_optimization(self, file_path: str) -> Dict[str, Any]:
+    def parse_for_pre_optimization(self, file_path: str, progress_callback=None) -> Dict[str, Any]:
         """
         专门用于优化前资料的完整解析
         
         Args:
             file_path: CAD文件路径
+            progress_callback: 进度回调函数，接收 (progress, message) 参数
             
         Returns:
             包含所有提取信息的完整字典
         """
+        if progress_callback:
+            progress_callback(30, '正在解析CAD文件...')
         # 基础解析
         parse_result = self.parse_cad_file(file_path)
         
         if not parse_result.get('success'):
             return parse_result
         
+        if progress_callback:
+            progress_callback(50, '提取技术经济指标...')
         # 提取技术经济指标
         indicators = self.extract_technical_economic_indicators(parse_result)
         
+        if progress_callback:
+            progress_callback(70, '提取图纸目录...')
         # 提取图纸目录
         catalog = self.extract_drawing_catalog(parse_result)
         
+        if progress_callback:
+            progress_callback(85, '提取基本信息...')
         # 提取基本信息
         basic_info = self.extract_basic_info(parse_result)
+        
+        if progress_callback:
+            progress_callback(95, '整理解析结果...')
         
         # 组合结果
         result = {

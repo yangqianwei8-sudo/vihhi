@@ -1,0 +1,375 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <div class="container-fluid py-4">
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-end gap-2 mb-3">
+            {% if can_edit %}
+            <a href="{% url 'business_pages:contact_edit' contact.id %}" class="btn btn-primary">编辑联系人</a>
+            {% endif %}
+        </div>
+        
+        <!-- 基本信息 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">基本信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <span class="info-label">客户名称</span>
+                        <span class="info-value">
+                            <a href="{% url 'business_pages:customer_detail' contact.client.id %}">{{ contact.client.name }}</a>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">联系人姓名</span>
+                        <span class="info-value info-value-bold">{{ contact.name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">审批状态</span>
+                        <span class="info-value">
+                            {% if contact.approval_status == 'draft' %}
+                                <span class="badge bg-secondary">草稿</span>
+                            {% elif contact.approval_status == 'pending' %}
+                                <span class="badge bg-warning">待审批</span>
+                            {% elif contact.approval_status == 'approved' %}
+                                <span class="badge bg-success">已通过</span>
+                            {% elif contact.approval_status == 'rejected' %}
+                                <span class="badge bg-danger">已驳回</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ contact.get_approval_status_display }}</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">性别</span>
+                        <span class="info-value">{{ contact.get_gender_display|default:"未填写" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">籍贯</span>
+                        <span class="info-value">{{ contact.birthplace|default:"未填写" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 职业信息 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">职业信息</h5>
+            </div>
+            <div class="info-card-body">
+                {% if careers %}
+                    {% for career in careers %}
+                    <div class="border rounded p-3 mb-3">
+                        <div class="info-grid info-grid-2">
+                            <div class="info-item">
+                                <span class="info-label">就职公司</span>
+                                <span class="info-value">{{ career.company|default:"未填写" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">社会统一信用代码</span>
+                                <span class="info-value">{{ career.unified_credit_code|default:"未填写" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">部门</span>
+                                <span class="info-value">{{ career.department|default:"未填写" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">职位</span>
+                                <span class="info-value">{{ career.position|default:"未填写" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">入职时间</span>
+                                <span class="info-value">{{ career.join_date|date:"Y-m-d"|default:"未填写" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">离职时间</span>
+                                <span class="info-value">
+                                    {% if career.leave_date %}
+                                        {{ career.leave_date|date:"Y-m-d" }}
+                                        {% if career.join_date %}
+                                            <span class="text-muted small">(工作{{ career.calculate_duration }}年)</span>
+                                        {% endif %}
+                                    {% else %}
+                                        在职
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-muted">暂无职业信息</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 联系方式 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">联系方式</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <span class="info-label">手机</span>
+                        <span class="info-value">{{ contact.phone|default:"未填写" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">邮箱</span>
+                        <span class="info-value">{{ contact.email|default:"未填写" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">微信号</span>
+                        <span class="info-value">{{ contact.wechat|default:"未填写" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">办公地址</span>
+                        <span class="info-value">{{ contact.office_address|default:"未填写" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 角色与关系 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">角色与关系</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <span class="info-label">人员角色</span>
+                        <span class="info-value">
+                            {% if contact.role %}
+                            <span class="badge bg-secondary">{{ contact.get_role_display }}</span>
+                            {% else %}
+                            <span class="text-muted">未设置</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">关系等级</span>
+                        <span class="info-value">
+                            <span class="badge bg-info">{{ contact.get_relationship_level_display }}</span>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">决策影响力</span>
+                        <span class="info-value">{{ contact.get_decision_influence_display|default:"未填写" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">关系评分</span>
+                        <span class="info-value">{{ contact.relationship_score }} 分</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">最后联系时间</span>
+                        <span class="info-value">{{ contact.last_contact_time|date:"Y-m-d H:i"|default:"从未联系" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 教育背景 -->
+        {% if educations %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">教育背景</h5>
+            </div>
+            <div class="info-card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>学校</th>
+                            <th>专业</th>
+                            <th>学历</th>
+                            <th>开始时间</th>
+                            <th>结束时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for edu in educations %}
+                        <tr>
+                            <td>{{ edu.school|default:"未填写" }}</td>
+                            <td>{{ edu.major|default:"未填写" }}</td>
+                            <td>{{ edu.get_degree_display|default:"未填写" }}</td>
+                            <td>{{ edu.start_date|date:"Y-m-d"|default:"未填写" }}</td>
+                            <td>{{ edu.end_date|date:"Y-m-d"|default:"未填写" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 工作经历 -->
+        {% if work_experiences %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">工作经历</h5>
+            </div>
+            <div class="info-card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>公司名称</th>
+                            <th>职务</th>
+                            <th>开始时间</th>
+                            <th>结束时间</th>
+                            <th>办公地址</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for exp in work_experiences %}
+                        <tr>
+                            <td>{{ exp.company_name|default:"未填写" }}</td>
+                            <td>{{ exp.position|default:"未填写" }}</td>
+                            <td>{{ exp.start_date|date:"Y-m-d"|default:"未填写" }}</td>
+                            <td>{{ exp.end_date|date:"Y-m-d"|default:"至今" }}</td>
+                            <td>{{ exp.office_address|default:"未填写" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 工作变动 -->
+        {% if job_changes %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">工作变动</h5>
+            </div>
+            <div class="info-card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>变动日期</th>
+                            <th>原公司</th>
+                            <th>新公司</th>
+                            <th>原职务</th>
+                            <th>新职务</th>
+                            <th>变动原因</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for change in job_changes %}
+                        <tr>
+                            <td>{{ change.change_date|date:"Y-m-d" }}</td>
+                            <td>{{ change.old_company|default:"未填写" }}</td>
+                            <td>{{ change.new_company|default:"未填写" }}</td>
+                            <td>{{ change.old_position|default:"未填写" }}</td>
+                            <td>{{ change.new_position|default:"未填写" }}</td>
+                            <td>{{ change.reason|default:"未填写" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 合作信息 -->
+        {% if cooperations %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">合作信息</h5>
+            </div>
+            <div class="info-card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>合作日期</th>
+                            <th>合作类型</th>
+                            <th>合作内容</th>
+                            <th>合作金额</th>
+                            <th>备注</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for coop in cooperations %}
+                        <tr>
+                            <td>{{ coop.cooperation_date|date:"Y-m-d" }}</td>
+                            <td>{{ coop.get_cooperation_type_display|default:"未填写" }}</td>
+                            <td>{{ coop.content|default:"未填写" }}</td>
+                            <td>{% if coop.amount %}¥{{ coop.amount|floatformat:2 }}{% else %}未填写{% endif %}</td>
+                            <td>{{ coop.notes|default:"未填写" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 跟踪信息 -->
+        {% if trackings %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">跟踪信息</h5>
+            </div>
+            <div class="info-card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>跟踪日期</th>
+                            <th>跟踪方式</th>
+                            <th>跟踪内容</th>
+                            <th>跟踪人</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tracking in trackings %}
+                        <tr>
+                            <td>{{ tracking.tracking_date|date:"Y-m-d" }}</td>
+                            <td>{{ tracking.get_tracking_method_display|default:"未填写" }}</td>
+                            <td>{{ tracking.content|default:"未填写" }}</td>
+                            <td>{{ tracking.tracked_by.get_full_name|default:tracking.tracked_by.username }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 简历信息 -->
+        {% if contact.resume_file %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">简历信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <span class="info-label">简历文件</span>
+                        <span class="info-value">
+                            <a href="{{ contact.resume_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">下载简历</a>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">简历来源</span>
+                        <span class="info-value">{{ contact.resume_source|default:"未填写" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,246 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="btn-group">
+        {% if not lead.responsible_user %}
+        <a href="{% url 'business_pages:customer_lead_claim' lead.id %}" class="btn btn-success">认领线索</a>
+        {% endif %}
+        {% if can_edit %}
+        <a href="{% url 'business_pages:customer_lead_edit' lead.id %}" class="btn btn-primary">编辑线索</a>
+        {% endif %}
+        {% if can_add_followup %}
+        <a href="{% url 'business_pages:customer_lead_followup_create' lead.id %}" class="btn btn-info">添加跟进</a>
+        {% endif %}
+        {% if not lead.converted_client %}
+        <button type="button" class="btn btn-warning"data-click="handle_onclick_0">转化为客户</button>
+        {% endif %}
+    </div>
+    <a href="{% url 'business_pages:customer_list' %}" class="btn btn-outline-secondary">返回列表</a>
+</div>
+
+<div class="info-card">
+    <div class="info-card-header">
+        <h5 class="info-card-title">基本信息</h5>
+    </div>
+    <div class="info-card-body">
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">公司名称</span>
+                <span class="info-value">{{ lead.company_name }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="info-card">
+    <div class="info-card-header">
+        <h5 class="info-card-title">线索信息</h5>
+    </div>
+    <div class="info-card-body">
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">线索来源</span>
+                <span class="info-value">{{ lead.get_lead_source_display }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">渠道</span>
+                <span class="info-value">{{ lead.channel|default:"—" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">跟进状态</span>
+                <span class="info-value">
+                    <span class="status-badge {{ lead.follow_status }}">
+                        {{ lead.get_follow_status_display }}
+                    </span>
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">负责人</span>
+                <span class="info-value">{{ lead.responsible_user.get_full_name|default:lead.responsible_user.username|default:"未分配" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">是否已加好友</span>
+                <span class="info-value">
+                    {% if lead.is_friend_added %}
+                    <span class="badge bg-success">是</span>
+                    {% else %}
+                    <span class="badge bg-secondary">否</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">未跟进天数</span>
+                <span class="info-value">
+                    {% if lead.days_not_followed > 0 %}
+                    <span class="badge bg-{% if lead.days_not_followed > 300 %}danger{% elif lead.days_not_followed > 100 %}warning{% else %}success{% endif %}">
+                        {{ lead.days_not_followed }} 天
+                    </span>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">实际跟进时间</span>
+                <span class="info-value">{{ lead.actual_followup_time|date:"Y-m-d H:i"|default:"—" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 跟进记录 -->
+<div class="info-card">
+    <div class="info-card-header d-flex justify-content-between align-items-center">
+        <h5 class="info-card-title">跟进记录</h5>
+        {% if can_add_followup %}
+        <a href="{% url 'business_pages:customer_lead_followup_create' lead.id %}" class="btn btn-sm btn-primary">+ 添加跟进</a>
+        {% endif %}
+    </div>
+    <div class="info-card-body">
+        {% if followups %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>跟进时间</th>
+                        <th>跟进方式</th>
+                        <th>跟进内容</th>
+                        <th>客户反馈</th>
+                        <th>下一步计划</th>
+                        <th>跟进人</th>
+                        {% if can_edit %}
+                        <th>操作</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for followup in followups %}
+                    <tr>
+                        <td>{{ followup.follow_date|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ followup.get_follow_type_display }}</span>
+                        </td>
+                        <td>{{ followup.content|truncatewords:10|default:"—" }}</td>
+                        <td>{{ followup.customer_feedback|truncatewords:5|default:"—" }}</td>
+                        <td>
+                            {% if followup.next_plan %}
+                            {{ followup.next_plan|truncatewords:5 }}
+                            {% if followup.next_follow_date %}
+                            <br><small class="text-muted">预计: {{ followup.next_follow_date|date:"Y-m-d H:i" }}</small>
+                            {% endif %}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                        <td>{{ followup.created_by.get_full_name|default:followup.created_by.username }}</td>
+                        {% if can_edit %}
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'business_pages:customer_lead_followup_edit' lead.id followup.id %}" class="btn btn-outline-primary btn-sm">编辑</a>
+                                <a href="{% url 'business_pages:customer_lead_followup_delete' lead.id followup.id %}" class="btn btn-outline-danger btn-sm"data-click="handle_onclick_1"确认删除此跟进记录？')">删除</a>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">暂无跟进记录</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="info-card">
+    <div class="info-card-header">
+        <h5 class="info-card-title">创建信息</h5>
+    </div>
+    <div class="info-card-body">
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">创建人</span>
+                <span class="info-value">{{ lead.created_by.get_full_name|default:lead.created_by.username }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">创建时间</span>
+                <span class="info-value">{{ lead.created_time|date:"Y-m-d H:i" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">更新时间</span>
+                <span class="info-value">{{ lead.updated_time|date:"Y-m-d H:i" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    function getCsrfToken() {
+        const token = document.querySelector('[name=csrfmiddlewaretoken]');
+        return token ? token.value : '';
+    }
+    // 转化为客户
+    function convertLead(leadId) {
+        if (!confirm('确认将此线索转化为客户？')) return;
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "business_pages:customer_lead_bulk_action" %}';
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = getCsrfToken();
+        form.appendChild(csrfInput);
+        
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'convert';
+        form.appendChild(actionInput);
+        
+        const leadIdInput = document.createElement('input');
+        leadIdInput.type = 'hidden';
+        leadIdInput.name = 'lead_ids';
+        leadIdInput.value = leadId;
+        form.appendChild(leadIdInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // 事件处理器: handle_onclick_0
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                convertLead({{ lead.id }})
+            });
+        }
+    });
+
+
+    // 事件处理器: handle_onclick_1
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                return confirm(
+            });
+        }
+    });
+
+</script>
+{% endblock %}
+

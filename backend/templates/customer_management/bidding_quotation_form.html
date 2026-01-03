@@ -1,0 +1,223 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+    background: var(--vh-card-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--vh-border);
+    }
+
+    .form-section {
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 2px solid var(--vh-primary);
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    }
+
+    .form-section h5 {
+    font-size: 18px;
+        font-weight: 600;
+    color: #dc3545; /* 红色 */
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 2px solid var(--vh-primary);
+    }
+
+    .form-label {
+        font-weight: 500;
+    color: var(--vh-text);
+    margin-bottom: var(--spacing-xs);
+    }
+
+.form-label.required-field::after {
+        content: " *";
+    color: var(--vh-error);
+    }
+
+.form-control,
+.form-select {
+    color: #16A34A; /* 绿色 */
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #16A34A;
+    box-shadow: 0 0 0 0.2rem rgba(22, 163, 74, 0.25);
+}
+
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: var(--vh-error);
+}
+
+.invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--vh-error);
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <!-- 页面标题 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- 表单 -->
+    <form method="post"  id="biddingQuotationForm" novalidate>
+        {% csrf_token %}
+        
+        <!-- 表单错误提示 -->
+        {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- 基本信息 -->
+        <div class="form-section">
+            <h5>基本信息</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label required-field">关联商机</label>
+                        <select name="opportunity_id" class="form-select" required>
+                            <option value="">请选择商机</option>
+                            {% for opp in opportunities %}
+                            <option value="{{ opp.id }}">
+                                {{ opp.name }} ({{ opp.opportunity_number|default:'未编号' }}) - {{ opp.client.name|default:'未关联客户' }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label">投标编号</label>
+                        <input type="text" name="bidding_number" class="form-control" 
+                               maxlength="100" 
+                               placeholder="留空则系统自动生成">
+                        <small class="form-text text-muted">留空则系统自动生成</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label required-field">投标日期</label>
+                        <input type="date" name="bidding_date" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label required-field">提交截止日期</label>
+                        <input type="date" name="submission_deadline" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label">状态</label>
+                        <select name="status" class="form-select">
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if value == 'draft' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 招标要求 -->
+        <div class="form-section">
+            <h5>招标要求</h5>
+            <div class="form-group mb-3">
+                <label class="form-label">招标要求</label>
+                <textarea name="tender_requirements" class="form-control" rows="5" 
+                          placeholder="根据招标文件填写的要求..."></textarea>
+            </div>
+        </div>
+        
+        <!-- 备注 -->
+        <div class="form-section">
+            <h5>备注说明</h5>
+            <div class="form-group mb-3">
+                <label class="form-label">备注说明</label>
+                <textarea name="notes" class="form-control" rows="3" 
+                          placeholder="其他需要说明的信息..."></textarea>
+            </div>
+        </div>
+        
+        <!-- 表单操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% url 'business_pages:opportunity_bidding_quotation' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> 创建投标报价
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('biddingQuotationForm');
+    const biddingDateInput = form.querySelector('input[name="bidding_date"]');
+    const deadlineInput = form.querySelector('input[name="submission_deadline"]');
+    
+    // 设置默认日期为今天
+    const today = new Date().toISOString().split('T')[0];
+    if (!biddingDateInput.value) {
+        biddingDateInput.value = today;
+    }
+    
+    // 表单验证
+    form.addEventListener('submit', function(e) {
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        // 验证截止日期应该晚于投标日期
+        if (biddingDateInput.value && deadlineInput.value) {
+            if (new Date(deadlineInput.value) < new Date(biddingDateInput.value)) {
+                e.preventDefault();
+                alert('提交截止日期应该晚于或等于投标日期');
+                deadlineInput.focus();
+                return false;
+            }
+        }
+        
+        form.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %}
+

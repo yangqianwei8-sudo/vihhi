@@ -1,0 +1,77 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">{{ page_title }}</h4>
+            <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>返回详情
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <h5>{{ plan.name }}</h5>
+                <p class="text-muted mb-0">{{ plan.plan_number }}</p>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label required">进度百分比</label>
+                        {{ form.progress }}
+                        {% if form.progress.errors %}
+                        <div class="text-danger small mt-1">{{ form.progress.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">范围：0-100</div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label required">进度说明</label>
+                        {{ form.progress_description }}
+                        {% if form.progress_description.errors %}
+                        <div class="text-danger small mt-1">{{ form.progress_description.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">执行结果</label>
+                        {{ form.execution_result }}
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">执行问题</label>
+                        {{ form.execution_issues }}
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">备注</label>
+                        {{ form.notes }}
+                    </div>
+                    <div class="col-md-12">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-1"></i>取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>更新进度
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

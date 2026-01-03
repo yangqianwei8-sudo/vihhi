@@ -1,0 +1,186 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}通知详情 - 诉讼管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ notification.notification_title }}</p>
+        </div>
+        <div>
+            {% if notification.status != 'confirmed' %}
+            <a href="{% url 'litigation_pages:notification_confirm' notification.id %}" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> 确认通知
+            </a>
+            {% endif %}
+            <a href="{% url 'litigation_pages:notification_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <!-- 通知详情 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">通知信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">通知标题</span>
+                    <span class="info-value">{{ notification.notification_title }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">通知类型</span>
+                    <span class="info-value">
+                        <span class="badge bg-info">{{ notification.get_notification_type_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">确认状态</span>
+                    <span class="info-value">
+                        {% if notification.status == 'pending' %}
+                            <span class="status-badge warning">待确认</span>
+                        {% elif notification.status == 'read_unconfirmed' %}
+                            <span class="status-badge info">已读未确认</span>
+                        {% elif notification.status == 'confirmed' %}
+                            <span class="status-badge success">已确认</span>
+                        {% elif notification.status == 'escalated' %}
+                            <span class="status-badge danger">已升级</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">紧急程度</span>
+                    <span class="info-value">
+                        {% if notification.urgency_level == 'urgent' %}
+                            <span class="badge bg-danger">紧急</span>
+                        {% elif notification.urgency_level == 'important' %}
+                            <span class="badge bg-warning">重要</span>
+                        {% else %}
+                            <span class="badge bg-secondary">一般</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">发送时间</span>
+                    <span class="info-value">{{ notification.sent_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% if notification.confirmed_at %}
+                <div class="info-item">
+                    <span class="info-label">确认时间</span>
+                    <span class="info-value">{{ notification.confirmed_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                {% if notification.confirmed_by %}
+                <div class="info-item">
+                    <span class="info-label">确认人</span>
+                    <span class="info-value">{{ notification.confirmed_by.username }}</span>
+                </div>
+                {% endif %}
+                {% if notification.escalation_level > 0 %}
+                <div class="info-item">
+                    <span class="info-label">升级级别</span>
+                    <span class="info-value">
+                        {% if notification.escalation_level == 1 %}
+                            <span class="badge bg-warning">二次提醒</span>
+                        {% elif notification.escalation_level == 2 %}
+                            <span class="badge bg-danger">通知上级</span>
+                        {% elif notification.escalation_level == 3 %}
+                            <span class="badge bg-danger">电话通知</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知内容 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">通知内容</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="alert alert-info">
+                <pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">{{ notification.notification_content }}</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知方式 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">通知方式</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-3">
+                <div class="info-item">
+                    <span class="info-label">系统通知</span>
+                    <span class="info-value">
+                        {% if notification.sent_via_system %}
+                            <span class="badge bg-success">已发送</span>
+                        {% else %}
+                            <span class="badge bg-secondary">未发送</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">邮件通知</span>
+                    <span class="info-value">
+                        {% if notification.sent_via_email %}
+                            <span class="badge bg-success">已发送</span>
+                        {% else %}
+                            <span class="badge bg-secondary">未发送</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">短信通知</span>
+                    <span class="info-value">
+                        {% if notification.sent_via_sms %}
+                            <span class="badge bg-success">已发送</span>
+                        {% else %}
+                            <span class="badge bg-secondary">未发送</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 关联案件 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">关联案件</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">案件编号</span>
+                    <span class="info-value">
+                        <a href="{% url 'litigation_pages:case_detail' notification.case.id %}" class="text-decoration-none">
+                            {{ notification.case.case_number }}
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">案件名称</span>
+                    <span class="info-value">{{ notification.case.case_name }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

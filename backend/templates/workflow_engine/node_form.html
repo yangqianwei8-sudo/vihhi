@@ -1,0 +1,196 @@
+{% extends "shared/form_page_base.html" %}
+{% load static %}
+
+{% block page_title %}{% if node %}编辑节点{% else %}创建节点{% endif %}{% endblock %}
+
+{% block module_extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .form-section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    .approver-selection {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{% if node %}编辑节点{% else %}创建节点{% endif %}</h2>
+            <p class="text-muted mb-0">流程：{{ workflow.name }}</p>
+        </div>
+        <a href="{% url 'workflow_engine:workflow_detail' workflow.id %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回流程详情
+        </a>
+    </div>
+
+    <form method="post" class="node-form">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-section">
+            <div class="form-section-title">基本信息</div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">节点名称 <span class="text-danger">*</span></label>
+                    <input type="text" name="name" class="form-control" value="{{ node.name|default:'' }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">节点类型 <span class="text-danger">*</span></label>
+                    <select name="node_type" class="form-select" required>
+                        {% for value, label in node_type_choices %}
+                        <option value="{{ value }}" {% if node.node_type == value or not node and value == 'approval' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">节点顺序 <span class="text-danger">*</span></label>
+                    <input type="number" name="sequence" class="form-control" value="{{ node.sequence|default:1 }}" min="0" required>
+                    <small class="form-text text-muted">数字越小越靠前</small>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">节点描述</label>
+                    <textarea name="description" class="form-control" rows="2">{{ node.description|default:'' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 审批人配置 -->
+        <div class="form-section" id="approver-config">
+            <div class="form-section-title">审批人配置</div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">审批人类型</label>
+                    <select name="approver_type" class="form-select" id="approver_type">
+                        <option value="">请选择</option>
+                        {% for value, label in approver_type_choices %}
+                        <option value="{{ value }}" {% if node.approver_type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">审批模式</label>
+                    <select name="approval_mode" class="form-select">
+                        {% for value, label in approval_mode_choices %}
+                        <option value="{{ value }}" {% if node.approval_mode == value or not node and value == 'single' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- 指定用户 -->
+                <div class="col-12" id="approver_users_section" style="display: none;">
+                    <label class="form-label">指定审批人</label>
+                    <div class="approver-selection">
+                        {% for user in users %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="approver_users" value="{{ user.id }}" id="user_{{ user.id }}" {% if node and user in node.approver_users.all %}checked{% endif %}>
+                            <label class="form-check-label" for="user_{{ user.id }}">{{ user.username }} ({{ user.get_full_name|default:user.username }})</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- 指定角色 -->
+                <div class="col-12" id="approver_roles_section" style="display: none;">
+                    <label class="form-label">指定角色</label>
+                    <div class="approver-selection">
+                        {% for role in roles %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="approver_roles" value="{{ role.id }}" id="role_{{ role.id }}" {% if node and role in node.approver_roles.all %}checked{% endif %}>
+                            <label class="form-check-label" for="role_{{ role.id }}">{{ role.name }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- 指定部门 -->
+                <div class="col-12" id="approver_departments_section" style="display: none;">
+                    <label class="form-label">指定部门</label>
+                    <div class="approver-selection">
+                        {% for dept in departments %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="approver_departments" value="{{ dept.id }}" id="dept_{{ dept.id }}" {% if node and dept in node.approver_departments.all %}checked{% endif %}>
+                            <label class="form-check-label" for="dept_{{ dept.id }}">{{ dept.name }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 节点配置 -->
+        <div class="form-section">
+            <div class="form-section-title">节点配置</div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_required" id="is_required" {% if node.is_required or not node %}checked{% endif %}>
+                        <label class="form-check-label" for="is_required">是否必审</label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="can_reject" id="can_reject" {% if node.can_reject or not node %}checked{% endif %}>
+                        <label class="form-check-label" for="can_reject">可驳回</label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="can_transfer" id="can_transfer" {% if node.can_transfer %}checked{% endif %}>
+                        <label class="form-check-label" for="can_transfer">可转交</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">超时时间（小时）</label>
+                    <input type="number" name="timeout_hours" class="form-control" value="{{ node.timeout_hours|default:'' }}" min="0" placeholder="覆盖流程默认超时时间">
+                </div>
+            </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="d-flex justify-content-end gap-2">
+            <a href="{% url 'workflow_engine:workflow_detail' workflow.id %}" class="btn btn-outline-secondary">取消</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> {% if node %}保存修改{% else %}创建节点{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const approverType = document.getElementById('approver_type');
+    const userSection = document.getElementById('approver_users_section');
+    const roleSection = document.getElementById('approver_roles_section');
+    const deptSection = document.getElementById('approver_departments_section');
+    
+    function toggleApproverSections() {
+        const value = approverType.value;
+        userSection.style.display = value === 'user' ? 'block' : 'none';
+        roleSection.style.display = value === 'role' ? 'block' : 'none';
+        deptSection.style.display = value === 'department' ? 'block' : 'none';
+    }
+    
+    approverType.addEventListener('change', toggleApproverSections);
+    toggleApproverSections(); // 初始化
+});
+</script>
+{% endblock %}

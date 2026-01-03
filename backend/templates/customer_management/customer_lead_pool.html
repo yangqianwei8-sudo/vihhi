@@ -1,0 +1,355 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .pool-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .pool-stat-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+        text-align: center;
+    }
+    
+    .pool-stat-value {
+        font-size: var(--font-size-2xl);
+        font-weight: 700;
+        color: var(--vh-primary);
+        margin-bottom: var(--spacing-xs);
+    }
+    
+    .pool-stat-label {
+        font-size: var(--font-size-sm);
+        color: var(--vh-text-muted);
+    }
+    
+    .lead-filters {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-md);
+        align-items: center;
+    }
+    
+    .filter-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+    }
+    
+    .filter-item label {
+        font-size: var(--font-size-sm);
+        color: var(--vh-text-muted);
+        white-space: nowrap;
+    }
+    
+    .filter-item select,
+    .filter-item input {
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border: 1px solid var(--vh-border);
+        border-radius: var(--radius-sm);
+    }
+    
+    .lead-table {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    
+    .lead-table table {
+        margin-bottom: 0;
+    }
+    
+    .lead-table thead th {
+        background: var(--vh-surface);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+        white-space: nowrap;
+    }
+    
+    .lead-table tbody td {
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-md);
+        vertical-align: middle;
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    
+    .lead-table tbody tr:hover {
+        background-color: var(--vh-surface);
+    }
+    
+    .contact-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--vh-primary), var(--vh-primary-light));
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 600;
+        font-size: var(--font-size-sm);
+        margin-right: var(--spacing-sm);
+    }
+    
+    
+    .claim-btn {
+        background: var(--vh-success);
+        color: #fff;
+        border: none;
+        padding: var(--spacing-xs) var(--spacing-md);
+        border-radius: var(--radius-sm);
+        font-size: var(--font-size-sm);
+        cursor: pointer;
+        transition: all var(--transition-base);
+    }
+    
+    .claim-btn:hover {
+        background: var(--vh-success-dark);
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 统计卡片 -->
+    <div class="pool-stats">
+        <div class="pool-stat-card">
+            <div class="pool-stat-value">{{ pool_total }}</div>
+            <div class="pool-stat-label">线索池总数</div>
+        </div>
+        <div class="pool-stat-card">
+            <div class="pool-stat-value">{{ unhandled_pool }}</div>
+            <div class="pool-stat-label">未处理线索</div>
+        </div>
+    </div>
+    
+    <!-- 筛选栏 -->
+    <div class="lead-filters">
+        <form method="get" id="filterForm">
+            <div class="filter-row">
+                <div class="filter-item">
+                    <label>跟进状态:</label>
+                    <select name="follow_status" class="form-select form-select-sm" style="width: 150px;">
+                        <option value="">全部</option>
+                        {% for value, label in follow_status_choices %}
+                        <option value="{{ value }}" {% if follow_status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label>线索来源:</label>
+                    <select name="lead_source" class="form-select form-select-sm" style="width: 150px;">
+                        <option value="">全部</option>
+                        {% for value, label in channel_choices %}
+                        <option value="{{ value }}" {% if lead_source == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label>创建时间:</label>
+                    <select name="created_time" class="form-select form-select-sm" style="width: 150px;">
+                        <option value="">全部</option>
+                        <option value="today" {% if created_time == 'today' %}selected{% endif %}>今天</option>
+                        <option value="week" {% if created_time == 'week' %}selected{% endif %}>最近7天</option>
+                        <option value="month" {% if created_time == 'month' %}selected{% endif %}>最近30天</option>
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <div class="input-group input-group-sm" style="width: 300px;">
+                        <input type="text" name="search" class="form-control" placeholder="搜索联系人、公司名称..." value="{{ search }}">
+                        <button class="btn btn-outline-secondary" type="submit">
+                            <i class="bi bi-search"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button"data-click="handle_onclick_0">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 线索列表表格 -->
+    {% if page_obj %}
+    <div class="lead-table">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>联系人</th>
+                        <th>公司名称</th>
+                        <th>线索来源</th>
+                        <th>地区</th>
+                        <th>跟进状态</th>
+                        <th>创建时间</th>
+                        <th>未跟进天数</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lead in page_obj %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <span class="contact-avatar">{{ lead.contact_name|first|upper }}</span>
+                                <span>{{ lead.contact_name }}</span>
+                            </div>
+                        </td>
+                        <td>{{ lead.company_name }}</td>
+                        <td>{{ lead.get_lead_source_display }}</td>
+                        <td>{{ lead.get_region_display|default:"—" }}</td>
+                        <td>
+                            <span class="status-badge {{ lead.follow_status }}">
+                                {{ lead.get_follow_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ lead.created_time|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            {% if lead.days_not_followed > 0 %}
+                            <span class="badge bg-{% if lead.days_not_followed > 300 %}danger{% elif lead.days_not_followed > 100 %}warning{% else %}success{% endif %}">
+                                {{ lead.days_not_followed }} 天
+                            </span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'business_pages:customer_lead_detail' lead.id %}" class="btn btn-sm btn-outline-primary">查看</a>
+                            {% if can_claim %}
+                            <form method="post" action="{% url 'business_pages:customer_lead_claim' lead.id %}" style="display: inline;" onsubmit="return confirm('确认认领此线索？');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm claim-btn">认领</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination-wrapper p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-muted">共{{ page_obj.paginator.count }}条</span>
+                </div>
+                <nav aria-label="线索池分页">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}">&lt;</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}">&gt;</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                <div>
+                    <select class="form-select form-select-sm" style="width: 80px;"data-change="handle_onchange_2">
+                        <option value="?page=1&per_page=10" {% if page_obj.paginator.per_page == 10 %}selected{% endif %}>10条/页</option>
+                        <option value="?page=1&per_page=20" {% if page_obj.paginator.per_page == 20 %}selected{% endif %}>20条/页</option>
+                        <option value="?page=1&per_page=50" {% if page_obj.paginator.per_page == 50 %}selected{% endif %}>50条/页</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="info-card">
+        <div class="info-card-body">
+            <p class="text-muted text-center py-5">线索池暂无数据</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // 筛选表单自动提交
+    document.querySelectorAll('#filterForm select').forEach(select => {
+        select.addEventListener('change', function() {
+            document.getElementById('filterForm').submit();
+        });
+    });
+
+    // 事件处理器: handle_onclick_0
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                location.reload()
+            });
+        }
+    });
+
+
+    // 事件处理器: handle_onchange_2
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.form-select');
+        if (element) {
+            element.addEventListener('change', function(e) {
+                location.href=this.value
+            });
+        }
+    });
+
+</script>
+{% endblock %}

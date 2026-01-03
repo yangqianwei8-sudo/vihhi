@@ -1,0 +1,95 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .form-card h5 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-md);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- 申请信息 -->
+    <div class="form-card mb-4">
+        <h5>申请信息</h5>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">申请单号</label>
+                <div class="form-control-plaintext"><code>{{ travel.application_number }}</code></div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">申请人</label>
+                <div class="form-control-plaintext">{{ travel.applicant.get_full_name|default:travel.applicant.username }}</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">差旅目的地</label>
+                <div class="form-control-plaintext">{{ travel.destination }}</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">差旅时间</label>
+                <div class="form-control-plaintext">
+                    {{ travel.start_date|date:"Y-m-d" }} 至 {{ travel.end_date|date:"Y-m-d" }}（{{ travel.travel_days }}天）
+                </div>
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">差旅事由</label>
+                <div class="form-control-plaintext" style="white-space: pre-wrap;">{{ travel.travel_reason }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 审批表单 -->
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-card">
+            <h5>审批意见</h5>
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label">审批意见</label>
+                    <textarea name="approval_notes" class="form-control" rows="4" placeholder="请输入审批意见（可选）..."></textarea>
+                    <small class="text-muted">可选，填写审批意见或说明</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% url 'admin_pages:travel_detail' travel.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="bi bi-check-circle"></i> 确认批准
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

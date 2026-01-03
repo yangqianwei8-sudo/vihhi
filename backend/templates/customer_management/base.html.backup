@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}维海科技信息化管理平台{% endblock %}</title>
+    {% load static %}
+    <!-- Bootstrap CSS with CDN fallback -->
+    <link id="bootstrap-css" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link id="bootstrap-icons-css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+    <script>
+        // Bootstrap CSS fallback: 如果主CDN失败，切换到备用CDN
+        (function() {
+            function switchToFallback() {
+                var bootstrapCss = document.getElementById('bootstrap-css');
+                var iconsCss = document.getElementById('bootstrap-icons-css');
+                
+                // 检查CSS是否加载成功（通过检查sheet属性）
+                if (bootstrapCss) {
+                    try {
+                        // 如果sheet为null或无法访问cssRules，说明加载失败
+                        if (!bootstrapCss.sheet || (bootstrapCss.sheet.cssRules && bootstrapCss.sheet.cssRules.length === 0)) {
+                            // 如果当前还是主CDN的URL，切换到备用CDN
+                            if (bootstrapCss.href.indexOf('cdn.jsdelivr.net') !== -1) {
+                                bootstrapCss.href = 'https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css';
+                            }
+                        }
+                    } catch(e) {
+                        // 跨域或其他错误，尝试切换到备用CDN
+                        if (bootstrapCss.href.indexOf('cdn.jsdelivr.net') !== -1) {
+                            bootstrapCss.href = 'https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css';
+                        }
+                    }
+                }
+                
+                if (iconsCss) {
+                    try {
+                        if (!iconsCss.sheet || (iconsCss.sheet.cssRules && iconsCss.sheet.cssRules.length === 0)) {
+                            if (iconsCss.href.indexOf('cdn.jsdelivr.net') !== -1) {
+                                iconsCss.href = 'https://cdn.bootcdn.net/ajax/libs/bootstrap-icons/1.11.0/font/bootstrap-icons.min.css';
+                            }
+                        }
+                    } catch(e) {
+                        if (iconsCss.href.indexOf('cdn.jsdelivr.net') !== -1) {
+                            iconsCss.href = 'https://cdn.bootcdn.net/ajax/libs/bootstrap-icons/1.11.0/font/bootstrap-icons.min.css';
+                        }
+                    }
+                }
+            }
+            
+            // 延迟检查，给主CDN一些时间加载（3秒）
+            setTimeout(switchToFallback, 3000);
+            
+            // 页面加载完成后也检查一次
+            if (document.readyState === 'complete') {
+                setTimeout(switchToFallback, 1000);
+            } else {
+                window.addEventListener('load', function() {
+                    setTimeout(switchToFallback, 2000);
+                });
+            }
+        })();
+    </script>
+    
+    
+                <style>
+        body {
+            padding-top: 56px; /* 为固定导航栏留出空间 */
+        }
+        /* 下拉菜单样式已在 navigation.css 中定义，无需重复 */
+        
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 20px;
+        }
+        
+            position: relative;
+        }
+        
+            position: sticky;
+            top: 88px;
+            background: linear-gradient(180deg, #FFFFFF, #F9FAFD);
+            border-radius: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 18px 16px;
+            min-height: calc(100vh - 200px);
+        }
+        
+            font-size: 12px;
+            color: #666;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        
+        
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--vh-text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+            position: relative;
+        }
+        
+            padding-left: 0;
+            margin-top: 2px;
+        }
+        
+            padding-left: 20px;
+        }
+        
+            padding: 6px 12px;
+            border-radius: 0;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--vh-text);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+            background: rgba(31, 42, 87, 0.08);
+            color: #1F2A57;
+        }
+        
+            background: rgba(255, 107, 53, 0.1);
+            color: #FF6B35;
+            font-weight: 600;
+        }
+        
+        .nav-icon {
+            font-size: 1.1em;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        
+        .nav-label {
+            flex: 1;
+        }
+        
+        /* 弹窗样式 - 从左往右铺满整个操作空间（参照商机管理） */
+        .customer-management-layout .modal-dialog {
+            max-width: calc(100vw - 240px - 40px); /* 减去侧边栏宽度和间距 */
+            margin: 1.75rem auto;
+        }
+        
+        .customer-management-layout .modal-dialog.modal-lg {
+            max-width: calc(100vw - 240px - 40px);
+        }
+        
+        .customer-management-layout .modal-dialog.modal-xl {
+            max-width: calc(100vw - 240px - 40px);
+        }
+        
+        /* 卡片标题下的蓝色线条（参照商机管理） */
+        .info-card-header {
+            border-bottom: 2px solid var(--vh-primary);
+            padding-bottom: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .info-card-title {
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+        
+        /* 所有创建表单中的卡片标题样式 - 添加蓝色下边框 */
+        .card .card-body h5,
+        .card-body h5,
+        .info-card h5,
+        .info-section-title {
+            border-bottom: 2px solid var(--vh-primary);
+            padding-bottom: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+            color: var(--vh-primary);
+            font-weight: 600;
+        }
+        
+        /* 确保表单卡片内的标题也有蓝色线条 */
+        .customer-content .card h5,
+        .customer-content .card-body h5 {
+            border-bottom: 2px solid var(--vh-primary);
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            color: var(--vh-primary);
+            font-weight: 600;
+        }
+    </style>
+    
+    
+    
+    
+    
+
+    </head>
+<body>
+    {% include "shared/_top_nav.html" %}
+
+    <div class="container-fluid py-3">
+        {% if messages %}
+        <div class="alert-container">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block breadcrumb %}
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                {% block breadcrumb_items %}{% endblock %}
+            </ol>
+        </nav>
+        {% endblock %}
+
+                {% if customer_menu %}
+        {# 客户管理布局 - 使用统一样式模板，带左侧菜单 #}
+        <div class="workspace workspace-two-column customer-management-layout">
+            <!-- 左侧导航菜单 -->
+            <aside class="workspace-nav">
+                <nav class="sidenav">
+                    <div class="sidenav-section">
+                        <div class="sidenav-links">
+                            {% for menu_group in customer_menu %}
+                            <div class="sidenav-item {% if menu_group.active or menu_group.expanded %}expanded{% endif %}">
+                                <a class="sidenav-link" 
+                                   href="{% if menu_group.url %}{{ menu_group.url }}{% else %}#{% endif %}" 
+                                   {% if menu_group.active %}data-active="true"{% endif %}>
+                                    {% if menu_group.icon %}<span>{{ menu_group.icon }}</span>{% endif %}
+                                    <span>{{ menu_group.label }}</span>
+                                    {% if menu_group.children %}<span class="menu-arrow">▶</span>{% endif %}
+                                </a>
+                                {% if menu_group.children %}
+                                <div class="submenu">
+                                    {% for child in menu_group.children %}
+                                    <a class="sidenav-link sidenav-sub-link" 
+                                       href="{{ child.url }}" 
+                                       {% if child.active %}data-active="true"{% endif %}>
+                                        {% if child.icon %}<span>{{ child.icon }}</span>{% endif %}
+                                        <span>{{ child.label }}</span>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </nav>
+            </aside>
+            
+            <!-- 主内容区域 -->
+            <main class="workspace-main customer-content">
+        {% else %}
+        <div class="workspace-content">
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+        
+        {% if customer_menu %}
+            </main>
+        </div>
+        {% else %}
+        </div>
+        {% endif %}
+        
+        
+        {% if customer_menu %}
+            </main>
+        </div>
+        {% else %}
+        </div>
+        {% endif %}
+    </div>
+
+    
+    <!-- 导航栏相关JavaScript已由sidebar.js统一处理 -->
+    <script>
+        // Bootstrap JS fallback
+        const bootstrapJs = document.getElementById('bootstrap-js');
+        if (bootstrapJs) {
+            bootstrapJs.addEventListener('error', function() {
+                var script = document.createElement('script');
+                script.src = 'https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js';
+                document.body.appendChild(script);
+            });
+        }
+    </script>
+    <!-- 导航栏折叠功能已由sidebar.js统一处理 -->
+    {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/sidebar.js' %}"></script>
+</body>
+</html>
+
+

@@ -1,0 +1,79 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}确认时间节点 - {{ timeline.timeline_name }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:timeline_detail' timeline.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回详情
+            </a>
+        </div>
+    </div>
+
+    <!-- 节点信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">节点信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">节点名称</span>
+                    <span class="info-value"><strong>{{ timeline.timeline_name }}</strong></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">节点类型</span>
+                    <span class="info-value">{{ timeline.get_timeline_type_display }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">节点时间</span>
+                    <span class="info-value">{{ timeline.timeline_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">当前状态</span>
+                    <span class="info-value">
+                        <span class="status-badge {{ timeline.status }}">
+                            {{ timeline.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认表单 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">确认完成</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>提示：</strong>确认完成后，该时间节点状态将更新为"已完成"。
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'litigation_pages:timeline_detail' timeline.id %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> 取消
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> 确认完成
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

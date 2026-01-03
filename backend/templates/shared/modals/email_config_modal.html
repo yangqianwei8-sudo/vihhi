@@ -1,0 +1,106 @@
+{% comment %}
+邮件配置模态框模板
+
+用于配置邮件发送的详细信息（主题、正文、收件人信息）
+
+使用方法：
+{% block module_modals %}
+{% include "shared/modals/email_config_modal.html" %}
+{% endblock %}
+
+JavaScript使用：
+- openModal('emailMethodModal') - 打开模态框
+- closeModal('emailMethodModal') - 关闭模态框
+{% endcomment %}
+
+<div class="modal fade" 
+     id="emailMethodModal" 
+     tabindex="-1" 
+     aria-labelledby="emailMethodModalLabel" 
+     aria-hidden="true"
+     data-bs-backdrop="true"
+     data-bs-keyboard="true"
+     data-bs-focus="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="emailMethodModalLabel">
+                    <i class="bi bi-envelope"></i> 邮件报送方式配置
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 第一行：收文单位 -->
+                <div class="mb-3">
+                    <label class="form-label">收文单位 <span class="text-danger">*</span></label>
+                    <select class="form-select" id="emailModalRecipientSelect" required>
+                        <option value="">请先选择项目</option>
+                    </select>
+                    <small class="form-text text-muted">根据项目编号自动过滤：关联客户、设计单位、人民法院</small>
+                </div>
+
+                <!-- 第二行：收件人信息（姓名、电话、邮箱一一对应） -->
+                <div class="mb-3">
+                    <label class="form-label">收件人信息 <span class="text-danger">*</span></label>
+                    <!-- 添加收件人 -->
+                    <div class="mb-2">
+                        <div class="input-group">
+                            <select class="form-select" id="emailModalContactSelectForAdd">
+                                <option value="">-- 从联系人中选择 --</option>
+                            </select>
+                            <button class="btn btn-outline-secondary" type="button" onclick="addEmailRecipientContact()">
+                                <i class="bi bi-plus"></i> 添加
+                            </button>
+                        </div>
+                        <small class="form-text text-muted">选择联系人后自动填充电话和邮箱，可手动编辑</small>
+                    </div>
+                    <!-- 收件人列表 -->
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered" id="emailRecipientsTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">姓名</th>
+                                    <th style="width: 30%;">联系电话</th>
+                                    <th style="width: 35%;">邮箱地址</th>
+                                    <th style="width: 10%;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="emailRecipientsTableBody">
+                                <tr id="emailRecipientsEmptyRow">
+                                    <td colspan="4" class="text-center text-muted">暂无收件人，请添加</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 第三行：邮件主题 -->
+                <div class="mb-3">
+                    <label class="form-label">邮件主题 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="emailModalSubject" placeholder="例如：【发文】文件标题" required>
+                </div>
+
+                <!-- 第四行：邮件正文 -->
+                <div class="mb-3">
+                    <label class="form-label">邮件正文</label>
+                    <textarea class="form-control" id="emailModalMessage" rows="6" placeholder="邮件正文内容（支持HTML格式）"></textarea>
+                </div>
+
+                <!-- 隐藏字段存储数据（这些字段会在表单提交时一起提交） -->
+                <input type="hidden" id="emailModalRecipients" name="email_recipients">
+                <input type="hidden" id="emailModalSubjectHidden" name="email_subject">
+                <input type="hidden" id="emailModalMessageHidden" name="email_message">
+                <!-- 联系方式隐藏字段 -->
+                <input type="hidden" id="emailModalRecipientHidden" name="recipient">
+                <input type="hidden" id="emailModalContactHidden" name="recipient_contact">
+                <input type="hidden" id="emailModalPhoneHidden" name="recipient_phone">
+                <input type="hidden" id="emailModalEmailHidden" name="recipient_email">
+                <input type="hidden" id="emailModalAddressHidden" name="recipient_address">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="uncheckEmailMethod()">取消选择</button>
+                <button type="button" class="btn btn-primary" onclick="confirmEmailMethod()">确认配置</button>
+            </div>
+        </div>
+    </div>
+</div>

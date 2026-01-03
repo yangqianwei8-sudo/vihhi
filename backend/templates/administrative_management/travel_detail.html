@@ -1,0 +1,250 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    /* 差旅方式徽章样式 */
+    .method-badge {
+        padding: 2px 8px;
+        border-radius: 8px;
+        font-size: var(--font-size-xs);
+        font-weight: 500;
+    }
+    .method-plane { background: #e7f3ff; color: #0066cc; }
+    .method-train { background: #fff4e6; color: #cc6600; }
+    .method-bus { background: #f0f0f0; color: #666; }
+    .method-self_drive { background: #e6ffe6; color: #006600; }
+    .method-other { background: #f0f0f0; color: #666; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:travel_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if travel.status in 'draft,pending_approval' and travel.applicant == request.user %}
+            <a href="{% url 'admin_pages:travel_update' travel_id=travel.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+            {% if travel.status == 'pending_approval' %}
+            <a href="{% url 'admin_pages:travel_approve' travel_id=travel.id %}" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> 审批
+            </a>
+            <a href="{% url 'admin_pages:travel_reject' travel_id=travel.id %}" class="btn btn-danger">
+                <i class="bi bi-x-circle"></i> 拒绝
+            </a>
+            {% endif %}
+            {% if travel.status == 'approved' %}
+            <a href="{% url 'admin_pages:expense_create' %}?travel_id={{ travel.id }}" class="btn btn-info">
+                <i class="bi bi-receipt"></i> 创建报销
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">申请单号</span>
+                    <span class="info-value"><code>{{ travel.application_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请人</span>
+                    <span class="info-value">{{ travel.applicant.get_full_name|default:travel.applicant.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请部门</span>
+                    <span class="info-value">{{ travel.department.name|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请日期</span>
+                    <span class="info-value">{{ travel.application_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge status-{{ travel.status }}">
+                            {{ travel.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ travel.created_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 差旅信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">差旅信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">差旅目的地</span>
+                    <span class="info-value">{{ travel.destination }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">差旅方式</span>
+                    <span class="info-value">
+                        <span class="method-badge method-{{ travel.travel_method }}">
+                            {{ travel.get_travel_method_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">开始时间</span>
+                    <span class="info-value">{{ travel.start_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">结束时间</span>
+                    <span class="info-value">{{ travel.end_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">差旅天数</span>
+                    <span class="info-value">{{ travel.travel_days }} 天</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">差旅预算</span>
+                    <span class="info-value">
+                        {% if travel.travel_budget %}
+                        ¥{{ travel.travel_budget|floatformat:2 }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">差旅事由</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ travel.travel_reason }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 差旅人员 -->
+    {% if travel.travelers.exists %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">差旅人员</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% for traveler in travel.travelers.all %}
+                <div class="info-item">
+                    <span class="info-value">{{ traveler.get_full_name|default:traveler.username }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 审批信息 -->
+    {% if travel.approver %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">审批信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">审批人</span>
+                    <span class="info-value">{{ travel.approver.get_full_name|default:travel.approver.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">审批时间</span>
+                    <span class="info-value">{{ travel.approved_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% if travel.approval_notes %}
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">审批意见</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ travel.approval_notes }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注 -->
+    {% if travel.notes %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-item">
+                <span class="info-value" style="white-space: pre-wrap;">{{ travel.notes }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 关联报销 -->
+    {% if reimbursements %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">关联报销</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>报销单号</th>
+                            <th>申请日期</th>
+                            <th>报销金额</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reimbursement in reimbursements %}
+                        <tr>
+                            <td><code>{{ reimbursement.reimbursement_number }}</code></td>
+                            <td>{{ reimbursement.application_date|date:"Y-m-d" }}</td>
+                            <td>¥{{ reimbursement.total_amount|floatformat:2 }}</td>
+                            <td>
+                                <span class="badge bg-{% if reimbursement.status == 'paid' %}success{% elif reimbursement.status == 'approved' %}info{% elif reimbursement.status == 'rejected' %}danger{% else %}warning{% endif %}">
+                                    {{ reimbursement.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'admin_pages:expense_detail' expense_id=reimbursement.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> 查看
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

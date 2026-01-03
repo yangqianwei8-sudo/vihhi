@@ -1,0 +1,183 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-pending_approval { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d1e7dd; color: #0f5132; }
+    .status-rejected { background: #f8d7da; color: #842029; }
+    .status-completed { background: #d1e7dd; color: #0f5132; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:asset_transfer_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            <a href="{% url 'admin_pages:asset_detail' asset_id=transfer.asset.id %}" class="btn btn-outline-primary">
+                <i class="bi bi-box"></i> 查看资产详情
+            </a>
+            {% if transfer.status == 'pending_approval' %}
+            <a href="{% url 'admin_pages:asset_transfer_approve' transfer_id=transfer.id %}" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> 审批
+            </a>
+            {% endif %}
+            {% if transfer.status == 'approved' %}
+            <a href="{% url 'admin_pages:asset_transfer_complete' transfer_id=transfer.id %}" class="btn btn-info">
+                <i class="bi bi-check-circle-fill"></i> 完成转移
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">转移单号</span>
+                    <span class="info-value"><code>{{ transfer.transfer_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge status-{{ transfer.status }}">
+                            {{ transfer.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">资产名称</span>
+                    <span class="info-value">
+                        <a href="{% url 'admin_pages:asset_detail' asset_id=transfer.asset.id %}" class="text-decoration-none">
+                            {{ transfer.asset.asset_name }}（{{ transfer.asset.asset_number }}）
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">转移日期</span>
+                    <span class="info-value">{{ transfer.transfer_date|date:"Y-m-d" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 转移信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">转移信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">原使用人</span>
+                    <span class="info-value">{{ transfer.from_user.get_full_name|default:transfer.from_user.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">新使用人</span>
+                    <span class="info-value">{{ transfer.to_user.get_full_name|default:transfer.to_user.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">原位置</span>
+                    <span class="info-value">{{ transfer.from_location|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">新位置</span>
+                    <span class="info-value">{{ transfer.to_location|default:"-" }}</span>
+                </div>
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">转移原因</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ transfer.transfer_reason }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 审批信息 -->
+    {% if transfer.approver %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">审批信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">审批人</span>
+                    <span class="info-value">{{ transfer.approver.get_full_name|default:transfer.approver.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">审批时间</span>
+                    <span class="info-value">{{ transfer.approved_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 完成信息 -->
+    {% if transfer.completed_by %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">完成信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">完成人</span>
+                    <span class="info-value">{{ transfer.completed_by.get_full_name|default:transfer.completed_by.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">完成时间</span>
+                    <span class="info-value">{{ transfer.completed_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注 -->
+    {% if transfer.notes %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-item">
+                <span class="info-value" style="white-space: pre-wrap;">{{ transfer.notes }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

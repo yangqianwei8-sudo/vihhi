@@ -1,0 +1,177 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}创建图纸归档 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-plus-circle"></i> 创建图纸归档
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if not drawing_files_available %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> 
+                        <strong>注意：</strong>图纸管理模块未安装或不可用，无法选择图纸文件。请先安装图纸管理模块。
+                    </div>
+                    {% endif %}
+
+                    <form method="post" id="drawingArchiveForm">
+                        {% csrf_token %}
+                        
+                        <!-- 基本信息 -->
+                        <h5 class="mb-3">基本信息</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="project" class="form-label">项目 <span class="text-danger">*</span></label>
+                                <select name="project" id="project" class="form-select" required>
+                                    <option value="">请选择项目</option>
+                                    {% for project in projects %}
+                                    <option value="{{ project.id }}">{{ project.name }} ({{ project.project_number }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="archive_type" class="form-label">归档类型 <span class="text-danger">*</span></label>
+                                <select name="archive_type" id="archive_type" class="form-select" required>
+                                    <option value="batch">批次归档</option>
+                                    <option value="project">项目归档</option>
+                                    <option value="category">分类归档</option>
+                                    <option value="profession">专业归档</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="category" class="form-label">归档分类</label>
+                                <select name="category" id="category" class="form-select">
+                                    <option value="">请选择分类（可选）</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category.id }}">{{ category.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="archive_reason" class="form-label">归档原因</label>
+                            <textarea name="archive_reason" id="archive_reason" class="form-control" rows="2" placeholder="请说明归档原因"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="archive_description" class="form-label">归档说明</label>
+                            <textarea name="archive_description" id="archive_description" class="form-control" rows="3" placeholder="请详细说明归档内容"></textarea>
+                        </div>
+
+                        <!-- 图纸选择 -->
+                        {% if drawing_files_available %}
+                        <h5 class="mb-3 mt-4">图纸选择</h5>
+                        
+                        <!-- 图纸文件选择 -->
+                        <div class="mb-3">
+                            <label class="form-label">图纸文件 <span class="text-danger">*</span></label>
+                            <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                {% if drawing_files %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="selectAllFiles" onchange="selectAllFiles(this)">
+                                    <label class="form-check-label fw-bold" for="selectAllFiles">全选</label>
+                                </div>
+                                <hr>
+                                {% for file in drawing_files %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="drawing_files" value="{{ file.id }}" id="file_{{ file.id }}">
+                                    <label class="form-check-label" for="file_{{ file.id }}">
+                                        {{ file.name }}
+                                        {% if file.submission %}
+                                            <span class="badge bg-secondary">{{ file.submission.project.name }}</span>
+                                        {% endif %}
+                                        <small class="text-muted">({{ file.category }})</small>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                                {% else %}
+                                <div class="text-muted">暂无图纸文件</div>
+                                {% endif %}
+                            </div>
+                            <div class="form-text">请至少选择一个图纸文件</div>
+                        </div>
+
+                        <!-- 图纸提交选择 -->
+                        <div class="mb-3">
+                            <label class="form-label">图纸提交（可选）</label>
+                            <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                                {% if drawing_submissions %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="selectAllSubmissions" onchange="selectAllSubmissions(this)">
+                                    <label class="form-check-label fw-bold" for="selectAllSubmissions">全选</label>
+                                </div>
+                                <hr>
+                                {% for submission in drawing_submissions %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="drawing_submissions" value="{{ submission.id }}" id="submission_{{ submission.id }}">
+                                    <label class="form-check-label" for="submission_{{ submission.id }}">
+                                        {{ submission.title }}
+                                        <span class="badge bg-secondary">{{ submission.project.name }}</span>
+                                        <small class="text-muted">({{ submission.get_status_display }})</small>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                                {% else %}
+                                <div class="text-muted">暂无图纸提交</div>
+                                {% endif %}
+                            </div>
+                            <div class="form-text">可选择图纸提交，系统会自动包含提交中的所有图纸文件</div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 图纸管理模块未安装，无法选择图纸文件。
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'archive_management:project_drawing_archive_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> 返回
+                            </a>
+                            <button type="submit" class="btn btn-primary" {% if not drawing_files_available %}disabled{% endif %}>
+                                <i class="bi bi-check-circle"></i> 提交归档申请
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectAllFiles(checkbox) {
+    const checkboxes = document.querySelectorAll('input[name="drawing_files"]');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+}
+
+function selectAllSubmissions(checkbox) {
+    const checkboxes = document.querySelectorAll('input[name="drawing_submissions"]');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+}
+
+// 表单验证
+document.getElementById('drawingArchiveForm').addEventListener('submit', function(e) {
+    const drawingFiles = document.querySelectorAll('input[name="drawing_files"]:checked');
+    const drawingSubmissions = document.querySelectorAll('input[name="drawing_submissions"]:checked');
+    
+    if (drawingFiles.length === 0 && drawingSubmissions.length === 0) {
+        e.preventDefault();
+        alert('请至少选择一个图纸文件或图纸提交');
+        return false;
+    }
+});
+</script>
+{% endblock %}

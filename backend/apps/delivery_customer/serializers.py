@@ -151,6 +151,43 @@ class DeliveryRecordCreateSerializer(serializers.ModelSerializer):
             'auto_archive_enabled', 'archive_condition', 'archive_days', 'notes'
         ]
     
+    def validate(self, data):
+        """验证业务规则"""
+        delivery_method = data.get('delivery_method')
+        
+        # 邮件交付方式必须填写收件人邮箱
+        if delivery_method == 'email':
+            recipient_email = data.get('recipient_email', '')
+            if not recipient_email or not recipient_email.strip():
+                raise serializers.ValidationError({
+                    'recipient_email': '邮件交付方式必须填写收件人邮箱'
+                })
+        
+        # 验证收件人姓名必填
+        recipient_name = data.get('recipient_name', '')
+        if not recipient_name or not recipient_name.strip():
+            raise serializers.ValidationError({
+                'recipient_name': '收件人姓名不能为空'
+            })
+        
+        # 验证标题必填
+        title = data.get('title', '')
+        if not title or not title.strip():
+            raise serializers.ValidationError({
+                'title': '交付标题不能为空'
+            })
+        
+        # 验证时间逻辑：计划交付时间不能晚于交付期限
+        scheduled_delivery_time = data.get('scheduled_delivery_time')
+        deadline = data.get('deadline')
+        if scheduled_delivery_time and deadline:
+            if scheduled_delivery_time > deadline:
+                raise serializers.ValidationError({
+                    'deadline': '交付期限不能早于计划交付时间'
+                })
+        
+        return data
+    
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
         validated_data['status'] = 'draft'

@@ -1,0 +1,169 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}发文签收确认 - {{ document.document_number }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">✅ 发文签收确认</h2>
+            <p class="text-muted mb-0">确认发文 {{ document.document_number }} 的签收信息</p>
+        </div>
+        <div>
+            <a href="{% url 'delivery_pages:outgoing_document_detail' document.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回详情
+            </a>
+        </div>
+    </div>
+
+    <!-- 发文基本信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">发文信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">发文编号：</dt>
+                        <dd class="col-sm-8"><strong>{{ document.document_number }}</strong></dd>
+                        
+                        <dt class="col-sm-4">文件标题：</dt>
+                        <dd class="col-sm-8">{{ document.title }}</dd>
+                        
+                        <dt class="col-sm-4">收文单位：</dt>
+                        <dd class="col-sm-8">{{ document.recipient }}</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">发送日期：</dt>
+                        <dd class="col-sm-8">{{ document.send_date|date:"Y-m-d" }}</dd>
+                        
+                        <dt class="col-sm-4">发送方式：</dt>
+                        <dd class="col-sm-8">
+                            {% if document.send_method %}
+                                <span class="badge bg-info">{{ document.send_method }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </dd>
+                        
+                        <dt class="col-sm-4">当前状态：</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-primary">{{ document.get_status_display }}</span>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 签收确认表单 -->
+    {% if can_confirm %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">签收确认信息</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" id="receiptConfirmForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="confirm">
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">签收方式 <span class="text-danger">*</span></label>
+                        <select name="receipt_method" class="form-select" required>
+                            <option value="">请选择</option>
+                            <option value="纸质签收">纸质签收</option>
+                            <option value="电子签收">电子签收</option>
+                            <option value="邮件确认">邮件确认</option>
+                            <option value="电话确认">电话确认</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">签收人姓名 <span class="text-danger">*</span></label>
+                        <input type="text" name="receipt_by" class="form-control" required placeholder="请输入签收人姓名">
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">签收人电话</label>
+                        <input type="text" name="receipt_phone" class="form-control" placeholder="请输入签收人电话">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">签收人邮箱</label>
+                        <input type="email" name="receipt_email" class="form-control" placeholder="请输入签收人邮箱">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">签收备注</label>
+                    <textarea name="receipt_comment" class="form-control" rows="3" placeholder="请输入签收备注信息"></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">签收凭证</label>
+                    <input type="file" name="receipt_signature" class="form-control" accept="image/*">
+                    <small class="form-text text-muted">支持上传签收凭证图片（如签收单、电子签名等）</small>
+                </div>
+                
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'delivery_pages:outgoing_document_detail' document.id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 取消
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> 确认签收
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i> 该发文已签收确认，无法重复确认。
+        <a href="{% url 'delivery_pages:outgoing_document_detail' document.id %}" class="alert-link">查看详情</a>
+    </div>
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('receiptConfirmForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const receiptMethod = form.querySelector('[name="receipt_method"]').value;
+            const receiptBy = form.querySelector('[name="receipt_by"]').value;
+            
+            if (!receiptMethod) {
+                e.preventDefault();
+                alert('请选择签收方式');
+                return false;
+            }
+            
+            if (!receiptBy || receiptBy.trim() === '') {
+                e.preventDefault();
+                alert('请输入签收人姓名');
+                form.querySelector('[name="receipt_by"]').focus();
+                return false;
+            }
+            
+            // 确认提交
+            if (!confirm('确认提交签收信息吗？')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+
+{% endblock %}

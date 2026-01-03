@@ -1,0 +1,490 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/approval_path.css' %}">
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <div class="container-fluid py-4">
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-end gap-2 mb-3">
+            {% if can_edit %}
+            <a href="{% url 'business_pages:customer_edit' client.id %}" class="btn btn-primary">编辑客户</a>
+            {% endif %}
+            {% if can_submit_approval %}
+            <a href="{% url 'business_pages:customer_submit_approval' client.id %}" class="btn btn-warning">提交审批</a>
+            {% endif %}
+        </div>
+        
+        <!-- 基本信息 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">基本信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <span class="info-label">客户名称</span>
+                        <span class="info-value info-value-bold">{{ client.name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">统一信用代码</span>
+                        <span class="info-value">{{ client.unified_credit_code|default:"未填写" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 企业信息 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">企业信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <span class="info-label">法定代表人</span>
+                        <span class="info-value">{{ client.legal_representative|default:"未填写" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">成立日期</span>
+                        <span class="info-value">{{ client.established_date|default:"未填写" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">联系电话</span>
+                        <span class="info-value">{{ client.company_phone|default:"未填写" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">邮箱</span>
+                        <span class="info-value">{{ client.company_email|default:"未填写" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">地址</span>
+                        <span class="info-value">{{ client.company_address|default:"未填写" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 客户分类 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">客户分类</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <span class="info-label">客户等级</span>
+                        <span class="info-value">
+                            <span class="badge bg-primary">{{ client.get_client_level_display }}</span>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">客户分级</span>
+                        <span class="info-value">
+                            {% if client.grade %}
+                            <span class="badge bg-info">{{ client.get_grade_display }}</span>
+                            {% else %}
+                            未分级
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">客户类型</span>
+                        <span class="info-value">{{ client.get_client_type_display|default:"未填写" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">所属区域</span>
+                        <span class="info-value">{{ client.region|default:"未填写" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">客户来源</span>
+                        <span class="info-value">{{ client.get_source_display|default:"未填写" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 财务信息 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">财务信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <span class="info-label">客户评分</span>
+                        <span class="info-value">{{ client.score }} 分</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">健康度评分</span>
+                        <span class="info-value">{{ client.health_score }} 分</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">累计合同金额</span>
+                        <span class="info-value">¥{{ client.total_contract_amount|floatformat:2 }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">累计回款金额</span>
+                        <span class="info-value">¥{{ client.total_payment_amount|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 负责人信息 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">负责人信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <span class="info-label">负责人</span>
+                        <span class="info-value">
+                            {% if client.responsible_user %}
+                                {{ client.responsible_user.get_full_name|default:client.responsible_user.username }}
+                            {% else %}
+                                <span class="text-muted">公海（未分配）</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if client.public_sea_entry_time %}
+                    <div class="info-item">
+                        <span class="info-label">进入公海时间</span>
+                        <span class="info-value">{{ client.public_sea_entry_time|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">进入公海原因</span>
+                        <span class="info-value">{{ client.get_public_sea_reason_display }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 关联联系人 -->
+        {% if contacts %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">关联联系人</h5>
+            </div>
+            <div class="info-card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>姓名</th>
+                            <th>职务</th>
+                            <th>电话</th>
+                            <th>邮箱</th>
+                            <th>角色</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contact in contacts %}
+                        <tr>
+                            <td>{{ contact.name }}</td>
+                            <td>{{ contact.position|default:"未填写" }}</td>
+                            <td>{{ contact.phone|default:"未填写" }}</td>
+                            <td>{{ contact.email|default:"未填写" }}</td>
+                            <td>
+                                {% if contact.role %}
+                                <span class="badge bg-secondary">{{ contact.get_role_display }}</span>
+                                {% else %}
+                                <span class="text-muted">未设置</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 被执行信息 -->
+        <div class="info-card">
+            <div class="info-card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="info-card-title d-inline-block mb-0">被执行信息</h5>
+                    <span class="badge bg-danger ms-2">共 {{ execution_count }} 条记录</span>
+                    {% if client.total_execution_amount %}
+                    <span class="badge bg-warning ms-2">执行总金额: ¥{{ client.total_execution_amount|floatformat:2 }}</span>
+                    {% endif %}
+                </div>
+                <div class="btn-group" role="group">
+                    {% if execution_records %}
+                    <a href="{% url 'business_pages:execution_records_export' client.id %}?format=xlsx" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-download"></i> 导出Excel
+                    </a>
+                    <a href="{% url 'business_pages:execution_records_export' client.id %}?format=csv" class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> 导出CSV
+                    </a>
+                    {% endif %}
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="syncExecutionBtn" data-client-id="{{ client.id }}">
+                        <i class="bi bi-arrow-clockwise"></i> 同步数据
+                    </button>
+                </div>
+            </div>
+            <div class="info-card-body">
+                {% if execution_records %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>案号</th>
+                                <th>执行状态</th>
+                                <th>执行法院</th>
+                                <th>立案日期</th>
+                                <th>执行金额</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in execution_records %}
+                            <tr>
+                                <td>{{ record.case_number|default:"未填写" }}</td>
+                                <td>{{ record.get_execution_status_display|default:"未填写" }}</td>
+                                <td>{{ record.execution_court|default:"未填写" }}</td>
+                                <td>{{ record.filing_date|date:"Y-m-d"|default:"未填写" }}</td>
+                                <td>¥{{ record.execution_amount|floatformat:2|default:"0.00" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <p class="mb-0">暂无被执行记录</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 审批流程 -->
+        {% if approval_instance %}
+        <div class="info-card">
+            <div class="info-card-header d-flex justify-content-between align-items-center">
+                <div>
+                <h5 class="info-card-title">
+                    <i class="bi bi-clipboard-check"></i> 审批流程
+                </h5>
+                    <div class="d-flex align-items-center gap-2 mt-2">
+                    <span class="badge bg-{% if approval_instance.status == 'approved' %}success{% elif approval_instance.status == 'rejected' %}danger{% else %}warning{% endif %}">
+                        {{ approval_instance.get_status_display }}
+                    </span>
+                    <span class="text-muted small">审批编号：{{ approval_instance.instance_number }}</span>
+                    </div>
+                </div>
+                <div>
+                    {% if can_approve_workflow %}
+                    <form method="post" action="{% url 'workflow_engine:approval_action' approval_instance.id %}" style="display: inline;" onsubmit="return confirm('确认审批通过？');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="approve">
+                        <input type="hidden" name="redirect_to" value="{% url 'business_pages:customer_detail' client.id %}">
+                        <button type="submit" class="btn btn-sm btn-success">
+                            <i class="bi bi-check-circle"></i> 审批通过
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'workflow_engine:approval_action' approval_instance.id %}" style="display: inline;" onsubmit="var reason = prompt('请输入拒绝原因：'); if (!reason) return false; var input = document.createElement('input'); input.type='hidden'; input.name='comment'; input.value=reason; this.appendChild(input); return confirm('确认审批拒绝？');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reject">
+                        <input type="hidden" name="redirect_to" value="{% url 'business_pages:customer_detail' client.id %}">
+                        <button type="submit" class="btn btn-sm btn-danger">
+                            <i class="bi bi-x-circle"></i> 审批拒绝
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-card-body">
+                <!-- 审批基本信息 -->
+                <div class="mb-4">
+                    <div class="info-grid info-grid-2">
+                        <div class="info-item">
+                            <span class="info-label">申请人</span>
+                            <span class="info-value">{{ approval_instance.applicant.get_full_name|default:approval_instance.applicant.username }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">申请时间</span>
+                            <span class="info-value">{{ approval_instance.apply_time|date:"Y-m-d H:i:s" }}</span>
+                        </div>
+                        {% if approval_instance.apply_comment %}
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <span class="info-label">申请说明</span>
+                            <span class="info-value">{{ approval_instance.apply_comment }}</span>
+                        </div>
+                        {% endif %}
+                        {% if approval_instance.current_node %}
+                        <div class="info-item">
+                            <span class="info-label">当前节点</span>
+                            <span class="info-value">
+                                <span class="badge bg-primary">{{ approval_instance.current_node.name }}</span>
+                            </span>
+                        </div>
+                        {% endif %}
+                        {% if approval_instance.completed_time %}
+                        <div class="info-item">
+                            <span class="info-label">完成时间</span>
+                            <span class="info-value">{{ approval_instance.completed_time|date:"Y-m-d H:i:s" }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- 审批路径时间轴 -->
+                {% include 'customer_management/partials/approval_path_timeline.html' with approval_instance=approval_instance approval_path_nodes=approval_path_nodes %}
+                
+                <!-- 查看完整审批详情链接 -->
+                <div class="mt-3 text-center">
+                    <a href="{% url 'workflow_engine:approval_detail' approval_instance.id %}" class="btn btn-sm btn-outline-primary" target="_blank">
+                        <i class="bi bi-box-arrow-up-right"></i> 查看完整审批详情
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% elif can_submit_approval %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">
+                    <i class="bi bi-clipboard-check"></i> 审批流程
+                </h5>
+            </div>
+            <div class="info-card-body text-center py-4">
+                <p class="text-muted mb-3">该客户尚未提交审批</p>
+                <a href="{% url 'business_pages:customer_submit_approval' client.id %}" class="btn btn-primary">
+                    <i class="bi bi-send"></i> 提交审批
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    // 获取CSRF token的辅助函数
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // 显示消息提示
+    function showMessage(type, message) {
+        // 创建消息提示元素
+        const messageEl = document.createElement('div');
+        messageEl.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+        messageEl.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        // TODO: 使用DOMPurify清理HTML
+            messageEl.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        document.body.appendChild(messageEl);
+        
+        // 3秒后自动关闭
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.remove();
+            }
+        }, 3000);
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const syncBtn = document.getElementById('syncExecutionBtn');
+        if (!syncBtn) return;
+        
+        syncBtn.addEventListener('click', async function() {
+            const clientId = this.getAttribute('data-client-id');
+            if (!clientId) {
+                showMessage('danger', '客户ID不存在');
+                return;
+            }
+            
+            // 禁用按钮，显示加载状态
+            const originalText = this.innerHTML;
+            this.disabled = true;
+            // TODO: 使用DOMPurify清理HTML
+            this.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> 同步中...';
+            
+            try {
+                // 获取CSRF token
+                const csrftoken = getCookie('csrftoken') || 
+                                 document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                
+                if (!csrftoken) {
+                    throw new Error('无法获取CSRF token，请刷新页面后重试');
+                }
+                
+                // 调用API
+                const response = await fetch('/api/customer/sync-execution-records/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        client_id: parseInt(clientId)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    let message = `同步成功！同步了 ${data.synced_count} 条记录，当前共有 ${data.total_count} 条记录`;
+                    if (data.total_amount && parseFloat(data.total_amount) > 0) {
+                        message += `，执行总金额: ¥${parseFloat(data.total_amount).toFixed(2)}`;
+                    }
+                    showMessage('success', message);
+                    // 延迟刷新页面，让用户看到成功消息
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showMessage('danger', '同步失败：' + (data.message || '未知错误'));
+                    // 恢复按钮
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                }
+            } catch (error) {
+                showMessage('danger', '同步失败：' + (error.message || '网络错误或服务器异常'));
+                // 恢复按钮
+                this.disabled = false;
+                this.innerHTML = originalText;
+            }
+        });
+    });
+})();
+</script>
+<style>
+.spin {
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}
+

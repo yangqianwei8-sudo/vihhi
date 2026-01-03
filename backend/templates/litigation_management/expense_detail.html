@@ -1,0 +1,169 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}费用详情 - {{ expense.expense_name }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                {% if perms.litigation_management.expense.manage %}
+                <a href="{% url 'litigation_pages:expense_edit' expense.id %}" class="btn btn-secondary">
+                    <i class="bi bi-pencil"></i> 编辑
+                </a>
+                {% endif %}
+                {% if expense.payment_status == 'paid' and expense.reimbursement_status != 'approved' and approval_status.can_submit and perms.litigation_management.expense.manage %}
+                <a href="{% url 'litigation_pages:expense_submit_reimbursement' expense.id %}" class="btn btn-warning">
+                    <i class="bi bi-credit-card"></i> 提交报销审批
+                </a>
+                {% endif %}
+                <a href="{% url 'litigation_pages:expense_list' case.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 审批状态 -->
+    {% if approval_instance %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">报销审批状态</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">审批实例编号</span>
+                    <span class="info-value">
+                        <a href="{% url 'workflow_pages:approval_detail' approval_instance.id %}" class="text-decoration-none">
+                            {{ approval_instance.instance_number }}
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">审批状态</span>
+                    <span class="info-value">
+                        {% if approval_instance.status == 'pending' %}
+                            <span class="status-badge warning">审批中</span>
+                        {% elif approval_instance.status == 'approved' %}
+                            <span class="status-badge success">已通过</span>
+                        {% elif approval_instance.status == 'rejected' %}
+                            <span class="status-badge danger">已驳回</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ approval_instance.get_status_display }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请人</span>
+                    <span class="info-value">{{ approval_instance.applicant.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请时间</span>
+                    <span class="info-value">{{ approval_instance.apply_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 基本信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">费用名称</span>
+                    <span class="info-value"><strong>{{ expense.expense_name }}</strong></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">费用类型</span>
+                    <span class="info-value">
+                        <span class="badge bg-info">{{ expense.get_expense_type_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">金额</span>
+                    <span class="info-value info-value-large">¥{{ expense.amount|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">费用日期</span>
+                    <span class="info-value">{{ expense.expense_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">支付方式</span>
+                    <span class="info-value">{{ expense.get_payment_method_display|default:"未设置" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">支付状态</span>
+                    <span class="info-value">
+                        <span class="status-badge {{ expense.payment_status }}">
+                            {{ expense.get_payment_status_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">关联案件</span>
+                    <span class="info-value">
+                        <a href="{% url 'litigation_pages:case_detail' case.id %}" class="text-decoration-none">
+                            {{ case.case_number }} - {{ case.case_name }}
+                        </a>
+                    </span>
+                </div>
+                {% if expense.project %}
+                <div class="info-item">
+                    <span class="info-label">关联项目</span>
+                    <span class="info-value">
+                        <a href="{% url 'production_pages:project_detail' expense.project.id %}" class="text-decoration-none">
+                            {{ expense.project.project_number }} - {{ expense.project.name }}
+                        </a>
+                    </span>
+                </div>
+                {% endif %}
+                {% if expense.description %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">费用说明</span>
+                    <span class="info-value">{{ expense.description|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 发票信息 -->
+    {% if expense.invoice_file %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">发票信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">发票文件</span>
+                    <span class="info-value">
+                        <a href="{{ expense.invoice_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-download"></i> 下载发票
+                        </a>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

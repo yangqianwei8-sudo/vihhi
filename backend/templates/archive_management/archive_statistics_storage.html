@@ -1,0 +1,333 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}档案保管统计 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📦 档案保管统计</h2>
+            <p class="text-muted mb-0">统计档案的保管情况，包括档案数量、分类分布、库房使用、保管期限等</p>
+        </div>
+    </div>
+
+    <!-- 总体统计 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="info-card info-card-primary">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">总档案数</div>
+                            <div class="info-value info-value-large">{{ total_archives|default:0 }}</div>
+                        </div>
+                        <div class="text-primary" style="font-size: 2rem;">
+                            <i class="bi bi-folder"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card info-card-info">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">项目文档</div>
+                            <div class="info-value info-value-large">{{ project_doc_total|default:0 }}</div>
+                        </div>
+                        <div class="text-info" style="font-size: 2rem;">
+                            <i class="bi bi-file-earmark"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card info-card-success">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">行政档案</div>
+                            <div class="info-value info-value-large">{{ admin_archive_total|default:0 }}</div>
+                        </div>
+                        <div class="text-success" style="font-size: 2rem;">
+                            <i class="bi bi-archive"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card info-card-warning">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">库房使用率</div>
+                            <div class="info-value info-value-large">{{ storage_usage_rate|default:0 }}%</div>
+                        </div>
+                        <div class="text-warning" style="font-size: 2rem;">
+                            <i class="bi bi-building"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 档案状态统计 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">项目文档状态统计</h5>
+                </div>
+                <div class="info-card-body">
+                    {% if project_doc_by_status %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>状态</th>
+                                    <th>数量</th>
+                                    <th>占比</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in project_doc_by_status %}
+                                <tr>
+                                    <td>
+                                        {% if item.status == 'archived' %}已归档
+                                        {% elif item.status == 'pending' %}待归档
+                                        {% elif item.status == 'borrowed' %}已借出
+                                        {% else %}{{ item.status }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.count }}</td>
+                                    <td>
+                                        {% if project_doc_total > 0 %}
+                                            {{ item.count|mul:100|div:project_doc_total|floatformat:1 }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 暂无项目文档数据
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">行政档案状态统计</h5>
+                </div>
+                <div class="info-card-body">
+                    {% if admin_archive_by_status %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>状态</th>
+                                    <th>数量</th>
+                                    <th>占比</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in admin_archive_by_status %}
+                                <tr>
+                                    <td>
+                                        {% if item.status == 'archived' %}已归档
+                                        {% elif item.status == 'pending' %}待归档
+                                        {% elif item.status == 'borrowed' %}已借出
+                                        {% elif item.status == 'destroyed' %}已销毁
+                                        {% else %}{{ item.status }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.count }}</td>
+                                    <td>
+                                        {% if admin_archive_total > 0 %}
+                                            {{ item.count|mul:100|div:admin_archive_total|floatformat:1 }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 暂无行政档案数据
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 档案分类统计 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">档案分类统计</h5>
+        </div>
+        <div class="info-card-body">
+            {% if category_stats %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>分类名称</th>
+                            <th>分类类型</th>
+                            <th>项目文档数</th>
+                            <th>行政档案数</th>
+                            <th>合计</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in category_stats %}
+                        <tr>
+                            <td>{{ category.name }}</td>
+                            <td>{{ category.get_category_type_display }}</td>
+                            <td>{{ category.project_count|default:0 }}</td>
+                            <td>{{ category.admin_count|default:0 }}</td>
+                            <td><strong>{{ category.project_count|add:category.admin_count }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 暂无分类统计数据
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 库房使用统计 -->
+    {% if storage_rooms %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">库房使用统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="text-center p-3 bg-light rounded">
+                        <div class="h4 mb-0">{{ total_capacity|default:0 }}</div>
+                        <small class="text-muted">总容量</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center p-3 bg-light rounded">
+                        <div class="h4 mb-0">{{ total_used|default:0 }}</div>
+                        <small class="text-muted">已使用</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center p-3 bg-light rounded">
+                        <div class="h4 mb-0">{{ storage_usage_rate|default:0 }}%</div>
+                        <small class="text-muted">使用率</small>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>库房名称</th>
+                            <th>库房编号</th>
+                            <th>容量</th>
+                            <th>已使用</th>
+                            <th>使用率</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for room in storage_rooms %}
+                        <tr>
+                            <td>{{ room.room_name }}</td>
+                            <td>{{ room.room_number }}</td>
+                            <td>{{ room.capacity|default:0 }}</td>
+                            <td>{{ room.archive_count|default:0 }}</td>
+                            <td>
+                                {% if room.capacity and room.capacity > 0 %}
+                                    {{ room.archive_count|mul:100|div:room.capacity|floatformat:1 }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 保管期限统计 -->
+    {% if expired_count > 0 or expiring_soon_count > 0 %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">保管期限提醒</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="alert alert-danger">
+                        <h6><i class="bi bi-exclamation-triangle"></i> 已到期档案</h6>
+                        <div class="h3 mb-0">{{ expired_count }}</div>
+                        <small>需要及时处理</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-warning">
+                        <h6><i class="bi bi-clock"></i> 即将到期档案</h6>
+                        <div class="h3 mb-0">{{ expiring_soon_count }}</div>
+                        <small>90天内到期</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 盘点统计 -->
+    {% if inventory_total > 0 %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">盘点统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="text-center p-3 bg-light rounded">
+                        <div class="h4 mb-0">{{ inventory_total }}</div>
+                        <small class="text-muted">总盘点次数</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-center p-3 bg-light rounded">
+                        <div class="h4 mb-0">{{ inventory_recent }}</div>
+                        <small class="text-muted">最近30天盘点次数</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

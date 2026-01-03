@@ -1,0 +1,265 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<script src="{% static 'js/department-user-filter.js' %}"></script>
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid #e5e7eb;
+        margin-bottom: 20px;
+    }
+    .form-card h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: #1f2937;
+        font-size: 16px;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .form-text {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+    .btn-submit {
+        padding: 10px 24px;
+        font-size: 15px;
+        font-weight: 600;
+    }
+    .section-icon {
+        font-size: 18px;
+        margin-right: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">{{ page_title }}</h4>
+            <a href="{% if plan %}{% url 'plan_pages:plan_detail' plan.id %}{% else %}{% url 'plan_pages:plan_list' %}{% endif %}" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>返回
+            </a>
+        </div>
+        <div class="card-body">
+            <form method="post" id="planForm">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+                
+                <!-- 基本信息 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">📋</span>基本信息</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">计划编号</label>
+                            {{ form.plan_number }}
+                            {% if form.plan_number.errors %}
+                            <div class="text-danger small mt-1">{{ form.plan_number.errors }}</div>
+                            {% endif %}
+                            {% if plan %}
+                            <div class="form-text">系统自动生成，不可修改</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label required">计划类型</label>
+                            {{ form.plan_type }}
+                            {% if form.plan_type.errors %}
+                            <div class="text-danger small mt-1">{{ form.plan_type.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label required">计划周期</label>
+                            {{ form.plan_period }}
+                            {% if form.plan_period.errors %}
+                            <div class="text-danger small mt-1">{{ form.plan_period.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 关联战略目标 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">🎯</span>关联战略目标</h5>
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label required">关联战略目标</label>
+                            {{ form.related_goal }}
+                            {% if form.related_goal.errors %}
+                            <div class="text-danger small mt-1">{{ form.related_goal.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">选择计划关联的战略目标，系统会自动计算目标对齐度</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 计划内容 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">📝</span>计划内容</h5>
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label required">计划内容</label>
+                            {{ form.content }}
+                            {% if form.content.errors %}
+                            <div class="text-danger small mt-1">{{ form.content.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label required">计划目标</label>
+                            {{ form.plan_objective }}
+                            {% if form.plan_objective.errors %}
+                            <div class="text-danger small mt-1">{{ form.plan_objective.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">计划描述</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 时间信息 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">📅</span>时间信息</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label required">计划开始日期</label>
+                            {{ form.start_time }}
+                            {% if form.start_time.errors %}
+                            <div class="text-danger small mt-1">{{ form.start_time.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">计划结束日期</label>
+                            {{ form.end_time }}
+                            {% if form.end_time.errors %}
+                            <div class="text-danger small mt-1">{{ form.end_time.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 责任人信息 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">👥</span>责任人信息</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">负责部门</label>
+                            {{ form.responsible_department }}
+                            {% if form.responsible_department.errors %}
+                            <div class="text-danger small mt-1">{{ form.responsible_department.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">计划负责人</label>
+                            {{ form.responsible_person }}
+                            {% if form.responsible_person.errors %}
+                            <div class="text-danger small mt-1">{{ form.responsible_person.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">协作人员</label>
+                            {{ form.participants }}
+                            {% if form.participants.errors %}
+                            <div class="text-danger small mt-1">{{ form.participants.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">可多选，按住 Ctrl 键或 Command 键选择多个。如果选择了协作人员，必须填写协作计划</div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">协作计划</label>
+                            {{ form.collaboration_plan }}
+                            {% if form.collaboration_plan.errors %}
+                            <div class="text-danger small mt-1">{{ form.collaboration_plan.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">如果选择了协作人员，此项为必填</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 关联信息 -->
+                <div class="form-card">
+                    <h5><span class="section-icon">🔗</span>关联信息</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">关联项目</label>
+                            {{ form.related_project }}
+                            {% if form.related_project.errors %}
+                            <div class="text-danger small mt-1">{{ form.related_project.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">父计划</label>
+                            {{ form.parent_plan }}
+                            {% if form.parent_plan.errors %}
+                            <div class="text-danger small mt-1">{{ form.parent_plan.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">用于计划分解，选择父计划后，当前计划将成为子计划</div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">备注</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                            <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 提交按钮 -->
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% if plan %}{% url 'plan_pages:plan_detail' plan.id %}{% else %}{% url 'plan_pages:plan_list' %}{% endif %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle me-1"></i>取消
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-submit">
+                        <i class="bi bi-check-circle me-1"></i>保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// 初始化部门-人员过滤功能
+document.addEventListener('DOMContentLoaded', function() {
+    // 计划负责人和负责部门的过滤
+    const departmentField = document.getElementById('id_responsible_department');
+    const personField = document.getElementById('id_responsible_person');
+    if (departmentField && personField) {
+        initDepartmentUserFilter(departmentField, personField);
+    }
+    
+    // 协作人员也可以根据部门过滤（如果有部门选择器）
+    // 注意：协作人员是多选，需要特殊处理
+});
+</script>
+{% endblock %}

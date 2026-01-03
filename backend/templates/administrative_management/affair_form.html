@@ -1,0 +1,176 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .form-card h5 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-md);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .form-label.required::after {
+        content: " *";
+        color: var(--vh-error);
+    }
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: var(--font-size-md);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- 表单 -->
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-card">
+            <h5>基本信息</h5>
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label required">事务标题</label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                    <div class="text-danger small mt-1">{{ form.title.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">事务类型</label>
+                    {{ form.affair_type }}
+                    {% if form.affair_type.errors %}
+                    <div class="text-danger small mt-1">{{ form.affair_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">优先级</label>
+                    {{ form.priority }}
+                    {% if form.priority.errors %}
+                    <div class="text-danger small mt-1">{{ form.priority.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">负责人</label>
+                    {{ form.responsible_user }}
+                    {% if form.responsible_user.errors %}
+                    <div class="text-danger small mt-1">{{ form.responsible_user.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label required">事务内容</label>
+                    {{ form.content }}
+                    {% if form.content.errors %}
+                    <div class="text-danger small mt-1">{{ form.content.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 参与人员 -->
+        <div class="form-card">
+            <h5>参与人员</h5>
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label">参与人（可选）</label>
+                    {{ form.participants }}
+                    {% if form.participants.errors %}
+                    <div class="text-danger small mt-1">{{ form.participants.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">按住Ctrl键（Mac上为Cmd键）可多选，参与人将收到事务通知</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 时间安排 -->
+        <div class="form-card">
+            <h5>时间安排</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">计划开始时间</label>
+                    {{ form.planned_start_time }}
+                    {% if form.planned_start_time.errors %}
+                    <div class="text-danger small mt-1">{{ form.planned_start_time.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">选择事务计划开始的时间</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">计划完成时间</label>
+                    {{ form.planned_end_time }}
+                    {% if form.planned_end_time.errors %}
+                    <div class="text-danger small mt-1">{{ form.planned_end_time.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">选择事务计划完成的时间，必须晚于开始时间</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 附件 -->
+        <div class="form-card">
+            <h5>附件</h5>
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label">事务附件</label>
+                    {{ form.attachment }}
+                    {% if form.attachment.errors %}
+                    <div class="text-danger small mt-1">{{ form.attachment.errors }}</div>
+                    {% endif %}
+                    {% if not is_create and affair.attachment %}
+                    <div class="mt-2">
+                        <small class="text-muted">当前附件：</small>
+                        <a href="{{ affair.attachment.url }}" target="_blank" class="ms-2">
+                            <i class="bi bi-file-earmark"></i> {{ affair.attachment.name|slice:"20:" }}
+                        </a>
+                    </div>
+                    {% endif %}
+                    <small class="text-muted">支持 PDF、Word、Excel、图片等格式</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 表单错误 -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% if is_create %}{% url 'admin_pages:affair_list' %}{% else %}{% url 'admin_pages:affair_detail' affair.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-submit">
+                    <i class="bi bi-check-circle"></i> 保存
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

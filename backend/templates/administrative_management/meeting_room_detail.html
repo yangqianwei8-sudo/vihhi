@@ -1,13 +1,12 @@
-{% extends "administrative_management/base.html" %}
+{% extends "shared/module_base.html" %}
+{% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:meeting_room_management' %}">会议室管理</a></li>
-<li class="breadcrumb-item active">{{ room.name }}</li>
-{% endblock %}
+
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .center-hero {
         background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
@@ -39,7 +38,7 @@
     .info-card h5 {
         margin-bottom: 20px;
         padding-bottom: 12px;
-        border-bottom: 2px solid #e5e7eb;
+        border-bottom: 2px solid var(--vh-primary);
         font-weight: 600;
         color: #1f2937;
     }
@@ -80,11 +79,10 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block module_content %}
 <div class="container-fluid py-4">
     <!-- 页面标题区域 -->
     <div class="center-hero">
-        <div class="hero-icon">{{ page_icon }}</div>
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
     </div>
@@ -94,7 +92,7 @@
         <a href="{% url 'admin_pages:meeting_room_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
         </a>
-        <a href="/admin/administrative_management/meetingroombooking/add/?room={{ room.id }}" class="btn btn-outline-primary me-2">
+        <a href="{% url 'admin_pages:meeting_room_booking_create' %}?room={{ room.id }}" class="btn btn-outline-primary me-2">
             <i class="bi bi-calendar-plus"></i> 预订会议室
         </a>
         <a href="{% url 'admin_pages:meeting_room_update' room.id %}" class="btn btn-primary">
@@ -205,7 +203,7 @@
                     </p>
                     {% endif %}
                 </div>
-                <a href="/admin/administrative_management/meetingroombooking/{{ booking.id }}/" class="btn btn-sm btn-outline-info ms-2">
+                <a href="{% url 'admin_pages:meeting_room_booking_detail' booking.id %}" class="btn btn-sm btn-outline-info ms-2">
                     <i class="bi bi-eye"></i>
                 </a>
             </div>
@@ -230,7 +228,7 @@
                         预订人：{{ booking.booker.get_full_name|default:booking.booker.username }}
                     </p>
                 </div>
-                <a href="/admin/administrative_management/meetingroombooking/{{ booking.id }}/" class="btn btn-sm btn-outline-info ms-2">
+                <a href="{% url 'admin_pages:meeting_room_booking_detail' booking.id %}" class="btn btn-sm btn-outline-info ms-2">
                     <i class="bi bi-eye"></i>
                 </a>
             </div>

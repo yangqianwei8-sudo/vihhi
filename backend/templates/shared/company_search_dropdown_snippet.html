@@ -1,0 +1,327 @@
+{% comment %}
+公司名称搜索下拉组件共享模板
+
+功能说明：
+- 提供企业名称输入框，支持实时搜索
+- 输入关键词后自动调用启信宝API搜索企业
+- 显示匹配的企业列表供用户选择
+- 选择后可自动填充相关字段（统一信用代码、法定代表人等）
+
+使用方法：
+1. 在表单中引入此模板：
+   {% include "shared/company_search_dropdown_snippet.html" with 
+       input_id="companyNameInput"
+       input_name="company_name"
+       dropdown_id="companyDropdown"
+       credit_code_input_id="creditCodeInput"
+       credit_code_input_name="unified_credit_code"
+       label="公司名称"
+       placeholder="输入公司名称，如：四川维海"
+       required=True
+       auto_fill_details=True
+       auto_query_execution=False
+   %}
+
+2. 在页面底部引入配置和初始化：
+   {% include "shared/qixinbao_api_config_snippet.html" %}
+   <script>
+   document.addEventListener('DOMContentLoaded', function() {
+       initCompanySearchDropdown({
+           inputId: 'companyNameInput',
+           dropdownId: 'companyDropdown',
+           creditCodeInputId: 'creditCodeInput',
+           autoFillDetails: true
+       });
+   });
+   </script>
+
+参数说明：
+- input_id: 输入框ID（必需，默认："companyNameInput"）
+- input_name: 输入框name属性（可选，默认：使用input_id）
+- dropdown_id: 下拉框ID（必需，默认："companyDropdown"）
+- credit_code_input_id: 统一信用代码输入框ID（可选）
+- credit_code_input_name: 统一信用代码输入框name属性（可选）
+- legal_rep_input_id: 法定代表人输入框ID（可选）
+- legal_rep_input_name: 法定代表人输入框name属性（可选）
+- established_date_input_id: 成立日期输入框ID（可选）
+- established_date_input_name: 成立日期输入框name属性（可选）
+- registered_capital_input_id: 注册资本输入框ID（可选）
+- registered_capital_input_name: 注册资本输入框name属性（可选）
+- label: 标签文本（可选，默认："公司名称"）
+- placeholder: 占位符文本（可选，默认："输入公司名称，如：四川维海"）
+- required: 是否必填（可选，默认：False）
+- auto_fill_details: 是否自动填充详细信息（可选，默认：True）
+- auto_query_execution: 是否自动查询被执行信息（可选，默认：False）
+- min_search_length: 最小搜索字符数（可选，默认：2）
+- search_delay: 搜索延迟时间（毫秒，可选，默认：500）
+- debug: 是否启用调试模式（可选，默认：False）
+
+生成的HTML元素：
+- 输入框：{input_id}
+- 下拉框：{dropdown_id}
+- 其他字段输入框：根据提供的参数生成
+
+示例：
+{% include "shared/company_search_dropdown_snippet.html" with 
+    input_id="clientName"
+    dropdown_id="clientDropdown"
+    credit_code_input_id="clientCreditCode"
+    label="客户名称"
+    required=True
+%}
+{% endcomment %}
+
+{% load static %}
+
+{# 设置默认值 #}
+{% with input_id=input_id|default:"companyNameInput" %}
+{% with input_name=input_name|default:input_id %}
+{% with dropdown_id=dropdown_id|default:"companyDropdown" %}
+{% with credit_code_input_id=credit_code_input_id|default:"" %}
+{% with credit_code_input_name=credit_code_input_name|default:credit_code_input_id %}
+{% with legal_rep_input_id=legal_rep_input_id|default:"" %}
+{% with legal_rep_input_name=legal_rep_input_name|default:legal_rep_input_id %}
+{% with established_date_input_id=established_date_input_id|default:"" %}
+{% with established_date_input_name=established_date_input_name|default:established_date_input_id %}
+{% with registered_capital_input_id=registered_capital_input_id|default:"" %}
+{% with registered_capital_input_name=registered_capital_input_name|default:registered_capital_input_id %}
+{% with label=label|default:"公司名称" %}
+{% with placeholder=placeholder|default:"输入公司名称，如：四川维海" %}
+{% with required=required|default:False %}
+{% with auto_fill_details=auto_fill_details|default:True %}
+{% with auto_query_execution=auto_query_execution|default:False %}
+{% with min_search_length=min_search_length|default:2 %}
+{% with search_delay=search_delay|default:500 %}
+{% with debug=debug|default:False %}
+
+{# 引入启信宝样式（如果尚未引入） #}
+<link rel="stylesheet" href="{% static 'css/qixinbao-autofill.css' %}">
+
+{# 表单组容器 #}
+<div class="form-group company-search-wrapper" data-input-id="{{ input_id }}" data-dropdown-id="{{ dropdown_id }}">
+    {# 标签 #}
+    <label class="form-label{% if required %} required-field{% endif %}" for="{{ input_id }}">{{ label }}</label>
+    
+    {# 输入框容器（需要相对定位以便下拉框定位） #}
+    <div class="position-relative">
+        {# 公司名称输入框 #}
+        <input type="text" 
+               class="form-control" 
+               id="{{ input_id }}" 
+               name="{{ input_name }}"
+               placeholder="{{ placeholder }}"
+               autocomplete="off"
+               {% if required %}required{% endif %}
+               data-min-search-length="{{ min_search_length }}">
+        
+        {# 下拉框（搜索结果列表） #}
+        <div id="{{ dropdown_id }}" class="autocomplete-dropdown" style="display: none;"></div>
+    </div>
+    
+    {# 提示文字 #}
+    <small class="form-text text-muted">
+        <i class="bi bi-info-circle"></i> 输入至少{{ min_search_length }}个字符后，将自动搜索匹配的企业
+    </small>
+</div>
+
+{# 初始化函数（在页面底部调用） #}
+<script>
+/**
+ * 初始化公司名称搜索下拉组件
+ * 
+ * @param {Object} options - 配置选项
+ * @param {string} options.inputId - 输入框ID（必需）
+ * @param {string} options.dropdownId - 下拉框ID（必需）
+ * @param {string} options.creditCodeInputId - 统一信用代码输入框ID（可选）
+ * @param {string} options.legalRepInputId - 法定代表人输入框ID（可选）
+ * @param {string} options.establishedDateInputId - 成立日期输入框ID（可选）
+ * @param {string} options.registeredCapitalInputId - 注册资本输入框ID（可选）
+ * @param {boolean} options.autoFillDetails - 是否自动填充详细信息（可选，默认：true）
+ * @param {boolean} options.autoQueryExecution - 是否自动查询被执行信息（可选，默认：false）
+ * @param {number} options.minSearchLength - 最小搜索字符数（可选，默认：2）
+ * @param {number} options.searchDelay - 搜索延迟时间（毫秒，可选，默认：500）
+ * @param {boolean} options.debug - 是否启用调试模式（可选，默认：false）
+ * @returns {QixinbaoAutofill|null} QixinbaoAutofill实例，失败返回null
+ */
+window.initCompanySearchDropdown = function(options) {
+    if (!options || typeof options !== 'object') {
+        console.error('initCompanySearchDropdown: 参数必须是对象');
+        return null;
+    }
+    
+    // 验证必需参数
+    if (!options.inputId || typeof options.inputId !== 'string') {
+        console.error('initCompanySearchDropdown: 缺少必需的inputId参数');
+        return null;
+    }
+    
+    if (!options.dropdownId || typeof options.dropdownId !== 'string') {
+        console.error('initCompanySearchDropdown: 缺少必需的dropdownId参数');
+        return null;
+    }
+    
+    // 检查QixinbaoAutofill类是否已加载
+    if (typeof QixinbaoAutofill === 'undefined') {
+        console.error('initCompanySearchDropdown: QixinbaoAutofill类未加载，请确保已引入qixinbao-autofill.js');
+        return null;
+    }
+    
+    // 检查API配置是否已加载
+    var apiConfig = window.QIXINBAO_API || window.QIXINBAO_API;
+    if (!apiConfig || !apiConfig.urls) {
+        console.error('initCompanySearchDropdown: QIXINBAO_API配置未加载，请确保已引入qixinbao_api_config_snippet.html');
+        return null;
+    }
+    
+    // 检查DOM元素是否存在
+    var nameInput = document.getElementById(options.inputId);
+    var dropdown = document.getElementById(options.dropdownId);
+    
+    if (!nameInput) {
+        console.error('initCompanySearchDropdown: 找不到输入框元素 #' + options.inputId);
+        return null;
+    }
+    
+    if (!dropdown) {
+        console.error('initCompanySearchDropdown: 找不到下拉框元素 #' + options.dropdownId);
+        return null;
+    }
+    
+    // 构建字段选择器配置
+    var fieldSelectors = {};
+    
+    if (options.creditCodeInputId) {
+        fieldSelectors.creditCode = '#' + options.creditCodeInputId;
+    } else {
+        // 尝试查找name属性包含unified_credit_code或credit_code的输入框
+        var creditCodeInput = document.querySelector('input[name*="unified_credit_code"], input[name*="credit_code"]');
+        if (creditCodeInput) {
+            fieldSelectors.creditCode = '#' + creditCodeInput.id || '[name="' + creditCodeInput.name + '"]';
+        }
+    }
+    
+    if (options.legalRepInputId) {
+        fieldSelectors.legalRepresentative = '#' + options.legalRepInputId;
+    } else {
+        var legalRepInput = document.querySelector('input[name*="legal_representative"], input[name*="legalRepresentative"]');
+        if (legalRepInput) {
+            fieldSelectors.legalRepresentative = '#' + legalRepInput.id || '[name="' + legalRepInput.name + '"]';
+        }
+    }
+    
+    if (options.establishedDateInputId) {
+        fieldSelectors.establishedDate = '#' + options.establishedDateInputId;
+    } else {
+        var establishedDateInput = document.querySelector('input[name*="established_date"], input[name*="start_date"], input[type="date"][name*="date"]');
+        if (establishedDateInput) {
+            fieldSelectors.establishedDate = '#' + establishedDateInput.id || '[name="' + establishedDateInput.name + '"]';
+        }
+    }
+    
+    if (options.registeredCapitalInputId) {
+        fieldSelectors.registeredCapital = '#' + options.registeredCapitalInputId;
+    } else {
+        var registeredCapitalInput = document.querySelector('input[name*="registered_capital"], input[name*="reg_capital"]');
+        if (registeredCapitalInput) {
+            fieldSelectors.registeredCapital = '#' + registeredCapitalInput.id || '[name="' + registeredCapitalInput.name + '"]';
+        }
+    }
+    
+    // 合并配置
+    var config = {
+        // 输入框选择器
+        nameInputSelector: '#' + options.inputId,
+        creditCodeInputSelector: fieldSelectors.creditCode || '[name="unified_credit_code"]',
+        
+        // 下拉框ID
+        dropdownId: options.dropdownId,
+        
+        // API端点（使用全局配置）
+        searchApiUrl: apiConfig.urls.searchCompany,
+        detailApiUrl: apiConfig.urls.getCompanyDetail,
+        executionApiUrl: apiConfig.urls.getExecutionRecords,
+        
+        // 其他字段选择器
+        fieldSelectors: {
+            legalRepresentative: fieldSelectors.legalRepresentative || '[name="legal_representative"]',
+            establishedDate: fieldSelectors.establishedDate || '[name="established_date"]',
+            registeredCapital: fieldSelectors.registeredCapital || '[name="registered_capital"]',
+            companyPhone: '[name="company_phone"]',
+            companyEmail: '[name="company_email"]',
+            companyAddress: '[name="company_address"]'
+        },
+        
+        // 被执行信息相关元素ID（如果启用）
+        executionSectionId: options.executionSectionId || 'executionSection',
+        executionTableContainerId: options.executionTableContainerId || 'executionTableContainer',
+        executionCountBadgeId: options.executionCountBadgeId || 'executionCountBadge',
+        
+        // 搜索配置
+        searchDelay: options.searchDelay || parseInt(nameInput.getAttribute('data-min-search-length')) || 500,
+        minSearchLength: options.minSearchLength || parseInt(nameInput.getAttribute('data-min-search-length')) || 2,
+        
+        // 功能开关
+        autoFillDetails: options.autoFillDetails !== false,
+        autoQueryExecution: options.autoQueryExecution || false,
+        showSuccessAlert: options.showSuccessAlert !== false,
+        
+        // 调试模式
+        debug: options.debug || false
+    };
+    
+    // 创建并初始化QixinbaoAutofill实例
+    try {
+        var autofill = new QixinbaoAutofill(config);
+        if (autofill.init()) {
+            if (config.debug) {
+                console.log('公司名称搜索下拉组件初始化成功:', {
+                    inputId: options.inputId,
+                    dropdownId: options.dropdownId,
+                    config: config
+                });
+            }
+            
+            // 将实例存储到全局对象，方便后续访问
+            if (!window.companySearchDropdowns) {
+                window.companySearchDropdowns = {};
+            }
+            window.companySearchDropdowns[options.inputId] = autofill;
+            
+            return autofill;
+        } else {
+            console.error('公司名称搜索下拉组件初始化失败');
+            return null;
+        }
+    } catch (error) {
+        console.error('公司名称搜索下拉组件初始化异常:', error);
+        return null;
+    }
+};
+
+// 如果页面中已经有companySearchDropdowns对象，确保不覆盖
+if (!window.companySearchDropdowns) {
+    window.companySearchDropdowns = {};
+}
+</script>
+
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+

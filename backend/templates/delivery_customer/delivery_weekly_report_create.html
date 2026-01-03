@@ -1,0 +1,134 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}创建每周快报 - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题和操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📰 创建每周快报</h2>
+            <p class="text-muted mb-0">为全过程设计咨询项目创建每周快报</p>
+        </div>
+        <div>
+            <a href="{% url 'delivery_pages:delivery_weekly_report_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <!-- 创建表单 - 使用样式模板 -->
+    <form method="post" id="weeklyReportForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- 基本信息 - 使用样式模板 -->
+        <div class="info-card info-card-fade-in mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">基本信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <label class="info-label info-label-required">关联项目</label>
+                        <select name="project_id" class="form-select" required id="project_select">
+                            <option value="">请选择项目</option>
+                            {% for project in full_process_projects %}
+                            <option value="{{ project.id }}">
+                                {{ project.project_number }} - {{ project.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">仅显示全过程设计咨询项目</small>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label info-label-required">快报周期</label>
+                        <input type="text" name="week_number" class="form-control" required 
+                               placeholder="如：1、2、3..." pattern="[0-9]+" title="请输入数字">
+                        <small class="form-text text-muted">请输入第X周（数字）</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快报内容 - 使用样式模板 -->
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">快报内容</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-1">
+                    <div class="info-item info-item-full-width">
+                        <label class="info-label">本周设计进度对标</label>
+                        <textarea name="design_progress" class="form-control" rows="4" 
+                                  placeholder="请描述本周设计进度对标情况"></textarea>
+                    </div>
+                    <div class="info-item info-item-full-width">
+                        <label class="info-label">本周主要优化建议</label>
+                        <textarea name="optimization_suggestions" class="form-control" rows="4" 
+                                  placeholder="请描述本周主要优化建议"></textarea>
+                    </div>
+                    <div class="info-item info-item-full-width">
+                        <label class="info-label">预估节省金额</label>
+                        <textarea name="estimated_savings" class="form-control" rows="3" 
+                                  placeholder="请描述预估节省金额"></textarea>
+                    </div>
+                    <div class="info-item info-item-full-width">
+                        <label class="info-label">本周发现的图纸问题及重要性分级</label>
+                        <textarea name="drawing_issues" class="form-control" rows="4" 
+                                  placeholder="请描述本周发现的图纸问题及重要性分级"></textarea>
+                    </div>
+                    <div class="info-item info-item-full-width">
+                        <label class="info-label">累计成本指标变动趋势</label>
+                        <textarea name="cost_trends" class="form-control" rows="3" 
+                                  placeholder="请描述累计成本指标变动趋势"></textarea>
+                    </div>
+                    <div class="info-item info-item-full-width">
+                        <label class="info-label">待决策事项</label>
+                        <textarea name="pending_decisions" class="form-control" rows="3" 
+                                  placeholder="请描述待决策事项"></textarea>
+                    </div>
+                    <div class="info-item info-item-full-width">
+                        <label class="info-label">风险提示</label>
+                        <textarea name="risk_alerts" class="form-control" rows="3" 
+                                  placeholder="请描述风险提示"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <a href="{% url 'delivery_pages:delivery_weekly_report_list' %}" class="btn btn-outline-secondary">取消</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> 创建快报
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// 表单验证
+document.getElementById('weeklyReportForm').addEventListener('submit', function(e) {
+    const projectId = document.getElementById('project_select').value;
+    const weekNumber = document.querySelector('input[name="week_number"]').value;
+    
+    if (!projectId) {
+        e.preventDefault();
+        alert('请选择关联项目');
+        return false;
+    }
+    
+    if (!weekNumber || !/^\d+$/.test(weekNumber)) {
+        e.preventDefault();
+        alert('请输入有效的快报周期（数字）');
+        return false;
+    }
+});
+</script>
+{% endblock %}
+
+
+

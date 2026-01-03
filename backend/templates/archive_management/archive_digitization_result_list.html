@@ -1,0 +1,184 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}档案数字化成果 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="list-page-container">
+    <!-- 页面标题 -->
+    <div class="list-page-header">
+        <div>
+            <h2 class="list-page-title">✅ 档案数字化成果</h2>
+            <p class="text-muted mb-0">管理档案数字化成果，支持预览、下载和统计</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-secondary" onclick="exportResults()">
+                <i class="bi bi-download"></i> 导出成果
+            </button>
+        </div>
+    </div>
+
+    
+            </div>
+        </div>
+        <div class="col-md-3">
+        <div class="col-md-3">
+        <div class="col-md-3">
+    </div>
+
+    <!-- 成果列表 -->
+    <div class="list-page-filters">
+        <div class="list-page-filters-header">
+            <h5 class="list-page-filters-title">筛选条件</h5>
+            
+        </div>
+        <div class="list-page-filter-row">
+            <!-- 筛选器 -->
+            <form method="get" class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <label class="form-label">成果类型</label>
+                    <select name="result_type" class="form-select">
+                        <option value="">全部类型</option>
+                        <option value="scan" {% if result_type == 'scan' %}selected{% endif %}>扫描</option>
+                        <option value="ocr" {% if result_type == 'ocr' %}selected{% endif %}>OCR识别</option>
+                        <option value="convert" {% if result_type == 'convert' %}selected{% endif %}>格式转换</option>
+                        <option value="other" {% if result_type == 'other' %}selected{% endif %}>其他</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">文件格式</label>
+                    <select name="file_format" class="form-select">
+                        <option value="">全部格式</option>
+                        <option value="pdf" {% if file_format == 'pdf' %}selected{% endif %}>PDF</option>
+                        <option value="jpg" {% if file_format == 'jpg' %}selected{% endif %}>JPG</option>
+                        <option value="png" {% if file_format == 'png' %}selected{% endif %}>PNG</option>
+                        <option value="txt" {% if file_format == 'txt' %}selected{% endif %}>TXT</option>
+                        <option value="docx" {% if file_format == 'docx' %}selected{% endif %}>DOCX</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">搜索</label>
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="搜索档案名称、成果编号..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> 筛选
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- 成果列表 -->
+            {% if page and page.object_list %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>成果编号</th>
+                            <th>原档案信息</th>
+                            <th>成果类型</th>
+                            <th>文件格式</th>
+                            <th>文件大小</th>
+                            <th>完成时间</th>
+                            <th>质量评分</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in page.object_list %}
+                        <tr>
+                            <td><code>{{ result.result_number|default:"-" }}</code></td>
+                            <td>
+                                <strong>{{ result.archive_name|default:"-" }}</strong>
+                                <br><small class="text-muted">{{ result.archive_type|default:"" }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">
+                                    {{ result.get_result_type_display|default:"-" }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ result.file_format|upper|default:"-" }}</span>
+                            </td>
+                            <td>{{ result.file_size|filesizeformat|default:"-" }}</td>
+                            <td>{{ result.completed_time|date:"Y-m-d H:i"|default:"-" }}</td>
+                            <td>
+                                {% if result.quality_score %}
+                                <span class="badge bg-{% if result.quality_score >= 90 %}success{% elif result.quality_score >= 70 %}warning{% else %}danger{% endif %}">
+                                    {{ result.quality_score }}分
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="#" class="btn btn-outline-primary" title="预览">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-outline-success" title="下载">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if page.paginator.num_pages > 1 %}
+            <nav aria-label="分页导航">
+                <ul class="pagination justify-content-center">
+                    {% if page.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page.previous_page_number }}{% if result_type %}&result_type={{ result_type }}{% endif %}{% if file_format %}&file_format={{ file_format }}{% endif %}{% if search %}&search={{ search }}{% endif %}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page.paginator.page_range %}
+                    {% if page.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page.number|add:'-3' and num < page.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if result_type %}&result_type={{ result_type }}{% endif %}{% if file_format %}&file_format={{ file_format }}{% endif %}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page.next_page_number }}{% if result_type %}&result_type={{ result_type }}{% endif %}{% if file_format %}&file_format={{ file_format }}{% endif %}{% if search %}&search={{ search }}{% endif %}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 暂无数字化成果
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function exportResults() {
+    // TODO: 实现成果导出功能
+    alert('成果导出功能待实现');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends "shared/form_page_base.html" %}
+{% load static %}
+
+{% block form_page_title_text %}{{ page_title|default:"新建回款计划" }}{% endblock %}
+{% block form_page_description %}{{ description|default:"为商务合同创建回款计划" }}{% endblock %}
+
+{% block cancel_url %}{% if plan %}{% url 'settlement_pages:payment_plan_detail' plan_type plan.id %}{% else %}{% url 'settlement_pages:payment_plan_list' %}{% endif %}{% endblock %}
+
+{% block form_id %}paymentPlanForm{% endblock %}
+
+{% block form_has_files %}False{% endblock %}
+
+{% block cancel_url %}{% url 'settlement_pages:payment_plan_list' %}{% endblock %}
+
+{% block form_content %}
+    <!-- 基本信息 -->
+    <div class="form-section">
+        <div class="form-section-header">
+            <h5>基本信息</h5>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label required-field">关联合同</label>
+                    {% if plan %}
+                        <input type="text" class="form-control" value="{{ plan.contract.contract_number }} - {{ plan.contract.client.name|default:plan.contract.project.name|default:'' }}" readonly>
+                        <small class="form-text text-muted">编辑模式下不能修改关联合同</small>
+                    {% else %}
+                        <select name="contract_id" id="contract_id" class="form-select" required>
+                            <option value="">请选择合同</option>
+                            {% for contract in contracts %}
+                            <option value="{{ contract.id }}" 
+                                    data-amount="{{ contract.amount }}"
+                                    data-client="{{ contract.client.name|default:'' }}">
+                                {{ contract.contract_number }} - {{ contract.client.name|default:contract.project.name|default:'' }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">选择要创建回款计划的商务合同</small>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label required-field">回款阶段名称</label>
+                    <input type="text" name="phase_name" id="phase_name" class="form-control" 
+                           placeholder="例如：合同签订、中期汇报、项目完成" 
+                           value="{% if plan %}{{ plan.phase_name }}{% endif %}" required maxlength="100">
+                    <small class="form-text text-muted">回款阶段的名称，用于标识不同的回款节点</small>
+                </div>
+            </div>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label class="form-label">阶段描述</label>
+                    <textarea name="phase_description" id="phase_description" class="form-control" 
+                              rows="3" placeholder="详细描述此回款阶段的触发条件和要求">{% if plan %}{{ plan.phase_description }}{% endif %}</textarea>
+                    <small class="form-text text-muted">可选，描述此回款阶段的详细信息和触发条件</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 金额和日期 -->
+    <div class="form-section">
+        <div class="form-section-header">
+            <h5>金额和日期</h5>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label required-field">计划金额（元）</label>
+                    <input type="number" name="planned_amount" id="planned_amount" class="form-control" 
+                           step="0.01" min="0" placeholder="0.00" 
+                           value="{% if plan %}{{ plan.planned_amount }}{% endif %}" required>
+                    <small class="form-text text-muted">此阶段的计划回款金额</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label required-field">计划日期</label>
+                    <input type="date" name="planned_date" id="planned_date" class="form-control" 
+                           value="{% if plan %}{{ plan.planned_date|date:'Y-m-d' }}{% endif %}" required>
+                    <small class="form-text text-muted">预计回款日期</small>
+                </div>
+            </div>
+            {% if plan %}
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">状态</label>
+                    <select name="status" id="status" class="form-select">
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if plan.status == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 付款条件 -->
+    <div class="form-section">
+        <div class="form-section-header">
+            <h5>付款条件</h5>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">触发条件</label>
+                    <input type="text" name="trigger_condition" id="trigger_condition" class="form-control" 
+                           placeholder="例如：合同签订后、验收通过后" 
+                           value="{% if plan %}{{ plan.trigger_condition }}{% endif %}" maxlength="100">
+                    <small class="form-text text-muted">可选，描述触发此回款的条件</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">付款条件详情</label>
+                    <input type="text" name="condition_detail" id="condition_detail" class="form-control" 
+                           placeholder="例如：7个工作日内付款" 
+                           value="{% if plan %}{{ plan.condition_detail }}{% endif %}" maxlength="200">
+                    <small class="form-text text-muted">可选，付款条件的详细说明</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 备注 -->
+    <div class="form-section">
+        <div class="form-section-header">
+            <h5>备注</h5>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <textarea name="notes" id="notes" class="form-control" rows="3" 
+                              placeholder="其他需要说明的信息">{% if plan %}{{ plan.notes }}{% endif %}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block form_page_extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 设置默认计划日期为今天（仅新建时）
+        const plannedDateInput = document.getElementById('planned_date');
+        if (plannedDateInput && !plannedDateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            plannedDateInput.value = today;
+        }
+
+        // 金额格式化
+        const plannedAmountInput = document.getElementById('planned_amount');
+        if (plannedAmountInput) {
+            plannedAmountInput.addEventListener('blur', function() {
+                if (this.value) {
+                    const num = parseFloat(this.value);
+                    if (!isNaN(num)) {
+                        this.value = num.toFixed(2);
+                    }
+                }
+            });
+        }
+
+        // 合同选择后可以显示合同金额作为参考
+        const contractSelect = document.getElementById('contract_id');
+        if (contractSelect) {
+            contractSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                if (selectedOption && selectedOption.value) {
+                    const amount = selectedOption.getAttribute('data-amount');
+                    if (amount) {
+                        // 可以在界面上显示合同金额作为参考
+                        console.log('合同金额:', amount);
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+

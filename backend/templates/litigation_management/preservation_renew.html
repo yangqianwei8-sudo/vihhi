@@ -1,0 +1,114 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}续封申请 - {{ seal.get_seal_type_display }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:preservation_detail' seal.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回详情
+            </a>
+        </div>
+    </div>
+
+    <!-- 紧急提醒 -->
+    <div class="info-card info-card-warning mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">⚠️ 重要提醒</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="alert alert-warning">
+                <h5><i class="bi bi-exclamation-triangle-fill"></i> 保全续封即将到期</h5>
+                <p class="mb-2"><strong>当前保全到期时间：{{ seal.end_date|date:"Y年m月d日" }}</strong></p>
+                <p class="mb-0"><strong>⚠️ 如未及时续封将导致保全失效，造成重大损失！</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 当前保全信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">当前保全信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">保全类型</span>
+                    <span class="info-value">{{ seal.get_seal_type_display }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">保全案号</span>
+                    <span class="info-value">{{ seal.seal_number|default:"未设置" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">法院名称</span>
+                    <span class="info-value">{{ seal.court_name|default:"未设置" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">当前到期时间</span>
+                    <span class="info-value">{{ seal.end_date|date:"Y-m-d" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 续封申请表单 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">续封申请信息</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" id="renewForm">
+                {% csrf_token %}
+                
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">续封信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">续封后到期日期 <span class="text-danger">*</span></label>
+                        <input type="date" name="renewal_date" class="form-control" 
+                               value="{% if seal.renewal_deadline %}{{ seal.renewal_deadline|date:'Y-m-d' }}{% endif %}" required>
+                        <small class="form-text text-muted">请选择续封后的到期日期</small>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>续封所需材料：</strong>
+                            {% if seal.renewal_materials %}
+                            {{ seal.renewal_materials|linebreaks }}
+                            {% else %}
+                            请根据法院要求准备续封材料
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'litigation_pages:preservation_detail' seal.id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> 取消
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-check-circle"></i> 提交续封申请
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

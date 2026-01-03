@@ -1,0 +1,299 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}文件准备 - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📝 文件准备</h2>
+            <p class="text-muted mb-0">准备交付文件，包括文件上传、文件审核、文件确认等环节</p>
+        </div>
+        <div>
+            <a href="{% url 'delivery_pages:delivery_file_prep_upload' %}" class="btn btn-primary">
+                <i class="bi bi-upload"></i> 上传文件
+            </a>
+            <a href="{% url 'delivery_pages:delivery_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="info-card info-card-info">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">文件总数</div>
+                            <div class="info-value info-value-large">{{ total_count }}</div>
+                        </div>
+                        <div class="text-info" style="font-size: 2rem;">
+                            <i class="bi bi-file-earmark"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="info-card info-card-success">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">文件总大小</div>
+                            <div class="info-value info-value-large">
+                                {% if total_size < 1024 %}
+                                    {{ total_size }} B
+                                {% elif total_size < 1048576 %}
+                                    {{ total_size|floatformat:0|div:1024 }} KB
+                                {% elif total_size < 1073741824 %}
+                                    {{ total_size|floatformat:0|div:1048576 }} MB
+                                {% else %}
+                                    {{ total_size|floatformat:2|div:1073741824 }} GB
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-success" style="font-size: 2rem;">
+                            <i class="bi bi-hdd"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选栏 - 使用样式模板 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">筛选条件</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" id="filterForm" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">文件类型</label>
+                    <select name="file_type" class="form-select form-select-sm">
+                        <option value="">全部类型</option>
+                        <option value="report" {% if file_type == 'report' %}selected{% endif %}>报告</option>
+                        <option value="drawing" {% if file_type == 'drawing' %}selected{% endif %}>图纸</option>
+                        <option value="document" {% if file_type == 'document' %}selected{% endif %}>文档</option>
+                        <option value="data" {% if file_type == 'data' %}selected{% endif %}>数据文件</option>
+                        <option value="image" {% if file_type == 'image' %}selected{% endif %}>图片</option>
+                        <option value="other" {% if file_type == 'other' %}selected{% endif %}>其他</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">文件分类</label>
+                    <select name="file_category" class="form-select form-select-sm">
+                        <option value="">全部分类</option>
+                        <option value="project" {% if file_category == 'project' %}selected{% endif %}>项目文件</option>
+                        <option value="non_project" {% if file_category == 'non_project' %}selected{% endif %}>非项目文件</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">文件状态</label>
+                    <select name="file_status" class="form-select form-select-sm">
+                        <option value="">全部状态</option>
+                        <option value="pending_review" {% if file_status == 'pending_review' %}selected{% endif %}>待审核</option>
+                        <option value="reviewing" {% if file_status == 'reviewing' %}selected{% endif %}>审核中</option>
+                        <option value="approved" {% if file_status == 'approved' %}selected{% endif %}>审核通过</option>
+                        <option value="rejected" {% if file_status == 'rejected' %}selected{% endif %}>审核驳回</option>
+                        <option value="confirmed" {% if file_status == 'confirmed' %}selected{% endif %}>已确认</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">关联项目</label>
+                    <select name="project_id" class="form-select form-select-sm">
+                        <option value="">全部项目</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}" {% if project_id == project.id|stringformat:"s" %}selected{% endif %}>
+                            {{ project.project_number }} - {{ project.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">搜索</label>
+                    <input type="text" name="search" class="form-control form-control-sm" 
+                           placeholder="文件名、描述..." value="{{ search_query }}">
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-search"></i> 搜索
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 文件列表 - 使用样式模板 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">文件列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-primary">共 {{ files.paginator.count }} 个文件</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if files %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>文件名</th>
+                            <th>文件类型</th>
+                            <th>文件大小</th>
+                            <th>关联交付单</th>
+                            <th>关联项目</th>
+                            <th>文件状态</th>
+                            <th>上传时间</th>
+                            <th>上传人</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in files %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-file-earmark me-2"></i>
+                                    <div>
+                                        <div class="text-truncate" style="max-width: 300px;" title="{{ file.file_name }}">
+                                            {{ file.file_name }}
+                                        </div>
+                                        {% if file.description %}
+                                        <small class="text-muted">{{ file.description|truncatewords:10 }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ file.get_file_type_display }}</span>
+                            </td>
+                            <td>{{ file.get_file_size_display }}</td>
+                            <td>
+                                {% if file.delivery_record %}
+                                <a href="{% url 'delivery_pages:delivery_detail' file.delivery_record.id %}" class="text-decoration-none">
+                                    {{ file.delivery_record.delivery_number }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if file.delivery_record and file.delivery_record.project %}
+                                <a href="#" class="text-decoration-none">
+                                    {{ file.delivery_record.project.project_number }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if file.delivery_record %}
+                                    {% if file.delivery_record.status == 'draft' %}
+                                        <span class="status-badge draft">待审核</span>
+                                    {% elif file.delivery_record.status == 'submitted' or file.delivery_record.status == 'pending_approval' %}
+                                        <span class="status-badge submitted">审核中</span>
+                                    {% elif file.delivery_record.status == 'approved' %}
+                                        <span class="status-badge approved">审核通过</span>
+                                    {% elif file.delivery_record.status == 'rejected' %}
+                                        <span class="status-badge rejected">审核驳回</span>
+                                    {% elif file.delivery_record.status == 'confirmed' %}
+                                        <span class="status-badge confirmed">已确认</span>
+                                    {% else %}
+                                        <span class="status-badge {{ file.delivery_record.status }}">{{ file.delivery_record.get_status_display }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="status-badge draft">未关联</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ file.uploaded_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                {% if file.uploaded_by %}
+                                    {{ file.uploaded_by.get_full_name|default:file.uploaded_by.username }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if file.file %}
+                                    <a href="{{ file.file.url }}" class="btn btn-outline-primary" title="下载" download>
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if file.delivery_record %}
+                                    <a href="{% url 'delivery_pages:delivery_detail' file.delivery_record.id %}" 
+                                       class="btn btn-outline-info" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if files.has_other_pages %}
+            <nav aria-label="文件分页">
+                <ul class="pagination justify-content-center">
+                    {% if files.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?file_type={{ file_type }}&file_category={{ file_category }}&file_status={{ file_status }}&project_id={{ project_id }}&search={{ search_query }}&page=1">首页</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?file_type={{ file_type }}&file_category={{ file_category }}&file_status={{ file_status }}&project_id={{ project_id }}&search={{ search_query }}&page={{ files.previous_page_number }}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in files.paginator.page_range %}
+                        {% if files.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > files.number|add:'-3' and num < files.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?file_type={{ file_type }}&file_category={{ file_category }}&file_status={{ file_status }}&project_id={{ project_id }}&search={{ search_query }}&page={{ num }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if files.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?file_type={{ file_type }}&file_category={{ file_category }}&file_status={{ file_status }}&project_id={{ project_id }}&search={{ search_query }}&page={{ files.next_page_number }}">下一页</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?file_type={{ file_type }}&file_category={{ file_category }}&file_status={{ file_status }}&project_id={{ project_id }}&search={{ search_query }}&page={{ files.paginator.num_pages }}">末页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-3">暂无文件记录</p>
+                <a href="{% url 'delivery_pages:delivery_file_prep_upload' %}" class="btn btn-primary mt-2">
+                    <i class="bi bi-upload"></i> 上传文件
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

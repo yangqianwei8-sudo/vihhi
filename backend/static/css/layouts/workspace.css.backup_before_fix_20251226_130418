@@ -1,0 +1,685 @@
+/**
+ * 工作台布局样式
+ * 参考总工作台设计风格
+ * 维海科技信息化管理平台
+ * 版本: 3.0
+ * 
+ * 注意：此文件包含所有左侧栏相关的样式，包括：
+ * - 工作台容器布局
+ * - 左侧栏导航样式
+ * - 内容区域样式
+ * - 容器边距处理（确保靠左靠顶）
+ */
+
+/* ============================================
+   工作台容器布局和边距处理
+   ============================================ */
+
+/* 工作台容器基础样式 */
+.workspace {
+    flex: 1;
+    padding: 0 0 28px 0 !important; /* 移除右边padding，让右侧栏靠右边缘；只保留下边padding */
+    display: grid;
+    grid-template-columns: 240px 1fr 320px;
+    gap: 12px !important; /* 减少一半：从24px改为12px，确保gap不被覆盖 */
+    margin-top: 0 !important; /* 确保上边缘靠紧顶部导航栏 */
+    margin-left: 0 !important; /* 确保容器本身靠左 */
+    margin-right: 0 !important; /* 确保容器靠右 */
+    padding-left: 0 !important; /* 确保左边距为0 */
+    padding-right: 0 !important; /* 确保右边距为0，让右侧栏靠右边缘 */
+    padding-top: 0 !important; /* 确保上边缘靠紧顶部导航栏 */
+    width: 100%; /* 确保占满宽度 */
+    max-width: 100%; /* 防止溢出 */
+}
+
+/* 当容器在工作台布局内时，移除左边距和上边距，确保导航栏完全靠左和靠紧顶部（按产值管理的方式） */
+.workspace .container-fluid,
+.workspace-content .container-fluid,
+.container-fluid .workspace {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+    padding-top: 0 !important; /* 确保上边缘靠紧顶部导航栏 */
+    margin-top: 0 !important; /* 确保上边缘靠紧顶部导航栏 */
+}
+
+/* 确保container-fluid内的workspace也完全靠左和靠紧顶部 */
+.container-fluid > .workspace {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+    padding-top: 0 !important; /* 确保上边缘靠紧顶部导航栏 */
+    margin-top: 0 !important; /* 确保上边缘靠紧顶部导航栏 */
+}
+
+/* 当container-fluid包含workspace时，container-fluid本身也要移除左边距和上边距（按产值管理的方式） */
+.container-fluid:has(.workspace),
+.container-fluid > .workspace,
+.container-fluid .workspace {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+    padding-top: 0 !important; /* 确保上边缘靠紧顶部导航栏 */
+    margin-top: 0 !important; /* 确保上边缘靠紧顶部导航栏 */
+}
+
+/* 确保container-fluid本身（当包含workspace时）也没有上边距 */
+.container-fluid:has(.workspace) {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+/* 移除container-fluid包含workspace时的Bootstrap padding类（py-3等） */
+.container-fluid:has(.workspace).py-3,
+.container-fluid:has(.workspace).py-2,
+.container-fluid:has(.workspace).py-1,
+.container-fluid:has(.workspace).py-4,
+.container-fluid:has(.workspace).py-5 {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* 两列布局变体（无右侧边栏） */
+.workspace-two-column {
+    grid-template-columns: 240px 1fr;
+    padding-right: 0 !important; /* 移除右侧padding，避免空白容器 */
+}
+
+/* 单列布局变体（无侧边栏） */
+.workspace-single-column {
+    grid-template-columns: 1fr;
+}
+
+/* ============================================
+   侧边栏导航样式 - 经典导航栏设计方案
+   ============================================ */
+
+/* 导航栏容器 */
+.workspace-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 0 !important; /* 确保没有上边距，紧贴欢迎卡片 */
+    margin-left: 0 !important; /* 确保完全靠左 */
+    padding-left: 0 !important; /* 确保没有左边距 */
+    padding-top: 0 !important; /* 确保没有上内边距 */
+    padding-bottom: 0 !important; /* 确保没有下内边距，贴底 */
+    width: 240px; /* 展开状态宽度：统一为 240px */
+    min-width: 240px;
+    max-width: 240px; /* 防止溢出 */
+    transition: width var(--transition-base), top var(--transition-base); /* 添加top的过渡效果 */
+    position: sticky; /* 使用sticky定位，粘住顶部导航栏 */
+    top: var(--navbar-height) !important; /* 普通页面：使用顶部导航栏高度56px，使用!important确保不被覆盖 */
+    bottom: 0 !important; /* 确保贴底 */
+    left: 0; /* 确保靠左对齐 */
+    overflow: visible; /* 改为visible，确保sticky定位正常工作 */
+    box-sizing: border-box; /* 确保宽度计算正确 */
+    height: calc(100vh - var(--navbar-height)); /* 高度填满屏幕，减去顶部导航栏高度56px */
+    min-height: calc(100vh - var(--navbar-height)); /* 确保最小高度 */
+    max-height: calc(100vh - var(--navbar-height)); /* 确保不超过视口高度 */
+    align-self: start; /* 确保在grid布局中正确对齐 */
+    z-index: 10; /* 确保在其他元素之上 */
+    border-radius: 0 !important; /* 确保四个角为直角 */
+}
+
+/* 确保左侧栏的top值始终一致，不受页面内容（如summary_cards）影响 */
+.workspace-nav,
+.workspace-nav[style*="top"] {
+    top: var(--navbar-height) !important; /* 强制使用固定的top值，确保所有页面一致 */
+}
+
+/* 折叠状态 */
+.workspace-nav.collapsed {
+    width: 80px; /* 折叠状态宽度：统一为 80px */
+    min-width: 80px;
+    max-width: 80px; /* 防止溢出 */
+}
+
+/* 导航栏主体 */
+.sidenav {
+    background: linear-gradient(180deg, #FFFFFF, #F9FAFD) !important; /* 使用样式模板的渐变底纹 */
+    border-radius: 0 !important; /* 确保四个角为直角 */
+    box-shadow: var(--shadow);
+    padding: 0;
+    margin: 0;
+    margin-bottom: 0 !important; /* 确保没有下边距，贴底 */
+    padding-bottom: 0 !important; /* 确保没有下内边距，贴底 */
+    position: relative; /* 改为relative，因为父容器已经设置了高度 */
+    top: 0; /* 不再需要sticky定位，因为父容器已经控制了高度 */
+    bottom: 0 !important; /* 确保贴底 */
+    height: 100%; /* 填满父容器高度 */
+    min-height: 100%; /* 确保最小高度 */
+    max-height: 100%; /* 不超过父容器高度 */
+    overflow-y: auto; /* 内容超出时显示滚动条 */
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    left: 0; /* 确保靠左对齐 */
+    width: 100%; /* 确保不超出父容器 */
+    max-width: 100%; /* 防止溢出 */
+    box-sizing: border-box; /* 确保宽度计算正确 */
+}
+
+/* 导航栏分区 */
+.sidenav-section {
+    padding: 12px 0;
+}
+
+/* 第一个分区没有上内边距，确保完全贴住顶部（按产值管理的方式） */
+.sidenav-section:first-child {
+    padding-top: 0 !important;
+}
+
+/* 如果第一个分区是独立项（没有分组标题），第二个分区是分组，则减少空白 */
+/* 第一个独立项后面跟着分组时，移除第一个的下内边距和第二个的上内边距 */
+/* 注意：使用 :has() 选择器，需要浏览器支持（Chrome 105+, Safari 15.4+, Firefox 121+） */
+.sidenav-section:first-child:not(:has(.sidenav-title)) {
+    padding-bottom: 0;
+}
+
+.sidenav-section:first-child:not(:has(.sidenav-title)) + .sidenav-section:has(.sidenav-title) {
+    padding-top: 0 !important;
+    margin-top: 0;
+    border-top: 1px solid var(--vh-border);
+}
+
+.sidenav-section + .sidenav-section {
+    border-top: 1px solid var(--vh-border);
+    margin-top: 0;
+    padding-top: 12px;
+}
+
+/* 确保最后一个分区没有下边距，贴底 */
+.sidenav-section:last-child {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* 分区标题 */
+.sidenav-title {
+    font-family: var(--font-family);
+    font-size: var(--font-size-sm); /* 12px */
+    line-height: 1.5; /* 统一行距：1.5倍 */
+    color: var(--vh-text-muted, #6B7280) !important; /* 确保文字颜色可见，使用fallback值 */
+    letter-spacing: 0.5px;
+    margin: 0; /* 统一所有margin为0 */
+    margin-bottom: 8px; /* 仅保留下边距用于分隔 */
+    padding: 0 16px; /* 统一标题左右padding：16px，与菜单项文字起始位置对齐 */
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.workspace-nav.collapsed .sidenav-title {
+    display: none;
+}
+
+/* 链接容器 */
+.sidenav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 4px; /* 菜单项垂直间距：4-8px */
+    padding: 0; /* 移除左右padding，让底纹铺满整个容器 */
+    padding-bottom: 0 !important; /* 确保没有下内边距，贴底 */
+    margin-bottom: 0 !important; /* 确保没有下边距，贴底 */
+}
+
+.workspace-nav.collapsed .sidenav-links {
+    padding: 0; /* 折叠状态也移除padding */
+}
+
+/* 一级菜单项（有子菜单） */
+.sidenav-item {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 有子菜单的菜单项 */
+.sidenav-item.has-children {
+    position: relative;
+}
+
+/* 激活状态的菜单项 */
+.sidenav-item.active > .sidenav-link {
+    background: rgba(214, 40, 40, 0.08);
+    color: var(--vh-primary);
+    font-weight: 600;
+}
+
+/* 侧边栏导航链接 - 一级菜单 */
+.sidenav-link {
+    font-family: var(--font-family);
+    font-size: var(--font-size-base); /* 14px - 与顶部栏保持一致 */
+    line-height: 1.5; /* 统一行距：1.5倍 */
+    font-weight: 500; /* 中等字重 */
+    padding: 0 16px 0 16px !important; /* 统一左右padding：16px，确保所有模块一致 */
+    min-height: 44px;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    gap: 0; /* 图标已移除，无需间距 */
+    color: var(--vh-text, #1F2937) !important; /* 确保文字颜色可见，使用fallback值 */
+    text-decoration: none;
+    transition: background var(--transition-base), color var(--transition-base);
+    position: relative;
+    cursor: pointer;
+    width: 100%; /* 确保不超出容器 */
+    max-width: 100%; /* 防止溢出 */
+    overflow: hidden; /* 防止文字溢出 */
+    box-sizing: border-box; /* 确保padding计算正确 */
+    flex-shrink: 1; /* 允许flex容器收缩 */
+    min-width: 0; /* 关键：允许flex容器收缩到小于内容宽度 */
+}
+
+.workspace-nav.collapsed .sidenav-link {
+    padding: 0 8px 0 8px !important; /* 折叠状态：左右各8px，居中显示 */
+    justify-content: center;
+}
+
+/* 链接图标 - 已隐藏，让菜单更简洁 */
+/* 注意：只隐藏有多个span时的第一个span（图标），不隐藏唯一的span（文字标签） */
+.sidenav-link > span:first-child:not(:only-child),
+.sidenav-link .nav-icon,
+.sidenav-link .sidenav-icon {
+    display: none !important; /* 隐藏所有图标 */
+    width: 0 !important; /* 确保不占用空间 */
+    margin: 0 !important; /* 确保不占用空间 */
+    padding: 0 !important; /* 确保不占用空间 */
+}
+
+/* 链接文字 - 选择包含文字标签的span（排除图标） */
+/* 注意：padding已经在.sidenav-link上统一设置，这里只需要处理文字样式 */
+.sidenav-link > span:not(:first-child),
+.sidenav-link > span:only-child,
+.sidenav-link > span:first-child:only-child,
+.sidenav-link .nav-label,
+.sidenav-link .sidenav-label {
+    font-family: var(--font-family);
+    line-height: 1.5; /* 统一行距：1.5倍 */
+    flex: 1;
+    min-width: 0; /* 关键：允许flex子元素收缩到小于内容宽度 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: inherit !important; /* 继承父元素的颜色，确保文字可见，使用!important确保优先级 */
+    padding-left: 0 !important; /* padding已经在父元素.sidenav-link上统一设置 */
+    padding-right: 0 !important; /* padding已经在父元素.sidenav-link上统一设置 */
+    display: block !important; /* 确保文字显示，使用!important确保优先级 */
+}
+
+.workspace-nav.collapsed .sidenav-link > span:last-child,
+.workspace-nav.collapsed .sidenav-link .nav-label {
+    display: none;
+}
+
+/* 箭头已删除 - 不再需要展开/折叠指示器 */
+
+/* 悬停状态 */
+.sidenav-link:hover {
+    background: rgba(31, 42, 87, 0.08); /* 浅灰色背景 */
+    color: var(--vh-primary);
+    text-decoration: none;
+}
+
+/* 激活状态：背景色 + 主色文字 */
+.sidenav-link[data-active="true"],
+.sidenav-link.active {
+    background: rgba(214, 40, 40, 0.08); /* 非常淡的红色背景（主题强调色） */
+    color: var(--vh-primary);
+    font-weight: 600;
+}
+
+/* 二级子菜单容器 */
+.sidenav-item .submenu {
+    display: none;
+    flex-direction: column;
+    gap: 4px; /* 统一菜单项间距：4px */
+    padding: 0; /* 统一所有padding为0，缩进由链接文字控制 */
+    margin: 0; /* 统一所有margin为0 */
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height var(--transition-base), padding-top var(--transition-base), padding-bottom var(--transition-base);
+}
+
+/* 展开状态的子菜单 */
+.sidenav-item.expanded .submenu {
+    display: flex !important; /* 使用 !important 确保优先级 */
+    max-height: 1000px !important; /* 使用 !important 确保优先级 */
+    padding-top: 4px !important; /* 统一子菜单上边距：4px */
+    padding-bottom: 4px !important; /* 统一子菜单下边距：4px */
+    overflow: visible !important; /* 确保内容可见 */
+}
+
+.workspace-nav.collapsed .submenu {
+    display: none !important;
+}
+
+/* 二级子菜单链接 */
+.sidenav-sub-link {
+    font-family: var(--font-family);
+    font-size: var(--font-size-base); /* 14px */
+    line-height: 1.5; /* 统一行距：1.5倍 */
+    font-weight: 400; /* 常规字重 */
+    padding: 0 16px 0 36px !important; /* 统一padding：左36px（一级16px + 缩进20px），右16px，确保所有模块一致 */
+    min-height: 40px;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    gap: 0; /* 图标已移除，无需间距 */
+    color: var(--vh-text-muted, #6B7280) !important; /* 确保文字颜色可见，使用fallback值 */
+    text-decoration: none;
+    transition: background var(--transition-base), color var(--transition-base);
+    position: relative;
+    cursor: pointer;
+    width: 100%; /* 确保不超出容器 */
+    max-width: 100%; /* 防止溢出 */
+    overflow: hidden; /* 防止文字溢出 */
+    box-sizing: border-box; /* 确保padding计算正确 */
+    flex-shrink: 1; /* 允许flex容器收缩 */
+    min-width: 0; /* 关键：允许flex容器收缩到小于内容宽度 */
+}
+
+.workspace-nav.collapsed .sidenav-sub-link {
+    display: none;
+}
+
+/* 二级菜单图标 - 已隐藏，让菜单更简洁 */
+/* 注意：只隐藏有多个span时的第一个span（图标），不隐藏唯一的span（文字标签） */
+.sidenav-sub-link > span:first-child:not(:only-child),
+.sidenav-sub-link .nav-icon,
+.sidenav-sub-link .sidenav-icon {
+    display: none !important; /* 隐藏所有图标 */
+    width: 0 !important; /* 确保不占用空间 */
+    margin: 0 !important; /* 确保不占用空间 */
+    padding: 0 !important; /* 确保不占用空间 */
+}
+
+/* 二级菜单文字 - 确保文字正确截断 */
+/* 注意：需要同时匹配有图标和无图标的情况 */
+/* 
+ * 策略：
+ * 1. :not(:first-child) - 匹配有图标时的文字span（第二个span）
+ * 2. :only-child - 匹配没有图标时的文字span（唯一的span）
+ * 3. :first-child:only-child - 更精确地匹配没有图标的情况
+ * 4. .nav-label 和 .sidenav-label - 匹配有类名的文字span
+ */
+.sidenav-sub-link > span:not(:first-child),
+.sidenav-sub-link > span:only-child,
+.sidenav-sub-link > span:first-child:only-child,
+.sidenav-sub-link .nav-label,
+.sidenav-sub-link .sidenav-label {
+    font-family: var(--font-family);
+    line-height: 1.5; /* 统一行距：1.5倍 */
+    flex: 1;
+    min-width: 0; /* 关键：允许flex子元素收缩到小于内容宽度 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: inherit !important; /* 继承父元素的颜色，确保文字可见，使用!important确保优先级 */
+    padding-left: 0 !important; /* padding已经在父元素.sidenav-sub-link上统一设置 */
+    padding-right: 0 !important; /* padding已经在父元素.sidenav-sub-link上统一设置 */
+    display: block !important; /* 确保文字显示，使用!important确保优先级 */
+}
+
+/* 二级菜单悬停状态 */
+.sidenav-sub-link:hover {
+    background: rgba(31, 42, 87, 0.06);
+    color: var(--vh-primary);
+    text-decoration: none;
+}
+
+/* 二级菜单激活状态 */
+.sidenav-sub-link[data-active="true"],
+.sidenav-sub-link.active {
+    background: rgba(214, 40, 40, 0.06); /* 非常淡的红色背景（主题强调色） */
+    color: var(--vh-primary);
+    font-weight: 500;
+}
+
+/* 确保链接可点击 */
+.sidenav-link,
+.sidenav-sub-link {
+    pointer-events: auto;
+    position: relative;
+    z-index: 2;
+}
+
+/* ============================================
+   主内容区域样式
+   ============================================ */
+
+/* 确保表单容器可以正常交互 */
+.workspace-content,
+.customer-content {
+    position: relative;
+    /* 移除 z-index: 1，避免创建 stacking context 影响模态框 */
+    /* z-index: 1; */
+    pointer-events: auto;
+    margin-left: 0 !important; /* 确保没有左边距 */
+    padding-left: 0 !important; /* 确保没有左边距 */
+}
+
+/* 使用更具体的选择器确保优先级高于 .customer-content */
+.workspace .workspace-main,
+.workspace-main.customer-content,
+.workspace-main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding-top: 0 !important; /* 确保没有上内边距 */
+    margin-top: 0 !important; /* 确保没有上外边距，紧贴欢迎卡片 */
+    padding-left: 14px !important; /* 减少一半：从28px改为14px，确保padding-left不被覆盖 */
+    min-width: 0;
+    position: relative;
+    /* 移除 z-index: 1，避免创建 stacking context 影响模态框 */
+    /* z-index: 1; */
+    pointer-events: auto;
+    margin-left: 0 !important; /* 确保没有左边距 */
+}
+
+/* ============================================
+   统一左侧栏贴顶：移除 workspace-main 内部所有上边距
+   确保所有模块的左侧栏都贴顶
+   ============================================ */
+
+/* 移除 workspace-main 内部所有 container-fluid 的上内边距 */
+.workspace-main .container-fluid.py-1,
+.workspace-main .container-fluid.py-2,
+.workspace-main .container-fluid.py-3,
+.workspace-main .container-fluid.py-4,
+.workspace-main .container-fluid.py-5 {
+    padding-top: 0 !important;
+}
+
+/* 移除 workspace-main 内部所有 container-fluid 的上外边距 */
+.workspace-main .container-fluid {
+    margin-top: 0 !important;
+}
+
+/* 移除 workspace-main 内部所有元素的 Bootstrap padding 类上内边距 */
+.workspace-main [class*="py-"],
+.workspace-main [class*="pt-"] {
+    padding-top: 0 !important;
+}
+
+/* 移除 workspace-main 内部所有元素的 Bootstrap margin 类上外边距 */
+.workspace-main [class*="mt-"] {
+    margin-top: 0 !important;
+}
+
+/* 特别处理：移除 workspace-main 内第一个元素的上边距 */
+.workspace-main > *:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* 确保数据概览卡片紧贴欢迎卡片 */
+.workspace-main > .info-card:first-child,
+.workspace-main > #workspaceMain > .info-card:first-child,
+.workspace-main > .info-card[data-card-id="data-overview"]:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* 确保信息卡片之间有足够间距 */
+.workspace-main > .info-card {
+    margin-bottom: 0;
+}
+
+.workspace-main > .info-card + .info-card {
+    margin-top: 0;
+}
+
+/* 待办事项卡片高度与数据概览保持一致 */
+.workspace-side [data-card-id="todo-items"] .info-card-body {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 信息网格布局优化，防止内容重叠 */
+.info-grid .info-item {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.info-grid .info-item > div {
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* 信息项文本溢出处理 */
+.info-item .info-label,
+.info-item .info-value {
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+/* ============================================
+   右侧边栏样式
+   ============================================ */
+.workspace-side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px !important; /* 缩小卡片间距：从24px改为12px */
+    margin-top: 0 !important; /* 移除上边距，与左侧栏和主内容区对齐 */
+    margin-right: 0 !important; /* 确保靠右边缘 */
+    padding-right: 0 !important; /* 确保没有右边距 */
+    align-self: start; /* 确保在grid布局中顶部对齐 */
+}
+
+/* ============================================
+   卡片样式（工作台专用）
+   ============================================ */
+.workspace-main > .card:first-child {
+    margin-top: 0;
+}
+
+.workspace-main .card {
+    padding: 20px 24px;
+}
+
+/* 删除悬停装饰效果 */
+.workspace-main .card:hover {
+    box-shadow: none !important;
+}
+
+/* ============================================
+   动画效果 - 已删除装饰性动画
+   ============================================ */
+.info-card-slide-up {
+    /* 删除装饰性动画 */
+    animation: none !important;
+}
+
+/* ============================================
+   响应式设计
+   ============================================ */
+@media (max-width: 1200px) {
+    .workspace {
+        grid-template-columns: 240px 1fr;
+        gap: 12px !important; /* 减少一半：从24px改为12px，确保gap保持一致 */
+    }
+    
+    .workspace-side {
+        display: none;
+    }
+    
+    /* 确保主内容区在响应式断点中也有正确的左边距 */
+    .workspace .workspace-main,
+    .workspace-main.customer-content,
+    .workspace-main {
+        padding-left: 14px !important; /* 减少一半：从28px改为14px，确保不被覆盖 */
+    }
+}
+
+@media (max-width: 992px) {
+    .workspace {
+        grid-template-columns: 1fr;
+        padding: 0 16px 16px 0;
+        gap: 16px;
+    }
+    
+    .workspace-nav {
+        margin-top: 0;
+        height: calc(100vh - var(--navbar-height)); /* 保持高度填满屏幕 */
+        min-height: calc(100vh - var(--navbar-height));
+    }
+    
+    .sidenav {
+        position: relative;
+        top: 0;
+        height: 100%; /* 保持填满父容器 */
+        min-height: 100%;
+    }
+    
+    .workspace-main {
+        margin-top: 64px !important; /* 主内容区距离顶部64px */
+        padding-left: 16px;
+    }
+    
+    .workspace-side {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .workspace {
+        padding: 0 12px 12px 0;
+        gap: 12px;
+    }
+    
+    .sidenav {
+        padding: 14px 12px;
+        border-radius: 0;
+    }
+    
+    .workspace-main {
+        padding-left: 12px;
+    }
+    
+    .workspace-main .card {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 576px) {
+    .workspace {
+        padding: 0 8px 8px 0;
+    }
+    
+    .sidenav {
+        padding: 12px;
+    }
+    
+    .sidenav-link {
+        padding: 6px 8px;
+        font-size: 13px;
+    }
+    
+    .workspace-main {
+        padding-left: 8px;
+    }
+    
+    .workspace-main .card {
+        padding: 12px;
+    }
+}
+

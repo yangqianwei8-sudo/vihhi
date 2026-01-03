@@ -1,0 +1,2632 @@
+{% extends "customer_management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+        display: block;
+    }
+    .required-field::after {
+        content: " *";
+        color: #ef4444;
+    }
+    .party-item {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    .party-item-header {
+    
+
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item"><a href="{% url 'business_pages:contract_management_list' %}">合同管理</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
+
+{% block content %}<div class="container-fluid py-4">
+    <div class="form-page-title">
+            <h1>{{ page_title }}</h1>
+            {% if page_description %}
+            <p>{{ page_description }}</p>
+            {% endif %}
+        </div>
+
+    <form method="post" enctype="multipart/form-data" id="contract-form" class="form-card">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+        {% endif %}
+            {{ form.non_field_errors }}
+        </div>
+        
+        <!-- 合同识别功能 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>🤖 AI合同识别</h5>
+                <button type="button" id="recognize-contract-btn" class="btn btn-primary">
+                    <i class="bi bi-magic"></i> 开始识别
+                </button>
+            </div>
+            <div class="alert alert-info" style="margin-bottom: 16px; font-size: 13px;">
+                <i class="bi bi-info-circle"></i> 上传合同文件（PDF、图片），AI将自动识别并填充表单信息
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label">上传合同文件</label>
+                        <input type="file" id="contract-file-input" class="form-control"
+                               accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                               style="padding: 8px;">
+                        <small class="form-text text-muted">支持格式：PDF、JPG、PNG、DOC、DOCX，最大10MB</small>
+                    </div>
+                </div>
+            </div>
+            <div id="recognition-status" style="display: none; margin-top: 12px;">
+                <div class="alert alert-warning">
+                    <i class="bi bi-hourglass-split"></i> <span id="recognition-message">正在识别中，请稍候...</span>
+                </div>
+            </div>
+            <div id="recognition-result" style="display: none; margin-top: 12px;">
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i> 识别完成！已自动填充表单信息，请检查并确认。
+                </div>
+            </div>
+        </div>
+        
+        <!-- 一、基础信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>基础信息</h5>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">审批单号</label>
+                        <input type="text" id="approval_number" name="approval_number" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" placeholder="系统自动生成">
+                        <small class="form-text text-muted">系统自动生成</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">提交部门</label>
+                        <input type="text" id="submit_department" name="submit_department" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" value="{% if request.user.department %}{{ request.user.department.name }}{% else %}未设置部门{% endif %}">
+                        <small class="form-text text-muted">系统默认</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">提交人</label>
+                        <input type="text" id="submitter" name="submitter" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" value="{{ request.user.get_full_name|default:request.user.username }}">
+                        <small class="form-text text-muted">系统默认</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">提交日期</label>
+                        <input type="date" id="submit_date" name="submit_date" class="form-control" value="{% now 'Y-m-d' %}" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
+                        <small class="form-text text-muted">当天</small>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field">项目编号</label>
+                        {{ form.project_number }}
+                        {% if form.project_number.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.project_number.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">YYYY-系统自动四位连接编号，不得重复</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field">项目名称</label>
+                        {{ form.project_name }}
+                        {% if form.project_name.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.project_name.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">项目业态</label>
+                        <select id="project_business_type" name="project_business_type" class="form-select">
+                            <option value="">-- 请选择项目业态 --</option>
+                            {% for business_type in business_types %}
+                            <option value="{{ business_type.id }}">{{ business_type.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">后台引入</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">合同暂定价款</label>
+                        <input type="number" id="provisional_price" name="provisional_price" class="form-control" step="0.01" placeholder="0.00">
+                        <small class="form-text text-muted">单位：元</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 二、主体信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>主体信息</h5>
+            </div>
+            
+            <!-- 客户方信息 -->
+            <div style="margin-bottom: 24px;">
+                <h6 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #1f2937;">客户方信息</h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label required-field">客户公司</label>
+                            {{ form.client }}
+                            {% if form.client.errors %}
+                            <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.client.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">根据客户管理</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label">统一社会信用代码</label>
+                            <input type="text" id="client_credit_code" name="client_credit_code" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" placeholder="自动带入">
+                            <small class="form-text text-muted">自动带入，客户管理</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label">法定代表人</label>
+                            <input type="text" id="client_legal_representative" name="client_legal_representative" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" placeholder="自动带入">
+                            <small class="form-text text-muted">自动带入，客户管理</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label">项目代表</label>
+                            <select id="client_project_representative" name="client_project_representative" class="form-select">
+                                <option value="">-- 请选择项目代表 --</option>
+                            </select>
+                            <small class="form-text text-muted">选择，客户管理</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label">联系方式</label>
+                            <input type="text" id="client_contact" name="client_contact" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" placeholder="自动带入">
+                            <small class="form-text text-muted">自动带入，客户管理</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 我方信息 -->
+            <div>
+                <h6 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #1f2937;">我方信息</h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label">我方签约主体</label>
+                            <select id="our_signing_party" name="our_signing_party" class="form-select">
+                                                                                        <option value="">-- 请选择我方签约主体 --</option></select>
+                            <small class="form-text text-muted">选择，后台引入</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label">项目负责人</label>
+                            <select id="project_manager" name="project_manager" class="form-select">
+                                                            <option value="">-- 请选择项目负责人 --</option>
+                            {% for manager in project_managers %}
+                            <option value="{{ manager.id }}">{{ manager.get_full_name|default:manager.username }}</option>
+                            {% endfor %}</select>
+                            <small class="form-text text-muted">选择</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label">商务负责人</label>
+                            <select id="business_manager" name="business_manager" class="form-select">
+                                                            <option value="">-- 请选择商务负责人 --</option>
+                            {% for manager in business_managers %}
+                            <option value="{{ manager.id }}" {% if manager.id == user.id %}selected{% endif %}>{{ manager.get_full_name|default:manager.username }}</option>
+                            {% endfor %}</select>
+                            <small class="form-text text-muted">选择，默认</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 三、合同信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>合同信息</h5>
+            </div>
+            <!-- 合同名称 -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field" for="{{ form.contract_name.id_for_label }}">{{ form.contract_name.label }}</label>
+                        {{ form.contract_name }}
+                        {% if form.contract_name.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.contract_name.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- 合同编号 -->
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">合同编号</label>
+                        <input type="text" id="contract_number_display" name="contract_number_display" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;" placeholder="HT+项目编号">
+                        <small class="form-text text-muted">HT+项目编号，自动生成</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.contract_type.id_for_label }}">{{ form.contract_type.label }}</label>
+                        {{ form.contract_type }}
+                        {% if form.contract_type.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.contract_type.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">后台管理引入</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">约定管辖</label>
+                        <select id="governing_law" name="governing_law" class="form-select">
+                            <option value="">-- 请选择约定管辖 --</option>
+                            {% for value, label in governing_law_choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <!-- 关联商机（保留，但移到合同信息部分） -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label required-field" for="{{ form.opportunity.id_for_label }}">{{ form.opportunity.label }}</label>
+                        {{ form.opportunity }}
+                        {% if form.opportunity.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.opportunity.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3" id="parent-contract-row-wrapper" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.parent_contract.id_for_label }}">{{ form.parent_contract.label }}</label>
+                        {{ form.parent_contract }}
+                        {% if form.parent_contract.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.parent_contract.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <div class="text-danger" style="font-size: 12px; margin-top: 4px;">{{ form.description.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">合同价格</label>
+                        <input type="text" id="contract_price" name="contract_price" class="form-control" value="" readonly style="background-color: #f5f5f5; cursor: not-allowed;" placeholder="根据结算方式自动计算">
+                        <small class="form-text text-muted">根据结算方式自动计算，不可手动修改</small>
+                    </div>
+                </div>
+                </div>
+            </div>
+            <!-- 合同状态（隐藏字段，由系统自动判断） -->
+            {{ form.status }}
+        </div>
+        
+        <!-- 签约主体 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>👥 签约主体</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="parties-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;">序号</th>
+                            <th style="width: 100px;">单位类型 <span class="text-danger">*</span></th>
+                            <th style="width: 180px;">单位名称 <span class="text-danger">*</span></th>
+                            <th style="width: 150px;">统一社会信用代码</th>
+                            <th style="width: 120px;">法定代表人</th>
+                            <th style="width: 120px;">项目负责人</th>
+                            <th style="width: 120px;">联系电话</th>
+                            <th style="width: 150px;">联系邮箱</th>
+                            <th style="width: 200px;">办公地址</th>
+                            <th style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="parties-container">
+                        <!-- 签约主体列表将通过JavaScript动态添加 -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 16px; text-align: left;">
+                <button type="button" class="btn btn-sm btn-primary" id="add-party-btn">
+                    <i class="bi bi-plus-circle"></i> 添加签约主体
+                </button>
+            </div>
+        </div>
+
+        </div>
+
+        <!-- 四、服务信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>服务信息</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="service-contents-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 50px;">序号</th>
+                            <th style="width: 150px;">服务类型 <span class="text-danger">*</span></th>
+                            <th style="width: 120px;">服务专业 <span class="text-danger">*</span></th>
+                            <th style="width: 200px;">成果清单</th>
+                            <th style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="service-contents-container">
+                        <!-- 服务信息列表将通过JavaScript动态添加 -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 16px; text-align: left;">
+                <button type="button" class="btn btn-sm btn-primary" id="add-service-content-btn">
+                    <i class="bi bi-plus-circle"></i> 添加服务信息
+                </button>
+            </div>
+        </div>
+
+
+        <!-- 五、价款信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>价款信息</h5>
+            </div>
+            
+            <!-- 结算方式选择 -->
+            <div class="row" style="margin-bottom: 20px;">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">结算方式</label>
+                        <select id="settlement_method" name="settlement_method" class="form-select">
+                            <option value="">-- 请选择结算方式 --</option>
+                            {% for method in settlement_methods %}
+                            <option value="{{ method.code }}" data-name="{{ method.name }}">{{ method.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">后台引入，未选择时隐藏列表</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 根据结算方式显示不同的列表 -->
+            <!-- 包干总价列表 -->
+            <div id="fixed-total-list" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 60px;">序号</th>
+                                <th style="width: 150px;">面积规模</th>
+                                <th style="width: 120px;">面积类型</th>
+                                <th style="width: 150px;">服务费</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fixed-total-container">
+                            <!-- 包干总价列表将通过JavaScript动态添加 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 16px; text-align: left;">
+                    <button type="button" class="btn btn-sm btn-primary" id="add-fixed-total-btn">
+                        <i class="bi bi-plus-circle"></i> 增加行
+                    </button>
+                </div>
+                <div style="margin-top: 16px; text-align: right;">
+                    <strong>小计：<span id="fixed-total-subtotal">0.00</span> 元</strong>
+                </div>
+            </div>
+            
+            <!-- 包干单价列表 -->
+            <div id="fixed-unit-list" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 60px;">序号</th>
+                                <th style="width: 150px;">服务类型</th>
+                                <th style="width: 120px;">面积规模</th>
+                                <th style="width: 120px;">面积类型</th>
+                                <th style="width: 120px;">包干单价</th>
+                                <th style="width: 150px;">服务费</th>
+                                <th style="width: 80px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fixed-unit-container">
+                            <!-- 包干单价列表将通过JavaScript动态添加 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 16px; text-align: left;">
+                    <button type="button" class="btn btn-sm btn-primary" id="add-fixed-unit-btn">
+                        <i class="bi bi-plus-circle"></i> 增加行
+                    </button>
+                </div>
+                <div style="margin-top: 16px; text-align: right;">
+                    <strong>小计：<span id="fixed-unit-subtotal">0.00</span> 元</strong>
+                </div>
+            </div>
+            
+            <!-- 累计提成列表 -->
+            <div id="cumulative-commission-list" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 60px;">序号</th>
+                                <th style="width: 150px;">服务类型</th>
+                                <th style="width: 120px;">面积规模</th>
+                                <th style="width: 120px;">面积类型</th>
+                                <th style="width: 120px;">累计提成系数</th>
+                                <th style="width: 120px;">综合调整系数</th>
+                                <th style="width: 150px;">服务费</th>
+                                <th style="width: 80px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cumulative-commission-container">
+                            <!-- 累计提成列表将通过JavaScript动态添加 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 16px; text-align: left;">
+                    <button type="button" class="btn btn-sm btn-primary" id="add-cumulative-commission-btn">
+                        <i class="bi bi-plus-circle"></i> 增加行
+                    </button>
+                </div>
+                <div style="margin-top: 16px; text-align: right;">
+                    <strong>小计：<span id="cumulative-commission-subtotal">0.00</span> 元</strong>
+                </div>
+            </div>
+            
+            <!-- 分段提成列表 -->
+            <div id="segmented-commission-list" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 60px;">序号</th>
+                                <th style="width: 150px;">服务类型</th>
+                                <th style="width: 120px;">面积规模</th>
+                                <th style="width: 120px;">面积类型</th>
+                                <th style="width: 120px;">区间金额</th>
+                                <th style="width: 120px;">区间提成系数</th>
+                                <th style="width: 120px;">综合调整系数</th>
+                                <th style="width: 150px;">服务费</th>
+                                <th style="width: 80px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="segmented-commission-container">
+                            <!-- 分段提成列表将通过JavaScript动态添加 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 16px; text-align: left;">
+                    <button type="button" class="btn btn-sm btn-primary" id="add-segmented-commission-btn">
+                        <i class="bi bi-plus-circle"></i> 增加行
+                    </button>
+                </div>
+                <div style="margin-top: 16px; text-align: right;">
+                    <strong>小计：<span id="segmented-commission-subtotal">0.00</span> 元</strong>
+                </div>
+            </div>
+            
+            <!-- 跳点提成列表 -->
+            <div id="jump-point-commission-list" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 60px;">序号</th>
+                                <th style="width: 150px;">服务类型</th>
+                                <th style="width: 120px;">面积规模</th>
+                                <th style="width: 120px;">面积类型</th>
+                                <th style="width: 120px;">跳点金额</th>
+                                <th style="width: 120px;">跳点提成系数</th>
+                                <th style="width: 120px;">综合调整系数</th>
+                                <th style="width: 150px;">服务费</th>
+                                <th style="width: 80px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jump-point-commission-container">
+                            <!-- 跳点提成列表将通过JavaScript动态添加 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 16px; text-align: left;">
+                    <button type="button" class="btn btn-sm btn-primary" id="add-jump-point-commission-btn">
+                        <i class="bi bi-plus-circle"></i> 增加行
+                    </button>
+                </div>
+                <div style="margin-top: 16px; text-align: right;">
+                    <strong>小计：<span id="jump-point-commission-subtotal">0.00</span> 元</strong>
+                </div>
+            </div>
+            
+            <!-- 总计和封顶费 -->
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 2px solid #e5e7eb;">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">封顶费</label>
+                            <select id="cap_fee_type" name="cap_fee_type" class="form-select" style="margin-bottom: 8px;">
+                                <option value="no_cap">无</option>
+                                <option value="amount">金额</option>
+                            </select>
+                            <input type="number" id="cap_fee_amount" name="cap_fee_amount" class="form-control" step="0.01" placeholder="0.00" style="display: none;">
+                            <small class="form-text text-muted">单位：元</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6" style="text-align: right; padding-top: 32px;">
+                        <div>
+                            <strong style="font-size: 18px;">总计：<span id="price-total">0.00</span> 元</strong>
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <strong style="font-size: 18px; color: #ef4444;">合同价款：<span id="contract-price-final">0.00</span> 元</strong>
+                        </div>
+                        <small class="form-text text-muted">合同价款 = max(总计，封顶费)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 七、回款信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>回款信息</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="payment-info-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;">序号</th>
+                            <th style="width: 120px;">款项名称</th>
+                            <th style="width: 150px;">触发节点 <span class="text-danger">*</span></th>
+                            <th style="width: 150px;">付款方式 <span class="text-danger">*</span></th>
+                            <th style="width: 150px;">回款金额（元）</th>
+                            <th style="width: 200px;">付款条件</th>
+                            <th style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payment-info-container">
+                        <!-- 回款信息列表将通过JavaScript动态添加 -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 16px; text-align: left;">
+                <button type="button" class="btn btn-sm btn-primary" id="add-payment-info-btn">
+                    <i class="bi bi-plus-circle"></i> 添加回款信息
+                </button>
+            </div>
+        </div>
+        <!-- 提交按钮 -->
+        <div class="form-group" style="margin-top: 32px;">
+            <button type="submit" class="btn btn-primary">保存合同</button>
+            <a href="{% url 'business_pages:contract_management_list' %}" class="btn btn-secondary">取消</a>
+        </div>
+    </form>
+
+<script>
+    // ========== 服务信息数据定义 ==========
+    // 服务专业数据（从后端传递）
+    const serviceProfessionsData = [
+        {% for sp in service_professions %}
+        {id: {{ sp.id }}, name: {{ sp.name|escapejs }}, service_type_id: {{ sp.service_type_id|default:"null" }}},
+        {% endfor %}
+    ];
+    
+    // 成果清单数据（从后端传递）
+    const resultFileTypesData = [
+        {% for rft in result_file_types %}
+        {id: {{ rft.id }}, name: {{ rft.name|escapejs }}},
+        {% endfor %}
+    ];
+    
+document.addEventListener('DOMContentLoaded', function() {
+        // ========== 签约主体列表管理 ==========
+    let partyIndex = 0;
+        // 添加签约主体行
+    function addPartyRow(partyData = null) {
+        // 确保容器存在
+        const container = document.getElementById('parties-container');
+        if (!container) {
+            console.error('parties-container 未找到，无法添加行');
+            return;
+        }
+        
+        const index = partyIndex++;
+        const party = partyData || {};
+        
+        const row = document.createElement('tr');
+        row.className = 'party-row';
+        row.setAttribute('data-party-index', index);
+        
+        // TODO: 使用DOMPurify清理HTML
+            row.innerHTML = `
+            <td style="vertical-align: middle; text-align: center;">
+                <strong>0</strong>
+            </td>
+            <td>
+                <select name="parties[${index}][party_type]" class="form-select form-select-sm" required>
+                    <option value="party_a" ${party.party_type === 'party_a' ? 'selected' : ''}>甲方</option>
+                    <option value="party_b" ${party.party_type === 'party_b' ? 'selected' : ''}>乙方</option>
+                    <option value="party_c" ${party.party_type === 'party_c' ? 'selected' : ''}>丙方</option>
+                    <option value="other" ${party.party_type === 'other' ? 'selected' : ''}>其他</option>
+                </select>
+            </td>
+            <td>
+                <input type="text" name="parties[${index}][party_name]" class="form-control form-control-sm"
+                       value="${(party.party_name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" 
+                       placeholder="请输入单位名称" required>
+            </td>
+            <td>
+                <input type="text" name="parties[${index}][credit_code]" class="form-control form-control-sm"
+                       value="${(party.credit_code || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" 
+                       placeholder="请输入统一社会信用代码">
+            </td>
+            <td>
+                <input type="text" name="parties[${index}][legal_representative]" class="form-control form-control-sm"
+                       value="${(party.legal_representative || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" 
+                       placeholder="请输入法定代表人">
+            </td>
+            <td>
+                <input type="text" name="parties[${index}][project_manager]" class="form-control form-control-sm"
+                       value="${(party.project_manager || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" 
+                       placeholder="请输入项目负责人">
+            </td>
+            <td>
+                <input type="text" name="parties[${index}][contact_phone]" class="form-control form-control-sm"
+                       value="${(party.contact_phone || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" 
+                       placeholder="请输入联系电话">
+            </td>
+            <td>
+                <input type="email" name="parties[${index}][contact_email]" class="form-control form-control-sm"
+                       value="${(party.contact_email || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" 
+                       placeholder="请输入联系邮箱">
+            </td>
+            <td>
+                <input type="text" name="parties[${index}][address]" class="form-control form-control-sm"
+                       value="${(party.address || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" 
+                       placeholder="请输入办公地址">
+            </td>
+            <td style="vertical-align: middle; text-align: center;">
+                <button type="button" class="btn btn-sm btn-danger remove-party-btn" data-index="${index}" title="删除">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        container.appendChild(row);
+        
+        // 绑定删除按钮事件
+        const removeBtn = row.querySelector('.remove-party-btn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                const currentRows = container.querySelectorAll('tr.party-row');
+                if (currentRows.length <= 2) {
+                    alert('至少需要保留两行签约主体（甲方和乙方）');
+                    return;
+                }
+                row.remove();
+                updatePartyRowNumbers();
+            });
+        }
+        
+        // 更新行编号
+        updatePartyRowNumbers();
+    }
+    
+    // 更新签约主体行编号
+    function updatePartyRowNumbers() {
+        const rows = document.getElementById('parties-container').querySelectorAll('tr.party-row');
+        rows.forEach((row, index) => {
+            const numberCell = row.querySelector('td:first-child strong');
+            if (numberCell) {
+                numberCell.textContent = index + 1;
+            }
+        });
+    }
+    
+    
+    // 初始化：确保至少有两行签约主体（甲方和乙方）
+    function ensureMinTwoParties() {
+        // 获取容器
+        const container = document.getElementById('parties-container');
+        if (!container) {
+            console.warn('parties-container 元素未找到，稍后重试');
+            return;
+        }
+        
+        const currentRows = container.querySelectorAll('tr.party-row');
+        const currentCount = currentRows.length;
+        
+        // 确保至少有两行
+        if (currentCount === 0) {
+            // 如果没有行，添加两行：第一行为甲方，第二行为乙方
+            try {
+                addPartyRow({ party_type: 'party_a' });
+                addPartyRow({ party_type: 'party_b' });
+                // 添加完成后，更新行编号
+                setTimeout(function() {
+                    updatePartyRowNumbers();
+                }, 50);
+            } catch (e) {
+                console.error('添加签约主体行失败:', e);
+            }
+        } else if (currentCount === 1) {
+            // 如果只有一行，再添加一行（默认乙方）
+            try {
+                addPartyRow({ party_type: 'party_b' });
+                setTimeout(function() {
+                    updatePartyRowNumbers();
+                }, 50);
+            } catch (e) {
+                console.error('添加签约主体行失败:', e);
+            }
+        }
+        // 如果已有两行或更多，不需要添加
+    }
+    
+        // 绑定"添加签约主体"按钮事件
+    const addPartyBtn = document.getElementById('add-party-btn');
+    if (addPartyBtn) {
+        addPartyBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            addPartyRow();
+        });
+    }
+    
+    // ========== 客户选择后自动填充客户方信息 ==========
+    const clientSelect = document.getElementById('id_client');
+    const clientCreditCodeField = document.getElementById('client_credit_code');
+    const clientLegalRepField = document.getElementById('client_legal_representative');
+    const clientProjectRepField = document.getElementById('client_project_representative');
+    const clientContactField = document.getElementById('client_contact');
+    
+    if (clientSelect) {
+        // 获取客户数据（从后端传递）
+        const clientDataMap = {};
+        {% if clients %}
+        {% for client in clients %}
+        clientDataMap[{{ client.id }}] = {
+            credit_code: {{ client.unified_credit_code|default:"''"|escapejs }},
+            legal_representative: {{ client.legal_representative|default:"''"|escapejs }},
+            contact: {{ client.company_phone|default:"''"|escapejs }},
+            contacts: [
+                {% for contact in client.contacts.all %}
+                {id: {{ contact.id }}, name: {{ contact.name|default:"''"|escapejs }}, role: {{ contact.role|default:"''"|escapejs }}},
+                {% endfor %}
+            ]
+        };
+        {% endfor %}
+        {% endif %}
+        
+        clientSelect.addEventListener('change', function() {
+            const clientId = this.value;
+            const clientData = clientDataMap[clientId];
+            
+            if (clientData) {
+                // 填充统一社会信用代码
+                if (clientCreditCodeField) {
+                    clientCreditCodeField.value = clientData.credit_code || '';
+                }
+                
+                // 填充法定代表人
+                if (clientLegalRepField) {
+                    clientLegalRepField.value = clientData.legal_representative || '';
+                }
+                
+                // 填充联系方式
+                if (clientContactField) {
+                    clientContactField.value = clientData.contact || '';
+                }
+                
+                // 填充项目代表下拉选项
+                if (clientProjectRepField) {
+                    // 清空现有选项（保留第一个空选项）
+                    clientProjectRepField.innerHTML = '<option value="">-- 请选择项目代表 --</option>';
+                    
+                    // 添加客户联系人作为项目代表选项
+                    if (clientData.contacts && clientData.contacts.length > 0) {
+                        clientData.contacts.forEach(function(contact) {
+                            const option = document.createElement('option');
+                            option.value = contact.id;
+                            option.textContent = contact.name + (contact.role ? ' (' + contact.role + ')' : '');
+                            clientProjectRepField.appendChild(option);
+                        });
+                    }
+                }
+            } else {
+                // 清空所有字段
+                if (clientCreditCodeField) clientCreditCodeField.value = '';
+                if (clientLegalRepField) clientLegalRepField.value = '';
+                if (clientContactField) clientContactField.value = '';
+                if (clientProjectRepField) {
+                    clientProjectRepField.innerHTML = '<option value="">-- 请选择项目代表 --</option>';
+                }
+            }
+        });
+    }
+    
+    // ========== 合同编号自动生成（HT+项目编号） ==========
+    const projectNumberField = document.getElementById('id_project_number');
+    const contractNumberDisplayField = document.getElementById('contract_number_display');
+    
+    function updateContractNumber() {
+        if (projectNumberField && contractNumberDisplayField) {
+            const projectNumber = projectNumberField.value;
+            if (projectNumber) {
+                contractNumberDisplayField.value = 'HT' + projectNumber;
+            } else {
+                contractNumberDisplayField.value = '';
+            }
+        }
+    }
+    
+    if (projectNumberField) {
+        projectNumberField.addEventListener('input', updateContractNumber);
+        projectNumberField.addEventListener('change', updateContractNumber);
+        // 页面加载时执行一次
+        setTimeout(updateContractNumber, 100);
+    }
+    
+    // ========== 结算方式选择后显示/隐藏不同列表 ==========
+    const settlementMethodSelect = document.getElementById('settlement_method');
+    const fixedTotalList = document.getElementById('fixed-total-list');
+    const fixedUnitList = document.getElementById('fixed-unit-list');
+    const cumulativeCommissionList = document.getElementById('cumulative-commission-list');
+    const segmentedCommissionList = document.getElementById('segmented-commission-list');
+    const jumpPointCommissionList = document.getElementById('jump-point-commission-list');
+    
+    function showSettlementMethodList(methodCode) {
+        // 隐藏所有列表
+        if (fixedTotalList) fixedTotalList.style.display = 'none';
+        if (fixedUnitList) fixedUnitList.style.display = 'none';
+        if (cumulativeCommissionList) cumulativeCommissionList.style.display = 'none';
+        if (segmentedCommissionList) segmentedCommissionList.style.display = 'none';
+        if (jumpPointCommissionList) jumpPointCommissionList.style.display = 'none';
+        
+        // 根据结算方式显示对应列表
+        if (methodCode) {
+            // 这里需要根据实际的结算方式代码来匹配
+            // 假设：fixed_total=包干总价, fixed_unit=包干单价, cumulative=累计提成, segmented=分段提成, jump_point=跳点提成
+            if (methodCode.includes('包干总价') || methodCode.includes('fixed_total')) {
+                if (fixedTotalList) fixedTotalList.style.display = 'block';
+            } else if (methodCode.includes('包干单价') || methodCode.includes('fixed_unit')) {
+                if (fixedUnitList) fixedUnitList.style.display = 'block';
+            } else if (methodCode.includes('累计提成') || methodCode.includes('cumulative')) {
+                if (cumulativeCommissionList) cumulativeCommissionList.style.display = 'block';
+            } else if (methodCode.includes('分段提成') || methodCode.includes('segmented')) {
+                if (segmentedCommissionList) segmentedCommissionList.style.display = 'block';
+            } else if (methodCode.includes('跳点提成') || methodCode.includes('jump_point')) {
+                if (jumpPointCommissionList) jumpPointCommissionList.style.display = 'block';
+            }
+        }
+    }
+    
+    if (settlementMethodSelect) {
+        settlementMethodSelect.addEventListener('change', function() {
+            const methodCode = this.value;
+            const selectedOption = this.options[this.selectedIndex];
+            const methodName = selectedOption ? selectedOption.textContent : '';
+            showSettlementMethodList(methodCode || methodName);
+        });
+        
+        // 页面加载时执行一次
+        setTimeout(function() {
+            if (settlementMethodSelect.value) {
+                showSettlementMethodList(settlementMethodSelect.value);
+            }
+        }, 100);
+    }
+    
+    // ========== 价款信息计算逻辑 ==========
+    
+    // 计算包干总价小计
+    function calculateFixedTotalSubtotal() {
+        const container = document.getElementById('fixed-total-container');
+        if (!container) return 0;
+        
+        const rows = container.querySelectorAll('tr');
+        let subtotal = 0;
+        rows.forEach(function(row) {
+            const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+            if (serviceFeeInput) {
+                subtotal += parseFloat(serviceFeeInput.value) || 0;
+            }
+        });
+        
+        const subtotalElement = document.getElementById('fixed-total-subtotal');
+        if (subtotalElement) {
+            subtotalElement.textContent = subtotal.toFixed(2);
+        }
+        
+        return subtotal;
+    }
+    
+    // 计算包干单价小计
+    function calculateFixedUnitSubtotal() {
+        const container = document.getElementById('fixed-unit-container');
+        if (!container) return 0;
+        
+        const rows = container.querySelectorAll('tr');
+        let subtotal = 0;
+        rows.forEach(function(row) {
+            const areaInput = row.querySelector('input[name*="[area_size]"]');
+            const unitPriceInput = row.querySelector('input[name*="[unit_price]"]');
+            const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+            
+            if (areaInput && unitPriceInput && serviceFeeInput) {
+                const area = parseFloat(areaInput.value) || 0;
+                const unitPrice = parseFloat(unitPriceInput.value) || 0;
+                const serviceFee = area * unitPrice;
+                serviceFeeInput.value = serviceFee.toFixed(2);
+                subtotal += serviceFee;
+            }
+        });
+        
+        const subtotalElement = document.getElementById('fixed-unit-subtotal');
+        if (subtotalElement) {
+            subtotalElement.textContent = subtotal.toFixed(2);
+        }
+        
+        return subtotal;
+    }
+    
+    // 计算累计提成小计
+    function calculateCumulativeCommissionSubtotal() {
+        const container = document.getElementById('cumulative-commission-container');
+        if (!container) return 0;
+        
+        const rows = container.querySelectorAll('tr');
+        let subtotal = 0;
+        rows.forEach(function(row) {
+            const areaInput = row.querySelector('input[name*="[area_size]"]');
+            const coefficientInput = row.querySelector('input[name*="[commission_coefficient]"]');
+            const adjustmentInput = row.querySelector('input[name*="[adjustment_coefficient]"]');
+            const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+            
+            if (areaInput && coefficientInput && adjustmentInput && serviceFeeInput) {
+                const area = parseFloat(areaInput.value) || 0;
+                const coefficient = parseFloat(coefficientInput.value) || 0;
+                const adjustment = parseFloat(adjustmentInput.value) || 0;
+                // 服务费 = 面积规模 * 25元/平方米 * 累计提成系数 * 综合调整系数
+                const serviceFee = area * 25 * coefficient * adjustment;
+                serviceFeeInput.value = serviceFee.toFixed(2);
+                subtotal += serviceFee;
+            }
+        });
+        
+        const subtotalElement = document.getElementById('cumulative-commission-subtotal');
+        if (subtotalElement) {
+            subtotalElement.textContent = subtotal.toFixed(2);
+        }
+        
+        return subtotal;
+    }
+    
+    // 计算分段提成小计
+    function calculateSegmentedCommissionSubtotal() {
+        const container = document.getElementById('segmented-commission-container');
+        if (!container) return 0;
+        
+        const rows = container.querySelectorAll('tr');
+        let subtotal = 0;
+        rows.forEach(function(row) {
+            const intervalAmountInput = row.querySelector('input[name*="[interval_amount]"]');
+            const coefficientInput = row.querySelector('input[name*="[commission_coefficient]"]');
+            const adjustmentInput = row.querySelector('input[name*="[adjustment_coefficient]"]');
+            const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+            
+            if (intervalAmountInput && coefficientInput && adjustmentInput && serviceFeeInput) {
+                const intervalAmount = parseFloat(intervalAmountInput.value) || 0;
+                const coefficient = parseFloat(coefficientInput.value) || 0;
+                const adjustment = parseFloat(adjustmentInput.value) || 0;
+                // 服务费 = 区间金额 * 区间提成系数 * 综合调整系数
+                const serviceFee = intervalAmount * coefficient * adjustment;
+                serviceFeeInput.value = serviceFee.toFixed(2);
+                subtotal += serviceFee;
+            }
+        });
+        
+        const subtotalElement = document.getElementById('segmented-commission-subtotal');
+        if (subtotalElement) {
+            subtotalElement.textContent = subtotal.toFixed(2);
+        }
+        
+        return subtotal;
+    }
+    
+    // 计算跳点提成小计
+    function calculateJumpPointCommissionSubtotal() {
+        const container = document.getElementById('jump-point-commission-container');
+        if (!container) return 0;
+        
+        const rows = container.querySelectorAll('tr');
+        let subtotal = 0;
+        rows.forEach(function(row) {
+            const areaInput = row.querySelector('input[name*="[area_size]"]');
+            const coefficientInput = row.querySelector('input[name*="[commission_coefficient]"]');
+            const adjustmentInput = row.querySelector('input[name*="[adjustment_coefficient]"]');
+            const jumpAmountInput = row.querySelector('input[name*="[jump_amount]"]');
+            const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+            
+            if (areaInput && coefficientInput && adjustmentInput && serviceFeeInput) {
+                const area = parseFloat(areaInput.value) || 0;
+                // 跳点金额 = 面积规模 * 25元/平方米（系统自动计算）
+                const jumpAmount = area * 25;
+                if (jumpAmountInput) {
+                    jumpAmountInput.value = jumpAmount.toFixed(2);
+                }
+                
+                const coefficient = parseFloat(coefficientInput.value) || 0;
+                const adjustment = parseFloat(adjustmentInput.value) || 0;
+                // 服务费 = 跳点金额 * 跳点提成系数 * 综合调整系数
+                const serviceFee = jumpAmount * coefficient * adjustment;
+                serviceFeeInput.value = serviceFee.toFixed(2);
+                subtotal += serviceFee;
+            }
+        });
+        
+        const subtotalElement = document.getElementById('jump-point-commission-subtotal');
+        if (subtotalElement) {
+            subtotalElement.textContent = subtotal.toFixed(2);
+        }
+        
+        return subtotal;
+    }
+    
+    // 计算总计和合同价款
+    function calculatePriceTotal() {
+        const settlementMethod = document.getElementById('settlement_method');
+        if (!settlementMethod || !settlementMethod.value) {
+            document.getElementById('price-total').textContent = '0.00';
+            document.getElementById('contract-price-final').textContent = '0.00';
+            return;
+        }
+        
+        const methodValue = settlementMethod.value;
+        let total = 0;
+        
+        // 根据结算方式计算总计
+        if (methodValue.includes('包干总价') || methodValue.includes('fixed_total')) {
+            total = calculateFixedTotalSubtotal();
+        } else if (methodValue.includes('包干单价') || methodValue.includes('fixed_unit')) {
+            total = calculateFixedUnitSubtotal();
+        } else if (methodValue.includes('累计提成') || methodValue.includes('cumulative')) {
+            total = calculateCumulativeCommissionSubtotal();
+        } else if (methodValue.includes('分段提成') || methodValue.includes('segmented')) {
+            total = calculateSegmentedCommissionSubtotal();
+        } else if (methodValue.includes('跳点提成') || methodValue.includes('jump_point')) {
+            total = calculateJumpPointCommissionSubtotal();
+        }
+        
+        // 更新总计
+        const totalElement = document.getElementById('price-total');
+        if (totalElement) {
+            totalElement.textContent = total.toFixed(2);
+        }
+        
+        // 计算封顶费
+        const capFeeType = document.getElementById('cap_fee_type');
+        const capFeeAmount = document.getElementById('cap_fee_amount');
+        let capFee = 0;
+        if (capFeeType && capFeeType.value === 'amount' && capFeeAmount) {
+            capFee = parseFloat(capFeeAmount.value) || 0;
+        }
+        
+        // 合同价款 = max(总计，封顶费)
+        const contractPrice = Math.max(total, capFee);
+        const contractPriceElement = document.getElementById('contract-price-final');
+        if (contractPriceElement) {
+            contractPriceElement.textContent = contractPrice.toFixed(2);
+        }
+        
+        // 更新隐藏的合同价款字段
+        const contractPriceInput = document.getElementById('contract_price');
+        if (contractPriceInput) {
+            contractPriceInput.value = contractPrice.toFixed(2);
+        }
+    }
+    
+    // 绑定封顶费变化事件
+    const capFeeTypeSelect = document.getElementById('cap_fee_type');
+    const capFeeAmountInput = document.getElementById('cap_fee_amount');
+    
+    if (capFeeTypeSelect) {
+        capFeeTypeSelect.addEventListener('change', function() {
+            if (this.value === 'amount' && capFeeAmountInput) {
+                capFeeAmountInput.style.display = 'block';
+            } else if (capFeeAmountInput) {
+                capFeeAmountInput.style.display = 'none';
+                capFeeAmountInput.value = '';
+            }
+            calculatePriceTotal();
+        });
+    }
+    
+    if (capFeeAmountInput) {
+        capFeeAmountInput.addEventListener('input', function() {
+            calculatePriceTotal();
+        });
+    }
+    
+    // 页面加载时执行一次计算
+    setTimeout(calculatePriceTotal, 300);
+    
+    // 页面加载完成后初始化（多次尝试，确保DOM完全加载）
+    // 立即执行一次    // ========== 回款信息列表管理 ==========
+    let paymentInfoIndex = 0;
+    
+    // 添加回款信息行
+        function addPaymentInfoRow(paymentData = null) {
+        const container = document.getElementById('payment-info-container');
+        if (!container) {
+            console.error('payment-info-container 未找到，无法添加行');
+            return;
+        }
+        
+        const index = paymentInfoIndex++;
+        const payment = paymentData || {};
+        
+        const row = document.createElement('tr');
+        row.className = 'payment-info-row';
+        row.setAttribute('data-payment-index', index);
+        
+        row.innerHTML = `
+            <td style="vertical-align: middle; text-align: center;">
+                <strong>0</strong>
+            </td>
+            <td>
+                <select name="payment_info[${index}][payment_name]" class="form-select form-select-sm">
+                    <option value="">-- 请选择款项名称 --</option>
+                    <option value="首付款" ${payment.payment_name === '首付款' ? 'selected' : ''}>首付款</option>
+                    <option value="进度款" ${payment.payment_name === '进度款' ? 'selected' : ''}>进度款</option>
+                    <option value="初审款" ${payment.payment_name === '初审款' ? 'selected' : ''}>初审款</option>
+                    <option value="结算款" ${payment.payment_name === '结算款' ? 'selected' : ''}>结算款</option>
+                    <option value="尾款" ${payment.payment_name === '尾款' ? 'selected' : ''}>尾款</option>
+                </select>
+            </td>
+            <td>
+                <input type="text" name="payment_info[${index}][trigger_node]" class="form-control form-control-sm" 
+                       value="${payment.trigger_node || ''}" 
+                       placeholder="触发节点" required>
+            </td>
+            <td>
+                <select name="payment_info[${index}][payment_method]" class="form-select form-select-sm payment-method" required>
+                    <option value="">-- 请选择付款方式 --</option>
+                    <option value="fixed_amount" ${payment.payment_method === 'fixed_amount' ? 'selected' : ''}>固定金额</option>
+                    <option value="ratio_payment" ${payment.payment_method === 'ratio_payment' ? 'selected' : ''}>按比例支付</option>
+                    <option value="actual_payment" ${payment.payment_method === 'actual_payment' ? 'selected' : ''}>按实支付</option>
+                </select>
+            </td>
+            <td>
+                <input type="number" name="payment_info[${index}][payment_amount]" class="form-control form-control-sm payment-amount"
+                       value="${payment.payment_amount || ''}" 
+                       placeholder="0.00" step="0.01" min="0" readonly>
+                <input type="number" name="payment_info[${index}][fixed_amount]" class="form-control form-control-sm fixed-amount-input" 
+                       style="display: none; margin-top: 4px;"
+                       placeholder="固定金额" step="0.01" min="0">
+                <input type="number" name="payment_info[${index}][payment_ratio]" class="form-control form-control-sm payment-ratio-input" 
+                       style="display: none; margin-top: 4px;"
+                       placeholder="比例（%）" step="0.01" min="0" max="100">
+            </td>
+            <td>
+                <textarea name="payment_info[${index}][payment_condition]" class="form-control form-control-sm" 
+                          rows="2" placeholder="付款条件">${payment.payment_condition || ''}</textarea>
+            </td>
+            <td style="vertical-align: middle; text-align: center;">
+                <button type="button" class="btn btn-sm btn-danger remove-payment-info-btn">
+                    <i class="bi bi-trash"></i> 删除
+                </button>
+            </td>
+        `;
+        
+        container.appendChild(row);
+        updatePaymentInfoRowNumbers();
+        
+        // 绑定付款方式变化事件
+        const paymentMethodSelect = row.querySelector('.payment-method');
+        const paymentAmountField = row.querySelector('.payment-amount');
+        const fixedAmountInput = row.querySelector('.fixed-amount-input');
+        const paymentRatioInput = row.querySelector('.payment-ratio-input');
+        
+        if (paymentMethodSelect) {
+            paymentMethodSelect.addEventListener('change', function() {
+                const method = this.value;
+                if (method === 'fixed_amount') {
+                    if (fixedAmountInput) fixedAmountInput.style.display = 'block';
+                    if (paymentRatioInput) paymentRatioInput.style.display = 'none';
+                    calculatePaymentAmountForRow(row);
+                } else if (method === 'ratio_payment') {
+                    if (fixedAmountInput) fixedAmountInput.style.display = 'none';
+                    if (paymentRatioInput) paymentRatioInput.style.display = 'block';
+                    calculatePaymentAmountForRow(row);
+                } else if (method === 'actual_payment') {
+                    if (fixedAmountInput) fixedAmountInput.style.display = 'none';
+                    if (paymentRatioInput) paymentRatioInput.style.display = 'none';
+                    if (paymentAmountField) {
+                        paymentAmountField.readOnly = false;
+                        paymentAmountField.placeholder = '手填金额';
+                    }
+                }
+            });
+            
+            // 初始化显示
+            if (paymentMethodSelect.value) {
+                paymentMethodSelect.dispatchEvent(new Event('change'));
+            }
+        }
+        
+        // 绑定金额输入变化事件
+        if (fixedAmountInput) {
+            fixedAmountInput.addEventListener('input', function() {
+                calculatePaymentAmountForRow(row);
+            });
+        }
+        if (paymentRatioInput) {
+            paymentRatioInput.addEventListener('input', function() {
+                calculatePaymentAmountForRow(row);
+            });
+        }
+        
+        // 绑定删除按钮事件
+        const removeBtn = row.querySelector('.remove-payment-info-btn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const currentRows = container.querySelectorAll('tr.payment-info-row');
+                if (currentRows.length <= 1) {
+                    alert('至少需要保留一行回款信息');
+                    return;
+                }
+                row.remove();
+                updatePaymentInfoRowNumbers();
+            });
+        }
+    }
+    
+    // 计算单行回款金额
+    function calculatePaymentAmountForRow(row) {
+        const paymentMethodSelect = row.querySelector('.payment-method');
+        const paymentAmountField = row.querySelector('.payment-amount');
+        const fixedAmountInput = row.querySelector('.fixed-amount-input');
+        const paymentRatioInput = row.querySelector('.payment-ratio-input');
+        const provisionalPriceField = document.getElementById('provisional_price');
+        
+        if (!paymentMethodSelect || !paymentAmountField) return;
+        
+        const method = paymentMethodSelect.value;
+        let amount = 0;
+        
+        if (method === 'fixed_amount' && fixedAmountInput) {
+            amount = parseFloat(fixedAmountInput.value) || 0;
+        } else if (method === 'ratio_payment' && paymentRatioInput && provisionalPriceField) {
+            const ratio = parseFloat(paymentRatioInput.value) || 0;
+            const provisionalPrice = parseFloat(provisionalPriceField.value) || 0;
+            amount = provisionalPrice * (ratio / 100);
+        }
+        
+        paymentAmountField.value = amount.toFixed(2);
+    }
+    
+
+    function updatePaymentInfoRowNumbers() {
+        const rows = document.getElementById('payment-info-container').querySelectorAll('tr.payment-info-row');
+        rows.forEach(function(row, index) {
+            const numberCell = row.querySelector('td:first-child strong');
+            if (numberCell) {
+                numberCell.textContent = index + 1;
+            }
+        });
+    }
+    
+    // 计算回款金额
+    function calculatePaymentAmount(index) {
+        const row = document.querySelector(`tr[data-payment-index="${index}"]`);
+        if (!row) return;
+        
+        const ratioInput = row.querySelector('.payment-ratio');
+        const amountInput = row.querySelector('.payment-amount');
+        const basisSelect = row.querySelector('select[name*="[calculation_basis]"]');
+        
+        if (!ratioInput || !amountInput || !basisSelect) return;
+        
+        const ratio = parseFloat(ratioInput.value) || 0;
+        const basis = basisSelect.value;
+        
+        // 获取计算基础的值
+        let basisValue = 0;
+        if (basis === 'contract_amount') {
+            const contractAmountInput = document.getElementById('id_contract_amount');
+            basisValue = parseFloat(contractAmountInput?.value) || 0;
+        } else if (basis === 'tax_free_amount') {
+            // 计算不含税金额
+            const contractAmountInput = document.getElementById('id_contract_amount');
+            const taxRateInput = document.getElementById('id_tax_rate');
+            const contractAmount = parseFloat(contractAmountInput?.value) || 0;
+            const taxRate = parseFloat(taxRateInput?.value) || 0;
+            basisValue = contractAmount / (1 + taxRate / 100);
+        } else if (basis === 'service_fee') {
+            // 这里需要根据实际情况获取服务费
+            basisValue = 0; // 暂时设为0，后续可以根据需要实现
+        } else if (basis === 'fixed_amount') {
+            // 固定金额，直接使用比例作为金额
+            amountInput.value = ratio.toFixed(2);
+            return;
+        }
+        
+        // 计算回款金额
+        const amount = (basisValue * ratio / 100).toFixed(2);
+        amountInput.value = amount;
+    }
+    
+    // 初始化回款信息列表（至少一行）
+    function ensureMinOnePaymentInfo() {
+        const container = document.getElementById('payment-info-container');
+        if (!container) return;
+        
+        const rows = container.querySelectorAll('tr.payment-info-row');
+        if (rows.length === 0) {
+            addPaymentInfoRow();
+        }
+    }
+    
+    // 页面加载时初始化
+    ensureMinOnePaymentInfo();
+    setTimeout(ensureMinOnePaymentInfo, 100);
+    // 绑定"添加回款信息"按钮事件
+    const addPaymentInfoBtn = document.getElementById('add-payment-info-btn');
+    if (addPaymentInfoBtn) {
+        addPaymentInfoBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            addPaymentInfoRow();
+        });
+    }
+    
+    setTimeout(ensureMinOnePaymentInfo, 300);
+    
+    
+        // 缓存常用DOM元素
+    
+    // ========== 签约主体初始化 ==========
+    // 页面加载完成后初始化签约主体（多次尝试，确保DOM完全加载）
+    ensureMinTwoParties();
+    setTimeout(ensureMinTwoParties, 100);
+    setTimeout(ensureMinTwoParties, 300);
+    setTimeout(ensureMinTwoParties, 500);
+        const cachedElements = {
+            contractForm: null,
+                        
+serviceContentsContainer: null,
+        };
+        
+        // 初始化缓存
+        cachedElements.contractForm = document.getElementById('contract-form');
+cachedElements.serviceContentsContainer = document.getElementById('service-contents-container');
+    // 主合同字段条件显示控制
+    const contractTypeField = document.getElementById('id_contract_type');
+    const parentContractRow = document.getElementById('parent-contract-row');
+    
+    function toggleParentContractField() {
+        if (contractTypeField && parentContractRow) {
+            const contractType = contractTypeField.value;
+            // 只有选择补充协议、变更协议或终止协议时才显示主合同字段
+            if (contractType === 'supplement' || contractType === 'change' || contractType === 'termination') {
+                parentContractRow.style.display = '';
+            } else {
+                parentContractRow.style.display = 'none';
+                // 清空主合同选择（如果隐藏）
+                const parentContractField = document.getElementById('id_parent_contract');
+                if (parentContractField) {
+                    parentContractField.value = '';
+                }
+            }
+        }
+    }
+    
+    // 初始化时检查
+    toggleParentContractField();
+    
+    // 监听合同类型变化
+    if (contractTypeField) {
+        contractTypeField.addEventListener('change', toggleParentContractField);
+    }
+    
+    // 更新表格行序号
+        rows.forEach((row, idx) => {
+            const numberCell = row.querySelector('td:first-child');
+            if (numberCell) {
+                // TODO: 使用DOMPurify清理HTML
+            numberCell.innerHTML = `<strong>${idx + 1}</strong>`;
+            }
+        });
+    }
+    
+    
+    
+
+    
+    let partyIndex = 0;
+    
+        rows.forEach(function(row, index) {
+            const numberCell = row.querySelector('td:first-child');
+            if (numberCell) {
+                // TODO: 使用DOMPurify清理HTML
+            numberCell.innerHTML = `<strong>0</strong>`;
+            }
+    
+    // 更新所有删除按钮的禁用状态（当只有两行时禁用）
+        const rowCount = rows.length;
+        rows.forEach(function(row) {
+            if (removeBtn) {
+                if (rowCount <= 2) {
+                    removeBtn.disabled = true;
+                    removeBtn.classList.add('disabled');
+                    removeBtn.style.opacity = '0.5';
+                    removeBtn.style.cursor = 'not-allowed';
+                } else {
+                    removeBtn.disabled = false;
+                    removeBtn.classList.remove('disabled');
+                    removeBtn.style.opacity = '1';
+                    removeBtn.style.cursor = 'pointer';
+                }
+            }
+        });
+    }
+    
+            // 更新所有input和select的name属性中的索引
+            const inputs = row.querySelectorAll('input, select');
+            inputs.forEach(function(input) {
+                const name = input.getAttribute('name');
+                if (name) {
+                    input.setAttribute('name', newName);
+                }
+            });
+            // 更新删除按钮的data-index
+            if (removeBtn) {
+                removeBtn.setAttribute('data-index', index);
+            }
+    }
+    
+        const index = partyIndex++;
+        const party = partyData || {};
+        
+        const row = document.createElement('tr');
+        row.setAttribute('data-index', index);
+        
+        // TODO: 使用DOMPurify清理HTML
+            row.innerHTML = `
+            <td style="vertical-align: middle; text-align: center;">
+                <strong>0</strong>
+            </td>
+            <td>
+                    <option value="party_a" ${party.party_type === 'party_a' ? 'selected' : ''}>甲方</option>
+                    <option value="party_b" ${party.party_type === 'party_b' ? 'selected' : ''}>乙方</option>
+                    <option value="party_c" ${party.party_type === 'party_c' ? 'selected' : ''}>丙方</option>
+                    <option value="other" ${party.party_type === 'other' ? 'selected' : ''}>其他</option>
+                </select>
+            </td>
+            <td>
+                       value="${(party.party_name || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" required>
+            </td>
+            <td>
+                       value="${(party.credit_code || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}">
+            </td>
+            <td>
+                       value="${(party.legal_representative || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}">
+            </td>
+            <td>
+                       value="${(party.party_contact || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}">
+            </td>
+            <td>
+                       value="${(party.contact_phone || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}">
+            </td>
+            <td>
+                       value="${(party.contact_email || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}">
+            </td>
+            <td>
+                       value="${(party.address || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}">
+            </td>
+            <td style="vertical-align: middle; text-align: center;">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        container.appendChild(row);
+        
+        // 绑定删除按钮事件
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                if (currentRows.length <= 2) {
+                    return;
+                }
+                row.remove();
+                // 更新删除按钮状态
+            });
+        }
+        
+        // 更新序号
+        // 更新删除按钮状态
+    }
+    
+    
+    (function initParties() {
+        function checkAndAdd() {
+            if (container) {
+                const currentCount = currentRows.length;
+                if (currentCount < 2) {
+                        const needed = 2 - currentCount;
+                        for (let i = 0; i < needed; i++) {
+                        }
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return true;
+                }
+            } else {
+                return false;
+            }
+        }
+        
+        // 立即尝试
+        if (!checkAndAdd()) {
+            // 如果失败，延迟重试
+            setTimeout(function() {
+                if (!checkAndAdd()) {
+                    setTimeout(function() {
+                        checkAndAdd();
+                    }, 200);
+                }
+            }, 50);
+        }
+    })();
+    
+    
+    (function() {
+        if (container) {
+                const needed = 2 - rows.length;
+                for (let i = 0; i < needed; i++) {
+                }
+            } else {
+            }
+        } else {
+        }
+    })();
+    
+    // 延迟执行（确保DOM完全加载）
+    setTimeout(function() {
+        if (container) {
+                const needed = 2 - rows.length;
+                for (let i = 0; i < needed; i++) {
+                }
+            }
+        }
+    }, 100);
+    
+    }
+    
+    
+
+            // 加载完成后，立即检查是否需要补充到两行
+            setTimeout(function() {
+                const container = document.getElementById('parties-container');
+                if (container) {
+                    if (currentRows.length < 2) {
+                        const needed = 2 - currentRows.length;
+                        for (let i = 0; i < needed; i++) {
+                    ensureMinTwoParties();
+                        }
+                               // 更新删除按钮状态
+         }
+                }
+            }, 100);
+    
+
+    // 使用多重检查，确保DOM完全加载
+        }
+    }
+    
+    // 多次尝试，确保执行
+    // 确保删除按钮状态正确
+    
+    
+    
+    
+        }
+        
+        // 绑定删除按钮事件
+        const removeBtn = row.querySelector('.remove-service-content-btn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                // 检查是否至少有一行，如果只有一行则不删除
+                const currentRows = serviceContentsContainer.querySelectorAll('tr.service-content-row');
+                if (currentRows.length <= 1) {
+                    alert('至少需要保留一行服务内容');
+                    return;
+                }
+                row.remove();
+                // 更新序号
+                updateServiceContentRowNumbers();
+            });
+        }
+    }
+    
+    // 更新表格行序号
+    function updateServiceContentRowNumbers() {
+        const rows = serviceContentsContainer.querySelectorAll('tr.service-content-row');
+        rows.forEach((row, idx) => {
+            const numberCell = row.querySelector('td:first-child');
+            if (numberCell) {
+                // TODO: 使用DOMPurify清理HTML
+            numberCell.innerHTML = `<strong>${idx + 1}</strong>`;
+            }
+        });
+
+    }
+    
+    
+    
+    // 添加服务信息行
+    let serviceContentIndex = 0;
+    function addServiceContent(serviceData = null) {
+        const container = document.getElementById('service-contents-container');
+        if (!container) {
+            console.error('service-contents-container 未找到，无法添加行');
+            return;
+        }
+        
+        const index = serviceContentIndex++;
+        const service = serviceData || {};
+        
+        const row = document.createElement('tr');
+        row.className = 'service-content-row';
+        row.setAttribute('data-service-index', index);
+        
+        // 构建服务专业选项HTML（使用JavaScript数据）
+        let serviceProfessionOptions = '';
+        serviceProfessionsData.forEach(function(sp) {
+            serviceProfessionOptions += '<option value="' + sp.id + '" data-service-type="' + (sp.service_type_id || '') + '">' + sp.name + '</option>';
+        });
+        
+        // 构建成果清单选项HTML（使用JavaScript数据）
+        let resultListOptions = '';
+        resultFileTypesData.forEach(function(rft) {
+            resultListOptions += '<option value="' + rft.id + '">' + rft.name + '</option>';
+        });
+        
+        row.innerHTML = `
+            <td style="vertical-align: middle; text-align: center;">
+                <strong>0</strong>
+            </td>
+            <td>
+                <select name="service_contents[${index}][service_type]" class="form-select form-select-sm service-type-select" required>
+                    <option value="">-- 请选择服务类型 --</option>
+                    {% for st in service_types %}
+                    <option value="{{ st.id }}">{{ st.name }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td>
+                <select name="service_contents[${index}][service_profession]" class="form-select form-select-sm service-profession-select" required>
+                    <option value="">-- 请选择服务专业 --</option>
+                    ${serviceProfessionOptions}
+                </select>
+            </td>
+            <td>
+                <select name="service_contents[${index}][result_list]" class="form-select form-select-sm" multiple style="min-height: 60px;">
+                    ${resultListOptions}
+                </select>
+                <small class="form-text text-muted">可多选，按住Ctrl/Cmd键选择多个</small>
+            </td>
+            <td style="vertical-align: middle; text-align: center;">
+                <button type="button" class="btn btn-sm btn-danger remove-service-content-btn">
+                    <i class="bi bi-trash"></i> 删除
+                </button>
+            </td>
+        `;
+        
+        container.appendChild(row);
+        updateServiceContentRowNumbers();
+        
+        // 绑定服务类型变化事件，过滤服务专业
+        const serviceTypeSelect = row.querySelector('.service-type-select');
+        const serviceProfessionSelect = row.querySelector('.service-profession-select');
+        
+        if (serviceTypeSelect && serviceProfessionSelect) {
+            // 初始过滤
+            function filterServiceProfessions() {
+                const selectedServiceType = serviceTypeSelect.value;
+                const options = serviceProfessionSelect.querySelectorAll('option');
+                options.forEach(function(opt) {
+                    if (opt.value === '') {
+                        opt.style.display = '';
+                    } else {
+                        const serviceType = opt.getAttribute('data-service-type');
+                        opt.style.display = (serviceType === selectedServiceType) ? '' : 'none';
+                    }
+                });
+                // 如果当前选择的服务专业不匹配，清空选择
+                const currentValue = serviceProfessionSelect.value;
+                if (currentValue) {
+                    const currentOption = serviceProfessionSelect.querySelector(`option[value="${currentValue}"]`);
+                    if (currentOption && currentOption.style.display === 'none') {
+                        serviceProfessionSelect.value = '';
+                    }
+                }
+            }
+            
+            // 初始执行一次
+            filterServiceProfessions();
+            
+            // 监听服务类型变化
+            serviceTypeSelect.addEventListener('change', filterServiceProfessions);
+        }
+        
+        // 如果有传入数据，设置选中值
+        if (service.service_profession) {
+            serviceProfessionSelect.value = service.service_profession;
+        }
+        if (service.result_list && Array.isArray(service.result_list)) {
+            service.result_list.forEach(function(resultId) {
+                const option = row.querySelector(`select[name="service_contents[${index}][result_list]"] option[value="${resultId}"]`);
+                if (option) {
+                    option.selected = true;
+                }
+            });
+        }
+        
+        // 绑定删除按钮事件
+        const removeBtn = row.querySelector('.remove-service-content-btn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const currentRows = container.querySelectorAll('tr.service-content-row');
+                if (currentRows.length <= 1) {
+                    alert('至少需要保留一行服务信息');
+                    return;
+                }
+                row.remove();
+                updateServiceContentRowNumbers();
+            });
+        }
+    }
+    
+    // 加载已有的服务内容（编辑模式）
+    {% if existing_service_contents %}
+    const existingServiceContents = [
+        {% for sc in existing_service_contents %}
+        {
+            service_type: {{ sc.service_type_id|default:"null" }},
+            design_stage: {{ sc.design_stage_id|default:"null" }},
+            business_type: {{ sc.business_type_id|default:"null" }},
+            description: {{ sc.description|default:"''"|escapejs }},
+    ];
+        {% endfor %}
+
+    existingServiceContents.forEach(function(content) {
+    {% endif %}
+        addServiceContent(content);
+    });
+    
+    // 确保至少有一行服务内容
+    if (serviceContentsContainer && serviceContentsContainer.querySelectorAll('tr.service-content-row').length === 0) {
+        addServiceContent();
+    }
+    
+    
+    // ========== 合同识别功能 ==========
+    const contractFileInput = document.getElementById('contract-file-input');
+    const recognizeBtn = document.getElementById('recognize-contract-btn');
+    const recognitionStatus = document.getElementById('recognition-status');
+    const recognitionResult = document.getElementById('recognition-result');
+    const recognitionMessage = document.getElementById('recognition-message');
+    
+    if (recognizeBtn && contractFileInput) {
+        recognizeBtn.addEventListener('click', async function() {
+            const file = contractFileInput.files[0];
+            if (!file) {
+                alert('请先选择合同文件');
+                return;
+            }
+            
+            // 检查文件大小
+            if (file.size > 10 * 1024 * 1024) {
+                alert('文件大小不能超过10MB');
+                return;
+            }
+            
+            // 显示识别状态
+            recognitionStatus.style.display = 'block';
+            recognitionResult.style.display = 'none';
+            recognitionMessage.textContent = '正在识别中，请稍候...';
+            recognizeBtn.disabled = true;
+            
+            // 创建FormData
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                // 调用识别API
+                const response = await fetch('/api/customer/contracts/recognize/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // 识别成功，填充表单
+                    fillFormWithRecognitionResult(result.data);
+                    recognitionMessage.textContent = '识别完成！';
+                    recognitionStatus.style.display = 'none';
+                    recognitionResult.style.display = 'block';
+                } else {
+                    // 识别失败
+                    recognitionMessage.textContent = '识别失败：' + (result.error || '未知错误');
+                    recognitionStatus.querySelector('.alert').className = 'alert alert-danger';
+                }
+            } catch (error) {
+                recognitionMessage.textContent = '识别失败：' + error.message;
+                recognitionStatus.querySelector('.alert').className = 'alert alert-danger';
+            } finally {
+                recognizeBtn.disabled = false;
+            }
+        });
+    }
+    
+    // 填充表单数据
+    function fillFormWithRecognitionResult(data) {
+        // 合同名称
+        if (data.contract_name) {
+            const contractNameField = document.querySelector('[name=]"contract_name"]');
+            if (contractNameField && !contractNameField.value) {
+                contractNameField.value = data.contract_name;
+            }
+        }
+        
+        // 项目编号（合同编号）
+        if (data.contract_number) {
+            const contractNumberField = document.querySelector('[name="project_number"]');
+            if (contractNumberField && !contractNumberField.value) {
+                contractNumberField.value = data.contract_number;
+            }
+        }
+        
+        // 合同类型
+        if (data.contract_type) {
+            const contractTypeField = document.querySelector('[name="contract_type"]');
+            if (contractTypeField) {
+                // 尝试匹配合同类型
+                const options = contractTypeField.querySelectorAll('option');
+                for (let opt of options) {
+                    if (opt.textContent.includes(data.contract_type) || data.contract_type.includes(opt.textContent)) {
+                        contractTypeField.value = opt.value;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // 合同描述
+        if (data.description) {
+            const descField = document.querySelector('[name="description"]');
+            if (descField && !descField.value) {
+                descField.value = data.description;
+            }
+        }
+        
+        if (data.party_a && data.party_a.name) {
+            if (partyRows.length > 0) {
+                const firstRow = partyRows[0];
+                const partyNameInput = firstCard.querySelector('input[name*="[party_name]"]');
+                if (partyNameInput && !partyNameInput.value) {
+                    partyNameInput.value = data.party_a.name;
+                }
+                if (data.party_a.contact) {
+                    const contactInput = firstCard.querySelector('input[name*="[party_contact]"]');
+                if (data.party_a.phone) {
+                    const phoneInput = firstCard.querySelector('input[name*="[contact_phone]"]');
+                if (data.party_a.email) {
+                    const emailInput = firstCard.querySelector('input[name*="[contact_email]"]');
+                if (data.party_a.address) {
+                    const addressInput = firstCard.querySelector('input[name*="[address]"]');
+                if (data.party_a.credit_code) {
+                    const creditCodeInput = firstCard.querySelector('input[name*="[credit_code]"]');
+                if (data.party_a.legal_representative) {
+                    const legalRepInput = firstCard.querySelector('input[name*="[legal_representative]"]');
+            }
+        }
+        
+        if (data.party_b && data.party_b.name) {
+            let secondRow = null;
+            if (partyRows.length > 1) {
+                secondRow = partyRows[1];
+                setTimeout(function() {
+                    if (newRows.length > 1) {
+                        secondRow = newRows[1];
+                    }
+                }, 300);
+            }
+            
+            if (secondRow) {
+                const partyNameInput = secondRow.querySelector('input[name*="[party_name]"]');
+                if (partyNameInput && !partyNameInput.value) {
+                    partyNameInput.value = data.party_b.name;
+                }
+                if (data.party_b.contact) {
+                    const contactInput = secondRow.querySelector('input[name*="[party_contact]"]');
+                if (data.party_b.phone) {
+                    const phoneInput = secondRow.querySelector('input[name*="[contact_phone]"]');
+                if (data.party_b.email) {
+                    const emailInput = secondRow.querySelector('input[name*="[contact_email]"]');
+                if (data.party_b.address) {
+                    const addressInput = secondRow.querySelector('input[name*="[address]"]');
+                if (data.party_b.credit_code) {
+                    const creditCodeInput = secondRow.querySelector('input[name*="[credit_code]"]');
+                if (data.party_b.legal_representative) {
+                    const legalRepInput = secondRow.querySelector('input[name*="[legal_representative]"]');
+            }
+        }
+        
+        // 如果有合同金额，可以尝试填充到结算方式中（固定总价）
+    }
+    
+// ========== 结算方式管理（表格形式） ==========
+    
+    
+    
+    // 结算方式选项（从模板中获取）
+        { value: '{{ value }}', label: '{{ label }}' },
+    ];
+
+    // 面积类型选项
+
+    // 封顶类型选项
+
+    // 服务类型选项（从模板中获取）
+    const serviceTypeOptions = [
+        {% for st in service_types %}
+        { value: '{{ st.id }}', label: '{{ st.name }}' },
+        {% endfor %}
+    ];
+
+    // 添加结算方式卡片
+    
+        // 更新结算方式相关字段的显示
+    // 添加分段取费行
+    function addSegmentedRate(cardIndex, rateData = null) {
+        const rate = rateData || {};
+        if (!container) return;
+        
+        const row = document.createElement('tr');
+        row.setAttribute('data-rate-index', rateIndex);
+        
+        // TODO: 使用DOMPurify清理HTML
+            row.innerHTML = `
+            <td>
+                       class="form-control form-control-sm" step="0.01"
+                       value="${rate.greater_than || ''}" placeholder="0.00">
+            </td>
+            <td>
+                       class="form-control form-control-sm" step="0.01"
+                       value="${rate.less_than || ''}" placeholder="0.00">
+            </td>
+            <td>
+                       class="form-control form-control-sm" step="0.01"
+                       value="${rate.rate || ''}" placeholder="0.00" required>
+            </td>
+            <td>
+                       class="form-control form-control-sm" step="0.01"
+                       value="${rate.service_fee || ''}" placeholder="0.00">
+            </td>
+            <td style="text-align: center;">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        container.appendChild(row);
+
+        // 绑定服务费输入框的change事件，自动计算小计
+        const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+        if (serviceFeeInput) {
+            serviceFeeInput.addEventListener('input', function() {
+                calculateFixedTotalSum(cardIndex);
+            });
+        }
+        // 绑定删除按钮事件
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                row.remove();
+                updateSegmentedRateNumbers(cardIndex);
+            });
+        }
+    }
+    
+    // 更新分段序号
+    // 添加总价包干条目
+    function addFixedTotalItem(cardIndex, itemData = null) {
+        const item = itemData || {};
+        if (!container) return;
+        
+        const row = document.createElement('tr');
+        row.setAttribute('data-item-index', itemIndex);
+        
+        // TODO: 使用DOMPurify清理HTML
+            row.innerHTML = `
+            <td>
+                       class="form-control form-control-sm" step="0.01"
+                       value="${item.area_scale || ''}" placeholder="0.00" required>
+            </td>
+            <td>
+                       class="form-control form-control-sm" step="0.01"
+                       value="${item.service_fee || ''}" placeholder="0.00" required>
+            </td>
+            <td>
+                    <i class="bi bi-trash"></i> 删除
+                </button>
+            </td>
+        `;
+        
+        container.appendChild(row);
+        
+        // 绑定服务费输入框的change事件，自动计算小计
+        const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+        if (serviceFeeInput) {
+            serviceFeeInput.addEventListener('input', function() {
+                calculateFixedTotalSum(cardIndex);
+            });
+        }
+        
+        // 计算小计
+        calculateFixedTotalSum(cardIndex);
+        
+        // 更新序号
+        updateFixedTotalNumbers(cardIndex);
+        
+    }
+    
+    // 更新总价包干条目序号
+    
+    
+    
+    function updateFixedTotalNumbers(cardIndex) {
+        if (!container) return;
+        
+        rows.forEach(function(row, index) {
+            row.setAttribute('data-item-index', index);
+            // 更新name属性中的索引
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(function(input) {
+                const name = input.getAttribute('name');
+                if (name) {
+                    // 替换索引部分
+                    const newName = name.replace(/\[fixed_total_items\]\[\d+\]/, '[fixed_total_items][' + index + ']');
+                    input.setAttribute('name', newName);
+                }
+            });
+            // 更新删除按钮的data-item-index
+            if (removeBtn) {
+                removeBtn.setAttribute('data-item-index', index);
+            }
+        });
+    }
+
+    
+    // 计算总价包干服务费小计
+    function calculateFixedTotalSum(cardIndex) {
+        if (!container || !sumElement) return;
+        
+        let total = 0;
+        
+        rows.forEach(function(row) {
+            const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+            if (serviceFeeInput && serviceFeeInput.value) {
+                const value = parseFloat(serviceFeeInput.value) || 0;
+                total += value;
+            }
+        });
+        
+        // 更新小计显示，保留两位小数
+        sumElement.textContent = total.toFixed(2);
+        // console.log(...) // 已移除}`);
+    }
+    function updateSegmentedRateNumbers(cardIndex) {
+        if (!container) return;
+        
+        rows.forEach((row, idx) => {
+            row.setAttribute('data-rate-index', idx);
+            // 更新所有输入框的name属性
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(input => {
+                const name = input.getAttribute('name');
+                if (name) {
+                    const newName = name.replace(/\[segmented_rates\]\[\d+\]/, '[segmented_rates][' + idx + ']');
+                    input.setAttribute('name', newName);
+                }
+            });
+        });
+    }
+
+    
+    
+    // 更新卡片序号
+    function updateSettlementMethodNumbers() {
+        cards.forEach((card, idx) => {
+            const titleElement = card.querySelector('.card-title');
+            if (titleElement) {
+                titleElement.textContent = `结算方式 #${idx + 1}`;
+            }
+            // 更新data-index
+            card.setAttribute('data-index', idx);
+            // 更新所有输入框的name属性中的index
+            const inputs = card.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                const name = input.getAttribute('name');
+                if (name && name.includes('[')) {
+                    const newName = name.replace(/\[(\d+)\]/, '[' + idx + ']');
+                    input.setAttribute('name', newName);
+                }
+            });
+        });
+    }
+    
+    // 添加按钮事件
+    
+
+        // 如果是总价包干，加载总价包干条目列表
+        }
+    });
+    
+    // 初始化所有行的字段显示状态
+    setTimeout(function() {
+        cards.forEach(function(card) {
+            const indexAttr = card.getAttribute('data-index');
+            if (indexAttr !== null) {
+                const index = parseInt(indexAttr);
+            }
+        });
+    }, 300);
+    
+    }
+    
+    
+                // 累计提成：需要节省金额，暂时无法计算
+                hasUncalculableMethod = true;
+                    const unitPrice = parseFloat(fixedUnitPrice.value) || 0;
+                    const totalArea = getTotalBuildingArea();
+                    rowPrice += unitPrice * totalArea;
+                }
+                // 按实结算部分暂时无法计算
+                hasUncalculableMethod = true;
+            } else {
+                // 其他结算方式（分段递增提成、跳点提成等）需要节省金额，暂时无法计算
+                hasUncalculableMethod = true;
+            }
+            
+            totalPrice += rowPrice;
+        });
+        
+        if (hasUncalculableMethod && totalPrice === 0) {
+            contractPriceInput.value = '需按实结算';
+        } else if (hasUncalculableMethod) {
+            contractPriceInput.value = totalPrice.toFixed(2) + '（部分需按实结算）';
+        } else if (totalPrice > 0) {
+            contractPriceInput.value = totalPrice.toFixed(2);
+        } else {
+            contractPriceInput.value = '';
+        }
+    }
+    
+    // 从服务内容中获取总建筑面积
+    function getTotalBuildingArea() {
+        let totalArea = 0;
+        
+            const areaInput = card.querySelector('input[name*="[area_scale]"]');
+            if (areaInput && areaInput.value) {
+                totalArea += parseFloat(areaInput.value) || 0;
+            }
+        });
+        
+        return totalArea;
+    }
+    
+        // 使用事件委托监听所有结算方式相关字段的变化
+        
+        // 监听结算方式表格中面积规模的变化
+        
+        
+        // 页面加载时计算一次
+
+        // ========== 绑定所有缺失的添加行按钮 ==========
+        // 辅助函数：更新行序号
+        function updateRowNumbers(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const rows = container.querySelectorAll('tr');
+            rows.forEach(function(row, index) {
+                const numCell = row.querySelector('td:first-child strong');
+                if (numCell) {
+                    numCell.textContent = index + 1;
+                }
+            });
+        }
+
+        // 绑定总价包干添加按钮
+        const addFixedTotalBtn = document.getElementById('add-fixed-total-btn');
+        if (addFixedTotalBtn) {
+            addFixedTotalBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const container = document.getElementById('fixed-total-container');
+                if (!container) return;
+                const rows = container.querySelectorAll('tr');
+                const index = rows.length;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="text-align: center; vertical-align: middle;"><strong>${index + 1}</strong></td>
+                    <td>
+                        <select name="fixed_total_items[${index}][service_type]" class="form-select form-select-sm" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="fixed_total_items[${index}][area_scale]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td><input type="number" name="fixed_total_items[${index}][service_fee]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn btn-sm btn-danger remove-row-btn"><i class="bi bi-trash"></i> 删除</button>
+                    </td>
+                `;
+                container.appendChild(row);
+                    // 填充服务类型选项
+                    const serviceTypeSelect = row.querySelector('select[name*="[service_type]"]');
+                    if (serviceTypeSelect && typeof serviceTypeOptions !== 'undefined') {
+                        serviceTypeOptions.forEach(function(opt) {
+                            const option = document.createElement('option');
+                            option.value = opt.value;
+                            option.textContent = opt.label;
+                            serviceTypeSelect.appendChild(option);
+                        });
+                    }
+                const removeBtn = row.querySelector('.remove-row-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        row.remove();
+                        updateRowNumbers('fixed-total-container');
+                        calculateFixedTotalSubtotal();
+                    });
+                }
+                const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+                if (serviceFeeInput) {
+                    serviceFeeInput.addEventListener('input', calculateFixedTotalSubtotal);
+                }
+                updateRowNumbers('fixed-total-container');
+                calculateFixedTotalSubtotal();
+            });
+        }
+
+        // 绑定包干单价添加按钮
+        const addFixedUnitBtn = document.getElementById('add-fixed-unit-btn');
+        if (addFixedUnitBtn) {
+            addFixedUnitBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const container = document.getElementById('fixed-unit-container');
+                if (!container) return;
+                const rows = container.querySelectorAll('tr');
+                const index = rows.length;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="text-align: center; vertical-align: middle;"><strong>${index + 1}</strong></td>
+                    <td>
+                        <select name="fixed_unit_items[${index}][service_type]" class="form-select form-select-sm" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="fixed_unit_items[${index}][area_size]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td>
+                        <select name="fixed_unit_items[${index}][area_type]" class="form-select form-select-sm" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="fixed_unit_items[${index}][unit_price]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td><input type="number" name="fixed_unit_items[${index}][service_fee]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn btn-sm btn-danger remove-row-btn"><i class="bi bi-trash"></i> 删除</button>
+                    </td>
+                `;
+                container.appendChild(row);
+                    // 填充服务类型选项
+                    const serviceTypeSelect = row.querySelector('select[name*="[service_type]"]');
+                    if (serviceTypeSelect && typeof serviceTypeOptions !== 'undefined') {
+                        serviceTypeOptions.forEach(function(opt) {
+                            const option = document.createElement('option');
+                            option.value = opt.value;
+                            option.textContent = opt.label;
+                            serviceTypeSelect.appendChild(option);
+                        });
+                    }
+                const removeBtn = row.querySelector('.remove-row-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        row.remove();
+                        updateRowNumbers('fixed-unit-container');
+                        calculateFixedUnitSubtotal();
+                    });
+                }
+                const inputs = row.querySelectorAll('input[name*="[area_size]"], input[name*="[unit_price]"], input[name*="[service_fee]"]');
+                inputs.forEach(function(input) {
+                    input.addEventListener('input', function() {
+                        const areaInput = row.querySelector('input[name*="[area_size]"]');
+                        const unitPriceInput = row.querySelector('input[name*="[unit_price]"]');
+                        const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
+                        if (areaInput && unitPriceInput && serviceFeeInput) {
+                            const area = parseFloat(areaInput.value) || 0;
+                            const unitPrice = parseFloat(unitPriceInput.value) || 0;
+                            serviceFeeInput.value = (area * unitPrice).toFixed(2);
+                        }
+                        calculateFixedUnitSubtotal();
+                    });
+                });
+                updateRowNumbers('fixed-unit-container');
+                calculateFixedUnitSubtotal();
+
+        }
+
+        // 绑定累计提成添加按钮
+        const addCumulativeCommissionBtn = document.getElementById('add-cumulative-commission-btn');
+        if (addCumulativeCommissionBtn) {
+            addCumulativeCommissionBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const container = document.getElementById('cumulative-commission-container');
+                if (!container) return;
+                const rows = container.querySelectorAll('tr');
+                const index = rows.length;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="text-align: center; vertical-align: middle;"><strong>${index + 1}</strong></td>
+                    <td>
+                        <select name="cumulative_commission_items[${index}][service_type]" class="form-select form-select-sm" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="cumulative_commission_items[${index}][area_scale]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td>
+                        <select name="cumulative_commission_items[${index}][area_type]" class="form-select form-select-sm" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="cumulative_commission_items[${index}][commission_rate]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td><input type="number" name="cumulative_commission_items[${index}][adjustment_rate]" class="form-control form-control-sm" step="0.01" placeholder="0.00"></td>
+                    <td><input type="number" name="cumulative_commission_items[${index}][service_fee]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn btn-sm btn-danger remove-row-btn"><i class="bi bi-trash"></i> 删除</button>
+                    </td>
+                `;
+                container.appendChild(row);
+                    // 填充服务类型选项
+                    const serviceTypeSelect = row.querySelector('select[name*="[service_type]"]');
+                    if (serviceTypeSelect && typeof serviceTypeOptions !== 'undefined') {
+                        serviceTypeOptions.forEach(function(opt) {
+                            const option = document.createElement('option');
+                            option.value = opt.value;
+                            option.textContent = opt.label;
+                            serviceTypeSelect.appendChild(option);
+                        });
+                    }
+                const removeBtn = row.querySelector('.remove-row-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        row.remove();
+                        updateRowNumbers('cumulative-commission-container');
+                    });
+                }
+                updateRowNumbers('cumulative-commission-container');
+            });
+        }
+
+        // 绑定分段提成添加按钮
+        const addSegmentedCommissionBtn = document.getElementById('add-segmented-commission-btn');
+        if (addSegmentedCommissionBtn) {
+            addSegmentedCommissionBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const container = document.getElementById('segmented-commission-container');
+                if (!container) return;
+                const rows = container.querySelectorAll('tr');
+                const index = rows.length;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="text-align: center; vertical-align: middle;"><strong>${index + 1}</strong></td>
+                    <td>
+                        <select name="segmented_commission_items[${index}][service_type]" class="form-select form-select-sm" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="segmented_commission_items[${index}][area_scale]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td>
+                        <select name="segmented_commission_items[${index}][area_type]" class="form-select form-select-sm" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="segmented_commission_items[${index}][amount_range]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td><input type="number" name="segmented_commission_items[${index}][commission_rate]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td><input type="number" name="segmented_commission_items[${index}][adjustment_rate]" class="form-control form-control-sm" step="0.01" placeholder="0.00"></td>
+                    <td><input type="number" name="segmented_commission_items[${index}][service_fee]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn btn-sm btn-danger remove-row-btn"><i class="bi bi-trash"></i> 删除</button>
+                    </td>
+                `;
+                container.appendChild(row);
+                    // 填充服务类型选项
+                    const serviceTypeSelect = row.querySelector('select[name*="[service_type]"]');
+                    if (serviceTypeSelect && typeof serviceTypeOptions !== 'undefined') {
+                        serviceTypeOptions.forEach(function(opt) {
+                            const option = document.createElement('option');
+                            option.value = opt.value;
+                            option.textContent = opt.label;
+                            serviceTypeSelect.appendChild(option);
+                        });
+                    }
+                const removeBtn = row.querySelector('.remove-row-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        row.remove();
+                        updateRowNumbers('segmented-commission-container');
+                    });
+                }
+                updateRowNumbers('segmented-commission-container');
+            });
+        }
+
+        // 绑定跳点提成添加按钮
+        const addJumpPointCommissionBtn = document.getElementById('add-jump-point-commission-btn');
+        if (addJumpPointCommissionBtn) {
+            addJumpPointCommissionBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const container = document.getElementById('jump-point-commission-container');
+                if (!container) return;
+                const rows = container.querySelectorAll('tr');
+                const index = rows.length;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="text-align: center; vertical-align: middle;"><strong>${index + 1}</strong></td>
+                    <td>
+                        <select name="jump_point_commission_items[${index}][service_type]" class="form-select form-select-sm" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="jump_point_commission_items[${index}][area_scale]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td>
+                        <select name="jump_point_commission_items[${index}][area_type]" class="form-select form-select-sm" required>
+                            <option value="">请选择</option>
+                        </select>
+                    </td>
+                    <td><input type="number" name="jump_point_commission_items[${index}][jump_point_amount]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td><input type="number" name="jump_point_commission_items[${index}][commission_rate]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td><input type="number" name="jump_point_commission_items[${index}][adjustment_rate]" class="form-control form-control-sm" step="0.01" placeholder="0.00"></td>
+                    <td><input type="number" name="jump_point_commission_items[${index}][service_fee]" class="form-control form-control-sm" step="0.01" placeholder="0.00" required></td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn btn-sm btn-danger remove-row-btn"><i class="bi bi-trash"></i> 删除</button>
+                    </td>
+                `;
+                container.appendChild(row);
+                    // 填充服务类型选项
+                    const serviceTypeSelect = row.querySelector('select[name*="[service_type]"]');
+                    if (serviceTypeSelect && typeof serviceTypeOptions !== 'undefined') {
+                        serviceTypeOptions.forEach(function(opt) {
+                            const option = document.createElement('option');
+                            option.value = opt.value;
+                            option.textContent = opt.label;
+                            serviceTypeSelect.appendChild(option);
+                        });
+                    }
+                const removeBtn = row.querySelector('.remove-row-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        row.remove();
+                        updateRowNumbers('jump-point-commission-container');
+                    });
+                }
+                updateRowNumbers('jump-point-commission-container');
+            });
+        }
+            });
+        }
+
+        // 绑定添加服务内容按钮事件
+        const addServiceContentBtn = document.getElementById('add-service-content-btn');
+        if (addServiceContentBtn) {
+            addServiceContentBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                addServiceContent();
+            });
+        }
+        
+        // 确保至少有一行服务内容
+        setTimeout(function() {
+            const container = document.getElementById('service-contents-container');
+            if (container && container.querySelectorAll('tr.service-content-row').length === 0) {
+                addServiceContent();
+            }
+        }, 200);
+
+        // 初始化我方签约主体选项
+        (function() {
+            const ourUnits = {{ our_units|safe|default:"[]" }};
+            const select = document.getElementById('our_signing_party');
+            if (select && Array.isArray(ourUnits)) {
+                ourUnits.forEach(function(unit) {
+                    const option = document.createElement('option');
+                    option.value = unit;
+                    option.textContent = unit;
+                    select.appendChild(option);
+                });
+            }
+        })();
+
+
+</script>
+{% endblock %}

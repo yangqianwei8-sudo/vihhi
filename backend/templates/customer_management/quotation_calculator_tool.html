@@ -1,0 +1,721 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calculator-container {
+        background: #fff;
+        border-radius: 12px;
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .mode-selector {
+        margin-bottom: 24px;
+    }
+    .mode-card {
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .mode-card:hover {
+        border-color: #3b82f6;
+        background: #f0f9ff;
+    }
+    .mode-card.active {
+        border-color: #3b82f6;
+        background: #eff6ff;
+    }
+    .mode-card h5 {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #111827;
+    }
+    .mode-card p {
+        margin: 0;
+        font-size: 13px;
+        color: #6b7280;
+    }
+    .param-group {
+        margin-bottom: 20px;
+    }
+    .param-group label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+        display: block;
+    }
+    .param-group input,
+    .param-group select {
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        padding: 10px 12px;
+    }
+    .result-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 32px;
+        margin-top: 24px;
+        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+    }
+    .result-card h3 {
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.9;
+        margin: 0 0 12px 0;
+    }
+    .result-card .service-fee {
+        font-size: 48px;
+        font-weight: 700;
+        margin: 0;
+    }
+    .calculation-steps {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 24px;
+        border: 1px solid #e5e7eb;
+    }
+    .calculation-steps h4 {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 16px 0;
+        color: #111827;
+    }
+    .step-item {
+        padding: 12px;
+        margin-bottom: 8px;
+        background: white;
+        border-radius: 6px;
+        border-left: 3px solid #3b82f6;
+        font-size: 14px;
+        color: #374151;
+    }
+    .capped-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        background: #fef3c7;
+        color: #92400e;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 12px;
+    }
+    .segmented-config {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 12px;
+    }
+    .segment-item {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+        align-items: center;
+    }
+    .segment-item input {
+        flex: 1;
+    }
+    .btn-add-segment {
+        margin-top: 8px;
+    }
+    .kpi-config {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 12px;
+    }
+    .kpi-item {
+        margin-bottom: 16px;
+        padding: 12px;
+        background: white;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+    }
+    .component-config {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 12px;
+    }
+    .component-item {
+        margin-bottom: 16px;
+        padding: 16px;
+        background: white;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="calculator-container">
+                <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 24px;">选择报价模式</h3>
+                
+                <div class="mode-selector">
+                    {% for value, label in quotation_modes %}
+                    <div class="mode-card" data-mode="{{ value }}"data-click="handle_onclick_0"{{ value }}')">
+                        <h5>{{ label }}</h5>
+                        <p id="mode-desc-{{ value }}"></p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <form id="calculator-form">
+                    <input type="hidden" id="selected-mode" name="mode" value="rate">
+                    
+                    <!-- 基础参数 -->
+                    <div class="param-group">
+                        <label>节省金额（万元）*</label>
+                        <input type="number" id="saved-amount" name="saved_amount" class="form-control" 
+                               step="0.01" min="0" placeholder="请输入节省金额" required>
+                    </div>
+
+                    <!-- 模式参数（动态显示） -->
+                    <div id="mode-params-container"></div>
+
+                    <!-- 封顶费（可选） -->
+                    <div class="param-group">
+                        <label>封顶费（万元，可选）</label>
+                        <input type="number" id="cap-fee" name="cap_fee" class="form-control" 
+                               step="0.01" min="0" placeholder="设置封顶费">
+                    </div>
+
+                    <button type="button" class="btn btn-primary btn-lg w-100"data-click="handle_onclick_1">
+                        <i class="bi bi-calculator"></i> 计算服务费
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- 计算结果 -->
+            <div id="result-container" style="display: none;">
+                <div class="result-card">
+                    <h3>计算结果</h3>
+                    <p class="service-fee" id="service-fee-value">0.00</p>
+                    <p style="font-size: 14px; opacity: 0.9; margin: 0;">万元</p>
+                    <span id="capped-badge" class="capped-badge" style="display: none;">已封顶</span>
+                </div>
+
+                <div class="calculation-steps">
+                    <h4>计算过程</h4>
+                    <div id="calculation-steps-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 安全的HTML设置函数
+    function setSafeHTML(element, html) {
+        if (!element) return;
+        // 如果内容不包含HTML标签，使用textContent
+        if (!/<[^>]+>/.test(html)) {
+            element.textContent = html;
+        } else {
+            // 对于包含HTML的内容，使用innerHTML（假设内容已清理）
+            // 在生产环境中，应该使用DOMPurify等库清理HTML
+            element.innerHTML = html;
+        }
+    }
+    
+    // 安全的文本设置函数（推荐使用）
+    function setSafeText(element, text) {
+        if (element) {
+            element.textContent = text;
+        }
+    }
+
+// 报价模式描述
+const modeDescriptions = {
+    'rate': '服务费 = 节省金额 × 约定费率',
+    'base_fee_rate': '服务费 = 固定基本费 + (节省金额 × 约定费率)',
+    'fixed': '服务费 = 预先设定的固定金额',
+    'segmented': '将节省金额划分为多个区间，每个区间适用不同的费率',
+    'min_savings_rate': '设定一个最低节省金额门槛，超过门槛后按费率计费',
+    'performance_linked': '服务费 = 基础服务费 + 绩效奖金',
+    'hybrid': '组合使用多种计价方式'
+};
+
+// 初始化模式描述
+document.addEventListener('DOMContentLoaded', function() {
+    for (const [mode, desc] of Object.entries(modeDescriptions)) {
+        const descEl = document.getElementById('mode-desc-' + mode);
+        if (descEl) {
+            descEl.textContent = desc;
+        }
+    }
+    selectMode('rate'); // 默认选择纯费率模式
+});
+
+function selectMode(mode) {
+    // 更新选中状态
+    document.querySelectorAll('.mode-card').forEach(card => {
+        card.classList.remove('active');
+    });
+    document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+    document.getElementById('selected-mode').value = mode;
+    
+    // 显示对应的参数配置
+    showModeParams(mode);
+}
+
+function showModeParams(mode) {
+    const container = document.getElementById('mode-params-container');
+    container.textContent = '';
+    
+    switch(mode) {
+        case 'rate':
+            // TODO: 使用DOMPurify清理HTML
+            container.innerHTML = `
+                <div class="param-group">
+                    <label>费率（%）*</label>
+                    <input type="number" name="rate" class="form-control" step="0.01" min="0" max="100" 
+                           placeholder="例如：15 表示 15%" required>
+                </div>
+            `;
+            break;
+        case 'base_fee_rate':
+            // TODO: 使用DOMPurify清理HTML
+            container.innerHTML = `
+                <div class="param-group">
+                    <label>基本费（万元）*</label>
+                    <input type="number" name="base_fee" class="form-control" step="0.01" min="0" 
+                           placeholder="请输入基本费" required>
+                </div>
+                <div class="param-group">
+                    <label>费率（%）*</label>
+                    <input type="number" name="rate" class="form-control" step="0.01" min="0" max="100" 
+                           placeholder="例如：15 表示 15%" required>
+                </div>
+            `;
+            break;
+        case 'fixed':
+            // TODO: 使用DOMPurify清理HTML
+            container.innerHTML = `
+                <div class="param-group">
+                    <label>固定金额（万元）*</label>
+                    <input type="number" name="fixed_amount" class="form-control" step="0.01" min="0" 
+                           placeholder="请输入固定金额" required>
+                </div>
+            `;
+            break;
+        case 'segmented':
+            // TODO: 使用DOMPurify清理HTML
+            container.innerHTML = `
+                <div class="param-group">
+                    <label>分段配置</label>
+                    <div class="segmented-config" id="segments-container">
+                        <div class="segment-item">
+                            <input type="number" name="min" class="form-control" placeholder="最小值" value="0" step="0.01">
+                            <input type="number" name="max" class="form-control" placeholder="最大值（留空表示无上限）" step="0.01">
+                            <input type="number" name="rate" class="form-control" placeholder="费率（%）" step="0.01" min="0" max="100">
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-segment"data-click="handle_onclick_2">
+                        <i class="bi bi-plus"></i> 添加分段
+                    </button>
+                </div>
+            `;
+            break;
+        case 'min_savings_rate':
+            // TODO: 使用DOMPurify清理HTML
+            container.innerHTML = `
+                <div class="param-group">
+                    <label>最低节省门槛（万元）*</label>
+                    <input type="number" name="min_threshold" class="form-control" step="0.01" min="0" 
+                           placeholder="请输入最低节省门槛" required>
+                </div>
+                <div class="param-group">
+                    <label>费率（%）*</label>
+                    <input type="number" name="rate" class="form-control" step="0.01" min="0" max="100" 
+                           placeholder="例如：15 表示 15%" required>
+                </div>
+            `;
+            break;
+        case 'performance_linked':
+            // TODO: 使用DOMPurify清理HTML
+            container.innerHTML = `
+                <div class="param-group">
+                    <label>基础服务费（万元）*</label>
+                    <input type="number" name="base_fee" class="form-control" step="0.01" min="0" 
+                           placeholder="请输入基础服务费" required>
+                </div>
+                <div class="param-group">
+                    <label>绩效指标配置</label>
+                    <div class="kpi-config" id="kpis-container">
+                        <div class="kpi-item">
+                            <input type="text" name="kpi_name" class="form-control mb-2" placeholder="指标名称">
+                            <div class="row">
+                                <div class="col-4">
+                                    <input type="number" name="completion_rate" class="form-control" 
+                                           placeholder="完成率（0-1）" step="0.01" min="0" max="1">
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" name="weight" class="form-control" 
+                                           placeholder="权重（0-1）" step="0.01" min="0" max="1">
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" name="target_bonus" class="form-control" 
+                                           placeholder="目标奖金（万元）" step="0.01" min="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-segment"data-click="handle_onclick_3">
+                        <i class="bi bi-plus"></i> 添加指标
+                    </button>
+                </div>
+            `;
+            break;
+        case 'hybrid':
+            // TODO: 使用DOMPurify清理HTML
+            container.innerHTML = `
+                <div class="param-group">
+                    <label>组件配置</label>
+                    <div class="component-config" id="components-container">
+                        <div class="component-item">
+                            <select name="component_mode" class="form-select mb-2">
+                                <option value="rate">纯费率模式</option>
+                                <option value="base_fee_rate">基本费+费率模式</option>
+                                <option value="fixed">包干价模式</option>
+                            </select>
+                            <input type="number" name="component_weight" class="form-control mb-2" 
+                                   placeholder="权重（0-1）" step="0.01" min="0" max="1" value="1.0">
+                            <input type="text" name="component_params" class="form-control" 
+                                   placeholder="参数（JSON格式，可选）">
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-segment"data-click="handle_onclick_4">
+                        <i class="bi bi-plus"></i> 添加组件
+                    </button>
+                </div>
+            `;
+            break;
+    }
+}
+
+function addSegment() {
+    const container = document.getElementById('segments-container');
+    const newSegment = document.createElement('div');
+    newSegment.className = 'segment-item';
+    // TODO: 使用DOMPurify清理HTML
+            newSegment.innerHTML = `
+        <input type="number" name="min" class="form-control" placeholder="最小值" step="0.01">
+        <input type="number" name="max" class="form-control" placeholder="最大值（留空表示无上限）" step="0.01">
+        <input type="number" name="rate" class="form-control" placeholder="费率（%）" step="0.01" min="0" max="100">
+        <button type="button" class="btn btn-sm btn-outline-danger"data-click="handle_onclick_5">
+            <i class="bi bi-trash"></i>
+        </button>
+    `;
+    container.appendChild(newSegment);
+}
+
+function addKPI() {
+    const container = document.getElementById('kpis-container');
+    const newKPI = document.createElement('div');
+    newKPI.className = 'kpi-item';
+    // TODO: 使用DOMPurify清理HTML
+            newKPI.innerHTML = `
+        <input type="text" name="kpi_name" class="form-control mb-2" placeholder="指标名称">
+        <div class="row">
+            <div class="col-4">
+                <input type="number" name="completion_rate" class="form-control" 
+                       placeholder="完成率（0-1）" step="0.01" min="0" max="1">
+            </div>
+            <div class="col-4">
+                <input type="number" name="weight" class="form-control" 
+                       placeholder="权重（0-1）" step="0.01" min="0" max="1">
+            </div>
+            <div class="col-4">
+                <input type="number" name="target_bonus" class="form-control" 
+                       placeholder="目标奖金（万元）" step="0.01" min="0">
+            </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger mt-2"data-click="handle_onclick_6">
+            <i class="bi bi-trash"></i> 删除
+        </button>
+    `;
+    container.appendChild(newKPI);
+}
+
+function addComponent() {
+    const container = document.getElementById('components-container');
+    const newComponent = document.createElement('div');
+    newComponent.className = 'component-item';
+    // TODO: 使用DOMPurify清理HTML
+            newComponent.innerHTML = `
+        <select name="component_mode" class="form-select mb-2">
+            <option value="rate">纯费率模式</option>
+            <option value="base_fee_rate">基本费+费率模式</option>
+            <option value="fixed">包干价模式</option>
+        </select>
+        <input type="number" name="component_weight" class="form-control mb-2" 
+               placeholder="权重（0-1）" step="0.01" min="0" max="1" value="1.0">
+        <input type="text" name="component_params" class="form-control mb-2" 
+               placeholder="参数（JSON格式，可选）">
+        <button type="button" class="btn btn-sm btn-outline-danger"data-click="handle_onclick_7">
+            <i class="bi bi-trash"></i> 删除
+        </button>
+    `;
+    container.appendChild(newComponent);
+}
+
+function collectFormData() {
+    const mode = document.getElementById('selected-mode').value;
+    const savedAmount = parseFloat(document.getElementById('saved-amount').value) || 0;
+    const capFee = document.getElementById('cap-fee').value ? parseFloat(document.getElementById('cap-fee').value) : null;
+    
+    const modeParams = {};
+    
+    switch(mode) {
+        case 'rate':
+            modeParams.rate = parseFloat(document.querySelector('input[name="rate"]').value) / 100;
+            break;
+        case 'base_fee_rate':
+            modeParams.base_fee = parseFloat(document.querySelector('input[name="base_fee"]').value);
+            modeParams.rate = parseFloat(document.querySelector('input[name="rate"]').value) / 100;
+            break;
+        case 'fixed':
+            modeParams.fixed_amount = parseFloat(document.querySelector('input[name="fixed_amount"]').value);
+            break;
+        case 'segmented':
+            const segments = [];
+            document.querySelectorAll('#segments-container .segment-item').forEach(item => {
+                const inputs = item.querySelectorAll('input');
+                if (inputs.length >= 3) {
+                    segments.push({
+                        min: parseFloat(inputs[0].value) || 0,
+                        max: inputs[1].value ? parseFloat(inputs[1].value) : null,
+                        rate: parseFloat(inputs[2].value) / 100 || 0
+                    });
+                }
+            });
+            modeParams.segments = segments;
+            break;
+        case 'min_savings_rate':
+            modeParams.min_threshold = parseFloat(document.querySelector('input[name="min_threshold"]').value);
+            modeParams.rate = parseFloat(document.querySelector('input[name="rate"]').value) / 100;
+            break;
+        case 'performance_linked':
+            modeParams.base_fee = parseFloat(document.querySelector('input[name="base_fee"]').value);
+            const kpis = [];
+            document.querySelectorAll('#kpis-container .kpi-item').forEach(item => {
+                const name = item.querySelector('input[name="kpi_name"]').value;
+                const completionRate = parseFloat(item.querySelector('input[name="completion_rate"]').value) || 0;
+                const weight = parseFloat(item.querySelector('input[name="weight"]').value) || 0;
+                const targetBonus = parseFloat(item.querySelector('input[name="target_bonus"]').value) || 0;
+                if (name) {
+                    kpis.push({ name, completion_rate: completionRate, weight, target_bonus: targetBonus });
+                }
+            });
+            modeParams.kpis = kpis;
+            break;
+        case 'hybrid':
+            const components = [];
+            document.querySelectorAll('#components-container .component-item').forEach(item => {
+                const componentMode = item.querySelector('select[name="component_mode"]').value;
+                const weight = parseFloat(item.querySelector('input[name="component_weight"]').value) || 1.0;
+                const paramsStr = item.querySelector('input[name="component_params"]').value;
+                let params = {};
+                if (paramsStr) {
+                    try {
+                        params = JSON.parse(paramsStr);
+                    } catch (e) {
+                    }
+                }
+                components.push({ mode: componentMode, params, weight });
+            });
+            modeParams.components = components;
+            break;
+    }
+    
+    return {
+        mode,
+        saved_amount: savedAmount,
+        mode_params: modeParams,
+        cap_fee: capFee
+    };
+}
+
+async function calculate() {
+    const data = collectFormData();
+    
+    if (!data.saved_amount || data.saved_amount <= 0) {
+        alert('请输入节省金额');
+        return;
+    }
+    
+    try {
+        // 获取CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+        
+        const response = await fetch('{% url "business_pages:quotation_calculator_api" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // 显示结果
+            document.getElementById('result-container').style.display = 'block';
+            document.getElementById('service-fee-value').textContent = result.service_fee.toFixed(2);
+            
+            // 显示封顶标识
+            if (result.is_capped) {
+                document.getElementById('capped-badge').style.display = 'inline-block';
+            } else {
+                document.getElementById('capped-badge').style.display = 'none';
+            }
+            
+            // 显示计算过程
+            const stepsList = document.getElementById('calculation-steps-list');
+            stepsList.textContent = '';
+            result.calculation_steps.forEach(step => {
+                const stepEl = document.createElement('div');
+                stepEl.className = 'step-item';
+                stepEl.textContent = step;
+                stepsList.appendChild(stepEl);
+            });
+        } else {
+            alert('计算失败：' + result.error);
+        }
+    } catch (error) {
+        alert('计算失败，请检查网络连接');
+    }
+}
+
+    // 事件处理器: handle_onclick_0
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.mode-card');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                selectMode(
+            });
+        }
+    });
+
+
+    // 事件处理器: handle_onclick_1
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                calculate()
+            });
+        }
+    });
+
+
+    // 事件处理器: handle_onclick_2
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                addSegment()
+            });
+        }
+    });
+
+
+    // 事件处理器: handle_onclick_3
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                addKPI()
+            });
+        }
+    });
+
+
+    // 事件处理器: handle_onclick_4
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                addComponent()
+            });
+        }
+    });
+
+
+    // 事件处理器: handle_onclick_5
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                this.parentElement.remove()
+            });
+        }
+    });
+
+
+    // 事件处理器: handle_onclick_6
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                this.parentElement.remove()
+            });
+        }
+    });
+
+
+    // 事件处理器: handle_onclick_7
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                this.parentElement.remove()
+            });
+        }
+    });
+
+</script>
+{% endblock %}
+

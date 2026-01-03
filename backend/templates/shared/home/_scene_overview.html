@@ -1,0 +1,559 @@
+            <div id="scene-overview" class="scene-content active">
+                <!-- 主内容区 - 重新设计的布局 -->
+                <section class="workspace-main" id="workspaceMain">
+                    <!-- 第一行：数据概览 + 关键指标（2列布局） -->
+                    <div class="dashboard-row dashboard-row-2">
+                        <!-- 数据概览卡片 -->
+                        <div class="info-card info-card-elevated info-card-slide-up" data-card-id="data-overview">
+                            <div class="info-card-header">
+                                <h5 class="info-card-title">
+                                    <i class="bi bi-bar-chart-line me-2"></i>数据概览
+                                </h5>
+                                <div class="info-card-actions">
+                                    <span class="muted" id="lastRefreshTime" style="font-size: var(--font-size-xs);">刚刚更新</span>
+                                    <button class="btn btn-sm btn-outline-secondary" id="refreshDataBtn" style="padding: 4px 10px; font-size: var(--font-size-xs);" title="刷新数据">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary card-settings-btn" data-card-id="data-overview" style="padding: 4px 10px; font-size: var(--font-size-xs);" title="卡片设置">
+                                        <i class="bi bi-gear"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="info-card-body">
+                                <div class="info-grid info-grid-4 info-grid-responsive" id="stats-cards-container">
+                                    <!-- 统计卡片将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 关键指标卡片 -->
+                        <div class="info-card info-card-slide-up" data-card-id="key-metrics">
+                            <div class="info-card-header">
+                                <h5 class="info-card-title">
+                                    <i class="bi bi-speedometer2 me-2"></i>关键指标
+                                </h5>
+                                <div class="info-card-actions">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" style="padding: 4px 10px; font-size: var(--font-size-xs);">
+                                            <i class="bi bi-calendar-week me-1"></i>本月
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">今天</a></li>
+                                            <li><a class="dropdown-item" href="#">本周</a></li>
+                                            <li><a class="dropdown-item active" href="#">本月</a></li>
+                                            <li><a class="dropdown-item" href="#">本季度</a></li>
+                                            <li><a class="dropdown-item" href="#">本年</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="info-card-body">
+                                <div class="metrics-grid metrics-grid-compact">
+                                    <div class="metric-card">
+                                        <div class="metric-header">
+                                            <div>
+                                                <div class="metric-title">待处理审批</div>
+                                                <div class="metric-value">5</div>
+                                                <div class="metric-change positive">
+                                                    <i class="bi bi-arrow-up-right"></i> +2 新增
+                                                </div>
+                                            </div>
+                                            <div class="metric-icon" style="background: linear-gradient(135deg, var(--primary), var(--primary-light));">
+                                                <i class="bi bi-clipboard-check"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="metric-card">
+                                        <div class="metric-header">
+                                            <div>
+                                                <div class="metric-title">进行中项目</div>
+                                                <div class="metric-value">8</div>
+                                                <div class="metric-title" style="font-size: var(--font-size-xs); color: var(--text-secondary);">3个本周截止</div>
+                                            </div>
+                                            <div class="metric-icon" style="background: linear-gradient(135deg, var(--vh-success), var(--success-dark));">
+                                                <i class="bi bi-kanban"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="metric-card">
+                                        <div class="metric-header">
+                                            <div>
+                                                <div class="metric-title">合同总额</div>
+                                                <div class="metric-value">¥342M</div>
+                                                <div class="metric-change positive">
+                                                    <i class="bi bi-arrow-up-right"></i> 12% 增长
+                                                </div>
+                                            </div>
+                                            <div class="metric-icon" style="background: linear-gradient(135deg, var(--vh-warning), var(--warning-dark));">
+                                                <i class="bi bi-file-earmark-text"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="metric-card">
+                                        <div class="metric-header">
+                                            <div>
+                                                <div class="metric-title">逾期任务</div>
+                                                <div class="metric-value">3</div>
+                                                <div class="metric-change negative">
+                                                    <i class="bi bi-exclamation-triangle"></i> 需要关注
+                                                </div>
+                                            </div>
+                                            <div class="metric-icon" style="background: linear-gradient(135deg, var(--vh-error), var(--danger-dark));">
+                                                <i class="bi bi-exclamation-triangle"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 第二行：任务看板（全宽） -->
+                    <div class="dashboard-row dashboard-row-full">
+                        <div class="info-card info-card-slide-up" data-card-id="task-board">
+                            <div class="info-card-header">
+                                <h5 class="info-card-title">
+                                    <i class="bi bi-kanban me-2"></i>我的任务看板
+                                </h5>
+                                <div class="info-card-actions">
+                                    <a href="#" class="muted link-muted">查看全部 <i class="bi bi-arrow-right ms-1"></i></a>
+                                    <button class="btn btn-sm btn-outline-secondary card-settings-btn" data-card-id="task-board" style="padding: 4px 10px; font-size: var(--font-size-xs);" title="卡片设置">
+                                        <i class="bi bi-gear"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="info-card-body">
+                                <div class="kanban" id="task-kanban">
+                                    <div class="kanban-column">
+                                        <h4 style="color: var(--vh-error);">
+                                            <i class="bi bi-clock-history me-2"></i>待处理
+                                        </h4>
+                                        <div id="task-pending-container">
+                                            <!-- 待处理任务将通过JavaScript动态生成 -->
+                                        </div>
+                                    </div>
+                                    <div class="kanban-column">
+                                        <h4 style="color: var(--vh-info);">
+                                            <i class="bi bi-arrow-repeat me-2"></i>进行中
+                                        </h4>
+                                        <div id="task-in-progress-container">
+                                            <!-- 进行中任务将通过JavaScript动态生成 -->
+                                        </div>
+                                    </div>
+                                    <div class="kanban-column">
+                                        <h4 style="color: var(--vh-success);">
+                                            <i class="bi bi-check-circle me-2"></i>已完成
+                                        </h4>
+                                        <div id="task-completed-container">
+                                            <!-- 已完成任务将通过JavaScript动态生成 -->
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 任务状态分布图 -->
+                                <div class="chart-container" id="task-chart-container" style="display: none;">
+                                    <div class="chart-title">任务状态分布</div>
+                                    <canvas id="taskStatusChart" style="max-height: 150px;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 第三行：本周工作计划 + 待处理工作（2列布局） -->
+                    <div class="dashboard-row dashboard-row-2">
+                        <!-- 本周工作计划 -->
+                        <div class="info-card info-card-slide-up" data-card-id="weekly-plan">
+                            <div class="info-card-header">
+                                <h5 class="info-card-title">
+                                    <i class="bi bi-calendar-week me-2"></i>本周工作计划
+                                </h5>
+                                <div class="info-card-actions">
+                                    <a href="#" class="muted link-muted">查看更多 <i class="bi bi-arrow-right ms-1"></i></a>
+                                    <button class="btn btn-sm btn-outline-secondary card-settings-btn" data-card-id="weekly-plan" style="padding: 4px 10px; font-size: var(--font-size-xs);" title="卡片设置">
+                                        <i class="bi bi-gear"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="info-card-body">
+                                <div class="project-cards" id="project-cards-container">
+                                    <!-- 项目卡片将通过JavaScript动态生成 -->
+                                </div>
+                                <!-- 项目进度分布图 -->
+                                <div class="chart-container" id="project-chart-container" style="display: none;">
+                                    <div class="chart-title">项目状态分布</div>
+                                    <canvas id="projectStatusChart" style="max-height: 150px;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 待处理工作 -->
+                        <div class="info-card info-card-slide-up" data-card-id="pending-works">
+                            <div class="info-card-header">
+                                <h5 class="info-card-title">
+                                    <i class="bi bi-exclamation-circle me-2"></i>待处理工作
+                                </h5>
+                                <div class="info-card-actions">
+                                    <a href="#" class="muted link-muted">查看全部 <i class="bi bi-arrow-right ms-1"></i></a>
+                                </div>
+                            </div>
+                            <div class="info-card-body">
+                                <div class="pending-works-compact">
+                                    <div class="pending-header-compact">
+                                        <span class="badge bg-primary">3项待处理</span>
+                                    </div>
+                                    
+                                    <div class="work-item-compact">
+                                        <div class="work-icon-compact" style="background: linear-gradient(135deg, var(--vh-error), var(--danger-dark));">
+                                            <i class="bi bi-x-circle"></i>
+                                        </div>
+                                        <div class="work-content-compact">
+                                            <div class="work-title-compact">销售合同 #CT202310001 被驳回</div>
+                                            <div class="work-meta-compact">
+                                                <span><i class="bi bi-person"></i> 李四</span>
+                                                <span><i class="bi bi-clock"></i> 10分钟前</span>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-danger">处理</button>
+                                    </div>
+                                    
+                                    <div class="work-item-compact">
+                                        <div class="work-icon-compact" style="background: linear-gradient(135deg, var(--vh-warning), var(--warning-dark));">
+                                            <i class="bi bi-clock-history"></i>
+                                        </div>
+                                        <div class="work-content-compact">
+                                            <div class="work-title-compact">生产计划 #PC20231005 即将超期</div>
+                                            <div class="work-meta-compact">
+                                                <span><i class="bi bi-calendar-event"></i> 明日 17:00</span>
+                                                <span class="text-warning"><i class="bi bi-exclamation-triangle"></i> 紧急</span>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-warning">处理</button>
+                                    </div>
+                                    
+                                    <div class="work-item-compact">
+                                        <div class="work-icon-compact" style="background: linear-gradient(135deg, var(--primary), var(--primary-light));">
+                                            <i class="bi bi-clipboard-check"></i>
+                                        </div>
+                                        <div class="work-content-compact">
+                                            <div class="work-title-compact">项目验收报告待审批</div>
+                                            <div class="work-meta-compact">
+                                                <span><i class="bi bi-person"></i> 王五</span>
+                                                <span><i class="bi bi-clock"></i> 2小时前</span>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-primary">处理</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 第四行：企业微信待办 + 流程审批消息（2列布局） -->
+                    <div class="dashboard-row dashboard-row-2">
+                        <!-- 企业微信待办 -->
+                        <div class="info-card info-card-slide-up" data-card-id="wecom-todo">
+                            <div class="info-card-header">
+                                <h5 class="info-card-title">
+                                    <i class="bi bi-chat-dots me-2"></i>企业微信待办
+                                </h5>
+                                <div class="info-card-actions">
+                                    <span class="badge bg-secondary">待集成</span>
+                                </div>
+                            </div>
+                            <div class="info-card-body card-body-center">
+                                <div class="info-item p-lg" style="text-align: center; width: 100%;">
+                                    <div style="font-size: 48px; margin-bottom: var(--spacing-md);">📱</div>
+                                    <div class="info-label text-base text-muted">企业微信待办事项集成中</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 流程审批消息 -->
+                        <div class="info-card info-card-slide-up" data-card-id="approval-messages">
+                            <div class="info-card-header">
+                                <h5 class="info-card-title">
+                                    <i class="bi bi-file-check me-2"></i>流程审批消息
+                                </h5>
+                                <div class="info-card-actions">
+                                    <a href="#" class="muted link-muted" id="approval-view-all" style="display: none;">查看全部 <i class="bi bi-arrow-right ms-1"></i></a>
+                                    <span class="muted" style="font-size: var(--font-size-sm);" id="approval-empty">暂无待审批</span>
+                                </div>
+                            </div>
+                            <div class="info-card-body card-body-compact">
+                                <div id="approval-messages-container">
+                                    <!-- 审批消息将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 其他统计卡片将通过JavaScript动态生成 -->
+                    <div id="dynamic-cards-container"></div>
+                    
+                    <!-- 核心功能入口（全宽） -->
+                    <div class="dashboard-row dashboard-row-full">
+                        <div class="modules-section">
+                            <div class="section-header">
+                                <div>
+                                    <h3 class="section-title">
+                                        <i class="bi bi-grid-3x3-gap me-2"></i>核心功能入口
+                                    </h3>
+                                    <p class="section-subtitle">快速访问企业核心管理功能</p>
+                                </div>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-light btn-sm active" data-view="grid">
+                                        <i class="bi bi-grid"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-light btn-sm" data-view="list">
+                                        <i class="bi bi-list"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="modules-grid" id="overview-modules">
+                                <!-- 模块将通过JavaScript动态生成 -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 原有的欢迎区域（保留作为备用） -->
+                <div class="welcome-section" style="display: none;">
+                    <div class="welcome-content">
+                        <div class="welcome-header">
+                            <div>
+                                <h2 class="welcome-title">欢迎回来，管理员 张三 👋</h2>
+                                <p class="welcome-subtitle">今天是 <span id="current-date">2023年10月27日，星期五</span>。您有 <strong class="text-primary">5项</strong> 待处理审批和 <strong class="text-primary">3个</strong> 待办任务，请及时处理。</p>
+                            </div>
+                            <div class="welcome-actions">
+                                <button class="btn btn-primary" id="quick-create-overview">
+                                    <i class="bi bi-plus-lg me-2"></i> 快速新建
+                                </button>
+                                <button class="btn btn-outline-primary" id="refresh-data">
+                                    <i class="bi bi-arrow-clockwise me-2"></i> 刷新数据
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="welcome-stats d-flex">
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: linear-gradient(135deg, var(--primary), var(--primary-light));">
+                                    <i class="bi bi-clock"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value">5项</div>
+                                    <div class="stat-label">今日待办</div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: linear-gradient(135deg, var(--vh-success), var(--success-dark));">
+                                    <i class="bi bi-check2-circle"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value">12项</div>
+                                    <div class="stat-label">本周完成</div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: linear-gradient(135deg, var(--vh-info), var(--info-dark));">
+                                    <i class="bi bi-people"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value">23人</div>
+                                    <div class="stat-label">在线用户</div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: linear-gradient(135deg, var(--vh-warning), var(--warning-dark));">
+                                    <i class="bi bi-calendar3"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value">8场</div>
+                                    <div class="stat-label">本月会议</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 关键指标 -->
+                <div class="section-header">
+                    <div>
+                        <h3 class="section-title">关键指标</h3>
+                        <p class="section-subtitle">实时监控企业核心业务数据</p>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-calendar-week me-1"></i> 本月
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">今天</a></li>
+                            <li><a class="dropdown-item" href="#">本周</a></li>
+                            <li><a class="dropdown-item active" href="#">本月</a></li>
+                            <li><a class="dropdown-item" href="#">本季度</a></li>
+                            <li><a class="dropdown-item" href="#">本年</a></li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <div class="metric-title">待处理审批</div>
+                                <div class="metric-value">5</div>
+                                <div class="metric-change positive">
+                                    <i class="bi bi-arrow-up-right"></i> +2 新增
+                                </div>
+                            </div>
+                            <div class="metric-icon" style="background: linear-gradient(135deg, var(--primary), var(--primary-light));">
+                                <i class="bi bi-clipboard-check"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <div class="metric-title">进行中项目</div>
+                                <div class="metric-value">8</div>
+                                <div class="metric-title">3个本周截止</div>
+                            </div>
+                            <div class="metric-icon" style="background: linear-gradient(135deg, var(--vh-success), var(--success-dark));">
+                                <i class="bi bi-kanban"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <div class="metric-title">合同总额</div>
+                                <div class="metric-value">¥342M</div>
+                                <div class="metric-change positive">
+                                    <i class="bi bi-arrow-up-right"></i> 12% 增长
+                                </div>
+                            </div>
+                            <div class="metric-icon" style="background: linear-gradient(135deg, var(--vh-warning), var(--warning-dark));">
+                                <i class="bi bi-file-earmark-text"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <div>
+                                <div class="metric-title">逾期任务</div>
+                                <div class="metric-value">3</div>
+                                <div class="metric-change negative">
+                                    <i class="bi bi-exclamation-triangle"></i> 需要关注
+                                </div>
+                            </div>
+                            <div class="metric-icon" style="background: linear-gradient(135deg, var(--vh-error), var(--danger-dark));">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 待处理工作 -->
+                <div class="section-header">
+                    <div>
+                        <h3 class="section-title">待处理工作</h3>
+                        <p class="section-subtitle">需要您关注和处理的待办事项</p>
+                    </div>
+                    <a href="#" class="text-decoration-none small d-flex align-items-center">
+                        查看全部 <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                
+                <div class="pending-works mb-4">
+                    <div class="pending-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-exclamation-circle me-2"></i> 高优先级工作
+                        </h6>
+                        <span class="badge bg-primary">3项待处理</span>
+                    </div>
+                    
+                    <div class="work-item">
+                        <div class="work-icon" style="background: linear-gradient(135deg, var(--vh-error), var(--danger-dark));">
+                            <i class="bi bi-x-circle"></i>
+                        </div>
+                        <div class="work-content">
+                            <div class="work-title">销售合同 #CT202310001 被驳回</div>
+                            <div class="work-meta">
+                                <span><i class="bi bi-person"></i> 提交人：李四</span>
+                                <span><i class="bi bi-clock"></i> 10分钟前</span>
+                                <span><i class="bi bi-tags"></i> 销售部</span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-danger">重新提交</button>
+                            <button class="btn btn-sm btn-outline-secondary">查看详情</button>
+                        </div>
+                    </div>
+                    
+                    <div class="work-item">
+                        <div class="work-icon" style="background: linear-gradient(135deg, var(--vh-warning), var(--warning-dark));">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <div class="work-content">
+                            <div class="work-title">生产计划 #PC20231005 即将超期</div>
+                            <div class="work-meta">
+                                <span><i class="bi bi-calendar-event"></i> 截止：明日 17:00</span>
+                                <span><i class="bi bi-tags"></i> A车间，B产品线</span>
+                                <span class="text-warning fw-medium"><i class="bi bi-exclamation-triangle"></i> 紧急</span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-warning">调整资源</button>
+                            <button class="btn btn-sm btn-outline-secondary">延期申请</button>
+                        </div>
+                    </div>
+                    
+                    <div class="work-item">
+                        <div class="work-icon" style="background: linear-gradient(135deg, var(--primary), var(--primary-light));">
+                            <i class="bi bi-clipboard-check"></i>
+                        </div>
+                        <div class="work-content">
+                            <div class="work-title">项目验收报告待审批</div>
+                            <div class="work-meta">
+                                <span><i class="bi bi-person"></i> 提交人：王五</span>
+                                <span><i class="bi bi-clock"></i> 2小时前</span>
+                                <span><i class="bi bi-tags"></i> 研发部</span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-primary">立即审批</button>
+                            <button class="btn btn-sm btn-outline-secondary">下载附件</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 核心功能入口 -->
+                <div class="modules-section">
+                    <div class="section-header">
+                        <div>
+                            <h3 class="section-title">核心功能入口</h3>
+                            <p class="section-subtitle">快速访问企业核心管理功能</p>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-light btn-sm active" data-view="grid">
+                                <i class="bi bi-grid"></i>
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm" data-view="list">
+                                <i class="bi bi-list"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="modules-grid" id="overview-modules">
+                        <!-- 模块将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+            </div>

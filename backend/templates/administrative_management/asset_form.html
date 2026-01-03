@@ -1,19 +1,12 @@
-{% extends "administrative_management/base.html" %}
+{% extends "shared/module_base.html" %}
+{% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-{% block breadcrumb_items %}
-{% if is_create %}
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:asset_management' %}">固定资产</a></li>
-<li class="breadcrumb-item active">新增</li>
-{% else %}
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:asset_management' %}">固定资产</a></li>
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:asset_detail' asset.id %}">{{ asset.asset_number }}</a></li>
-<li class="breadcrumb-item active">编辑</li>
-{% endif %}
-{% endblock %}
+
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .btn-submit {
         padding: 12px 32px;
@@ -23,10 +16,9 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block module_content %}
 <div class="container-fluid py-4">
     <div class="center-hero">
-        <div class="hero-icon">{{ page_icon }}</div>
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
     </div>
@@ -120,17 +112,17 @@
             <h5>使用信息</h5>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">当前使用人</label>
-                    {{ form.current_user }}
-                    {% if form.current_user.errors %}
-                    <div class="text-danger small mt-1">{{ form.current_user.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
                     <label class="form-label required">所属部门</label>
                     {{ form.department }}
                     {% if form.department.errors %}
                     <div class="text-danger small mt-1">{{ form.department.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">当前使用人</label>
+                    {{ form.current_user }}
+                    {% if form.current_user.errors %}
+                    <div class="text-danger small mt-1">{{ form.current_user.errors }}</div>
                     {% endif %}
                 </div>
                 <div class="col-12">

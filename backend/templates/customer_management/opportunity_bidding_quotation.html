@@ -1,0 +1,324 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .resource-section {
+        margin-bottom: 2rem;
+    }
+    .resource-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background-color: #f8f9fa;
+    }
+    .resource-card h6 {
+        margin-bottom: 0.5rem;
+        color: #495057;
+    }
+    .resource-item {
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+        background-color: white;
+        border-radius: 0.25rem;
+        border-left: 3px solid #007bff;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <div class="list-page-container">
+        <div class="list-page-header">
+            <h1 class="list-page-title">
+                {{ page_title }}
+            </h1>
+            <div class="list-page-actions">
+                <a href="{% url 'business_pages:bidding_quotation_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> 创建投标报价
+                </a>
+            </div>
+        </div>
+        
+        <form method="get" class="list-page-filters">
+            <div class="list-page-filter-row">
+                <div class="list-page-filter-item">
+                    <label>搜索:</label>
+                    <input type="text" name="search" class="form-control form-control-sm" 
+                           placeholder="搜索投标编号、商机名称、客户..." value="{{ search }}">
+                </div>
+                <div class="list-page-filter-item">
+                    <label>关联商机:</label>
+                    <select name="opportunity_id" class="form-select form-select-sm">
+                        <option value="">全部商机</option>
+                        {% for opp in opportunities %}
+                        <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>
+                            {{ opp.name }} ({{ opp.opportunity_number|default:'未编号' }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="list-page-filter-item">
+                    <label>状态:</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">全部状态</option>
+                        {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="list-page-filter-actions">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a href="{% url 'business_pages:opportunity_bidding_quotation' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+                </div>
+            </div>
+        </form>
+        
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>投标编号</th>
+                        <th>关联商机</th>
+                        <th>关联客户</th>
+                        <th>投标日期</th>
+                        <th>提交截止日期</th>
+                        <th>状态</th>
+                        <th>创建人</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bidding in page_obj %}
+                    <tr>
+                        <td>
+                            <strong>{{ bidding.bidding_number|default:'未编号' }}</strong>
+                        </td>
+                        <td>
+                            <a href="{% url 'business_pages:opportunity_detail' bidding.opportunity.id %}">
+                                {{ bidding.opportunity.name }}
+                            </a>
+                            <br><small class="text-muted">{{ bidding.opportunity.opportunity_number|default:'未编号' }}</small>
+                        </td>
+                        <td>{{ bidding.opportunity.client.name|default:'-' }}</td>
+                        <td>{{ bidding.bidding_date|date:'Y-m-d' }}</td>
+                        <td>
+                            {{ bidding.submission_deadline|date:'Y-m-d' }}
+                            {% if bidding.submission_deadline < today %}
+                            <span class="badge bg-danger">已过期</span>
+                            {% elif bidding.submission_deadline == today %}
+                            <span class="badge bg-warning">今日截止</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if bidding.status == 'draft' %}
+                            <span class="badge bg-secondary">{{ bidding.get_status_display }}</span>
+                            {% elif bidding.status == 'preparing' %}
+                            <span class="badge bg-info">{{ bidding.get_status_display }}</span>
+                            {% elif bidding.status == 'submitted' %}
+                            <span class="badge bg-primary">{{ bidding.get_status_display }}</span>
+                            {% elif bidding.status == 'won' %}
+                            <span class="badge bg-success">{{ bidding.get_status_display }}</span>
+                            {% elif bidding.status == 'lost' %}
+                            <span class="badge bg-danger">{{ bidding.get_status_display }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ bidding.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ bidding.created_by.get_full_name|default:bidding.created_by.username }}</td>
+                        <td>{{ bidding.created_time|date:'Y-m-d H:i' }}</td>
+                        <td>
+                            <a href="{% url 'business_pages:bidding_quotation_detail' bidding.id %}" 
+                               class="btn btn-sm btn-outline-primary" title="查看详情">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'business_pages:bidding_quotation_edit' bidding.id %}" 
+                               class="btn btn-sm btn-outline-success" title="编辑">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">暂无投标报价数据</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                <li class="page-item active">
+                    <span class="page-link">第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页</span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}">末页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> 暂无投标报价数据
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 投标资源模态框 -->
+<div class="modal fade" id="biddingResourcesModal" tabindex="-1" aria-labelledby="biddingResourcesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="biddingResourcesModalLabel">投标资源信息</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="resource-section">
+                    <h6 class="mb-3">📋 技术标信息</h6>
+                    <div class="resource-card">
+                        <h6>技术方案</h6>
+                        {% if technical_solutions %}
+                        {% for solution in technical_solutions %}
+                        <div class="resource-item">
+                            <strong>{{ solution.name }}</strong> - {{ solution.get_domain_display }}
+                            <br><small class="text-muted">{{ solution.optimized_solution|truncatewords:20 }}</small>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted">暂无技术方案</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="resource-section">
+                    <h6 class="mb-3">💰 商务标信息</h6>
+                    <div class="resource-card">
+                        <p class="text-muted">商务标信息包括报价、付款方式、服务承诺等，可在创建投标报价时填写。</p>
+                    </div>
+                </div>
+                
+                <div class="resource-section">
+                    <h6 class="mb-3">🏆 类似业绩</h6>
+                    <div class="resource-card">
+                        {% if completed_projects %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>项目名称</th>
+                                        <th>客户</th>
+                                        <th>项目类型</th>
+                                        <th>完成时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for project in completed_projects %}
+                                    <tr>
+                                        <td>{{ project.name }}</td>
+                                        <td>{{ project.client.name|default:'-' }}</td>
+                                        <td>{{ project.project_type|default:'-' }}</td>
+                                        <td>{{ project.end_date|date:'Y-m-d'|default:'-' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted">暂无已完成项目</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="resource-section">
+                    <h6 class="mb-3">👤 人员证书</h6>
+                    <div class="resource-card">
+                        {% if employee_certificates %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>员工姓名</th>
+                                        <th>证书类型</th>
+                                        <th>证书名称</th>
+                                        <th>到期日期</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cert in employee_certificates %}
+                                    <tr>
+                                        <td>{{ cert.employee.name }}</td>
+                                        <td>{{ cert.get_category_display }}</td>
+                                        <td>{{ cert.file_name }}</td>
+                                        <td>{{ cert.expiry_date|date:'Y-m-d'|default:'长期有效' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted">暂无人员证书信息</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="resource-section">
+                    <h6 class="mb-3">🏢 公司证件</h6>
+                    <div class="resource-card">
+                        <p class="text-muted">公司证件包括营业执照、资质证书等，可在创建投标报价时上传。</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary"data-click="handle_onclick_0">创建投标报价</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showBiddingResources(opportunityId, opportunityName) {
+    document.getElementById('biddingResourcesModalLabel').textContent = '投标资源信息 - ' + opportunityName;
+    var modal = new bootstrap.Modal(document.getElementById('biddingResourcesModal'));
+    modal.show();
+}
+
+
+    // 事件处理器: handle_onclick_0
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                createBiddingQuotation()
+            });
+        }
+    });
+
+</script>
+{% endblock %}

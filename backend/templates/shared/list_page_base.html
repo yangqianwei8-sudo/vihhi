@@ -1,0 +1,1860 @@
+{% extends "shared/base.html" %}
+{% comment %}
+列表页基础模板 (List Page Base Template)
+
+功能说明：
+- 提供统一的列表页面布局框架，包含完整的列表页功能
+- 支持筛选、搜索、分页、批量操作、列设置等高级功能
+- 包含加载状态、错误提示、骨架屏等用户体验优化
+
+主要功能模块：
+1. 页面头部：标题、操作按钮（新增等）
+2. 统计卡片：可选的数据统计展示
+3. 标签页切换：支持多标签页展示
+4. 筛选区域：可折叠的筛选条件表单
+5. 表格工具栏：打印、列设置等工具按钮
+6. 批量操作栏：选中项批量操作（导出、删除等）
+7. 数据表格：支持复选框、自定义列显示
+8. 分页组件：数据分页导航
+
+重要规定：
+- 分页设置：所有使用此模板的列表页必须固定为每页显示10条数据
+- 在视图函数中必须设置：per_page = 10
+- 示例代码：
+  per_page = 10
+  paginator = Paginator(queryset, per_page)
+  page_obj = paginator.get_page(page_number)
+
+可覆盖的模板块：
+- list_page_title: 页面标题
+- list_page_filter_fields: 筛选字段
+- list_page_table_search: 表格搜索框（可选）
+- list_page_table_stats: 表格统计信息（可选）
+- list_page_table_toolbar: 表格工具栏
+- list_page_table_toolbar_left: 表格工具栏左侧
+- list_page_table_toolbar_right: 表格工具栏右侧
+- list_page_table_headers: 表格列头
+- list_page_table_row_content: 表格行内容（数据列）
+- list_page_table_actions_cell: 操作列单元格（可选，默认显示查看/编辑/删除）
+- list_page_table_checkbox_header: 复选框列头（可选）
+- list_page_table_checkbox_cell: 复选框单元格（可选）
+- list_page_custom_js: 自定义JavaScript代码
+
+JavaScript功能：
+- 筛选表单自动提交（防抖）
+- 复选框全选/取消全选
+- 列设置保存（localStorage）
+- 批量操作栏显示/隐藏控制
+- 键盘快捷键支持（Ctrl+P打印、Ctrl+F搜索）
+- 表格搜索功能（实时过滤，可选：show_table_search=True）
+- 表格统计信息（总记录数、显示数，可选：show_table_stats=True）
+- 表格导出功能（导出为CSV/Excel，可选：show_table_export=True）
+- 列排序功能（点击表头排序，可选：enable_table_sort=True，需在表头添加class="sortable"）
+- 行点击功能（点击行高亮，可选：enable_table_row_click=True）
+{% endcomment %}
+{% block title %}{{ page_title|default:"列表" }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+{# 工作区基础样式 #}
+{% include 'shared/_workspace_resources.html' %}
+{# 列表页面额外样式 #}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% block list_page_extra_css %}{% endblock %}
+<style>
+/* 加载状态样式 */
+.list-page-loading {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.list-page-loading.active {
+    display: flex;
+}
+
+.list-page-loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--vh-border);
+    border-top-color: var(--vh-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 骨架屏样式 */
+.list-page-skeleton {
+    display: none;
+}
+
+.list-page-skeleton.active {
+    display: block;
+}
+
+.skeleton-row {
+    height: 48px;
+    background: linear-gradient(90deg, var(--vh-border-light) 25%, var(--vh-border) 50%, var(--vh-border-light) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s ease-in-out infinite;
+    margin-bottom: 8px;
+    border-radius: 4px;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* 错误提示样式 */
+.list-page-error {
+    display: none;
+    padding: var(--spacing-md);
+    background: var(--vh-warning-soft);
+    border: 1px solid var(--vh-warning);
+    border-radius: var(--radius-md);
+    color: var(--vh-warning);
+    margin-bottom: var(--spacing-md);
+}
+
+.list-page-error.active {
+    display: block;
+}
+
+.list-page-error.danger {
+    background: var(--vh-error-soft);
+    border-color: var(--vh-error);
+    color: var(--vh-error);
+}
+
+/* 成功提示样式 */
+.list-page-success {
+    display: none;
+    padding: var(--spacing-md);
+    background: var(--vh-success-soft);
+    border: 1px solid var(--vh-success);
+    border-radius: var(--radius-md);
+    color: var(--vh-success);
+    margin-bottom: var(--spacing-md);
+}
+
+.list-page-success.active {
+    display: block;
+}
+
+/* 表格工具栏 */
+.list-page-table-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--vh-surface);
+    border-bottom: 1px solid var(--vh-border);
+    margin-bottom: 0;
+}
+
+/* 表格表头样式 - 高度放大一倍，灰色底纹 */
+.list-page-table thead th {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+    min-height: 60px;
+    vertical-align: middle;
+    background-color: #adb5bd !important;
+    color: #000000 !important;
+    font-weight: 600;
+}
+
+/* 表头中的按钮样式 */
+.list-page-table thead th button,
+.list-page-table thead th .btn-link,
+.list-page-table thead th #columnSettingsBtn {
+    color: #000000 !important;
+    text-decoration: none !important;
+    border: none !important;
+    background: transparent !important;
+    display: inline-block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    font-size: 16px !important;
+}
+
+.list-page-table thead th button:hover,
+.list-page-table thead th .btn-link:hover,
+.list-page-table thead th #columnSettingsBtn:hover {
+    color: #000000 !important;
+    opacity: 0.7 !important;
+}
+
+.list-page-table thead th #columnSettingsBtn i {
+    color: #000000 !important;
+    font-size: 16px !important;
+}
+
+/* 操作列样式 - 小图标链接，不同颜色，竖线分隔 */
+.list-page-table-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 16px;
+}
+
+.list-page-table-actions a {
+    text-decoration: none;
+    padding: 2px 4px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.list-page-table-actions a:hover {
+    opacity: 0.7;
+    transform: scale(1.1);
+}
+
+.list-page-table-actions a i {
+    font-size: 16px;
+}
+
+.list-page-table-actions .action-view {
+    color: #0d6efd; /* 蓝色 - 查看 */
+}
+
+.list-page-table-actions .action-view:hover {
+    color: #0a58ca;
+}
+
+.list-page-table-actions .action-edit {
+    color: #198754; /* 绿色 - 编辑 */
+}
+
+.list-page-table-actions .action-edit:hover {
+    color: #146c43;
+}
+
+.list-page-table-actions .action-delete {
+    color: #dc3545; /* 红色 - 删除 */
+}
+
+.list-page-table-actions .action-delete:hover {
+    color: #b02a37;
+}
+
+.list-page-table-actions .action-separator {
+    color: #dee2e6;
+    margin: 0 2px;
+    user-select: none;
+    font-size: 12px;
+}
+
+/* 批量操作栏与表格工具栏之间的间距（即批量操作栏与筛选条件区域的距离） */
+/* 注意：父容器 .list-page-container 使用了 gap: 8px，gap 和 margin 会叠加 */
+/* 由于父容器已有 gap: 8px，我们需要将 margin-top 设为 0，让 gap 来控制间距 */
+.list-page-table-toolbar + .list-page-batch-actions,
+.list-page-filters ~ .list-page-batch-actions {
+    margin-top: 0 !important;
+}
+
+/* 确保表格工具栏不会增加额外的下边距 */
+.list-page-table-toolbar {
+    margin-bottom: 0 !important;
+}
+
+/* ==================== 表格扩展功能样式 ==================== */
+/* 搜索框样式 */
+.list-page-table-search {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.list-page-table-search input {
+    max-width: 300px;
+}
+
+/* 统计信息样式 */
+.list-page-table-stats {
+    padding: 0.5rem 1rem;
+    background: var(--vh-surface, #f8f9fa);
+    border-bottom: 1px solid var(--vh-border, #dee2e6);
+    font-size: 0.875rem;
+    color: var(--vh-text-secondary, #6c757d);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* 可排序表头样式 */
+.list-page-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 1.5rem;
+}
+
+.list-page-table th.sortable:hover {
+    background-color: #9ca3af !important;
+}
+
+.list-page-table th.sortable::after {
+    content: '⇅';
+    position: absolute;
+    right: 0.5rem;
+    opacity: 0.5;
+    font-size: 0.875rem;
+}
+
+.list-page-table th.sortable.sort-asc::after {
+    content: '↑';
+    opacity: 1;
+}
+
+.list-page-table th.sortable.sort-desc::after {
+    content: '↓';
+    opacity: 1;
+}
+
+/* 行点击样式 */
+.list-page-table tbody tr.clickable {
+    cursor: pointer;
+}
+
+.list-page-table tbody tr.clickable:hover {
+    background-color: var(--vh-surface, #f8f9fa) !important;
+}
+
+.list-page-table tbody tr.selected {
+    background-color: #e7f3ff !important;
+}
+
+/* 空状态样式优化 */
+.list-page-table-empty {
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--vh-text-muted, #6c757d);
+}
+
+.list-page-table-empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+    .list-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+    
+    .list-page-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .list-page-filter-row {
+        flex-direction: column;
+    }
+    
+    .list-page-filter-item {
+        width: 100%;
+    }
+    
+    /* 新格式筛选字段样式 */
+    .filter-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+        width: 100%;
+    }
+    
+    .filter-label {
+        min-width: 80px;
+        margin-right: 12px;
+        margin-bottom: 0;
+        font-weight: 500;
+        color: #212529;
+    }
+    
+    .filter-control {
+        flex: 1;
+    }
+    
+    .filter-control .form-control,
+    .filter-control .form-control-sm {
+        width: 100%;
+    }
+    
+    .list-page-table-container {
+        overflow-x: auto;
+    }
+}
+
+</style>
+
+{% endblock %}
+
+{% block content %}
+{# 工作区布局结构 #}
+<div class="workspace {% if module_sidebar_nav %}workspace-two-column{% else %}workspace-single-column{% endif %}">
+    {% if module_sidebar_nav %}
+        {% include 'shared/sidebar_nav_enhanced.html' with menu_items=module_sidebar_nav %}
+    {% endif %}
+    <main class="workspace-main">
+        {% block module_content %}
+{% csrf_token %}
+
+<!-- 消息提示区域 -->
+{% block list_page_messages %}
+{% if messages %}
+<div class="list-page-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="关闭"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+<!-- 使用列表页面布局模板 -->
+<div class="list-page-container" id="listPageContainer">
+    <!-- 加载状态 -->
+    <div class="list-page-loading" id="listPageLoading" role="status" aria-live="polite">
+        <div class="list-page-loading-spinner" aria-hidden="true"></div>
+        <div class="loading-message">{% block loading_message %}加载中...{% endblock %}</div>
+    </div>
+
+    <!-- 错误提示 -->
+    <div class="list-page-error" id="listPageError" role="alert"></div>
+
+    <!-- 成功提示 -->
+    <div class="list-page-success" id="listPageSuccess" role="alert"></div>
+
+    <!-- 骨架屏 -->
+    <div class="list-page-skeleton" id="listPageSkeleton">
+        {% for i in "12345" %}
+        <div class="skeleton-row"></div>
+        {% endfor %}
+    </div>
+
+    <!-- 页面头部 -->
+    <div class="list-page-header">
+        <h1 class="list-page-title">{% block list_page_title %}列表{% endblock %}</h1>
+        <div class="list-page-actions">
+            {% block list_page_actions %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- 统计卡片区域（可选） -->
+    {% block list_page_stats %}{% endblock %}
+
+    <!-- 标签页切换（可选） -->
+    {% block list_page_tabs %}{% endblock %}
+
+    <!-- 筛选区域 -->
+    {% comment %}
+    筛选区域说明：
+    1. 如果视图中提供了 filter_config，将使用新的筛选面板模板（_filter_panel.html）
+    2. 如果没有提供 filter_config，可以使用 list_page_filters 块自定义筛选区域
+    3. 新的筛选面板支持多种筛选类型、日期快捷选择、筛选预设、筛选历史等高级功能
+    4. 详细使用说明请参考 list_page_base_filter_integration.md 文档
+    {% endcomment %}
+    {% block list_page_filters %}
+    {% if filter_config %}
+        {# 使用新的筛选面板模板 #}
+        {% include 'shared/_filter_panel.html' with filter_config=filter_config %}
+    {% else %}
+        {# 兼容旧的筛选方式（已注释，如需使用可取消注释） #}
+        {% comment %}
+        <div class="list-page-filters" role="region" aria-label="筛选条件">
+            <div class="list-page-filters-header">
+                <h6 class="list-page-filters-title">
+                    <i class="bi bi-funnel"></i> 筛选条件
+                </h6>
+                {% block list_page_filters_header_actions %}
+                <div class="d-flex gap-2 align-items-center">
+                    {% block list_page_filter_fields_settings_btn %}
+                    <button type="button" 
+                            class="btn btn-link btn-sm p-0 text-decoration-none" 
+                            id="settingsFilterFieldsBtn"
+                            aria-label="设置筛选字段"
+                            title="自定义筛选字段">
+                        <i class="bi bi-gear"></i> 设置筛选字段
+                    </button>
+                    {% endblock %}
+                </div>
+                {% endblock %}
+            </div>
+            <form method="get" id="filterForm" action="{{ request.path }}" role="search" aria-label="数据筛选表单">
+                {% if tab %}
+                <input type="hidden" name="tab" value="{{ tab }}">
+                {% endif %}
+                <div class="list-page-filter-row" id="filterFieldsContainer">
+                    {% block list_page_filter_fields %}
+                    <!-- 子模板可以在这里添加筛选字段 -->
+                    <!-- 注意：筛选字段需要使用 data-filter-key 属性标识，例如：-->
+                    <!-- <div class="filter-row" data-filter-key="status">...</div> -->
+                    {% endblock %}
+                </div>
+                <div class="list-page-filter-search">
+                    <div class="list-page-filter-search-input">
+                        <label for="searchInput" class="visually-hidden">搜索关键词</label>
+                        <input type="text" 
+                               name="search" 
+                               id="searchInput"
+                               class="form-control form-control-sm" 
+                               placeholder="{% block search_placeholder %}搜索...{% endblock %}" 
+                               value="{{ search }}"
+                               aria-label="搜索输入框"
+                               autocomplete="off">
+                    </div>
+                    <div class="list-page-filter-actions">
+                        <button type="submit" 
+                                class="btn btn-sm btn-primary"
+                                aria-label="执行搜索">
+                            <i class="bi bi-search"></i> 搜索
+                        </button>
+                        <a href="{% block reset_url %}{{ request.path }}{% endblock %}" 
+                           class="btn btn-sm btn-outline-secondary"
+                           aria-label="重置筛选条件">重置</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% endcomment %}
+    {% endif %}
+    {% endblock %}
+
+    {% if page_obj %}
+    <!-- 表格搜索框（可选） -->
+    {% block list_page_table_search %}
+    {% if show_table_search %}
+    <div class="list-page-table-search">
+        <input type="text" 
+               class="form-control form-control-sm" 
+               id="listPageTableSearchInput"
+               placeholder="搜索表格内容..."
+               autocomplete="off"
+               aria-label="搜索表格">
+        <button type="button" 
+                class="btn btn-sm btn-outline-secondary" 
+                id="listPageTableClearSearch"
+                style="display: none;">
+            <i class="bi bi-x"></i> 清除
+        </button>
+    </div>
+    {% endif %}
+    {% endblock %}
+
+    <!-- 表格统计信息（可选） -->
+    {% block list_page_table_stats %}
+    {% if show_table_stats %}
+    <div class="list-page-table-stats" id="listPageTableStats">
+        <span>共 <strong id="listPageTableTotalCount">0</strong> 条记录</span>
+        <span>显示 <strong id="listPageTableVisibleCount">0</strong> 条</span>
+    </div>
+    {% endif %}
+    {% endblock %}
+
+    <!-- 表格工具栏 -->
+    {% block list_page_table_toolbar %}
+    <div class="list-page-table-toolbar" role="toolbar" aria-label="表格工具栏">
+        <div class="table-toolbar-left">
+            {% block list_page_table_toolbar_left %}{% endblock %}
+        </div>
+        <div class="table-toolbar-right">
+            {% block list_page_table_toolbar_right %}
+            {% if show_table_export %}
+            <button type="button" 
+                    class="btn btn-sm btn-outline-primary" 
+                    id="listPageTableExportBtn"
+                    aria-label="导出表格"
+                    title="导出为Excel">
+                <i class="bi bi-download"></i> 导出
+            </button>
+            {% endif %}
+            {% if can_print %}
+            <button type="button" 
+                    class="btn btn-link btn-sm text-muted p-1" 
+                    id="printTable"
+                    aria-label="打印"
+                    title="打印 (Ctrl+P)">
+                <i class="bi bi-printer"></i>
+            </button>
+            {% endif %}
+            {% endblock %}
+        </div>
+    </div>
+    {% endblock %}
+
+    <!-- 批量操作栏 -->
+    {% block list_page_batch_actions %}
+    {% include "shared/batch_actions_bar.html" %}
+    {% endblock %}
+
+    <!-- 表格区域 -->
+    {% block list_page_table %}
+    <div class="list-page-table-container">
+        <table class="table table-hover table-striped list-page-table" id="dataTable">
+            <thead>
+                <tr>
+                    {% block list_page_table_checkbox_header %}{% endblock %}
+                    {% block list_page_table_headers %}
+                    <th>名称</th>
+                    {% endblock %}
+                    {% block list_page_table_actions_header %}
+                    <th>
+                        操作
+                        <span id="columnSettingsBtn"
+                              data-bs-toggle="modal"
+                              data-bs-target="#columnSettingsModal"
+                              aria-label="设置表格字段"
+                              title="设置表格字段"
+                              style="cursor: pointer; color: #000000 !important; font-size: 16px; vertical-align: middle; margin-left: 8px; display: inline-block;">
+                            <i class="bi bi-gear" style="color: #000000 !important;"></i>
+                        </span>
+                    </th>
+                    {% endblock %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in page_obj.object_list %}
+                <tr data-id="{{ item.id }}">
+                    {% block list_page_table_checkbox_cell %}{% endblock %}
+                    {% block list_page_table_row_content %}
+                    <td>{{ item.name }}</td>
+                    {% endblock %}
+                    {% block list_page_table_actions_cell %}
+                    <td>
+                        <div class="list-page-table-actions">
+                            <a href="#" class="action-view" title="查看">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <span class="action-separator">|</span>
+                            <a href="#" class="action-edit" title="编辑">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <span class="action-separator">|</span>
+                            <a href="#" class="action-delete" title="删除">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                    {% endblock %}
+                </tr>
+                {% empty %}
+                <tr class="list-page-table-empty-row">
+                    <td colspan="{% block empty_colspan %}2{% endblock %}">
+                        <div class="list-page-table-empty">
+                            <div class="list-page-table-empty-icon">📭</div>
+                            {% block empty_table_message %}
+                            <p class="mb-0">暂无数据</p>
+                            {% endblock %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- 分页参数（只定义一次，供子模板覆盖） -->
+    {% block pagination_params %}{% endblock %}
+    
+    <!-- 翻页功能 - 使用共享模板 -->
+    {% block list_page_pagination %}
+        {% if page_obj and page_obj.paginator.count > 0 %}
+            {% include "shared/pagination.html" with page_obj=page_obj %}
+        {% endif %}
+    {% endblock %}
+
+    {% endblock %}
+    {% else %}
+    <div class="list-page-empty" role="status" aria-live="polite">
+        <div class="list-page-empty-icon">📭</div>
+        <p class="list-page-empty-text">{% block empty_message %}暂无数据{% endblock %}</p>
+        {% block empty_action %}
+        {% if can_create %}
+        <a href="{% block empty_create_url %}#{% endblock %}" class="btn btn-primary btn-sm mt-3">
+            <i class="bi bi-plus-circle"></i> 创建第一条记录
+        </a>
+        {% endif %}
+        {% endblock %}
+    </div>
+    {% endif %}
+</div>
+{% endblock module_content %}
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{# 工作区基础脚本 #}
+{% include 'shared/_workspace_scripts.html' %}
+{% block module_extra_js %}
+<script src="{% static 'js/filter-fields-settings.js' %}"></script>
+<script>
+    // ==================== 工具函数 ====================
+    
+    // 获取CSRF token的函数
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    function getCsrfToken() {
+        const input = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (input && input.value) {
+            return input.value;
+        }
+        return getCookie('csrftoken') || '';
+    }
+
+    // 防抖函数
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // 显示/隐藏加载状态
+    function showLoading(message = '加载中...') {
+        const loading = document.getElementById('listPageLoading');
+        if (loading) {
+            const messageEl = loading.querySelector('.loading-message');
+            if (messageEl) messageEl.textContent = message;
+            loading.classList.add('active');
+        }
+    }
+
+    function hideLoading() {
+        const loading = document.getElementById('listPageLoading');
+        if (loading) {
+            loading.classList.remove('active');
+        }
+    }
+
+    // 显示错误消息
+    function showError(message, duration = 5000) {
+        const errorEl = document.getElementById('listPageError');
+        if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.classList.add('active');
+            setTimeout(() => {
+                errorEl.classList.remove('active');
+            }, duration);
+        }
+    }
+
+    // 显示成功消息
+    function showSuccess(message, duration = 3000) {
+        const successEl = document.getElementById('listPageSuccess');
+        if (successEl) {
+            successEl.textContent = message;
+            successEl.classList.add('active');
+            setTimeout(() => {
+                successEl.classList.remove('active');
+            }, duration);
+        }
+    }
+
+    // ==================== 页面初始化 ====================
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化筛选表单自动提交
+        // initFilterAutoSubmit(); // 已注释：筛选功能已禁用
+        
+        // 初始化表格增强
+        initTableEnhancements();
+        
+        // 初始化快捷键
+        initKeyboardShortcuts();
+        
+        // 初始化工具栏功能
+        initToolbar();
+        
+        // 初始化列设置功能
+        initColumnSettings();
+        
+        // 初始化批量操作栏功能
+        initBatchActionsBar();
+    });
+
+    // ==================== 筛选表单自动提交 ====================
+    // 已注释：筛选功能已禁用
+    /*
+    function initFilterAutoSubmit() {
+        const filterForm = document.getElementById('filterForm');
+        if (!filterForm) return;
+        
+        function autoSubmit() {
+            const pageInput = filterForm.querySelector('input[name="page"]');
+            if (pageInput) {
+                pageInput.value = '1';
+            }
+            showLoading('正在筛选...');
+            filterForm.submit();
+        }
+        
+        const debouncedSubmit = debounce(autoSubmit, 500);
+        
+        // 只对搜索框启用自动提交，选择框不自动提交（避免页面抖动）
+        // 用户需要手动点击搜索按钮来提交筛选条件
+        const searchInput = filterForm.querySelector('input[name="search"]');
+        if (searchInput) {
+            const debouncedSearch = debounce(autoSubmit, 500);
+            searchInput.addEventListener('input', debouncedSearch);
+        }
+        
+        // 如果用户需要自动提交功能，可以取消下面的注释
+        // const filterInputs = filterForm.querySelectorAll('select, input[type="text"], input[type="date"], input[type="number"]');
+        // filterInputs.forEach(input => {
+        //     if (input.name === 'search') return;
+        //     input.addEventListener('change', debouncedSubmit);
+        // });
+    }
+    */
+
+    // ==================== 表格增强 ====================
+    function initTableEnhancements() {
+        const table = document.querySelector('.list-page-table');
+        if (!table) return;
+        
+        const tbody = table.querySelector('tbody');
+        const rows = tbody ? Array.from(tbody.querySelectorAll('tr:not(.list-page-table-empty-row)')) : [];
+        
+        // 行悬停效果
+        rows.forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = 'var(--vh-surface)';
+            });
+            row.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('selected')) {
+                    this.style.backgroundColor = '';
+                }
+            });
+        });
+        
+        // URL参数保持
+        const urlParams = new URLSearchParams(window.location.search);
+        const paginationLinks = document.querySelectorAll('.pagination .page-link[href]');
+        paginationLinks.forEach(link => {
+            const href = new URL(link.href, window.location.origin);
+            urlParams.forEach((value, key) => {
+                if (key !== 'page') {
+                    href.searchParams.set(key, value);
+                }
+            });
+            link.href = href.pathname + href.search;
+        });
+        
+        // ==================== 表格搜索功能 ====================
+        const searchInput = document.getElementById('listPageTableSearchInput');
+        const clearSearchBtn = document.getElementById('listPageTableClearSearch');
+        if (searchInput) {
+            let originalRows = rows.slice();
+            
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                let hasVisibleRows = false;
+                
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (text.includes(searchTerm)) {
+                        row.style.display = '';
+                        hasVisibleRows = true;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                
+                // 显示/隐藏空数据提示
+                const emptyRow = tbody.querySelector('.list-page-table-empty-row');
+                if (emptyRow) {
+                    emptyRow.style.display = hasVisibleRows ? 'none' : '';
+                }
+                
+                // 显示/隐藏清除按钮
+                if (clearSearchBtn) {
+                    clearSearchBtn.style.display = searchTerm ? 'inline-block' : 'none';
+                }
+                
+                // 更新统计信息
+                updateTableStats();
+            });
+            
+            // 清除搜索
+            if (clearSearchBtn) {
+                clearSearchBtn.addEventListener('click', function() {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input'));
+                    searchInput.focus();
+                });
+            }
+        }
+        
+        // ==================== 表格统计信息 ====================
+        function updateTableStats() {
+            const totalCountEl = document.getElementById('listPageTableTotalCount');
+            const visibleCountEl = document.getElementById('listPageTableVisibleCount');
+            if (totalCountEl) totalCountEl.textContent = rows.length;
+            if (visibleCountEl) {
+                const visibleRows = rows.filter(row => row.style.display !== 'none');
+                visibleCountEl.textContent = visibleRows.length;
+            }
+        }
+        
+        // 初始化统计信息
+        updateTableStats();
+        
+        // ==================== 表格列排序功能 ====================
+        {% if enable_table_sort %}
+        const sortableHeaders = table.querySelectorAll('thead th.sortable');
+        sortableHeaders.forEach((th, index) => {
+            th.addEventListener('click', function() {
+                const isAsc = this.classList.contains('sort-asc');
+                const isDesc = this.classList.contains('sort-desc');
+                
+                // 清除其他列的排序状态
+                sortableHeaders.forEach(header => {
+                    header.classList.remove('sort-asc', 'sort-desc');
+                });
+                
+                // 切换排序状态
+                if (isAsc) {
+                    this.classList.add('sort-desc');
+                    sortTableRows(table, index, false);
+                } else {
+                    this.classList.add('sort-asc');
+                    sortTableRows(table, index, true);
+                }
+            });
+        });
+        
+        function sortTableRows(table, columnIndex, ascending) {
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr:not(.list-page-table-empty-row)'));
+            
+            // 调整列索引（考虑复选框列）
+            const checkboxCol = table.querySelector('thead th input[type="checkbox"]');
+            const actualIndex = checkboxCol ? columnIndex : columnIndex;
+            
+            rows.sort((a, b) => {
+                const aCell = a.querySelectorAll('td')[actualIndex];
+                const bCell = b.querySelectorAll('td')[actualIndex];
+                const aVal = aCell ? aCell.textContent.trim() : '';
+                const bVal = bCell ? bCell.textContent.trim() : '';
+                const aNum = parseFloat(aVal);
+                const bNum = parseFloat(bVal);
+                
+                let comparison = 0;
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    comparison = aNum - bNum;
+                } else {
+                    comparison = aVal.localeCompare(bVal, 'zh-CN');
+                }
+                
+                return ascending ? comparison : -comparison;
+            });
+            
+            rows.forEach(row => tbody.appendChild(row));
+            updateTableStats();
+        }
+        {% endif %}
+        
+        // ==================== 表格行点击功能 ====================
+        {% if enable_table_row_click %}
+        rows.forEach(row => {
+            if (!row.classList.contains('list-page-table-empty-row')) {
+                row.classList.add('clickable');
+                row.addEventListener('click', function(e) {
+                    // 如果点击的是链接、按钮或复选框，不触发行点击
+                    if (e.target.closest('a, button, input')) return;
+                    
+                    // 切换选中状态
+                    this.classList.toggle('selected');
+                    
+                    // 触发自定义事件
+                    const event = new CustomEvent('tableRowClick', {
+                        detail: {
+                            row: this,
+                            id: this.dataset.id
+                        }
+                    });
+                    table.dispatchEvent(event);
+                });
+            }
+        });
+        {% endif %}
+        
+        // ==================== 表格导出功能 ====================
+        const exportBtn = document.getElementById('listPageTableExportBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', function() {
+                exportTableToExcel(table);
+            });
+        }
+        
+        function exportTableToExcel(table) {
+            if (!table) return;
+            
+            // 获取可见行
+            const visibleRows = Array.from(table.querySelectorAll('tbody tr:not([style*="display: none"])'));
+            if (visibleRows.length === 0) {
+                if (typeof showError !== 'undefined') {
+                    showError('没有可导出的数据');
+                } else {
+                    alert('没有可导出的数据');
+                }
+                return;
+            }
+            
+            // 构建CSV内容
+            let csv = '';
+            
+            // 表头
+            const headers = Array.from(table.querySelectorAll('thead th'));
+            const headerTexts = headers.map(th => {
+                const clone = th.cloneNode(true);
+                clone.querySelectorAll('span, i, input').forEach(el => el.remove());
+                return clone.textContent.trim().replace(/\n/g, ' ').replace(/\s+/g, ' ');
+            }).filter(text => text);
+            
+            csv += headerTexts.join(',') + '\n';
+            
+            // 数据行
+            visibleRows.forEach(row => {
+                const cells = Array.from(row.querySelectorAll('td'));
+                const dataCells = cells.filter((cell, index) => {
+                    if (cell.querySelector('input[type="checkbox"]')) return false;
+                    if (cell.querySelector('.list-page-table-actions')) return false;
+                    return true;
+                });
+                
+                const rowData = dataCells.map(cell => {
+                    let text = cell.textContent.trim().replace(/\n/g, ' ').replace(/\s+/g, ' ');
+                    if (text.includes(',')) {
+                        text = '"' + text + '"';
+                    }
+                    return text;
+                });
+                
+                csv += rowData.join(',') + '\n';
+            });
+            
+            // 创建下载链接
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'table_' + new Date().toISOString().split('T')[0] + '.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+
+    // ==================== 快捷键支持 ====================
+    function initKeyboardShortcuts() {
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+P 打印
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                const printBtn = document.getElementById('printTable');
+                if (printBtn) printBtn.click();
+            }
+            
+            // Ctrl+F 聚焦搜索框（优先使用表格搜索框，如果没有则使用筛选搜索框）
+            if (e.ctrlKey && e.key === 'f' && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                const tableSearchInput = document.getElementById('listPageTableSearchInput');
+                const filterSearchInput = document.getElementById('searchInput');
+                const targetInput = tableSearchInput || filterSearchInput;
+                if (targetInput) {
+                    targetInput.focus();
+                    targetInput.select();
+                }
+            }
+        });
+    }
+
+    // ==================== 工具栏功能 ====================
+    function initToolbar() {
+        const printBtn = document.getElementById('printTable');
+        if (printBtn) {
+            printBtn.addEventListener('click', function() {
+                window.print();
+            });
+        }
+    }
+    
+    // ==================== 列设置功能 ====================
+    function initColumnSettings() {
+        const columnSettingsBtn = document.getElementById('columnSettingsBtn');
+        const columnSettingsModal = document.getElementById('columnSettingsModal');
+        const columnSettingsList = document.getElementById('columnSettingsList');
+        const saveColumnSettings = document.getElementById('saveColumnSettings');
+        const resetColumnSettings = document.getElementById('resetColumnSettings');
+        const selectAllColumns = document.getElementById('selectAllColumns');
+        const invertSelection = document.getElementById('invertSelection');
+        const columnSearchInput = document.getElementById('columnSearchInput');
+        
+        if (!columnSettingsModal || !columnSettingsList) {
+            return; // 模态框不存在，不需要初始化
+        }
+        
+        // 获取存储键（基于当前页面路径）
+        const storageKey = 'column_settings_' + window.location.pathname.replace(/\//g, '_');
+        
+        // 获取表格列
+        const table = document.querySelector('.list-page-table');
+        if (!table) return;
+        
+        const headers = table.querySelectorAll('thead th');
+        const columns = [];
+        headers.forEach((th, index) => {
+            // 跳过复选框列和操作列
+            const checkbox = th.querySelector('input[type="checkbox"]');
+            const isColumnSettings = th.querySelector('#columnSettingsBtn');
+            
+            // 跳过复选框列和包含列设置按钮的操作列
+            if (checkbox || isColumnSettings) {
+                return;
+            }
+            
+            // 获取列名
+            let columnName = th.textContent.trim();
+            
+            // 只添加有名称的列
+            if (columnName) {
+                columns.push({
+                    index: index,
+                    name: columnName,
+                    element: th
+                });
+            }
+        });
+        
+        // 从localStorage加载设置
+        function loadSettings() {
+                const saved = localStorage.getItem(storageKey);
+                if (saved) {
+                try {
+                    return JSON.parse(saved);
+            } catch (e) {
+                // 解析失败时返回默认设置，不输出错误日志
+            }
+            }
+            // 默认所有列都显示
+            return columns.reduce((acc, col) => {
+                acc[col.index] = { visible: true, width: '' };
+                return acc;
+            }, {});
+        }
+        
+        // 保存设置到localStorage
+        function saveSettings(settings) {
+            localStorage.setItem(storageKey, JSON.stringify(settings));
+        }
+        
+        // 应用设置到表格
+        function applySettings(settings) {
+            columns.forEach(col => {
+                const setting = settings[col.index] || { visible: true, width: '' };
+                // 使用原始列索引来查找对应的单元格（包括所有列，不跳过复选框和操作列）
+                const columnIndex = col.index + 1; // nth-child 从1开始
+                const cells = table.querySelectorAll(`tbody td:nth-child(${columnIndex}), thead th:nth-child(${columnIndex})`);
+                
+                cells.forEach(cell => {
+                    // 应用可见性设置
+                    if (setting.visible) {
+                        cell.style.display = '';
+                    } else {
+                        cell.style.display = 'none';
+                    }
+                    
+                    // 应用宽度设置
+                    const widthValue = setting.width ? setting.width.trim() : '';
+                    if (widthValue) {
+                        // 设置宽度，使用 setProperty 确保优先级
+                        cell.style.setProperty('width', widthValue, 'important');
+                    } else {
+                        // 清除宽度设置，移除内联样式
+                        cell.style.removeProperty('width');
+                    }
+                });
+            });
+        }
+        
+        // 保存原始设置（用于取消预览）
+        let originalSettings = {};
+        let isSettingsSaved = false; // 标记是否已保存
+        
+        // 生成列设置列表
+        function generateColumnList(settings) {
+            columnSettingsList.innerHTML = '';
+            columns.forEach(col => {
+                const setting = settings[col.index] || { visible: true, width: '' };
+                const item = document.createElement('div');
+                item.className = 'column-settings-item';
+                item.innerHTML = `
+                    <div class="column-checkbox-wrapper">
+                        <input type="checkbox" 
+                               data-column-index="${col.index}" 
+                               ${setting.visible ? 'checked' : ''}>
+                    </div>
+                    <div class="column-name">${col.name}</div>
+                    <div class="column-width-wrapper">
+                        <label>宽度:</label>
+                        <div class="width-control-group">
+                            <div class="width-quick-buttons">
+                                <button type="button" class="btn btn-sm btn-outline-secondary width-quick-btn" 
+                                        data-width="80px" data-column-index="${col.index}" title="窄">
+                                    <i class="bi bi-arrows-collapse"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary width-quick-btn" 
+                                        data-width="120px" data-column-index="${col.index}" title="中">
+                                    <i class="bi bi-arrows-angle-contract"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary width-quick-btn" 
+                                        data-width="180px" data-column-index="${col.index}" title="宽">
+                                    <i class="bi bi-arrows-expand"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary width-quick-btn" 
+                                        data-width="" data-column-index="${col.index}" title="默认">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            </div>
+                            <input type="text" 
+                                   class="form-control form-control-sm column-width-input" 
+                                   data-column-index="${col.index}" 
+                                   value="${setting.width || ''}" 
+                                   placeholder="100px 或 15%">
+                        </div>
+                    </div>
+                `;
+                columnSettingsList.appendChild(item);
+            });
+            
+            // 绑定宽度输入框事件（实时预览）
+            const widthInputs = columnSettingsList.querySelectorAll('.column-width-input');
+            widthInputs.forEach(input => {
+                // 输入时实时预览
+                input.addEventListener('input', function() {
+                    const index = parseInt(this.dataset.columnIndex);
+                    const widthValue = this.value.trim();
+                    previewColumnWidth(index, widthValue);
+                });
+                
+                // 失焦时验证格式
+                input.addEventListener('blur', function() {
+                    const value = this.value.trim();
+                    if (value && !/^(\d+(\.\d+)?(px|%)|auto)$/i.test(value)) {
+                        // 如果输入的是纯数字，自动添加px
+                        if (/^\d+$/.test(value)) {
+                            this.value = value + 'px';
+                            const index = parseInt(this.dataset.columnIndex);
+                            previewColumnWidth(index, this.value);
+                        }
+                    }
+                });
+            });
+            
+            // 绑定快捷按钮事件
+            const quickButtons = columnSettingsList.querySelectorAll('.width-quick-btn');
+            quickButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const index = parseInt(this.dataset.columnIndex);
+                    const width = this.dataset.width;
+                    const input = columnSettingsList.querySelector(`.column-width-input[data-column-index="${index}"]`);
+                    if (input) {
+                        input.value = width;
+                        previewColumnWidth(index, width);
+                    }
+                });
+            });
+        }
+        
+        // 实时预览列宽度（不保存到localStorage）
+        function previewColumnWidth(columnIndex, widthValue) {
+            const columnIndexNum = parseInt(columnIndex) + 1; // nth-child 从1开始
+            const cells = table.querySelectorAll(`tbody td:nth-child(${columnIndexNum}), thead th:nth-child(${columnIndexNum})`);
+            
+            cells.forEach(cell => {
+                if (widthValue && widthValue.trim()) {
+                    // 如果输入的是纯数字，自动添加px
+                    let finalWidth = widthValue.trim();
+                    if (/^\d+$/.test(finalWidth)) {
+                        finalWidth = finalWidth + 'px';
+                    }
+                    cell.style.setProperty('width', finalWidth, 'important');
+                } else {
+                    cell.style.removeProperty('width');
+                }
+            });
+        }
+        
+        // 模态框打开时生成列表
+        if (columnSettingsModal) {
+            columnSettingsModal.addEventListener('show.bs.modal', function() {
+                const settings = loadSettings();
+                // 保存原始设置（用于取消预览）
+                originalSettings = JSON.parse(JSON.stringify(settings));
+                isSettingsSaved = false; // 重置保存标记
+                generateColumnList(settings);
+            });
+            
+            // 模态框关闭时恢复原始设置（如果未保存）
+            columnSettingsModal.addEventListener('hide.bs.modal', function() {
+                // 只有在未保存的情况下才恢复原始设置
+                if (!isSettingsSaved) {
+                    applySettings(originalSettings);
+                }
+            });
+        }
+        
+        // 保存设置
+        if (saveColumnSettings) {
+            saveColumnSettings.addEventListener('click', function() {
+                const settings = {};
+                const checkboxes = columnSettingsList.querySelectorAll('input[type="checkbox"]');
+                const widthInputs = columnSettingsList.querySelectorAll('input[type="text"]');
+                
+                checkboxes.forEach(cb => {
+                    const index = parseInt(cb.dataset.columnIndex);
+                    settings[index] = {
+                        visible: cb.checked,
+                        width: ''
+                    };
+                });
+                
+                widthInputs.forEach(input => {
+                    const index = parseInt(input.dataset.columnIndex);
+                    if (settings[index]) {
+                        // 保存宽度值（包括空值，用于清除宽度）
+                        let widthValue = input.value.trim();
+                        // 如果输入的是纯数字，自动添加px
+                        if (widthValue && /^\d+$/.test(widthValue)) {
+                            widthValue = widthValue + 'px';
+                        }
+                        settings[index].width = widthValue;
+                    }
+                });
+                
+                // 保存设置到localStorage
+                saveSettings(settings);
+                
+                // 更新原始设置（保存后，原始设置就是当前设置）
+                originalSettings = JSON.parse(JSON.stringify(settings));
+                isSettingsSaved = true; // 标记已保存
+                
+                // 立即应用设置到表格
+                applySettings(settings);
+                
+                // 显示成功提示
+                if (typeof showSuccess !== 'undefined') {
+                    showSuccess('列设置已保存');
+                }
+                
+                // 关闭模态框
+                if (typeof window.ModalManager !== 'undefined') {
+                    window.ModalManager.hide('columnSettingsModal');
+                } else if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    const modal = bootstrap.Modal.getInstance(columnSettingsModal);
+                    if (modal) modal.hide();
+                }
+            });
+        }
+        
+        // 重置设置
+        if (resetColumnSettings) {
+            resetColumnSettings.addEventListener('click', function() {
+                if (confirm('确定要重置为默认设置吗？')) {
+                    localStorage.removeItem(storageKey);
+                    const defaultSettings = columns.reduce((acc, col) => {
+                        acc[col.index] = { visible: true, width: '' };
+                        return acc;
+                    }, {});
+                    generateColumnList(defaultSettings);
+                    applySettings(defaultSettings);
+                }
+            });
+        }
+        
+        // 全选
+        if (selectAllColumns) {
+            selectAllColumns.addEventListener('click', function() {
+                const checkboxes = columnSettingsList.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(cb => cb.checked = true);
+            });
+        }
+        
+        // 反选
+        if (invertSelection) {
+            invertSelection.addEventListener('click', function() {
+                const checkboxes = columnSettingsList.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(cb => cb.checked = !cb.checked);
+            });
+        }
+        
+        // 搜索过滤
+        if (columnSearchInput) {
+            columnSearchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const items = columnSettingsList.querySelectorAll('.column-settings-item');
+                items.forEach(item => {
+                    const name = item.querySelector('.column-name').textContent.toLowerCase();
+                    if (name.includes(searchTerm)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+        
+        // 页面加载时应用已保存的设置
+        const settings = loadSettings();
+        applySettings(settings);
+    }
+    // ==================== 批量操作栏功能 ====================
+    function initBatchActionsBar() {
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        const batchActionsBar = document.getElementById('batchActionsBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+        const batchCancelBtn = document.getElementById('batchCancelBtn');
+        const batchExportBtn = document.getElementById('batchExportBtn');
+        const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+        
+        // 如果没有批量操作栏或复选框，则不需要初始化
+        if (!batchActionsBar || rowCheckboxes.length === 0) {
+            return;
+        }
+        
+        // 更新批量操作栏显示状态（一直显示，只更新选中数量）
+        function updateBatchActionsBar() {
+            if (!batchActionsBar || !selectedCountSpan) return;
+            
+            const selectedCount = Array.from(rowCheckboxes).filter(cb => cb.checked).length;
+            // 更新选中数量显示
+            if (selectedCountSpan) {
+                selectedCountSpan.textContent = selectedCount;
+            }
+            // 根据选中数量显示/隐藏批量删除按钮
+            if (batchDeleteBtn) {
+                if (selectedCount > 0) {
+                    batchDeleteBtn.style.display = 'inline-block';
+                } else {
+                    batchDeleteBtn.style.display = 'none';
+                }
+            }
+        }
+        
+        // 更新全选复选框状态
+        function updateSelectAllState() {
+            if (!selectAllCheckbox || rowCheckboxes.length === 0) return;
+            
+            const allChecked = Array.from(rowCheckboxes).every(cb => cb.checked);
+            const someChecked = Array.from(rowCheckboxes).some(cb => cb.checked);
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = someChecked && !allChecked;
+        }
+        
+        // 全选/取消全选
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                rowCheckboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                updateBatchActionsBar();
+            });
+        }
+        
+        // 单个复选框变化
+        rowCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateSelectAllState();
+                updateBatchActionsBar();
+            });
+        });
+        
+        // 取消选择
+        if (batchCancelBtn) {
+            batchCancelBtn.addEventListener('click', function() {
+                rowCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = false;
+                }
+                updateBatchActionsBar();
+            });
+        }
+        
+        // 导出选中（默认实现，子模板可以覆盖）
+        if (batchExportBtn) {
+            batchExportBtn.addEventListener('click', function() {
+                const checked = document.querySelectorAll('.row-checkbox:checked');
+                if (checked.length === 0) {
+                    showError('请先选择要导出的数据');
+                    return;
+                }
+                
+                // 获取导出格式（如果选择了格式）
+                const exportFormat = this.dataset.exportFormat || 'excel';
+                
+                // 子模板可以通过覆盖 list_page_batch_export_js block 来自定义导出逻辑
+                // 默认实现：提示用户需要在子模板中实现
+                showError('批量导出功能需要在子模板中实现');
+            });
+        }
+        
+        // 删除选中（默认实现，子模板可以覆盖）
+        if (batchDeleteBtn) {
+            batchDeleteBtn.addEventListener('click', function() {
+                const checked = document.querySelectorAll('.row-checkbox:checked');
+                if (checked.length === 0) {
+                    showError('请先选择要删除的数据');
+                    return;
+                }
+                
+                // 子模板可以通过覆盖 list_page_batch_delete_js block 来自定义删除逻辑
+                // 默认实现：提示用户需要在子模板中实现
+                showError('批量删除功能需要在子模板中实现');
+            });
+        }
+        
+        // 初始状态检查
+        updateSelectAllState();
+        updateBatchActionsBar();
+        
+        // 检查下拉菜单是否有内容，如果没有内容则隐藏下拉按钮
+        const dropdownGroup = document.getElementById('batchActionsDropdownGroup');
+        if (dropdownGroup) {
+            const dropdownMenu = dropdownGroup.querySelector('.dropdown-menu');
+            if (dropdownMenu) {
+                const hasItems = dropdownMenu.querySelectorAll('li').length > 0;
+                if (!hasItems) {
+                    dropdownGroup.style.display = 'none';
+                }
+            }
+        }
+    }
+    
+    // ==================== 筛选字段设置功能初始化 ====================
+    // 已注释：筛选功能已禁用
+    /*
+    // 支持两种配置名称：listPageFilterFieldsSettingsConfig 和 filterFieldsSettingsConfig
+    (function() {
+        function initFilterFieldsSettings() {
+            // 优先使用 listPageFilterFieldsSettingsConfig，如果没有则使用 filterFieldsSettingsConfig
+            const config = window.listPageFilterFieldsSettingsConfig || window.filterFieldsSettingsConfig;
+            if (config && typeof window.FilterFieldsSettings !== 'undefined') {
+                // 确保容器ID正确（使用 list_page_base.html 中的实际容器ID）
+                const finalConfig = {
+                    ...config,
+                    containerId: config.containerId || 'filterFieldsContainer',
+                    modalId: config.modalId || 'filterFieldsSettingsModal',
+                    settingsBtnId: config.settingsBtnId || 'settingsFilterFieldsBtn'
+                };
+                const instance = new window.FilterFieldsSettings(finalConfig);
+                instance.init();
+                window.filterFieldsSettingsInstance = instance;
+                console.log('筛选字段设置功能已初始化', finalConfig);
+            }
+        }
+        
+        // 在DOM加载完成后初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initFilterFieldsSettings);
+        } else {
+            // DOM已加载，延迟一下确保 filter-fields-settings.js 已加载
+            setTimeout(initFilterFieldsSettings, 100);
+        }
+    })();
+    */
+    
+    // ==================== 自定义JavaScript ====================
+    // 注意：此块已在 <script> 标签内部，子模板覆盖时不要添加 <script> 标签，直接写 JavaScript 代码即可
+    {% block list_page_custom_js %}{% endblock %}
+    
+    // ==================== 批量操作相关JavaScript ====================
+    // 注意：以下块已在 <script> 标签内部，子模板覆盖时不要添加 <script> 标签，直接写 JavaScript 代码即可
+    
+    // 批量导入基础功能（通用部分）
+    (function() {
+        const batchImportModal = document.getElementById('batchImportModal');
+        const batchImportForm = document.getElementById('batchImportForm');
+        const importProgress = document.getElementById('importProgress');
+        const importProgressBar = document.getElementById('importProgressBar');
+        const importStatus = document.getElementById('importStatus');
+        
+        if (batchImportModal && batchImportForm) {
+            // 重置导入表单的通用函数
+            function resetBatchImportForm() {
+                if (batchImportForm) {
+                    batchImportForm.reset();
+                }
+                if (importProgress) {
+                    importProgress.classList.add('d-none');
+                }
+                if (importProgressBar) {
+                    importProgressBar.style.width = '0%';
+                    importProgressBar.textContent = '0%';
+                }
+                if (importStatus) {
+                    importStatus.textContent = '';
+                }
+                // 重置按钮状态
+                const confirmBtn = document.getElementById('batchImportConfirmBtn');
+                const spinner = document.getElementById('batchImportSpinner');
+                const confirmText = document.getElementById('batchImportConfirmText');
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                }
+                if (spinner) {
+                    spinner.classList.add('d-none');
+                }
+                if (confirmText) {
+                    confirmText.textContent = '开始导入';
+                }
+            }
+            
+            // 模态框关闭时重置表单
+            batchImportModal.addEventListener('hidden.bs.modal', function() {
+                resetBatchImportForm();
+            });
+            
+            // 将重置函数暴露到全局，供子模板使用
+            window.resetBatchImportForm = resetBatchImportForm;
+        }
+    })();
+    
+    {% block list_page_batch_import_js %}{% endblock %}
+    {% block list_page_batch_delete_js %}{% endblock %}
+    {% block list_page_batch_export_js %}{% endblock %}
+    
+    // ==================== 批量操作增强功能 ====================
+    function initBatchActionsEnhancements() {
+        // 批量导出格式选择
+        const exportFormatLinks = document.querySelectorAll('[data-export-format]');
+        exportFormatLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const format = this.getAttribute('data-export-format');
+                const batchExportBtn = document.getElementById('batchExportBtn');
+                if (batchExportBtn) {
+                    batchExportBtn.dataset.exportFormat = format;
+                    batchExportBtn.click();
+                }
+            });
+        });
+        
+        // 批量打印功能
+        const batchPrintBtn = document.getElementById('batchPrintBtn');
+        if (batchPrintBtn) {
+            batchPrintBtn.addEventListener('click', function() {
+                const checked = document.querySelectorAll('.row-checkbox:checked');
+                if (checked.length === 0) {
+                    showError('请先选择要打印的数据');
+                    return;
+                }
+                
+                // 获取选中的行数据
+                const selectedRows = [];
+                checked.forEach(checkbox => {
+                    const row = checkbox.closest('tr');
+                    if (row) {
+                        selectedRows.push(row.cloneNode(true));
+                    }
+                });
+                
+                // 创建新窗口用于打印
+                const printWindow = window.open('', '_blank');
+                const table = document.querySelector('.list-page-table');
+                if (!table) return;
+                
+                const tableClone = table.cloneNode(true);
+                const tbody = tableClone.querySelector('tbody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+                    selectedRows.forEach(row => {
+                        tbody.appendChild(row);
+                    });
+                }
+                
+                var printContent = '<html>' +
+                    '<head>' +
+                    '<title>批量打印</title>' +
+                    '<style>' +
+                    'body { font-family: Arial, sans-serif; padding: 20px; }' +
+                    'table { width: 100%; border-collapse: collapse; }' +
+                    'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }' +
+                    'th { background-color: #f2f2f2; }' +
+                    '@media print { body { padding: 0; } @page { margin: 1cm; } }' +
+                    '</style>' +
+                    '</head>' +
+                    '<body>' +
+                    '<h2>批量打印</h2>' +
+                    '<p>共 ' + checked.length + ' 项</p>' +
+                    tableClone.outerHTML +
+                    '<script>window.onload = function() { window.print(); };<\/script>' +
+                    '</body>' +
+                    '</html>';
+                printWindow.document.write(printContent);
+                printWindow.document.close();
+            });
+        }
+        
+        // 批量操作下拉菜单项点击处理
+        const dropdownItems = document.querySelectorAll('#batchActionsDropdown + .dropdown-menu .dropdown-item[href="#"]');
+        dropdownItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                // 如果子模板没有实现具体功能，这里只是示例
+                // 子模板应该覆盖这个行为或使用 list_page_batch_dropdown_js block
+            });
+        });
+    }
+    
+    // 批量操作模态框工具函数
+    function showBatchActionModal(type, title, options = {}) {
+        const modal = document.getElementById('batchActionModal');
+        const modalTitle = document.getElementById('batchActionModalLabel');
+        const modalContent = document.getElementById('batchActionModalContent');
+        const confirmBtn = document.getElementById('batchActionConfirmBtn');
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        
+        if (!modal || !modalContent) return;
+        
+        if (checked.length === 0) {
+            showError('请先选择要操作的数据');
+            return;
+        }
+        
+        if (modalTitle) {
+            modalTitle.textContent = title || '批量操作';
+        }
+        
+        // 根据类型生成内容
+        let content = '';
+        if (type === 'status' && options.statusChoices) {
+            var statusOptions = options.statusChoices.map(function(choice) {
+                return '<option value="' + choice[0] + '">' + choice[1] + '</option>';
+            }).join('');
+            content = '<p>已选择 <strong>' + checked.length + '</strong> 项，请选择新的状态：</p>' +
+                '<div class="mb-3">' +
+                '<label for="batchStatusSelect" class="form-label">状态</label>' +
+                '<select class="form-select" id="batchStatusSelect">' +
+                statusOptions +
+                '</select>' +
+                '</div>';
+        } else if (type === 'urgency' && options.urgencyChoices) {
+            var urgencyOptions = options.urgencyChoices.map(function(choice) {
+                return '<option value="' + choice[0] + '">' + choice[1] + '</option>';
+            }).join('');
+            content = '<p>已选择 <strong>' + checked.length + '</strong> 项，请选择新的紧急程度：</p>' +
+                '<div class="mb-3">' +
+                '<label for="batchUrgencySelect" class="form-label">紧急程度</label>' +
+                '<select class="form-select" id="batchUrgencySelect">' +
+                urgencyOptions +
+                '</select>' +
+                '</div>';
+        } else if (options.content) {
+            content = options.content;
+        }
+        
+        modalContent.innerHTML = content;
+        
+        // 显示模态框 - 使用ModalManager统一管理
+        let bsModal = null;
+        if (typeof window.ModalManager !== 'undefined') {
+            window.ModalManager.show('batchActionModal');
+            bsModal = window.ModalManager.getOrCreateInstance('batchActionModal');
+        } else if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+        }
+        
+        // 确认按钮点击事件
+        if (confirmBtn && options.onConfirm && bsModal) {
+            const handler = function() {
+                const spinner = document.getElementById('batchActionSpinner');
+                const confirmText = document.getElementById('batchActionConfirmText');
+                if (spinner) spinner.classList.remove('d-none');
+                if (confirmText) confirmText.textContent = '处理中...';
+                confirmBtn.disabled = true;
+                
+                options.onConfirm().finally(() => {
+                    if (spinner) spinner.classList.add('d-none');
+                    if (confirmText) confirmText.textContent = '确认';
+                    confirmBtn.disabled = false;
+                    if (typeof window.ModalManager !== 'undefined') {
+                        window.ModalManager.hide('batchActionModal');
+                    } else if (bsModal) {
+                        bsModal.hide();
+                    }
+                });
+                
+                confirmBtn.removeEventListener('click', handler);
+            };
+            confirmBtn.addEventListener('click', handler);
+        }
+    }
+    
+    // 页面加载时初始化增强功能
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBatchActionsEnhancements);
+    } else {
+        initBatchActionsEnhancements();
+    }
+</script>
+{% endblock module_extra_js %}
+{% endblock extra_scripts %}
+
+{% block modals %}
+{% comment %}
+注意：通用模态框（column_settings_modal、filter_fields_settings_modal、batch_action_modal）
+已在 base.html 中引入，所有页面都可以使用
+列表页特有的批量导入模态框
+{% endcomment %}
+{{ block.super }}
+{% block list_page_batch_import_modal %}{% endblock %}
+{% endblock %}

@@ -1,13 +1,12 @@
-{% extends "administrative_management/base.html" %}
+{% extends "shared/module_base.html" %}
+{% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:supplies_management' %}">办公用品管理</a></li>
-<li class="breadcrumb-item active">{{ supply.name }}</li>
-{% endblock %}
+
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .info-card {
         background: var(--vh-card-bg);
@@ -20,7 +19,7 @@
     .info-card h5 {
         margin-bottom: 20px;
         padding-bottom: var(--spacing-md);
-        border-bottom: 2px solid var(--vh-border);
+        border-bottom: 2px solid var(--vh-primary);
         font-weight: 600;
         color: var(--vh-text);
     }
@@ -57,11 +56,10 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block module_content %}
 <div class="container-fluid py-4">
     <!-- 页面标题区域 -->
     <div class="center-hero">
-        <div class="hero-icon">{{ page_icon }}</div>
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
     </div>
@@ -191,7 +189,7 @@
                         总金额：¥{{ purchase.total_amount|floatformat:2 }}
                     </p>
                 </div>
-                <a href="/admin/administrative_management/supplypurchase/{{ purchase.id }}/" class="btn btn-sm btn-outline-info">
+                <a href="{% url 'admin_pages:supply_purchase_detail' purchase.id %}" class="btn btn-sm btn-outline-info">
                     <i class="bi bi-eye"></i>
                 </a>
             </div>
@@ -216,7 +214,7 @@
                         用途：{{ req.purpose|truncatewords:10|default:"-" }}
                     </p>
                 </div>
-                <a href="/admin/administrative_management/supplyrequest/{{ req.id }}/" class="btn btn-sm btn-outline-info">
+                <a href="{% url 'admin_pages:supply_request_detail' req.id %}" class="btn btn-sm btn-outline-info">
                     <i class="bi bi-eye"></i>
                 </a>
             </div>

@@ -1,0 +1,217 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    .status-badge.pending {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    .status-badge.approved {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .status-badge.rejected {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .status-badge.completed {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+</style>
+{% endblock %}
+
+{% block personnel_content %}
+<div class="container-fluid py-4">
+    <!-- 操作按钮 -->
+    <div class="text-end mb-4">
+        <a href="{% url 'personnel_pages:employee_movement_management' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        {% if movement.status == 'pending' %}
+        <a href="{% url 'personnel_pages:employee_movement_approve' movement.id %}" class="btn btn-success">
+            <i class="bi bi-check-circle"></i> 审批
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">异动编号</span>
+                    <span class="info-value"><code>{{ movement.movement_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">员工</span>
+                    <span class="info-value">
+                        <a href="{% url 'personnel_pages:employee_detail' movement.employee.id %}">
+                            {{ movement.employee.name }} ({{ movement.employee.employee_number }})
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">异动类型</span>
+                    <span class="info-value">
+                        <span class="badge bg-primary">{{ movement.get_movement_type_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">异动日期</span>
+                    <span class="info-value">{{ movement.movement_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge {{ movement.status }}">{{ movement.get_status_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ movement.created_time|date:"Y-m-d H:i" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 异动前信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">异动前信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">原部门</span>
+                    <span class="info-value">
+                        {% if movement.old_department %}
+                        {{ movement.old_department.name }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">原职位</span>
+                    <span class="info-value">
+                        {% if movement.old_position %}
+                        {{ movement.old_position }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">原薪资</span>
+                    <span class="info-value">
+                        {% if movement.old_salary %}
+                        ¥{{ movement.old_salary|floatformat:2 }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 异动后信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">异动后信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">新部门</span>
+                    <span class="info-value">
+                        {% if movement.new_department %}
+                        <strong style="color: #142F5B;">{{ movement.new_department.name }}</strong>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">新职位</span>
+                    <span class="info-value">
+                        {% if movement.new_position %}
+                        <strong style="color: #142F5B;">{{ movement.new_position }}</strong>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">新薪资</span>
+                    <span class="info-value">
+                        {% if movement.new_salary %}
+                        <strong style="color: #142F5B;">¥{{ movement.new_salary|floatformat:2 }}</strong>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 异动原因 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">异动原因</h5>
+        </div>
+        <div class="info-card-body">
+            <p style="color: var(--vh-text); white-space: pre-wrap;">{{ movement.reason }}</p>
+        </div>
+    </div>
+
+    <!-- 审批信息 -->
+    {% if movement.status != 'pending' %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">审批信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% if movement.approver %}
+                <div class="info-item">
+                    <span class="info-label">审批人</span>
+                    <span class="info-value">{{ movement.approver.get_full_name|default:movement.approver.username }}</span>
+                </div>
+                {% endif %}
+                {% if movement.approval_time %}
+                <div class="info-item">
+                    <span class="info-label">审批时间</span>
+                    <span class="info-value">{{ movement.approval_time|date:"Y-m-d H:i" }}</span>
+                </div>
+                {% endif %}
+                {% if movement.approval_comment %}
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">审批意见</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ movement.approval_comment }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

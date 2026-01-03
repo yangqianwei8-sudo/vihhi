@@ -1,0 +1,312 @@
+{% extends "shared/workflow_detail_page_base.html" %}
+{% load static %}
+{% load customer_tags %}
+
+{% comment %}
+================================================================================
+报送跟踪详情页面共享模板 (Delivery Tracking Detail Base Template)
+================================================================================
+
+版本: 1.0
+更新日期: 2024
+作者: 维海科技开发团队
+
+功能说明：
+- 用于展示快递、邮件、现场报送、易签宝的详情页面
+- 跟踪从报送到签收的全流程信息
+- 参考 approval_detail.html 的设计风格
+- 支持多种报送方式的统一展示
+
+使用方式：
+1. 继承此模板：{% extends "shared/delivery_tracking_detail_base.html" %}
+2. 覆盖以下块：
+
+必需覆盖的块：
+   - delivery_tracking_content: 主要内容区域（必须）
+   - delivery_tracking_timeline: 右侧时间线区域（必须）
+
+可选覆盖的块：
+   - delivery_tracking_hero_icon: Hero区域的图标（默认：📦）
+   - delivery_tracking_hero_title: Hero区域的标题（默认：报送跟踪详情）
+   - delivery_tracking_hero_subtitle: Hero区域的副标题（默认：空）
+   - delivery_tracking_actions: 操作按钮区域（可选）
+   - delivery_tracking_extra_css: 额外的CSS样式（可选）
+   - delivery_tracking_extra_js: 额外的JavaScript代码（可选）
+
+上下文变量要求：
+- tracking: OutgoingDocumentTracking 对象（必须）
+- document: OutgoingDocument 对象（可选，从 tracking.document 获取）
+- status_logs: 状态日志列表（可选）
+- tracking_records: 跟踪记录列表（可选）
+
+模板继承链：
+base.html -> workflow_detail_page_base.html -> delivery_tracking_detail_base.html -> 具体跟踪详情页面 (4层)
+{% endcomment %}
+
+{% block workflow_hero_icon %}📦{% endblock %}
+{% block workflow_hero_title %}报送跟踪详情{% endblock %}
+{% block workflow_hero_subtitle %}{% if tracking.document %}{{ tracking.document.document_number }}{% endif %} - {{ tracking.delivery_method.name|default:"未知方式" }}{% endblock %}
+
+{% block workflow_detail_extra_css %}
+<style>
+    /* 隐藏 Hero 标题区域（如果需要） */
+    {% block delivery_tracking_hide_hero %}
+    /* .workflow-hero {
+        display: none !important;
+    } */
+    {% endblock %}
+    
+    /* 内容卡片样式 */
+    .content-object-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        padding: 20px;
+        margin-bottom: 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .info-label {
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 4px;
+    }
+    
+    .info-value {
+        font-size: 1rem;
+        color: #333;
+        font-weight: 500;
+    }
+    
+    .info-section {
+        margin-bottom: 24px;
+    }
+    
+    .info-section:last-child {
+        margin-bottom: 0;
+    }
+    
+    .info-section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 16px;
+    }
+    
+    /* 报送方式徽章样式 */
+    .method-badge {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    /* 照片预览样式 */
+    .photo-preview {
+        max-width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        margin-top: 10px;
+    }
+    
+    /* 时间线样式 - 参考 approval_detail.html */
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .timeline-record-item {
+        border-left: 2px solid #e0e0e0;
+    }
+    
+    /* 已完成的卡片 - 灰色背景 */
+    .timeline-record-item.record-completed {
+        background-color: #f5f5f5 !important;
+    }
+    
+    /* 当前节点 - 浅蓝色背景 */
+    .timeline-record-item.record-current {
+        background-color: #e3f2fd !important;
+    }
+    
+    /* 未开始的节点 - 淡红色背景 */
+    .timeline-record-item.record-not-started {
+        background-color: #ffebee !important;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-bottom: 24px;
+    }
+    
+    .timeline-item:last-child {
+        padding-bottom: 0;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -22px;
+        top: 4px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #ddd;
+        border: 1px solid #fff;
+    }
+    
+    .timeline-item.timeline-success .timeline-marker {
+        background: #28a745;
+        border-color: #28a745;
+    }
+    
+    .timeline-item.timeline-danger .timeline-marker {
+        background: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .timeline-item.timeline-warning .timeline-marker {
+        background: #ffc107;
+        border-color: #ffc107;
+    }
+    
+    .timeline-item.timeline-info .timeline-marker {
+        background: #17a2b8;
+        border-color: #17a2b8;
+    }
+    
+    .timeline-item:not(:last-child)::before {
+        content: '';
+        position: absolute;
+        left: -16px;
+        top: 16px;
+        width: 2px;
+        height: calc(100% - 4px);
+        background: #e0e0e0;
+    }
+    
+    .timeline-content {
+        background: #f9fafb;
+        padding: 16px;
+        border-left: 2px solid #e0e0e0;
+        border-radius: 4px;
+    }
+    
+    .timeline-item.timeline-success .timeline-content {
+        border-left-color: #28a745;
+    }
+    
+    .timeline-item.timeline-danger .timeline-content {
+        border-left-color: #dc3545;
+    }
+    
+    .timeline-item.timeline-warning .timeline-content {
+        border-left-color: #ffc107;
+    }
+    
+    .timeline-item.timeline-info .timeline-content {
+        border-left-color: #17a2b8;
+    }
+    
+    .timeline-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .timeline-time {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 4px;
+    }
+    
+    .timeline-time-success {
+        color: #28a745;
+    }
+    
+    .timeline-time-danger {
+        color: #dc3545;
+    }
+    
+    .timeline-time-warning {
+        color: #ffc107;
+    }
+    
+    .timeline-actor {
+        font-size: 0.85rem;
+        color: #999;
+        margin-top: 4px;
+    }
+    
+    /* 快递跟踪表格样式 */
+    .express-tracking-table {
+        margin-top: 16px;
+    }
+    
+    .express-tracking-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    
+    /* 状态徽章样式 */
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    {% block delivery_tracking_extra_css %}{% endblock %}
+</style>
+{% endblock workflow_detail_extra_css %}
+
+{% block workflow_actions %}
+{% block delivery_tracking_actions %}{% endblock %}
+{% endblock %}
+
+{% block workflow_content %}
+{% block delivery_tracking_content %}
+{# 子模板必须覆盖此块来显示跟踪详情内容 #}
+<div class="content-object-card">
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        请覆盖 delivery_tracking_content 块来显示跟踪详情内容
+    </div>
+</div>
+{% endblock %}
+{% endblock %}
+
+{% block workflow_nodes_sidebar_title_text %}流程跟踪{% endblock %}
+
+{% block workflow_nodes_sidebar %}
+{% block delivery_tracking_timeline %}
+{# 子模板必须覆盖此块来显示时间线 #}
+<div class="timeline">
+    <div class="workflow-empty-state">
+        <i class="bi bi-clock-history workflow-empty-state-icon" aria-hidden="true"></i>
+        <p class="workflow-empty-state-text">请覆盖 delivery_tracking_timeline 块来显示时间线</p>
+    </div>
+</div>
+{% endblock %}
+{% endblock %}
+
+{% block workflow_modals %}
+{% block delivery_tracking_modals %}{% endblock %}
+{% endblock %}
+
+{% block workflow_detail_extra_js %}
+{% block delivery_tracking_extra_js %}{% endblock %}
+{% endblock workflow_detail_extra_js %}
+

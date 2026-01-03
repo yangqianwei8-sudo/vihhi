@@ -1,132 +1,517 @@
-{% extends "delivery_customer/base.html" %}
+{% extends "shared/module_base.html" %}
 {% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
 
 {% block title %}交付详情 - 维海科技信息化管理平台{% endblock %}
 
-{% block content %}
+
+
+{% block module_content %}
 <div class="container-fluid">
-    <div class="card">
-        <div class="card-header">
-            <h3>📋 交付详情：{{ delivery.delivery_number }}</h3>
-            <a href="{% url 'delivery_pages:delivery_list' %}" class="btn btn-secondary">返回列表</a>
+    <!-- 页面标题和操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📋 交付详情</h2>
+            <p class="text-muted mb-0">交付单号：{{ delivery.delivery_number }}</p>
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <h5>基本信息</h5>
-                    <table class="table table-bordered">
-                        <tr>
-                            <th>交付单号</th>
-                            <td>{{ delivery.delivery_number }}</td>
-                        </tr>
-                        <tr>
-                            <th>标题</th>
-                            <td>{{ delivery.title }}</td>
-                        </tr>
-                        <tr>
-                            <th>交付方式</th>
-                            <td>{{ delivery.get_delivery_method_display }}</td>
-                        </tr>
-                        <tr>
-                            <th>状态</th>
-                            <td>
-                                <span class="badge badge-{{ delivery.status|default:'secondary' }}">
+        <div>
+            <a href="{% url 'delivery_pages:delivery_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if can_edit and delivery.status == 'draft' %}
+            <a href="{% url 'delivery_pages:delivery_edit' delivery.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            <button type="button" class="btn btn-danger" onclick="confirmDelete({{ delivery.id }})">
+                <i class="bi bi-trash"></i> 删除
+            </button>
+            {% endif %}
+            {% if can_submit %}
+            <form method="post" action="{% url 'delivery_pages:delivery_submit' delivery.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success" onclick="return confirm('确定要提交此交付记录进行审核吗？提交后将无法编辑。');">
+                    <i class="bi bi-send"></i> 提交审核
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息卡片 -->
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">交付单号</span>
+                    <span class="info-value info-value-bold">{{ delivery.delivery_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">交付标题</span>
+                    <span class="info-value">{{ delivery.title }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">交付方式</span>
+                    <span class="info-value">
+                        {% if delivery.delivery_method == 'email' %}
+                            <i class="bi bi-envelope"></i> 邮件
+                        {% elif delivery.delivery_method == 'express' %}
+                            <i class="bi bi-box-seam"></i> 快递
+                        {% elif delivery.delivery_method == 'hand_delivery' %}
+                            <i class="bi bi-person-walking"></i> 送达
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">交付状态</span>
+                    <span class="info-value">
+                        <span class="status-badge {{ delivery.status }}">
                                     {{ delivery.get_status_display }}
                                 </span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>优先级</th>
-                            <td>{{ delivery.get_priority_display }}</td>
-                        </tr>
-                        {% if delivery.project %}
-                        <tr>
-                            <th>关联项目</th>
-                            <td>{{ delivery.project.project_number }} - {{ delivery.project.name }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if delivery.client %}
-                        <tr>
-                            <th>关联客户</th>
-                            <td>{{ delivery.client.name }}</td>
-                        </tr>
-                        {% endif %}
-                    </table>
+                    </span>
                 </div>
-                <div class="col-md-6">
-                    <h5>收件人信息</h5>
-                    <table class="table table-bordered">
-                        <tr>
-                            <th>收件人</th>
-                            <td>{{ delivery.recipient_name }}</td>
-                        </tr>
-                        {% if delivery.recipient_phone %}
-                        <tr>
-                            <th>电话</th>
-                            <td>{{ delivery.recipient_phone }}</td>
-                        </tr>
+                <div class="info-item">
+                    <span class="info-label">优先级</span>
+                    <span class="info-value">
+                        {% if delivery.priority == 'urgent' %}
+                            <span class="badge bg-danger">紧急</span>
+                        {% elif delivery.priority == 'high' %}
+                            <span class="badge bg-warning">高</span>
+                        {% elif delivery.priority == 'normal' %}
+                            <span class="badge bg-info">普通</span>
+                        {% else %}
+                            <span class="badge bg-secondary">低</span>
                         {% endif %}
-                        {% if delivery.recipient_email %}
-                        <tr>
-                            <th>邮箱</th>
-                            <td>{{ delivery.recipient_email }}</td>
-                        </tr>
+                    </span>
+                </div>
+                {% if delivery.deadline %}
+                <div class="info-item">
+                    <span class="info-label">交付期限</span>
+                    <span class="info-value {% if delivery.is_overdue %}text-danger{% endif %}">
+                        {{ delivery.deadline|date:"Y-m-d H:i" }}
+                        {% if delivery.is_overdue %}
+                            <span class="badge bg-danger ms-2">逾期 {{ delivery.overdue_days }} 天</span>
                         {% endif %}
-                        {% if delivery.recipient_address %}
-                        <tr>
-                            <th>地址</th>
-                            <td>{{ delivery.recipient_address }}</td>
-                        </tr>
-                        {% endif %}
-                    </table>
+                    </span>
+                </div>
+                {% endif %}
+                {% if delivery.scheduled_delivery_time %}
+                <div class="info-item">
+                    <span class="info-label">计划交付时间</span>
+                    <span class="info-value">{{ delivery.scheduled_delivery_time|date:"Y-m-d H:i" }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.description %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">交付说明</span>
+                    <span class="info-value">{{ delivery.description|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 关联信息卡片 -->
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">关联信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                {% if delivery.project %}
+                <div class="info-item">
+                    <span class="info-label">关联项目</span>
+                    <span class="info-value">
+                        <a href="#" class="info-value-link">
+                            {{ delivery.project.project_number }} - {{ delivery.project.name }}
+                        </a>
+                    </span>
+                </div>
+                {% endif %}
+                {% if delivery.client %}
+                <div class="info-item">
+                    <span class="info-label">关联客户</span>
+                    <span class="info-value">
+                        <a href="#" class="info-value-link">{{ delivery.client.name }}</a>
+                    </span>
+                </div>
+                {% endif %}
+                {% if delivery.created_by %}
+                <div class="info-item">
+                    <span class="info-label">创建人</span>
+                    <span class="info-value">{{ delivery.created_by.get_full_name|default:delivery.created_by.username }}</span>
+                </div>
+                {% endif %}
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ delivery.created_at|date:"Y-m-d H:i" }}</span>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 收件人信息卡片 -->
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">收件人信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">收件人姓名</span>
+                    <span class="info-value">{{ delivery.recipient_name }}</span>
+                </div>
+                        {% if delivery.recipient_phone %}
+                <div class="info-item">
+                    <span class="info-label">联系电话</span>
+                    <span class="info-value">
+                        <a href="tel:{{ delivery.recipient_phone }}" class="info-value-link">
+                            <i class="bi bi-telephone"></i> {{ delivery.recipient_phone }}
+                        </a>
+                    </span>
+                </div>
+                        {% endif %}
+                        {% if delivery.recipient_email %}
+                <div class="info-item">
+                    <span class="info-label">邮箱地址</span>
+                    <span class="info-value">
+                        <a href="mailto:{{ delivery.recipient_email }}" class="info-value-link">
+                            <i class="bi bi-envelope"></i> {{ delivery.recipient_email }}
+                        </a>
+                    </span>
+                </div>
+                        {% endif %}
+                        {% if delivery.recipient_address %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">收件地址</span>
+                    <span class="info-value">{{ delivery.recipient_address }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 邮件相关信息（仅邮件交付方式） -->
+    {% if delivery.delivery_method == 'email' %}
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">邮件信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                {% if delivery.email_subject %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">邮件主题</span>
+                    <span class="info-value">{{ delivery.email_subject }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.cc_emails %}
+                <div class="info-item">
+                    <span class="info-label">抄送邮箱</span>
+                    <span class="info-value">{{ delivery.cc_emails }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.bcc_emails %}
+                <div class="info-item">
+                    <span class="info-label">密送邮箱</span>
+                    <span class="info-value">{{ delivery.bcc_emails }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.email_message %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">邮件正文</span>
+                    <div class="info-value">{{ delivery.email_message|safe }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 快递相关信息（仅快递交付方式） -->
+    {% if delivery.delivery_method == 'express' %}
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">快递信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                {% if delivery.express_company %}
+                <div class="info-item">
+                    <span class="info-label">快递公司</span>
+                    <span class="info-value">{{ delivery.express_company }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.express_number %}
+                <div class="info-item">
+                    <span class="info-label">快递单号</span>
+                    <span class="info-value">
+                        <a href="#" class="info-value-link" target="_blank">
+                            {{ delivery.express_number }}
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                    </span>
+                </div>
+                {% endif %}
+                {% if delivery.express_fee %}
+                <div class="info-item">
+                    <span class="info-label">快递费用</span>
+                    <span class="info-value info-value-numeric">¥{{ delivery.express_fee }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 送达相关信息（仅送达交付方式） -->
+    {% if delivery.delivery_method == 'hand_delivery' %}
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">送达信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                {% if delivery.delivery_person %}
+                <div class="info-item">
+                    <span class="info-label">送达人</span>
+                    <span class="info-value">{{ delivery.delivery_person.get_full_name|default:delivery.delivery_person.username }}</span>
+                </div>
+                        {% endif %}
+                {% if delivery.delivery_notes %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">送达备注</span>
+                    <span class="info-value">{{ delivery.delivery_notes|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
             
+    <!-- 交付文件卡片 -->
             {% if delivery.files.exists %}
-            <div class="mt-4">
-                <h5>交付文件</h5>
-                <table class="table">
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">交付文件</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">{{ delivery.files.count }} 个文件</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
                     <thead>
                         <tr>
                             <th>文件名</th>
                             <th>类型</th>
                             <th>大小</th>
                             <th>上传时间</th>
+                            <th>操作</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for file in delivery.files.all %}
                         <tr>
-                            <td>{{ file.file_name }}</td>
-                            <td>{{ file.get_file_type_display }}</td>
+                            <td>
+                                <i class="bi bi-file-earmark"></i>
+                                {{ file.file_name }}
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ file.get_file_type_display }}</span>
+                            </td>
                             <td>{{ file.get_file_size_display }}</td>
                             <td>{{ file.uploaded_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <a href="{{ file.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                    <i class="bi bi-download"></i> 下载
+                                </a>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+        </div>
+            </div>
             {% endif %}
             
+    <!-- 跟踪记录卡片 -->
             {% if delivery.tracking_records.exists %}
-            <div class="mt-4">
-                <h5>跟踪记录</h5>
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">跟踪记录</h5>
+        </div>
+        <div class="info-card-body">
                 <div class="timeline">
                     {% for tracking in delivery.tracking_records.all %}
                     <div class="timeline-item">
                         <div class="timeline-marker"></div>
                         <div class="timeline-content">
-                            <h6>{{ tracking.get_event_type_display }}</h6>
-                            <p>{{ tracking.event_description }}</p>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ tracking.get_event_type_display }}</h6>
+                                <p class="mb-1">{{ tracking.event_description }}</p>
+                                {% if tracking.location %}
+                                <p class="text-muted small mb-0">
+                                    <i class="bi bi-geo-alt"></i> {{ tracking.location }}
+                                </p>
+                                {% endif %}
+                            </div>
                             <small class="text-muted">{{ tracking.event_time|date:"Y-m-d H:i" }}</small>
+                        </div>
+                        {% if tracking.operator %}
+                        <p class="text-muted small mt-1 mb-0">
+                            <i class="bi bi-person"></i> {{ tracking.operator.get_full_name|default:tracking.operator.username }}
+                        </p>
+                        {% endif %}
                         </div>
                     </div>
                     {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 客户反馈卡片 -->
+    {% if delivery.feedbacks.exists %}
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">客户反馈</h5>
+        </div>
+        <div class="info-card-body">
+            {% for feedback in delivery.feedbacks.all %}
+            <div class="info-card info-card-flat mb-3">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="status-badge {{ feedback.feedback_type }}">
+                                {{ feedback.get_feedback_type_display }}
+                            </span>
+                            <span class="ms-2 text-muted">
+                                <i class="bi bi-person"></i> {{ feedback.feedback_by }}
+                            </span>
+                        </div>
+                        <small class="text-muted">{{ feedback.created_at|date:"Y-m-d H:i" }}</small>
+                    </div>
+                    <div class="info-value">{{ feedback.content|linebreaks }}</div>
                 </div>
             </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 时间线信息 -->
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">时间线</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ delivery.created_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% if delivery.submitted_at %}
+                <div class="info-item">
+                    <span class="info-label">报送时间</span>
+                    <span class="info-value">{{ delivery.submitted_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.sent_at %}
+                <div class="info-item">
+                    <span class="info-label">发送时间</span>
+                    <span class="info-value">{{ delivery.sent_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.delivered_at %}
+                <div class="info-item">
+                    <span class="info-label">送达时间</span>
+                    <span class="info-value">{{ delivery.delivered_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.received_at %}
+                <div class="info-item">
+                    <span class="info-label">接收时间</span>
+                    <span class="info-value">{{ delivery.received_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.confirmed_at %}
+                <div class="info-item">
+                    <span class="info-label">确认时间</span>
+                    <span class="info-value">{{ delivery.confirmed_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.archived_at %}
+                <div class="info-item">
+                    <span class="info-label">归档时间</span>
+                    <span class="info-value">{{ delivery.archived_at|date:"Y-m-d H:i:s" }}</span>
+            </div>
             {% endif %}
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+/* 时间线样式 */
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--vh-primary);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px var(--vh-primary);
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: -25px;
+    top: 16px;
+    width: 2px;
+    height: calc(100% - 4px);
+    background: var(--vh-border);
+}
+
+.timeline-content {
+    background: var(--vh-surface);
+    padding: 12px;
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--vh-primary);
+}
+</style>
 {% endblock %}
 
+{% block extra_js %}
+<script>
+function confirmDelete(deliveryId) {
+    if (confirm('确定要删除此交付记录吗？\n\n此操作不可恢复！')) {
+        window.location.href = "{% url 'delivery_pages:delivery_delete' delivery.id %}";
+    }
+}
+</script>
+{% endblock %}

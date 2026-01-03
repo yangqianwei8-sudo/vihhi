@@ -1,0 +1,261 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    .filter-bar {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    .contact-select-table {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    .table thead th {
+        background: var(--vh-surface);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+        font-size: var(--font-size-sm);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: var(--spacing-md);
+    }
+    .table tbody td {
+        font-size: var(--font-size-sm);
+        vertical-align: middle;
+        padding: var(--spacing-md);
+    }
+    .table tbody tr {
+        transition: background-color var(--transition-base);
+    }
+    .table tbody tr:hover {
+        background-color: var(--vh-surface);
+    }
+    .btn-select {
+        background: var(--vh-primary);
+        color: var(--vh-card-bg);
+        border: none;
+        padding: var(--spacing-xs) var(--spacing-md);
+        border-radius: var(--radius-sm);
+        font-size: var(--font-size-sm);
+        transition: all var(--transition-base);
+    }
+    .btn-select:hover {
+        background: var(--vh-primary-dark);
+        color: var(--vh-card-bg);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+    }
+    .badge-primary {
+        background: var(--vh-success);
+        color: var(--vh-card-bg);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border-radius: var(--radius-xs);
+        font-size: var(--font-size-xs);
+        font-weight: 500;
+    }
+    .badge-secondary {
+        background: var(--vh-text-muted);
+        color: var(--vh-card-bg);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border-radius: var(--radius-xs);
+        font-size: var(--font-size-xs);
+        font-weight: 500;
+    }
+    .empty-state {
+        text-align: center;
+        padding: var(--spacing-2xl);
+        color: var(--vh-text-muted);
+    }
+    .empty-state-icon {
+        font-size: var(--font-size-4xl);
+        margin-bottom: var(--spacing-md);
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div>
+            <h1>{{ page_title }}</h1>
+            <p>{{ description }}</p>
+        </div>
+    </div>
+    
+    <!-- 搜索筛选栏 -->
+    <div class="filter-bar">
+        <form method="get" action="{% url 'business_pages:contact_change' %}" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" id="searchInput" class="form-control" 
+                       placeholder="搜索联系人姓名、手机、邮箱、职务、部门或客户名称..." 
+                       value="{{ search|default:'' }}">
+            </div>
+            <div class="col-md-3">
+                <select name="client_id" id="clientSelect" class="form-select">
+                    <option value="">全部客户</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search"></i> 搜索
+                </button>
+                <a href="{% url 'business_pages:contact_change' %}" class="btn btn-outline-secondary">重置</a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 联系人选择列表 -->
+    {% if page_obj %}
+    <div class="contact-select-table">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>联系人姓名</th>
+                        <th>对应客户</th>
+                        <th>职务</th>
+                        <th>部门</th>
+                        <th>手机</th>
+                        <th>邮箱</th>
+                        <th>主要联系人</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contact in page_obj %}
+                    <tr>
+                        <td><strong>{{ contact.name }}</strong></td>
+                        <td>
+                            <a href="{% url 'business_pages:customer_detail' contact.client.id %}" class="text-decoration-none">
+                                {{ contact.client.name }}
+                            </a>
+                        </td>
+                        <td>{{ contact.position|default:"—" }}</td>
+                        <td>{{ contact.department|default:"—" }}</td>
+                        <td>{{ contact.phone|default:"—" }}</td>
+                        <td>{{ contact.email|default:"—" }}</td>
+                        <td>
+                            {% if contact.is_primary %}
+                            <span class="badge-primary">是</span>
+                            {% else %}
+                            <span class="badge-secondary">否</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'business_pages:contact_edit' contact.id %}" class="btn-select">
+                                <i class="bi bi-pencil"></i> 变更信息
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination-wrapper p-3">
+            <nav aria-label="创建联系人信息分页">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="contact-select-table">
+        <div class="empty-state">
+            {% if search or client_id %}
+            <div class="empty-state-icon">🔍</div>
+            <p>未找到匹配的联系人</p>
+            <p class="text-muted">请尝试调整搜索条件，或点击"重置"查看所有联系人</p>
+            {% else %}
+            <div class="empty-state-icon">✏️</div>
+            <p>请输入搜索条件查找要变更的联系人</p>
+            <p class="text-muted">您可以按姓名、手机、邮箱、职务、部门或客户名称进行搜索，也可以选择客户进行筛选</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+    // 等待页面完全加载后再执行
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSearch);
+    } else {
+        initSearch();
+    }
+    
+    function initSearch() {
+        const searchInput = document.getElementById('searchInput');
+        const form = document.querySelector('form[method="get"]');
+        
+        if (searchInput && form) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    form.submit();
+                }
+            });
+        }
+    }
+})();
+</script>
+{% endblock %}
+

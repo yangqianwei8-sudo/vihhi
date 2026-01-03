@@ -1,0 +1,2096 @@
+{% extends "customer_management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台
+    
+
+
+
+
+    
+
+    
+    
+    
+    
+    
+    
+
+
+
+
+
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+/* 压缩空白区域，使排版更紧凑 */
+.list-page-container {
+    padding: 12px !important;
+    gap: 8px !important; /* 压缩卡片间距 */
+}
+
+.list-page-header {
+    margin-bottom: 8px !important;
+    padding: 6px 0 !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+}
+
+.list-page-actions {
+    margin-left: auto;
+    display: flex;
+    gap: var(--spacing-sm, 8px);
+    align-items: center;
+}
+
+.list-page-filters {
+    margin-bottom: 8px !important;
+    margin-top: -16px !important;
+    padding: 10px !important;
+}
+
+
+
+.list-page-table {
+    margin-bottom: 6px !important;
+}
+
+/* 筛选按钮组样式 */
+.filter-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.filter-label {
+    min-width: 70px;
+    font-size: 13px;
+    color: #666;
+    padding-top: 4px;
+    flex-shrink: 0;
+}
+
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    flex: 1;
+}
+
+.filter-btn {
+    padding: 3px 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #333;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.filter-btn:hover {
+    border-color: #ff6b35;
+    color: #ff6b35;
+}
+
+.filter-btn.active {
+    background: #ff6b35;
+    border-color: #ff6b35;
+    color: #fff;
+}
+
+/* 标签页样式已迁移到 list-layout.css */
+
+/* 自定义显示列模态框样式 */
+#displayedFields .badge {
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+#displayedFields .badge[draggable="true"]:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+#displayedFields .badge[draggable="true"]:active {
+    opacity: 0.7;
+}
+
+#availableFields .border {
+    transition: all 0.2s ease;
+}
+
+#availableFields .border:hover {
+    background-color: #f8f9fa;
+    border-color: #ff6b35 !important;
+}
+
+#availableFields .btn-link {
+    color: #ff6b35;
+    text-decoration: none;
+}
+
+#availableFields .btn-link:hover {
+    color: #ff4500;
+}
+
+/* 拖动时的样式 */
+.dragging {
+    opacity: 0.5;
+    cursor: move;
+}
+
+.drag-over {
+    border-top: 2px solid #ff6b35;
+}
+
+/* 筛选字段设置模态框样式 */
+#filterFieldsList tr {
+    transition: all 0.2s ease;
+}
+
+#filterFieldsList tr:hover {
+    background-color: #f8f9fa;
+}
+
+#filterFieldsList tr[draggable="true"] {
+    cursor: move;
+}
+
+#filterFieldsList tr.dragging {
+    opacity: 0.5;
+}
+
+#filterFieldsList tr.drag-over {
+    border-top: 2px solid #ff6b35;
+}
+
+#filterFieldsList .bi-grip-vertical {
+    color: #6c757d;
+    transition: color 0.2s ease;
+}
+
+#filterFieldsList tr:hover .bi-grip-vertical {
+    color: #ff6b35;
+}
+
+/* 分页样式优化 */
+.pagination {
+    margin: 0;
+    gap: 2px;
+}
+
+.pagination .page-link {
+    padding: 4px 8px;
+    font-size: 12px;
+    min-width: 28px;
+    text-align: center;
+    line-height: 1.4;
+    border: 1px solid #dee2e6;
+    color: #333;
+}
+
+.pagination .page-link:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #333;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #ff6b35;
+    border-color: #ff6b35;
+    color: #fff;
+    z-index: 1;
+}
+
+.pagination .page-item.disabled .page-link {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #fff;
+}
+
+/* 表格样式优化 */
+.table {
+    margin-bottom: 8px;
+}
+
+.table th,
+.table td {
+    padding: 8px 10px;
+    font-size: 13px;
+}
+
+/* 操作栏优化 */
+
+</style>
+
+    
+
+
+
+
+    
+
+    
+    
+    
+    
+    
+    
+
+
+
+
+
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+
+    
+
+
+
+
+    
+
+    
+    
+    
+    
+    
+    
+
+
+
+
+
+
+
+<!-- 列设置模态框 -->
+<div class="modal fade" id="fieldsSettingsModal" tabindex="-1" aria-labelledby="fieldsSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="fieldsSettingsModalLabel">自定义显示列</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="mb-3">已显示的列</h6>
+                        <div id="displayedFields" class="border rounded p-3" style="min-height: 200px; max-height: 400px; overflow-y: auto;">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="mb-3">可用的列</h6>
+                        <div id="availableFields" class="border rounded p-3" style="min-height: 200px; max-height: 400px; overflow-y: auto;">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="saveFieldsSettings">保存</button>
+                <button type="button" class="btn btn-outline-secondary" id="resetFieldsSettings">重置</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="workspace-content">
+    <!-- 使用列表页面布局模板 -->
+    <div class="list-page-container">
+        <!-- 页面标题 -->
+        <div class="list-page-header">
+            <div>
+                <h2 class="mb-0">
+                    客户管理
+                </h2>
+            </div>
+            <div class="list-page-actions">
+                {% if can_create %}
+                <a href="{% url 'business_pages:customer_create' %}" class="btn btn-primary">
+                    + 新增客户
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 标签页 -->
+        <ul class="nav nav-tabs mb-1 border-bottom" role="tablist" style="margin-bottom: 8px !important;">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link {% if tab == 'all' or not tab %}active{% endif %} border-0" href="?tab=all{% if search %}&search={{ search }}{% endif %}{% if search_field %}&search_field={{ search_field }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if relationship_stage %}&relationship_stage={{ relationship_stage }}{% endif %}{% if department %}&department={{ department }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}{% if created_time_start %}&created_time_start={{ created_time_start }}{% endif %}{% if created_time_end %}&created_time_end={{ created_time_end }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}{% if company_email %}&company_email={{ company_email }}{% endif %}{% if legal_representative %}&legal_representative={{ legal_representative }}{% endif %}">
+                    全部
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link {% if tab == 'my_responsible' %}active{% endif %} border-0" href="?tab=my_responsible{% if search %}&search={{ search }}{% endif %}{% if search_field %}&search_field={{ search_field }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if relationship_stage %}&relationship_stage={{ relationship_stage }}{% endif %}{% if department %}&department={{ department }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}{% if created_time_start %}&created_time_start={{ created_time_start }}{% endif %}{% if created_time_end %}&created_time_end={{ created_time_end }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}{% if company_email %}&company_email={{ company_email }}{% endif %}{% if legal_representative %}&legal_representative={{ legal_representative }}{% endif %}">
+                    我负责的
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link {% if tab == 'subordinate_responsible' %}active{% endif %} border-0" href="?tab=subordinate_responsible{% if search %}&search={{ search }}{% endif %}{% if search_field %}&search_field={{ search_field }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if relationship_stage %}&relationship_stage={{ relationship_stage }}{% endif %}{% if department %}&department={{ department }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}{% if created_time_start %}&created_time_start={{ created_time_start }}{% endif %}{% if created_time_end %}&created_time_end={{ created_time_end }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}{% if company_email %}&company_email={{ company_email }}{% endif %}{% if legal_representative %}&legal_representative={{ legal_representative }}{% endif %}">
+                    下属负责的
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link {% if tab == 'my_collaboration' %}active{% endif %} border-0" href="?tab=my_collaboration{% if search %}&search={{ search }}{% endif %}{% if search_field %}&search_field={{ search_field }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if relationship_stage %}&relationship_stage={{ relationship_stage }}{% endif %}{% if department %}&department={{ department }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}{% if created_time_start %}&created_time_start={{ created_time_start }}{% endif %}{% if created_time_end %}&created_time_end={{ created_time_end }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}{% if company_email %}&company_email={{ company_email }}{% endif %}{% if legal_representative %}&legal_representative={{ legal_representative }}{% endif %}">
+                    我协作的
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link {% if tab == 'subordinate_collaboration' %}active{% endif %} border-0" href="?tab=subordinate_collaboration{% if search %}&search={{ search }}{% endif %}{% if search_field %}&search_field={{ search_field }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if relationship_stage %}&relationship_stage={{ relationship_stage }}{% endif %}{% if department %}&department={{ department }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}{% if created_time_start %}&created_time_start={{ created_time_start }}{% endif %}{% if created_time_end %}&created_time_end={{ created_time_end }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}{% if company_email %}&company_email={{ company_email }}{% endif %}{% if legal_representative %}&legal_representative={{ legal_representative }}{% endif %}">
+                    下属协作的
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link {% if tab == 'pending_approval' %}active{% endif %} border-0" href="?tab=pending_approval{% if search %}&search={{ search }}{% endif %}{% if search_field %}&search_field={{ search_field }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if relationship_stage %}&relationship_stage={{ relationship_stage }}{% endif %}{% if department %}&department={{ department }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}{% if created_time_start %}&created_time_start={{ created_time_start }}{% endif %}{% if created_time_end %}&created_time_end={{ created_time_end }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}{% if company_email %}&company_email={{ company_email }}{% endif %}{% if legal_representative %}&legal_representative={{ legal_representative }}{% endif %}">
+                    待审批的
+                </a>
+            </li>
+        </ul>
+
+        <!-- 筛选栏区域 -->
+        <div class="list-page-filters mb-1" style="margin-bottom: 8px !important;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 small fw-semibold">筛选条件</h6>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="settingsFilterFieldsBtn">
+                        ⚙️ 设置筛选字段
+                    </button>
+                </div>
+            </div>
+            <form method="get" id="filterForm">
+                <!-- 保留标签页和搜索参数 -->
+                {% if tab %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
+                {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
+                {% if search_field %}<input type="hidden" name="search_field" value="{{ search_field }}">{% endif %}
+                {% if page_obj.paginator.per_page %}<input type="hidden" name="page_size" value="{{ page_obj.paginator.per_page }}">{% endif %}
+                <div id="basicFilters" style="display: block;">
+                    <!-- 客户分类 -->
+                    <div class="filter-row mb-3" data-filter-key="client_level">
+                        <label class="filter-label">客户分类:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not client_level %}active{% endif %}" data-filter="client_level" data-value="">
+                                全部
+                            </button>
+                            {% for value, label in client_level_choices %}
+                            <button type="button" class="filter-btn {% if client_level == value %}active{% endif %}" data-filter="client_level" data-value="{{ value }}">
+                                {{ label }}
+                            </button>
+        {% endfor %}
+                            <input type="hidden" name="client_level" id="filter_client_level" value="{{ client_level }}">
+    </div>
+                    </div>
+
+                    <!-- 关系阶段 -->
+                    <div class="filter-row mb-3" data-filter-key="relationship_stage">
+                        <label class="filter-label">关系阶段:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not relationship_stage %}active{% endif %}" data-filter="relationship_stage" data-value="">
+                                全部
+                            </button>
+                            <button type="button" class="filter-btn {% if relationship_stage == 'recent' %}active{% endif %}" data-filter="relationship_stage" data-value="recent">
+                                近期
+                            </button>
+                            <button type="button" class="filter-btn {% if relationship_stage == 'mid' %}active{% endif %}" data-filter="relationship_stage" data-value="mid">
+                                中期
+                            </button>
+                            <button type="button" class="filter-btn {% if relationship_stage == 'long' %}active{% endif %}" data-filter="relationship_stage" data-value="long">
+                                远期
+                            </button>
+                            <input type="hidden" name="relationship_stage" id="filter_relationship_stage" value="{{ relationship_stage }}">
+            </div>
+        </div>
+
+                    <!-- 地区 -->
+                    <div class="filter-row mb-3" data-filter-key="region">
+                        <label class="filter-label">地区:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not region %}active{% endif %}" data-filter="region" data-value="">
+                                全部
+                            </button>
+                            <div class="d-inline-flex align-items-center gap-2 ms-2">
+                                <select name="region" class="form-select form-select-sm" style="width: 200px;" id="regionSelect">
+                                    <option value="">请选择地区</option>
+                                    <option value="北京" {% if region == '北京' %}selected{% endif %}>北京</option>
+                                    <option value="上海" {% if region == '上海' %}selected{% endif %}>上海</option>
+                                    <option value="广东" {% if region == '广东' %}selected{% endif %}>广东</option>
+                                    <option value="四川" {% if region == '四川' %}selected{% endif %}>四川</option>
+                                    <!-- 更多地区选项 -->
+                </select>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="regionMultiSelect">多选</button>
+            </div>
+        </div>
+    </div>
+
+                    <!-- 所属部门 -->
+                    <div class="filter-row mb-3" data-filter-key="department">
+                        <label class="filter-label">所属部门:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not department %}active{% endif %}" data-filter="department" data-value="">
+                                全部
+                            </button>
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <select name="department" class="form-select form-select-sm" id="departmentSelect" style="width: 200px;">
+                                    <option value="">请选择所属部门</option>
+                                    {% for dept in departments %}
+                                    <option value="{{ dept }}" {% if department == dept %}selected{% endif %}>{{ dept }}</option>
+                                    {% endfor %}
+                </select>
+            </div>
+                            <input type="hidden" name="department" id="filter_department" value="{{ department }}">
+                        </div>
+                    </div>
+
+                    <!-- 负责人 -->
+                    <div class="filter-row mb-3" data-filter-key="responsible_user">
+                        <label class="filter-label">负责人:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not responsible_user_id %}active{% endif %}" data-filter="responsible_user" data-value="">
+                                全部
+                            </button>
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <select name="responsible_user" class="form-select form-select-sm" style="width: 200px;">
+                                    <option value="">请选择负责人</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}" {% if responsible_user_id == user.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ user.get_full_name|default:user.username }}
+                                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+                            <input type="hidden" name="responsible_user" id="filter_responsible_user" value="{{ responsible_user_id }}">
+            </div>
+            </div>
+
+                    <!-- 创建时间 -->
+                    <div class="filter-row mb-3" data-filter-key="date_range">
+                        <label class="filter-label">创建时间:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not date_range %}active{% endif %}" data-filter="date_range" data-value="">
+                                全部
+                </button>
+                            <button type="button" class="filter-btn {% if date_range == 'today' %}active{% endif %}" data-filter="date_range" data-value="today">
+                                今天
+                            </button>
+                            <button type="button" class="filter-btn {% if date_range == 'yesterday' %}active{% endif %}" data-filter="date_range" data-value="yesterday">
+                                昨天
+                            </button>
+                            <button type="button" class="filter-btn {% if date_range == 'this_week' %}active{% endif %}" data-filter="date_range" data-value="this_week">
+                                本周
+                            </button>
+                            <button type="button" class="filter-btn {% if date_range == 'last_week' %}active{% endif %}" data-filter="date_range" data-value="last_week">
+                                上周
+                            </button>
+                            <button type="button" class="filter-btn {% if date_range == 'this_month' %}active{% endif %}" data-filter="date_range" data-value="this_month">
+                                本月
+                            </button>
+                            <button type="button" class="filter-btn {% if date_range == 'last_month' %}active{% endif %}" data-filter="date_range" data-value="last_month">
+                                上月
+                            </button>
+                            <button type="button" class="filter-btn {% if date_range == 'custom' %}active{% endif %}" data-filter="date_range" data-value="custom" id="customDateBtn">
+                                自定义
+                            </button>
+                            <div class="d-inline-flex align-items-center gap-2 ms-2" id="customDateRange" style="display: {% if date_range == 'custom' %}flex{% else %}none{% endif %};">
+                                <input type="date" name="created_time_start" class="form-control form-control-sm" 
+                                       value="{{ created_time_start }}" style="width: 150px;">
+                                <span>~</span>
+                                <input type="date" name="created_time_end" class="form-control form-control-sm" 
+                                       value="{{ created_time_end }}" style="width: 150px;">
+            </div>
+                            <input type="hidden" name="date_range" id="filter_date_range" value="{{ date_range }}">
+                        </div>
+                    </div>
+
+                    <!-- 客户分级 -->
+                    <div class="filter-row mb-3" data-filter-key="grade">
+                        <label class="filter-label">客户分级:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not grade %}active{% endif %}" data-filter="grade" data-value="">
+                                全部
+                            </button>
+                            {% for value, label in grade_choices %}
+                            <button type="button" class="filter-btn {% if grade == value %}active{% endif %}" data-filter="grade" data-value="{{ value }}">
+                                {{ label }}
+                            </button>
+                            {% endfor %}
+                            <input type="hidden" name="grade" id="filter_grade" value="{{ grade }}">
+                        </div>
+                    </div>
+
+                    <!-- 信用等级 -->
+                    <div class="filter-row mb-3" data-filter-key="credit_level">
+                        <label class="filter-label">信用等级:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not credit_level %}active{% endif %}" data-filter="credit_level" data-value="">
+                                全部
+                            </button>
+                            {% for value, label in credit_level_choices %}
+                            <button type="button" class="filter-btn {% if credit_level == value %}active{% endif %}" data-filter="credit_level" data-value="{{ value }}">
+                                {{ label }}
+                            </button>
+                            {% endfor %}
+                            <input type="hidden" name="credit_level" id="filter_credit_level" value="{{ credit_level }}">
+                        </div>
+                    </div>
+
+                    <!-- 客户类型 -->
+                    <div class="filter-row mb-3" data-filter-key="client_type">
+                        <label class="filter-label">客户类型:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not client_type %}active{% endif %}" data-filter="client_type" data-value="">
+                                全部
+                            </button>
+                            {% for value, label in client_type_choices %}
+                            <button type="button" class="filter-btn {% if client_type == value %}active{% endif %}" data-filter="client_type" data-value="{{ value }}">
+                                {{ label }}
+                            </button>
+                            {% endfor %}
+                            <input type="hidden" name="client_type" id="filter_client_type" value="{{ client_type }}">
+                        </div>
+                    </div>
+
+                    <!-- 所属行业 -->
+                    <div class="filter-row mb-3" data-filter-key="industry">
+                        <label class="filter-label">所属行业:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not industry %}active{% endif %}" data-filter="industry" data-value="">
+                                全部
+                            </button>
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <input type="text" name="industry" class="form-control form-control-sm" 
+                                       value="{{ industry }}" placeholder="请输入行业" style="width: 200px;" id="filter_industry">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 客户来源 -->
+                    <div class="filter-row mb-3" data-filter-key="source">
+                        <label class="filter-label">客户来源:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not source %}active{% endif %}" data-filter="source" data-value="">
+                                全部
+                            </button>
+                            {% for value, label in source_choices %}
+                            <button type="button" class="filter-btn {% if source == value %}active{% endif %}" data-filter="source" data-value="{{ value }}">
+                                {{ label }}
+                            </button>
+                            {% endfor %}
+                            <input type="hidden" name="source" id="filter_source" value="{{ source }}">
+                        </div>
+                    </div>
+
+                    <!-- 法律风险等级 -->
+                    <div class="filter-row mb-3" data-filter-key="legal_risk_level">
+                        <label class="filter-label">法律风险等级:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not legal_risk_level %}active{% endif %}" data-filter="legal_risk_level" data-value="">
+                                全部
+                            </button>
+                            <button type="button" class="filter-btn {% if legal_risk_level == 'low' %}active{% endif %}" data-filter="legal_risk_level" data-value="low">
+                                低风险
+                            </button>
+                            <button type="button" class="filter-btn {% if legal_risk_level == 'medium_low' %}active{% endif %}" data-filter="legal_risk_level" data-value="medium_low">
+                                中低风险
+                            </button>
+                            <button type="button" class="filter-btn {% if legal_risk_level == 'medium' %}active{% endif %}" data-filter="legal_risk_level" data-value="medium">
+                                中风险
+                            </button>
+                            <button type="button" class="filter-btn {% if legal_risk_level == 'medium_high' %}active{% endif %}" data-filter="legal_risk_level" data-value="medium_high">
+                                中高风险
+                            </button>
+                            <button type="button" class="filter-btn {% if legal_risk_level == 'high' %}active{% endif %}" data-filter="legal_risk_level" data-value="high">
+                                高风险
+                            </button>
+                            <button type="button" class="filter-btn {% if legal_risk_level == 'unknown' %}active{% endif %}" data-filter="legal_risk_level" data-value="unknown">
+                                未知
+                            </button>
+                            <input type="hidden" name="legal_risk_level" id="filter_legal_risk_level" value="{{ legal_risk_level }}">
+                        </div>
+                    </div>
+
+                    <!-- 是否活跃 -->
+                    <div class="filter-row mb-3" data-filter-key="is_active">
+                        <label class="filter-label">是否活跃:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if is_active == '' %}active{% endif %}" data-filter="is_active" data-value="">
+                                全部
+                            </button>
+                            <button type="button" class="filter-btn {% if is_active == '1' %}active{% endif %}" data-filter="is_active" data-value="1">
+                                是
+                            </button>
+                            <button type="button" class="filter-btn {% if is_active == '0' %}active{% endif %}" data-filter="is_active" data-value="0">
+                                否
+                            </button>
+                            <input type="hidden" name="is_active" id="filter_is_active" value="{{ is_active }}">
+                        </div>
+                    </div>
+
+                    <!-- 审批状态 -->
+                    <div class="filter-row mb-3" data-filter-key="approval_status">
+                        <label class="filter-label">审批状态:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not approval_status %}active{% endif %}" data-filter="approval_status" data-value="">
+                                全部
+                            </button>
+                            {% for value, label in approval_status_choices %}
+                            {% if value %}
+                            <button type="button" class="filter-btn {% if approval_status == value %}active{% endif %}" data-filter="approval_status" data-value="{{ value }}">
+                                {{ label }}
+                            </button>
+                            {% endif %}
+                            {% endfor %}
+                            <input type="hidden" name="approval_status" id="filter_approval_status" value="{{ approval_status }}">
+                        </div>
+                    </div>
+
+                    <!-- 邮箱 -->
+                    <div class="filter-row mb-3" data-filter-key="company_email">
+                        <label class="filter-label">邮箱:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not company_email %}active{% endif %}" data-filter="company_email" data-value="">
+                                全部
+                            </button>
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <input type="text" name="company_email" class="form-control form-control-sm" 
+                                       value="{{ company_email }}" placeholder="请输入邮箱" style="width: 200px;" id="filter_company_email">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 法定代表人 -->
+                    <div class="filter-row mb-3" data-filter-key="legal_representative">
+                        <label class="filter-label">法定代表人:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not legal_representative %}active{% endif %}" data-filter="legal_representative" data-value="">
+                                全部
+                            </button>
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <input type="text" name="legal_representative" class="form-control form-control-sm" 
+                                       value="{{ legal_representative }}" placeholder="请输入法定代表人" style="width: 200px;" id="filter_legal_representative">
+                            </div>
+            </div>
+        </div>
+        </form>
+    </div>
+    
+        <!-- 操作栏 -->
+        <div class="list-page-action-bar d-flex justify-content-between align-items-center">
+            <!-- 左侧：批量操作 -->
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted small">已选 <strong id="selectedCount" style="color: #ff6b35;">0</strong> 个</span>
+                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="clearSelection" style="display: none;">
+                    清除所选
+                </button>
+                <div class="d-flex align-items-center gap-1">
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="batchDeleteBtn" disabled>删除</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" disabled></button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" id="batchDeleteAction">删除</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧：搜索/筛选控件 -->
+            <div class="d-flex align-items-center gap-2">
+                <!-- 搜索控件 -->
+                <div class="input-group input-group-sm" style="width: auto;">
+                    <select class="form-select form-select-sm" name="search_field" id="searchFieldSelect" style="min-width: 100px; width: auto; font-size: 14px; color: #333; padding-right: 24px;">
+                        <option value="name" {% if search_field == 'name' or not search_field %}selected{% endif %}>客户名称</option>
+                        <option value="phone" {% if search_field == 'phone' %}selected{% endif %}>手机</option>
+                        <option value="wechat" {% if search_field == 'wechat' %}selected{% endif %}>微信号</option>
+                        <option value="address" {% if search_field == 'address' %}selected{% endif %}>详细地址</option>
+                        <option value="project_address1" {% if search_field == 'project_address1' %}selected{% endif %}>项目地址1</option>
+                        <option value="project_address2" {% if search_field == 'project_address2' %}selected{% endif %}>项目地址2</option>
+                        <option value="project_address3" {% if search_field == 'project_address3' %}selected{% endif %}>项目地址3</option>
+                        <option value="approval_node" {% if search_field == 'approval_node' %}selected{% endif %}>当前审批节点</option>
+                    </select>
+                    <input type="text" class="form-control form-control-sm" id="searchInput" name="search" placeholder="请输入搜索内容" value="{{ search }}" style="width: 200px; font-size: 12px;" data-keypress="handle_onkeypress_0">
+                    <button type="submit" form="searchForm" class="btn btn-outline-secondary btn-sm" style="font-size: 12px;" title="搜索">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 隐藏的搜索表单 -->
+        <form method="get" id="searchForm" style="display: none;">
+            {% if tab %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
+            <input type="hidden" name="search_field" id="searchFieldHidden">
+            {% if client_level %}<input type="hidden" name="client_level" value="{{ client_level }}">{% endif %}
+            {% if client_type %}<input type="hidden" name="client_type" value="{{ client_type }}">{% endif %}
+            {% if credit_level %}<input type="hidden" name="credit_level" value="{{ credit_level }}">{% endif %}
+            {% if is_active %}<input type="hidden" name="is_active" value="{{ is_active }}">{% endif %}
+            {% if relationship_stage %}<input type="hidden" name="relationship_stage" value="{{ relationship_stage }}">{% endif %}
+            {% if department %}<input type="hidden" name="department" value="{{ department }}">{% endif %}
+            {% if responsible_user_id %}<input type="hidden" name="responsible_user" value="{{ responsible_user_id }}">{% endif %}
+            {% if industry %}<input type="hidden" name="industry" value="{{ industry }}">{% endif %}
+            {% if region %}<input type="hidden" name="region" value="{{ region }}">{% endif %}
+            {% if source %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
+            {% if created_time_start %}<input type="hidden" name="created_time_start" value="{{ created_time_start }}">{% endif %}
+            {% if created_time_end %}<input type="hidden" name="created_time_end" value="{{ created_time_end }}">{% endif %}
+            {% if date_range %}<input type="hidden" name="date_range" value="{{ date_range }}">{% endif %}
+            {% if page_obj.paginator.per_page %}<input type="hidden" name="page_size" value="{{ page_obj.paginator.per_page }}">{% endif %}
+        </form>
+    
+        <!-- 数据表格 -->
+        <div class="list-page-table">
+    {% if page_obj %}
+        <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle">
+                <thead>
+                    <tr>
+                            <th width="40" class="column-checkbox">
+                                <input type="checkbox" id="selectAll" class="form-check-input">
+                            </th>
+                            <th class="column-name">客户名称</th>
+                            <th class="column-code">统一信用代码</th>
+                            <th class="column-legal-representative" style="display: none;">法定代表人</th>
+                            <th class="column-established-date" style="display: none;">成立日期</th>
+                            <th class="column-registered-capital" style="display: none;">注册资本（万元）</th>
+                            <th class="column-company-phone" style="display: none;">联系电话</th>
+                            <th class="column-company-email" style="display: none;">邮箱</th>
+                            <th class="column-company-address" style="display: none;">地址</th>
+                            <th class="column-level">客户等级</th>
+                            <th class="column-grade" style="display: none;">客户分级</th>
+                            <th class="column-type">客户类型</th>
+                            <th class="column-credit">信用等级</th>
+                            <th class="column-industry" style="display: none;">所属行业</th>
+                            <th class="column-region" style="display: none;">所属区域</th>
+                            <th class="column-source" style="display: none;">客户来源</th>
+                            <th class="column-score" style="display: none;">客户评分</th>
+                            <th class="column-contact-name" style="display: none;">联系人</th>
+                            <th class="column-contact-position" style="display: none;">职务</th>
+                            <th class="column-phone" style="display: none;">电话</th>
+                            <th class="column-total-contract-amount" style="display: none;">累计合同金额</th>
+                            <th class="column-total-payment-amount" style="display: none;">累计回款金额</th>
+                            <th class="column-legal-risk-level" style="display: none;">法律风险等级</th>
+                            <th class="column-litigation-count" style="display: none;">司法案件数量</th>
+                            <th class="column-executed-person-count" style="display: none;">被执行人数量</th>
+                            <th class="column-final-case-count" style="display: none;">终本案件数量</th>
+                            <th class="column-consumption-limit-count" style="display: none;">限制高消费数量</th>
+                            <th class="column-is-active" style="display: none;">是否活跃</th>
+                            <th class="column-health-score" style="display: none;">健康度评分</th>
+                            <th class="column-description" style="display: none;">客户描述</th>
+                            <th class="column-responsible">负责人</th>
+                            <th class="column-public-sea-entry-time" style="display: none;">进入公海时间</th>
+                            <th class="column-public-sea-reason" style="display: none;">进入公海原因</th>
+                            <th class="column-created">创建时间</th>
+                            <th class="column-created-by" style="display: none;">创建人</th>
+                            <th class="column-updated-time" style="display: none;">更新时间</th>
+                            <th width="120" class="column-actions">
+                                操作
+                                <button type="button" class="btn btn-link btn-sm p-0 ms-2" id="tableColumnSettingsBtn" data-bs-toggle="modal" data-bs-target="#fieldsSettingsModal" title="自定义显示列" style="text-decoration: none; color: #FFC107 !important;">
+                                    <i class="bi bi-gear-fill" style="color: #FFC107 !important;"></i>
+                                </button>
+                            </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in page_obj %}
+                    <tr>
+                            <td class="column-checkbox">
+                                <input type="checkbox" name="client_ids" value="{{ client.id }}" class="form-check-input row-checkbox">
+                            </td>
+                            <td class="column-name">
+                                <a href="{% url 'business_pages:customer_detail' client.id %}" class="text-decoration-none">
+                                {{ client.name }}
+                            </a>
+                        </td>
+                            <td class="column-code text-muted small">{{ client.unified_credit_code|default:"未填写" }}</td>
+                            <td class="column-legal-representative small" style="display: none;">{{ client.legal_representative|default:"未填写" }}</td>
+                            <td class="column-established-date small" style="display: none;">{{ client.established_date|date:"Y-m-d"|default:"未填写" }}</td>
+                            <td class="column-registered-capital small" style="display: none;">{{ client.registered_capital|default:"未填写" }}</td>
+                            <td class="column-company-phone small" style="display: none;">{{ client.company_phone|default:"未填写" }}</td>
+                            <td class="column-company-email small" style="display: none;">{{ client.company_email|default:"未填写" }}</td>
+                            <td class="column-company-address small" style="display: none;">{{ client.company_address|default:"未填写" }}</td>
+                            <td class="column-level">
+                                <span class="badge bg-primary">{{ client.get_client_level_display }}</span>
+                        </td>
+                            <td class="column-grade small" style="display: none;">{{ client.get_grade_display|default:"未填写" }}</td>
+                            <td class="column-type small">{{ client.get_client_type_display|default:"未填写" }}</td>
+                            <td class="column-credit">
+                                <span class="badge bg-info">{{ client.get_credit_level_display }}</span>
+                        </td>
+                            <td class="column-industry small" style="display: none;">{{ client.industry|default:"未填写" }}</td>
+                            <td class="column-region small" style="display: none;">{{ client.region|default:"未填写" }}</td>
+                            <td class="column-source small" style="display: none;">{{ client.get_source_display|default:"未填写" }}</td>
+                            <td class="column-score small" style="display: none;">{{ client.score }}</td>
+                            <td class="column-contact-name small" style="display: none;">{{ client.contact_name|default:"未填写" }}</td>
+                            <td class="column-contact-position small" style="display: none;">{{ client.contact_position|default:"未填写" }}</td>
+                            <td class="column-phone small" style="display: none;">{{ client.phone|default:"未填写" }}</td>
+                            <td class="column-total-contract-amount small" style="display: none;">¥{{ client.total_contract_amount|default:"0.00" }}</td>
+                            <td class="column-total-payment-amount small" style="display: none;">¥{{ client.total_payment_amount|default:"0.00" }}</td>
+                            <td class="column-legal-risk-level small" style="display: none;">{{ client.get_legal_risk_level_display }}</td>
+                            <td class="column-litigation-count small" style="display: none;">{{ client.litigation_count }}</td>
+                            <td class="column-executed-person-count small" style="display: none;">{{ client.executed_person_count }}</td>
+                            <td class="column-final-case-count small" style="display: none;">{{ client.final_case_count }}</td>
+                            <td class="column-consumption-limit-count small" style="display: none;">{{ client.consumption_limit_count }}</td>
+                            <td class="column-is-active small" style="display: none;">
+                                {% if client.is_active %}<span class="badge bg-success">活跃</span>{% else %}<span class="badge bg-secondary">非活跃</span>{% endif %}
+                        </td>
+                            <td class="column-health-score small" style="display: none;">{{ client.health_score }}</td>
+                            <td class="column-description small" style="display: none;">{{ client.description|truncatewords:10|default:"未填写" }}</td>
+                            <td class="column-responsible small">
+                                {% if client.responsible_user %}
+                                    {{ client.responsible_user.get_full_name|default:client.responsible_user.username }}
+                            {% else %}
+                                    <span class="text-muted">公海</span>
+                            {% endif %}
+                        </td>
+                            <td class="column-public-sea-entry-time small" style="display: none;">{{ client.public_sea_entry_time|date:"Y-m-d H:i"|default:"未填写" }}</td>
+                            <td class="column-public-sea-reason small" style="display: none;">{{ client.get_public_sea_reason_display|default:"未填写" }}</td>
+                            <td class="column-created small text-muted">{{ client.created_time|date:"Y-m-d" }}</td>
+                            <td class="column-created-by small" style="display: none;">{{ client.created_by.get_full_name|default:client.created_by.username }}</td>
+                            <td class="column-updated-time small" style="display: none;">{{ client.updated_time|date:"Y-m-d H:i" }}</td>
+                            <td class="column-actions">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'business_pages:customer_detail' client.id %}" class="btn btn-outline-primary btn-sm">查看</a>
+                                {% if can_create %}
+                                    <a href="{% url 'business_pages:customer_edit' client.id %}" class="btn btn-outline-secondary btn-sm">编辑</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">暂无数据</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        {% if page_obj %}
+            <div class="d-flex justify-content-between align-items-center" style="padding: 8px 12px; background: #fff; border-radius: 4px; margin-top: 8px;">
+                <div class="text-muted small">
+                    共 <strong>{{ page_obj.paginator.count }}</strong> 条
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <nav aria-label="分页导航">
+                        <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if tab %}&tab={{ tab }}{% endif %}{% if search %}&search={{ search }}{% endif %}{% if search_field %}&search_field={{ search_field }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if client_type %}&client_type={{ client_type }}{% endif %}{% if credit_level %}&credit_level={{ credit_level }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}{% if relationship_stage %}&relationship_stage={{ relationship_stage }}{% endif %}{% if department %}&department={{ department }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if industry %}&industry={{ industry }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if source %}&source={{ source }}{% endif %}{% if created_time_start %}&created_time_start={{ created_time_start }}{% endif %}{% if created_time_end %}&created_time_end={{ created_time_end }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}">&lt;</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">&lt;</span>
+                    </li>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if tab %}&tab={{ tab }}{% endif %}{% if search %}&search={{ search }}{% endif %}{% if search_field %}&search_field={{ search_field }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if client_type %}&client_type={{ client_type }}{% endif %}{% if credit_level %}&credit_level={{ credit_level }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}{% if relationship_stage %}&relationship_stage={{ relationship_stage }}{% endif %}{% if department %}&department={{ department }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if industry %}&industry={{ industry }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if source %}&source={{ source }}{% endif %}{% if created_time_start %}&created_time_start={{ created_time_start }}{% endif %}{% if created_time_end %}&created_time_end={{ created_time_end }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if tab %}&tab={{ tab }}{% endif %}{% if search %}&search={{ search }}{% endif %}{% if search_field %}&search_field={{ search_field }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if client_type %}&client_type={{ client_type }}{% endif %}{% if credit_level %}&credit_level={{ credit_level }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}{% if relationship_stage %}&relationship_stage={{ relationship_stage }}{% endif %}{% if department %}&department={{ department }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if industry %}&industry={{ industry }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if source %}&source={{ source }}{% endif %}{% if created_time_start %}&created_time_start={{ created_time_start }}{% endif %}{% if created_time_end %}&created_time_end={{ created_time_end }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if tab %}&tab={{ tab }}{% endif %}{% if search %}&search={{ search }}{% endif %}{% if search_field %}&search_field={{ search_field }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if client_type %}&client_type={{ client_type }}{% endif %}{% if credit_level %}&credit_level={{ credit_level }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}{% if relationship_stage %}&relationship_stage={{ relationship_stage }}{% endif %}{% if department %}&department={{ department }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if industry %}&industry={{ industry }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if source %}&source={{ source }}{% endif %}{% if created_time_start %}&created_time_start={{ created_time_start }}{% endif %}{% if created_time_end %}&created_time_end={{ created_time_end }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}">&gt;</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">&gt;</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+                    <div class="d-flex align-items-center gap-1 ms-2">
+                        <select class="form-select form-select-sm" id="pageSizeSelect" style="width: auto; min-width: 80px; font-size: 12px;">
+                            <option value="10" {% if page_obj.paginator.per_page == 10 %}selected{% endif %}>10条/页</option>
+                            <option value="20" {% if page_obj.paginator.per_page == 20 %}selected{% endif %}>20条/页</option>
+                            <option value="50" {% if page_obj.paginator.per_page == 50 %}selected{% endif %}>50条/页</option>
+                        </select>
+                        {% if page_obj.paginator.num_pages > 1 %}
+                        <span class="text-muted small ms-2" style="font-size: 12px;">跳至</span>
+                        <input type="number" class="form-control form-control-sm" id="jumpToPage" min="1" max="{{ page_obj.paginator.num_pages }}" value="{{ page_obj.number }}" style="width: 50px; font-size: 12px; padding: 2px 4px;" data-keypress="handle_onkeypress_2">
+                        <span class="text-muted small" style="font-size: 12px;">页</span>
+        {% endif %}
+    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+            <div class="alert alert-info">暂无客户数据</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // 安全的HTML设置函数
+    function setSafeHTML(element, html) {
+        if (!element) return;
+        // 如果内容不包含HTML标签，使用textContent
+        if (!/<[^>]+>/.test(html)) {
+            element.textContent = html;
+        } else {
+            // 对于包含HTML的内容，使用innerHTML（假设内容已清理）
+            // 在生产环境中，应该使用DOMPurify等库清理HTML
+            element.innerHTML = html;
+        }
+    }
+    
+    // 安全的文本设置函数（推荐使用）
+    function setSafeText(element, text) {
+        if (element) {
+            element.textContent = text;
+        }
+    }
+
+// 定义URL常量（从Django模板获取）
+const URLS = {    batchDelete: '{% url "business_pages:customer_batch_delete" %}',};
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化代码
+});
+
+// 更新选中数量
+function updateSelectedCount() {
+    const selected = document.querySelectorAll('.row-checkbox:checked').length;
+    const selectedCountEl = document.getElementById('selectedCount');
+    if (selectedCountEl) {
+        selectedCountEl.textContent = selected;
+    }
+    
+    // 启用/禁用批量操作按钮
+    const batchButtons = document.querySelectorAll('#batchDeleteBtn');
+    batchButtons.forEach(btn => {
+        if (btn) {
+            btn.disabled = selected === 0;
+            // 更新按钮样式
+            if (selected === 0) {
+                btn.classList.add('disabled');
+            } else {
+                btn.classList.remove('disabled');
+            }
+        }
+    });
+    
+    // 更新下拉菜单按钮状态
+    const dropdownToggles = document.querySelectorAll('.dropdown-toggle-split, .dropdown-toggle');
+    dropdownToggles.forEach(btn => {
+        if (btn) {
+            btn.disabled = selected === 0;
+        }
+    });
+    
+    // 全选框点击事件
+document.getElementById('selectAll')?.addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    const isChecked = this.checked;
+    checkboxes.forEach(cb => {
+        cb.checked = isChecked;
+    });
+    updateSelectedCount();
+    updateSelectAllState();
+});
+
+// 行复选框点击事件 - 更新全选状态（使用事件委托，支持动态加载）
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.classList.contains('row-checkbox')) {
+        updateSelectedCount();
+        updateSelectAllState();
+    }
+});
+
+
+    
+
+
+
+
+
+
+
+// 批量删除
+document.getElementById('batchDeleteBtn')?.addEventListener('click', function() {
+    const selectedIds = getSelectedClientIds();
+    if (selectedIds.length === 0) {
+        alert('请先选择要删除的客户');
+        return;
+    }
+    if (!confirm(`确定要删除选中的 ${selectedIds.length} 个客户吗？\n\n此操作不可恢复！`)) {
+        return;
+    }
+    
+    // 禁用按钮，防止重复提交
+    const deleteBtn = document.getElementById('batchDeleteBtn');
+    const originalText = deleteBtn.textContent;
+    deleteBtn.disabled = true;
+    deleteBtn.textContent = '删除中...';
+    
+    // 使用AJAX批量删除
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                     document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
+    
+    if (!csrfToken) {
+        alert('无法获取CSRF token，请刷新页面后重试');
+        deleteBtn.disabled = false;
+        deleteBtn.textContent = originalText;
+        return;
+    }
+    
+    // 发送删除请求
+    fetch(URLS.batchDelete, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken
+        },
+        body: new URLSearchParams({
+            'client_ids': selectedIds.join(',')
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        }
+        return response.json().then(data => {
+            throw new Error(data.message || '删除失败');
+        });
+    })
+    .then(data => {
+        if (data.success) {
+            let message = `成功删除 ${data.deleted_count} 个客户`;
+            if (data.failed_count > 0) {
+                message += `\n${data.failed_count} 个客户删除失败（存在关联关系）`;
+                if (data.failed_clients && data.failed_clients.length > 0) {
+                    message += `\n失败的客户：${data.failed_clients.slice(0, 5).join('、')}`;
+                    if (data.failed_clients.length > 5) {
+                        message += ` 等${data.failed_clients.length}个`;
+                    }
+                }
+            }
+            alert(message);
+            location.reload();
+        } else {
+            alert(data.message || '删除失败');
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = originalText;
+        }
+    })
+    .catch(error => {
+        alert('删除失败：' + error.message);
+        deleteBtn.disabled = false;
+        deleteBtn.textContent = originalText;
+    });
+});
+
+document.getElementById('batchDeleteAction')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    document.getElementById('batchDeleteBtn')?.click();
+});
+
+// 更新选中数量时同时更新清除所选按钮
+(function() {
+    const originalUpdateSelectedCount = updateSelectedCount;
+    window.updateSelectedCount = function() {
+        originalUpdateSelectedCount();
+        updateClearSelectionButton();
+    };
+})();
+
+// 初始化
+updateSelectedCount();
+
+// 搜索字段选择器同步
+document.getElementById('searchFieldSelect')?.addEventListener('change', function() {
+    document.getElementById('searchFieldHidden').value = this.value;
+});
+
+// 搜索表单提交时同步搜索字段
+document.getElementById('searchForm')?.addEventListener('submit', function(e) {
+    const select = document.getElementById('searchFieldSelect');
+    const hidden = document.getElementById('searchFieldHidden');
+    if (select && hidden) {
+        hidden.value = select.value;
+    }
+    // 添加搜索关键词到表单（如果不存在）
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput && searchInput.value.trim()) {
+        // 检查是否已存在search字段
+        let existingSearch = this.querySelector('input[name="search"]');
+        if (existingSearch) {
+            existingSearch.value = searchInput.value.trim();
+        } else {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'search';
+            input.value = searchInput.value.trim();
+            this.appendChild(input);
+        }
+    } else {
+        // 如果搜索框为空，移除search字段
+        const existingSearch = this.querySelector('input[name="search"]');
+        if (existingSearch) {
+            existingSearch.remove();
+        }
+    }
+});
+
+// 初始化搜索字段
+document.addEventListener('DOMContentLoaded', function() {
+    const searchField = '{{ search_field|default:"name" }}';
+    const searchFieldSelect = document.getElementById('searchFieldSelect');
+    const searchFieldHidden = document.getElementById('searchFieldHidden');
+    if (searchFieldSelect && searchFieldHidden) {
+        searchFieldSelect.value = searchField || 'name';
+        searchFieldHidden.value = searchField || 'name';
+    }
+    
+    // 例如：重新加载数据或应用不同的筛选条件
+});
+
+// 筛选按钮组功能
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const filterName = this.dataset.filter;
+        const filterValue = this.dataset.value;
+        const hiddenInput = document.getElementById('filter_' + filterName);
+        
+        // 移除同组其他按钮的active状态
+        const group = this.closest('.filter-buttons');
+        group.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        
+        // 设置当前按钮为active
+        this.classList.add('active');
+        
+        // 更新隐藏输入框的值
+        if (hiddenInput) {
+            hiddenInput.value = filterValue;
+        }
+        
+        // 特殊处理：自定义日期范围
+        if (filterName === 'date_range') {
+            const customDateRange = document.getElementById('customDateRange');
+            if (filterValue === 'custom') {
+                customDateRange.style.display = 'flex';
+            } else {
+                customDateRange.style.display = 'none';
+                // 自动应用日期范围
+                if (filterValue) {
+                    applyDateRange(filterValue);
+                }
+            }
+        }
+        
+        // 特殊处理：地区、部门、负责人下拉框
+        if (filterName === 'region' || filterName === 'department' || filterName === 'responsible_user') {
+            if (filterValue === '') {
+                // 选择"全部"时，清空下拉框
+                const select = group.querySelector('select');
+                if (select) select.value = '';
+            }
+        }
+        
+        // 自动提交表单
+        document.getElementById('filterForm').submit();
+    });
+});
+
+// 应用日期范围
+
+// 更新全选状态
+function updateSelectAllState() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    const selectAll = document.getElementById('selectAll');
+    if (checkboxes.length > 0 && selectAll) {
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        const someChecked = Array.from(checkboxes).some(cb => cb.checked);
+        selectAll.checked = allChecked;
+        selectAll.indeterminate = someChecked && !allChecked;
+    }
+}
+
+function applyDateRange(range) {
+    const today = new Date();
+    const startInput = document.querySelector('input[name="created_time_start"]');
+    const endInput = document.querySelector('input[name="created_time_end"]');
+    
+    let startDate, endDate;
+    
+    switch(range) {
+        case 'today':
+            startDate = endDate = today.toISOString().split('T')[0];
+            break;
+        case 'yesterday':
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            startDate = endDate = yesterday.toISOString().split('T')[0];
+            break;
+        case 'this_week':
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            startDate = weekStart.toISOString().split('T')[0];
+            endDate = today.toISOString().split('T')[0];
+            break;
+        case 'last_week':
+            const lastWeekStart = new Date(today);
+            lastWeekStart.setDate(today.getDate() - today.getDay() - 7);
+            const lastWeekEnd = new Date(today);
+            lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
+            startDate = lastWeekStart.toISOString().split('T')[0];
+            endDate = lastWeekEnd.toISOString().split('T')[0];
+            break;
+        case 'this_month':
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+            endDate = today.toISOString().split('T')[0];
+            break;
+        case 'last_month':
+            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+            startDate = lastMonth.toISOString().split('T')[0];
+            endDate = lastMonthEnd.toISOString().split('T')[0];
+            break;
+    }
+    
+    if (startInput && startDate) startInput.value = startDate;
+    if (endInput && endDate) endInput.value = endDate;
+}
+
+// 下拉框变化时更新按钮状态
+document.querySelectorAll('select[name="region"], select[name="department"], select[name="responsible_user"]').forEach(select => {
+    select.addEventListener('change', function() {
+        // 更新对应的全部按钮状态
+        const group = this.closest('.filter-buttons');
+        const allBtn = group.querySelector('.filter-btn[data-value=""]');
+        if (allBtn && this.value === '') {
+            group.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            allBtn.classList.add('active');
+        } else if (allBtn && this.value !== '') {
+            allBtn.classList.remove('active');
+        }
+        document.getElementById('filterForm').submit();
+    });
+});
+
+// 地区下拉框变化时同步更新隐藏字段并提交表单
+document.getElementById('regionSelect')?.addEventListener('change', function() {
+    const hiddenInput = document.getElementById('filter_region');
+    if (hiddenInput) {
+        hiddenInput.value = this.value;
+    }
+    // 更新"全部"按钮状态
+    const allBtn = this.closest('.filter-buttons')?.querySelector('.filter-btn[data-value=""]');
+    if (allBtn && this.value === '') {
+        allBtn.classList.add('active');
+        allBtn.closest('.filter-buttons')?.querySelectorAll('.filter-btn').forEach(btn => {
+            if (btn !== allBtn) btn.classList.remove('active');
+        });
+    } else if (allBtn && this.value !== '') {
+        allBtn.classList.remove('active');
+    }
+    document.getElementById('filterForm').submit();
+});
+
+// 文本输入字段的防抖提交（industry, company_email, legal_representative）
+(function() {
+    let debounceTimer;
+    const textInputs = ['filter_industry', 'filter_company_email', 'filter_legal_representative'];
+    
+    textInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('input', function() {
+                // 更新对应的全部按钮状态
+                const group = this.closest('.filter-buttons');
+                const allBtn = group.querySelector('.filter-btn[data-value=""]');
+                if (allBtn) {
+                    if (this.value.trim() === '') {
+                        group.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        allBtn.classList.add('active');
+                    } else {
+                        allBtn.classList.remove('active');
+                    }
+                }
+                
+                // 防抖：延迟500ms后提交表单
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    document.getElementById('filterForm').submit();
+                }, 500);
+            });
+            
+            // 失去焦点时立即提交
+            input.addEventListener('blur', function() {
+                clearTimeout(debounceTimer);
+                document.getElementById('filterForm').submit();
+            });
+        }
+    });
+})();
+
+// 部门下拉框变化时同步更新并提交表单
+document.querySelector('select[name="department"]')?.addEventListener('change', function() {
+    const hiddenInput = document.getElementById('filter_department');
+    if (hiddenInput) {
+        hiddenInput.value = this.value;
+    }
+    // 更新"全部"按钮状态
+    const allBtn = this.closest('.filter-buttons')?.querySelector('.filter-btn[data-value=""]');
+    if (allBtn && this.value === '') {
+        allBtn.classList.add('active');
+        allBtn.closest('.filter-buttons')?.querySelectorAll('.filter-btn').forEach(btn => {
+            if (btn !== allBtn) btn.classList.remove('active');
+        });
+    } else if (allBtn && this.value !== '') {
+        allBtn.classList.remove('active');
+    }
+    document.getElementById('filterForm').submit();
+});
+
+// 负责人下拉框变化时同步更新并提交表单
+document.querySelector('select[name="responsible_user"]')?.addEventListener('change', function() {
+    const hiddenInput = document.getElementById('filter_responsible_user');
+    if (hiddenInput) {
+        hiddenInput.value = this.value;
+    }
+    // 更新"全部"按钮状态
+    const allBtn = this.closest('.filter-buttons')?.querySelector('.filter-btn[data-value=""]');
+    if (allBtn && this.value === '') {
+        allBtn.classList.add('active');
+        allBtn.closest('.filter-buttons')?.querySelectorAll('.filter-btn').forEach(btn => {
+            if (btn !== allBtn) btn.classList.remove('active');
+        });
+    } else if (allBtn && this.value !== '') {
+        allBtn.classList.remove('active');
+    }
+    document.getElementById('filterForm').submit();
+});
+
+// 收起筛选条件 - 移除重复代码，使用上面已定义的立即执行函数
+
+// 初始化筛选条件显示状态（如果有筛选条件，默认展开）
+document.addEventListener('DOMContentLoaded', function() {
+    const hasFilters = {% if client_level or relationship_stage or region or department or responsible_user_id or date_range %}true{% else %}false{% endif %};
+    const basicFilters = document.getElementById('basicFilters');
+    
+    if (hasFilters && basicFilters && text && icon) {
+        basicFilters.style.display = '';
+        text.textContent = '收起';
+        icon.textContent = '▲';
+    } else if (basicFilters && text && icon) {
+        // 即使没有筛选条件，也确保按钮状态正确
+        basicFilters.style.display = 'none';
+        text.textContent = '展开';
+        icon.textContent = '▼';
+    }
+});
+
+// 清除所选
+document.getElementById('clearSelection')?.addEventListener('click', function() {
+    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('selectAll').checked = false;
+    document.getElementById('selectAll').indeterminate = false;
+    updateSelectedCount();
+    this.style.display = 'none';
+});
+
+// 更新清除所选按钮显示
+function updateClearSelectionBtn() {
+    const selected = document.querySelectorAll('.row-checkbox:checked').length;
+    const clearBtn = document.getElementById('clearSelection');
+    if (clearBtn) {
+        clearBtn.style.display = selected > 0 ? 'inline' : 'none';
+    }
+}
+
+// 修改updateSelectedCount函数（已在上方处理，这里不再重复）
+
+// 字段设置 - 从localStorage加载
+function loadColumnSettings() {
+    const saved = localStorage.getItem('customer_list_columns');
+    const savedOrder = localStorage.getItem('customer_list_columns_order');
+    
+    if (saved) {
+        try {
+            const columns = JSON.parse(saved);
+            Object.keys(columns).forEach(col => {
+                const elements = document.querySelectorAll('.' + col);
+                elements.forEach(el => {
+                    if (el) {
+                        el.style.display = columns[col] ? '' : 'none';
+                    }
+                });
+            });
+        } catch (e) {
+        }
+    }
+    
+    // 应用列顺序
+    if (savedOrder) {
+        try {
+            const order = JSON.parse(savedOrder);
+            applyColumnOrder(order);
+        } catch (e) {
+        }
+    }
+}
+
+// 字段设置 - 保存到localStorage
+function saveColumnSettings() {
+    const columns = {
+        'column-checkbox': true,  // 复选框列始终显示
+        'column-name': true,     // 客户名称列始终显示
+        'column-actions': true   // 操作列始终显示
+    };
+    
+    document.querySelectorAll('[data-column]').forEach(checkbox => {
+        const col = checkbox.dataset.column;
+        if (col) {
+            columns[col] = checkbox.checked;
+        }
+    });
+    
+    try {
+        localStorage.setItem('customer_list_columns', JSON.stringify(columns));
+        loadColumnSettings();
+    } catch (e) {
+        alert('保存设置失败，请检查浏览器是否支持本地存储');
+    }
+}
+
+// 初始化字段设置模态框（支持多个按钮）
+function initFieldsSettingsModal() {
+    const saved = localStorage.getItem('customer_list_columns');
+    const columns = saved ? JSON.parse(saved) : {};
+    
+    document.querySelectorAll('[data-column]').forEach(checkbox => {
+        const col = checkbox.dataset.column;
+        checkbox.checked = columns[col] !== false;
+    });
+}
+
+// 为显示列设置按钮绑定事件
+document.getElementById('settingsFieldsBtn')?.addEventListener('click', initFieldsSettingsModal);
+
+// 页面加载时应用字段设置
+document.addEventListener('DOMContentLoaded', function() {
+    loadColumnSettings();
+    initColumnSettingsModal();
+    initColumnSettingsButtons();
+    
+    // 当模态框显示时，重新初始化按钮事件（防止事件丢失）
+    const fieldsSettingsModal = document.getElementById('fieldsSettingsModal');
+    if (fieldsSettingsModal) {
+        fieldsSettingsModal.addEventListener('shown.bs.modal', function() {
+            initColumnSettingsButtons();
+        });
+    }
+});
+
+// 字段定义
+const ALL_FIELDS = [
+    { column: 'column-checkbox', label: '复选框', required: true },
+    { column: 'column-name', label: '客户名称', required: true },
+    { column: 'column-code', label: '统一信用代码', required: false },
+    { column: 'column-legal-representative', label: '法定代表人', required: false },
+    { column: 'column-established-date', label: '成立日期', required: false },
+    { column: 'column-registered-capital', label: '注册资本（万元）', required: false },
+    { column: 'column-company-phone', label: '联系电话', required: false },
+    { column: 'column-company-email', label: '邮箱', required: false },
+    { column: 'column-company-address', label: '地址', required: false },
+    { column: 'column-level', label: '客户等级', required: false },
+    { column: 'column-grade', label: '客户分级', required: false },
+    { column: 'column-type', label: '客户类型', required: false },
+    { column: 'column-credit', label: '信用等级', required: false },
+    { column: 'column-industry', label: '所属行业', required: false },
+    { column: 'column-region', label: '所属区域', required: false },
+    { column: 'column-source', label: '客户来源', required: false },
+    { column: 'column-score', label: '客户评分', required: false },
+    { column: 'column-contact-name', label: '联系人', required: false },
+    { column: 'column-contact-position', label: '职务', required: false },
+    { column: 'column-phone', label: '电话', required: false },
+    { column: 'column-total-contract-amount', label: '累计合同金额', required: false },
+    { column: 'column-total-payment-amount', label: '累计回款金额', required: false },
+    { column: 'column-legal-risk-level', label: '法律风险等级', required: false },
+    { column: 'column-litigation-count', label: '司法案件数量', required: false },
+    { column: 'column-executed-person-count', label: '被执行人数量', required: false },
+    { column: 'column-final-case-count', label: '终本案件数量', required: false },
+    { column: 'column-consumption-limit-count', label: '限制高消费数量', required: false },
+    { column: 'column-is-active', label: '是否活跃', required: false },
+    { column: 'column-health-score', label: '健康度评分', required: false },
+    { column: 'column-description', label: '客户描述', required: false },
+    { column: 'column-responsible', label: '负责人', required: false },
+    { column: 'column-public-sea-entry-time', label: '进入公海时间', required: false },
+    { column: 'column-public-sea-reason', label: '进入公海原因', required: false },
+    { column: 'column-created', label: '创建时间', required: false },
+    { column: 'column-created-by', label: '创建人', required: false },
+    { column: 'column-updated-time', label: '更新时间', required: false },
+    { column: 'column-actions', label: '操作', required: true },
+];
+
+// 初始化列设置模态框
+function initColumnSettingsModal() {
+    const saved = localStorage.getItem('customer_list_columns');
+    const savedOrder = localStorage.getItem('customer_list_columns_order');
+    
+    let displayedColumns = [];
+    if (saved && savedOrder) {
+        try {
+            const columns = JSON.parse(saved);
+            const order = JSON.parse(savedOrder);
+            displayedColumns = order.filter(col => columns[col] !== false);
+        } catch (e) {
+        }
+    }
+    
+    // 如果没有保存的顺序，使用默认顺序
+    if (displayedColumns.length === 0) {
+        displayedColumns = ALL_FIELDS
+            .filter(f => f.required || (saved && JSON.parse(saved)[f.column] !== false))
+            .map(f => f.column);
+    }
+    
+    // 确保复选框列在第一位，操作列在最后一位
+    const checkboxIndex = displayedColumns.indexOf('column-checkbox');
+    const actionsIndex = displayedColumns.indexOf('column-actions');
+    if (checkboxIndex > -1) displayedColumns.splice(checkboxIndex, 1);
+    if (actionsIndex > -1) displayedColumns.splice(displayedColumns.indexOf('column-actions'), 1);
+    displayedColumns.unshift('column-checkbox');
+    displayedColumns.push('column-actions');
+    
+    renderColumnSettings(displayedColumns);
+    
+    // 绑定拖动事件
+    initDragAndDrop();
+}
+
+// 渲染列设置
+function renderColumnSettings(displayedColumns) {
+    const displayedFieldsContainer = document.getElementById('displayedFields');
+    const availableFieldsContainer = document.getElementById('availableFields');
+    
+    if (!displayedFieldsContainer || !availableFieldsContainer) return;
+    
+    displayedFieldsContainer.textContent = '';
+    availableFieldsContainer.textContent = '';
+    
+    // 确保复选框列在第一位，操作列在最后一位
+    const normalizedColumns = [...displayedColumns];
+    const checkboxIndex = normalizedColumns.indexOf('column-checkbox');
+    const actionsIndex = normalizedColumns.indexOf('column-actions');
+    if (checkboxIndex > -1) normalizedColumns.splice(checkboxIndex, 1);
+    if (actionsIndex > -1) normalizedColumns.splice(normalizedColumns.indexOf('column-actions'), 1);
+    normalizedColumns.unshift('column-checkbox');
+    normalizedColumns.push('column-actions');
+    
+    const displayedSet = new Set(normalizedColumns);
+    
+    // 渲染已显示的字段（按规范化后的顺序）
+    normalizedColumns.forEach(column => {
+        const field = ALL_FIELDS.find(f => f.column === column);
+        if (field) {
+            const tag = createFieldTag(field, true);
+            displayedFieldsContainer.appendChild(tag);
+        }
+    });
+    
+    // 渲染可选择的字段
+    ALL_FIELDS.forEach(field => {
+        if (!displayedSet.has(field.column)) {
+            const item = createFieldItem(field);
+            availableFieldsContainer.appendChild(item);
+        }
+    });
+}
+
+// 创建字段标签（已显示的）
+function createFieldTag(field, isDisplayed) {
+    const tag = document.createElement('span');
+    tag.className = 'badge bg-primary d-inline-flex align-items-center gap-1';
+    tag.style.cursor = isDisplayed && !field.required ? 'move' : 'default';
+    tag.draggable = isDisplayed && !field.required;
+    tag.dataset.column = field.column;
+    // TODO: 使用DOMPurify清理HTML
+            tag.innerHTML = `
+        ${field.label}
+        ${!field.required ? '<button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.65em;" data-click="handle_onclick_3(\'${field.column}\')"></button>' : ''}
+    `;
+    
+    if (tag.draggable) {
+        tag.addEventListener('dragstart', handleDragStart);
+        tag.addEventListener('dragover', handleDragOver);
+        tag.addEventListener('drop', handleDrop);
+        tag.addEventListener('dragend', handleDragEnd);
+    }
+    
+    return tag;
+}
+
+// 创建字段项（可选择的）
+function createFieldItem(field) {
+    const item = document.createElement('div');
+    item.className = 'd-flex align-items-center justify-content-between p-2 border rounded';
+    // TODO: 使用DOMPurify清理HTML
+            item.innerHTML = `
+        <span>${field.label}</span>
+        <button type="button" class="btn btn-sm btn-link p-0"data-click="handle_onclick_4"${field.column}')">
+            <i class="bi bi-plus-circle"></i>
+        </button>
+    `;
+    return item;
+}
+
+// 添加字段
+function addField(column) {
+    const saved = localStorage.getItem('customer_list_columns');
+    const savedOrder = localStorage.getItem('customer_list_columns_order');
+    
+    let displayedColumns = [];
+    if (savedOrder) {
+        try {
+            displayedColumns = JSON.parse(savedOrder);
+            // 移除复选框和操作列（如果存在），稍后会重新添加
+            const checkboxIndex = displayedColumns.indexOf('column-checkbox');
+            const actionsIndex = displayedColumns.indexOf('column-actions');
+            if (checkboxIndex > -1) displayedColumns.splice(checkboxIndex, 1);
+            if (actionsIndex > -1) displayedColumns.splice(displayedColumns.indexOf('column-actions'), 1);
+        } catch (e) {
+        }
+    }
+    
+    if (!displayedColumns.includes(column)) {
+        displayedColumns.push(column);
+        // 确保复选框列在第一位，操作列在最后一位
+        displayedColumns.unshift('column-checkbox');
+        displayedColumns.push('column-actions');
+        localStorage.setItem('customer_list_columns_order', JSON.stringify(displayedColumns));
+        
+        const columns = saved ? JSON.parse(saved) : {};
+        columns[column] = true;
+        localStorage.setItem('customer_list_columns', JSON.stringify(columns));
+        
+        renderColumnSettings(displayedColumns);
+        initDragAndDrop();
+    }
+}
+
+// 移除字段
+function removeField(column) {
+    const field = ALL_FIELDS.find(f => f.column === column);
+    if (field && field.required) return; // 不能移除必选字段
+    
+    const saved = localStorage.getItem('customer_list_columns');
+    const savedOrder = localStorage.getItem('customer_list_columns_order');
+    
+    let displayedColumns = [];
+    if (savedOrder) {
+        try {
+            displayedColumns = JSON.parse(savedOrder);
+        } catch (e) {
+        }
+    }
+    
+    displayedColumns = displayedColumns.filter(col => col !== column);
+    // 确保复选框列在第一位，操作列在最后一位
+    const checkboxIndex = displayedColumns.indexOf('column-checkbox');
+    const actionsIndex = displayedColumns.indexOf('column-actions');
+    if (checkboxIndex > -1) displayedColumns.splice(checkboxIndex, 1);
+    if (actionsIndex > -1) displayedColumns.splice(displayedColumns.indexOf('column-actions'), 1);
+    displayedColumns.unshift('column-checkbox');
+    displayedColumns.push('column-actions');
+    localStorage.setItem('customer_list_columns_order', JSON.stringify(displayedColumns));
+    
+    const columns = saved ? JSON.parse(saved) : {};
+    columns[column] = false;
+    localStorage.setItem('customer_list_columns', JSON.stringify(columns));
+    
+    renderColumnSettings(displayedColumns);
+    initDragAndDrop();
+}
+
+// 拖动相关变量
+let draggedElement = null;
+
+// 初始化拖动功能
+function initDragAndDrop() {
+    const displayedFieldsContainer = document.getElementById('displayedFields');
+    if (!displayedFieldsContainer) return;
+    
+    const tags = displayedFieldsContainer.querySelectorAll('[draggable="true"]');
+    tags.forEach(tag => {
+        tag.addEventListener('dragstart', handleDragStart);
+        tag.addEventListener('dragover', handleDragOver);
+        tag.addEventListener('drop', handleDrop);
+        tag.addEventListener('dragend', handleDragEnd);
+    });
+}
+
+function handleDragStart(e) {
+    draggedElement = this;
+    this.style.opacity = '0.5';
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+    
+    if (draggedElement !== this) {
+        const displayedFieldsContainer = document.getElementById('displayedFields');
+        const allTags = Array.from(displayedFieldsContainer.children);
+        const draggedIndex = allTags.indexOf(draggedElement);
+        const targetIndex = allTags.indexOf(this);
+        
+        // 检查是否尝试拖动复选框或操作列
+        const draggedColumn = draggedElement.dataset.column;
+        const targetColumn = this.dataset.column;
+        if (draggedColumn === 'column-checkbox' || draggedColumn === 'column-actions' ||
+            targetColumn === 'column-checkbox' || targetColumn === 'column-actions') {
+            // 不允许拖动复选框和操作列
+            return false;
+        }
+        
+        if (draggedIndex < targetIndex) {
+            displayedFieldsContainer.insertBefore(draggedElement, this.nextSibling);
+        } else {
+            displayedFieldsContainer.insertBefore(draggedElement, this);
+        }
+        
+        // 更新顺序，确保复选框在第一位，操作列在最后一位
+        let newOrder = Array.from(displayedFieldsContainer.children).map(tag => tag.dataset.column).filter(col => col);
+        const checkboxIndex = newOrder.indexOf('column-checkbox');
+        const actionsIndex = newOrder.indexOf('column-actions');
+        if (checkboxIndex > -1) newOrder.splice(checkboxIndex, 1);
+        if (actionsIndex > -1) newOrder.splice(newOrder.indexOf('column-actions'), 1);
+        newOrder.unshift('column-checkbox');
+        newOrder.push('column-actions');
+        localStorage.setItem('customer_list_columns_order', JSON.stringify(newOrder));
+        
+        // 重新渲染以确保顺序正确
+        renderColumnSettings(newOrder);
+        initDragAndDrop();
+    }
+    
+    return false;
+}
+
+function handleDragEnd(e) {
+    this.style.opacity = '';
+    draggedElement = null;
+}
+
+// 初始化保存和重置按钮事件绑定
+function initColumnSettingsButtons() {
+    // 重置字段设置
+    const resetBtn = document.getElementById('resetFieldsSettings');
+    if (resetBtn) {
+        // 移除旧的事件监听器（如果存在）
+        const newResetBtn = resetBtn.cloneNode(true);
+        resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
+        
+        newResetBtn.addEventListener('click', function() {
+            if (confirm('确定要重置所有字段设置吗？')) {
+                // 清除保存的设置
+                localStorage.removeItem('customer_list_columns');
+                localStorage.removeItem('customer_list_columns_order');
+                
+                // 获取默认显示的列
+                let defaultColumns = ALL_FIELDS.filter(f => f.required || ['column-code', 'column-level', 'column-type', 'column-credit', 'column-responsible', 'column-created'].includes(f.column)).map(f => f.column);
+                
+                // 确保复选框列在第一位，操作列在最后一位
+                const checkboxIndex = defaultColumns.indexOf('column-checkbox');
+                const actionsIndex = defaultColumns.indexOf('column-actions');
+                if (checkboxIndex > -1) defaultColumns.splice(checkboxIndex, 1);
+                if (actionsIndex > -1) defaultColumns.splice(defaultColumns.indexOf('column-actions'), 1);
+                defaultColumns.unshift('column-checkbox');
+                defaultColumns.push('column-actions');
+                
+                // 保存默认设置到 localStorage
+                const defaultColumnsObj = {};
+                ALL_FIELDS.forEach(field => {
+                    defaultColumnsObj[field.column] = defaultColumns.includes(field.column);
+                });
+                localStorage.setItem('customer_list_columns', JSON.stringify(defaultColumnsObj));
+                localStorage.setItem('customer_list_columns_order', JSON.stringify(defaultColumns));
+                
+                // 应用设置到表格
+                loadColumnSettings();
+                applyColumnOrder(defaultColumns);
+                
+                // 更新模态框显示
+                renderColumnSettings(defaultColumns);
+                initDragAndDrop();
+            }
+        });
+    }
+    
+    // 保存字段设置
+    const saveBtn = document.getElementById('saveFieldsSettings');
+    if (saveBtn) {
+        // 移除旧的事件监听器（如果存在）
+        const newSaveBtn = saveBtn.cloneNode(true);
+        saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+        
+        newSaveBtn.addEventListener('click', function() {
+            const displayedFieldsContainer = document.getElementById('displayedFields');
+            if (!displayedFieldsContainer) {
+                return;
+            }
+            
+            let displayedColumns = Array.from(displayedFieldsContainer.children).map(tag => tag.dataset.column).filter(col => col);
+            
+            // 确保复选框列在第一位，操作列在最后一位
+            // 移除复选框和操作列（如果存在）
+            const checkboxIndex = displayedColumns.indexOf('column-checkbox');
+            const actionsIndex = displayedColumns.indexOf('column-actions');
+            if (checkboxIndex > -1) displayedColumns.splice(checkboxIndex, 1);
+            if (actionsIndex > -1) displayedColumns.splice(displayedColumns.indexOf('column-actions'), 1);
+            // 将复选框列放在第一位，操作列放在最后
+            displayedColumns.unshift('column-checkbox');
+            displayedColumns.push('column-actions');
+            
+            // 保存顺序
+            localStorage.setItem('customer_list_columns_order', JSON.stringify(displayedColumns));
+            
+            // 保存显示状态
+            const columns = {
+                'column-checkbox': true,
+                'column-name': true,
+                'column-actions': true
+            };
+            
+            displayedColumns.forEach(col => {
+                if (col && col !== 'column-checkbox' && col !== 'column-name' && col !== 'column-actions') {
+                    columns[col] = true;
+                }
+            });
+            
+            ALL_FIELDS.forEach(field => {
+                if (!displayedColumns.includes(field.column) && !field.required) {
+                    columns[field.column] = false;
+                }
+            });
+            
+            localStorage.setItem('customer_list_columns', JSON.stringify(columns));
+            
+            // 应用设置
+            loadColumnSettings();
+            
+            // 应用列顺序
+            applyColumnOrder(displayedColumns);
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('fieldsSettingsModal'));
+            if (modal) {
+                modal.hide();
+            }
+        });
+    }
+}
+
+// 应用列顺序
+function applyColumnOrder(order) {
+    const thead = document.querySelector('thead tr');
+    const tbodyRows = document.querySelectorAll('tbody tr');
+    
+    if (!thead) return;
+    
+    // 确保复选框列在第一位，操作列在最后一位
+    const normalizedOrder = [...order];
+    // 移除复选框和操作列（如果存在）
+    const checkboxIndex = normalizedOrder.indexOf('column-checkbox');
+    const actionsIndex = normalizedOrder.indexOf('column-actions');
+    if (checkboxIndex > -1) normalizedOrder.splice(checkboxIndex, 1);
+    if (actionsIndex > -1) normalizedOrder.splice(normalizedOrder.indexOf('column-actions'), 1);
+    // 将复选框列放在第一位，操作列放在最后
+    normalizedOrder.unshift('column-checkbox');
+    normalizedOrder.push('column-actions');
+    
+    // 重新排列表头
+    const headerCells = Array.from(thead.children);
+    const orderedHeaders = [];
+    
+    // 先添加复选框列（固定第一位）
+    const checkboxHeader = headerCells.find(c => c.classList.contains('column-checkbox'));
+    if (checkboxHeader) {
+        orderedHeaders.push(checkboxHeader);
+    }
+    
+    // 按顺序添加其他列（排除复选框和操作列）
+    normalizedOrder.slice(1, -1).forEach(col => {
+        const cell = headerCells.find(c => c.classList.contains(col));
+        if (cell && !orderedHeaders.includes(cell)) {
+            orderedHeaders.push(cell);
+        }
+    });
+    
+    // 最后添加操作列（固定最后一位）
+    const actionsHeader = headerCells.find(c => c.classList.contains('column-actions'));
+    if (actionsHeader && !orderedHeaders.includes(actionsHeader)) {
+        orderedHeaders.push(actionsHeader);
+    }
+    
+    // 重新插入表头
+    orderedHeaders.forEach(cell => thead.appendChild(cell));
+    
+    // 重新排列数据行
+    tbodyRows.forEach(row => {
+        const dataCells = Array.from(row.children);
+        const orderedCells = [];
+        
+        // 先添加复选框列（固定第一位）
+        const checkboxCell = dataCells.find(c => c.classList.contains('column-checkbox'));
+        if (checkboxCell) {
+            orderedCells.push(checkboxCell);
+        }
+        
+        // 按顺序添加其他列（排除复选框和操作列）
+        normalizedOrder.slice(1, -1).forEach(col => {
+            const cell = dataCells.find(c => c.classList.contains(col));
+            if (cell && !orderedCells.includes(cell)) {
+                orderedCells.push(cell);
+            }
+        });
+        
+        // 最后添加操作列（固定最后一位）
+        const actionsCell = dataCells.find(c => c.classList.contains('column-actions'));
+        if (actionsCell && !orderedCells.includes(actionsCell)) {
+            orderedCells.push(actionsCell);
+        }
+        
+        // 重新插入数据单元格
+        orderedCells.forEach(cell => row.appendChild(cell));
+    });
+}
+
+// 为表头齿轮按钮绑定事件
+document.getElementById('tableColumnSettingsBtn')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('列设置按钮被点击');
+    
+    // 先初始化模态框内容
+    initColumnSettingsModal();
+    
+    // 尝试使用Bootstrap打开模态框
+    const modalElement = document.getElementById('fieldsSettingsModal');
+    if (modalElement) {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        } else if (typeof $ !== 'undefined' && $.fn.modal) {
+            // 兼容jQuery Bootstrap
+            $(modalElement).modal('show');
+        } else {
+            // 降级方案：直接显示模态框
+            console.log('使用降级方案打开模态框');
+            modalElement.style.display = 'block';
+            modalElement.classList.add('show');
+            modalElement.setAttribute('aria-hidden', 'false');
+            modalElement.setAttribute('aria-modal', 'true');
+            modalElement.setAttribute('role', 'dialog');
+            
+            // 创建backdrop
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            backdrop.id = 'fieldsSettingsModalBackdrop';
+            backdrop.style.zIndex = '1040';
+            document.body.appendChild(backdrop);
+            
+            // 设置模态框z-index
+            modalElement.style.zIndex = '1050';
+            const dialog = modalElement.querySelector('.modal-dialog');
+            if (dialog) {
+                dialog.style.zIndex = '1051';
+            }
+        }
+    } else {
+        console.error('列设置模态框未找到');
+        alert('列设置模态框未找到，请检查页面是否正确加载。');
+    }
+});
+}
+</script>
+
+{% include "customer_management/includes/filter_fields_settings_modal.html" %}
+
+
+
+<!-- 引入筛选功能模块 -->
+<script src="{% static "js/list-filters.js" %}"></script>
+<script src="{% static "js/filter-fields-settings.js" %}"></script>
+
+<script>
+// 初始化筛选功能
+document.addEventListener("DOMContentLoaded", function() {
+    // 初始化列表筛选功能
+    if (typeof ListFilters !== "undefined") {
+        const listFilters = new ListFilters({
+            formId: "filterForm",
+            debounceDelay: 500,
+            autoSubmit: true,
+            enableFieldsSettings: false  // 使用独立的FilterFieldsSettings模块
+        });
+        listFilters.init();
+        console.log("列表筛选功能已初始化");
+    } else {
+        console.error("ListFilters模块未加载");
+    }
+    
+    // 初始化筛选字段设置功能
+    if (typeof FilterFieldsSettings !== "undefined") {
+        const filterFieldsSettings = new FilterFieldsSettings({
+            storageKey: "customer_list_filter_fields_settings",
+            containerId: "basicFilters",
+            modalId: "filterFieldsSettingsModal",
+            listId: "filterFieldsList",
+            settingsBtnId: "settingsFilterFieldsBtn",
+            saveBtnId: "saveFilterFieldsSettings",
+            resetBtnId: "resetFilterFieldsSettings",
+            maxEnabledFields: 10,
+            defaultEnabledFields: []
+        });
+        filterFieldsSettings.init();
+        console.log("筛选字段设置功能已初始化");
+    } else {
+        console.error("FilterFieldsSettings模块未加载");
+    }
+});
+</script>
+
+
+
+<!-- 筛选字段设置模态框 -->
+
+{% endblock %}

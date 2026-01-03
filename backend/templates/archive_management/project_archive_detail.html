@@ -1,0 +1,145 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}项目归档详情 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header">
+            <h3>📋 项目归档详情：{{ archive.archive_number }}</h3>
+            <div>
+                <a href="{% url 'archive_management:project_archive_list' %}" class="btn btn-light btn-sm">返回列表</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="mb-3">基本信息</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 120px;">归档编号</th>
+                            <td>{{ archive.archive_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>项目名称</th>
+                            <td>{{ archive.project.project_name|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>项目编号</th>
+                            <td>{{ archive.project.project_number|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>归档状态</th>
+                            <td>
+                                <span class="status-badge status-{{ archive.status }}">
+                                    {{ archive.get_status_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>归档原因</th>
+                            <td>{{ archive.archive_reason|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th>归档说明</th>
+                            <td>{{ archive.archive_description|default:"-" }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="mb-3">归档信息</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 120px;">申请人</th>
+                            <td>{{ archive.applicant.username }}</td>
+                        </tr>
+                        <tr>
+                            <th>申请时间</th>
+                            <td>{{ archive.applied_time|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% if archive.executor %}
+                        <tr>
+                            <th>执行人</th>
+                            <td>{{ archive.executor.username }}</td>
+                        </tr>
+                        <tr>
+                            <th>执行时间</th>
+                            <td>{{ archive.executed_time|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if archive.confirmed_by %}
+                        <tr>
+                            <th>确认人</th>
+                            <td>{{ archive.confirmed_by.username }}</td>
+                        </tr>
+                        <tr>
+                            <th>确认时间</th>
+                            <td>{{ archive.confirmed_time|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>创建时间</th>
+                            <td>{{ archive.created_time|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 归档文档列表 -->
+            {% if documents %}
+            <div class="mt-4">
+                <h5 class="mb-3">归档文档</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>文档编号</th>
+                                <th>文档名称</th>
+                                <th>文档类型</th>
+                                <th>分类</th>
+                                <th>状态</th>
+                                <th>上传人</th>
+                                <th>上传时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in documents %}
+                            <tr>
+                                <td>{{ doc.document_number }}</td>
+                                <td>{{ doc.document_name }}</td>
+                                <td>{{ doc.get_document_type_display }}</td>
+                                <td>{{ doc.category.name|default:"-" }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ doc.status }}">
+                                        {{ doc.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ doc.uploaded_by.username }}</td>
+                                <td>{{ doc.uploaded_time|date:"Y-m-d H:i" }}</td>
+                                <td>
+                                    <a href="{% url 'archive_management:project_document_detail' doc.pk %}" class="btn btn-sm btn-outline-primary">查看</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div class="mt-4">
+                <p class="text-muted">暂无归档文档</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

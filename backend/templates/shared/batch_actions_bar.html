@@ -1,0 +1,140 @@
+{% comment %}
+批量操作栏共享模板 (Batch Actions Bar Template)
+
+功能说明：
+- 提供列表页批量操作功能的工具栏组件
+- 当用户选中表格中的复选框时自动显示
+- 支持批量导出、批量删除、批量打印等操作
+- 可自定义添加批量操作按钮和下拉菜单项
+
+使用方法：
+1. 在 list_page_base.html 中引入：{% include "shared/batch_actions_bar.html" %}
+2. 或者在子模板中覆盖 list_page_batch_actions block 来自定义
+
+支持的blocks（可在子模板中覆盖）：
+- list_page_batch_actions_info: 左侧信息区域（默认显示选中数量）
+- list_page_batch_actions_buttons: 右侧按钮区域（默认包含导出和取消选择按钮）
+- list_page_batch_actions_custom_buttons: 自定义按钮区域（位于默认按钮之前）
+- list_page_batch_actions_dropdown: 批量操作下拉菜单
+- list_page_batch_dropdown_items: 下拉菜单项（子模板可以覆盖添加自定义菜单项）
+
+配置选项（在视图中设置）：
+- show_batch_delete: 是否显示批量删除按钮（默认True，设为False可隐藏）
+- show_batch_print: 是否显示批量打印按钮（默认False）
+- show_export_format_menu: 是否显示导出格式选择菜单（默认False）
+- show_batch_dropdown: 是否显示批量操作下拉菜单（默认True）
+- show_batch_export: 是否显示批量导出按钮（默认True）
+
+增强功能：
+1. 批量操作下拉菜单 - 提供"更多操作"下拉菜单，可以添加自定义批量操作项
+2. 批量导出格式选择 - 支持 Excel、CSV、PDF 等多种导出格式
+3. 批量打印功能 - 打印选中的数据行
+4. 批量删除功能 - 删除选中的数据（需在视图中启用）
+
+需要的JavaScript：
+- 批量操作栏的JavaScript代码已在 list_page_base.html 中提供
+- 复选框需要添加 class="row-checkbox" 和 value="{{ item.id }}" 属性
+- 全选复选框需要 id="selectAll"
+- 批量操作模态框功能：showBatchActionModal(type, title, options) 函数已提供
+
+可用的全局函数（在 list_page_base.html 中已定义）：
+- showBatchActionModal(type, title, options) - 显示批量操作模态框
+- showError(message, duration) - 显示错误消息
+- showSuccess(message, duration) - 显示成功消息
+- showLoading(message) - 显示加载状态
+- hideLoading() - 隐藏加载状态
+- getCsrfToken() - 获取 CSRF token
+{% endcomment %}
+
+{% if page_obj %}
+<div class="list-page-batch-actions" id="batchActionsBar">
+    {% block list_page_batch_actions_info %}
+    <div class="list-page-batch-info">
+        <span id="selectedCount">0</span> 项已选择
+    </div>
+    {% endblock %}
+    
+    <div class="list-page-batch-buttons">
+        {% block list_page_batch_actions_custom_buttons %}
+        {% comment %}
+        子模板可以在这里添加自定义批量操作按钮
+        例如：
+        <button type="button" class="btn btn-sm btn-outline-warning" id="batchStatusChangeBtn">
+            <i class="bi bi-gear"></i> 批量修改状态
+        </button>
+        {% endcomment %}
+        {% endblock %}
+        
+        {% block list_page_batch_actions_dropdown %}
+        {% comment %}
+        批量操作下拉菜单 - 更灵活的批量操作方式
+        子模板可以通过覆盖 list_page_batch_dropdown_items block 来添加自定义菜单项
+        {% endcomment %}
+        {% if show_batch_dropdown != False %}
+        <div class="btn-group" role="group" id="batchActionsDropdownGroup">
+            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" id="batchActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-three-dots-vertical"></i> 更多操作
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="batchActionsDropdown">
+                {% block list_page_batch_dropdown_items %}
+                {% comment %}
+                默认下拉菜单项，子模板可以覆盖
+                例如：
+                <li><a class="dropdown-item" href="#" id="batchStatusChangeBtn"><i class="bi bi-gear"></i> 批量修改状态</a></li>
+                <li><a class="dropdown-item" href="#" id="batchUrgencyChangeBtn"><i class="bi bi-exclamation-circle"></i> 批量修改紧急程度</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#" id="batchPrintBtn"><i class="bi bi-printer"></i> 打印选中</a></li>
+                {% endcomment %}
+                {% endblock %}
+            </ul>
+        </div>
+        {% endif %}
+        {% endblock %}
+        
+        {% block list_page_batch_actions_buttons %}
+        {% comment %}
+        默认按钮区域，子模板可以覆盖以自定义按钮
+        
+        批量删除按钮默认显示，可以通过设置 show_batch_delete=False 来隐藏
+        {% endcomment %}
+        {% if show_batch_import != False %}
+        <button type="button" class="btn btn-sm btn-outline-success" id="batchImportBtn" data-bs-toggle="modal" data-bs-target="#batchImportModal">
+            <i class="bi bi-upload"></i> <span class="batch-btn-text">{% block batch_import_text %}批量导入{% endblock %}</span>
+        </button>
+        {% endif %}
+        {% if show_batch_export != False %}
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm btn-outline-primary" id="batchExportBtn">
+                <i class="bi bi-download"></i> <span class="batch-btn-text">{% block batch_export_text %}导出选中{% endblock %}</span>
+            </button>
+            {% if show_export_format_menu %}
+            <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle dropdown-toggle-split" id="batchExportFormatDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">导出格式</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="batchExportFormatDropdown">
+                <li><a class="dropdown-item" href="#" data-export-format="excel"><i class="bi bi-file-earmark-excel"></i> 导出为 Excel</a></li>
+                <li><a class="dropdown-item" href="#" data-export-format="csv"><i class="bi bi-file-earmark-spreadsheet"></i> 导出为 CSV</a></li>
+                <li><a class="dropdown-item" href="#" data-export-format="pdf"><i class="bi bi-file-earmark-pdf"></i> 导出为 PDF</a></li>
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if show_batch_delete != False %}
+        <button type="button" class="btn btn-sm btn-danger" id="batchDeleteBtn" style="display: none;">
+            <i class="bi bi-trash"></i> <span class="batch-btn-text">{% block batch_delete_text %}删除选中{% endblock %}</span>
+        </button>
+        {% endif %}
+        {% if show_batch_print %}
+        <button type="button" class="btn btn-sm btn-outline-info" id="batchPrintBtn">
+            <i class="bi bi-printer"></i> <span class="batch-btn-text">打印选中</span>
+        </button>
+        {% endif %}
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="batchCancelBtn">
+            <i class="bi bi-x-circle"></i> {% block batch_cancel_text %}取消选择{% endblock %}
+        </button>
+        {% endblock %}
+    </div>
+</div>
+{% endif %}
+

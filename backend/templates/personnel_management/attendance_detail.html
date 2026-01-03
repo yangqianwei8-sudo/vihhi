@@ -1,0 +1,163 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block personnel_content %}
+<div class="container-fluid py-4">
+    <!-- 操作按钮 -->
+    <div class="text-end mb-4">
+        <a href="{% url 'personnel_pages:attendance_management' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">员工</span>
+                    <span class="info-value">
+                        <a href="{% url 'personnel_pages:employee_detail' attendance.employee.id %}">
+                            {{ attendance.employee.name }} ({{ attendance.employee.employee_number }})
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">考勤日期</span>
+                    <span class="info-value">{{ attendance.attendance_date|date:"Y年m月d日" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">考勤类型</span>
+                    <span class="info-value">{{ attendance.get_attendance_type_display }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        {% if attendance.is_absent %}
+                        <span class="badge bg-danger">缺勤</span>
+                        {% elif attendance.is_late %}
+                        <span class="badge bg-warning">迟到</span>
+                        {% elif attendance.is_early_leave %}
+                        <span class="badge bg-warning">早退</span>
+                        {% else %}
+                        <span class="badge bg-success">正常</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 时间信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">时间信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">上班时间</span>
+                    <span class="info-value">
+                        {% if attendance.check_in_time %}
+                        {{ attendance.check_in_time|date:"H:i" }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">下班时间</span>
+                    <span class="info-value">
+                        {% if attendance.check_out_time %}
+                        {{ attendance.check_out_time|date:"H:i" }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">工作时长</span>
+                    <span class="info-value" style="font-size: 18px; font-weight: 700; color: #142F5B;">
+                        {{ attendance.work_hours|floatformat:2 }} 小时
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">加班时长</span>
+                    <span class="info-value">
+                        {% if attendance.overtime_hours > 0 %}
+                        <span style="color: #059669; font-weight: 600;">{{ attendance.overtime_hours|floatformat:2 }} 小时</span>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 状态标记 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">状态标记</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">是否迟到</span>
+                    <span class="info-value">
+                        {% if attendance.is_late %}
+                        <span class="badge bg-warning">是</span>
+                        {% else %}
+                        <span class="badge bg-success">否</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">是否早退</span>
+                    <span class="info-value">
+                        {% if attendance.is_early_leave %}
+                        <span class="badge bg-warning">是</span>
+                        {% else %}
+                        <span class="badge bg-success">否</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">是否缺勤</span>
+                    <span class="info-value">
+                        {% if attendance.is_absent %}
+                        <span class="badge bg-danger">是</span>
+                        {% else %}
+                        <span class="badge bg-success">否</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 备注 -->
+    {% if attendance.notes %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <p style="color: var(--vh-text); white-space: pre-wrap;">{{ attendance.notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

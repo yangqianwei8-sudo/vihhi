@@ -1,0 +1,164 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .form-card h5 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-md);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .form-label.required::after {
+        content: " *";
+        color: var(--vh-error);
+    }
+    .formset-item {
+        border: 1px solid var(--vh-border);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        background: var(--vh-bg);
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- 表单 -->
+    <form method="post" id="requestForm">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-card">
+            <h5>基本信息</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label required">申请日期</label>
+                    {{ form.request_date }}
+                    {% if form.request_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.request_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">用途说明</label>
+                    {{ form.purpose }}
+                    {% if form.purpose.errors %}
+                    <div class="text-danger small mt-1">{{ form.purpose.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">备注</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 领用明细 -->
+        <div class="form-card">
+            <h5>领用明细</h5>
+            {{ formset.management_form }}
+            <div id="formset-container">
+                {% for item_form in formset %}
+                <div class="formset-item" data-form-index="{{ forloop.counter0 }}">
+                    {{ item_form.id }}
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label required">办公用品</label>
+                            {{ item_form.supply }}
+                            {% if item_form.supply.errors %}
+                            <div class="text-danger small mt-1">{{ item_form.supply.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label required">申请数量</label>
+                            {{ item_form.requested_quantity }}
+                            {% if item_form.requested_quantity.errors %}
+                            <div class="text-danger small mt-1">{{ item_form.requested_quantity.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">备注</label>
+                            {{ item_form.notes }}
+                            {% if item_form.notes.errors %}
+                            <div class="text-danger small mt-1">{{ item_form.notes.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">&nbsp;</label>
+                            {% if item_form.DELETE %}
+                            <div class="form-check">
+                                {{ item_form.DELETE }}
+                                <label class="form-check-label" for="{{ item_form.DELETE.id_for_label }}">删除</label>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addFormsetItem()">
+                <i class="bi bi-plus-circle"></i> 添加明细
+            </button>
+        </div>
+
+        <!-- 表单错误 -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+        {% if formset.non_form_errors %}
+        <div class="alert alert-danger">
+            {{ formset.non_form_errors }}
+        </div>
+        {% endif %}
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% if is_create %}{% url 'admin_pages:supply_request_list' %}{% else %}{% url 'admin_pages:supply_request_detail' request_obj.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i> 保存
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function addFormsetItem() {
+    // 这个功能需要JavaScript动态添加表单行
+    // 简化版本：提示用户刷新页面或使用Django的formset功能
+    alert('请使用浏览器的后退功能，或刷新页面后添加更多明细项');
+}
+</script>
+{% endblock %}
+

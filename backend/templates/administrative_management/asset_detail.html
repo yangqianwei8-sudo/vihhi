@@ -1,13 +1,12 @@
-{% extends "administrative_management/base.html" %}
+{% extends "shared/module_base.html" %}
+{% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:asset_management' %}">固定资产</a></li>
-<li class="breadcrumb-item active">{{ asset.asset_name }}</li>
-{% endblock %}
+
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .center-hero {
         background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
@@ -39,7 +38,7 @@
     .info-card h5 {
         margin-bottom: 20px;
         padding-bottom: 12px;
-        border-bottom: 2px solid #e5e7eb;
+        border-bottom: 2px solid var(--vh-primary);
         font-weight: 600;
         color: #1f2937;
     }
@@ -76,11 +75,10 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block module_content %}
 <div class="container-fluid py-4">
     <!-- 页面标题区域 -->
     <div class="center-hero">
-        <div class="hero-icon">{{ page_icon }}</div>
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
     </div>
@@ -90,13 +88,17 @@
         <a href="{% url 'admin_pages:asset_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
         </a>
-        <a href="/admin/administrative_management/assettransfer/add/?asset={{ asset.id }}" class="btn btn-outline-primary me-2">
+        {% if can_transfer %}
+        <a href="{% url 'admin_pages:asset_transfer_create' asset_id=asset.id %}" class="btn btn-outline-primary me-2">
             <i class="bi bi-arrow-left-right"></i> 资产转移
         </a>
-        <a href="/admin/administrative_management/assetmaintenance/add/?asset={{ asset.id }}" class="btn btn-outline-info me-2">
+        {% endif %}
+        {% if can_maintenance %}
+        <a href="{% url 'admin_pages:asset_maintenance_create' asset_id=asset.id %}" class="btn btn-outline-info me-2">
             <i class="bi bi-tools"></i> 维护记录
         </a>
-        <a href="{% url 'admin_pages:asset_update' asset.id %}" class="btn btn-primary">
+        {% endif %}
+        <a href="{% url 'admin_pages:asset_update' asset_id=asset.id %}" class="btn btn-primary">
             <i class="bi bi-pencil"></i> 编辑
         </a>
     </div>
@@ -266,7 +268,7 @@
                     </p>
                     {% endif %}
                 </div>
-                <a href="/admin/administrative_management/assettransfer/{{ transfer.id }}/" class="btn btn-sm btn-outline-info ms-2">
+                <a href="{% url 'admin_pages:asset_transfer_detail' transfer_id=transfer.id %}" class="btn btn-sm btn-outline-info ms-2">
                     <i class="bi bi-eye"></i>
                 </a>
             </div>
@@ -301,9 +303,14 @@
                     </p>
                     {% endif %}
                 </div>
-                <a href="/admin/administrative_management/assetmaintenance/{{ maintenance.id }}/change/" class="btn btn-sm btn-outline-secondary ms-2">
-                    <i class="bi bi-pencil"></i>
-                </a>
+                    <a href="{% url 'admin_pages:asset_maintenance_detail' maintenance_id=maintenance.id %}" class="btn btn-sm btn-outline-info ms-2">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    {% if maintenance.performed_by == request.user %}
+                    <a href="{% url 'admin_pages:asset_maintenance_update' maintenance_id=maintenance.id %}" class="btn btn-sm btn-outline-secondary ms-2">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    {% endif %}
             </div>
         </div>
         {% endfor %}

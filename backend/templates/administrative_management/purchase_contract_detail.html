@@ -1,0 +1,237 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card-header {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    .info-card-title {
+        margin: 0;
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .info-grid {
+        display: grid;
+        gap: var(--spacing-md);
+    }
+    .info-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+    .info-label {
+        font-size: var(--font-size-sm);
+        color: var(--vh-text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: var(--font-size-base);
+        color: var(--vh-text);
+        font-weight: 500;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-draft { background: #f3f4f6; color: #374151; }
+    .status-pending_approval { background: #fff3cd; color: #856404; }
+    .status-approved { background: #cfe2ff; color: #084298; }
+    .status-signed { background: #d1e7dd; color: #0f5132; }
+    .status-executing { background: #cfe2ff; color: #084298; }
+    .status-completed { background: #d1e7dd; color: #0f5132; }
+    .status-cancelled { background: #f8d7da; color: #842029; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:purchase_contract_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if contract.status not in 'completed,cancelled' %}
+            <a href="{% url 'admin_pages:purchase_contract_update' contract.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+            {% if can_pay %}
+            <a href="{% url 'admin_pages:purchase_payment_create_for_contract' contract.id %}" class="btn btn-success">
+                <i class="bi bi-cash-coin"></i> 创建付款
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">合同编号</span>
+                    <span class="info-value"><code>{{ contract.contract_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">合同名称</span>
+                    <span class="info-value">{{ contract.contract_name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">供应商</span>
+                    <span class="info-value">{{ contract.supplier.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge status-{{ contract.status }}">
+                            {{ contract.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">合同金额</span>
+                    <span class="info-value" style="font-size: var(--font-size-lg); font-weight: 700; color: var(--vh-primary);">
+                        ¥{{ contract.contract_amount|floatformat:2 }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">已付款金额</span>
+                    <span class="info-value">¥{{ contract.paid_amount|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">未付款金额</span>
+                    <span class="info-value" style="font-size: var(--font-size-lg); font-weight: 700; color: var(--vh-error);">
+                        ¥{{ contract.unpaid_amount|floatformat:2 }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">签约日期</span>
+                    <span class="info-value">{{ contract.signed_date|date:"Y-m-d"|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">到期日期</span>
+                    <span class="info-value">{{ contract.expiry_date|date:"Y-m-d"|default:"-" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 合同内容 -->
+    {% if contract.contract_content %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">合同内容</h5>
+        </div>
+        <div class="info-card-body">
+            <div style="white-space: pre-wrap;">{{ contract.contract_content }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 合同文件 -->
+    {% if contract.contract_file %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">合同文件</h5>
+        </div>
+        <div class="info-card-body">
+            <a href="{{ contract.contract_file.url }}" target="_blank" class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark"></i> 查看合同文件
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 付款记录 -->
+    {% if payments %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">付款记录</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>付款单号</th>
+                            <th>付款日期</th>
+                            <th>付款金额</th>
+                            <th>付款人</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td><code>{{ payment.payment_number }}</code></td>
+                            <td>{{ payment.payment_date|date:"Y-m-d" }}</td>
+                            <td>¥{{ payment.amount|floatformat:2 }}</td>
+                            <td>{{ payment.paid_by.get_full_name|default:payment.paid_by.username|default:"-" }}</td>
+                            <td>
+                                {% if payment.status == 'pending' %}
+                                <span class="badge bg-warning">待付款</span>
+                                {% elif payment.status == 'paid' %}
+                                <span class="badge bg-success">已付款</span>
+                                {% else %}
+                                <span class="badge bg-secondary">已取消</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'admin_pages:purchase_payment_detail' payment.id %}" class="btn btn-sm btn-outline-primary" title="查看详情">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注 -->
+    {% if contract.notes %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <p style="white-space: pre-wrap; margin: 0;">{{ contract.notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

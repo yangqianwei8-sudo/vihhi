@@ -1,0 +1,623 @@
+{% comment %}
+实时定位共享模板
+
+功能说明：
+- 提供GPS实时定位功能（使用浏览器Geolocation API）
+- 提供IP定位备选方案（当GPS不可用时）
+- 自动调用高德地图API进行逆地理编码，将坐标转换为地址
+- 支持编辑时回填已有位置信息
+- 统一的UI展示和交互体验
+
+使用方法：
+1. 在表单中引入此模板：
+   {% include "shared/realtime_location_snippet.html" with 
+       prefix="visit" 
+       latitude_field_id="hiddenLatitude"
+       longitude_field_id="hiddenLongitude"
+       address_field_id="hiddenLocationAddress"
+       label="拜访位置"
+       show_map_preview=False
+       auto_locate=True
+   %}
+
+2. 在页面底部初始化（可选，如果auto_locate=True则自动初始化）：
+   {% block extra_js %}
+   <script>
+   document.addEventListener('DOMContentLoaded', function() {
+       initRealtimeLocation({
+           prefix: 'visit',
+           latitudeFieldId: 'hiddenLatitude',
+           longitudeFieldId: 'hiddenLongitude',
+           addressFieldId: 'hiddenLocationAddress',
+           regeocodeApiUrl: '/api/customer/regeocode/',
+           ipLocationApiUrl: '/api/customer/ip-location/',
+           autoLocate: true
+       });
+   });
+   </script>
+   {% endblock %}
+
+参数说明：
+- prefix: ID前缀（必需），用于区分同一页面中的多个定位器实例
+- latitude_field_id: 纬度隐藏字段ID（可选，默认：prefix + "Latitude"）
+- latitude_field_name: 纬度隐藏字段name属性（可选，默认：使用latitude_field_id）
+- longitude_field_id: 经度隐藏字段ID（可选，默认：prefix + "Longitude"）
+- longitude_field_name: 经度隐藏字段name属性（可选，默认：使用longitude_field_id）
+- address_field_id: 地址隐藏字段ID（可选，默认：prefix + "LocationAddress"）
+- address_field_name: 地址隐藏字段name属性（可选，默认：使用address_field_id）
+- label: 定位功能标签（可选，默认："位置定位"）
+- show_map_preview: 是否显示地图预览（可选，默认：False）
+- auto_locate: 是否自动定位（可选，默认：False）
+- watch_position: 是否启用动态跟踪（可选，默认：False）。如果为True，将使用watchPosition持续跟踪位置变化
+- watch_interval: 动态跟踪更新间隔（毫秒，可选，默认：5000，仅在watch_position=True时有效）
+- required: 是否必填（可选，默认：False）
+- regeocode_api_url: 逆地理编码API URL（可选，默认：'/api/customer/regeocode/'）
+- ip_location_api_url: IP定位API URL（可选，默认：'/api/customer/ip-location/'）
+
+生成的HTML元素ID：
+- 纬度隐藏字段：{latitude_field_id} 或 {prefix}Latitude
+- 经度隐藏字段：{longitude_field_id} 或 {prefix}Longitude
+- 地址隐藏字段：{address_field_id} 或 {prefix}LocationAddress
+- 定位显示区域：{prefix}LocationDisplay
+- 定位按钮：{prefix}LocationButton
+
+示例：
+{% include "shared/realtime_location_snippet.html" with prefix="visit" auto_locate=True %}
+{% include "shared/realtime_location_snippet.html" with prefix="delivery" label="送达位置" %}
+{% endcomment %}
+
+{% load static %}
+
+{# 设置默认值 #}
+{% with prefix=prefix|default:"location" %}
+{% with latitude_field_id=latitude_field_id|default:prefix|add:"Latitude" %}
+{% with latitude_field_name=latitude_field_name|default:latitude_field_id %}
+{% with longitude_field_id=longitude_field_id|default:prefix|add:"Longitude" %}
+{% with longitude_field_name=longitude_field_name|default:longitude_field_id %}
+{% with address_field_id=address_field_id|default:prefix|add:"LocationAddress" %}
+{% with address_field_name=address_field_name|default:address_field_id %}
+{% with label=label|default:"位置定位" %}
+{% with show_map_preview=show_map_preview|default:False %}
+{% with auto_locate=auto_locate|default:False %}
+{% with watch_position=watch_position|default:False %}
+{% with watch_interval=watch_interval|default:5000 %}
+{% with required=required|default:False %}
+{% with regeocode_api_url=regeocode_api_url|default:"/api/customer/regeocode/" %}
+{% with ip_location_api_url=ip_location_api_url|default:"/api/customer/ip-location/" %}
+
+{# 隐藏字段（用于存储位置数据） #}
+<input type="hidden" id="{{ latitude_field_id }}" name="{{ latitude_field_name }}" value="">
+<input type="hidden" id="{{ longitude_field_id }}" name="{{ longitude_field_name }}" value="">
+<input type="hidden" id="{{ address_field_id }}" name="{{ address_field_name }}" value="">
+
+{# 定位功能容器 #}
+<div class="mb-3 realtime-location-container" data-prefix="{{ prefix }}">
+    <label class="form-label">
+        {{ label }}
+        {% if required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    
+    {# 定位按钮和状态显示区域 #}
+    <div class="d-flex flex-column gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" 
+                    class="btn btn-outline-primary btn-sm" 
+                    id="{{ prefix }}LocationButton"
+                    title="点击获取当前位置">
+                <i class="bi bi-geo-alt"></i> 获取位置
+            </button>
+            <div id="{{ prefix }}LocationStatus" class="text-muted small" style="min-height: 20px;"></div>
+        </div>
+        
+        {# 位置信息显示区域 #}
+        <div id="{{ prefix }}LocationDisplay" class="location-display-container" style="display: none;">
+            <div class="card border-success">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-success mb-1">定位成功</div>
+                            <div id="{{ prefix }}LocationAddress" class="text-muted small mb-2"></div>
+                            <div id="{{ prefix }}LocationCoords" class="font-monospace small text-muted"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <small class="form-text text-muted">
+        <i class="bi bi-info-circle"></i> 
+        {% if watch_position %}
+        点击"获取位置"按钮将启动位置跟踪，持续更新您的位置（GPS定位）。如果GPS不可用，将自动尝试IP定位。
+        {% else %}
+        点击"获取位置"按钮将自动获取您的当前位置（GPS定位），如果GPS不可用，将自动尝试IP定位。
+        {% endif %}
+    </small>
+</div>
+
+{# JavaScript定位功能实现 #}
+<script>
+/**
+ * 初始化实时定位功能
+ * @param {Object} options 配置选项
+ * @param {string} options.prefix - ID前缀（必需）
+ * @param {string} options.latitudeFieldId - 纬度隐藏字段ID（可选）
+ * @param {string} options.longitudeFieldId - 经度隐藏字段ID（可选）
+ * @param {string} options.addressFieldId - 地址隐藏字段ID（可选）
+ * @param {string} options.regeocodeApiUrl - 逆地理编码API URL（可选，默认：'/api/customer/regeocode/'）
+ * @param {string} options.ipLocationApiUrl - IP定位API URL（可选，默认：'/api/customer/ip-location/'）
+ * @param {boolean} options.autoLocate - 是否自动定位（可选，默认：false）
+ * @param {boolean} options.watchPosition - 是否启用动态跟踪（可选，默认：false）。如果为true，将使用watchPosition持续跟踪位置变化
+ * @param {number} options.watchInterval - 动态跟踪更新间隔（毫秒，可选，默认：5000，仅在watchPosition=true时有效）
+ * @param {boolean} options.enableLogging - 是否启用日志（可选，默认：false）
+ */
+function initRealtimeLocation(options) {
+    if (!options || !options.prefix) {
+        console.error('initRealtimeLocation: 缺少必需的prefix参数');
+        return null;
+    }
+    
+    const prefix = options.prefix;
+    const latitudeFieldId = options.latitudeFieldId || prefix + 'Latitude';
+    const longitudeFieldId = options.longitudeFieldId || prefix + 'Longitude';
+    const addressFieldId = options.addressFieldId || prefix + 'LocationAddress';
+    const regeocodeApiUrl = options.regeocodeApiUrl || '/api/customer/regeocode/';
+    const ipLocationApiUrl = options.ipLocationApiUrl || '/api/customer/ip-location/';
+    const autoLocate = options.autoLocate || false;
+    const watchPosition = options.watchPosition || false;
+    const watchInterval = options.watchInterval || 5000;
+    const enableLogging = options.enableLogging || false;
+    
+    // 获取DOM元素
+    const latitudeField = document.getElementById(latitudeFieldId);
+    const longitudeField = document.getElementById(longitudeFieldId);
+    const addressField = document.getElementById(addressFieldId);
+    const locationButton = document.getElementById(prefix + 'LocationButton');
+    const locationStatus = document.getElementById(prefix + 'LocationStatus');
+    const locationDisplay = document.getElementById(prefix + 'LocationDisplay');
+    const locationAddressDisplay = document.getElementById(prefix + 'LocationAddress');
+    const locationCoordsDisplay = document.getElementById(prefix + 'LocationCoords');
+    
+    if (!latitudeField || !longitudeField || !addressField || !locationButton) {
+        console.error('initRealtimeLocation: 缺少必需的DOM元素');
+        return null;
+    }
+    
+    // 定位状态
+    let isLocating = false;
+    let locationObtained = false;
+    let watchId = null; // watchPosition的ID，用于停止跟踪
+    
+    /**
+     * 更新位置状态显示
+     */
+    function updateLocationStatus(message, isSuccess = true) {
+        if (!locationStatus) return;
+        const icon = isSuccess ? 'bi-hourglass-split' : 'bi-exclamation-circle';
+        const color = isSuccess ? 'text-info' : 'text-danger';
+        locationStatus.innerHTML = `<i class="bi ${icon}"></i> <span class="${color}">${message}</span>`;
+    }
+    
+    /**
+     * 更新位置信息显示
+     */
+    function updateLocationDisplay(latitude, longitude, address) {
+        if (!locationDisplay) return;
+        
+        if (latitude && longitude) {
+            const lat = parseFloat(latitude).toFixed(7);
+            const lon = parseFloat(longitude).toFixed(7);
+            
+            // 更新显示
+            if (locationAddressDisplay) {
+                locationAddressDisplay.textContent = address || '地址解析中...';
+            }
+            if (locationCoordsDisplay) {
+                locationCoordsDisplay.textContent = `纬度 ${lat}，经度 ${lon}`;
+            }
+            
+            // 显示容器
+            locationDisplay.style.display = 'block';
+            locationObtained = true;
+            
+            // 更新按钮状态
+            if (locationButton) {
+                locationButton.classList.remove('btn-outline-primary');
+                locationButton.classList.add('btn-success');
+                locationButton.innerHTML = '<i class="bi bi-check-circle"></i> 已定位';
+            }
+        } else {
+            locationDisplay.style.display = 'none';
+            locationObtained = false;
+        }
+    }
+    
+    /**
+     * 调用高德地图API获取地址（逆地理编码）
+     */
+    async function getAddressFromCoordinates(latitude, longitude) {
+        try {
+            updateLocationStatus('正在解析地址...', true);
+            
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            const response = await fetch(`${regeocodeApiUrl}?latitude=${latitude}&longitude=${longitude}`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                },
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.formatted_address) {
+                // 保存地址到隐藏字段
+                if (addressField) {
+                    addressField.value = data.formatted_address;
+                }
+                // 更新显示
+                updateLocationDisplay(latitude, longitude, data.formatted_address);
+                updateLocationStatus('定位成功', true);
+                return true;
+            } else {
+                // 即使地址解析失败，也更新坐标显示
+                updateLocationDisplay(latitude, longitude, null);
+                updateLocationStatus('地址解析失败，但已获取坐标', false);
+                return false;
+            }
+        } catch (error) {
+            if (enableLogging) {
+                console.error('地址解析失败:', error);
+            }
+            // 即使地址解析失败，也更新坐标显示
+            updateLocationDisplay(latitude, longitude, null);
+            updateLocationStatus('地址解析失败，但已获取坐标', false);
+            return false;
+        }
+    }
+    
+    /**
+     * GPS定位（静态定位，一次性获取）
+     */
+    function getGPSLocation(showStatus = true) {
+        if (!navigator.geolocation) {
+            if (showStatus) {
+                updateLocationStatus('浏览器不支持GPS定位，尝试IP定位...', false);
+            }
+            // GPS不支持时自动尝试IP定位
+            setTimeout(() => getIPLocation(), 1000);
+            return;
+        }
+        
+        if (isLocating) {
+            return; // 正在定位中，避免重复请求
+        }
+        
+        isLocating = true;
+        if (showStatus) {
+            updateLocationStatus('正在获取GPS位置...', true);
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+            async function(position) {
+                const lat = position.coords.latitude.toFixed(7);
+                const lon = position.coords.longitude.toFixed(7);
+                
+                // 保存到隐藏字段
+                if (latitudeField) latitudeField.value = lat;
+                if (longitudeField) longitudeField.value = lon;
+                
+                // 调用API获取地址
+                await getAddressFromCoordinates(lat, lon);
+                
+                isLocating = false;
+            },
+            function(error) {
+                let errorMessage = 'GPS定位失败';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = '定位权限被拒绝，尝试IP定位...';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = '位置信息不可用，尝试IP定位...';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = '定位超时，尝试IP定位...';
+                        break;
+                    default:
+                        errorMessage = '定位失败，尝试IP定位...';
+                        break;
+                }
+                if (showStatus) {
+                    updateLocationStatus(errorMessage, false);
+                }
+                isLocating = false;
+                // GPS定位失败，自动尝试IP定位
+                setTimeout(() => getIPLocation(), 1000);
+            },
+            {
+                enableHighAccuracy: false,  // 降低精度要求，加快定位速度
+                timeout: 30000,  // 超时时间30秒
+                maximumAge: 60000  // 允许使用1分钟内的缓存位置
+            }
+        );
+    }
+    
+    /**
+     * GPS动态跟踪（持续更新位置）
+     */
+    function startWatchPosition(showStatus = true) {
+        if (!navigator.geolocation) {
+            if (showStatus) {
+                updateLocationStatus('浏览器不支持GPS定位', false);
+            }
+            return;
+        }
+        
+        // 如果已经在跟踪，先停止
+        if (watchId !== null) {
+            stopWatchPosition();
+        }
+        
+        if (showStatus) {
+            updateLocationStatus('正在启动位置跟踪...', true);
+        }
+        
+        watchId = navigator.geolocation.watchPosition(
+            async function(position) {
+                const lat = position.coords.latitude.toFixed(7);
+                const lon = position.coords.longitude.toFixed(7);
+                
+                // 保存到隐藏字段
+                if (latitudeField) latitudeField.value = lat;
+                if (longitudeField) longitudeField.value = lon;
+                
+                // 调用API获取地址（节流，避免频繁调用）
+                if (!isLocating) {
+                    isLocating = true;
+                    await getAddressFromCoordinates(lat, lon);
+                    // 延迟重置isLocating，实现节流
+                    setTimeout(() => {
+                        isLocating = false;
+                    }, watchInterval);
+                }
+                
+                if (showStatus) {
+                    updateLocationStatus('位置跟踪中...', true);
+                }
+            },
+            function(error) {
+                let errorMessage = '位置跟踪失败';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = '定位权限被拒绝';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = '位置信息不可用';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = '定位超时';
+                        break;
+                    default:
+                        errorMessage = '定位失败';
+                        break;
+                }
+                if (showStatus) {
+                    updateLocationStatus(errorMessage, false);
+                }
+            },
+            {
+                enableHighAccuracy: true,  // 动态跟踪时使用高精度
+                timeout: 30000,
+                maximumAge: watchInterval  // 使用配置的更新间隔
+            }
+        );
+        
+        // 更新按钮状态
+        if (locationButton) {
+            locationButton.classList.remove('btn-outline-primary', 'btn-success');
+            locationButton.classList.add('btn-warning');
+            locationButton.innerHTML = '<i class="bi bi-geo-alt-fill"></i> 跟踪中...';
+        }
+    }
+    
+    /**
+     * 停止GPS动态跟踪
+     */
+    function stopWatchPosition() {
+        if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+            
+            // 更新按钮状态
+            if (locationButton) {
+                locationButton.classList.remove('btn-warning');
+                if (locationObtained) {
+                    locationButton.classList.add('btn-success');
+                    locationButton.innerHTML = '<i class="bi bi-check-circle"></i> 已定位';
+                } else {
+                    locationButton.classList.add('btn-outline-primary');
+                    locationButton.innerHTML = '<i class="bi bi-geo-alt"></i> 获取位置';
+                }
+            }
+            
+            if (locationStatus) {
+                locationStatus.innerHTML = '<span class="text-muted">位置跟踪已停止</span>';
+            }
+        }
+    }
+    
+    /**
+     * IP定位（备选方案）
+     */
+    async function getIPLocation() {
+        updateLocationStatus('正在通过IP获取位置...', true);
+        
+        try {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            const response = await fetch(ipLocationApiUrl, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                },
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.center_latitude && data.center_longitude) {
+                const lat = data.center_latitude.toFixed(7);
+                const lon = data.center_longitude.toFixed(7);
+                
+                // 保存到隐藏字段
+                if (latitudeField) latitudeField.value = lat;
+                if (longitudeField) longitudeField.value = lon;
+                
+                // 调用API获取详细地址
+                await getAddressFromCoordinates(lat, lon);
+                
+                updateLocationStatus(`IP定位成功（${data.city || '城市级别'}）`, true);
+            } else {
+                updateLocationStatus('IP定位失败：' + (data.message || '无法获取位置信息'), false);
+            }
+        } catch (error) {
+            if (enableLogging) {
+                console.error('IP定位失败:', error);
+            }
+            updateLocationStatus('IP定位失败，请检查网络连接', false);
+        }
+    }
+    
+    // 绑定定位按钮点击事件
+    if (locationButton) {
+        locationButton.addEventListener('click', function() {
+            // 如果正在跟踪，点击停止跟踪
+            if (watchId !== null) {
+                stopWatchPosition();
+                return;
+            }
+            
+            // 如果启用动态跟踪
+            if (watchPosition) {
+                if (!locationObtained) {
+                    startWatchPosition(true);
+                } else {
+                    // 如果已定位，点击可以重新开始跟踪
+                    locationObtained = false;
+                    if (locationButton) {
+                        locationButton.classList.remove('btn-success');
+                        locationButton.classList.add('btn-outline-primary');
+                        locationButton.innerHTML = '<i class="bi bi-geo-alt"></i> 获取位置';
+                    }
+                    locationDisplay.style.display = 'none';
+                    startWatchPosition(true);
+                }
+            } else {
+                // 静态定位模式
+                if (!isLocating && !locationObtained) {
+                    getGPSLocation(true);
+                } else if (locationObtained) {
+                    // 如果已定位，点击可以重新定位
+                    locationObtained = false;
+                    if (locationButton) {
+                        locationButton.classList.remove('btn-success');
+                        locationButton.classList.add('btn-outline-primary');
+                        locationButton.innerHTML = '<i class="bi bi-geo-alt"></i> 获取位置';
+                    }
+                    locationDisplay.style.display = 'none';
+                    getGPSLocation(true);
+                }
+            }
+        });
+    }
+    
+    // 检查是否已有位置信息（从隐藏字段）
+    if (latitudeField.value && longitudeField.value) {
+        locationObtained = true;
+        updateLocationDisplay(
+            latitudeField.value, 
+            longitudeField.value, 
+            addressField.value || ''
+        );
+    }
+    
+    // 如果启用自动定位
+    if (autoLocate && !locationObtained) {
+        // 延迟一下，确保页面加载完成
+        setTimeout(() => {
+            if (watchPosition) {
+                startWatchPosition(true);
+            } else {
+                getGPSLocation(true);
+            }
+        }, 500);
+    }
+    
+    // 将定位器实例存储到全局对象中，方便后续访问
+    if (!window.realtimeLocations) {
+        window.realtimeLocations = {};
+    }
+    window.realtimeLocations[prefix] = {
+        getGPSLocation: getGPSLocation,
+        getIPLocation: getIPLocation,
+        startWatchPosition: startWatchPosition,
+        stopWatchPosition: stopWatchPosition,
+        updateLocationDisplay: updateLocationDisplay,
+        isLocating: () => isLocating,
+        locationObtained: () => locationObtained,
+        isWatching: () => watchId !== null
+    };
+    
+    if (enableLogging) {
+        console.log(`实时定位功能已初始化: ${prefix}`);
+    }
+    
+    return {
+        getGPSLocation: getGPSLocation,
+        getIPLocation: getIPLocation,
+        updateLocationDisplay: updateLocationDisplay
+    };
+}
+
+// 如果页面中已经有realtimeLocations对象，确保不覆盖
+if (!window.realtimeLocations) {
+    window.realtimeLocations = {};
+}
+</script>
+
+{# 样式定义 #}
+<style>
+.realtime-location-container .location-display-container {
+    margin-top: 0.5rem;
+}
+
+.realtime-location-container .card {
+    border-left: 3px solid #28a745;
+}
+
+.realtime-location-container .btn-success {
+    pointer-events: auto;
+}
+
+.realtime-location-container .btn-success:hover {
+    opacity: 0.8;
+}
+</style>
+
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+

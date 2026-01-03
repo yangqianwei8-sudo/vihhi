@@ -1,0 +1,183 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <div class="list-page-container">
+        <!-- 页面标题区域 -->
+        <div class="list-page-header">
+            <h1 class="list-page-title">
+                {{ page_title }}
+            </h1>
+        </div>
+
+        <!-- 筛选栏区域 -->
+        <div class="list-page-filters mb-3">
+            <form method="get" id="filterForm">
+                <div class="row g-2">
+                    <div class="col-md-2">
+                        <label class="form-label small">搜索:</label>
+                        <input type="text" name="search" class="form-control form-control-sm" 
+                               value="{{ search }}" placeholder="联系人姓名、客户名称">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">联系人:</label>
+                        <select name="contact" class="form-select form-select-sm">
+                            <option value="">全部联系人</option>
+                            {% for c in contacts %}
+                            <option value="{{ c.id }}" {% if contact_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }} ({{ c.client.name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">变更类型:</label>
+                        <select name="change_type" class="form-select form-select-sm">
+                            <option value="">全部类型</option>
+                            {% for value, label in change_type_choices %}
+                            <option value="{{ value }}" {% if change_type == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">审批状态:</label>
+                        <select name="approval_status" class="form-select form-select-sm">
+                            <option value="">全部</option>
+                            {% for value, label in approval_status_choices %}
+                            <option value="{{ value }}" {% if approval_status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">&nbsp;</label>
+                        <div class="d-flex gap-1">
+                            <button type="submit" class="btn btn-primary btn-sm flex-fill">筛选</button>
+                            <a href="{% url 'business_pages:contact_info_change_list' %}" class="btn btn-secondary btn-sm flex-fill">重置</a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- 操作栏 -->
+        <div class="list-page-action-bar mb-3 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted small">共 <strong>{{ page_obj.paginator.count|default:0 }}</strong> 条记录</span>
+            </div>
+            <div class="d-flex gap-2">
+                {% if can_create %}
+                <a href="{% url 'business_pages:contact_info_change_create' %}" class="btn btn-primary btn-sm">
+                    + 新增人员信息变更
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 数据表格 -->
+        <div class="list-page-table">
+            {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>联系人</th>
+                            <th>客户</th>
+                            <th>变更类型</th>
+                            <th>变更原因</th>
+                            <th>审批状态</th>
+                            <th>申请人</th>
+                            <th>创建时间</th>
+                            <th width="100">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for change in page_obj %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'business_pages:contact_detail' change.contact.id %}" class="text-decoration-none">
+                                    {{ change.contact.name }}
+                                </a>
+                            </td>
+                            <td>
+                                <a href="{% url 'business_pages:customer_detail' change.contact.client.id %}" class="text-decoration-none">
+                                    {{ change.contact.client.name }}
+                                </a>
+                            </td>
+                            <td>{{ change.get_change_type_display }}</td>
+                            <td class="small">{{ change.change_reason|truncatewords:10 }}</td>
+                            <td>
+                                <span class="badge bg-{% if change.approval_status == 'approved' %}success{% elif change.approval_status == 'rejected' %}danger{% elif change.approval_status == 'withdrawn' %}secondary{% elif change.approval_status == 'draft' %}info{% else %}warning{% endif %}">
+                                    {{ change.get_approval_status_display }}
+                                </span>
+                            </td>
+                            <td class="small">{{ change.created_by.get_full_name|default:change.created_by.username }}</td>
+                            <td class="small text-muted">{{ change.created_time|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <a href="{% url 'business_pages:contact_info_change_detail' change.id %}" class="btn btn-sm btn-outline-primary">查看</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">暂无人员信息变更申请记录</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if page_obj.has_other_pages %}
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-muted small">
+                    共 <strong>{{ page_obj.paginator.count }}</strong> 条
+                </div>
+                <nav aria-label="分页导航">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if contact_id %}&contact={{ contact_id }}{% endif %}{% if change_type %}&change_type={{ change_type }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}">上一页</a>
+                        </li>
+                        {% endif %}
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if contact_id %}&contact={{ contact_id }}{% endif %}{% if change_type %}&change_type={{ change_type }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if contact_id %}&contact={{ contact_id }}{% endif %}{% if change_type %}&change_type={{ change_type }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if contact_id %}&contact={{ contact_id }}{% endif %}{% if change_type %}&change_type={{ change_type }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}">下一页</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="alert alert-info">暂无人员信息变更申请记录</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,619 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}客户列表{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<!-- 注意：list-layout.css、list-filters.css、tables.css 已通过 common.css 的 @import 导入，无需单独引用 -->
+<style>
+/* 筛选按钮组样式 */
+.filter-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-label {
+    min-width: 100px;
+    font-weight: 500;
+    color: #333;
+}
+
+.filter-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 4px 12px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.filter-btn:hover {
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.filter-btn.active {
+    background: #007bff;
+    color: #fff;
+    border-color: #007bff;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="list-page-container">
+    <!-- 标签页 -->
+    <ul class="nav nav-tabs mb-1 border-bottom" role="tablist" style="margin-bottom: 8px !important;">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if tab == 'all' or not tab %}active{% endif %} border-0" href="?tab=all{% if search %}&search={{ search }}{% endif %}">全部</a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if tab == 'my_responsible' %}active{% endif %} border-0" href="?tab=my_responsible{% if search %}&search={{ search }}{% endif %}">我负责的</a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {% if tab == 'subordinate_responsible' %}active{% endif %} border-0" href="?tab=subordinate_responsible{% if search %}&search={{ search }}{% endif %}">下属负责的</a>
+        </li>
+    </ul>
+
+    <!-- 筛选栏区域 -->
+    <div class="list-page-filters mb-1" style="margin-bottom: 8px !important;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0 small fw-semibold">筛选条件</h6>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="settingsFilterFieldsBtn">
+                    ⚙️ 设置筛选字段
+                </button>
+                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="filterCollapseBtn">
+                    <span id="filterCollapseText">收起</span> <span id="filterCollapseIcon">▲</span>
+                </button>
+            </div>
+        </div>
+        <form method="get" id="filterForm">
+            {% if tab %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
+            {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
+            {% if search_field %}<input type="hidden" name="search_field" value="{{ search_field }}">{% endif %}
+            {% if page_obj.paginator.per_page %}<input type="hidden" name="page_size" value="{{ page_obj.paginator.per_page }}">{% endif %}
+            <div id="basicFilters" style="display: block;">
+                <!-- 所属部门 -->
+                <div class="filter-row mb-3" data-filter-key="department">
+                    <label class="filter-label">所属部门:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not department %}active{% endif %}" data-filter="department" data-value="">全部</button>
+                        <div class="d-inline-flex align-items-center ms-2">
+                            <select name="department" class="form-select form-select-sm" id="departmentSelect" style="width: 200px;">
+                                <option value="">请选择所属部门</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept }}" {% if department == dept %}selected{% endif %}>{{ dept }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <input type="hidden" name="department" id="filter_department" value="{{ department }}">
+                    </div>
+                </div>
+
+                <!-- 负责人 -->
+                <div class="filter-row mb-3" data-filter-key="responsible_user">
+                    <label class="filter-label">负责人:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not responsible_user_id %}active{% endif %}" data-filter="responsible_user" data-value="">全部</button>
+                        <div class="d-inline-flex align-items-center ms-2">
+                            <select name="responsible_user" class="form-select form-select-sm" style="width: 200px;">
+                                <option value="">请选择负责人</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {% if responsible_user_id == user.id|stringformat:"s" %}selected{% endif %}>{{ user.get_full_name|default:user.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <input type="hidden" name="responsible_user" id="filter_responsible_user" value="{{ responsible_user_id }}">
+                    </div>
+                </div>
+
+                <!-- 客户类型 -->
+                <div class="filter-row mb-3" data-filter-key="client_type">
+                    <label class="filter-label">客户类型:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not client_type %}active{% endif %}" data-filter="client_type" data-value="">全部</button>
+                        {% for value, label in client_type_choices %}
+                        <button type="button" class="filter-btn {% if client_type == value|stringformat:"s" %}active{% endif %}" data-filter="client_type" data-value="{{ value }}">{{ label }}</button>
+                        {% endfor %}
+                        <input type="hidden" name="client_type" id="filter_client_type" value="{{ client_type }}">
+                    </div>
+                </div>
+
+                <!-- 客户分级 -->
+                <div class="filter-row mb-3" data-filter-key="grade">
+                    <label class="filter-label">客户分级:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not grade %}active{% endif %}" data-filter="grade" data-value="">全部</button>
+                        {% for value, label in grade_choices %}
+                        <button type="button" class="filter-btn {% if grade == value|stringformat:"s" %}active{% endif %}" data-filter="grade" data-value="{{ value }}">{{ label }}</button>
+                        {% endfor %}
+                        <input type="hidden" name="grade" id="filter_grade" value="{{ grade }}">
+                    </div>
+                </div>
+
+                <!-- 客户来源 -->
+                <div class="filter-row mb-3" data-filter-key="source">
+                    <label class="filter-label">客户来源:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not source %}active{% endif %}" data-filter="source" data-value="">全部</button>
+                        {% for value, label in source_choices %}
+                        <button type="button" class="filter-btn {% if source == value %}active{% endif %}" data-filter="source" data-value="{{ value }}">{{ label }}</button>
+                        {% endfor %}
+                        <input type="hidden" name="source" id="filter_source" value="{{ source }}">
+                    </div>
+                </div>
+
+                <!-- 所属区域 -->
+                <div class="filter-row mb-3" data-filter-key="region">
+                    <label class="filter-label">所属区域:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not region %}active{% endif %}" data-filter="region" data-value="">全部</button>
+                        <div class="d-inline-flex align-items-center ms-2">
+                            <input type="text" name="region" class="form-control form-control-sm" value="{{ region }}" placeholder="请输入区域" style="width: 200px;" id="filter_region">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 法律风险等级 -->
+                <div class="filter-row mb-3" data-filter-key="legal_risk_level">
+                    <label class="filter-label">法律风险等级:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not legal_risk_level %}active{% endif %}" data-filter="legal_risk_level" data-value="">全部</button>
+                        <button type="button" class="filter-btn {% if legal_risk_level == 'low' %}active{% endif %}" data-filter="legal_risk_level" data-value="low">低风险</button>
+                        <button type="button" class="filter-btn {% if legal_risk_level == 'medium_low' %}active{% endif %}" data-filter="legal_risk_level" data-value="medium_low">中低风险</button>
+                        <button type="button" class="filter-btn {% if legal_risk_level == 'medium' %}active{% endif %}" data-filter="legal_risk_level" data-value="medium">中风险</button>
+                        <button type="button" class="filter-btn {% if legal_risk_level == 'medium_high' %}active{% endif %}" data-filter="legal_risk_level" data-value="medium_high">中高风险</button>
+                        <button type="button" class="filter-btn {% if legal_risk_level == 'high' %}active{% endif %}" data-filter="legal_risk_level" data-value="high">高风险</button>
+                        <button type="button" class="filter-btn {% if legal_risk_level == 'unknown' %}active{% endif %}" data-filter="legal_risk_level" data-value="unknown">未知</button>
+                        <input type="hidden" name="legal_risk_level" id="filter_legal_risk_level" value="{{ legal_risk_level }}">
+                    </div>
+                </div>
+
+                <!-- 邮箱 -->
+                <div class="filter-row mb-3" data-filter-key="company_email">
+                    <label class="filter-label">邮箱:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not company_email %}active{% endif %}" data-filter="company_email" data-value="">全部</button>
+                        <div class="d-inline-flex align-items-center ms-2">
+                            <input type="text" name="company_email" class="form-control form-control-sm" value="{{ company_email }}" placeholder="请输入邮箱" style="width: 200px;" id="filter_company_email">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 法定代表人 -->
+                <div class="filter-row mb-3" data-filter-key="legal_representative">
+                    <label class="filter-label">法定代表人:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not legal_representative %}active{% endif %}" data-filter="legal_representative" data-value="">全部</button>
+                        <div class="d-inline-flex align-items-center ms-2">
+                            <input type="text" name="legal_representative" class="form-control form-control-sm" value="{{ legal_representative }}" placeholder="请输入法定代表人" style="width: 200px;" id="filter_legal_representative">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 成立日期 -->
+                <div class="filter-row mb-3" data-filter-key="established_date">
+                    <label class="filter-label">成立日期:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not established_date_start and not established_date_end %}active{% endif %}" data-filter="established_date" data-value="">全部</button>
+                        <div class="d-inline-flex align-items-center gap-2 ms-2">
+                            <input type="date" name="established_date_start" class="form-control form-control-sm" value="{{ established_date_start }}" style="width: 150px;" placeholder="开始日期">
+                            <span>~</span>
+                            <input type="date" name="established_date_end" class="form-control form-control-sm" value="{{ established_date_end }}" style="width: 150px;" placeholder="结束日期">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 注册资本 -->
+                <div class="filter-row mb-3" data-filter-key="registered_capital">
+                    <label class="filter-label">注册资本（万元）:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not registered_capital_min and not registered_capital_max %}active{% endif %}" data-filter="registered_capital" data-value="">全部</button>
+                        <div class="d-inline-flex align-items-center gap-2 ms-2">
+                            <input type="number" name="registered_capital_min" class="form-control form-control-sm" value="{{ registered_capital_min }}" placeholder="最小值" style="width: 120px;" step="0.01">
+                            <span>~</span>
+                            <input type="number" name="registered_capital_max" class="form-control form-control-sm" value="{{ registered_capital_max }}" placeholder="最大值" style="width: 120px;" step="0.01">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 联系电话 -->
+                <div class="filter-row mb-3" data-filter-key="company_phone">
+                    <label class="filter-label">联系电话:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not company_phone %}active{% endif %}" data-filter="company_phone" data-value="">全部</button>
+                        <div class="d-inline-flex align-items-center ms-2">
+                            <input type="text" name="company_phone" class="form-control form-control-sm" value="{{ company_phone }}" placeholder="请输入联系电话" style="width: 200px;" id="filter_company_phone">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 注册地址 -->
+                <div class="filter-row mb-3" data-filter-key="company_address">
+                    <label class="filter-label">注册地址:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not company_address %}active{% endif %}" data-filter="company_address" data-value="">全部</button>
+                        <div class="d-inline-flex align-items-center ms-2">
+                            <input type="text" name="company_address" class="form-control form-control-sm" value="{{ company_address }}" placeholder="请输入注册地址" style="width: 200px;" id="filter_company_address">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 创建时间 -->
+                <div class="filter-row mb-3" data-filter-key="date_range">
+                    <label class="filter-label">创建时间:</label>
+                    <div class="filter-buttons">
+                        <button type="button" class="filter-btn {% if not date_range %}active{% endif %}" data-filter="date_range" data-value="">全部</button>
+                        <button type="button" class="filter-btn {% if date_range == 'today' %}active{% endif %}" data-filter="date_range" data-value="today">今天</button>
+                        <button type="button" class="filter-btn {% if date_range == 'this_week' %}active{% endif %}" data-filter="date_range" data-value="this_week">本周</button>
+                        <button type="button" class="filter-btn {% if date_range == 'this_month' %}active{% endif %}" data-filter="date_range" data-value="this_month">本月</button>
+                        <button type="button" class="filter-btn {% if date_range == 'custom' %}active{% endif %}" data-filter="date_range" data-value="custom" id="customDateBtn">自定义</button>
+                        <div class="d-inline-flex align-items-center gap-2 ms-2" id="customDateRange" style="display: {% if date_range == 'custom' %}flex{% else %}none{% endif %};">
+                            <input type="date" name="created_time_start" class="form-control form-control-sm" value="{{ created_time_start }}" style="width: 150px;">
+                            <span>~</span>
+                            <input type="date" name="created_time_end" class="form-control form-control-sm" value="{{ created_time_end }}" style="width: 150px;">
+                        </div>
+                        <input type="hidden" name="date_range" id="filter_date_range" value="{{ date_range }}">
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 操作栏 -->
+    <div class="list-page-action-bar d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+            <span class="text-muted small">已选 <strong id="selectedCount" style="color: #ff6b35;">0</strong> 个</span>
+            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="clearSelection" style="display: none;">清除所选</button>
+            <div class="d-flex align-items-center gap-1">
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="batchDeleteBtn" disabled>删除</button>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div class="input-group input-group-sm" style="width: auto;">
+                <select class="form-select form-select-sm" name="search_field" id="searchFieldSelect" style="min-width: 100px;">
+                    <option value="name" {% if search_field == 'name' or not search_field %}selected{% endif %}>客户名称</option>
+                    <option value="unified_credit_code" {% if search_field == 'unified_credit_code' %}selected{% endif %}>统一信用代码</option>
+                </select>
+                <input type="text" class="form-control form-control-sm" name="search" id="searchInput" value="{{ search }}" placeholder="搜索..." style="width: 200px;">
+                <button class="btn btn-outline-secondary btn-sm" type="submit" form="filterForm">搜索</button>
+            </div>
+            {% if can_create %}
+            <a href="{% url 'business_pages:customer_create' %}" class="btn btn-primary btn-sm">创建客户</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 数据表格 -->
+    <div class="list-page-table">
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th width="40" class="column-checkbox">
+                            <input type="checkbox" id="selectAll" class="form-check-input">
+                        </th>
+                        <th class="column-name">客户名称</th>
+                        <th class="column-code">统一信用代码</th>
+                        <th class="column-legal-representative">法定代表人</th>
+                        <th class="column-established-date">成立日期</th>
+                        <th class="column-registered-capital">注册资本（万元）</th>
+                        <th class="column-company-phone">联系电话</th>
+                        <th class="column-company-email">邮箱</th>
+                        <th class="column-company-address">注册地址</th>
+                        <th class="column-grade">客户分级</th>
+                        <th class="column-type">客户类型</th>
+                        <th class="column-region">所属区域</th>
+                        <th class="column-source">客户来源</th>
+                        <th class="column-legal-risk-level">法律风险等级</th>
+                        <th class="column-litigation-count">司法案件数量</th>
+                        <th class="column-executed-person-count">被执行人数量</th>
+                        <th class="column-final-case-count">终本案件数量</th>
+                        <th class="column-consumption-limit-count">限制高消费数量</th>
+                        <th class="column-responsible">负责人</th>
+                        <th class="column-created">创建时间</th>
+                        <th width="120" class="column-actions">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in page_obj %}
+                    <tr>
+                        <td class="column-checkbox">
+                            <input type="checkbox" name="client_ids" value="{{ client.id }}" class="form-check-input row-checkbox">
+                        </td>
+                        <td class="column-name">
+                            <a href="{% url 'business_pages:customer_detail' client.id %}" class="text-decoration-none">{{ client.name }}</a>
+                        </td>
+                        <td class="column-code text-muted small">{{ client.unified_credit_code|default:"未填写" }}</td>
+                        <td class="column-legal-representative small">{{ client.legal_representative|default:"未填写" }}</td>
+                        <td class="column-established-date small">{{ client.established_date|date:"Y-m-d"|default:"未填写" }}</td>
+                        <td class="column-registered-capital small">{{ client.registered_capital|default:"未填写" }}</td>
+                        <td class="column-company-phone small">{{ client.company_phone|default:"未填写" }}</td>
+                        <td class="column-company-email small">{{ client.company_email|default:"未填写" }}</td>
+                        <td class="column-company-address small">{{ client.company_address|default:"未填写" }}</td>
+                        <td class="column-grade small">{{ client.grade.name|default:"未填写" }}</td>
+                        <td class="column-type small">{{ client.client_type.name|default:"未填写" }}</td>
+                        <td class="column-region small">{{ client.region|default:"未填写" }}</td>
+                        <td class="column-source small">{{ client.get_source_display|default:"未填写" }}</td>
+                        <td class="column-legal-risk-level small">{{ client.get_legal_risk_level_display }}</td>
+                        <td class="column-litigation-count small">{{ client.litigation_count }}</td>
+                        <td class="column-executed-person-count small">{{ client.executed_person_count }}</td>
+                        <td class="column-final-case-count small">{{ client.final_case_count }}</td>
+                        <td class="column-consumption-limit-count small">{{ client.consumption_limit_count }}</td>
+                        <td class="column-responsible small">
+                            {% if client.responsible_user %}
+                                {{ client.responsible_user.get_full_name|default:client.responsible_user.username }}
+                            {% else %}
+                                <span class="text-muted">公海</span>
+                            {% endif %}
+                        </td>
+                        <td class="column-created small text-muted">{{ client.created_time|date:"Y-m-d" }}</td>
+                        <td class="column-actions">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'business_pages:customer_detail' client.id %}" class="btn btn-outline-primary btn-sm">查看</a>
+                                {% if can_create %}
+                                <a href="{% url 'business_pages:customer_edit' client.id %}" class="btn btn-outline-secondary btn-sm">编辑</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="21" class="text-center text-muted py-4">暂无数据</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="d-flex justify-content-between align-items-center" style="padding: 8px 12px; background: #fff; border-radius: 4px; margin-top: 8px;">
+            <div class="text-muted small">共 <strong>{{ page_obj.paginator.count }}</strong> 条</div>
+            <div class="d-flex align-items-center gap-2">
+                <nav aria-label="分页导航">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if tab %}&tab={{ tab }}{% endif %}{% if search %}&search={{ search }}{% endif %}">&lt;</a></li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">&lt;</span></li>
+                        {% endif %}
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if tab %}&tab={{ tab }}{% endif %}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a></li>
+                        {% endif %}
+                        {% endfor %}
+                        {% if page_obj.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if tab %}&tab={{ tab }}{% endif %}{% if search %}&search={{ search }}{% endif %}">&gt;</a></li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">&gt;</span></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                <select class="form-select form-select-sm" id="pageSizeSelect" style="width: auto; min-width: 80px;">
+                    <option value="10" {% if page_obj.paginator.per_page == 10 %}selected{% endif %}>10条/页</option>
+                    <option value="20" {% if page_obj.paginator.per_page == 20 %}selected{% endif %}>20条/页</option>
+                    <option value="50" {% if page_obj.paginator.per_page == 50 %}selected{% endif %}>50条/页</option>
+                </select>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="alert alert-info">暂无客户数据</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 筛选字段设置模态框 -->
+
+<!-- 筛选字段设置模态框 -->
+<div class="modal fade" id="filterFieldsSettingsModal" tabindex="-1" aria-labelledby="filterFieldsSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filterFieldsSettingsModalLabel">设置筛选字段</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th width="50">显示</th>
+                                <th>字段名称</th>
+                                <th width="50">排序</th>
+                            </tr>
+                        </thead>
+                        <tbody id="filterFieldsList"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="resetFilterFieldsSettings">重置</button>
+                <button type="button" class="btn btn-primary" id="saveFilterFieldsSettings">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- 列设置模态框 -->
+<div class="modal fade" id="columnSettingsModal" tabindex="-1" aria-labelledby="columnSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="columnSettingsModalLabel">自定义显示列</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>已显示的列</h6>
+                        <div id="displayedFields" class="border rounded p-3" style="min-height: 200px; max-height: 400px; overflow-y: auto;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>可添加的列</h6>
+                        <div id="availableFields" class="border rounded p-3" style="min-height: 200px; max-height: 400px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="saveColumnSettings">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/list-filters.js' %}"></script>
+<script src="{% static 'js/filter-fields-settings.js' %}"></script>
+<script>
+// 初始化筛选字段设置
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof FilterFieldsSettings !== "undefined") {
+        const filterFieldsSettings = new FilterFieldsSettings({
+            storageKey: "customer_list_filter_fields_settings",
+            containerId: "basicFilters",
+            modalId: "filterFieldsSettingsModal",
+            listId: "filterFieldsList",
+            settingsBtnId: "settingsFilterFieldsBtn",
+            saveBtnId: "saveFilterFieldsSettings",
+            resetBtnId: "resetFilterFieldsSettings",
+            maxEnabledFields: 10,
+            defaultEnabledFields: ['department', 'responsible_user'],
+            requiredFields: ['department', 'responsible_user']
+        });
+        filterFieldsSettings.init();
+        console.log("筛选字段设置功能已初始化");
+    }
+});
+
+// 全选功能
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(cb => cb.checked = this.checked);
+            updateSelectedCount();
+        });
+    }
+    
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelectedCount);
+    });
+    
+    function updateSelectedCount() {
+        const selected = document.querySelectorAll('.row-checkbox:checked').length;
+        const countEl = document.getElementById('selectedCount');
+        if (countEl) countEl.textContent = selected;
+        const deleteBtn = document.getElementById('batchDeleteBtn');
+        if (deleteBtn) deleteBtn.disabled = selected === 0;
+    }
+    
+    // 筛选条件展开/收起
+    const collapseBtn = document.getElementById('filterCollapseBtn');
+    const basicFilters = document.getElementById('basicFilters');
+    const collapseText = document.getElementById('filterCollapseText');
+    const collapseIcon = document.getElementById('filterCollapseIcon');
+    
+    if (collapseBtn && basicFilters) {
+        collapseBtn.addEventListener('click', function() {
+            if (basicFilters.style.display === 'none') {
+                basicFilters.style.display = 'block';
+                if (collapseText) collapseText.textContent = '收起';
+                if (collapseIcon) collapseIcon.textContent = '▲';
+            } else {
+                basicFilters.style.display = 'none';
+                if (collapseText) collapseText.textContent = '展开';
+                if (collapseIcon) collapseIcon.textContent = '▼';
+            }
+        });
+    }
+});
+
+// 筛选按钮点击事件
+document.addEventListener('DOMContentLoaded', function() {
+    // 筛选按钮点击处理
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const filterKey = this.getAttribute('data-filter');
+            const filterValue = this.getAttribute('data-value');
+            const hiddenInput = document.getElementById('filter_' + filterKey);
+            
+            if (hiddenInput) {
+                hiddenInput.value = filterValue;
+            } else {
+                // 如果没有隐藏输入，创建或更新URL参数
+                const form = document.getElementById('filterForm');
+                if (form) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = filterKey;
+                    input.id = 'filter_' + filterKey;
+                    input.value = filterValue;
+                    form.appendChild(input);
+                }
+            }
+            
+            // 更新按钮状态
+            this.parentElement.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('active');
+            });
+            this.classList.add('active');
+            
+            // 提交表单
+            const form = document.getElementById('filterForm');
+            if (form) {
+                form.submit();
+            }
+        });
+    });
+    
+    // 自定义日期范围按钮
+    const customDateBtn = document.getElementById('customDateBtn');
+    const customDateRange = document.getElementById('customDateRange');
+    if (customDateBtn && customDateRange) {
+        customDateBtn.addEventListener('click', function() {
+            customDateRange.style.display = 'flex';
+        });
+    }
+    
+    // 下拉选择框变化时提交表单
+    document.querySelectorAll('#filterForm select, #filterForm input[type="text"], #filterForm input[type="number"], #filterForm input[type="date"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const form = document.getElementById('filterForm');
+            if (form) {
+                // 延迟提交，避免频繁请求
+                clearTimeout(window.filterSubmitTimeout);
+                window.filterSubmitTimeout = setTimeout(() => {
+                    form.submit();
+                }, 500);
+            }
+        });
+    });
+});
+
+</script>
+{% endblock %}

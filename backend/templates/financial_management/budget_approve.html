@@ -1,0 +1,97 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 预算信息预览 -->
+    <div class="info-card mb-4">
+        <h5>预算信息</h5>
+        <div class="info-row">
+            <div class="info-item">
+                <span class="info-label">预算编号</span>
+                <span class="info-value"><code>{{ budget.budget_number }}</code></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">预算名称</span>
+                <span class="info-value">{{ budget.name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">预算年度</span>
+                <span class="info-value">{{ budget.budget_year }} 年</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">状态</span>
+                <span class="info-value">
+                    <span class="badge bg-secondary">草稿</span>
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">预算金额</span>
+                <span class="info-value" style="font-size: 20px; font-weight: 700; color: #142F5B;">¥{{ budget.budget_amount|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">所属部门</span>
+                <span class="info-value">{{ budget.department.name|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">预算科目</span>
+                <span class="info-value">{{ budget.account_subject.name|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">开始日期</span>
+                <span class="info-value">{{ budget.start_date|date:"Y-m-d" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">结束日期</span>
+                <span class="info-value">{{ budget.end_date|date:"Y-m-d" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 备注信息 -->
+    {% if budget.description %}
+    <div class="info-card mb-4">
+        <h5>备注说明</h5>
+        <p style="color: #374151; white-space: pre-wrap;">{{ budget.description }}</p>
+    </div>
+    {% endif %}
+
+    <!-- 审批操作 -->
+    <div class="info-card">
+        <h5>审批操作</h5>
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">审批结果</label>
+                <div>
+                    <button type="submit" name="action" value="approve" class="btn btn-success me-2">
+                        <i class="bi bi-check-circle"></i> 审批通过
+                    </button>
+                    <button type="submit" name="action" value="reject" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> 取消
+                    </button>
+                </div>
+            </div>
+            <div class="text-end">
+                <a href="{% url 'finance_pages:budget_detail' budget.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+
+

@@ -1,0 +1,126 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/modules/module-home.css' %}">
+{% endblock %}
+
+{% block module_content %}
+<div class="module-home-container">
+    <!-- 页面头部 -->
+    <div class="module-home-header">
+        <h1 class="module-home-title">
+            <span class="module-home-icon">{{ page_icon }}</span>
+            {{ page_title }}
+        </h1>
+        <p class="module-home-description">{{ description }}</p>
+    </div>
+
+    <!-- 统计卡片区域 -->
+    {% if summary_cards %}
+    <div class="summary-cards-section">
+        <div class="row g-3">
+            {% for card in summary_cards %}
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <div class="summary-card summary-card-{{ card.variant|default:'default' }}">
+                    <a href="{{ card.url }}" class="summary-card-link">
+                        <div class="summary-card-icon">{{ card.icon }}</div>
+                        <div class="summary-card-content">
+                            <div class="summary-card-label">{{ card.label }}</div>
+                            <div class="summary-card-value">{{ card.value }}</div>
+                            {% if card.subvalue %}
+                            <div class="summary-card-subvalue">{{ card.subvalue }}</div>
+                            {% endif %}
+                            {% if card.extra %}
+                            <div class="summary-card-extra">{{ card.extra }}</div>
+                            {% endif %}
+                        </div>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 快捷操作和功能模块区域 -->
+    {% if sections %}
+    {% for section in sections %}
+    <div class="module-section">
+        <div class="module-section-header">
+            <h2 class="module-section-title">{{ section.title }}</h2>
+            {% if section.description %}
+            <p class="module-section-description">{{ section.description }}</p>
+            {% endif %}
+        </div>
+        <div class="module-section-content">
+            {% if section.layout == 'grid' %}
+            <div class="row g-3">
+                {% for item in section.items %}
+                <div class="col-12 col-sm-6 col-md-4">
+                    <div class="module-action-card">
+                        <div class="module-action-icon">{{ item.icon }}</div>
+                        <div class="module-action-content">
+                            <h3 class="module-action-title">{{ item.label }}</h3>
+                            <p class="module-action-description">{{ item.description }}</p>
+                            <a href="{{ item.url }}" class="module-action-link">
+                                {{ item.link_label|default:'查看详情 →' }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <ul class="module-action-list">
+                {% for item in section.items %}
+                <li class="module-action-item">
+                    <a href="{{ item.url }}" class="module-action-link">
+                        <span class="module-action-icon">{{ item.icon }}</span>
+                        <span class="module-action-label">{{ item.label }}</span>
+                        <span class="module-action-arrow">→</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- 待办事项区域 -->
+    {% if pending_tasks %}
+    <div class="module-section">
+        <div class="module-section-header">
+            <h2 class="module-section-title">待办事项</h2>
+            <p class="module-section-description">需要您处理的事项</p>
+        </div>
+        <div class="module-section-content">
+            <div class="pending-tasks-list">
+                {% for task in pending_tasks %}
+                <div class="pending-task-item priority-{{ task.priority }}">
+                    <div class="pending-task-content">
+                        <h4 class="pending-task-title">{{ task.title }}</h4>
+                        <p class="pending-task-description">{{ task.description }}</p>
+                        <div class="pending-task-meta">
+                            <span class="pending-task-type">{{ task.type }}</span>
+                            {% if task.due_time %}
+                            <span class="pending-task-due">截止：{{ task.due_time|date:"Y-m-d H:i" }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="pending-task-action">
+                        <a href="{{ task.url }}" class="btn btn-sm btn-primary">查看详情 →</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

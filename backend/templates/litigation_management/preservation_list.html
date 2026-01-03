@@ -1,0 +1,174 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}保全续封 - {{ case.case_number }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                <a href="{% url 'litigation_pages:preservation_create' case.id %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> 添加保全
+                </a>
+                <a href="{% url 'litigation_pages:case_detail' case.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回案件
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 即将到期提醒 -->
+    {% if expiring_soon %}
+    <div class="info-card info-card-warning mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">⚠️ 即将到期的保全续封</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>重要提醒：</strong>以下保全续封即将到期，请及时处理，避免保全失效造成重大损失！
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>保全类型</th>
+                            <th>保全金额</th>
+                            <th>到期日期</th>
+                            <th>剩余天数</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for seal in expiring_soon %}
+                        <tr class="table-warning">
+                            <td>{{ seal.get_seal_type_display }}</td>
+                            <td>
+                                {% if seal.seal_amount %}
+                                ¥{{ seal.seal_amount|floatformat:2 }}
+                                {% else %}
+                                <span class="text-muted">未设置</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ seal.end_date|date:"Y-m-d" }}</td>
+                            <td>
+                                <span class="badge bg-danger">
+                                    {% now "Y-m-d" as today_str %}
+                                    {% if seal.end_date|date:"Y-m-d" == today_str %}
+                                    今天到期
+                                    {% else %}
+                                    {{ seal.end_date|timesince }}后到期
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'litigation_pages:preservation_detail' seal.id %}" class="btn btn-sm btn-warning">
+                                    立即处理
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 保全续封列表 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">保全续封列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">共 {{ seals.count }} 条</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if seals %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>保全类型</th>
+                            <th>保全金额</th>
+                            <th>保全案号</th>
+                            <th>法院名称</th>
+                            <th>开始日期</th>
+                            <th>结束日期</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for seal in seals %}
+                        <tr {% if seal.status == 'active' %}class="table-warning"{% endif %}>
+                            <td>{{ seal.get_seal_type_display }}</td>
+                            <td>
+                                {% if seal.seal_amount %}
+                                ¥{{ seal.seal_amount|floatformat:2 }}
+                                {% else %}
+                                <span class="text-muted">未设置</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ seal.seal_number|default:"未设置" }}</td>
+                            <td>{{ seal.court_name|default:"未设置" }}</td>
+                            <td>{{ seal.start_date|date:"Y-m-d" }}</td>
+                            <td>
+                                {{ seal.end_date|date:"Y-m-d" }}
+                                {% if seal.status == 'active' %}
+                                <span class="badge bg-danger ms-1">即将到期</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="status-badge {{ seal.status }}">
+                                    {{ seal.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'litigation_pages:preservation_detail' seal.id %}" class="btn btn-outline-primary" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if perms.litigation_management.process.manage %}
+                                    <a href="{% url 'litigation_pages:preservation_edit' seal.id %}" class="btn btn-outline-secondary" title="编辑">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if seal.status == 'active' %}
+                                    <a href="{% url 'litigation_pages:preservation_renew' seal.id %}" class="btn btn-outline-warning" title="续封">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: var(--vh-text-muted);"></i>
+                <p class="text-muted mt-3">暂无保全续封记录</p>
+                <a href="{% url 'litigation_pages:preservation_create' case.id %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> 创建第一个保全续封记录
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

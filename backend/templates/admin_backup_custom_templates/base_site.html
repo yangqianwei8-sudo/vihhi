@@ -1,0 +1,135 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+        /* 限制左侧导航栏高度，启用滚动 */
+    #nav-sidebar {
+        max-height: calc(100vh - 120px) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+    
+    /* 优化滚动条样式 */
+    #nav-sidebar::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    #nav-sidebar::-webkit-scrollbar-track {
+        background: rgba(255,255,255,0.1);
+    }
+    
+    #nav-sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.3);
+        border-radius: 3px;
+    }
+    
+    #nav-sidebar::-webkit-scrollbar-thumb:hover {
+        background: rgba(255,255,255,0.5);
+    }
+    
+    /* 默认折叠：隐藏所有应用下的模型行 */
+    #nav-sidebar .module table tbody tr[class*="model-"] {
+        display: none !important;
+    }
+    
+    /* 鼠标悬停在应用模块上时展开显示模型 */
+    #nav-sidebar .module:hover table tbody tr[class*="model-"] {
+        display: table-row !important;
+    }
+    
+    /* 隐藏表头行（thead），避免空白行 */
+    #nav-sidebar .module table thead {
+        display: none !important;
+    }
+    
+    /* 隐藏空的tbody（如果存在） */
+    #nav-sidebar .module table tbody:empty {
+        display: none !important;
+    }
+    
+    /* 减少应用模块之间的间距 */
+    #nav-sidebar .module {
+        margin-bottom: 0 !important;
+    }
+    
+    #nav-sidebar .module table {
+        margin-bottom: 0 !important;
+    }
+    
+
+    
+
+    /* 确保过滤器容器在右侧显示 */
+    #changelist .changelist-form-container {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-start !important;
+    }
+    
+    /* 过滤器容器样式 */
+    #changelist .filter-container {
+        flex: 0 0 240px !important;
+        order: 2 !important;  /* 移到右侧（在form之后） */
+        margin-left: 30px !important;
+    }
+    
+    /* 表单容器占据剩余空间 */
+    #changelist .changelist-form-container > div:not(.filter-container) {
+        flex: 1 1 auto !important;
+        order: 1 !important;
+        min-width: 0;
+    }
+    
+    /* 过滤器样式 */
+    #changelist-filter {
+        position: sticky !important;
+        top: 60px !important;
+        max-height: calc(100vh - 120px) !important;
+        overflow-y: auto !important;
+    }
+        /* 列表表格样式：固定总宽度，铺满中间区域，平均分布列宽 */
+    #changelist .results {
+        width: 100% !important;
+        overflow-x: auto !important;
+        max-width: 100% !important;
+    }
+    
+    #changelist .results table {
+        width: 100% !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+    }
+    
+    /* 平均分布所有列宽度 */
+    #changelist .results table thead th,
+    #changelist .results table tbody td {
+        width: auto !important;
+    }
+    
+    /* 确保表格铺满容器 */
+    #changelist .results table colgroup col {
+        width: auto !important;
+    }
+    
+    /* 移除Django默认的列宽限制 */
+    #changelist .results table th.action-checkbox-column,
+    #changelist .results table td.action-checkbox {
+        width: auto !important;
+    }
+
+</style>
+{% endblock %}

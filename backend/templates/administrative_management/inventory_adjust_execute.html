@@ -1,0 +1,106 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">调整信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">调整单号</span>
+                    <span class="info-value"><code>{{ adjust.adjust_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">调整日期</span>
+                    <span class="info-value">{{ adjust.adjust_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">调整原因</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ adjust.reason }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 调整明细 -->
+    {% if items %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">调整明细</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>用品编码</th>
+                            <th>用品名称</th>
+                            <th>当前库存</th>
+                            <th>调整数量</th>
+                            <th>调整后库存</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td><code>{{ item.supply.code }}</code></td>
+                            <td>{{ item.supply.name }}</td>
+                            <td>{{ item.supply.current_stock }}</td>
+                            <td>
+                                {% if item.adjust_quantity > 0 %}
+                                <span class="text-success">+{{ item.adjust_quantity }}</span>
+                                {% elif item.adjust_quantity < 0 %}
+                                <span class="text-danger">{{ item.adjust_quantity }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% with new_stock=item.supply.current_stock|add:item.adjust_quantity %}
+                                {% if new_stock < 0 %}
+                                <span class="text-danger">0（将设为0）</span>
+                                {% else %}
+                                <strong>{{ new_stock }}</strong>
+                                {% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="alert alert-warning">
+        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> 执行确认</h5>
+        <p>执行后，系统将根据调整明细自动更新库存数量。此操作不可撤销，请确认调整信息无误。</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'admin_pages:inventory_adjust_detail' adjust.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-info">
+                <i class="bi bi-gear"></i> 确认执行
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -1,0 +1,197 @@
+{% extends "shared/list_page_base.html" %}
+{% load static %}
+
+{% block list_page_title %}客户列表{% endblock %}
+{% block list_page_description %}管理所有客户信息，查看客户详情和统计数据{% endblock %}
+
+{% block create_url %}{% url 'business_pages:customer_create' %}{% endblock %}
+{% block create_button_text %}新增客户{% endblock %}
+
+{% block search_placeholder %}搜索客户名称或统一信用代码...{% endblock %}
+
+{% block tab_url_params %}{% if search %}&search={{ search }}{% endif %}{% if client_type %}&client_type={{ client_type }}{% endif %}{% if grade %}&grade={{ grade }}{% endif %}{% if source %}&source={{ source }}{% endif %}{% if department %}&department={{ department }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% endblock %}
+
+{% block list_page_filter_fields %}
+<!-- 所属部门 -->
+<div class="list-page-filter-item">
+    <label>所属部门:</label>
+    <select name="department" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for dept in departments %}
+        <option value="{{ dept }}" {% if department == dept %}selected{% endif %}>{{ dept }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- 负责人 -->
+<div class="list-page-filter-item">
+    <label>负责人:</label>
+    <select name="responsible_user" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for user in users %}
+        <option value="{{ user.id }}" {% if responsible_user_id == user.id|stringformat:"s" %}selected{% endif %}>{{ user.get_full_name|default:user.username }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- 客户类型 -->
+<div class="list-page-filter-item">
+    <label>客户类型:</label>
+    <select name="client_type" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for value, label in client_type_choices %}
+        <option value="{{ value }}" {% if client_type == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- 客户分级 -->
+<div class="list-page-filter-item">
+    <label>客户分级:</label>
+    <select name="grade" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for value, label in grade_choices %}
+        <option value="{{ value }}" {% if grade == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- 客户来源 -->
+<div class="list-page-filter-item">
+    <label>客户来源:</label>
+    <select name="source" class="form-control form-control-sm">
+        <option value="">全部</option>
+        {% for value, label in source_choices %}
+        <option value="{{ value }}" {% if source == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- 法律风险等级 -->
+<div class="list-page-filter-item">
+    <label>法律风险等级:</label>
+    <select name="legal_risk_level" class="form-control form-control-sm">
+        <option value="">全部</option>
+        <option value="low" {% if legal_risk_level == 'low' %}selected{% endif %}>低</option>
+        <option value="medium" {% if legal_risk_level == 'medium' %}selected{% endif %}>中</option>
+        <option value="high" {% if legal_risk_level == 'high' %}selected{% endif %}>高</option>
+    </select>
+</div>
+{% endblock %}
+
+{% block list_page_table_checkbox_header %}
+<th width="40">
+    <input type="checkbox" id="selectAll" class="form-check-input">
+</th>
+{% endblock %}
+
+{% block list_page_table_headers %}
+<th>客户名称</th>
+<th>统一信用代码</th>
+<th>法定代表人</th>
+<th>成立日期</th>
+<th>注册资本（万元）</th>
+<th>联系电话</th>
+<th>邮箱</th>
+<th>客户分级</th>
+<th>客户类型</th>
+<th>所属区域</th>
+<th>客户来源</th>
+<th>负责人</th>
+<th>创建时间</th>
+{% endblock %}
+
+{% block list_page_table_checkbox_cell %}
+<td>
+    <input type="checkbox" name="customer_ids" value="{{ item.id }}" class="form-check-input row-checkbox">
+</td>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td>
+    <a href="{% url 'business_pages:customer_detail' item.id %}" class="text-decoration-none">{{ item.name }}</a>
+</td>
+<td class="text-muted small">{{ item.unified_credit_code|default:"未填写" }}</td>
+<td class="small">{{ item.legal_representative|default:"未填写" }}</td>
+<td class="small">{{ item.established_date|date:"Y-m-d"|default:"未填写" }}</td>
+<td class="small">{{ item.registered_capital|default:"未填写" }}</td>
+<td class="small">{{ item.company_phone|default:"未填写" }}</td>
+<td class="small">{{ item.company_email|default:"未填写" }}</td>
+<td class="small">{{ item.grade.name|default:"未填写" }}</td>
+<td class="small">{{ item.client_type.name|default:"未填写" }}</td>
+<td class="small">{{ item.region|default:"未填写" }}</td>
+<td class="small">{{ item.get_source_display|default:"未填写" }}</td>
+<td class="small">
+    {% if item.responsible_user %}
+        {{ item.responsible_user.get_full_name|default:item.responsible_user.username }}
+    {% else %}
+        <span class="text-muted">公海</span>
+    {% endif %}
+</td>
+<td class="small text-muted">{{ item.created_time|date:"Y-m-d" }}</td>
+{% endblock %}
+
+{% block list_page_table_actions_cell %}
+<td>
+    <div class="list-page-table-actions">
+        <a href="{% url 'business_pages:customer_detail' item.id %}" class="action-view" title="查看">
+            <i class="bi bi-eye"></i>
+        </a>
+        {% if can_create %}
+        <span class="action-separator">|</span>
+        <a href="{% url 'business_pages:customer_edit' item.id %}" class="action-edit" title="编辑">
+            <i class="bi bi-pencil"></i>
+        </a>
+        {% endif %}
+        {% if can_delete %}
+        <span class="action-separator">|</span>
+        <a href="{% url 'business_pages:customer_delete' item.id %}" 
+           class="action-delete" 
+           title="删除"
+           onclick="return confirm('确定要删除此客户吗？此操作不可恢复。');">
+            <i class="bi bi-trash"></i>
+        </a>
+        {% endif %}
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_colspan %}15{% endblock %}
+
+{% block pagination_params %}{% if tab %}&tab={{ tab }}{% endif %}{% if search %}&search={{ search }}{% endif %}{% if client_type %}&client_type={{ client_type }}{% endif %}{% if grade %}&grade={{ grade }}{% endif %}{% if source %}&source={{ source }}{% endif %}{% if department %}&department={{ department }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% endblock %}
+
+{% block batch_delete_api_url %}{% url 'business_pages:customer_batch_delete' %}{% endblock %}
+
+{% block batch_export_api_url %}{% url 'business_pages:customer_export' %}{% endblock %}
+
+{% block export_url %}{% url 'business_pages:customer_export' %}?{% if tab %}tab={{ tab }}&{% endif %}{% if search %}search={{ search }}&{% endif %}{% if client_type %}client_type={{ client_type }}&{% endif %}{% if grade %}grade={{ grade }}&{% endif %}{% if source %}source={{ source }}&{% endif %}{% endblock %}
+
+{% block list_page_batch_import_modal %}
+{% include "shared/modals/batch_import_modal.html" %}
+{% endblock %}
+
+{% block batch_import_modal_title %}批量导入客户{% endblock %}
+
+{% block list_page_tabs %}
+{% if tabs %}
+<div class="list-page-tabs mb-3">
+    <ul class="nav nav-tabs">
+        {% for tab_item in tabs %}
+        <li class="nav-item">
+            <a class="nav-link {% if tab == tab_item.value %}active{% endif %}" 
+               href="?tab={{ tab_item.value }}{{ tab_url_params }}">
+                {{ tab_item.label }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block list_page_custom_js %}
+// 客户列表自定义JavaScript
+// 注意：全选、批量操作等功能已在基模板中实现，无需重复定义
+{% endblock %}
+
+{% block empty_create_url %}{% url 'business_pages:customer_create' %}{% endblock %}

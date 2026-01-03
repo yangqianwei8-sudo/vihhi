@@ -1,9 +1,10 @@
 from django import forms
-from .models import (
-    AccountSubject, Voucher, VoucherEntry, Budget, Invoice, FundFlow
+from backend.apps.financial_management.models import (
+    AccountSubject, Voucher, VoucherEntry, Budget, Invoice, FundFlow,
+    ReceivableAccount, PayableAccount
 )
 from backend.apps.system_management.models import User
-from backend.apps.project_center.models import Project
+from backend.apps.production_management.models import Project
 
 
 class AccountSubjectForm(forms.ModelForm):
@@ -286,4 +287,126 @@ class FundFlowForm(forms.ModelForm):
         self.fields['project'].required = False
         self.fields['voucher'].required = False
         self.fields['counterparty'].required = False
+
+
+class ReceivableAccountForm(forms.ModelForm):
+    """应收账款表单"""
+    
+    class Meta:
+        model = ReceivableAccount
+        fields = [
+            'customer', 'project', 'receivable_amount', 'received_amount',
+            'receivable_date', 'due_date', 'payment_terms', 'status', 'description'
+        ]
+        widgets = {
+            'customer': forms.Select(attrs={'class': 'form-select'}),
+            'project': forms.Select(attrs={'class': 'form-select'}),
+            'receivable_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '应收金额'
+            }),
+            'received_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '已收金额',
+                'value': '0.00'
+            }),
+            'receivable_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'due_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'payment_terms': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'placeholder': '账期（天）'
+            }),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '备注说明'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        try:
+            from backend.apps.customer_management.models import Client
+            self.fields['customer'].queryset = Client.objects.filter(is_active=True).order_by('name')
+        except (ImportError, AttributeError):
+            # 如果Client模型不存在或无法导入，使用空查询集
+            self.fields['customer'].queryset = AccountSubject.objects.none()  # 临时使用AccountSubject作为占位符
+        try:
+            self.fields['project'].queryset = Project.objects.all().order_by('-created_time')
+        except Exception:
+            self.fields['project'].queryset = Project.objects.none()
+        self.fields['customer'].required = False
+        self.fields['project'].required = False
+        self.fields['due_date'].required = False
+        self.fields['payment_terms'].required = False
+        self.fields['received_amount'].initial = 0.00
+
+
+class PayableAccountForm(forms.ModelForm):
+    """应付账款表单"""
+    
+    class Meta:
+        model = PayableAccount
+        fields = [
+            'supplier', 'project', 'payable_amount', 'paid_amount',
+            'payable_date', 'due_date', 'payment_terms', 'status', 'description'
+        ]
+        widgets = {
+            'supplier': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '供应商名称'
+            }),
+            'project': forms.Select(attrs={'class': 'form-select'}),
+            'payable_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '应付金额'
+            }),
+            'paid_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '已付金额',
+                'value': '0.00'
+            }),
+            'payable_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'due_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'payment_terms': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'placeholder': '账期（天）'
+            }),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '备注说明'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        try:
+            self.fields['project'].queryset = Project.objects.all().order_by('-created_time')
+        except Exception:
+            self.fields['project'].queryset = Project.objects.none()
+        self.fields['project'].required = False
+        self.fields['due_date'].required = False
+        self.fields['payment_terms'].required = False
+        self.fields['paid_amount'].initial = 0.00
 

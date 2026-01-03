@@ -1,0 +1,289 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .followup-filters {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-md);
+        align-items: center;
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .filter-row:last-child {
+        margin-bottom: 0;
+    }
+    
+    .filter-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+    }
+    
+    .filter-item label {
+        font-size: var(--font-size-sm);
+        color: var(--vh-text-muted);
+        white-space: nowrap;
+    }
+    
+    .filter-item select,
+    .filter-item input {
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border: 1px solid var(--vh-border);
+        border-radius: var(--radius-sm);
+    }
+    
+    .followup-table {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    
+    .followup-table table {
+        margin-bottom: 0;
+    }
+    
+    .followup-table thead th {
+        background: var(--vh-surface);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+        white-space: nowrap;
+    }
+    
+    .followup-table tbody td {
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-md);
+        vertical-align: middle;
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    
+    .followup-table tbody tr:hover {
+        background-color: var(--vh-surface);
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 操作栏 -->
+    <div class="d-flex justify-content-end mb-3">
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                导出
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="?export=csv{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}{% if follow_type %}&follow_type={{ follow_type }}{% endif %}{% if follow_date_start %}&follow_date_start={{ follow_date_start }}{% endif %}{% if follow_date_end %}&follow_date_end={{ follow_date_end }}{% endif %}{% if created_by_id %}&created_by={{ created_by_id }}{% endif %}">导出为 CSV</a></li>
+                <li><a class="dropdown-item" href="?export=xlsx{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}{% if follow_type %}&follow_type={{ follow_type }}{% endif %}{% if follow_date_start %}&follow_date_start={{ follow_date_start }}{% endif %}{% if follow_date_end %}&follow_date_end={{ follow_date_end }}{% endif %}{% if created_by_id %}&created_by={{ created_by_id }}{% endif %}">导出为 Excel</a></li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- 筛选栏 -->
+    <div class="followup-filters">
+        <form method="get" id="filterForm">
+            <div class="filter-row">
+                <div class="filter-item">
+                    <label>搜索:</label>
+                    <input type="text" name="search" class="form-control form-control-sm" style="width: 200px;" placeholder="搜索内容、商机、客户" value="{{ search }}">
+                </div>
+                
+                <div class="filter-item">
+                    <label>客户:</label>
+                    <select name="client_id" class="form-select form-select-sm" style="width: 150px;">
+                        <option value="">全部</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label>商机:</label>
+                    <select name="opportunity_id" class="form-select form-select-sm" style="width: 150px;">
+                        <option value="">全部</option>
+                        {% for opp in opportunities %}
+                        <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>{{ opp.name|truncatechars:20 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label>跟进类型:</label>
+                    <select name="follow_type" class="form-select form-select-sm" style="width: 120px;">
+                        <option value="">全部</option>
+                        {% for value, label in follow_type_choices %}
+                        <option value="{{ value }}" {% if follow_type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label>跟进人:</label>
+                    <select name="created_by" class="form-select form-select-sm" style="width: 120px;">
+                        <option value="">全部</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if created_by_id == user.id|stringformat:"s" %}selected{% endif %}>{{ user.get_full_name|default:user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label>开始日期:</label>
+                    <input type="date" name="follow_date_start" class="form-control form-control-sm" style="width: 140px;" value="{{ follow_date_start }}">
+                </div>
+                
+                <div class="filter-item">
+                    <label>结束日期:</label>
+                    <input type="date" name="follow_date_end" class="form-control form-control-sm" style="width: 140px;" value="{{ follow_date_end }}">
+                </div>
+                
+                <div class="filter-item">
+                    <button type="submit" class="btn btn-primary btn-sm">筛选</button>
+                    <a href="{% url 'business_pages:followup_record' %}" class="btn btn-outline-secondary btn-sm">重置</a>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 跟进记录列表 -->
+    {% if page_obj %}
+    <div class="followup-table">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>跟进日期</th>
+                        <th>商机</th>
+                        <th>客户</th>
+                        <th>跟进类型</th>
+                        <th>跟进人</th>
+                        <th>内容</th>
+                        <th>客户反馈</th>
+                        <th>下一步计划</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for followup in page_obj %}
+                    <tr>
+                        <td>{{ followup.follow_date|date:"Y-m-d" }}</td>
+                        <td>
+                            <a href="{% url 'business_pages:opportunity_detail' followup.opportunity.id %}" class="text-decoration-none">
+                                {{ followup.opportunity.name|truncatechars:20 }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{% url 'business_pages:customer_detail' followup.opportunity.client.id %}" class="text-decoration-none">
+                                {{ followup.opportunity.client.name|truncatechars:15 }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ followup.get_follow_type_display }}</span>
+                        </td>
+                        <td>{{ followup.created_by.get_full_name|default:followup.created_by.username }}</td>
+                        <td>{{ followup.content|truncatewords:8|default:"—" }}</td>
+                        <td>{{ followup.customer_feedback|truncatewords:5|default:"—" }}</td>
+                        <td>
+                            {% if followup.next_plan %}
+                            {{ followup.next_plan|truncatewords:5 }}
+                            {% if followup.next_follow_date %}
+                            <br><small class="text-muted">预计: {{ followup.next_follow_date|date:"Y-m-d" }}</small>
+                            {% endif %}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'business_pages:opportunity_detail' followup.opportunity.id %}" class="btn btn-sm btn-outline-primary">查看</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination-wrapper p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-muted">共{{ page_obj.paginator.count }}条</span>
+                </div>
+                <nav aria-label="跟进记录分页">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}{% if follow_type %}&follow_type={{ follow_type }}{% endif %}{% if follow_date_start %}&follow_date_start={{ follow_date_start }}{% endif %}{% if follow_date_end %}&follow_date_end={{ follow_date_end }}{% endif %}{% if created_by_id %}&created_by={{ created_by_id }}{% endif %}">上一页</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}{% if follow_type %}&follow_type={{ follow_type }}{% endif %}{% if follow_date_start %}&follow_date_start={{ follow_date_start }}{% endif %}{% if follow_date_end %}&follow_date_end={{ follow_date_end }}{% endif %}{% if created_by_id %}&created_by={{ created_by_id }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}{% if follow_type %}&follow_type={{ follow_type }}{% endif %}{% if follow_date_start %}&follow_date_start={{ follow_date_start }}{% endif %}{% if follow_date_end %}&follow_date_end={{ follow_date_end }}{% endif %}{% if created_by_id %}&created_by={{ created_by_id }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}{% if follow_type %}&follow_type={{ follow_type }}{% endif %}{% if follow_date_start %}&follow_date_start={{ follow_date_start }}{% endif %}{% if follow_date_end %}&follow_date_end={{ follow_date_end }}{% endif %}{% if created_by_id %}&created_by={{ created_by_id }}{% endif %}">下一页</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="info-card">
+        <div class="info-card-body">
+            <p class="text-muted text-center py-5">暂无跟进记录</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // 筛选表单自动提交（日期选择器）
+    document.querySelectorAll('#filterForm input[type="date"]').forEach(input => {
+        input.addEventListener('change', function() {
+            document.getElementById('filterForm').submit();
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">{{ page_title }}</h1>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <a href="{% url 'settlement_pages:output_value_event_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> 创建事件
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>所属阶段</th>
+                            <th>所属里程碑</th>
+                            <th>事件名称</th>
+                            <th>事件编码</th>
+                            <th>事件比例(%)</th>
+                            <th>责任岗位</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                        <tr>
+                            <td><span class="badge bg-info">{{ event.milestone.stage.name }}</span></td>
+                            <td><span class="badge bg-secondary">{{ event.milestone.name }}</span></td>
+                            <td><strong>{{ event.name }}</strong></td>
+                            <td><code>{{ event.code }}</code></td>
+                            <td>{{ event.event_percentage }}%</td>
+                            <td><code>{{ event.responsible_role_code }}</code></td>
+                            <td>
+                                {% if event.is_active %}
+                                <span class="badge bg-success">启用</span>
+                                {% else %}
+                                <span class="badge bg-secondary">禁用</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'settlement_pages:output_value_event_edit' event.id %}" class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i> 编辑
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger" onclick="deleteEvent({{ event.id }}, '{{ event.name }}')">
+                                        <i class="bi bi-trash"></i> 删除
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                暂无产值事件，<a href="{% url 'settlement_pages:output_value_event_create' %}">创建第一个事件</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="deleteForm" method="post" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<script>
+function deleteEvent(id, name) {
+    if (confirm(`确定要删除产值事件 "${name}" 吗？`)) {
+        const form = document.getElementById('deleteForm');
+        form.action = `{% url 'settlement_pages:output_value_event_delete' 0 %}`.replace('0', id);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}
+

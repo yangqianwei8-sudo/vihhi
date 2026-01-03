@@ -13,8 +13,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('project_center', '0001_initial'),
-        ('customer_success', '0001_initial'),
+        ('production_management', '0001_initial'),
+        ('customer_management', '0001_initial_squashed_0015_remove_client_blacklist_details_remove_client_code_and_more'),
     ]
 
     operations = [
@@ -70,10 +70,10 @@ class Migration(migrations.Migration):
                 ('file_count', models.IntegerField(default=0, verbose_name='文件数量')),
                 ('total_file_size', models.BigIntegerField(default=0, verbose_name='文件总大小(字节)')),
                 ('notes', models.TextField(blank=True, verbose_name='备注')),
-                ('client', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='delivery_records', to='customer_success.client', verbose_name='关联客户')),
+                ('client', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='delivery_records', to='customer_management.client', verbose_name='关联客户')),
                 ('created_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_deliveries', to=settings.AUTH_USER_MODEL, verbose_name='创建人')),
                 ('delivery_person', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='hand_delivered_records', to=settings.AUTH_USER_MODEL, verbose_name='送达人')),
-                ('project', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='delivery_records', to='project_center.project', verbose_name='关联项目')),
+                ('project', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='delivery_records', to='production_management.project', verbose_name='关联项目')),
                 ('sent_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='sent_deliveries', to=settings.AUTH_USER_MODEL, verbose_name='发送人')),
             ],
             options={

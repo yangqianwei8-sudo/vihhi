@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from .models import RegistrationRequest, Role
+from backend.apps.system_management.models import RegistrationRequest, Role
 
 # Default role mapping based on the client type selected during registration.
 CLIENT_TYPE_DEFAULT_ROLE = {

@@ -1,0 +1,116 @@
+{% extends "shared/list_page_base.html" %}
+{% comment %}
+采购管理列表页面模板 (Supply Purchase List Template)
+
+功能说明：
+- 展示采购单记录的列表页面
+- 支持按状态等多维度筛选
+- 支持采购单的查看、编辑、审批、收货等操作
+- 包含复选框功能，支持批量操作
+
+主要功能：
+1. 筛选功能：
+   - 状态筛选：全部、草稿、待审批、已批准、已收货等
+2. 表格展示：采购单号、供应商、采购日期、采购金额、创建人、状态、创建时间、操作
+3. 复选框功能：支持全选和批量操作（继承自list_page_base.html）
+4. 操作功能：查看详情、编辑、审批、收货
+{% endcomment %}
+{% load static %}
+
+{% block list_page_title %}采购管理{% endblock %}
+
+{% block list_page_actions %}
+{% if can_create %}
+<a href="{% url 'admin_pages:supply_purchase_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> 创建采购单
+</a>
+{% endif %}
+{% endblock %}
+
+{% block search_placeholder %}搜索采购单号、供应商...{% endblock %}
+
+{% block reset_url %}{% url 'admin_pages:supply_purchase_list' %}{% endblock %}
+
+<!-- 表格复选框列 -->
+{% block list_page_table_checkbox_header %}
+<th style="width: 40px;">
+    <input type="checkbox" id="selectAll" title="全选/取消全选">
+</th>
+{% endblock %}
+
+{% block list_page_table_headers %}
+<th style="width: 10%;">采购单号</th>
+<th style="width: 12%;">供应商</th>
+<th style="width: 10%;">采购日期</th>
+<th style="width: 10%;">采购金额</th>
+<th style="width: 10%;">创建人</th>
+<th style="width: 10%;">状态</th>
+<th style="width: 12%;">创建时间</th>
+{% endblock %}
+
+{% block list_page_table_checkbox_cell %}
+<td>
+    <input type="checkbox" class="row-checkbox" value="{{ item.id }}" title="选择此项">
+</td>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td>
+    <a href="{% url 'admin_pages:supply_purchase_detail' purchase_id=item.id %}" class="text-decoration-none">
+        <code>{{ item.purchase_number }}</code>
+    </a>
+</td>
+<td>{{ item.supplier }}</td>
+<td>{{ item.purchase_date|date:"Y-m-d" }}</td>
+<td>¥{{ item.total_amount|floatformat:2 }}</td>
+<td>{{ item.created_by.get_full_name|default:item.created_by.username }}</td>
+<td>
+    {% if item.status == 'draft' %}
+        <span class="badge bg-secondary">草稿</span>
+    {% elif item.status == 'pending_approval' %}
+        <span class="badge bg-warning">待审批</span>
+    {% elif item.status == 'approved' %}
+        <span class="badge bg-success">已批准</span>
+    {% elif item.status == 'rejected' %}
+        <span class="badge bg-danger">已拒绝</span>
+    {% elif item.status == 'received' %}
+        <span class="badge bg-info">已收货</span>
+    {% else %}
+        <span class="badge bg-secondary">{{ item.get_status_display }}</span>
+    {% endif %}
+</td>
+<td>{{ item.created_time|date:"Y-m-d H:i" }}</td>
+<td>
+    <div class="list-page-table-actions">
+        <a href="{% url 'admin_pages:supply_purchase_detail' purchase_id=item.id %}" class="action-view" title="查看详情">
+            <i class="bi bi-eye"></i>
+        </a>
+        {% if item.status in 'draft,pending_approval' and item.created_by == request.user %}
+        <span class="action-separator">|</span>
+        <a href="{% url 'admin_pages:supply_purchase_update' purchase_id=item.id %}" class="action-edit" title="编辑">
+            <i class="bi bi-pencil"></i>
+        </a>
+        {% endif %}
+        {% if item.status == 'pending_approval' %}
+        <span class="action-separator">|</span>
+        <a href="{% url 'admin_pages:supply_purchase_approve' purchase_id=item.id %}" class="action-edit" title="审批">
+            <i class="bi bi-check-circle"></i>
+        </a>
+        {% endif %}
+        {% if item.status == 'approved' %}
+        <span class="action-separator">|</span>
+        <a href="{% url 'admin_pages:supply_purchase_receive' purchase_id=item.id %}" class="action-view" title="收货">
+            <i class="bi bi-box-arrow-in-down"></i>
+        </a>
+        {% endif %}
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_colspan %}9{% endblock %}
+
+{% block empty_table_message %}暂无数据{% endblock %}
+
+{% block empty_message %}暂无数据{% endblock %}
+
+{% block empty_create_url %}{% url 'admin_pages:supply_purchase_create' %}{% endblock %}

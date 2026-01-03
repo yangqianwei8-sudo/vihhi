@@ -1,0 +1,165 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}诉讼费用 - {{ case.case_number }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                {% if perms.litigation_management.expense.view %}
+                <a href="{% url 'litigation_pages:expense_list_export' case.id %}?{{ request.GET.urlencode }}" class="btn btn-success">
+                    <i class="bi bi-download"></i> 导出Excel
+                </a>
+                {% endif %}
+                {% if perms.litigation_management.expense.manage %}
+                <a href="{% url 'litigation_pages:expense_create' case.id %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> 添加费用
+                </a>
+                {% endif %}
+                <a href="{% url 'litigation_pages:case_detail' case.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回案件
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 费用统计 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">费用统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-4 info-grid-responsive">
+                <div class="info-item">
+                    <span class="info-label">费用总额</span>
+                    <span class="info-value info-value-large">¥{{ total_amount|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">已支付</span>
+                    <span class="info-value info-value-large">¥{{ paid_amount|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">待支付</span>
+                    <span class="info-value info-value-large">¥{{ pending_amount|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">费用记录数</span>
+                    <span class="info-value info-value-large">{{ expenses.count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选器 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">费用筛选</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">支付状态</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">全部状态</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>待支付</option>
+                        <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>已支付</option>
+                        <option value="reimbursed" {% if status_filter == 'reimbursed' %}selected{% endif %}>已报销</option>
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-search"></i> 筛选
+                        </button>
+                        <a href="{% url 'litigation_pages:expense_list' case.id %}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-arrow-counterclockwise"></i> 重置
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 费用列表 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">费用列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">共 {{ expenses.count }} 条</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if expenses %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>费用名称</th>
+                            <th>费用类型</th>
+                            <th>金额</th>
+                            <th>费用日期</th>
+                            <th>支付状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in expenses %}
+                        <tr>
+                            <td>{{ expense.expense_name }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ expense.get_expense_type_display }}</span>
+                            </td>
+                            <td><strong>¥{{ expense.amount|floatformat:2 }}</strong></td>
+                            <td>{{ expense.expense_date|date:"Y-m-d" }}</td>
+                            <td>
+                                <span class="status-badge {{ expense.payment_status }}">
+                                    {{ expense.get_payment_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'litigation_pages:expense_detail' expense.id %}" class="btn btn-outline-primary" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if perms.litigation_management.expense.manage %}
+                                    <a href="{% url 'litigation_pages:expense_edit' expense.id %}" class="btn btn-outline-secondary" title="编辑">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: var(--vh-text-muted);"></i>
+                <p class="text-muted mt-3">暂无费用记录</p>
+                {% if perms.litigation_management.expense.manage %}
+                <a href="{% url 'litigation_pages:expense_create' case.id %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> 创建第一个费用记录
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

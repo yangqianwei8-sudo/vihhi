@@ -1,0 +1,401 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}发文效能报告 - 维海科技信息化管理平台
+function exportReport(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('format', format);
+    const exportUrl = '{% url "delivery_pages:outgoing_document_performance_report" %}?' + params.toString();
+    window.open(exportUrl, '_blank');
+    alert('导出功能开发中，敬请期待！\n格式：' + format.toUpperCase());
+}
+
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📊 发文效能报告</h2>
+            <p class="text-muted mb-0">查看发文效能统计分析报告</p>
+
+            <div class="btn-group">
+                <button type="button" class="btn btn-success btn-sm" onclick="exportReport('excel')" title="导出Excel">
+                    <i class="bi bi-file-excel"></i> 导出Excel
+                </button>
+                <button type="button" class="btn btn-danger btn-sm" onclick="exportReport('pdf')" title="导出PDF">
+                    <i class="bi bi-file-pdf"></i> 导出PDF
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 筛选栏 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">筛选条件</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">开始日期</label>
+                    <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">结束日期</label>
+                    <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">责任人</label>
+                    <select name="responsible_person" class="form-select form-select-sm">
+                        <option value="">全部</option>
+                        {% for person in responsible_persons %}
+                        <option value="{{ person.id }}" {% if selected_responsible_person_id == person.id %}selected{% endif %}>
+                            {{ person.get_full_name|default:person.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary btn-sm me-2">
+                        <i class="bi bi-search"></i> 查询
+                    </button>
+                    <a href="{% url 'delivery_pages:outgoing_document_performance_report' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-clockwise"></i> 重置
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 报告期间 -->
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> 报告期间：{{ report_data.period.start|date:"Y-m-d" }} 至 {{ report_data.period.end|date:"Y-m-d" }}
+    </div>
+
+    <!-- 基础统计 -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="info-card info-card-primary">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">总发文数</div>
+                            <div class="info-value info-value-large">{{ report_data.summary.total_documents }}</div>
+                        </div>
+                        <div class="text-primary" style="font-size: 2rem;">
+                            <i class="bi bi-file-text"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="info-card info-card-success">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">签收率</div>
+                            <div class="info-value info-value-large">{{ report_data.receipt_stats.receipt_rate }}%</div>
+                        </div>
+                        <div class="text-success" style="font-size: 2rem;">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="info-card info-card-warning">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">延迟率</div>
+                            <div class="info-value info-value-large">{{ report_data.receipt_stats.delayed_rate }}%</div>
+                        </div>
+                        <div class="text-warning" style="font-size: 2rem;">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 效率指标 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">效率指标</h5>
+                </div>
+                <div class="info-card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-6">平均响应时效：</dt>
+                        <dd class="col-sm-6"><strong>{{ report_data.efficiency.avg_response_time }}</strong> 小时</dd>
+                        
+                        <dt class="col-sm-6">平均审核时间：</dt>
+                        <dd class="col-sm-6"><strong>{{ report_data.efficiency.avg_review_time }}</strong> 小时</dd>
+                        
+                        <dt class="col-sm-6">平均签收时间：</dt>
+                        <dd class="col-sm-6"><strong>{{ report_data.receipt_stats.avg_receipt_days }}</strong> 天</dd>
+                        
+                        <dt class="col-sm-6">完成率：</dt>
+                        <dd class="col-sm-6"><strong>{{ report_data.efficiency.completion_rate }}</strong>%</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">签收统计</h5>
+                </div>
+                <div class="info-card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-6">签收率：</dt>
+                        <dd class="col-sm-6"><strong>{{ report_data.receipt_stats.receipt_rate }}</strong>%</dd>
+                        
+                        <dt class="col-sm-6">平均签收天数：</dt>
+                        <dd class="col-sm-6"><strong>{{ report_data.receipt_stats.avg_receipt_days }}</strong> 天</dd>
+                        
+                        <dt class="col-sm-6">延迟数量：</dt>
+                        <dd class="col-sm-6"><strong>{{ report_data.receipt_stats.delayed_count }}</strong> 个</dd>
+                        
+                        <dt class="col-sm-6">延迟率：</dt>
+                        <dd class="col-sm-6"><strong>{{ report_data.receipt_stats.delayed_rate }}</strong>%</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 按状态分布 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">按状态分布</h5>
+                </div>
+                <div class="info-card-body">
+                    {% if formatted_by_status %}
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>状态</th>
+                                <th>数量</th>
+                                <th>占比</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for status, count in formatted_by_status.items %}
+                            <tr>
+                                <td>{{ status }}</td>
+                                <td><strong>{{ count }}</strong></td>
+                                <td>
+                                    {% widthratio count report_data.summary.total_documents 100 %}%
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="text-muted mb-0">暂无数据</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">按优先级分布</h5>
+                </div>
+                <div class="info-card-body">
+                    {% if formatted_by_priority %}
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>优先级</th>
+                                <th>数量</th>
+                                <th>占比</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for priority, count in formatted_by_priority.items %}
+                            <tr>
+                                <td>{{ priority }}</td>
+                                <td><strong>{{ count }}</strong></td>
+                                <td>
+                                    {% widthratio count report_data.summary.total_documents 100 %}%
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="text-muted mb-0">暂无数据</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- 趋势图表 -->
+    {% if report_data.trend_data %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">趋势分析</h5>
+        </div>
+        <div class="info-card-body">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 责任人排名 -->
+    {% if report_data.top_responsible_persons %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">责任人排名（Top 10）</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>责任人</th>
+                            <th>发文数</th>
+                            <th>已签收</th>
+                            <th>签收率</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for person in report_data.top_responsible_persons %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td><strong>{{ person.person_name }}</strong></td>
+                            <td>{{ person.total_count }}</td>
+                            <td>{{ person.receipt_count }}</td>
+                            <td>
+                                <span class="badge {% if person.receipt_rate >= 80 %}bg-success{% elif person.receipt_rate >= 60 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ person.receipt_rate }}%
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 退回统计 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">退回统计</h5>
+        </div>
+        <div class="info-card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">退回/拒绝数量：</dt>
+                <dd class="col-sm-3"><strong>{{ report_data.rejection_stats.rejection_count }}</strong> 个</dd>
+                
+                <dt class="col-sm-3">退回率：</dt>
+                <dd class="col-sm-3"><strong>{{ report_data.rejection_stats.rejection_rate }}</strong>%</dd>
+            </dl>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 状态分布饼图
+    {% if formatted_by_status %}
+    const statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'pie',
+            data: {
+                labels: [{% for status, count in formatted_by_status.items %}'{{ status }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for status, count in formatted_by_status.items %}{{ count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6c757d']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    title: { display: true, text: '状态分布' }
+                }
+            }
+        });
+    }
+    {% endif %}
+    
+    // 趋势数据折线图
+    {% if report_data.trend_data %}
+    const trendCtx = document.getElementById('trendChart');
+    if (trendCtx) {
+        const trendData = {{ report_data.trend_data|safe }};
+        const dates = Object.keys(trendData).sort();
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: '发文数',
+                    data: dates.map(d => trendData[d].created),
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)'
+                }, {
+                    label: '签收数',
+                    data: dates.map(d => trendData[d].receipt),
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    title: { display: true, text: '趋势分析' }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+    {% endif %}
+});
+</script>
+
+function exportReport(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('format', format);
+    const exportUrl = '{% url "delivery_pages:outgoing_document_performance_report" %}?' + params.toString();
+    window.open(exportUrl, '_blank');
+    alert('导出功能开发中，敬请期待！\n格式：' + format.toUpperCase());
+}
+
+{% endblock %}
+
+
+function exportReport(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('format', format);
+    const exportUrl = '{% url "delivery_pages:outgoing_document_performance_report" %}?' + params.toString();
+    window.open(exportUrl, '_blank');
+    alert('导出功能开发中，敬请期待！\n格式：' + format.toUpperCase());
+}
+
+{% endblock %}

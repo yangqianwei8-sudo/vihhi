@@ -1,0 +1,140 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}档案借阅 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="list-page-container">
+    <!-- 页面标题和操作按钮 -->
+    <div class="list-page-header">
+        <div>
+            <h2 class="list-page-title">📖 档案借阅</h2>
+            <p class="text-muted mb-0">管理档案借阅记录，支持审批、出库和归还</p>
+        </div>
+        <div class="list-page-actions">
+            <a href="{% url 'archive_management:archive_borrow_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> 新建借阅
+            </a>
+        </div>
+    </div>
+
+    <!-- 筛选和列表 -->
+    <div class="list-page-filters">
+        <div class="list-page-filters-header">
+            <h5 class="list-page-filters-title">筛选条件</h5>
+            
+        </div>
+        <div class="list-page-filter-row">
+            <!-- 筛选器 -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <form method="get" class="d-flex gap-2">
+                        <select name="status" class="form-select" style="max-width: 150px;">
+                            <option value="">全部状态</option>
+                            <option value="pending" {% if status == 'pending' %}selected{% endif %}>待审批</option>
+                            <option value="approving" {% if status == 'approving' %}selected{% endif %}>审批中</option>
+                            <option value="approved" {% if status == 'approved' %}selected{% endif %}>已批准</option>
+                            <option value="out" {% if status == 'out' %}selected{% endif %}>已出库</option>
+                            <option value="returned" {% if status == 'returned' %}selected{% endif %}>已归还</option>
+                            <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>已拒绝</option>
+                            <option value="overdue" {% if status == 'overdue' %}selected{% endif %}>已逾期</option>
+                        </select>
+                        <input type="text" name="search" class="form-control" placeholder="搜索借阅单号、借阅人..." value="{{ search }}" style="max-width: 300px;">
+                        <button type="submit" class="btn btn-primary">搜索</button>
+                        <a href="{% url 'archive_management:archive_borrow_list' %}" class="btn btn-secondary">重置</a>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 列表表格 -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>借阅单号</th>
+                            <th>档案名称</th>
+                            <th>借阅人</th>
+                            <th>借阅日期</th>
+                            <th>归还日期</th>
+                            <th>借阅方式</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for borrow in page %}
+                        <tr>
+                            <td>{{ borrow.borrow_number }}</td>
+                            <td>
+                                {% if borrow.project_document %}
+                                    {{ borrow.project_document.document_name }}
+                                {% elif borrow.administrative_archive %}
+                                    {{ borrow.administrative_archive.archive_name }}
+                                {% endif %}
+                            </td>
+                            <td>{{ borrow.borrower.username }}</td>
+                            <td>{{ borrow.borrow_date|date:"Y-m-d" }}</td>
+                            <td>{{ borrow.return_date|date:"Y-m-d" }}</td>
+                            <td>{{ borrow.get_borrow_method_display }}</td>
+                            <td>
+                                <span class="status-badge status-{{ borrow.status }}">
+                                    {{ borrow.get_status_display }}
+                                </span>
+                                {% if borrow.is_overdue %}
+                                <span class="badge bg-danger">逾期</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'archive_management:archive_borrow_detail' borrow.pk %}" class="btn btn-sm btn-outline-primary">查看</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">暂无数据</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if page.has_other_pages %}
+            <nav aria-label="分页">
+                <ul class="pagination justify-content-center">
+                    {% if page.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if search %}&search={{ search }}{% endif %}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page.paginator.page_range %}
+                    {% if page.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page.number|add:'-3' and num < page.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if status %}&status={{ status }}{% endif %}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if search %}&search={{ search }}{% endif %}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,103 @@
+{% extends "shared/list_page_base.html" %}
+{% load static %}
+
+{% block list_page_title %}全部流程{% if status_filter == 'pending' %} - 进行中{% elif status_filter == 'completed' %} - 已完成{% elif status_filter == 'archived' %} - 已归档{% endif %}{% endblock %}
+
+{% block list_page_filter_fields %}
+<!-- 状态筛选 -->
+<div class="filter-row" data-filter-key="status">
+    <label class="filter-label">状态:</label>
+    <div class="filter-control">
+        <select name="status" class="form-control form-control-sm" onchange="this.form.submit()">
+            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>进行中</option>
+            <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>已完成</option>
+            <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>已归档</option>
+        </select>
+    </div>
+</div>
+{% endblock %}
+
+{% block list_page_table_headers %}
+<th style="width: 10%;">流程编号</th>
+<th style="width: 15%;">流程名称</th>
+<th style="width: 10%;">申请人</th>
+<th style="width: 10%;">申请时间</th>
+<th style="width: 8%;">状态</th>
+<th style="width: 12%;">当前节点</th>
+<th style="width: 10%;">完成时间</th>
+<th style="width: 15%;">关联对象</th>
+<th style="width: 10%;">操作</th>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td><code>{{ item.instance_number }}</code></td>
+<td>
+    <strong>{{ item.workflow.name }}</strong>
+    {% if item.workflow.category %}
+    <br><small class="text-muted">{{ item.workflow.category }}</small>
+    {% endif %}
+</td>
+<td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
+<td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
+<td>
+    {% if item.status == 'pending' %}
+        <span class="badge bg-warning">审批中</span>
+    {% elif item.status == 'approved' %}
+        <span class="badge bg-success">已通过</span>
+    {% elif item.status == 'rejected' %}
+        <span class="badge bg-danger">已驳回</span>
+    {% elif item.status == 'withdrawn' %}
+        <span class="badge bg-secondary">已撤回</span>
+    {% elif item.status == 'cancelled' %}
+        <span class="badge bg-dark">已取消</span>
+    {% else %}
+        <span class="badge bg-secondary">{{ item.get_status_display }}</span>
+    {% endif %}
+</td>
+<td>
+    {% if item.current_node %}
+        <span class="badge bg-info">{{ item.current_node.name }}</span>
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>{{ item.completed_time|date:"Y-m-d H:i"|default:"-" }}</td>
+<td>
+    {% if item.content_object %}
+        {{ item.content_object }}
+        {% if item.content_type %}
+        <br><small class="text-muted">{{ item.content_type.model }}</small>
+        {% endif %}
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>
+    <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-eye"></i> 查看
+    </a>
+</td>
+{% endblock %}
+
+{% block empty_table_message %}
+<i class="bi bi-inbox"></i> 暂无{% if status_filter == 'pending' %}进行中{% elif status_filter == 'completed' %}已完成{% elif status_filter == 'archived' %}已归档{% else %}流程{% endif %}的流程
+{% endblock %}
+
+{% block empty_colspan %}9{% endblock %}
+
+{% block list_page_custom_js %}
+// 页面加载时自动提交状态筛选
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelect = document.querySelector('select[name="status"]');
+    if (statusSelect) {
+        statusSelect.addEventListener('change', function() {
+            // 更新URL参数
+            const url = new URL(window.location);
+            url.searchParams.set('status', this.value);
+            url.searchParams.delete('page'); // 重置页码
+            window.location.href = url.toString();
+        });
+    }
+});
+{% endblock %}
+

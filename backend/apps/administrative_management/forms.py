@@ -1,10 +1,54 @@
 from django import forms
 from .models import (
-    OfficeSupply, MeetingRoom, Vehicle, ReceptionRecord,
-    Announcement, Seal, FixedAsset, ExpenseReimbursement, ExpenseItem
+    OfficeSupply, SupplyPurchase, SupplyCategory, MeetingRoom, MeetingRoomBooking, Meeting, MeetingRecord, MeetingResolution,
+    Vehicle, VehicleBooking, ReceptionRecord,
+    Announcement, Seal, FixedAsset, ExpenseReimbursement, ExpenseItem,
+    AdministrativeAffair, TravelApplication,
+    Supplier, PurchaseContract, PurchasePayment,
+    InventoryCheck, InventoryCheckItem, InventoryAdjust, InventoryAdjustItem
 )
 from backend.apps.system_management.models import User, Department
 from backend.apps.system_management.models import Role
+
+
+class SupplyCategoryForm(forms.ModelForm):
+    """办公用品分类表单"""
+    
+    class Meta:
+        model = SupplyCategory
+        fields = ['name', 'parent', 'description', 'sort_order', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '分类名称'}),
+            'parent': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '分类描述'
+            }),
+            'sort_order': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': '排序顺序'
+            }),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 排除自己和自己的子分类作为父分类
+        if self.instance and self.instance.pk:
+            exclude_ids = [self.instance.pk]
+            # 获取所有子分类ID
+            def get_children_ids(category):
+                ids = []
+                for child in category.children.all():
+                    ids.append(child.id)
+                    ids.extend(get_children_ids(child))
+                return ids
+            exclude_ids.extend(get_children_ids(self.instance))
+            self.fields['parent'].queryset = SupplyCategory.objects.exclude(id__in=exclude_ids).order_by('sort_order', 'name')
+        else:
+            self.fields['parent'].queryset = SupplyCategory.objects.order_by('sort_order', 'name')
+        self.fields['parent'].required = False
 
 
 class OfficeSupplyForm(forms.ModelForm):
@@ -13,14 +57,14 @@ class OfficeSupplyForm(forms.ModelForm):
     class Meta:
         model = OfficeSupply
         fields = [
-            'code', 'name', 'category', 'unit', 'specification', 'brand',
+            'code', 'name', 'supply_category', 'unit', 'specification', 'brand',
             'supplier', 'purchase_price', 'current_stock', 'min_stock',
             'max_stock', 'storage_location', 'description', 'is_active'
         ]
         widgets = {
             'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '用品编码'}),
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '用品名称'}),
-            'category': forms.Select(attrs={'class': 'form-select'}),
+            'supply_category': forms.Select(attrs={'class': 'form-select'}),
             'unit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '单位'}),
             'specification': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '规格型号'}),
             'brand': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '品牌'}),
@@ -96,6 +140,87 @@ class MeetingRoomForm(forms.ModelForm):
         }
 
 
+class MeetingRoomBookingForm(forms.ModelForm):
+    """会议室预订表单"""
+    
+    class Meta:
+        model = MeetingRoomBooking
+        fields = [
+            'room', 'booking_date', 'start_time', 'end_time',
+            'meeting_topic', 'attendees_count', 'attendees',
+            'equipment_needed', 'special_requirements'
+        ]
+        widgets = {
+            'room': forms.Select(attrs={'class': 'form-select'}),
+            'booking_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'start_time': forms.TimeInput(attrs={
+                'class': 'form-control',
+                'type': 'time'
+            }),
+            'end_time': forms.TimeInput(attrs={
+                'class': 'form-control',
+                'type': 'time'
+            }),
+            'meeting_topic': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '会议主题'
+            }),
+            'attendees_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'placeholder': '参会人数'
+            }),
+            'attendees': forms.SelectMultiple(attrs={
+                'class': 'form-select',
+                'size': 5
+            }),
+            'special_requirements': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '特殊需求'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['room'].queryset = MeetingRoom.objects.filter(
+            is_active=True,
+            status='available'
+        ).order_by('code')
+        self.fields['attendees'].queryset = User.objects.filter(is_active=True).order_by('username')
+        self.fields['attendees'].required = False
+        self.fields['meeting_topic'].required = False
+        self.fields['special_requirements'].required = False
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        booking_date = cleaned_data.get('booking_date')
+        start_time = cleaned_data.get('start_time')
+        end_time = cleaned_data.get('end_time')
+        room = cleaned_data.get('room')
+        
+        if start_time and end_time and end_time <= start_time:
+            self.add_error('end_time', '结束时间必须晚于开始时间。')
+        
+        # 检查时间冲突
+        if room and booking_date and start_time and end_time:
+            conflicts = MeetingRoomBooking.objects.filter(
+                room=room,
+                booking_date=booking_date,
+                status__in=['pending', 'confirmed']
+            ).exclude(id=self.instance.id if self.instance.id else None)
+            
+            for conflict in conflicts:
+                if (start_time < conflict.end_time and end_time > conflict.start_time):
+                    self.add_error('start_time', f'该时间段与已有预订冲突：{conflict.meeting_topic or conflict.booking_number}')
+                    break
+        
+        return cleaned_data
+
+
 class VehicleForm(forms.ModelForm):
     """车辆表单"""
     
@@ -149,6 +274,68 @@ class VehicleForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['driver'].queryset = User.objects.filter(is_active=True).order_by('username')
         self.fields['driver'].required = False
+
+
+class VehicleBookingForm(forms.ModelForm):
+    """用车申请表单"""
+    
+    class Meta:
+        model = VehicleBooking
+        fields = [
+            'vehicle', 'driver', 'start_time', 'end_time',
+            'destination', 'purpose', 'passenger_count', 'notes'
+        ]
+        widgets = {
+            'vehicle': forms.Select(attrs={'class': 'form-select'}),
+            'driver': forms.Select(attrs={'class': 'form-select'}),
+            'start_time': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local'
+            }),
+            'end_time': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local'
+            }),
+            'destination': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '目的地'
+            }),
+            'purpose': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '用车事由'
+            }),
+            'passenger_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'placeholder': '乘车人数'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': '备注'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['vehicle'].queryset = Vehicle.objects.filter(
+            is_active=True,
+            status__in=['available', 'in_use']
+        ).order_by('plate_number')
+        self.fields['driver'].queryset = User.objects.filter(is_active=True).order_by('username')
+        self.fields['driver'].required = False
+        self.fields['notes'].required = False
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        start_time = cleaned_data.get('start_time')
+        end_time = cleaned_data.get('end_time')
+        
+        if start_time and end_time and end_time <= start_time:
+            self.add_error('end_time', '结束时间必须晚于开始时间。')
+        
+        return cleaned_data
 
 
 class ReceptionRecordForm(forms.ModelForm):
@@ -441,4 +628,461 @@ class ExpenseReimbursementForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['payment_method'].required = False
+
+
+class AdministrativeAffairForm(forms.ModelForm):
+    """行政事务表单"""
+    
+    class Meta:
+        model = AdministrativeAffair
+        fields = [
+            'title', 'affair_type', 'content', 'priority', 'responsible_user',
+            'participants', 'planned_start_time', 'planned_end_time', 'attachment'
+        ]
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '事务标题'}),
+            'affair_type': forms.Select(attrs={'class': 'form-select'}),
+            'content': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 6,
+                'placeholder': '事务内容'
+            }),
+            'priority': forms.Select(attrs={'class': 'form-select'}),
+            'responsible_user': forms.Select(attrs={'class': 'form-select'}),
+            'participants': forms.SelectMultiple(attrs={
+                'class': 'form-select',
+                'size': 5
+            }),
+            'planned_start_time': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local'
+            }),
+            'planned_end_time': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local'
+            }),
+            'attachment': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.png'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['responsible_user'].queryset = User.objects.filter(is_active=True).order_by('username')
+        self.fields['participants'].queryset = User.objects.filter(is_active=True).order_by('username')
+        self.fields['participants'].required = False
+        self.fields['attachment'].required = False
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        planned_start_time = cleaned_data.get('planned_start_time')
+        planned_end_time = cleaned_data.get('planned_end_time')
+        
+        if planned_start_time and planned_end_time:
+            if planned_end_time <= planned_start_time:
+                self.add_error('planned_end_time', '计划完成时间必须晚于计划开始时间。')
+        
+        return cleaned_data
+
+
+class MeetingForm(forms.ModelForm):
+    """会议表单"""
+    
+    class Meta:
+        model = Meeting
+        fields = [
+            'title', 'meeting_type', 'room', 'meeting_date',
+            'start_time', 'end_time', 'duration', 'organizer',
+            'attendees', 'agenda', 'attachment'
+        ]
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '会议主题'}),
+            'meeting_type': forms.Select(attrs={'class': 'form-select'}),
+            'room': forms.Select(attrs={'class': 'form-select'}),
+            'meeting_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'start_time': forms.TimeInput(attrs={
+                'class': 'form-control',
+                'type': 'time'
+            }),
+            'end_time': forms.TimeInput(attrs={
+                'class': 'form-control',
+                'type': 'time'
+            }),
+            'duration': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'placeholder': '会议时长（分钟）'
+            }),
+            'organizer': forms.Select(attrs={'class': 'form-select'}),
+            'attendees': forms.SelectMultiple(attrs={
+                'class': 'form-select',
+                'size': 5
+            }),
+            'agenda': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 6,
+                'placeholder': '会议议程'
+            }),
+            'attachment': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.png'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['organizer'].queryset = User.objects.filter(is_active=True).order_by('username')
+        self.fields['attendees'].queryset = User.objects.filter(is_active=True).order_by('username')
+        self.fields['room'].queryset = MeetingRoom.objects.filter(is_active=True, status='available').order_by('code')
+        self.fields['attendees'].required = False
+        self.fields['attachment'].required = False
+        self.fields['room'].required = False
+
+
+class MeetingRecordForm(forms.ModelForm):
+    """会议记录表单"""
+    
+    class Meta:
+        model = MeetingRecord
+        fields = ['minutes', 'resolutions', 'attachment']
+        widgets = {
+            'minutes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 10,
+                'placeholder': '会议纪要'
+            }),
+            'resolutions': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 6,
+                'placeholder': '会议决议'
+            }),
+            'attachment': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.png'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['attachment'].required = False
+
+
+class TravelApplicationForm(forms.ModelForm):
+    """差旅申请表单"""
+    
+    class Meta:
+        model = TravelApplication
+        fields = [
+            'travel_reason', 'destination', 'start_date', 'end_date',
+            'travel_method', 'travelers', 'travel_budget', 'department', 'notes'
+        ]
+        widgets = {
+            'travel_reason': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '差旅事由'
+            }),
+            'destination': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '差旅目的地'
+            }),
+            'start_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'end_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'travel_method': forms.Select(attrs={'class': 'form-select'}),
+            'travelers': forms.SelectMultiple(attrs={
+                'class': 'form-select',
+                'size': 5
+            }),
+            'travel_budget': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '差旅预算'
+            }),
+            'department': forms.Select(attrs={'class': 'form-select'}),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': '备注'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['travelers'].queryset = User.objects.filter(is_active=True).order_by('username')
+        self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('name')
+        self.fields['travelers'].required = False
+        self.fields['travel_budget'].required = False
+        self.fields['department'].required = False
+        self.fields['notes'].required = False
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        
+        if start_date and end_date and end_date < start_date:
+            self.add_error('end_date', '结束日期不能早于开始日期。')
+        
+        return cleaned_data
+
+
+class SupplierForm(forms.ModelForm):
+    """供应商表单"""
+    
+    class Meta:
+        model = Supplier
+        fields = [
+            'name', 'contact_person', 'contact_phone', 'contact_email',
+            'address', 'tax_id', 'bank_name', 'bank_account',
+            'rating', 'credit_limit', 'payment_terms', 'description', 'is_active'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '供应商名称'}),
+            'contact_person': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '联系人'}),
+            'contact_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '联系电话'}),
+            'contact_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': '联系邮箱'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': '地址'}),
+            'tax_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '税号'}),
+            'bank_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '开户银行'}),
+            'bank_account': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '银行账号'}),
+            'rating': forms.Select(attrs={'class': 'form-select'}),
+            'credit_limit': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '信用额度'
+            }),
+            'payment_terms': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '付款条件'}),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '描述'
+            }),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class PurchaseContractForm(forms.ModelForm):
+    """采购合同表单"""
+    
+    class Meta:
+        model = PurchaseContract
+        fields = [
+            'contract_name', 'supplier', 'purchase', 'contract_amount',
+            'signed_date', 'start_date', 'end_date', 'payment_terms',
+            'contract_file', 'notes'
+        ]
+        widgets = {
+            'contract_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '合同名称'}),
+            'supplier': forms.Select(attrs={'class': 'form-select'}),
+            'purchase': forms.Select(attrs={'class': 'form-select'}),
+            'contract_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '合同金额'
+            }),
+            'signed_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'payment_terms': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '付款条件'}),
+            'contract_file': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.doc,.docx'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '备注'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['supplier'].queryset = Supplier.objects.filter(is_active=True).order_by('name')
+        self.fields['purchase'].queryset = SupplyPurchase.objects.filter(
+            status__in=['approved', 'purchased']
+        ).order_by('-purchase_date')
+        self.fields['purchase'].required = False
+        self.fields['contract_file'].required = False
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        
+        if start_date and end_date and end_date < start_date:
+            self.add_error('end_date', '结束日期不能早于开始日期。')
+        
+        return cleaned_data
+
+
+class PurchasePaymentForm(forms.ModelForm):
+    """采购付款表单"""
+    
+    class Meta:
+        model = PurchasePayment
+        fields = [
+            'contract', 'amount', 'payment_date', 'payment_method',
+            'voucher_number', 'notes'
+        ]
+        widgets = {
+            'contract': forms.Select(attrs={'class': 'form-select'}),
+            'amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '付款金额'
+            }),
+            'payment_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'payment_method': forms.Select(attrs={'class': 'form-select'}),
+            'voucher_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '凭证号'}),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '备注'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['contract'].queryset = PurchaseContract.objects.filter(
+            status__in=['approved', 'signed', 'executing']
+        ).order_by('-signed_date')
+        self.fields['voucher_number'].required = False
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        contract = cleaned_data.get('contract')
+        amount = cleaned_data.get('amount')
+        
+        if contract and amount:
+            unpaid_amount = contract.unpaid_amount
+            if amount > unpaid_amount:
+                self.add_error('amount', f'付款金额不能超过未付款金额（¥{unpaid_amount}）。')
+        
+        return cleaned_data
+
+
+class InventoryCheckForm(forms.ModelForm):
+    """库存盘点表单"""
+    
+    class Meta:
+        model = InventoryCheck
+        fields = ['check_date', 'check_scope', 'check_location', 'notes']
+        widgets = {
+            'check_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'check_scope': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '盘点范围'
+            }),
+            'check_location': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '盘点地点'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '备注'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['check_scope'].required = False
+        self.fields['check_location'].required = False
+        self.fields['notes'].required = False
+
+
+class InventoryCheckItemForm(forms.ModelForm):
+    """库存盘点明细表单"""
+    
+    class Meta:
+        model = InventoryCheckItem
+        fields = ['supply', 'book_quantity', 'actual_quantity', 'notes']
+        widgets = {
+            'supply': forms.Select(attrs={'class': 'form-select'}),
+            'book_quantity': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'readonly': True
+            }),
+            'actual_quantity': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'placeholder': '实际数量'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': '备注'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['supply'].queryset = OfficeSupply.objects.filter(is_active=True).order_by('code')
+        self.fields['notes'].required = False
+
+
+class InventoryAdjustForm(forms.ModelForm):
+    """库存调整表单"""
+    
+    class Meta:
+        model = InventoryAdjust
+        fields = ['adjust_date', 'reason', 'notes']
+        widgets = {
+            'adjust_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'reason': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '调整原因'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': '备注'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['notes'].required = False
+
+
+class InventoryAdjustItemForm(forms.ModelForm):
+    """库存调整明细表单"""
+    
+    class Meta:
+        model = InventoryAdjustItem
+        fields = ['supply', 'adjust_quantity', 'notes']
+        widgets = {
+            'supply': forms.Select(attrs={'class': 'form-select'}),
+            'adjust_quantity': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': '调整数量（正数为增加，负数为减少）'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': '备注'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['supply'].queryset = OfficeSupply.objects.filter(is_active=True).order_by('code')
+        self.fields['notes'].required = False
 

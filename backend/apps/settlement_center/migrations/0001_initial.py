@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('project_center', '0001_initial'),
+        ('production_management', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -101,7 +101,7 @@ class Migration(migrations.Migration):
                 ('created_time', models.DateTimeField(default=django.utils.timezone.now, verbose_name='创建时间')),
                 ('event', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='settlement_center.outputvalueevent', verbose_name='产值事件')),
                 ('milestone', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='settlement_center.outputvaluemilestone', verbose_name='产值里程碑')),
-                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='output_value_records', to='project_center.project', verbose_name='关联项目')),
+                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='output_value_records', to='production_management.project', verbose_name='关联项目')),
                 ('responsible_user', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='output_value_records', to=settings.AUTH_USER_MODEL, verbose_name='责任人')),
                 ('stage', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='settlement_center.outputvaluestage', verbose_name='产值阶段')),
                 ('confirmed_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='confirmed_output_values', to=settings.AUTH_USER_MODEL, verbose_name='确认人')),

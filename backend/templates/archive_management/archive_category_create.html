@@ -1,0 +1,242 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}新建档案分类 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">➕ 新建档案分类</h2>
+            <p class="text-muted mb-0">创建新的档案分类，支持多级分类结构</p>
+        </div>
+        <div>
+            <a href="{% url 'archive_management:archive_category_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <!-- 表单卡片 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">分类信息</h5>
+        </div>
+        <div class="info-card-body">
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <h6><i class="bi bi-exclamation-triangle"></i> 表单验证失败</h6>
+                <ul class="mb-0">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                        <li>{{ field }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" id="categoryForm">
+                {% csrf_token %}
+                
+                <div class="row g-3">
+                    <!-- 分类名称 -->
+                    <div class="col-md-6">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            {{ form.name.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <div class="text-danger small">{{ form.name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 分类代码 -->
+                    <div class="col-md-6">
+                        <label for="{{ form.code.id_for_label }}" class="form-label">
+                            {{ form.code.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.code }}
+                        <small class="form-text text-muted">分类代码必须唯一</small>
+                        {% if form.code.errors %}
+                        <div class="text-danger small">{{ form.code.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 分类类型 -->
+                    <div class="col-md-6">
+                        <label for="{{ form.category_type.id_for_label }}" class="form-label">
+                            {{ form.category_type.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.category_type }}
+                        {% if form.category_type.errors %}
+                        <div class="text-danger small">{{ form.category_type.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 上级分类 -->
+                    <div class="col-md-6">
+                        <label for="{{ form.parent.id_for_label }}" class="form-label">
+                            {{ form.parent.label }}
+                        </label>
+                        {{ form.parent }}
+                        <small class="form-text text-muted">选择上级分类以创建多级分类结构</small>
+                        {% if form.parent.errors %}
+                        <div class="text-danger small">{{ form.parent.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 分类描述 -->
+                    <div class="col-md-12">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            {{ form.description.label }}
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                        <div class="text-danger small">{{ form.description.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 排序 -->
+                    <div class="col-md-3">
+                        <label for="{{ form.order.id_for_label }}" class="form-label">
+                            {{ form.order.label }}
+                        </label>
+                        {{ form.order }}
+                        <small class="form-text text-muted">数字越大越靠前</small>
+                        {% if form.order.errors %}
+                        <div class="text-danger small">{{ form.order.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 图标 -->
+                    <div class="col-md-3">
+                        <label for="{{ form.icon.id_for_label }}" class="form-label">
+                            {{ form.icon.label }}
+                        </label>
+                        {{ form.icon }}
+                        <small class="form-text text-muted">图标代码或emoji</small>
+                        {% if form.icon.errors %}
+                        <div class="text-danger small">{{ form.icon.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 保管期限 -->
+                    <div class="col-md-3">
+                        <label for="{{ form.storage_period.id_for_label }}" class="form-label">
+                            {{ form.storage_period.label }}
+                        </label>
+                        {{ form.storage_period }}
+                        <small class="form-text text-muted">单位：年</small>
+                        {% if form.storage_period.errors %}
+                        <div class="text-danger small">{{ form.storage_period.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 密级 -->
+                    <div class="col-md-3">
+                        <label for="{{ form.security_level.id_for_label }}" class="form-label">
+                            {{ form.security_level.label }}
+                        </label>
+                        {{ form.security_level }}
+                        {% if form.security_level.errors %}
+                        <div class="text-danger small">{{ form.security_level.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 是否启用 -->
+                    <div class="col-md-12">
+                        <div class="form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                {{ form.is_active.label }}
+                            </label>
+                        </div>
+                        {% if form.is_active.errors %}
+                        <div class="text-danger small">{{ form.is_active.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'archive_management:archive_category_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> 取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> 创建分类
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 创建说明 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">创建说明</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="alert alert-info">
+                <h6><i class="bi bi-info-circle"></i> 分类说明</h6>
+                <ul class="mb-0">
+                    <li><strong>分类名称</strong>：分类的显示名称，必填</li>
+                    <li><strong>分类代码</strong>：分类的唯一标识代码，必填且唯一</li>
+                    <li><strong>分类类型</strong>：选择项目档案分类或行政档案分类</li>
+                    <li><strong>上级分类</strong>：选择上级分类可以创建多级分类结构</li>
+                    <li><strong>保管期限</strong>：设置该分类下档案的保管期限（年）</li>
+                    <li><strong>密级</strong>：设置该分类下档案的默认密级</li>
+                </ul>
+            </div>
+            <div class="alert alert-warning">
+                <h6><i class="bi bi-exclamation-triangle"></i> 注意事项</h6>
+                <ul class="mb-0">
+                    <li>分类代码必须唯一，创建后无法修改</li>
+                    <li>选择上级分类时，不能选择自己或自己的子分类</li>
+                    <li>停用分类后，该分类下的档案将无法使用</li>
+                    <li>建议在创建分类前规划好分类结构</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 表单提交验证
+document.getElementById('categoryForm').addEventListener('submit', function(e) {
+    const name = document.getElementById('{{ form.name.id_for_label }}').value;
+    const code = document.getElementById('{{ form.code.id_for_label }}').value;
+    const categoryType = document.getElementById('{{ form.category_type.id_for_label }}').value;
+    
+    if (!name.trim()) {
+        e.preventDefault();
+        alert('请填写分类名称');
+        return false;
+    }
+    
+    if (!code.trim()) {
+        e.preventDefault();
+        alert('请填写分类代码');
+        return false;
+    }
+    
+    if (!categoryType) {
+        e.preventDefault();
+        alert('请选择分类类型');
+        return false;
+    }
+    
+    if (!confirm('确定要创建分类吗？')) {
+        e.preventDefault();
+        return false;
+    }
+});
+</script>
+{% endblock %}

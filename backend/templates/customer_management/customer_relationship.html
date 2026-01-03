@@ -1,0 +1,186 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .relationship-filters {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    
+    .relationship-table {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    
+    .relationship-table table {
+        margin-bottom: 0;
+    }
+    
+    .relationship-table thead th {
+        background: var(--vh-surface);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+    
+    .relationship-table tbody td {
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-md);
+        vertical-align: middle;
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    
+    .relationship-table tbody tr:hover {
+        background-color: var(--vh-surface);
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 筛选栏 -->
+    <div class="relationship-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" name="search" class="form-control" placeholder="搜索客户名称、关系标题..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="client_id" class="form-select">
+                    <option value="">全部客户</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="relationship_type" class="form-select">
+                    <option value="">全部类型</option>
+                    {% for value, label in relationship_type_choices %}
+                    <option value="{{ value }}" {% if relationship_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="opportunity_id" class="form-select">
+                    <option value="">全部商机</option>
+                    {% for opp in opportunities %}
+                    <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>{{ opp.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}" placeholder="开始日期">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}" placeholder="结束日期">
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">搜索</button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 操作栏 -->
+    <div class="d-flex justify-content-end mb-3">
+        {% if can_create %}
+        <a href="{% url 'business_pages:customer_relationship_create' %}" class="btn btn-primary">+ 新建关系记录</a>
+        {% endif %}
+    </div>
+    
+    <!-- 关系记录列表 -->
+    {% if page_obj %}
+    <div class="relationship-table">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>关系日期</th>
+                        <th>客户</th>
+                        <th>关系类型</th>
+                        <th>关系标题</th>
+                        <th>地点</th>
+                        <th>参与人员</th>
+                        <th>创建人</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for relationship in page_obj %}
+                    <tr>
+                        <td>{{ relationship.relationship_date|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <a href="{% url 'business_pages:customer_detail' relationship.client.id %}" class="text-decoration-none">
+                                {{ relationship.client.name }}
+                            </a>
+                        </td>
+                        <td>{{ relationship.get_relationship_type_display }}</td>
+                        <td>{{ relationship.title }}</td>
+                        <td>{{ relationship.location|default:"—" }}</td>
+                        <td>{{ relationship.participants|default:"—" }}</td>
+                        <td>{{ relationship.created_by.get_full_name|default:relationship.created_by.username }}</td>
+                        <td>
+                            <a href="{% url 'business_pages:customer_relationship_detail' relationship.id %}" class="btn btn-sm btn-outline-primary">查看</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination-wrapper p-3">
+            <nav aria-label="客户关系分页">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if relationship_type %}&relationship_type={{ relationship_type }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if relationship_type %}&relationship_type={{ relationship_type }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if relationship_type %}&relationship_type={{ relationship_type }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="info-card">
+        <div class="info-card-body">
+            <p class="text-muted text-center py-5">暂无客户关系记录</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('project_center', '0009_projectteamnotification_operator_context'),
+        ('production_management', '0001_initial'),  # 改为依赖 production_management
         ('resource_standard', '0002_opiniontemplate_reporttemplate_reporttemplateversion_and_more'),
     ]
 
@@ -84,7 +84,7 @@ class Migration(migrations.Migration):
                 ('updated_time', models.DateTimeField(auto_now=True, verbose_name='更新时间')),
                 ('is_published', models.BooleanField(default=False, verbose_name='是否已发布')),
                 ('created_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='risk_cases_created', to=settings.AUTH_USER_MODEL, verbose_name='创建人')),
-                ('project', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='project_center.project', verbose_name='发生项目')),
+                ('project', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='production_management.project', verbose_name='发生项目')),
                 ('tags', models.ManyToManyField(blank=True, related_name='risk_cases', to='resource_standard.knowledgetag')),
             ],
             options={

@@ -1,0 +1,238 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}案件统计 - 诉讼管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:litigation_home' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回首页
+            </a>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    {% if summary_cards %}
+    <div class="info-card info-card-elevated mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">📊 统计概览</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-4 info-grid-responsive">
+                {% for card in summary_cards %}
+                <div class="info-item">
+                    <span class="info-label">{{ card.label }}</span>
+                    <span class="info-value info-value-large">{{ card.value }}</span>
+                    {% if card.hint %}
+                    <span class="info-hint">{{ card.hint }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 筛选器 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">统计筛选</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">开始日期</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">结束日期</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-search"></i> 查询
+                        </button>
+                        <a href="{% url 'litigation_pages:case_statistics' %}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-arrow-counterclockwise"></i> 重置
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 案件类型统计 -->
+    {% if stats_by_type %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">案件类型统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>案件类型</th>
+                            <th>数量</th>
+                            <th>占比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in stats_by_type %}
+                        <tr>
+                            <td>{{ stat.case_type|default:"未知" }}</td>
+                            <td><strong>{{ stat.count }}</strong></td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" style="width: {% widthratio stat.count stats_by_type|length 100 %}%">
+                                        {% widthratio stat.count stats_by_type|length 100 %}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 案件状态统计 -->
+    {% if stats_by_status %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">案件状态统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>案件状态</th>
+                            <th>数量</th>
+                            <th>占比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in stats_by_status %}
+                        <tr>
+                            <td>
+                                <span class="status-badge {{ stat.status }}">
+                                    {{ stat.status|default:"未知" }}
+                                </span>
+                            </td>
+                            <td><strong>{{ stat.count }}</strong></td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" style="width: {% widthratio stat.count stats_by_status|length 100 %}%">
+                                        {% widthratio stat.count stats_by_status|length 100 %}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 案件性质统计 -->
+    {% if stats_by_nature %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">案件性质统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>案件性质</th>
+                            <th>数量</th>
+                            <th>占比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in stats_by_nature %}
+                        <tr>
+                            <td>{{ stat.case_nature|default:"未知" }}</td>
+                            <td><strong>{{ stat.count }}</strong></td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" style="width: {% widthratio stat.count stats_by_nature|length 100 %}%">
+                                        {% widthratio stat.count stats_by_nature|length 100 %}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 优先级统计 -->
+    {% if stats_by_priority %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">优先级统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>优先级</th>
+                            <th>数量</th>
+                            <th>占比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in stats_by_priority %}
+                        <tr>
+                            <td>
+                                {% if stat.priority == 'urgent' %}
+                                <span class="badge bg-danger">紧急</span>
+                                {% elif stat.priority == 'high' %}
+                                <span class="badge bg-warning">高</span>
+                                {% elif stat.priority == 'medium' %}
+                                <span class="badge bg-info">中</span>
+                                {% else %}
+                                <span class="badge bg-secondary">低</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ stat.count }}</strong></td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" style="width: {% widthratio stat.count stats_by_priority|length 100 %}%">
+                                        {% widthratio stat.count stats_by_priority|length 100 %}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

@@ -4600,6 +4600,16 @@ def pre_optimization_materials_list(request):
     return render(request, 'production_management/pre_optimization_materials_list.html', context)
 
 
+def _update_parse_progress(material, progress, message=''):
+    """更新解析进度的辅助函数"""
+    try:
+        material.parse_progress = progress
+        material.parse_progress_message = message
+        material.save(update_fields=['parse_progress', 'parse_progress_message'])
+    except Exception as e:
+        logger.error(f"更新解析进度失败: {str(e)}")
+
+
 @login_required
 def pre_optimization_materials_create(request):
     """创建优化前资料"""
@@ -4672,14 +4682,26 @@ def pre_optimization_materials_create(request):
                         sys.stdout.flush()
                         material.parse_status = 'processing'
                         material.parse_progress = 0
+                        material.parse_progress_message = '准备开始解析...'
                         material.save()
                         
                         print(f"[CAD解析任务] 创建 CADParserService 实例", flush=True)
                         sys.stdout.flush()
+                        material.parse_progress = 10
+                        material.parse_progress_message = '初始化解析服务...'
+                        material.save()
                         parser = CADParserService()
+                        
                         print(f"[CAD解析任务] 调用 parse_for_pre_optimization", flush=True)
                         sys.stdout.flush()
-                        result = parser.parse_for_pre_optimization(material.cad_file.path)
+                        material.parse_progress = 20
+                        material.parse_progress_message = '开始解析CAD文件...'
+                        material.save()
+                        
+                        def progress_callback(progress, message):
+                            _update_parse_progress(material, progress, message)
+                        
+                        result = parser.parse_for_pre_optimization(material.cad_file.path, progress_callback=progress_callback)
                         print(f"[CAD解析任务] 解析完成，结果: success={result.get('success')}", flush=True)
                         sys.stdout.flush()
                         
@@ -4776,6 +4798,26 @@ def pre_optimization_materials_detail(request, material_id):
 
 
 @login_required
+def pre_optimization_materials_progress(request, material_id):
+    """获取优化前资料解析进度（API）"""
+    from django.http import JsonResponse
+    permission_set = get_user_permission_codes(request.user)
+    if not _has_permission(permission_set, 'production_management.view_all'):
+        material = get_object_or_404(PreOptimizationMaterial, id=material_id)
+        if not _user_is_project_member(request.user, material.project):
+            return JsonResponse({'error': '无权访问'}, status=403)
+    
+    material = get_object_or_404(PreOptimizationMaterial, id=material_id)
+    
+    return JsonResponse({
+        'parse_status': material.parse_status,
+        'parse_progress': material.parse_progress,
+        'parse_progress_message': material.parse_progress_message or '',
+        'parse_error': material.parse_error or '',
+    })
+
+
+@login_required
 def pre_optimization_materials_reparse(request, material_id):
     """重新解析优化前资料"""
     permission_set = get_user_permission_codes(request.user)
@@ -4831,6 +4873,7 @@ def pre_optimization_materials_reparse(request, material_id):
                         
                         material.parse_status = 'success'
                         material.parse_progress = 100
+                        material.parse_progress_message = '解析完成！'
                         material.parsed_time = timezone.now()
                         material.parse_error = ''
                     else:

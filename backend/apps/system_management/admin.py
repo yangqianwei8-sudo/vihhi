@@ -6,23 +6,34 @@ from django.utils import timezone
 from django.contrib import messages
 from django.db.models import Count
 
-from .models import (
+from backend.apps.system_management.models import (
     User, Department, Role, RegistrationRequest,
-    DataDictionary, SystemConfig
+    DataDictionary, SystemConfig, OurCompany
 )
+from backend.core.admin_base import BaseModelAdmin, AuditAdminMixin, StatusBadgeMixin
 from .services_registration import finalize_approval
 
 
 @admin.register(Role)
-class RoleAdmin(admin.ModelAdmin):
+class RoleAdmin(BaseModelAdmin):
     """角色管理"""
     list_display = ('name', 'code', 'user_count', 'permission_count', 'is_active', 'created_time')
     list_filter = ('is_active', 'created_time')
     search_fields = ('name', 'code', 'description')
     ordering = ('-created_time',)
-    list_per_page = 50
     filter_horizontal = ('custom_permissions', 'permissions')
     readonly_fields = ('created_time',)
+    
+    # 注意：如果以后需要权限筛选增强功能，可以创建以下静态文件：
+    # - static/admin/css/permission_filter.css
+    # - static/admin/js/permission_filter.js
+    # 然后取消下面的注释：
+    # class Media:
+    #     css = {
+    #         'all': ('admin/css/permission_filter.css',)
+    #     }
+    #     js = ('admin/js/permission_filter.js',)
+    
     fieldsets = (
         ('基本信息', {
             'fields': ('name', 'code', 'description', 'is_active')
@@ -33,12 +44,31 @@ class RoleAdmin(admin.ModelAdmin):
         }),
         ('业务权限', {
             'fields': ('custom_permissions',),
-            'description': '业务系统的自定义权限（如 project_center.view_all 等）'
+            'description': '业务系统的自定义权限（如 customer_management.client.view_all 等）。<br>'
+                          '<strong>客户管理权限推荐配置：</strong><br>'
+                          '• 商务经理：<code>customer_management.client.view_assigned</code>（查看本人负责）<br>'
+                          '• 部门经理：<code>customer_management.client.view_department</code>（查看本部门）<br>'
+                          '• 总经理：<code>customer_management.client.view_all</code>（查看全部）<br><br>'
+                          '<strong>提示：</strong>在权限选择器的搜索框中输入 <code>customer_management.client</code> 可以快速筛选客户管理权限'
         }),
-        ('其他信息', {
-            'fields': ('created_time',)
-        }),
+        # 时间信息会自动添加，无需手动定义
     )
+    
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        """自定义多对多字段的显示"""
+        if db_field.name == 'custom_permissions':
+            from backend.apps.permission_management.models import PermissionItem
+            # 只显示激活的权限，并按模块和代码排序
+            kwargs['queryset'] = PermissionItem.objects.filter(
+                is_active=True
+            ).order_by('module', 'code')
+            # 添加搜索提示
+            kwargs['help_text'] = (
+                '提示：在搜索框中输入权限代码或名称可以快速查找。'
+                '例如：输入 "customer_management.client" 可以筛选所有客户管理权限；'
+                '输入 "view_assigned" 可以查找"查看本人负责"权限。'
+            )
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
     
     def user_count(self, obj):
         """显示拥有此角色的用户数量"""
@@ -58,29 +88,28 @@ class RoleAdmin(admin.ModelAdmin):
         return '0 个权限'
     permission_count.short_description = '权限数量'
     
-    actions = ['activate_roles', 'deactivate_roles']
-    
-    def activate_roles(self, request, queryset):
-        """批量激活角色"""
-        count = queryset.update(is_active=True)
-        self.message_user(request, f'已激活 {count} 个角色。')
-    activate_roles.short_description = '激活选中的角色'
-    
-    def deactivate_roles(self, request, queryset):
-        """批量停用角色"""
-        count = queryset.update(is_active=False)
-        self.message_user(request, f'已停用 {count} 个角色。')
-    deactivate_roles.short_description = '停用选中的角色'
+    # 批量操作已由 BaseModelAdmin 提供（activate_items/deactivate_items）
+    # 如果需要自定义名称，可以重写：
+    def get_actions(self, request):
+        """自定义批量操作名称"""
+        actions = super().get_actions(request)
+        # 重命名批量操作（actions字典的值是tuple，需要创建新tuple替换）
+        if 'activate_items' in actions:
+            func, old_name, description = actions['activate_items']
+            actions['activate_items'] = (func, '激活选中的角色', description)
+        if 'deactivate_items' in actions:
+            func, old_name, description = actions['deactivate_items']
+            actions['deactivate_items'] = (func, '停用选中的角色', description)
+        return actions
 
 
 @admin.register(Department)
-class DepartmentAdmin(admin.ModelAdmin):
+class DepartmentAdmin(BaseModelAdmin):
     """部门管理"""
     list_display = ('name', 'code', 'parent', 'leader', 'member_count', 'order', 'is_active', 'created_time')
     list_filter = ('is_active', 'parent', 'created_time')
     search_fields = ('name', 'code', 'description')
     ordering = ('order', 'name')
-    list_per_page = 50
     raw_id_fields = ('parent', 'leader')
     readonly_fields = ('created_time',)
     fieldsets = (
@@ -88,8 +117,9 @@ class DepartmentAdmin(admin.ModelAdmin):
             'fields': ('name', 'code', 'parent', 'leader', 'description')
         }),
         ('组织信息', {
-            'fields': ('order', 'is_active', 'created_time')
+            'fields': ('order', 'is_active')
         }),
+        # 时间信息会自动添加
     )
     
     def member_count(self, obj):
@@ -101,19 +131,7 @@ class DepartmentAdmin(admin.ModelAdmin):
         return '0 人'
     member_count.short_description = '成员数量'
     
-    actions = ['activate_departments', 'deactivate_departments']
-    
-    def activate_departments(self, request, queryset):
-        """批量激活部门"""
-        count = queryset.update(is_active=True)
-        self.message_user(request, f'已激活 {count} 个部门。')
-    activate_departments.short_description = '激活选中的部门'
-    
-    def deactivate_departments(self, request, queryset):
-        """批量停用部门"""
-        count = queryset.update(is_active=False)
-        self.message_user(request, f'已停用 {count} 个部门。')
-    deactivate_departments.short_description = '停用选中的部门'
+    # 批量操作已由 BaseModelAdmin 提供
 
 
 @admin.register(User)
@@ -183,8 +201,9 @@ class UserAdmin(DjangoUserAdmin):
                 url = reverse('admin:system_management_role_change', args=[role.id])
                 role_links.append(format_html('<a href="{}">{}</a>', url, role.name))
             if roles.count() > 3:
-                role_links.append(f'...等{roles.count()}个')
-            return format_html(', '.join(role_links))
+                role_links.append(format_html('...等{}个', roles.count()))
+            from django.utils.safestring import mark_safe
+            return mark_safe(', '.join(str(link) for link in role_links))
         return '-'
     role_list.short_description = '角色'
     
@@ -225,16 +244,240 @@ class UserAdmin(DjangoUserAdmin):
         count = queryset.update(is_superuser=False)
         self.message_user(request, f'已取消 {count} 个用户的超级管理员权限。')
     remove_superuser.short_description = '取消超级管理员'
+    
+    def get_queryset(self, request):
+        """重写查询集，避免查询不存在的关联表"""
+        qs = super().get_queryset(request)
+        # 只选择必要的关联，避免查询可能不存在的表
+        return qs.select_related('department').prefetch_related('roles')
+    
+    def changelist_view(self, request, extra_context=None):
+        """重写列表视图，捕获数据库错误"""
+        from django.db import ProgrammingError
+        from django.contrib import messages
+        
+        try:
+            return super().changelist_view(request, extra_context)
+        except ProgrammingError as e:
+            # 检查是否是表或字段不存在的错误
+            error_msg = str(e)
+            
+            # 处理 settlement_payment_record 表不存在
+            if ('settlement_management_payment_record' in error_msg or 'settlement_payment_record' in error_msg) and 'does not exist' in error_msg:
+                messages.error(
+                    request,
+                    '数据库表 settlement_payment_record 不存在。'
+                    '请运行迁移命令创建表：python manage.py migrate settlement_center'
+                )
+                from django.http import HttpResponseRedirect
+                from django.urls import reverse
+                return HttpResponseRedirect(reverse('admin:index'))
+            
+            # 处理 admin_reception_record.status 字段不存在
+            if 'admin_reception_record' in error_msg and 'status' in error_msg and 'does not exist' in error_msg:
+                # 这是数据库结构不一致的问题，发生在删除操作时
+                # 尝试使用强制删除方式绕过这个问题
+                if request.method == 'POST' and 'action' in request.POST and request.POST['action'] == 'delete_selected':
+                    # 这是批量删除操作，使用自定义的删除方法
+                    from django.http import HttpResponseRedirect
+                    from django.urls import reverse
+                    messages.warning(
+                        request,
+                        '检测到数据库结构不一致（admin_reception_record.status 字段不存在）。'
+                        '将使用强制删除方式处理。'
+                    )
+                    # 获取要删除的用户
+                    selected_ids = request.POST.getlist('_selected_action')
+                    queryset = self.get_queryset(request).filter(pk__in=selected_ids)
+                    # 使用自定义删除方法（强制删除）
+                    self.delete_queryset(request, queryset)
+                    # 重定向回列表页面
+                    return HttpResponseRedirect(reverse('admin:system_management_user_changelist'))
+                else:
+                    messages.warning(
+                        request,
+                        '数据库表 admin_reception_record 缺少 status 字段。'
+                        '这可能是由于模型定义与数据库结构不一致导致的。'
+                        '请运行迁移命令更新数据库结构：python manage.py migrate administrative_management'
+                    )
+                    from django.http import HttpResponseRedirect
+                    from django.urls import reverse
+                    return HttpResponseRedirect(reverse('admin:system_management_user_changelist'))
+            
+            # 其他数据库错误，继续抛出
+            raise
+    
+    def has_delete_permission(self, request, obj=None):
+        """检查用户是否有删除权限"""
+        # 超级用户可以删除任何用户
+        if request.user.is_superuser:
+            return True
+        # 员工用户（is_staff=True）也可以删除用户
+        if request.user.is_staff:
+            return True
+        # 其他情况需要检查是否有delete_user权限
+        return request.user.has_perm('system_management.delete_user')
+    
+    def delete_view(self, request, object_id, extra_context=None):
+        """重写删除视图，处理外键约束错误，支持强制删除"""
+        from django.db.models.deletion import ProtectedError
+        from django.contrib import messages
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
+        from django.db import transaction
+        
+        obj = self.get_object(request, object_id)
+        if obj is None:
+            return super().delete_view(request, object_id, extra_context)
+        
+        if request.method == 'POST':
+            # 检查是否是强制删除
+            force_delete = request.POST.get('force_delete', '') == '1'
+            
+            try:
+                if force_delete:
+                    # 强制删除：先清理所有 PROTECT 约束的引用
+                    with transaction.atomic():
+                        self._cleanup_user_references(obj)
+                        obj.delete()
+                    messages.success(request, f'用户 "{obj.username}" 已强制删除（已清理相关引用）。')
+                else:
+                    # 普通删除
+                    obj.delete()
+                    messages.success(request, f'用户 "{obj.username}" 已成功删除。')
+                return HttpResponseRedirect(reverse('admin:system_management_user_changelist'))
+            except ProtectedError as e:
+                # 捕获保护错误，提供友好的错误信息和强制删除选项
+                protected_objects = e.protected_objects
+                
+                # 统计各模型的引用数量
+                model_counts = {}
+                for protected_obj in protected_objects:
+                    model_name = protected_obj._meta.verbose_name or protected_obj._meta.model_name
+                    if model_name not in model_counts:
+                        model_counts[model_name] = 0
+                    model_counts[model_name] += 1
+                
+                # 构建错误消息
+                error_msg_parts = [f'无法删除用户 "{obj.username}"，因为该用户被以下数据引用：']
+                for model_name, count in sorted(model_counts.items()):
+                    error_msg_parts.append(f'  • {model_name}: {count} 条记录')
+                error_msg_parts.append('\n如果您确定要删除，可以使用"强制删除"功能（将清理相关引用）。')
+                error_msg = '\n'.join(error_msg_parts)
+                
+                messages.error(request, error_msg)
+                # 重定向回用户详情页面，并添加强制删除选项
+                return HttpResponseRedirect(reverse('admin:system_management_user_change', args=[object_id]))
+        
+        # GET 请求，显示删除确认页面
+        return super().delete_view(request, object_id, extra_context)
+    
+    def _cleanup_user_references(self, user):
+        """清理用户的所有 PROTECT 约束引用，通过直接更新数据库绕过约束"""
+        from django.db import models, connection
+        from django.apps import apps
+        
+        # 获取 User 模型
+        User = self.model
+        
+        # 获取所有模型
+        all_models = apps.get_models()
+        
+        with connection.cursor() as cursor:
+            for model in all_models:
+                # 跳过 User 模型本身
+                if model == User:
+                    continue
+                    
+                # 检查模型的所有字段
+                for field in model._meta.get_fields():
+                    if isinstance(field, models.ForeignKey):
+                        # 检查是否是引用 User 模型的外键
+                        related_model = getattr(field, 'related_model', None)
+                        if related_model == User:
+                            # 检查是否是 PROTECT 约束
+                            if hasattr(field, 'remote_field') and field.remote_field.on_delete == models.PROTECT:
+                                # 获取表名和字段名
+                                table_name = model._meta.db_table
+                                field_name = field.column
+                                
+                                # 如果字段允许 NULL，设置为 NULL
+                                if field.null:
+                                    try:
+                                        sql = f'UPDATE {table_name} SET {field_name} = NULL WHERE {field_name} = %s'
+                                        cursor.execute(sql, [user.id])
+                                    except Exception:
+                                        pass
+                                else:
+                                    # 如果字段不允许 NULL，尝试删除相关记录
+                                    # 注意：这可能会删除重要数据，需要谨慎
+                                    try:
+                                        sql = f'DELETE FROM {table_name} WHERE {field_name} = %s'
+                                        cursor.execute(sql, [user.id])
+                                    except Exception:
+                                        pass
+    
+    def delete_queryset(self, request, queryset):
+        """重写批量删除方法，处理外键约束错误，支持强制删除"""
+        from django.db.models.deletion import ProtectedError
+        from django.db import ProgrammingError, transaction
+        from django.contrib import messages
+        
+        deleted_count = 0
+        failed_users = []
+        force_delete = request.POST.get('force_delete', '') == '1'
+        
+        for obj in queryset:
+            try:
+                if force_delete:
+                    # 强制删除：先清理引用
+                    with transaction.atomic():
+                        self._cleanup_user_references(obj)
+                        obj.delete()
+                else:
+                    obj.delete()
+                deleted_count += 1
+            except ProtectedError as e:
+                failed_users.append((obj.username, '外键约束'))
+            except ProgrammingError as e:
+                # 捕获数据库结构错误（如字段不存在）
+                error_msg = str(e)
+                if 'admin_reception_record' in error_msg and 'status' in error_msg:
+                    # 如果是因为 ReceptionRecord.status 字段不存在，尝试强制删除
+                    try:
+                        with transaction.atomic():
+                            self._cleanup_user_references(obj)
+                            obj.delete()
+                        deleted_count += 1
+                        messages.warning(request, f'用户 "{obj.username}" 已删除（数据库结构不一致，已跳过相关查询）。')
+                    except Exception as e2:
+                        failed_users.append((obj.username, f'数据库错误: {str(e2)[:50]}'))
+                else:
+                    failed_users.append((obj.username, f'数据库错误: {str(e)[:50]}'))
+            except Exception as e:
+                failed_users.append((obj.username, f'未知错误: {str(e)[:50]}'))
+        
+        if deleted_count > 0:
+            if force_delete:
+                messages.success(request, f'成功强制删除 {deleted_count} 个用户（已清理相关引用）。')
+            else:
+                messages.success(request, f'成功删除 {deleted_count} 个用户。')
+        
+        if failed_users:
+            error_msg_parts = ['以下用户无法删除：']
+            for username, reason in failed_users:
+                error_msg_parts.append(f'  • {username}: {reason}')
+            error_msg_parts.append('\n请先处理这些用户的引用关系，或使用"停用用户"功能，或使用强制删除。')
+            messages.error(request, '\n'.join(error_msg_parts))
 
 
 @admin.register(RegistrationRequest)
-class RegistrationRequestAdmin(admin.ModelAdmin):
+class RegistrationRequestAdmin(StatusBadgeMixin, BaseModelAdmin):
     """注册申请管理"""
     list_display = ('username', 'phone', 'get_client_type_display', 'status_badge', 'submitted_time', 'processed_time', 'processed_by')
     list_filter = ('client_type', 'status', 'submitted_time', 'processed_time')
     search_fields = ('username', 'phone', 'feedback')
     ordering = ('-submitted_time',)
-    list_per_page = 50
     date_hierarchy = 'submitted_time'
     readonly_fields = ('submitted_time', 'processed_time', 'processed_by', 'encoded_password')
     raw_id_fields = ('processed_by',)
@@ -253,16 +496,15 @@ class RegistrationRequestAdmin(admin.ModelAdmin):
     
     def status_badge(self, obj):
         """状态标签"""
-        colors = {
-            'pending': 'orange',
-            'approved': 'green',
-            'rejected': 'red',
+        color_map = {
+            'pending': '#ffc107',  # orange -> yellow
+            'approved': '#28a745',  # green
+            'rejected': '#dc3545',  # red
         }
-        color = colors.get(obj.status, 'gray')
-        return format_html(
-            '<span style="background: {}; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px;">{}</span>',
-            color,
-            obj.get_status_display()
+        return self.format_status_badge(
+            obj.status,
+            obj.get_status_display(),
+            color_map=color_map
         )
     status_badge.short_description = '状态'
     
@@ -307,13 +549,12 @@ class RegistrationRequestAdmin(admin.ModelAdmin):
 
 
 @admin.register(DataDictionary)
-class DataDictionaryAdmin(admin.ModelAdmin):
+class DataDictionaryAdmin(BaseModelAdmin):
     """数据字典管理"""
     list_display = ('name', 'code', 'value', 'get_dict_type_display', 'parent', 'order', 'is_active', 'created_time')
     list_filter = ('dict_type', 'is_active', 'parent', 'created_time')
     search_fields = ('name', 'code', 'value', 'description')
     ordering = ('dict_type', 'order', 'id')
-    list_per_page = 50
     raw_id_fields = ('parent',)
     readonly_fields = ('created_time',)
     fieldsets = (
@@ -324,41 +565,27 @@ class DataDictionaryAdmin(admin.ModelAdmin):
             'fields': ('parent', 'order')
         }),
         ('状态信息', {
-            'fields': ('is_active', 'created_time')
+            'fields': ('is_active',)
         }),
+        # 时间信息会自动添加
     )
     
-    actions = ['activate_items', 'deactivate_items']
-    
-    def activate_items(self, request, queryset):
-        """批量激活字典项"""
-        count = queryset.update(is_active=True)
-        self.message_user(request, f'已激活 {count} 个字典项。')
-    activate_items.short_description = '激活选中的字典项'
-    
-    def deactivate_items(self, request, queryset):
-        """批量停用字典项"""
-        count = queryset.update(is_active=False)
-        self.message_user(request, f'已停用 {count} 个字典项。')
-    deactivate_items.short_description = '停用选中的字典项'
+    # 批量操作已由 BaseModelAdmin 提供
 
 
 @admin.register(SystemConfig)
-class SystemConfigAdmin(admin.ModelAdmin):
+class SystemConfigAdmin(AuditAdminMixin, BaseModelAdmin):
     """系统配置管理"""
     list_display = ('key', 'value_preview', 'description', 'is_encrypted', 'updated_time', 'created_time')
     list_filter = ('is_encrypted', 'created_time', 'updated_time')
     search_fields = ('key', 'value', 'description')
     ordering = ('key',)
-    list_per_page = 50
     readonly_fields = ('created_time', 'updated_time')
     fieldsets = (
         ('配置信息', {
             'fields': ('key', 'value', 'description', 'is_encrypted')
         }),
-        ('时间信息', {
-            'fields': ('created_time', 'updated_time')
-        }),
+        # 时间信息会自动添加
     )
     
     def value_preview(self, obj):
@@ -371,8 +598,37 @@ class SystemConfigAdmin(admin.ModelAdmin):
         return value
     value_preview.short_description = '配置值'
     
+    # AuditAdminMixin 会自动显示成功消息，但这里需要自定义消息
     def save_model(self, request, obj, form, change):
-        """保存时记录操作人（可扩展）"""
+        """保存时记录操作"""
         super().save_model(request, obj, form, change)
         if change:
             messages.success(request, f'系统配置 "{obj.key}" 已更新。')
+
+
+@admin.register(OurCompany)
+class OurCompanyAdmin(AuditAdminMixin, BaseModelAdmin):
+    """我方主体信息管理"""
+    list_display = ('company_name', 'credit_code', 'legal_representative', 'order', 'is_active', 'updated_time')
+    list_filter = ('is_active', 'created_time', 'updated_time')
+    search_fields = ('company_name', 'credit_code', 'legal_representative', 'registered_address')
+    ordering = ('order', 'id')
+    readonly_fields = ('created_time', 'updated_time')
+    fieldsets = (
+        ('基本信息', {
+            'fields': ('company_name', 'credit_code', 'legal_representative', 'registered_address')
+        }),
+        ('设置', {
+            'fields': ('order', 'is_active')
+        }),
+        # 时间信息会自动添加
+    )
+    
+    # AuditAdminMixin 会自动显示成功消息，但这里需要自定义消息
+    def save_model(self, request, obj, form, change):
+        """保存时记录操作"""
+        super().save_model(request, obj, form, change)
+        if change:
+            messages.success(request, f'我方主体信息 "{obj.company_name}" 已更新。')
+        else:
+            messages.success(request, f'我方主体信息 "{obj.company_name}" 已创建。')

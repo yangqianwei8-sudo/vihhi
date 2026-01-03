@@ -1,0 +1,198 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card-header {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    .info-card-title {
+        margin: 0;
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .info-grid {
+        display: grid;
+        gap: var(--spacing-md);
+    }
+    .info-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+    .info-label {
+        font-size: var(--font-size-sm);
+        color: var(--vh-text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: var(--font-size-base);
+        color: var(--vh-text);
+        font-weight: 500;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-confirmed { background: #cfe2ff; color: #084298; }
+    .status-cancelled { background: #f8d7da; color: #842029; }
+    .status-completed { background: #d1e7dd; color: #0f5132; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:meeting_room_booking_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if can_edit %}
+            <a href="{% url 'admin_pages:meeting_room_booking_update' booking.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+            {% if can_confirm %}
+            <a href="{% url 'admin_pages:meeting_room_booking_confirm' booking.id %}" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> 确认
+            </a>
+            {% endif %}
+            {% if can_cancel %}
+            <a href="{% url 'admin_pages:meeting_room_booking_cancel' booking.id %}" class="btn btn-danger">
+                <i class="bi bi-x-circle"></i> 取消
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">预订单号</span>
+                    <span class="info-value"><code>{{ booking.booking_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">预订人</span>
+                    <span class="info-value">{{ booking.booker.get_full_name|default:booking.booker.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">会议室</span>
+                    <span class="info-value">{{ booking.room.name }}（{{ booking.room.code }}）</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge status-{{ booking.status }}">
+                            {{ booking.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预订信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">预订信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">预订日期</span>
+                    <span class="info-value">{{ booking.booking_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">时间</span>
+                    <span class="info-value">{{ booking.start_time|time:"H:i" }} - {{ booking.end_time|time:"H:i" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">会议主题</span>
+                    <span class="info-value">{{ booking.meeting_topic|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">参会人数</span>
+                    <span class="info-value">{{ booking.attendees_count }} 人</span>
+                </div>
+                {% if booking.attendees.exists %}
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">参会人员</span>
+                    <span class="info-value">
+                        {% for attendee in booking.attendees.all %}
+                        <span class="badge bg-secondary me-1">{{ attendee.get_full_name|default:attendee.username }}</span>
+                        {% endfor %}
+                    </span>
+                </div>
+                {% endif %}
+                {% if booking.special_requirements %}
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">特殊需求</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ booking.special_requirements }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 取消信息 -->
+    {% if booking.status == 'cancelled' and booking.cancelled_by %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">取消信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">取消人</span>
+                    <span class="info-value">{{ booking.cancelled_by.get_full_name|default:booking.cancelled_by.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">取消时间</span>
+                    <span class="info-value">{{ booking.cancelled_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% if booking.cancelled_reason %}
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">取消原因</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ booking.cancelled_reason }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

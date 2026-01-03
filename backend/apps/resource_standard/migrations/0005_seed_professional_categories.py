@@ -23,7 +23,7 @@ def _detect_category(code: str, name: str) -> str:
 
 def seed_professional_categories(apps, schema_editor):
     ProfessionalCategory = apps.get_model("resource_standard", "ProfessionalCategory")
-    ServiceProfession = apps.get_model("project_center", "ServiceProfession")
+    ServiceProfession = apps.get_model("production_management", "ServiceProfession")
 
     existing_codes = set(
         ProfessionalCategory.objects.values_list("code", flat=True)
@@ -58,7 +58,7 @@ def unseed_professional_categories(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("project_center", "0011_projectdrawingreview_projectdrawingsubmission_and_more"),
+        # ("production_management", "0001_initial"),  # 注释掉，因为production_management迁移尚未创建
         ("resource_standard", "0004_systemparameter_professionalcategory"),
     ]
 

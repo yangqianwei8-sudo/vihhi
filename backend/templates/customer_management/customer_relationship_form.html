@@ -1,0 +1,103 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="info-card info-card-compact">
+    <div class="info-card-header">
+        <h5 class="info-card-title">{{ page_title }}</h5>
+    </div>
+    <div class="info-card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="info-section">
+                <h6 class="info-section-title">基本信息</h6>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label class="info-label info-label-required">客户</label>
+                        <select name="client_id" class="form-select" required>
+                            <option value="">请选择客户</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}" {% if relationship.client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label info-label-required">关系类型</label>
+                        <select name="relationship_type" class="form-select" required>
+                            {% for value, label in relationship_type_choices %}
+                            <option value="{{ value }}" {% if relationship.relationship_type == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label info-label-required">关系标题</label>
+                        <input type="text" name="title" class="form-control" value="{{ relationship.title|default:'' }}" required>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">关联商机</label>
+                        <select name="related_opportunity_id" class="form-select">
+                            <option value="">无</option>
+                            {% for opp in opportunities %}
+                            <option value="{{ opp.id }}" {% if relationship.related_opportunity_id == opp.id %}selected{% endif %}>{{ opp.client.name }} - {{ opp.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label info-label-required">关系日期</label>
+                        <input type="date" name="relationship_date" class="form-control" value="{{ relationship.relationship_date|date:'Y-m-d'|default:'' }}" required>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">关系时间</label>
+                        <input type="time" name="relationship_time" class="form-control" value="{{ relationship.relationship_date|time:'H:i'|default:'' }}">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">地点</label>
+                        <input type="text" name="location" class="form-control" value="{{ relationship.location|default:'' }}">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">参与人员</label>
+                        <input type="text" name="participants" class="form-control" value="{{ relationship.participants|default:'' }}" placeholder="用逗号分隔">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h6 class="info-section-title">关系内容</h6>
+                <div class="info-item">
+                    <label class="info-label info-label-required">关系内容</label>
+                    <textarea name="content" class="form-control" rows="5" required>{{ relationship.content|default:'' }}</textarea>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h6 class="info-section-title">下一步行动</h6>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label class="info-label">下一步行动</label>
+                        <textarea name="next_action" class="form-control" rows="3">{{ relationship.next_action|default:'' }}</textarea>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">下次行动日期</label>
+                        <input type="date" name="next_action_date" class="form-control" value="{{ relationship.next_action_date|date:'Y-m-d'|default:'' }}">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{% if relationship %}{% url 'business_pages:customer_relationship_detail' relationship.id %}{% else %}{% url 'business_pages:customer_relationship' %}{% endif %}" class="btn btn-outline-secondary">取消</a>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

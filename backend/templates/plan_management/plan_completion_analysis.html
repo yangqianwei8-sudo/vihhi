@@ -1,0 +1,285 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .stat-card {
+        background: #fff;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        height: 100%;
+    }
+    .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #142F5B;
+    }
+    .stat-label {
+        font-size: 14px;
+        color: #6c757d;
+        margin-top: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="list-page-header mb-4">
+        <h2 class="mb-0">
+            {{ page_title }}
+        </h2>
+        <p class="text-muted mb-0 mt-1">{{ description }}</p>
+    </div>
+    
+    <!-- 筛选 -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small">开始时间</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">结束时间</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">计划类型</label>
+                    <select name="plan_type" class="form-select form-select-sm">
+                        <option value="">全部类型</option>
+                        <option value="personal" {% if plan_type == 'personal' %}selected{% endif %}>个人计划</option>
+                        <option value="department" {% if plan_type == 'department' %}selected{% endif %}>部门计划</option>
+                        <option value="company" {% if plan_type == 'company' %}selected{% endif %}>公司计划</option>
+                        <option value="project" {% if plan_type == 'project' %}selected{% endif %}>项目计划</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">计划周期</label>
+                    <select name="plan_period" class="form-select form-select-sm">
+                        <option value="">全部周期</option>
+                        <option value="daily" {% if plan_period == 'daily' %}selected{% endif %}>日计划</option>
+                        <option value="weekly" {% if plan_period == 'weekly' %}selected{% endif %}>周计划</option>
+                        <option value="monthly" {% if plan_period == 'monthly' %}selected{% endif %}>月计划</option>
+                        <option value="quarterly" {% if plan_period == 'quarterly' %}selected{% endif %}>季度计划</option>
+                        <option value="yearly" {% if plan_period == 'yearly' %}selected{% endif %}>年计划</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary btn-sm w-100">筛选</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 统计卡片 -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_count }}</div>
+                <div class="stat-label">计划总数</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value text-success">{{ completed_count }}</div>
+                <div class="stat-label">已完成</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value text-warning">{{ in_progress_count }}</div>
+                <div class="stat-label">执行中</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value text-primary">{{ completion_rate }}%</div>
+                <div class="stat-label">完成率</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value text-danger">{{ cancelled_count }}</div>
+                <div class="stat-label">已取消</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value text-info">{{ avg_progress }}%</div>
+                <div class="stat-label">平均进度</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 图表 -->
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">状态分布</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">进度分布</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="progressChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-3 mt-3">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">类型分布</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="typeChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">周期分布</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="periodChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 状态分布图表
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+const statusData = {
+    labels: [
+        {% for stat in status_stats %}
+        '{{ stat.status }}',
+        {% endfor %}
+    ],
+    datasets: [{
+        data: [
+            {% for stat in status_stats %}
+            {{ stat.count }},
+            {% endfor %}
+        ],
+        backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d', '#20c997', '#6610f2']
+    }]
+};
+new Chart(statusCtx, {
+    type: 'doughnut',
+    data: statusData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// 进度分布图表
+const progressCtx = document.getElementById('progressChart').getContext('2d');
+new Chart(progressCtx, {
+    type: 'bar',
+    data: {
+        labels: ['0-25%', '25-50%', '50-75%', '75-100%', '100%'],
+        datasets: [{
+            label: '计划数量',
+            data: [
+                {{ progress_distribution.progress_0_25 }},
+                {{ progress_distribution.progress_25_50 }},
+                {{ progress_distribution.progress_50_75 }},
+                {{ progress_distribution.progress_75_100 }},
+                {{ progress_distribution.progress_100 }}
+            ],
+            backgroundColor: '#198754'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// 类型分布图表
+const typeCtx = document.getElementById('typeChart').getContext('2d');
+const typeData = {
+    labels: [
+        {% for stat in type_stats %}
+        '{{ stat.plan_type }}',
+        {% endfor %}
+    ],
+    datasets: [{
+        data: [
+            {% for stat in type_stats %}
+            {{ stat.count }},
+            {% endfor %}
+        ],
+        backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545']
+    }]
+};
+new Chart(typeCtx, {
+    type: 'pie',
+    data: typeData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// 周期分布图表
+const periodCtx = document.getElementById('periodChart').getContext('2d');
+new Chart(periodCtx, {
+    type: 'bar',
+    data: {
+        labels: [
+            {% for stat in period_stats %}
+            '{{ stat.plan_period }}',
+            {% endfor %}
+        ],
+        datasets: [{
+            label: '计划数量',
+            data: [
+                {% for stat in period_stats %}
+                {{ stat.count }},
+                {% endfor %}
+            ],
+            backgroundColor: '#20c997'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

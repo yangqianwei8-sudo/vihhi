@@ -1,0 +1,246 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}档案权限管理 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题和操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">🔐 档案权限管理</h2>
+            <p class="text-muted mb-0">管理档案权限角色和权限分配，支持权限类型设置和权限审批</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRoleModal">
+                <i class="bi bi-plus-circle"></i> 新建角色
+            </button>
+            <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#assignPermissionModal">
+                <i class="bi bi-person-check"></i> 分配权限
+            </button>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="info-card info-card-primary">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">权限角色</div>
+                            <div class="info-value info-value-large">{{ role_count|default:0 }}</div>
+                        </div>
+                        <div class="text-primary" style="font-size: 2rem;">
+                            <i class="bi bi-people"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card info-card-success">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">已分配用户</div>
+                            <div class="info-value info-value-large">{{ user_count|default:0 }}</div>
+                        </div>
+                        <div class="text-success" style="font-size: 2rem;">
+                            <i class="bi bi-person-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card info-card-warning">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">待审批权限</div>
+                            <div class="info-value info-value-large">{{ pending_permission_count|default:0 }}</div>
+                        </div>
+                        <div class="text-warning" style="font-size: 2rem;">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card info-card-info">
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">权限类型</div>
+                            <div class="info-value info-value-large">{{ permission_type_count|default:7 }}</div>
+                        </div>
+                        <div class="text-info" style="font-size: 2rem;">
+                            <i class="bi bi-key"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 权限角色列表 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">权限角色列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">共 {{ roles|length|default:0 }} 个角色</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            <!-- 筛选器 -->
+            <form method="get" class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <label class="form-label">角色类型</label>
+                    <select name="role_type" class="form-select">
+                        <option value="">全部类型</option>
+                        <option value="admin" {% if role_type == 'admin' %}selected{% endif %}>管理员</option>
+                        <option value="archivist" {% if role_type == 'archivist' %}selected{% endif %}>档案管理员</option>
+                        <option value="user" {% if role_type == 'user' %}selected{% endif %}>普通用户</option>
+                        <option value="viewer" {% if role_type == 'viewer' %}selected{% endif %}>查看者</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">搜索</label>
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="搜索角色名称、描述..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> 筛选
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- 角色列表 -->
+            {% if roles %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>角色名称</th>
+                            <th>角色类型</th>
+                            <th>权限类型</th>
+                            <th>用户数量</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for role in roles %}
+                        <tr>
+                            <td>
+                                <strong>{{ role.name|default:"-" }}</strong>
+                                {% if role.description %}
+                                <br><small class="text-muted">{{ role.description|truncatewords:10 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">
+                                    {{ role.get_role_type_display|default:"-" }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if role.permissions %}
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% for perm in role.permissions|slice:":3" %}
+                                    <span class="badge bg-info">{{ perm }}</span>
+                                    {% endfor %}
+                                    {% if role.permissions|length > 3 %}
+                                    <span class="badge bg-secondary">+{{ role.permissions|length|add:"-3" }}</span>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">{{ role.user_count|default:0 }}</span>
+                            </td>
+                            <td>
+                                {% if role.is_active %}
+                                <span class="badge bg-success">启用</span>
+                                {% else %}
+                                <span class="badge bg-secondary">停用</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ role.created_time|date:"Y-m-d"|default:"-" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="#" class="btn btn-outline-primary" title="编辑">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-outline-info" title="权限设置">
+                                        <i class="bi bi-key"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-outline-danger" title="删除">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 暂无权限角色，请创建角色并分配权限
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 权限类型说明 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">权限类型说明</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-eye text-primary"></i> <strong>查看权限</strong> - 可以查看档案信息
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-download text-success"></i> <strong>下载权限</strong> - 可以下载档案文件
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-pencil text-warning"></i> <strong>编辑权限</strong> - 可以编辑档案信息
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-trash text-danger"></i> <strong>删除权限</strong> - 可以删除档案
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-archive text-info"></i> <strong>归档权限</strong> - 可以进行档案归档
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-book text-primary"></i> <strong>借阅权限</strong> - 可以借阅档案
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-x-circle text-danger"></i> <strong>销毁权限</strong> - 可以销毁档案
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

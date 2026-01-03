@@ -1,0 +1,144 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-card h5 {
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+            <h1>{{ page_title }}</h1>
+        <p>{{ description }}</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <h5>应付账款信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">供应商</label>
+                    {{ form.supplier }}
+                    {% if form.supplier.errors %}
+                    <div class="text-danger small mt-1">{{ form.supplier.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">关联项目</label>
+                    {{ form.project }}
+                    {% if form.project.errors %}
+                    <div class="text-danger small mt-1">{{ form.project.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">应付金额</label>
+                    {{ form.payable_amount }}
+                    {% if form.payable_amount.errors %}
+                    <div class="text-danger small mt-1">{{ form.payable_amount.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">已付金额</label>
+                    {{ form.paid_amount }}
+                    {% if form.paid_amount.errors %}
+                    <div class="text-danger small mt-1">{{ form.paid_amount.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">应付日期</label>
+                    {{ form.payable_date }}
+                    {% if form.payable_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.payable_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">到期日期</label>
+                    {{ form.due_date }}
+                    {% if form.due_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.due_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">账期（天）</label>
+                    {{ form.payment_terms }}
+                    {% if form.payment_terms.errors %}
+                    <div class="text-danger small mt-1">{{ form.payment_terms.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">状态</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                    <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">备注说明</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% if is_create %}{% url 'finance_pages:payable_management' %}{% else %}{% url 'finance_pages:payable_detail' payable.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-submit">
+                    <i class="bi bi-check-circle"></i> 保存
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

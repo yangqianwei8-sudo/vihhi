@@ -1,0 +1,114 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">盘点信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">盘点单号</span>
+                    <span class="info-value"><code>{{ check.check_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">盘点日期</span>
+                    <span class="info-value">{{ check.check_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">盘点人</span>
+                    <span class="info-value">{{ check.checker.get_full_name|default:check.checker.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">准确率</span>
+                    <span class="info-value">{{ check.accuracy_rate|floatformat:1 }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 盘点明细 -->
+    {% if items %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">盘点明细</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>用品编码</th>
+                            <th>用品名称</th>
+                            <th>账面数量</th>
+                            <th>实际数量</th>
+                            <th>差异数量</th>
+                            <th>差异金额</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td><code>{{ item.supply.code }}</code></td>
+                            <td>{{ item.supply.name }}</td>
+                            <td>{{ item.book_quantity }}</td>
+                            <td>{{ item.actual_quantity|default:"-" }}</td>
+                            <td>
+                                {% if item.difference > 0 %}
+                                <span class="text-success">+{{ item.difference }}</span>
+                                {% elif item.difference < 0 %}
+                                <span class="text-danger">{{ item.difference }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td>¥{{ item.difference_amount|floatformat:2 }}</td>
+                            <td>
+                                {% if item.is_surplus %}
+                                <span class="badge bg-success">盘盈</span>
+                                {% elif item.is_shortage %}
+                                <span class="badge bg-danger">盘亏</span>
+                                {% else %}
+                                <span class="badge bg-secondary">无差异</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="alert alert-warning">
+        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> 审核确认</h5>
+        <p>审核通过后，系统将根据盘点结果自动更新库存数量。此操作不可撤销，请确认盘点结果无误。</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'admin_pages:inventory_check_detail' check.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> 确认审核通过
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

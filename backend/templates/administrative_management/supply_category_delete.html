@@ -1,0 +1,69 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <div class="alert alert-warning">
+        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> 确认删除</h5>
+        <p>您确定要删除分类 <strong>{{ category.name }}</strong> 吗？</p>
+        <hr>
+        <p class="mb-0">此操作不可恢复，请谨慎操作。</p>
+    </div>
+
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">分类信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">分类名称</span>
+                    <span class="info-value">{{ category.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">分类编码</span>
+                    <span class="info-value"><code>{{ category.code }}</code></span>
+                </div>
+                {% if category.parent %}
+                <div class="info-item">
+                    <span class="info-label">上级分类</span>
+                    <span class="info-value">{{ category.parent.name }}</span>
+                </div>
+                {% endif %}
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        {% if category.is_active %}
+                        <span class="badge bg-success">启用</span>
+                        {% else %}
+                        <span class="badge bg-secondary">停用</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'admin_pages:supply_category_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> 确认删除
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

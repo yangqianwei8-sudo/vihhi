@@ -1,0 +1,124 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}结果统计 - 诉讼管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:litigation_home' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回首页
+            </a>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    {% if summary_cards %}
+    <div class="info-card info-card-elevated mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">📊 结果统计概览</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-4 info-grid-responsive">
+                {% for card in summary_cards %}
+                <div class="info-item">
+                    <span class="info-label">{{ card.label }}</span>
+                    <span class="info-value info-value-large">{{ card.value }}</span>
+                    {% if card.hint %}
+                    <span class="info-hint">{{ card.hint }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 筛选器 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">统计筛选</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">开始日期</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">结束日期</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-search"></i> 查询
+                        </button>
+                        <a href="{% url 'litigation_pages:result_statistics' %}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-arrow-counterclockwise"></i> 重置
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 结果统计 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">诉讼结果统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-4 info-grid-responsive">
+                <div class="info-item">
+                    <span class="info-label">胜诉案件</span>
+                    <span class="info-value info-value-large">{{ won_cases }}</span>
+                    <span class="info-hint">胜诉金额：¥{{ won_amount|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">败诉案件</span>
+                    <span class="info-value info-value-large">{{ lost_cases }}</span>
+                    <span class="info-hint">败诉金额：¥{{ lost_amount|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">和解案件</span>
+                    <span class="info-value info-value-large">{{ settled_cases }}</span>
+                    <span class="info-hint">和解金额：¥{{ settled_amount|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">撤诉案件</span>
+                    <span class="info-value info-value-large">{{ withdrawn_cases }}</span>
+                    <span class="info-hint">撤诉金额：¥{{ withdrawn_amount|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 平均周期 -->
+    {% if avg_won_cycle %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">周期统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">胜诉案件平均周期</span>
+                    <span class="info-value info-value-large">{{ avg_won_cycle|floatformat:0 }} 天</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

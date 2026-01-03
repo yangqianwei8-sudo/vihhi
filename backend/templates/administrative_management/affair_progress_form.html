@@ -1,0 +1,122 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .form-card h5 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-md);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .form-label.required::after {
+        content: " *";
+        color: var(--vh-error);
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- 事务信息 -->
+    <div class="form-card mb-4">
+        <h5>事务信息</h5>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">事务编号</label>
+                <div class="form-control-plaintext"><code>{{ affair.affair_number }}</code></div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">事务标题</label>
+                <div class="form-control-plaintext">{{ affair.title }}</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">当前进度</label>
+                <div class="form-control-plaintext">
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ affair.progress }}%">
+                            {{ affair.progress }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 进度表单 -->
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-card">
+            <h5>进度信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">进度（%）</label>
+                    {{ form.progress }}
+                    {% if form.progress.errors %}
+                    <div class="text-danger small mt-1">{{ form.progress.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">请输入0-100之间的数字</small>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label required">进度说明</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">请详细说明当前的处理进度、遇到的问题、下一步计划等</small>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">进度附件</label>
+                    {{ form.attachment }}
+                    {% if form.attachment.errors %}
+                    <div class="text-danger small mt-1">{{ form.attachment.errors }}</div>
+                    {% endif %}
+                    <small class="text-muted">可上传处理过程中的文件、截图等</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 表单错误 -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% url 'admin_pages:affair_detail' affair.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i> 保存进度
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

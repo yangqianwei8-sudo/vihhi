@@ -1,0 +1,44 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <h5>确认删除</h5>
+                <p>您确定要删除业务委托书 <strong>"{{ letter.project_name }}"</strong> 吗？</p>
+                <p class="mb-0">此操作不可恢复，请谨慎操作。</p>
+            </div>
+
+            <div class="mb-4">
+                <h6>委托书信息：</h6>
+                <ul>
+                    <li>委托书编号：{{ letter.letter_number|default:"未编号" }}</li>
+                    <li>项目名称：{{ letter.project_name }}</li>
+                    <li>委托方：{{ letter.client_name }}</li>
+                    {% if letter.provisional_price %}
+                    <li>暂定价款：¥{{ letter.provisional_price|floatformat:2 }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">确认删除</button>
+                <a href="{% url 'business_pages:authorization_letter_detail' letter.id %}" class="btn btn-outline-secondary">取消</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

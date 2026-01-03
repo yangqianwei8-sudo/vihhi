@@ -1,0 +1,238 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}流程详情 - {{ process.get_process_type_display }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                {% if perms.litigation_management.process.manage %}
+                <a href="{% url 'litigation_pages:process_edit' process.id %}" class="btn btn-secondary">
+                    <i class="bi bi-pencil"></i> 编辑
+                </a>
+                {% endif %}
+                <a href="{% url 'litigation_pages:process_list' case.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">流程类型</span>
+                    <span class="info-value">
+                        <span class="badge bg-info">{{ process.get_process_type_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">流程日期</span>
+                    <span class="info-value">{{ process.process_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge {{ process.status }}">
+                            {{ process.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">关联案件</span>
+                    <span class="info-value">
+                        <a href="{% url 'litigation_pages:case_detail' case.id %}" class="text-decoration-none">
+                            {{ case.case_number }} - {{ case.case_name }}
+                        </a>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 立案信息 -->
+    {% if process.process_type == 'filing' %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">立案信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% if process.filing_number %}
+                <div class="info-item">
+                    <span class="info-label">立案号</span>
+                    <span class="info-value">{{ process.filing_number }}</span>
+                </div>
+                {% endif %}
+                {% if process.court_name %}
+                <div class="info-item">
+                    <span class="info-label">法院名称</span>
+                    <span class="info-value">{{ process.court_name }}</span>
+                </div>
+                {% endif %}
+                {% if process.court_address %}
+                <div class="info-item">
+                    <span class="info-label">法院地址</span>
+                    <span class="info-value">{{ process.court_address }}</span>
+                </div>
+                {% endif %}
+                {% if process.court_contact %}
+                <div class="info-item">
+                    <span class="info-label">法院联系方式</span>
+                    <span class="info-value">{{ process.court_contact }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 庭审信息 -->
+    {% if process.process_type == 'trial' %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">庭审信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% if process.trial_location %}
+                <div class="info-item">
+                    <span class="info-label">庭审地点</span>
+                    <span class="info-value">{{ process.trial_location }}</span>
+                </div>
+                {% endif %}
+                {% if process.judge_name %}
+                <div class="info-item">
+                    <span class="info-label">法官姓名</span>
+                    <span class="info-value">{{ process.judge_name }}</span>
+                </div>
+                {% endif %}
+                {% if process.trial_participants %}
+                <div class="info-item">
+                    <span class="info-label">参与人员</span>
+                    <span class="info-value">{{ process.trial_participants }}</span>
+                </div>
+                {% endif %}
+                {% if process.trial_result %}
+                <div class="info-item">
+                    <span class="info-label">庭审结果</span>
+                    <span class="info-value">{{ process.trial_result }}</span>
+                </div>
+                {% endif %}
+                {% if process.trial_notes %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">庭审记录</span>
+                    <span class="info-value">{{ process.trial_notes|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 判决信息 -->
+    {% if process.process_type == 'judgment' %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">判决信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% if process.judgment_number %}
+                <div class="info-item">
+                    <span class="info-label">判决书编号</span>
+                    <span class="info-value">{{ process.judgment_number }}</span>
+                </div>
+                {% endif %}
+                {% if process.judgment_amount %}
+                <div class="info-item">
+                    <span class="info-label">判决金额</span>
+                    <span class="info-value">¥{{ process.judgment_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                {% if process.judgment_content %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">判决内容</span>
+                    <span class="info-value">{{ process.judgment_content|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 执行信息 -->
+    {% if process.process_type == 'execution' %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">执行信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                {% if process.execution_amount %}
+                <div class="info-item">
+                    <span class="info-label">执行金额</span>
+                    <span class="info-value">¥{{ process.execution_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                {% if process.interest_amount %}
+                <div class="info-item">
+                    <span class="info-label">利息金额</span>
+                    <span class="info-value">¥{{ process.interest_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                {% if process.execution_deadline %}
+                <div class="info-item">
+                    <span class="info-label">执行期限</span>
+                    <span class="info-value">{{ process.execution_deadline|date:"Y-m-d" }}</span>
+                </div>
+                {% endif %}
+                {% if process.execution_status %}
+                <div class="info-item">
+                    <span class="info-label">执行状态</span>
+                    <span class="info-value">{{ process.execution_status }}</span>
+                </div>
+                {% endif %}
+                {% if process.execution_result %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">执行结果</span>
+                    <span class="info-value">{{ process.execution_result|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注信息 -->
+    {% if process.notes %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注信息</h5>
+        </div>
+        <div class="info-card-body">
+            <p>{{ process.notes|linebreaks }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

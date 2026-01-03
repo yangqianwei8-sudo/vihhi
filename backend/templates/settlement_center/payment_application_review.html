@@ -1,0 +1,126 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .content-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: var(--spacing-lg);
+    }
+    .info-table {
+        width: 100%;
+    }
+    .info-table th {
+        width: 150px;
+        padding: 12px;
+        background: #f8f9fa;
+        font-weight: 600;
+        text-align: right;
+        vertical-align: middle;
+    }
+    .info-table td {
+        padding: 12px;
+        vertical-align: middle;
+    }
+    .review-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="content-card">
+        <div class="mb-4">
+            <h3 class="mb-3">{{ page_title }}</h3>
+            <p class="text-muted">{{ description }}</p>
+        </div>
+
+        <!-- 回款申请信息 -->
+        <div class="mb-4">
+            <h5 class="mb-3">回款申请信息</h5>
+            <table class="table info-table">
+                <tr>
+                    <th>申请单号</th>
+                    <td><strong>{{ application.application_number }}</strong></td>
+                    <th>申请金额</th>
+                    <td class="text-success fw-bold">¥{{ application.application_amount|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <th>申请日期</th>
+                    <td>{{ application.application_date|date:"Y-m-d" }}</td>
+                    <th>期望回款日期</th>
+                    <td>
+                        {% if application.expected_date %}
+                            {{ application.expected_date|date:"Y-m-d" }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>关联合同</th>
+                    <td>{{ application.contract.contract_number }}</td>
+                    <th>客户名称</th>
+                    <td>{{ application.contract.client.name|default:"-" }}</td>
+                </tr>
+                <tr>
+                    <th>申请原因</th>
+                    <td colspan="3">{{ application.reason|linebreaks }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 审核表单 -->
+        <form method="post" id="reviewForm">
+            {% csrf_token %}
+            <div class="mb-4">
+                <h5 class="mb-3">审核意见</h5>
+                <textarea name="review_comment" id="review_comment" class="form-control" rows="4" 
+                          placeholder="请输入审核意见（可选）"></textarea>
+            </div>
+
+            <div class="mb-4">
+                <h5 class="mb-3">拒绝原因</h5>
+                <textarea name="rejection_reason" id="rejection_reason" class="form-control" rows="4" 
+                          placeholder="如果拒绝申请，请填写拒绝原因"></textarea>
+                <small class="form-text text-muted">仅在拒绝申请时需要填写</small>
+            </div>
+
+            <div class="review-actions">
+                <button type="submit" name="action" value="approve" class="btn btn-success btn-lg">
+                    <i class="bi bi-check-circle"></i> 通过审核
+                </button>
+                <button type="submit" name="action" value="reject" class="btn btn-danger btn-lg" 
+                        onclick="return confirmReject();">
+                    <i class="bi bi-x-circle"></i> 拒绝申请
+                </button>
+                <a href="{% url 'settlement_pages:payment_application_detail' application.id %}" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-arrow-left"></i> 返回详情
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function confirmReject() {
+    const reason = document.getElementById('rejection_reason').value.trim();
+    if (!reason) {
+        alert('请填写拒绝原因');
+        return false;
+    }
+    return confirm('确定要拒绝此回款申请吗？');
+}
+</script>
+{% endblock %}
+

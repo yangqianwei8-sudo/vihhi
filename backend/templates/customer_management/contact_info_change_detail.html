@@ -1,0 +1,143 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .change-content-item {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .change-content-item .field-label {
+        font-weight: 500;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    .change-content-item .old-value {
+        color: #6c757d;
+        text-decoration: line-through;
+        margin-right: 1rem;
+    }
+    .change-content-item .new-value {
+        color: #28a745;
+        font-weight: 500;
+    }
+    .change-content-item .arrow {
+        color: #6c757d;
+        margin: 0 0.5rem;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <div class="container-fluid py-4">
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">{{ page_title }}</h5>
+            </div>
+            <div class="info-card-body">
+                <!-- 基本信息 -->
+                <div class="info-section">
+                    <h6 class="info-section-title">基本信息</h6>
+                    <div class="info-grid info-grid-2">
+                        <div class="info-item">
+                            <span class="info-label">联系人</span>
+                            <span class="info-value">
+                                <a href="{% url 'business_pages:contact_detail' change.contact.id %}" class="text-decoration-none">
+                                    {{ change.contact.name }}
+                                </a>
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">客户</span>
+                            <span class="info-value">
+                                <a href="{% url 'business_pages:customer_detail' change.contact.client.id %}" class="text-decoration-none">
+                                    {{ change.contact.client.name }}
+                                </a>
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">变更类型</span>
+                            <span class="info-value">{{ change.get_change_type_display }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">审批状态</span>
+                            <span class="info-value">
+                                <span class="badge bg-{% if change.approval_status == 'approved' %}success{% elif change.approval_status == 'rejected' %}danger{% elif change.approval_status == 'withdrawn' %}secondary{% elif change.approval_status == 'draft' %}info{% else %}warning{% endif %}">
+                                    {{ change.get_approval_status_display }}
+                                </span>
+                            </span>
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <span class="info-label">变更原因</span>
+                            <span class="info-value">{{ change.change_reason|linebreaks }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 变更内容 -->
+                {% if change_content %}
+                <div class="info-section">
+                    <h6 class="info-section-title">变更内容</h6>
+                    {% for field_name, values in change_content.items %}
+                    <div class="change-content-item">
+                        <div class="field-label">{{ field_name }}</div>
+                        <div>
+                            <span class="old-value">{{ values.old|default:"（空）" }}</span>
+                            <span class="arrow">→</span>
+                            <span class="new-value">{{ values.new|default:"（空）" }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <!-- 审批信息 -->
+                <div class="info-section">
+                    <h6 class="info-section-title">审批信息</h6>
+                    <div class="info-grid info-grid-2">
+                        <div class="info-item">
+                            <span class="info-label">申请人</span>
+                            <span class="info-value">{{ change.created_by.get_full_name|default:change.created_by.username }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">申请时间</span>
+                            <span class="info-value">{{ change.created_time|date:"Y-m-d H:i:s" }}</span>
+                        </div>
+                        {% if change.approved_time %}
+                        <div class="info-item">
+                            <span class="info-label">审批通过时间</span>
+                            <span class="info-value">{{ change.approved_time|date:"Y-m-d H:i:s" }}</span>
+                        </div>
+                        {% endif %}
+                        {% if change.approval_instance %}
+                        <div class="info-item">
+                            <span class="info-label">审批实例</span>
+                            <span class="info-value">
+                                <a href="{% url 'workflow_pages:approval_detail' change.approval_instance.id %}" class="text-decoration-none">
+                                    {{ change.approval_instance.instance_number }}
+                                </a>
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'business_pages:contact_info_change_list' %}" class="btn btn-secondary">返回列表</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

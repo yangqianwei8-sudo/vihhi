@@ -1,23 +1,68 @@
 from django.db import models
 from django.utils import timezone
-from django.db.models import Max
+from django.db.models import Max, Sum, F, F
 from datetime import datetime
+from decimal import Decimal
 from backend.apps.system_management.models import User, Department
 
 
 # ==================== 办公用品管理 ====================
 
+class SupplyCategory(models.Model):
+    """办公用品分类"""
+    name = models.CharField(max_length=100, verbose_name='分类名称')
+    code = models.CharField(max_length=50, unique=True, blank=True, verbose_name='分类编码')
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children', verbose_name='上级分类')
+    description = models.TextField(blank=True, verbose_name='分类描述')
+    sort_order = models.IntegerField(default=0, verbose_name='排序顺序')
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'admin_supply_category'
+        verbose_name = '办公用品分类'
+        verbose_name_plural = verbose_name
+        ordering = ['sort_order', 'name']
+        indexes = [
+            models.Index(fields=['code']),
+            models.Index(fields=['parent', 'is_active']),
+        ]
+    
+    def __str__(self):
+        if self.parent:
+            return f"{self.parent.name} > {self.name}"
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.code:
+            max_category = SupplyCategory.objects.filter(
+                code__startswith='CAT-'
+            ).aggregate(max_num=Max('code'))['max_num']
+            if max_category:
+                try:
+                    seq = int(max_category.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.code = f'CAT-{seq:05d}'
+        super().save(*args, **kwargs)
+    
+    @property
+    def full_path(self):
+        """获取完整分类路径"""
+        if self.parent:
+            return f"{self.parent.full_path} > {self.name}"
+        return self.name
+
+
 class OfficeSupply(models.Model):
     """办公用品"""
-    CATEGORY_CHOICES = [
-        ('consumable', '消耗品'),
-        ('fixed_asset', '固定资产'),
-        ('low_value', '低值易耗品'),
-    ]
     
     code = models.CharField(max_length=50, unique=True, verbose_name='用品编码')
     name = models.CharField(max_length=200, verbose_name='用品名称')
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='consumable', verbose_name='分类')
+    supply_category = models.ForeignKey(SupplyCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='supplies', verbose_name='用品分类')
     unit = models.CharField(max_length=20, default='个', verbose_name='单位')
     specification = models.CharField(max_length=200, blank=True, verbose_name='规格型号')
     brand = models.CharField(max_length=100, blank=True, verbose_name='品牌')
@@ -40,7 +85,7 @@ class OfficeSupply(models.Model):
         ordering = ['-created_time']
         indexes = [
             models.Index(fields=['code']),
-            models.Index(fields=['category', 'is_active']),
+            models.Index(fields=['supply_category', 'is_active']),
         ]
     
     def __str__(self):
@@ -65,7 +110,8 @@ class SupplyPurchase(models.Model):
     
     purchase_number = models.CharField(max_length=100, unique=True, verbose_name='采购单号')
     purchase_date = models.DateField(default=timezone.now, verbose_name='采购日期')
-    supplier = models.CharField(max_length=200, verbose_name='供应商')
+    supplier = models.CharField(max_length=200, verbose_name='供应商')  # 保留字符串字段以兼容旧数据
+    supplier_obj = models.ForeignKey('Supplier', on_delete=models.SET_NULL, null=True, blank=True, related_name='purchases', verbose_name='供应商对象')
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='采购总金额')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='状态')
     approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_purchases', verbose_name='审批人')
@@ -122,6 +168,215 @@ class SupplyPurchaseItem(models.Model):
     
     def save(self, *args, **kwargs):
         self.total_amount = self.quantity * self.unit_price
+        super().save(*args, **kwargs)
+
+
+# ==================== 供应商管理 ====================
+
+class Supplier(models.Model):
+    """供应商"""
+    RATING_CHOICES = [
+        ('A', 'A级（优秀）'),
+        ('B', 'B级（良好）'),
+        ('C', 'C级（一般）'),
+        ('D', 'D级（较差）'),
+    ]
+    
+    name = models.CharField(max_length=200, unique=True, verbose_name='供应商名称')
+    code = models.CharField(max_length=50, unique=True, blank=True, verbose_name='供应商编码')
+    contact_person = models.CharField(max_length=100, blank=True, verbose_name='联系人')
+    contact_phone = models.CharField(max_length=50, blank=True, verbose_name='联系电话')
+    contact_email = models.EmailField(blank=True, verbose_name='联系邮箱')
+    address = models.CharField(max_length=500, blank=True, verbose_name='地址')
+    tax_id = models.CharField(max_length=50, blank=True, verbose_name='税号')
+    bank_name = models.CharField(max_length=200, blank=True, verbose_name='开户银行')
+    bank_account = models.CharField(max_length=100, blank=True, verbose_name='银行账号')
+    rating = models.CharField(max_length=10, choices=RATING_CHOICES, default='C', verbose_name='供应商评级')
+    credit_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='信用额度')
+    payment_terms = models.CharField(max_length=200, blank=True, verbose_name='付款条件')
+    description = models.TextField(blank=True, verbose_name='描述')
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_suppliers', verbose_name='创建人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'admin_supplier'
+        verbose_name = '供应商'
+        verbose_name_plural = verbose_name
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name', 'is_active']),
+            models.Index(fields=['code']),
+        ]
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.code:
+            max_supplier = Supplier.objects.filter(
+                code__startswith='SUP-'
+            ).aggregate(max_num=Max('code'))['max_num']
+            if max_supplier:
+                try:
+                    seq = int(max_supplier.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.code = f'SUP-{seq:05d}'
+        super().save(*args, **kwargs)
+    
+    @property
+    def total_purchase_amount(self):
+        """累计采购金额"""
+        from django.db.models import Sum
+        return SupplyPurchase.objects.filter(
+            supplier=self.name,
+            status__in=['approved', 'purchased', 'received']
+        ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
+    
+    @property
+    def purchase_count(self):
+        """采购次数"""
+        return SupplyPurchase.objects.filter(
+            supplier=self.name,
+            status__in=['approved', 'purchased', 'received']
+        ).count()
+
+
+class PurchaseContract(models.Model):
+    """采购合同"""
+    STATUS_CHOICES = [
+        ('draft', '草稿'),
+        ('pending_approval', '待审批'),
+        ('approved', '已批准'),
+        ('signed', '已签约'),
+        ('executing', '执行中'),
+        ('completed', '已完成'),
+        ('cancelled', '已取消'),
+    ]
+    
+    contract_number = models.CharField(max_length=100, unique=True, verbose_name='合同编号')
+    contract_name = models.CharField(max_length=200, verbose_name='合同名称')
+    supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name='contracts', verbose_name='供应商')
+    purchase = models.ForeignKey(SupplyPurchase, on_delete=models.SET_NULL, null=True, blank=True, related_name='contracts', verbose_name='关联采购单')
+    contract_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='合同金额')
+    signed_date = models.DateField(null=True, blank=True, verbose_name='签约日期')
+    start_date = models.DateField(null=True, blank=True, verbose_name='合同开始日期')
+    end_date = models.DateField(null=True, blank=True, verbose_name='合同结束日期')
+    payment_terms = models.CharField(max_length=200, blank=True, verbose_name='付款条件')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='状态')
+    contract_file = models.FileField(upload_to='purchases/contracts/', null=True, blank=True, verbose_name='合同文件')
+    notes = models.TextField(blank=True, verbose_name='备注')
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_purchase_contracts', verbose_name='创建人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'admin_purchase_contract'
+        verbose_name = '采购合同'
+        verbose_name_plural = verbose_name
+        ordering = ['-created_time']
+        indexes = [
+            models.Index(fields=['contract_number']),
+            models.Index(fields=['supplier', 'status']),
+            models.Index(fields=['signed_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.contract_number} - {self.contract_name}"
+    
+    def save(self, *args, **kwargs):
+        if not self.contract_number:
+            current_year = datetime.now().year
+            max_contract = PurchaseContract.objects.filter(
+                contract_number__startswith=f'PUR-CON-{current_year}-'
+            ).aggregate(max_num=Max('contract_number'))['max_num']
+            if max_contract:
+                try:
+                    seq = int(max_contract.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.contract_number = f'PUR-CON-{current_year}-{seq:04d}'
+        super().save(*args, **kwargs)
+    
+    @property
+    def paid_amount(self):
+        """已付款金额"""
+        from django.db.models import Sum
+        return PurchasePayment.objects.filter(
+            contract=self,
+            status='paid'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    @property
+    def unpaid_amount(self):
+        """未付款金额"""
+        return self.contract_amount - self.paid_amount
+
+
+class PurchasePayment(models.Model):
+    """采购付款"""
+    STATUS_CHOICES = [
+        ('pending', '待付款'),
+        ('paid', '已付款'),
+        ('cancelled', '已取消'),
+    ]
+    
+    PAYMENT_METHOD_CHOICES = [
+        ('bank_transfer', '银行转账'),
+        ('check', '支票'),
+        ('cash', '现金'),
+        ('other', '其他'),
+    ]
+    
+    payment_number = models.CharField(max_length=100, unique=True, verbose_name='付款单号')
+    contract = models.ForeignKey(PurchaseContract, on_delete=models.PROTECT, related_name='payments', verbose_name='采购合同')
+    amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='付款金额')
+    payment_date = models.DateField(verbose_name='付款日期')
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='bank_transfer', verbose_name='付款方式')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='状态')
+    voucher_number = models.CharField(max_length=100, blank=True, verbose_name='凭证号')
+    paid_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='paid_purchases', verbose_name='付款人')
+    paid_time = models.DateTimeField(null=True, blank=True, verbose_name='付款时间')
+    notes = models.TextField(blank=True, verbose_name='备注')
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_purchase_payments', verbose_name='创建人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'admin_purchase_payment'
+        verbose_name = '采购付款'
+        verbose_name_plural = verbose_name
+        ordering = ['-payment_date', '-created_time']
+        indexes = [
+            models.Index(fields=['payment_number']),
+            models.Index(fields=['contract', 'status']),
+            models.Index(fields=['payment_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.payment_number} - ¥{self.amount}"
+    
+    def save(self, *args, **kwargs):
+        if not self.payment_number:
+            current_date = datetime.now()
+            date_str = current_date.strftime('%Y%m%d')
+            max_payment = PurchasePayment.objects.filter(
+                payment_number__startswith=f'PUR-PAY-{date_str}-'
+            ).aggregate(max_num=Max('payment_number'))['max_num']
+            if max_payment:
+                try:
+                    seq = int(max_payment.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.payment_number = f'PUR-PAY-{date_str}-{seq:04d}'
         super().save(*args, **kwargs)
 
 
@@ -189,6 +444,209 @@ class SupplyRequestItem(models.Model):
     
     def __str__(self):
         return f"{self.request.request_number} - {self.supply.name}"
+
+
+# ==================== 库存盘点管理 ====================
+
+class InventoryCheck(models.Model):
+    """库存盘点"""
+    STATUS_CHOICES = [
+        ('draft', '草稿'),
+        ('in_progress', '进行中'),
+        ('completed', '已完成'),
+        ('approved', '已审核'),
+        ('cancelled', '已取消'),
+    ]
+    
+    check_number = models.CharField(max_length=100, unique=True, verbose_name='盘点单号')
+    check_date = models.DateField(default=timezone.now, verbose_name='盘点日期')
+    check_scope = models.CharField(max_length=200, blank=True, verbose_name='盘点范围')
+    check_location = models.CharField(max_length=200, blank=True, verbose_name='盘点地点')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='状态')
+    checker = models.ForeignKey(User, on_delete=models.PROTECT, related_name='inventory_checks', verbose_name='盘点人')
+    participants = models.ManyToManyField(User, blank=True, related_name='participated_inventory_checks', verbose_name='参与人员')
+    notes = models.TextField(blank=True, verbose_name='备注')
+    completed_time = models.DateTimeField(null=True, blank=True, verbose_name='完成时间')
+    approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_inventory_checks', verbose_name='审核人')
+    approved_time = models.DateTimeField(null=True, blank=True, verbose_name='审核时间')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'admin_inventory_check'
+        verbose_name = '库存盘点'
+        verbose_name_plural = verbose_name
+        ordering = ['-check_date', '-created_time']
+        indexes = [
+            models.Index(fields=['check_number']),
+            models.Index(fields=['check_date', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.check_number} - {self.check_date}"
+    
+    def save(self, *args, **kwargs):
+        if not self.check_number:
+            current_date = datetime.now()
+            date_str = current_date.strftime('%Y%m%d')
+            max_check = InventoryCheck.objects.filter(
+                check_number__startswith=f'INV-CHK-{date_str}-'
+            ).aggregate(max_num=Max('check_number'))['max_num']
+            if max_check:
+                try:
+                    seq = int(max_check.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.check_number = f'INV-CHK-{date_str}-{seq:04d}'
+        super().save(*args, **kwargs)
+    
+    @property
+    def total_items(self):
+        """盘点项总数"""
+        return self.items.count()
+    
+    @property
+    def completed_items(self):
+        """已完成盘点项数"""
+        return self.items.filter(actual_quantity__isnull=False).count()
+    
+    @property
+    def accuracy_rate(self):
+        """盘点准确率"""
+        if self.total_items == 0:
+            return 100.0
+        completed = self.completed_items
+        if completed == 0:
+            return 0.0
+        # 计算无差异的项数
+        correct_items = self.items.filter(
+            actual_quantity__isnull=False
+        ).exclude(
+            actual_quantity=F('book_quantity')
+        ).count()
+        return ((completed - correct_items) / completed) * 100 if completed > 0 else 0.0
+
+
+class InventoryCheckItem(models.Model):
+    """库存盘点明细"""
+    inventory_check = models.ForeignKey(InventoryCheck, on_delete=models.CASCADE, related_name='items', verbose_name='盘点单', db_column='check_id')
+    supply = models.ForeignKey(OfficeSupply, on_delete=models.PROTECT, related_name='check_items', verbose_name='用品')
+    book_quantity = models.IntegerField(verbose_name='账面数量')
+    actual_quantity = models.IntegerField(null=True, blank=True, verbose_name='实际数量')
+    difference = models.IntegerField(default=0, verbose_name='差异数量')
+    difference_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='差异金额')
+    notes = models.TextField(blank=True, verbose_name='备注')
+    checked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='checked_items', verbose_name='盘点人')
+    checked_time = models.DateTimeField(null=True, blank=True, verbose_name='盘点时间')
+    
+    class Meta:
+        db_table = 'admin_inventory_check_item'
+        verbose_name = '库存盘点明细'
+        verbose_name_plural = verbose_name
+        ordering = ['supply__code']
+        indexes = [
+            models.Index(fields=['inventory_check', 'supply']),
+        ]
+    
+    def __str__(self):
+        return f"{self.inventory_check.check_number} - {self.supply.name}"
+    
+    def save(self, *args, **kwargs):
+        if self.actual_quantity is not None and self.book_quantity is not None:
+            self.difference = self.actual_quantity - self.book_quantity
+            self.difference_amount = Decimal(self.difference) * self.supply.purchase_price
+        super().save(*args, **kwargs)
+    
+    @property
+    def is_surplus(self):
+        """是否盘盈"""
+        return self.difference > 0
+    
+    @property
+    def is_shortage(self):
+        """是否盘亏"""
+        return self.difference < 0
+
+
+class InventoryAdjust(models.Model):
+    """库存调整"""
+    STATUS_CHOICES = [
+        ('draft', '草稿'),
+        ('pending_approval', '待审批'),
+        ('approved', '已批准'),
+        ('rejected', '已拒绝'),
+        ('executed', '已执行'),
+    ]
+    
+    adjust_number = models.CharField(max_length=100, unique=True, verbose_name='调整单号')
+    adjust_date = models.DateField(default=timezone.now, verbose_name='调整日期')
+    reason = models.TextField(verbose_name='调整原因')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='状态')
+    approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_inventory_adjusts', verbose_name='审批人')
+    approved_time = models.DateTimeField(null=True, blank=True, verbose_name='审批时间')
+    executed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='executed_inventory_adjusts', verbose_name='执行人')
+    executed_time = models.DateTimeField(null=True, blank=True, verbose_name='执行时间')
+    notes = models.TextField(blank=True, verbose_name='备注')
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_inventory_adjusts', verbose_name='创建人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'admin_inventory_adjust'
+        verbose_name = '库存调整'
+        verbose_name_plural = verbose_name
+        ordering = ['-adjust_date', '-created_time']
+        indexes = [
+            models.Index(fields=['adjust_number']),
+            models.Index(fields=['adjust_date', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.adjust_number} - {self.adjust_date}"
+    
+    def save(self, *args, **kwargs):
+        if not self.adjust_number:
+            current_date = datetime.now()
+            date_str = current_date.strftime('%Y%m%d')
+            max_adjust = InventoryAdjust.objects.filter(
+                adjust_number__startswith=f'INV-ADJ-{date_str}-'
+            ).aggregate(max_num=Max('adjust_number'))['max_num']
+            if max_adjust:
+                try:
+                    seq = int(max_adjust.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.adjust_number = f'INV-ADJ-{date_str}-{seq:04d}'
+        super().save(*args, **kwargs)
+
+
+class InventoryAdjustItem(models.Model):
+    """库存调整明细"""
+    adjust = models.ForeignKey(InventoryAdjust, on_delete=models.CASCADE, related_name='items', verbose_name='调整单')
+    supply = models.ForeignKey(OfficeSupply, on_delete=models.PROTECT, related_name='adjust_items', verbose_name='用品')
+    adjust_quantity = models.IntegerField(verbose_name='调整数量')  # 正数为增加，负数为减少
+    adjust_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='调整金额')
+    notes = models.TextField(blank=True, verbose_name='备注')
+    
+    class Meta:
+        db_table = 'admin_inventory_adjust_item'
+        verbose_name = '库存调整明细'
+        verbose_name_plural = verbose_name
+        ordering = ['supply__code']
+        indexes = [
+            models.Index(fields=['adjust', 'supply']),
+        ]
+    
+    def __str__(self):
+        return f"{self.adjust.adjust_number} - {self.supply.name}"
+    
+    def save(self, *args, **kwargs):
+        self.adjust_amount = Decimal(self.adjust_quantity) * self.supply.purchase_price
+        super().save(*args, **kwargs)
 
 
 # ==================== 会议室管理 ====================
@@ -282,6 +740,158 @@ class MeetingRoomBooking(models.Model):
                 seq = 1
             self.booking_number = f'ADM-BOOK-{current_year}-{seq:04d}'
         super().save(*args, **kwargs)
+
+
+class Meeting(models.Model):
+    """会议"""
+    MEETING_TYPE_CHOICES = [
+        ('internal', '内部会议'),
+        ('external', '外部会议'),
+        ('video', '视频会议'),
+        ('other', '其他'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('scheduled', '待开始'),
+        ('in_progress', '进行中'),
+        ('completed', '已结束'),
+        ('cancelled', '已取消'),
+    ]
+    
+    meeting_number = models.CharField(max_length=100, unique=True, verbose_name='会议编号')
+    title = models.CharField(max_length=200, verbose_name='会议主题')
+    meeting_type = models.CharField(max_length=20, choices=MEETING_TYPE_CHOICES, default='internal', verbose_name='会议类型')
+    room = models.ForeignKey(MeetingRoom, on_delete=models.SET_NULL, null=True, blank=True, related_name='meetings', verbose_name='会议室')
+    meeting_date = models.DateField(verbose_name='会议日期')
+    start_time = models.TimeField(verbose_name='开始时间')
+    end_time = models.TimeField(verbose_name='结束时间')
+    duration = models.IntegerField(default=60, verbose_name='会议时长（分钟）')
+    organizer = models.ForeignKey(User, on_delete=models.PROTECT, related_name='organized_meetings', verbose_name='组织人')
+    attendees = models.ManyToManyField(User, blank=True, related_name='attended_meetings_list', verbose_name='参会人员')
+    agenda = models.TextField(blank=True, verbose_name='会议议程')
+    attachment = models.FileField(upload_to='meetings/attachments/', null=True, blank=True, verbose_name='会议附件')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled', verbose_name='状态')
+    cancelled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cancelled_meetings', verbose_name='取消人')
+    cancelled_time = models.DateTimeField(null=True, blank=True, verbose_name='取消时间')
+    cancelled_reason = models.TextField(blank=True, verbose_name='取消原因')
+    actual_start_time = models.DateTimeField(null=True, blank=True, verbose_name='实际开始时间')
+    actual_end_time = models.DateTimeField(null=True, blank=True, verbose_name='实际结束时间')
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_meetings', verbose_name='创建人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'admin_meeting'
+        verbose_name = '会议'
+        verbose_name_plural = verbose_name
+        ordering = ['-meeting_date', '-start_time']
+        indexes = [
+            models.Index(fields=['meeting_number']),
+            models.Index(fields=['meeting_date', 'status']),
+            models.Index(fields=['room', 'meeting_date', 'start_time']),
+        ]
+    
+    def __str__(self):
+        return f"{self.meeting_number} - {self.title}"
+    
+    def save(self, *args, **kwargs):
+        if not self.meeting_number:
+            current_date = datetime.now()
+            date_str = current_date.strftime('%Y%m%d')
+            max_meeting = Meeting.objects.filter(
+                meeting_number__startswith=f'MEET-{date_str}-'
+            ).aggregate(max_num=Max('meeting_number'))['max_num']
+            if max_meeting:
+                try:
+                    seq = int(max_meeting.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.meeting_number = f'MEET-{date_str}-{seq:04d}'
+        super().save(*args, **kwargs)
+    
+    @property
+    def is_conflict(self):
+        """检查是否有时间冲突"""
+        if not self.room or not self.meeting_date:
+            return False
+        
+        # 检查同一会议室、同一日期、同一时间段是否有其他会议或预订
+        # 检查其他会议
+        conflicts = Meeting.objects.filter(
+            room=self.room,
+            meeting_date=self.meeting_date,
+            status__in=['scheduled', 'in_progress'],
+        ).exclude(id=self.id if self.id else None)
+        
+        # 检查会议室预订
+        bookings = MeetingRoomBooking.objects.filter(
+            room=self.room,
+            booking_date=self.meeting_date,
+            status__in=['pending', 'confirmed'],
+        )
+        
+        # 检查时间是否重叠
+        for meeting in conflicts:
+            if (self.start_time < meeting.end_time and self.end_time > meeting.start_time):
+                return True
+        
+        for booking in bookings:
+            if (self.start_time < booking.end_time and self.end_time > booking.start_time):
+                return True
+        
+        return False
+
+
+class MeetingRecord(models.Model):
+    """会议记录"""
+    meeting = models.OneToOneField(Meeting, on_delete=models.CASCADE, related_name='record', verbose_name='会议')
+    minutes = models.TextField(verbose_name='会议纪要')
+    resolutions = models.TextField(blank=True, verbose_name='会议决议')
+    action_items = models.JSONField(default=list, blank=True, verbose_name='待办事项')
+    attachment = models.FileField(upload_to='meetings/records/', null=True, blank=True, verbose_name='会议记录附件')
+    recorder = models.ForeignKey(User, on_delete=models.PROTECT, related_name='recorded_meetings', verbose_name='记录人')
+    record_time = models.DateTimeField(default=timezone.now, verbose_name='记录时间')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'admin_meeting_record'
+        verbose_name = '会议记录'
+        verbose_name_plural = verbose_name
+        ordering = ['-record_time']
+    
+    def __str__(self):
+        return f"{self.meeting.meeting_number} - 会议记录"
+
+
+class MeetingResolution(models.Model):
+    """会议决议跟踪"""
+    STATUS_CHOICES = [
+        ('pending', '待执行'),
+        ('in_progress', '执行中'),
+        ('completed', '已完成'),
+        ('cancelled', '已取消'),
+    ]
+    
+    record = models.ForeignKey(MeetingRecord, on_delete=models.CASCADE, related_name='resolution_items', verbose_name='会议记录')
+    resolution_content = models.TextField(verbose_name='决议内容')
+    responsible_user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='responsible_resolutions', verbose_name='负责人')
+    due_date = models.DateField(null=True, blank=True, verbose_name='截止日期')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='状态')
+    completion_notes = models.TextField(blank=True, verbose_name='完成说明')
+    completed_time = models.DateTimeField(null=True, blank=True, verbose_name='完成时间')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    
+    class Meta:
+        db_table = 'admin_meeting_resolution'
+        verbose_name = '会议决议'
+        verbose_name_plural = verbose_name
+        ordering = ['-created_time']
+    
+    def __str__(self):
+        return f"{self.record.meeting.meeting_number} - {self.resolution_content[:50]}"
 
 
 # ==================== 用车管理 ====================
@@ -404,6 +1014,57 @@ class VehicleBooking(models.Model):
             self.booking_number = f'ADM-VEH-{current_year}-{seq:04d}'
         self.total_cost = self.fuel_cost + self.parking_fee + self.toll_fee + self.other_cost
         super().save(*args, **kwargs)
+    
+    @property
+    def actual_mileage(self):
+        """实际行驶里程"""
+        if self.mileage_before and self.mileage_after:
+            return self.mileage_after - self.mileage_before
+        return None
+
+
+class VehicleMaintenance(models.Model):
+    """车辆维护记录"""
+    MAINTENANCE_TYPE_CHOICES = [
+        ('daily', '日常保养'),
+        ('regular', '定期保养'),
+        ('repair', '维修'),
+        ('inspection', '年检'),
+        ('insurance', '保险'),
+        ('other', '其他'),
+    ]
+    
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='maintenances', verbose_name='车辆')
+    maintenance_type = models.CharField(max_length=20, choices=MAINTENANCE_TYPE_CHOICES, default='daily', verbose_name='维护类型')
+    maintenance_date = models.DateField(default=timezone.now, verbose_name='维护日期')
+    maintenance_items = models.TextField(verbose_name='维护项目')
+    cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='维护费用')
+    service_provider = models.CharField(max_length=200, blank=True, verbose_name='维护单位')
+    description = models.TextField(blank=True, verbose_name='维护说明')
+    next_maintenance_date = models.DateField(null=True, blank=True, verbose_name='下次维护日期')
+    next_maintenance_mileage = models.IntegerField(null=True, blank=True, verbose_name='下次维护里程数')
+    performed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='performed_vehicle_maintenances', verbose_name='执行人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    
+    class Meta:
+        db_table = 'admin_vehicle_maintenance'
+        verbose_name = '车辆维护记录'
+        verbose_name_plural = verbose_name
+        ordering = ['-maintenance_date']
+        indexes = [
+            models.Index(fields=['vehicle', 'maintenance_date']),
+            models.Index(fields=['maintenance_type', 'maintenance_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.vehicle.plate_number} - {self.get_maintenance_type_display()} - {self.maintenance_date}"
+    
+    @property
+    def is_overdue(self):
+        """是否逾期"""
+        if self.next_maintenance_date:
+            return timezone.now().date() > self.next_maintenance_date
+        return False
 
 
 # ==================== 接待管理 ====================
@@ -432,6 +1093,16 @@ class ReceptionRecord(models.Model):
         ('dinner', '晚餐'),
     ]
     
+    STATUS_CHOICES = [
+        ('draft', '草稿'),
+        ('pending_approval', '待审批'),
+        ('approved', '已批准'),
+        ('rejected', '已拒绝'),
+        ('arranged', '已安排'),
+        ('completed', '已完成'),
+        ('cancelled', '已取消'),
+    ]
+    
     record_number = models.CharField(max_length=100, unique=True, verbose_name='接待单号')
     visitor_name = models.CharField(max_length=100, verbose_name='访客姓名')
     visitor_company = models.CharField(max_length=200, blank=True, verbose_name='访客单位')
@@ -449,11 +1120,18 @@ class ReceptionRecord(models.Model):
     meeting_location = models.CharField(max_length=200, blank=True, verbose_name='会议地点')
     catering_arrangement = models.CharField(max_length=20, choices=CATERING_CHOICES, default='none', verbose_name='餐饮安排')
     accommodation_arrangement = models.BooleanField(default=False, verbose_name='住宿安排')
+    reception_budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='接待预算')
     gifts_exchanged = models.TextField(blank=True, verbose_name='礼品交换情况')
     outcome = models.TextField(blank=True, verbose_name='接待结果/成果')
+    feedback = models.TextField(blank=True, verbose_name='接待反馈')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='状态')
+    approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_receptions', verbose_name='审批人')
+    approved_time = models.DateTimeField(null=True, blank=True, verbose_name='审批时间')
+    approval_notes = models.TextField(blank=True, verbose_name='审批意见')
     notes = models.TextField(blank=True, verbose_name='备注')
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_receptions', verbose_name='创建人')
     created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
     
     class Meta:
         db_table = 'admin_reception_record'
@@ -462,6 +1140,7 @@ class ReceptionRecord(models.Model):
         ordering = ['-reception_date', '-reception_time']
         indexes = [
             models.Index(fields=['reception_date', 'host']),
+            models.Index(fields=['status', 'reception_date']),
         ]
     
     def __str__(self):
@@ -482,6 +1161,11 @@ class ReceptionRecord(models.Model):
                 seq = 1
             self.record_number = f'ADM-REC-{current_year}-{seq:04d}'
         super().save(*args, **kwargs)
+    
+    @property
+    def total_expense(self):
+        """总费用"""
+        return self.expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0')
 
 
 class ReceptionExpense(models.Model):
@@ -491,6 +1175,7 @@ class ReceptionExpense(models.Model):
         ('accommodation', '住宿'),
         ('transport', '交通'),
         ('gift', '礼品'),
+        ('venue', '场地'),
         ('other', '其他'),
     ]
     
@@ -507,6 +1192,7 @@ class ReceptionExpense(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='金额')
     description = models.TextField(blank=True, verbose_name='费用说明')
     invoice_number = models.CharField(max_length=100, blank=True, verbose_name='发票号码')
+    invoice_file = models.FileField(upload_to='reception_expenses/invoices/', null=True, blank=True, verbose_name='发票文件')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='报销状态')
     created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
     
@@ -689,6 +1375,69 @@ class SealBorrowing(models.Model):
                 seq = 1
             self.borrowing_number = f'ADM-SEA-{current_year}-{seq:04d}'
         super().save(*args, **kwargs)
+    
+    @property
+    def is_overdue(self):
+        """是否逾期"""
+        if self.status == 'borrowed' and self.expected_return_date:
+            return timezone.now().date() > self.expected_return_date
+        return False
+
+
+class SealUsage(models.Model):
+    """用印记录"""
+    USAGE_TYPE_CHOICES = [
+        ('contract', '合同'),
+        ('agreement', '协议'),
+        ('certificate', '证明'),
+        ('document', '文件'),
+        ('other', '其他'),
+    ]
+    
+    usage_number = models.CharField(max_length=100, unique=True, verbose_name='用印单号')
+    seal = models.ForeignKey(Seal, on_delete=models.PROTECT, related_name='usages', verbose_name='印章')
+    borrowing = models.ForeignKey(SealBorrowing, on_delete=models.SET_NULL, null=True, blank=True, related_name='usages', verbose_name='关联借用')
+    usage_type = models.CharField(max_length=20, choices=USAGE_TYPE_CHOICES, default='document', verbose_name='用印类型')
+    usage_date = models.DateField(default=timezone.now, verbose_name='用印日期')
+    usage_time = models.DateTimeField(default=timezone.now, verbose_name='用印时间')
+    usage_reason = models.TextField(verbose_name='用印事由')
+    usage_count = models.IntegerField(default=1, verbose_name='用印数量')
+    document_name = models.CharField(max_length=200, blank=True, verbose_name='文件名称')
+    document_file = models.FileField(upload_to='seal_usage/documents/', null=True, blank=True, verbose_name='用印文件')
+    used_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='seal_usages', verbose_name='用印人')
+    witness = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='witnessed_seal_usages', verbose_name='见证人')
+    notes = models.TextField(blank=True, verbose_name='备注')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    
+    class Meta:
+        db_table = 'admin_seal_usage'
+        verbose_name = '用印记录'
+        verbose_name_plural = verbose_name
+        ordering = ['-usage_date', '-usage_time']
+        indexes = [
+            models.Index(fields=['seal', 'usage_date']),
+            models.Index(fields=['usage_type', 'usage_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.usage_number} - {self.seal.seal_name}"
+    
+    def save(self, *args, **kwargs):
+        if not self.usage_number:
+            current_date = datetime.now()
+            date_str = current_date.strftime('%Y%m%d')
+            max_usage = SealUsage.objects.filter(
+                usage_number__startswith=f'SEAL-USE-{date_str}-'
+            ).aggregate(max_num=Max('usage_number'))['max_num']
+            if max_usage:
+                try:
+                    seq = int(max_usage.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.usage_number = f'SEAL-USE-{date_str}-{seq:04d}'
+        super().save(*args, **kwargs)
 
 
 # ==================== 固定资产管理 ====================
@@ -847,6 +1596,85 @@ class AssetMaintenance(models.Model):
         return f"{self.asset.asset_name} - {self.get_maintenance_type_display()} ({self.maintenance_date})"
 
 
+# ==================== 差旅管理 ====================
+
+class TravelApplication(models.Model):
+    """差旅申请"""
+    TRAVEL_METHOD_CHOICES = [
+        ('plane', '飞机'),
+        ('train', '火车'),
+        ('bus', '汽车'),
+        ('self_drive', '自驾'),
+        ('other', '其他'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('draft', '草稿'),
+        ('pending_approval', '待审批'),
+        ('approved', '已批准'),
+        ('rejected', '已拒绝'),
+        ('in_progress', '进行中'),
+        ('completed', '已完成'),
+        ('cancelled', '已取消'),
+    ]
+    
+    application_number = models.CharField(max_length=100, unique=True, verbose_name='申请单号')
+    applicant = models.ForeignKey(User, on_delete=models.PROTECT, related_name='travel_applications', verbose_name='申请人')
+    application_date = models.DateField(default=timezone.now, verbose_name='申请日期')
+    travel_reason = models.TextField(verbose_name='差旅事由')
+    destination = models.CharField(max_length=200, verbose_name='差旅目的地')
+    start_date = models.DateField(verbose_name='开始时间')
+    end_date = models.DateField(verbose_name='结束时间')
+    travel_days = models.IntegerField(default=1, verbose_name='差旅天数')
+    travelers = models.ManyToManyField(User, related_name='traveled_applications', verbose_name='差旅人员')
+    travel_method = models.CharField(max_length=20, choices=TRAVEL_METHOD_CHOICES, default='plane', verbose_name='差旅方式')
+    travel_budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='差旅预算')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='travel_applications', verbose_name='申请部门')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='状态')
+    approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_travel_applications', verbose_name='审批人')
+    approved_time = models.DateTimeField(null=True, blank=True, verbose_name='审批时间')
+    approval_notes = models.TextField(blank=True, verbose_name='审批意见')
+    notes = models.TextField(blank=True, verbose_name='备注')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'admin_travel_application'
+        verbose_name = '差旅申请'
+        verbose_name_plural = verbose_name
+        ordering = ['-application_date', '-created_time']
+        indexes = [
+            models.Index(fields=['applicant', 'status']),
+            models.Index(fields=['start_date', 'end_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.application_number} - {self.destination}"
+    
+    def save(self, *args, **kwargs):
+        if not self.application_number:
+            current_date = datetime.now()
+            date_str = current_date.strftime('%Y%m%d')
+            max_app = TravelApplication.objects.filter(
+                application_number__startswith=f'TRAVEL-{date_str}-'
+            ).aggregate(max_num=Max('application_number'))['max_num']
+            if max_app:
+                try:
+                    seq = int(max_app.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.application_number = f'TRAVEL-{date_str}-{seq:04d}'
+        
+        # 自动计算差旅天数
+        if self.start_date and self.end_date:
+            delta = self.end_date - self.start_date
+            self.travel_days = max(1, delta.days + 1)
+        
+        super().save(*args, **kwargs)
+
+
 # ==================== 报销管理 ====================
 
 class ExpenseReimbursement(models.Model):
@@ -876,6 +1704,7 @@ class ExpenseReimbursement(models.Model):
     ]
     
     reimbursement_number = models.CharField(max_length=100, unique=True, verbose_name='报销单号')
+    travel_application = models.ForeignKey('TravelApplication', on_delete=models.SET_NULL, null=True, blank=True, related_name='reimbursements', verbose_name='关联差旅申请')
     applicant = models.ForeignKey(User, on_delete=models.PROTECT, related_name='expense_reimbursements', verbose_name='申请人')
     application_date = models.DateField(default=timezone.now, verbose_name='申请日期')
     expense_type = models.CharField(max_length=30, choices=EXPENSE_TYPE_CHOICES, default='other', verbose_name='报销类型')
@@ -946,4 +1775,101 @@ class ExpenseItem(models.Model):
     
     def __str__(self):
         return f"{self.reimbursement.reimbursement_number} - {self.get_expense_type_display()} - {self.amount}"
+
+
+# ==================== 行政事务管理 ====================
+
+class AdministrativeAffair(models.Model):
+    """行政事务"""
+    AFFAIR_TYPE_CHOICES = [
+        ('daily', '日常事务'),
+        ('special', '专项事务'),
+        ('urgent', '紧急事务'),
+        ('other', '其他'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', '待处理'),
+        ('in_progress', '处理中'),
+        ('completed', '已完成'),
+        ('cancelled', '已取消'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('low', '低'),
+        ('normal', '普通'),
+        ('high', '高'),
+        ('urgent', '紧急'),
+    ]
+    
+    affair_number = models.CharField(max_length=100, unique=True, verbose_name='事务编号')
+    title = models.CharField(max_length=200, verbose_name='事务标题')
+    affair_type = models.CharField(max_length=20, choices=AFFAIR_TYPE_CHOICES, default='daily', verbose_name='事务类型')
+    content = models.TextField(verbose_name='事务内容')
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='normal', verbose_name='优先级')
+    responsible_user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='responsible_affairs', verbose_name='负责人')
+    participants = models.ManyToManyField(User, blank=True, related_name='participated_affairs', verbose_name='参与人')
+    planned_start_time = models.DateTimeField(verbose_name='计划开始时间')
+    planned_end_time = models.DateTimeField(verbose_name='计划完成时间')
+    actual_start_time = models.DateTimeField(null=True, blank=True, verbose_name='实际开始时间')
+    actual_end_time = models.DateTimeField(null=True, blank=True, verbose_name='实际完成时间')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='状态')
+    progress = models.IntegerField(default=0, verbose_name='处理进度（%）')
+    processing_notes = models.TextField(blank=True, verbose_name='处理说明')
+    completion_notes = models.TextField(blank=True, verbose_name='完成说明')
+    attachment = models.FileField(upload_to='affairs/attachments/', null=True, blank=True, verbose_name='事务附件')
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_affairs', verbose_name='创建人')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'admin_administrative_affair'
+        verbose_name = '行政事务'
+        verbose_name_plural = verbose_name
+        ordering = ['-created_time']
+        indexes = [
+            models.Index(fields=['affair_number']),
+            models.Index(fields=['status', 'priority']),
+            models.Index(fields=['responsible_user', 'status']),
+            models.Index(fields=['planned_start_time', 'planned_end_time']),
+        ]
+    
+    def __str__(self):
+        return f"{self.affair_number} - {self.title}"
+    
+    def save(self, *args, **kwargs):
+        if not self.affair_number:
+            current_date = datetime.now()
+            date_str = current_date.strftime('%Y%m%d')
+            max_affair = AdministrativeAffair.objects.filter(
+                affair_number__startswith=f'ADMIN-{date_str}-'
+            ).aggregate(max_num=Max('affair_number'))['max_num']
+            if max_affair:
+                try:
+                    seq = int(max_affair.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.affair_number = f'ADMIN-{date_str}-{seq:04d}'
+        super().save(*args, **kwargs)
+    
+    @property
+    def is_overdue(self):
+        """是否逾期"""
+        if self.status in ['completed', 'cancelled']:
+            return False
+        if self.planned_end_time and timezone.now() > self.planned_end_time:
+            return True
+        return False
+    
+    @property
+    def days_remaining(self):
+        """剩余天数"""
+        if self.status in ['completed', 'cancelled']:
+            return 0
+        if self.planned_end_time:
+            delta = self.planned_end_time - timezone.now()
+            return max(0, delta.days)
+        return None
 

@@ -1,0 +1,168 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}档案归还列表 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="list-page-container">
+    <!-- 页面标题 -->
+    <div class="list-page-header">
+        <div>
+            <h2 class="list-page-title">↩️ 档案归还</h2>
+            <p class="text-muted mb-0">管理待归还的档案借阅记录</p>
+        </div>
+    </div>
+
+    
+            </div>
+        </div>
+        <div class="col-md-3">
+        <div class="col-md-3">
+        <div class="col-md-3">
+    </div>
+
+    <!-- 筛选和搜索 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">状态</label>
+                    <select name="status" class="form-select">
+                        <option value="">全部</option>
+                        <option value="out" {% if status == 'out' %}selected{% endif %}>已出库</option>
+                        <option value="approved" {% if status == 'approved' %}selected{% endif %}>已批准</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">是否逾期</label>
+                    <select name="is_overdue" class="form-select">
+                        <option value="">全部</option>
+                        <option value="true" {% if is_overdue == 'true' %}selected{% endif %}>已逾期</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">搜索</label>
+                    <input type="text" name="search" class="form-control" placeholder="借阅单号、借阅人姓名" value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> 查询
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 借阅记录列表 -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">待归还借阅记录</h5>
+        </div>
+        <div class="card-body">
+            {% if page.object_list %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>借阅单号</th>
+                            <th>档案名称</th>
+                            <th>借阅人</th>
+                            <th>借阅日期</th>
+                            <th>应还日期</th>
+                            <th>状态</th>
+                            <th>是否逾期</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for borrow in page.object_list %}
+                        <tr>
+                            <td>{{ borrow.borrow_number }}</td>
+                            <td>
+                                {% if borrow.project_document %}
+                                    {{ borrow.project_document.document_name }}
+                                {% elif borrow.administrative_archive %}
+                                    {{ borrow.administrative_archive.archive_name }}
+                                {% endif %}
+                            </td>
+                            <td>{{ borrow.borrower.get_full_name|default:borrow.borrower.username }}</td>
+                            <td>{{ borrow.borrow_date|date:"Y-m-d" }}</td>
+                            <td>
+                                {{ borrow.return_date|date:"Y-m-d" }}
+                                {% if borrow.is_overdue %}
+                                    <span class="badge bg-danger">逾期</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if borrow.status == 'out' %}warning{% elif borrow.status == 'approved' %}info{% endif %}">
+                                    {{ borrow.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if borrow.is_overdue %}
+                                    <span class="text-danger">
+                                        <i class="bi bi-exclamation-triangle"></i> 是
+                                    </span>
+                                {% else %}
+                                    <span class="text-success">
+                                        <i class="bi bi-check-circle"></i> 否
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'archive_management:archive_borrow_return' borrow.pk %}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-arrow-return-left"></i> 归还
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if page.has_other_pages %}
+            <nav aria-label="分页导航">
+                <ul class="pagination justify-content-center">
+                    {% if page.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if is_overdue %}&is_overdue={{ is_overdue }}{% endif %}{% if search %}&search={{ search }}{% endif %}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page.paginator.page_range %}
+                    {% if page.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page.number|add:'-3' and num < page.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if status %}&status={{ status }}{% endif %}{% if is_overdue %}&is_overdue={{ is_overdue }}{% endif %}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if is_overdue %}&is_overdue={{ is_overdue }}{% endif %}{% if search %}&search={{ search }}{% endif %}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 暂无待归还的借阅记录。
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

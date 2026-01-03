@@ -1,0 +1,264 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--vh-border);
+    }
+    .info-section {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-md);
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    .info-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    .info-section h6 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #dc3545;
+        margin-bottom: var(--spacing-sm);
+    }
+    .info-row {
+        display: flex;
+        margin-bottom: var(--spacing-xs);
+    }
+    .info-label {
+        min-width: 120px;
+        font-weight: 500;
+        color: var(--vh-text-secondary);
+    }
+    .info-value {
+        flex: 1;
+        color: var(--vh-text);
+    }
+    .json-content {
+        background-color: #f8f9fa;
+        padding: var(--spacing-sm);
+        border-radius: var(--radius-sm);
+        white-space: pre-wrap;
+        font-family: monospace;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <!-- 页面标题 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-section">
+            <h6>基本信息</h6>
+            <div class="info-row">
+                <span class="info-label">投标编号：</span>
+                <span class="info-value"><strong>{{ bidding_quotation.bidding_number|default:'未编号' }}</strong></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">关联商机：</span>
+                <span class="info-value">
+                    <a href="{% url 'business_pages:opportunity_detail' bidding_quotation.opportunity.id %}">
+                        {{ bidding_quotation.opportunity.name }}
+                    </a>
+                    <small class="text-muted">({{ bidding_quotation.opportunity.opportunity_number|default:'未编号' }})</small>
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">关联客户：</span>
+                <span class="info-value">{{ bidding_quotation.opportunity.client.name|default:'-' }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">投标日期：</span>
+                <span class="info-value">{{ bidding_quotation.bidding_date|date:'Y-m-d' }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">提交截止日期：</span>
+                <span class="info-value">
+                    {{ bidding_quotation.submission_deadline|date:'Y-m-d' }}
+                    {% if bidding_quotation.submission_deadline < today %}
+                    <span class="badge bg-danger">已过期</span>
+                    {% elif bidding_quotation.submission_deadline == today %}
+                    <span class="badge bg-warning">今日截止</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">状态：</span>
+                <span class="info-value">
+                    {% if bidding_quotation.status == 'draft' %}
+                    <span class="badge bg-secondary">{{ bidding_quotation.get_status_display }}</span>
+                    {% elif bidding_quotation.status == 'preparing' %}
+                    <span class="badge bg-info">{{ bidding_quotation.get_status_display }}</span>
+                    {% elif bidding_quotation.status == 'submitted' %}
+                    <span class="badge bg-primary">{{ bidding_quotation.get_status_display }}</span>
+                    {% elif bidding_quotation.status == 'won' %}
+                    <span class="badge bg-success">{{ bidding_quotation.get_status_display }}</span>
+                    {% elif bidding_quotation.status == 'lost' %}
+                    <span class="badge bg-danger">{{ bidding_quotation.get_status_display }}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ bidding_quotation.get_status_display }}</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">创建人：</span>
+                <span class="info-value">{{ bidding_quotation.created_by.get_full_name|default:bidding_quotation.created_by.username }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">创建时间：</span>
+                <span class="info-value">{{ bidding_quotation.created_time|date:'Y-m-d H:i' }}</span>
+            </div>
+        </div>
+
+        {% if bidding_quotation.tender_requirements %}
+        <div class="info-section">
+            <h6>招标要求</h6>
+            <div class="info-value">{{ bidding_quotation.tender_requirements|linebreaks }}</div>
+        </div>
+        {% endif %}
+
+        {% if bidding_quotation.technical_proposal %}
+        <div class="info-section">
+            <h6>技术标信息</h6>
+            {% if bidding_quotation.technical_proposal.technical_solution %}
+            <div class="info-row">
+                <span class="info-label">技术方案：</span>
+                <span class="info-value">{{ bidding_quotation.technical_proposal.technical_solution|linebreaks }}</span>
+            </div>
+            {% endif %}
+            {% if bidding_quotation.technical_proposal.technical_capability %}
+            <div class="info-row">
+                <span class="info-label">技术能力：</span>
+                <span class="info-value">{{ bidding_quotation.technical_proposal.technical_capability|linebreaks }}</span>
+            </div>
+            {% endif %}
+            {% if bidding_quotation.technical_proposal.technical_team %}
+            <div class="info-row">
+                <span class="info-label">技术团队：</span>
+                <span class="info-value">{{ bidding_quotation.technical_proposal.technical_team|linebreaks }}</span>
+            </div>
+            {% endif %}
+            {% if bidding_quotation.technical_proposal.implementation_plan %}
+            <div class="info-row">
+                <span class="info-label">实施计划：</span>
+                <span class="info-value">{{ bidding_quotation.technical_proposal.implementation_plan|linebreaks }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if bidding_quotation.commercial_proposal %}
+        <div class="info-section">
+            <h6>商务标信息</h6>
+            {% if bidding_quotation.commercial_proposal.quotation_mode %}
+            <div class="info-row">
+                <span class="info-label">报价模式：</span>
+                <span class="info-value">
+                    {% if bidding_quotation.commercial_proposal.quotation_mode == 'rate' %}纯费率模式
+                    {% elif bidding_quotation.commercial_proposal.quotation_mode == 'base_fee_rate' %}基本费+费率模式
+                    {% elif bidding_quotation.commercial_proposal.quotation_mode == 'fixed' %}包干价模式
+                    {% elif bidding_quotation.commercial_proposal.quotation_mode == 'segmented' %}分段累进模式
+                    {% elif bidding_quotation.commercial_proposal.quotation_mode == 'min_savings_rate' %}最低节省+费率模式
+                    {% elif bidding_quotation.commercial_proposal.quotation_mode == 'performance_linked' %}绩效挂钩模式
+                    {% elif bidding_quotation.commercial_proposal.quotation_mode == 'hybrid' %}混合计价模式
+                    {% else %}{{ bidding_quotation.commercial_proposal.quotation_mode }}{% endif %}
+                </span>
+            </div>
+            {% endif %}
+            {% if bidding_quotation.commercial_proposal.saved_amount %}
+            <div class="info-row">
+                <span class="info-label">节省金额：</span>
+                <span class="info-value">{{ bidding_quotation.commercial_proposal.saved_amount|floatformat:2 }} 万元</span>
+            </div>
+            {% endif %}
+            {% if bidding_quotation.commercial_proposal.service_fee %}
+            <div class="info-row">
+                <span class="info-label">服务费：</span>
+                <span class="info-value"><strong style="color: #dc3545;">{{ bidding_quotation.commercial_proposal.service_fee|floatformat:2 }} 万元</strong></span>
+            </div>
+            {% endif %}
+            {% if bidding_quotation.commercial_proposal.payment_method %}
+            <div class="info-row">
+                <span class="info-label">付款方式：</span>
+                <span class="info-value">{{ bidding_quotation.commercial_proposal.payment_method|linebreaks }}</span>
+            </div>
+            {% endif %}
+            {% if bidding_quotation.commercial_proposal.service_commitment %}
+            <div class="info-row">
+                <span class="info-label">服务承诺：</span>
+                <span class="info-value">{{ bidding_quotation.commercial_proposal.service_commitment|linebreaks }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if similar_projects %}
+        <div class="info-section">
+            <h6>类似业绩</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>项目名称</th>
+                            <th>客户</th>
+                            <th>项目类型</th>
+                            <th>完成时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in similar_projects %}
+                        <tr>
+                            <td>{{ project.name }}</td>
+                            <td>{{ project.client.name|default:'-' }}</td>
+                            <td>{{ project.project_type|default:'-' }}</td>
+                            <td>{{ project.end_date|date:'Y-m-d'|default:'-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if bidding_quotation.notes %}
+        <div class="info-section">
+            <h6>备注说明</h6>
+            <div class="info-value">{{ bidding_quotation.notes|linebreaks }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <a href="{% url 'business_pages:opportunity_bidding_quotation' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        <div>
+            <a href="{% url 'business_pages:bidding_quotation_edit' bidding_quotation.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

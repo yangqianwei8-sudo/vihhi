@@ -1,0 +1,167 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-card h5 {
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block personnel_content %}
+<div class="info-card">
+    <div class="info-card-header">
+        <h5 class="info-card-title">{{ page_title }}</h5>
+    </div>
+    <div class="info-card-body">
+        <form method="post">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-card">
+            <h5>需求信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">需求部门</label>
+                    {{ form.department }}
+                    {% if form.department.errors %}
+                    <div class="text-danger small mt-1">{{ form.department.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">需求职位</label>
+                    {{ form.position }}
+                    {% if form.position.errors %}
+                    <div class="text-danger small mt-1">{{ form.position.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">需求人数</label>
+                    {{ form.required_count }}
+                    {% if form.required_count.errors %}
+                    <div class="text-danger small mt-1">{{ form.required_count.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">状态</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                    <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label required">岗位要求</label>
+                    {{ form.requirements }}
+                    {% if form.requirements.errors %}
+                    <div class="text-danger small mt-1">{{ form.requirements.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 薪资信息 -->
+        <div class="form-card">
+            <h5>薪资信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">薪资范围（最低）</label>
+                    {{ form.salary_range_min }}
+                    {% if form.salary_range_min.errors %}
+                    <div class="text-danger small mt-1">{{ form.salary_range_min.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">薪资范围（最高）</label>
+                    {{ form.salary_range_max }}
+                    {% if form.salary_range_max.errors %}
+                    <div class="text-danger small mt-1">{{ form.salary_range_max.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 需求原因 -->
+        <div class="form-card">
+            <h5>需求原因</h5>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label required">需求原因</label>
+                    {{ form.reason }}
+                    {% if form.reason.errors %}
+                    <div class="text-danger small mt-1">{{ form.reason.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 时间信息 -->
+        <div class="form-card">
+            <h5>时间信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">发布日期</label>
+                    {{ form.publish_date }}
+                    {% if form.publish_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.publish_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">截止日期</label>
+                    {{ form.deadline }}
+                    {% if form.deadline.errors %}
+                    <div class="text-danger small mt-1">{{ form.deadline.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="d-flex justify-content-end gap-3 mt-4">
+            <a href="{% url 'personnel_pages:recruitment_management' %}" class="btn btn-outline-secondary btn-submit">
+                <i class="bi bi-x-circle"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary btn-submit">
+                <i class="bi bi-check-circle"></i> 保存
+            </button>
+        </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

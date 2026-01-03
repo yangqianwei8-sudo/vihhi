@@ -1,0 +1,215 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}发送邮件 - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题和操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📧 发送邮件</h2>
+            <p class="text-muted mb-0">交付单号：{{ delivery.delivery_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'delivery_pages:delivery_email_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            <a href="{% url 'delivery_pages:delivery_detail' delivery.id %}" class="btn btn-outline-primary">
+                <i class="bi bi-eye"></i> 查看详情
+            </a>
+        </div>
+    </div>
+
+    <!-- 交付记录基本信息 -->
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">交付记录信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">交付单号</span>
+                    <span class="info-value info-value-bold">{{ delivery.delivery_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">交付标题</span>
+                    <span class="info-value">{{ delivery.title }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">关联项目</span>
+                    <span class="info-value">
+                        {% if delivery.project %}
+                        <a href="#" class="text-decoration-none">
+                            {{ delivery.project.project_number }} - {{ delivery.project.name }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">优先级</span>
+                    <span class="info-value">
+                        {% if delivery.priority == 'urgent' %}
+                            <span class="badge bg-danger">紧急</span>
+                        {% elif delivery.priority == 'high' %}
+                            <span class="badge bg-warning">高</span>
+                        {% elif delivery.priority == 'normal' %}
+                            <span class="badge bg-info">普通</span>
+                        {% else %}
+                            <span class="badge bg-secondary">低</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 邮件发送表单 -->
+    <form method="post" id="emailSendForm">
+        {% csrf_token %}
+        
+        <!-- 收件人信息 -->
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">收件人信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <span class="info-label">收件人姓名</span>
+                        <span class="info-value">{{ delivery.recipient_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">收件人邮箱</span>
+                        <span class="info-value">
+                            <a href="mailto:{{ delivery.recipient_email }}" class="text-decoration-none">
+                                <i class="bi bi-envelope"></i> {{ delivery.recipient_email }}
+                            </a>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 邮件内容 -->
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">邮件内容</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="mb-3">
+                    <label class="form-label">邮件主题 <span class="text-danger">*</span></label>
+                    <input type="text" name="email_subject" class="form-control" 
+                           value="{{ delivery.email_subject|default:delivery.title }}" 
+                           required placeholder="请输入邮件主题">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">邮件正文 <span class="text-danger">*</span></label>
+                    <textarea name="email_message" class="form-control" rows="10" 
+                              required placeholder="请输入邮件正文（支持HTML格式）">{{ delivery.email_message }}</textarea>
+                    <small class="text-muted">支持HTML格式，可以使用HTML标签格式化邮件内容</small>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">抄送邮箱</label>
+                        <input type="text" name="cc_emails" class="form-control" 
+                               value="{{ delivery.cc_emails }}" 
+                               placeholder="多个邮箱用逗号分隔">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">密送邮箱</label>
+                        <input type="text" name="bcc_emails" class="form-control" 
+                               value="{{ delivery.bcc_emails }}" 
+                               placeholder="多个邮箱用逗号分隔">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 邮件附件 -->
+        {% if delivery.files.exists %}
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">邮件附件</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="list-group">
+                    {% for file in delivery.files.all %}
+                    {% if not file.is_deleted %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-file-earmark"></i>
+                            <span class="ms-2">{{ file.file_name }}</span>
+                            <small class="text-muted ms-2">({{ file.file_size|filesizeformat }})</small>
+                        </div>
+                        <span class="badge bg-success">将自动添加为附件</span>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <small class="text-muted mt-2 d-block">以上文件将自动添加为邮件附件</small>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 发送按钮 -->
+        {% if can_send %}
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <a href="{% url 'delivery_pages:delivery_email_list' %}" class="btn btn-outline-secondary">取消</a>
+            <button type="submit" class="btn btn-success" onclick="return confirm('确定要发送此邮件吗？');">
+                <i class="bi bi-send"></i> 发送邮件
+            </button>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> 
+            该交付记录当前状态不允许发送邮件。只有审核通过且未发送的记录才能发送。
+        </div>
+        {% endif %}
+    </form>
+
+    <!-- 发送历史（如果有） -->
+    {% if delivery.sent_at %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">发送历史</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">发送状态</span>
+                    <span class="info-value">
+                        {% if delivery.status == 'sent' %}
+                            <span class="badge bg-success">已发送</span>
+                        {% elif delivery.status == 'failed' %}
+                            <span class="badge bg-danger">发送失败</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">发送时间</span>
+                    <span class="info-value">{{ delivery.sent_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% if delivery.sent_by %}
+                <div class="info-item">
+                    <span class="info-label">发送人</span>
+                    <span class="info-value">{{ delivery.sent_by.get_full_name|default:delivery.sent_by.username }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.error_message %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">失败原因</span>
+                    <span class="info-value text-danger">{{ delivery.error_message }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

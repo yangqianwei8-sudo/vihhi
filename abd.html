@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>审批流程配置平台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <style>
+        :root {
+            /* 主色调 - 深海蓝系列（精细化） */
+            --primary: #1a5f7a;
+            --primary-light: #2a8db0;
+            --primary-lighter: #e8f4f8;
+            --primary-lightest: #f0f8fb;
+            --primary-dark: #0d3c4f;
+            --primary-darker: #082530;
+            --primary-gradient: linear-gradient(135deg, #1a5f7a 0%, #2a8db0 100%);
+            --primary-gradient-light: linear-gradient(135deg, rgba(26, 95, 122, 0.1) 0%, rgba(42, 141, 176, 0.1) 100%);
+            --primary-gradient-hover: linear-gradient(135deg, #2a8db0 0%, #3ba0c5 100%);
+            
+            /* 辅助色（精细化） */
+            --secondary: #4a9cff;
+            --secondary-light: #e8f2ff;
+            --secondary-dark: #2d7dd8;
+            --success: #28a745;
+            --success-light: #e7f6e9;
+            --success-dark: #1e7e34;
+            --warning: #ffc107;
+            --warning-light: #fff4e6;
+            --warning-dark: #e0a800;
+            --danger: #dc3545;
+            --danger-light: #ffe6e6;
+            --danger-dark: #c82333;
+            --info: #17a2b8;
+            --info-light: #e6f7fa;
+            --info-dark: #138496;
+            
+            /* 中性色（精细化） */
+            --light: #f8f9fa;
+            --light-bg: #f8fafc;
+            --light-hover: #f1f3f5;
+            --border: #e9ecef;
+            --border-light: #f1f3f4;
+            --border-dark: #dee2e6;
+            --border-hover: #d0d7de;
+            
+            /* 文本色（精细化） */
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --text-tertiary: #adb5bd;
+            --text-quaternary: #ced4da;
+            --text-white: #ffffff;
+            --text-disabled: #adb5bd;
+            
+            /* 阴影系统（精细化多层阴影） */
+            --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            --shadow-primary: 0 4px 14px 0 rgba(26, 95, 122, 0.15);
+            --shadow-primary-lg: 0 8px 24px 0 rgba(26, 95, 122, 0.2);
+            
+            /* 圆角（精细化） */
+            --radius-xs: 4px;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --radius-full: 9999px;
+            
+            /* 过渡动画（精细化缓动函数） */
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-smooth: 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--light-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        /* 顶部工具栏 */
+        .header {
+            background: var(--primary-gradient);
+            color: var(--text-white);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-primary);
+            z-index: 100;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .logo i {
+            margin-right: 10px;
+            font-size: 24px;
+        }
+        
+        .toolbar {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--success);
+            color: var(--text-white);
+        }
+        
+        .btn-primary:hover {
+            background: var(--success-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--text-white);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: var(--text-white);
+        }
+        
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* 主内容区域 */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        /* 左侧组件库 */
+        .component-panel {
+            width: 260px;
+            background: var(--text-white);
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .components {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .component-category {
+            margin-bottom: 20px;
+        }
+        
+        .category-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed var(--border);
+        }
+        
+        .component-item {
+            background: var(--light);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: move;
+            transition: all var(--transition-base);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .component-item:hover {
+            background: var(--primary-lighter);
+            border-color: var(--primary);
+            transform: translateX(4px);
+        }
+        
+        .component-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-xs);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-white);
+            font-size: 14px;
+        }
+        
+        .start-icon { background: var(--success); }
+        .end-icon { background: var(--danger); }
+        .task-icon { background: var(--primary); }
+        .gateway-icon { background: var(--warning); }
+        .notice-icon { background: var(--info); }
+        
+        .component-info h4 {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        
+        .component-info p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        /* 中间画布区域 */
+        .canvas-container {
+            flex: 1;
+            background: var(--light);
+            position: relative;
+            overflow: auto;
+            padding: 20px;
+        }
+        
+        .canvas {
+            width: 1200px;
+            height: 800px;
+            background: var(--text-white);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            margin: 0 auto;
+            border: 1px solid var(--border);
+        }
+        
+        .node {
+            position: absolute;
+            width: 120px;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            text-align: center;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            transition: all var(--transition-base);
+            z-index: 10;
+        }
+        
+        .node:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .node-start {
+            background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+            color: var(--text-white);
+            top: 50px;
+            left: 100px;
+        }
+        
+        .node-end {
+            background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
+            color: var(--text-white);
+            top: 50px;
+            right: 100px;
+        }
+        
+        .node-task {
+            background: var(--primary-gradient);
+            color: var(--text-white);
+        }
+        
+        .node-gateway {
+            background: linear-gradient(135deg, var(--warning) 0%, var(--warning-dark) 100%);
+            color: var(--text-white);
+        }
+        
+        .node-notice {
+            background: linear-gradient(135deg, var(--info) 0%, var(--info-dark) 100%);
+            color: var(--text-white);
+        }
+        
+        .node i {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .node-title {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .node.selected {
+            outline: 3px solid var(--primary);
+            outline-offset: 2px;
+        }
+        
+        .connection {
+            position: absolute;
+            z-index: 1;
+        }
+        
+        /* 右侧属性面板 */
+        .property-panel {
+            width: 320px;
+            background: var(--text-white);
+            border-left: 1px solid var(--border);
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .property-section {
+            margin-bottom: 24px;
+        }
+        
+        .property-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-dark);
+            border-radius: var(--radius-xs);
+            font-size: 14px;
+            transition: border-color var(--transition-base);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(26, 95, 122, 0.2);
+        }
+        
+        .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-dark);
+            border-radius: var(--radius-xs);
+            font-size: 14px;
+            background-color: var(--text-white);
+            cursor: pointer;
+        }
+        
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+        
+        .btn-full {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: var(--border-dark);
+        }
+        
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 1400px) {
+            .component-panel {
+                width: 220px;
+            }
+            
+            .property-panel {
+                width: 280px;
+            }
+        }
+        
+        @media (max-width: 1200px) {
+            .component-panel {
+                width: 200px;
+                padding: 15px;
+            }
+            
+            .property-panel {
+                width: 260px;
+                padding: 15px;
+            }
+        }
+        
+        /* 动画效果 */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        /* 节点连接线样式 */
+        .line {
+            stroke: var(--text-secondary);
+            stroke-width: 2;
+            fill: none;
+        }
+        
+        .arrow {
+            fill: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 顶部工具栏 -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-project-diagram"></i>
+                <span>审批流程配置平台</span>
+            </div>
+            <div class="toolbar">
+                <button class="btn btn-secondary">
+                    <i class="fas fa-save"></i>保存
+                </button>
+                <button class="btn btn-primary">
+                    <i class="fas fa-rocket"></i>发布
+                </button>
+                <button class="btn btn-outline">
+                    <i class="fas fa-file-export"></i>导出
+                </button>
+                <button class="btn btn-outline">
+                    <i class="fas fa-eye"></i>预览
+                </button>
+                <button class="btn btn-outline">
+                    <i class="fas fa-history"></i>版本管理
+                </button>
+            </div>
+        </header>
+        
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <!-- 左侧组件库 -->
+            <div class="component-panel">
+                <h2 class="panel-title">
+                    <i class="fas fa-shapes"></i>组件库
+                </h2>
+                
+                <div class="components">
+                    <div class="component-category">
+                        <h3 class="category-title">基础节点</h3>
+                        <div class="component-item" data-type="start" draggable="true">
+                            <div class="component-icon start-icon">
+                                <i class="fas fa-play"></i>
+                            </div>
+                            <div class="component-info">
+                                <h4>开始节点</h4>
+                                <p>流程起点</p>
+                            </div>
+                        </div>
+                        <div class="component-item" data-type="end" draggable="true">
+                            <div class="component-icon end-icon">
+                                <i class="fas fa-stop"></i>
+                            </div>
+                            <div class="component-info">
+                                <h4>结束节点</h4>
+                                <p>流程终点</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="component-category">
+                        <h3 class="category-title">审批节点</h3>
+                        <div class="component-item" data-type="user-task" draggable="true">
+                            <div class="component-icon task-icon">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="component-info">
+                                <h4>用户任务</h4>
+                                <p>人工审批节点</p>
+                            </div>
+                        </div>
+                        <div class="component-item" data-type="countersign" draggable="true">
+                            <div class="component-icon task-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="component-info">
+                                <h4>会签节点</h4>
+                                <p>多人并行审批</p>
+                            </div>
+                        </div>
+                        <div class="component-item" data-type="orsign" draggable="true">
+                            <div class="component-icon task-icon">
+                                <i class="fas fa-user-friends"></i>
+                            </div>
+                            <div class="component-info">
+                                <h4>或签节点</h4>
+                                <p>任意一人审批</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="component-category">
+                        <h3 class="category-title">网关节点</h3>
+                        <div class="component-item" data-type="gateway" draggable="true">
+                            <div class="component-icon gateway-icon">
+                                <i class="fas fa-code-branch"></i>
+                            </div>
+                            <div class="component-info">
+                                <h4>条件网关</h4>
+                                <p>根据条件分流</p>
+                            </div>
+                        </div>
+                        <div class="component-item" data-type="parallel" draggable="true">
+                            <div class="component-icon gateway-icon">
+                                <i class="fas fa-stream"></i>
+                            </div>
+                            <div class="component-info">
+                                <h4>并行网关</h4>
+                                <p>同时执行多分支</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="component-category">
+                        <h3 class="category-title">其他节点</h3>
+                        <div class="component-item" data-type="notice" draggable="true">
+                            <div class="component-icon notice-icon">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                            <div class="component-info">
+                                <h4>通知节点</h4>
+                                <p>发送消息通知</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 中间画布区域 -->
+            <div class="canvas-container" id="canvasContainer">
+                <div class="canvas" id="flowCanvas">
+                    <!-- 开始节点 -->
+                    <div class="node node-start pulse selected" id="node-start" style="top: 100px; left: 150px;">
+                        <i class="fas fa-play"></i>
+                        <div class="node-title">流程开始</div>
+                    </div>
+                    
+                    <!-- 部门经理审批节点 -->
+                    <div class="node node-task" id="node-1" style="top: 100px; left: 350px;">
+                        <i class="fas fa-user-tie"></i>
+                        <div class="node-title">部门经理审批</div>
+                        <div style="font-size: 12px; margin-top: 5px;">会签 · 全部通过</div>
+                    </div>
+                    
+                    <!-- 条件网关节点 -->
+                    <div class="node node-gateway" id="node-2" style="top: 100px; left: 600px;">
+                        <i class="fas fa-code-branch"></i>
+                        <div class="node-title">条件判断</div>
+                        <div style="font-size: 12px; margin-top: 5px;">按金额/天数分流</div>
+                    </div>
+                    
+                    <!-- 财务审批节点 -->
+                    <div class="node node-task" id="node-3" style="top: 250px; left: 600px;">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <div class="node-title">财务审批</div>
+                        <div style="font-size: 12px; margin-top: 5px;">金额＞5000元</div>
+                    </div>
+                    
+                    <!-- HR审批节点 -->
+                    <div class="node node-task" id="node-4" style="top: -50px; left: 600px;">
+                        <i class="fas fa-user-friends"></i>
+                        <div class="node-title">HR审批</div>
+                        <div style="font-size: 12px; margin-top: 5px;">天数＞3天</div>
+                    </div>
+                    
+                    <!-- 总经理审批节点 -->
+                    <div class="node node-task" id="node-5" style="top: 100px; left: 850px;">
+                        <i class="fas fa-crown"></i>
+                        <div class="node-title">总经理审批</div>
+                        <div style="font-size: 12px; margin-top: 5px;">或签 · 任意一人</div>
+                    </div>
+                    
+                    <!-- 结束节点 -->
+                    <div class="node node-end" id="node-end" style="top: 100px; left: 1100px;">
+                        <i class="fas fa-flag-checkered"></i>
+                        <div class="node-title">流程结束</div>
+                    </div>
+                    
+                    <!-- 连接线通过SVG绘制 -->
+                    <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                        <!-- 开始节点到部门经理审批 -->
+                        <path class="line" d="M270,130 C300,130 320,130 350,130" marker-end="url(#arrowhead)"/>
+                        
+                        <!-- 部门经理审批到条件网关 -->
+                        <path class="line" d="M470,130 C500,130 520,130 550,130" marker-end="url(#arrowhead)"/>
+                        
+                        <!-- 条件网关到财务审批 -->
+                        <path class="line" d="M630,160 C630,190 630,220 630,250" marker-end="url(#arrowhead)"/>
+                        
+                        <!-- 条件网关到HR审批 -->
+                        <path class="line" d="M630,100 C630,70 630,40 630,10" marker-end="url(#arrowhead)"/>
+                        
+                        <!-- 财务审批到总经理审批 -->
+                        <path class="line" d="M630,280 C730,280 780,280 850,160" marker-end="url(#arrowhead)"/>
+                        
+                        <!-- HR审批到总经理审批 -->
+                        <path class="line" d="M630,10 C730,10 780,10 850,100" marker-end="url(#arrowhead)"/>
+                        
+                        <!-- 总经理审批到结束节点 -->
+                        <path class="line" d="M970,130 C1000,130 1020,130 1050,130" marker-end="url(#arrowhead)"/>
+                        
+                        <!-- 箭头标记定义 -->
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                <polygon class="arrow" points="0 0, 10 3.5, 0 7" />
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+            </div>
+            
+            <!-- 右侧属性面板 -->
+            <div class="property-panel">
+                <h2 class="panel-title">
+                    <i class="fas fa-sliders-h"></i>属性配置
+                </h2>
+                
+                <div id="node-properties">
+                    <!-- 开始节点属性 -->
+                    <div class="property-section" id="start-properties">
+                        <h3 class="property-title">
+                            <i class="fas fa-play"></i>开始节点
+                        </h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label">节点名称</label>
+                            <input type="text" class="form-control" value="流程开始">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">发起人权限</label>
+                            <select class="form-select">
+                                <option>所有员工</option>
+                                <option selected>部门主管及以上</option>
+                                <option>指定角色</option>
+                                <option>指定人员</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">表单配置</label>
+                            <select class="form-select">
+                                <option selected>请假申请表单</option>
+                                <option>报销申请表单</option>
+                                <option>采购申请表单</option>
+                                <option>自定义表单</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="allow-withdraw" checked>
+                                    <label for="allow-withdraw">允许发起人撤回</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="allow-modify" checked>
+                                    <label for="allow-modify">允许退回修改</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="auto-skip">
+                                    <label for="auto-skip">审批人与发起人相同时自动跳过</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 部门经理审批节点属性 -->
+                    <div class="property-section" id="task-properties" style="display: none;">
+                        <h3 class="property-title">
+                            <i class="fas fa-user-tie"></i>部门经理审批
+                        </h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label">节点名称</label>
+                            <input type="text" class="form-control" value="部门经理审批">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">审批人类型</label>
+                            <div class="radio-group">
+                                <div class="radio-item">
+                                    <input type="radio" id="assign-type1" name="assign-type" checked>
+                                    <label for="assign-type1">指定角色</label>
+                                </div>
+                                <div class="radio-item">
+                                    <input type="radio" id="assign-type2" name="assign-type">
+                                    <label for="assign-type2">指定人员</label>
+                                </div>
+                                <div class="radio-item">
+                                    <input type="radio" id="assign-type3" name="assign-type">
+                                    <label for="assign-type3">发起人部门负责人</label>
+                                </div>
+                                <div class="radio-item">
+                                    <input type="radio" id="assign-type4" name="assign-type">
+                                    <label for="assign-type4">发起人上级主管</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">审批方式</label>
+                            <select class="form-select">
+                                <option selected>会签（全部通过）</option>
+                                <option>或签（任意一人）</option>
+                                <option>依次审批</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">审批操作</label>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="action-approve" checked disabled>
+                                    <label for="action-approve">同意</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="action-reject" checked>
+                                    <label for="action-reject">驳回</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="action-transfer" checked>
+                                    <label for="action-transfer">转审</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="action-addsign" checked>
+                                    <label for="action-addsign">加签</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="action-back">
+                                    <label for="action-back">退回修改</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">审批期限</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="number" class="form-control" value="24" style="flex: 1;">
+                                <select class="form-select" style="width: 80px;">
+                                    <option>小时</option>
+                                    <option selected>天</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">超时处理</label>
+                            <select class="form-select">
+                                <option>自动提醒</option>
+                                <option selected>转交上级</option>
+                                <option>自动通过</option>
+                                <option>自动拒绝</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- 条件网关属性 -->
+                    <div class="property-section" id="gateway-properties" style="display: none;">
+                        <h3 class="property-title">
+                            <i class="fas fa-code-branch"></i>条件网关
+                        </h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label">节点名称</label>
+                            <input type="text" class="form-control" value="条件判断">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">网关类型</label>
+                            <div class="radio-group">
+                                <div class="radio-item">
+                                    <input type="radio" id="gateway-type1" name="gateway-type" checked>
+                                    <label for="gateway-type1">排他网关（仅执行一条分支）</label>
+                                </div>
+                                <div class="radio-item">
+                                    <input type="radio" id="gateway-type2" name="gateway-type">
+                                    <label for="gateway-type2">并行网关（同时执行所有分支）</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">分支条件</label>
+                            <div style="background: var(--light); border-radius: 6px; padding: 12px; margin-top: 8px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                    <strong>条件1：财务审批路径</strong>
+                                    <span style="font-size: 12px; color: var(--primary);">优先级 1</span>
+                                </div>
+                                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+                                    条件：${amount} > 5000
+                                </div>
+                                <div style="font-size: 13px; color: var(--text-secondary);">
+                                    目标节点：财务审批
+                                </div>
+                            </div>
+                            
+                            <div style="background: var(--light); border-radius: 6px; padding: 12px; margin-top: 8px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                    <strong>条件2：HR审批路径</strong>
+                                    <span style="font-size: 12px; color: var(--primary);">优先级 2</span>
+                                </div>
+                                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+                                    条件：${days} > 3
+                                </div>
+                                <div style="font-size: 13px; color: var(--text-secondary);">
+                                    目标节点：HR审批
+                                </div>
+                            </div>
+                            
+                            <div style="background: var(--light); border-radius: 6px; padding: 12px; margin-top: 8px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                    <strong>默认路径</strong>
+                                    <span style="font-size: 12px; color: var(--primary);">优先级 3</span>
+                                </div>
+                                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+                                    条件：其他情况
+                                </div>
+                                <div style="font-size: 13px; color: var(--text-secondary);">
+                                    目标节点：总经理审批
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="btn-group">
+                            <button class="btn btn-primary btn-sm btn-full">
+                                <i class="fas fa-plus"></i>添加分支条件
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 无节点选中时的状态 -->
+                <div id="empty-properties" style="display: none;">
+                    <div class="empty-state">
+                        <i class="fas fa-mouse-pointer"></i>
+                        <h3>未选择任何节点</h3>
+                        <p>点击画布中的节点以查看和编辑属性</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 节点选择功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const nodes = document.querySelectorAll('.node');
+            const startProperties = document.getElementById('start-properties');
+            const taskProperties = document.getElementById('task-properties');
+            const gatewayProperties = document.getElementById('gateway-properties');
+            const emptyProperties = document.getElementById('empty-properties');
+            
+            // 默认显示开始节点属性
+            startProperties.style.display = 'block';
+            taskProperties.style.display = 'none';
+            gatewayProperties.style.display = 'none';
+            emptyProperties.style.display = 'none';
+            
+            nodes.forEach(node => {
+                node.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    
+                    // 移除所有节点的选中状态
+                    nodes.forEach(n => n.classList.remove('selected'));
+                    
+                    // 为当前节点添加选中状态
+                    this.classList.add('selected');
+                    
+                    // 根据节点类型显示对应的属性面板
+                    const nodeId = this.id;
+                    
+                    // 隐藏所有属性面板
+                    startProperties.style.display = 'none';
+                    taskProperties.style.display = 'none';
+                    gatewayProperties.style.display = 'none';
+                    emptyProperties.style.display = 'none';
+                    
+                    // 显示对应节点的属性面板
+                    if (nodeId === 'node-start') {
+                        startProperties.style.display = 'block';
+                    } else if (nodeId === 'node-end') {
+                        emptyProperties.style.display = 'block';
+                    } else if (nodeId === 'node-2') {
+                        gatewayProperties.style.display = 'block';
+                    } else {
+                        taskProperties.style.display = 'block';
+                        
+                        // 更新任务属性面板标题
+                        const nodeTitle = this.querySelector('.node-title').textContent;
+                        const propertyTitle = taskProperties.querySelector('.property-title');
+                        propertyTitle.innerHTML = `<i class="fas fa-user-tie"></i>${nodeTitle}`;
+                    }
+                });
+            });
+            
+            // 点击画布空白处取消选中
+            document.getElementById('flowCanvas').addEventListener('click', function(e) {
+                if (!e.target.classList.contains('node')) {
+                    nodes.forEach(n => n.classList.remove('selected'));
+                    
+                    // 隐藏所有属性面板，显示空状态
+                    startProperties.style.display = 'none';
+                    taskProperties.style.display = 'none';
+                    gatewayProperties.style.display = 'none';
+                    emptyProperties.style.display = 'block';
+                }
+            });
+            
+            // 组件拖拽功能
+            const componentItems = document.querySelectorAll('.component-item');
+            const canvas = document.getElementById('flowCanvas');
+            
+            componentItems.forEach(item => {
+                item.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text/plain', this.getAttribute('data-type'));
+                });
+            });
+            
+            canvas.addEventListener('dragover', function(e) {
+                e.preventDefault();
+            });
+            
+            canvas.addEventListener('drop', function(e) {
+                e.preventDefault();
+                const nodeType = e.dataTransfer.getData('text/plain');
+                
+                // 计算在画布中的位置
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // 创建新节点
+                createNewNode(nodeType, x, y);
+            });
+            
+            // 创建新节点的函数
+            function createNewNode(nodeType, x, y) {
+                const nodeId = 'node-' + Date.now();
+                let nodeHtml = '';
+                let nodeClass = '';
+                let icon = '';
+                let title = '';
+                
+                switch(nodeType) {
+                    case 'start':
+                        nodeClass = 'node node-start';
+                        icon = 'fa-play';
+                        title = '流程开始';
+                        break;
+                    case 'end':
+                        nodeClass = 'node node-end';
+                        icon = 'fa-stop';
+                        title = '流程结束';
+                        break;
+                    case 'user-task':
+                    case 'countersign':
+                    case 'orsign':
+                        nodeClass = 'node node-task';
+                        icon = nodeType === 'countersign' ? 'fa-users' : 
+                               nodeType === 'orsign' ? 'fa-user-friends' : 'fa-user-check';
+                        title = nodeType === 'countersign' ? '会签审批' : 
+                                nodeType === 'orsign' ? '或签审批' : '用户审批';
+                        break;
+                    case 'gateway':
+                    case 'parallel':
+                        nodeClass = 'node node-gateway';
+                        icon = nodeType === 'parallel' ? 'fa-stream' : 'fa-code-branch';
+                        title = nodeType === 'parallel' ? '并行网关' : '条件网关';
+                        break;
+                    case 'notice':
+                        nodeClass = 'node node-notice';
+                        icon = 'fa-bell';
+                        title = '通知节点';
+                        break;
+                }
+                
+                nodeHtml = `
+                    <div class="${nodeClass}" id="${nodeId}" style="top: ${y}px; left: ${x}px;">
+                        <i class="fas ${icon}"></i>
+                        <div class="node-title">${title}</div>
+                    </div>
+                `;
+                
+                // 添加到画布
+                canvas.insertAdjacentHTML('beforeend', nodeHtml);
+                
+                // 为新节点添加点击事件
+                const newNode = document.getElementById(nodeId);
+                newNode.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    
+                    nodes.forEach(n => n.classList.remove('selected'));
+                    this.classList.add('selected');
+                    
+                    // 显示任务属性面板（简化处理，实际应根据节点类型显示不同面板）
+                    startProperties.style.display = 'none';
+                    taskProperties.style.display = 'block';
+                    gatewayProperties.style.display = 'none';
+                    emptyProperties.style.display = 'none';
+                    
+                    // 更新面板标题
+                    const nodeTitle = this.querySelector('.node-title').textContent;
+                    const propertyTitle = taskProperties.querySelector('.property-title');
+                    propertyTitle.innerHTML = `<i class="fas ${icon}"></i>${nodeTitle}`;
+                });
+                
+                // 使新节点可拖拽
+                makeDraggable(newNode);
+            }
+            
+            // 使节点可拖拽
+            function makeDraggable(node) {
+                let isDragging = false;
+                let offsetX, offsetY;
+                
+                node.addEventListener('mousedown', startDrag);
+                
+                function startDrag(e) {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') {
+                        return;
+                    }
+                    
+                    isDragging = true;
+                    
+                    const rect = node.getBoundingClientRect();
+                    offsetX = e.clientX - rect.left;
+                    offsetY = e.clientY - rect.top;
+                    
+                    document.addEventListener('mousemove', drag);
+                    document.addEventListener('mouseup', stopDrag);
+                    
+                    e.preventDefault();
+                }
+                
+                function drag(e) {
+                    if (!isDragging) return;
+                    
+                    const canvasRect = canvas.getBoundingClientRect();
+                    let x = e.clientX - canvasRect.left - offsetX;
+                    let y = e.clientY - canvasRect.top - offsetY;
+                    
+                    // 限制在画布范围内
+                    x = Math.max(0, Math.min(x, canvas.offsetWidth - node.offsetWidth));
+                    y = Math.max(0, Math.min(y, canvas.offsetHeight - node.offsetHeight));
+                    
+                    node.style.left = x + 'px';
+                    node.style.top = y + 'px';
+                }
+                
+                function stopDrag() {
+                    isDragging = false;
+                    document.removeEventListener('mousemove', drag);
+                    document.removeEventListener('mouseup', stopDrag);
+                }
+            }
+            
+            // 初始化现有节点的可拖拽功能
+            nodes.forEach(node => makeDraggable(node));
+            
+            // 模拟保存功能
+            document.querySelector('.btn-primary').addEventListener('click', function() {
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>发布中...';
+                this.disabled = true;
+                
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-check"></i>发布成功';
+                    this.classList.remove('btn-primary');
+                    this.classList.add('btn-secondary');
+                    
+                    // 3秒后恢复原状
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="fas fa-rocket"></i>发布';
+                        this.classList.remove('btn-secondary');
+                        this.classList.add('btn-primary');
+                        this.disabled = false;
+                    }, 3000);
+                }, 1500);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,7 +1,13 @@
 from django import forms
-from .models import ProjectSettlement, ContractSettlement
-from backend.apps.project_center.models import Project
-from backend.apps.customer_success.models import BusinessContract
+from backend.apps.settlement_management.models import ProjectSettlement, ContractSettlement
+from backend.apps.production_management.models import Project
+from backend.apps.production_management.models import BusinessContract
+from backend.apps.settlement_center.models import (
+    ServiceFeeSettlementScheme,
+    ServiceFeeSegmentedRate,
+    ServiceFeeJumpPointRate,
+    ServiceFeeUnitCapDetail
+)
 
 
 class ProjectSettlementForm(forms.ModelForm):
@@ -105,6 +111,16 @@ class ProjectSettlementForm(forms.ModelForm):
                 self.fields['contract'].queryset = BusinessContract.objects.filter(
                     project=self.instance.project
                 ).order_by('-created_time') | self.fields['contract'].queryset
+        else:
+            # 新建时，设置日期字段默认值为当天
+            from datetime import date
+            today = date.today()
+            if 'settlement_period_start' in self.fields:
+                self.fields['settlement_period_start'].initial = today
+            if 'settlement_period_end' in self.fields:
+                self.fields['settlement_period_end'].initial = today
+            if 'settlement_date' in self.fields:
+                self.fields['settlement_date'].initial = today
     
     def clean(self):
         cleaned_data = super().clean()
@@ -234,6 +250,12 @@ class ContractSettlementForm(forms.ModelForm):
             self.fields['settlement_batch'].disabled = True
             self.fields['contract_amount'].widget.attrs['readonly'] = True
             self.fields['previous_settlement_amount'].widget.attrs['readonly'] = True
+        else:
+            # 新建时，设置日期字段默认值为当天
+            from datetime import date
+            today = date.today()
+            if 'settlement_date' in self.fields:
+                self.fields['settlement_date'].initial = today
     
     def clean(self):
         cleaned_data = super().clean()
@@ -257,6 +279,122 @@ class ContractSettlementForm(forms.ModelForm):
                 raise forms.ValidationError({
                     'settlement_batch': f'该合同的第{settlement_batch}批结算已存在'
                 })
+        
+        return cleaned_data
+
+
+class ServiceFeeSettlementSchemeForm(forms.ModelForm):
+    """服务费结算方案表单"""
+    
+    class Meta:
+        model = ServiceFeeSettlementScheme
+        fields = [
+            'name', 'code', 'description',
+            'contract', 'project',
+            'settlement_method',
+            'fixed_total_price', 'fixed_unit_price', 'area_type',
+            'cumulative_rate',
+            'combined_fixed_method', 'combined_fixed_total', 'combined_fixed_unit',
+            'combined_fixed_area_type', 'combined_actual_method', 'combined_cumulative_rate',
+            'combined_deduct_fixed',
+            'has_cap_fee', 'cap_type', 'total_cap_amount',
+            'has_minimum_fee', 'minimum_fee_amount',
+            'is_active', 'is_default', 'sort_order'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '方案名称'}),
+            'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '方案代码（可选）'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': '方案描述'}),
+            'contract': forms.Select(attrs={'class': 'form-select'}),
+            'project': forms.Select(attrs={'class': 'form-select'}),
+            'settlement_method': forms.Select(attrs={'class': 'form-select'}),
+            'fixed_total_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'fixed_unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'area_type': forms.Select(attrs={'class': 'form-select'}),
+            'cumulative_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'combined_fixed_method': forms.Select(attrs={'class': 'form-select'}),
+            'combined_fixed_total': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'combined_fixed_unit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'combined_fixed_area_type': forms.Select(attrs={'class': 'form-select'}),
+            'combined_actual_method': forms.Select(attrs={'class': 'form-select'}),
+            'combined_cumulative_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'combined_deduct_fixed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'has_cap_fee': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'cap_type': forms.Select(attrs={'class': 'form-select'}),
+            'total_cap_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'has_minimum_fee': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'minimum_fee_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_default': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'sort_order': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # 动态加载合同和项目
+        self.fields['contract'].queryset = BusinessContract.objects.filter(
+            status__in=['effective', 'executing', 'completed']
+        ).order_by('-created_time')
+        self.fields['contract'].required = False
+        
+        self.fields['project'].queryset = Project.objects.all().order_by('-created_time')
+        self.fields['project'].required = False
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        settlement_method = cleaned_data.get('settlement_method')
+        
+        # 根据结算方式验证必填字段
+        if settlement_method == 'fixed_total':
+            if not cleaned_data.get('fixed_total_price'):
+                raise forms.ValidationError({
+                    'fixed_total_price': '固定总价方式必须填写固定总价'
+                })
+        
+        elif settlement_method == 'fixed_unit':
+            if not cleaned_data.get('fixed_unit_price'):
+                raise forms.ValidationError({
+                    'fixed_unit_price': '固定单价方式必须填写固定单价'
+                })
+            if not cleaned_data.get('area_type'):
+                raise forms.ValidationError({
+                    'area_type': '固定单价方式必须选择面积类型'
+                })
+        
+        elif settlement_method == 'cumulative_commission':
+            if not cleaned_data.get('cumulative_rate'):
+                raise forms.ValidationError({
+                    'cumulative_rate': '累计提成方式必须填写取费系数'
+                })
+        
+        elif settlement_method == 'combined':
+            if not cleaned_data.get('combined_fixed_method'):
+                raise forms.ValidationError({
+                    'combined_fixed_method': '组合方式必须选择固定部分方式'
+                })
+            if not cleaned_data.get('combined_actual_method'):
+                raise forms.ValidationError({
+                    'combined_actual_method': '组合方式必须选择按实结算部分方式'
+                })
+        
+        # 验证封顶费
+        if cleaned_data.get('has_cap_fee'):
+            if not cleaned_data.get('cap_type') or cleaned_data.get('cap_type') == 'no_cap':
+                raise forms.ValidationError({
+                    'cap_type': '设置封顶费时必须选择封顶费类型'
+                })
+            if cleaned_data.get('cap_type') == 'total_cap' and not cleaned_data.get('total_cap_amount'):
+                raise forms.ValidationError({
+                    'total_cap_amount': '总价封顶时必须填写封顶金额'
+                })
+        
+        # 验证保底费
+        if cleaned_data.get('has_minimum_fee') and not cleaned_data.get('minimum_fee_amount'):
+            raise forms.ValidationError({
+                'minimum_fee_amount': '设置保底费时必须填写保底费金额'
+            })
         
         return cleaned_data
 

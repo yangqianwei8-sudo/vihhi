@@ -1,0 +1,291 @@
+{% extends "shared/base.html" %}
+{% comment %}
+详情页面基础模板 (Detail Page Base Template)
+
+功能说明：
+- 提供详情页面的统一三栏布局框架
+- 左侧：侧边栏导航（如果提供了 module_sidebar_nav）
+- 中间：页面标题区域和主要内容区域
+- 右侧：时间线区域（显示流程跟踪、审批流程、跟踪记录等全流程时间）
+
+布局结构：
+┌─────────┬──────────────────────┬─────────────┐
+│ 左侧栏  │  中间主要内容区域     │  右侧时间线 │
+│ (导航)  │  - Hero标题区域       │  - 时间线   │
+│         │  - 操作按钮(可选)    │  - 流程跟踪 │
+│         │  - 详情内容卡片       │  - 审批流程 │
+│         │                      │  - 跟踪记录 │
+└─────────┴──────────────────────┴─────────────┘
+
+使用方式：
+1. 继承此模板：{% extends "shared/detail_page_base.html" %}
+2. 覆盖以下块：
+   - detail_hero_icon: Hero区域的图标（默认：📋）
+   - detail_hero_title: Hero区域的标题
+   - detail_hero_subtitle: Hero区域的副标题
+   - detail_actions: 操作按钮区域（可选）
+   - detail_content: 主要内容区域（必须）
+   - detail_timeline: 时间线区域（可选，默认显示在右侧）
+
+示例：
+{% extends "shared/detail_page_base.html" %}
+{% block detail_hero_icon %}📤{% endblock %}
+{% block detail_hero_title %}发文详情{% endblock %}
+{% block detail_hero_subtitle %}发文编号：{{ document.document_number }}{% endblock %}
+{% block detail_content %}
+    <!-- 详情内容 -->
+{% endblock %}
+{% block detail_timeline %}
+    <!-- 时间线内容 -->
+{% endblock %}
+
+模板继承链（方案二：扁平化）：
+base.html -> detail_page_base.html -> 具体详情页面模板 (3层)
+
+架构设计：
+- 直接继承 base.html，避免4层继承
+- 通过 include 组合 workspace 资源片段
+- 保持所有块名称不变，确保向后兼容
+{% endcomment %}
+{% load static %}
+
+{% block extra_css %}
+{# 工作区基础样式 #}
+{% include 'shared/_workspace_resources.html' %}
+{# 详情页面额外样式 #}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% block detail_page_extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    /* 确保 container-fluid 内的 workspace 正确显示 */
+    .container-fluid .workspace,
+    .container-fluid > .workspace {
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+        margin-top: 16px; /* 与顶部导航栏保持16px间距 */
+        padding-left: 0;
+        padding-right: 0;
+        padding-top: 0; /* 移除container-fluid的py-3带来的顶部padding */
+    }
+    
+    /* 覆盖container-fluid的py-3，为详情页面设置正确的顶部间距 */
+    .container-fluid:has(.workspace) {
+        padding-top: 0 !important;
+    }
+
+    /* 详情页面两栏布局样式已在 workspace.css 中统一定义 */
+    /* 这里只保留详情页面特有的样式覆盖 */
+
+    /* 详情页面主内容区域 */
+    .detail-main-content {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        min-width: 0; /* 防止内容溢出 */
+        overflow: hidden; /* 防止内容溢出 */
+        position: relative; /* 确保内容在导航栏下方 */
+        z-index: 1; /* 确保在导航栏下方 */
+    }
+    
+    /* 确保 Hero 区域不会被导航栏遮挡 */
+    .detail-main-content .center-hero {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* 详情页面右侧时间线区域 */
+    .detail-timeline-sidebar {
+        position: sticky;
+        top: calc(var(--navbar-height, 56px) + 16px); /* 导航栏高度 + 16px间距，避免被导航栏遮挡 */
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        max-height: calc(100vh - var(--navbar-height, 56px) - 16px);
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    /* 时间线侧边栏中的卡片样式 - 移除所有装饰 */
+    .detail-timeline-sidebar .info-card {
+        margin-bottom: 0;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+    
+    .detail-timeline-sidebar .info-card-header {
+        display: none !important;
+    }
+    
+    .detail-timeline-sidebar .info-card-body {
+        padding: 0 !important;
+    }
+    
+    /* 时间线容器 - 单根连续线（从上往下） */
+    .detail-timeline-sidebar .timeline {
+        position: relative;
+        padding-left: 24px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    /* 时间线连接线 - 从第一个到最后一个事件（从上往下） */
+    .detail-timeline-sidebar .timeline::before {
+        content: '';
+        position: absolute;
+        left: 11px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--vh-border, #e5e7eb);
+        z-index: 0;
+    }
+    
+    /* 时间线项 */
+    .detail-timeline-sidebar .timeline-item {
+        position: relative;
+        padding-bottom: 24px;
+        z-index: 1;
+    }
+    
+    .detail-timeline-sidebar .timeline-item:last-child {
+        padding-bottom: 0;
+    }
+    
+    /* 时间线标记点 */
+    .detail-timeline-sidebar .timeline-marker {
+        position: absolute;
+        left: -24px;
+        top: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--vh-primary, #142F5B);
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px var(--vh-primary, #142F5B);
+        z-index: 2;
+    }
+    
+    /* 时间线变体标记点 */
+    .detail-timeline-sidebar .timeline-item.timeline-success .timeline-marker {
+        background: var(--vh-success, #10b981);
+        box-shadow: 0 0 0 2px var(--vh-success, #10b981);
+    }
+    
+    .detail-timeline-sidebar .timeline-item.timeline-warning .timeline-marker {
+        background: var(--vh-warning, #f59e0b);
+        box-shadow: 0 0 0 2px var(--vh-warning, #f59e0b);
+    }
+    
+    .detail-timeline-sidebar .timeline-item.timeline-danger .timeline-marker {
+        background: var(--vh-error, #ef4444);
+        box-shadow: 0 0 0 2px var(--vh-error, #ef4444);
+    }
+    
+    .detail-timeline-sidebar .timeline-item.timeline-info .timeline-marker {
+        background: var(--vh-info, #3b82f6);
+        box-shadow: 0 0 0 2px var(--vh-info, #3b82f6);
+    }
+    
+    /* 移除时间线项之间的连接线（使用统一的容器线） */
+    .detail-timeline-sidebar .timeline-item::before {
+        display: none !important;
+    }
+    
+    /* 时间线内容 - 移除装饰 */
+    .detail-timeline-sidebar .timeline-content {
+        background: transparent !important;
+        padding: 0 !important;
+        border: none !important;
+        border-left: none !important;
+        border-radius: 0 !important;
+    }
+    
+    /* 移除时间线内容的所有边框和背景 */
+    .detail-timeline-sidebar .timeline-item.timeline-success .timeline-content,
+    .detail-timeline-sidebar .timeline-item.timeline-warning .timeline-content,
+    .detail-timeline-sidebar .timeline-item.timeline-danger .timeline-content,
+    .detail-timeline-sidebar .timeline-item.timeline-info .timeline-content {
+        border-left: none !important;
+        background: transparent !important;
+    }
+
+    /* 响应式设计 */
+    /* 注意：workspace-three-column 和 workspace-detail-two-column 的响应式样式已在 workspace.css 中统一定义 */
+    /* 这里只保留详情页面特有的响应式样式 */
+    
+    @media (max-width: 992px) {
+        .detail-timeline-sidebar {
+            position: static;
+            max-height: none;
+            overflow-y: visible;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .detail-main-content,
+        .detail-timeline-sidebar {
+            gap: 16px;
+        }
+    }
+</style>
+{% endblock detail_page_extra_css %}
+{% endblock %}
+
+{% block extra_scripts %}
+{# 工作区基础脚本 #}
+{% include 'shared/_workspace_scripts.html' %}
+{% block detail_page_extra_js %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+{# 根据是否有左侧栏选择不同的布局类 #}
+<div class="workspace {% if module_sidebar_nav %}workspace-three-column{% else %}workspace-detail-two-column{% endif %}">
+    {% if module_sidebar_nav %}
+    <!-- 左侧导航菜单 -->
+    {% include 'shared/sidebar_nav_enhanced.html' with menu_items=module_sidebar_nav %}
+    {% endif %}
+    
+    <!-- 中间主要内容区域 -->
+    <main class="workspace-main detail-main-content">
+        <!-- 页面标题区域 -->
+        <div class="center-hero">
+            <div class="hero-icon">
+                {% block detail_hero_icon %}📋{% endblock %}
+            </div>
+            <h1 class="hero-title">
+                {% block detail_hero_title %}详情{% endblock %}
+            </h1>
+            <p class="hero-subtitle">
+                {% block detail_hero_subtitle %}{% endblock %}
+            </p>
+        </div>
+
+        <!-- 操作按钮区域（可选） -->
+        {% block detail_actions %}{% endblock %}
+
+        <!-- 主要内容区域 -->
+        {% block detail_content %}
+        {# 子模板必须覆盖此块 #}
+        {% endblock %}
+    </main>
+
+    <!-- 右侧时间线区域 -->
+    <aside class="workspace-side detail-timeline-sidebar">
+        {% block detail_timeline %}
+        {# 子模板可以覆盖此块来显示时间线 #}
+        {% endblock %}
+    </aside>
+</div>
+{% endblock %}
+
+{% block modals %}
+{% comment %}继承 base.html 中的通用模态框{% endcomment %}
+{{ block.super }}
+{# 子模板可以覆盖此块添加额外的模态框 #}
+{% block module_modals %}{% endblock %}
+{% endblock %}
+

@@ -1,0 +1,414 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/qixinbao-autofill.css' %}">
+<style>
+    .duplicate-check-status {
+        margin-top: 4px;
+        font-size: 0.875rem;
+        min-height: 18px;
+        display: block;
+    }
+    .duplicate-check-status.checking {
+        color: #6c757d;
+    }
+    .duplicate-check-status.error {
+        color: #dc3545;
+    }
+    .duplicate-check-status.success {
+        color: #28a745;
+    }
+</style>
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <div class="form-page-title">
+        <h1>{{ page_title }}</h1>
+        {% if page_description %}
+        <p>{{ page_description }}</p>
+        {% endif %}
+    </div>
+
+    <form method="post" id="customerForm" >
+        {% csrf_token %}
+                    
+        <!-- 基本信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>基本信息</h5>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">{{ form.responsible_department.label }}</label>
+                        {{ form.responsible_department }}
+                        {% if form.responsible_department.errors %}
+                        <div class="text-danger">{{ form.responsible_department.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">{{ form.responsible_user.label }}</label>
+                        {{ form.responsible_user }}
+                        {% if form.responsible_user.errors %}
+                        <div class="text-danger">{{ form.responsible_user.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">{{ form.source.label }}</label>
+                        {{ form.source }}
+                        {% if form.source.errors %}
+                        <div class="text-danger">{{ form.source.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">{{ form.client_type.label }}</label>
+                        {{ form.client_type }}
+                        {% if form.client_type.errors %}
+                        <div class="text-danger">{{ form.client_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 客户信息 -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>客户信息</h5>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">{{ form.customer_number.label }}</label>
+                        {{ form.customer_number }}
+                        {% if form.customer_number.errors %}
+                        <div class="text-danger">{{ form.customer_number.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    {# 使用共享模板：启信宝客户名称搜索下拉 #}
+                    {% include "shared/qixinbao_company_name_snippet.html" with form_field=form.name dropdown_id="companyDropdown" duplicate_status_id="nameDuplicateStatus" credit_code_input_selector='[name="unified_credit_code"]' auto_fill_details=True auto_query_execution=True show_duplicate_check=True debug=False %}
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">{{ form.unified_credit_code.label }}</label>
+                        {{ form.unified_credit_code }}
+                        <div class="duplicate-check-status" id="creditCodeDuplicateStatus"></div>
+                        {% if form.unified_credit_code.errors %}
+                        <div class="text-danger">{{ form.unified_credit_code.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">{{ form.legal_representative.label }}</label>
+                        {{ form.legal_representative }}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">{{ form.established_date.label }}</label>
+                        {{ form.established_date }}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">{{ form.registered_capital.label }}</label>
+                        {{ form.registered_capital }}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">{{ form.company_phone.label }}</label>
+                        {{ form.company_phone }}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">{{ form.company_email.label }}</label>
+                        {{ form.company_email }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">{{ form.company_address.label }}</label>
+                        {{ form.company_address }}
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label class="form-label">办公地址</label>
+                        {# 使用共享的行政区域选择器模板 #}
+                        {% include "shared/district_selector_snippet.html" with prefix="office" province_label="省份" city_label="城市" district_label="区县" address_field_id="regionField" address_field_name="region" detail_input_id="addressDetailInput" show_detail_input=True %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+                    <!-- 被执行信息 -->
+                    <div class="info-section mt-4" id="executionSection" {% if not client %}style="display: none;"{% endif %}>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="info-section-title mb-0">
+                                被执行信息
+                                <span id="executionCountBadge">
+                                {% if client %}
+                                    {% if execution_count > 0 %}
+                                    <span class="badge bg-danger ms-2">{{ execution_count }} 条记录</span>
+                                    {% if total_execution_amount %}
+                                    <span class="badge bg-warning ms-2">执行总金额: ¥{{ total_execution_amount|floatformat:2 }}</span>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="badge bg-success ms-2">无记录</span>
+                                    {% endif %}
+                                {% endif %}
+                                </span>
+                            </h6>
+                            {% if client %}
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="syncExecutionBtn" data-client-id="{{ client.id }}">
+                                <i class="bi bi-arrow-clockwise"></i> 同步数据
+                            </button>
+                            {% endif %}
+                        </div>
+                        
+                        <div id="executionTableContainer">
+                        {% if client and execution_records %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>案号</th>
+                                        <th>执行状态</th>
+                                        <th>执行法院</th>
+                                        <th>立案日期</th>
+                                        <th>执行金额</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in execution_records %}
+                                    <tr>
+                                        <td>{{ record.case_number|default:"未填写" }}</td>
+                                        <td>{{ record.get_execution_status_display|default:"未填写" }}</td>
+                                        <td>{{ record.execution_court|default:"未填写" }}</td>
+                                        <td>{{ record.filing_date|date:"Y-m-d"|default:"未填写" }}</td>
+                                        <td>¥{{ record.execution_amount|floatformat:2|default:"0.00" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle me-2"></i>暂无被执行记录
+                        </div>
+                        {% endif %}
+                        </div>
+                    </div>
+                    
+                                        <!-- 风险信息 -->
+                    <div class="form-section">
+                        <div class="form-section-header">
+                            <h5>风险信息</h5>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">{{ form.grade.label }}</label>
+                                    {{ form.grade }}
+                                    {% if form.grade.errors %}
+                                    <div class="text-danger">{{ form.grade.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">{{ form.legal_risk_level.label }}</label>
+                                    <input type="text" id="legalRiskLevel" class="form-control" 
+                                           value="{% if client %}{% if client.legal_risk_level == 'low' %}低风险{% elif client.legal_risk_level == 'medium_low' %}中低风险{% elif client.legal_risk_level == 'medium' %}中风险{% elif client.legal_risk_level == 'medium_high' %}中高风险{% elif client.legal_risk_level == 'high' %}高风险{% else %}未知{% endif %}{% elif form.legal_risk_level.value %}{{ form.legal_risk_level.value }}{% else %}未知{% endif %}" 
+                                           readonly style="background-color: #f5f5f5;">
+                                    <input type="hidden" name="legal_risk_level" id="legalRiskLevelHidden" 
+                                           value="{% if client %}{{ client.legal_risk_level|default:'unknown' }}{% elif form.legal_risk_level.value %}{{ form.legal_risk_level.value }}{% else %}unknown{% endif %}">
+                                    {% if form.legal_risk_level.errors %}
+                                    <div class="text-danger">{{ form.legal_risk_level.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">{{ form.litigation_count.label }}</label>
+                                    {{ form.litigation_count }}
+                                    {% if form.litigation_count.errors %}
+                                    <div class="text-danger">{{ form.litigation_count.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">{{ form.executed_person_count.label }}</label>
+                                    {{ form.executed_person_count }}
+                                    {% if form.executed_person_count.errors %}
+                                    <div class="text-danger">{{ form.executed_person_count.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">{{ form.final_case_count.label }}</label>
+                                    {{ form.final_case_count }}
+                                    {% if form.final_case_count.errors %}
+                                    <div class="text-danger">{{ form.final_case_count.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">{{ form.consumption_limit_count.label }}</label>
+                                    {{ form.consumption_limit_count }}
+                                    {% if form.consumption_limit_count.errors %}
+                                    <div class="text-danger">{{ form.consumption_limit_count.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                            </div>
+                        </div>
+                    </div>
+
+        <!-- 表单操作按钮 -->
+        <div class="form-actions mt-4 mb-4">
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'business_pages:customer_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> 取消
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> 保存
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block module_extra_js %}
+{# 引入启信宝API配置模板 #}
+{% include "shared/qixinbao_api_config_snippet.html" %}
+<script>
+console.log('[客户表单] extra_js block 开始执行');
+console.log('[客户表单] 当前时间:', new Date().toISOString());
+</script>
+<script src="{% static 'js/qixinbao-autofill.js' %}"></script>
+<script src="{% static 'js/amap-district-selector.js' %}"></script>
+<script>
+console.log('[客户表单] amap-district-selector.js 加载后');
+console.log('[客户表单] AmapDistrictSelector 类:', typeof AmapDistrictSelector);
+console.log('[客户表单] initDistrictSelector 函数:', typeof initDistrictSelector);
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('[客户表单] DOMContentLoaded 事件触发');
+    
+    // 等待 initDistrictSelector 函数定义（来自共享模板）
+    function initOfficeSelector() {
+        console.log('[客户表单] 检查 initDistrictSelector 函数...');
+        console.log('[客户表单] initDistrictSelector 类型:', typeof initDistrictSelector);
+        console.log('[客户表单] AmapDistrictSelector 类型:', typeof AmapDistrictSelector);
+        
+        if (typeof initDistrictSelector === 'undefined') {
+            console.warn('[客户表单] initDistrictSelector 函数未定义，等待中...');
+            setTimeout(initOfficeSelector, 100);
+            return;
+        }
+        
+        if (typeof AmapDistrictSelector === 'undefined') {
+            console.error('[客户表单] AmapDistrictSelector 类未加载，请检查 amap-district-selector.js 文件');
+            return;
+        }
+        
+        console.log('[客户表单] 开始初始化办公地址选择器...');
+        
+        // 检查元素是否存在
+        console.log('[客户表单] 检查DOM元素:', {
+            regionField: !!document.getElementById('regionField'),
+            officeProvinceSelect: !!document.getElementById('officeProvinceSelect'),
+            officeCitySelect: !!document.getElementById('officeCitySelect'),
+            officeDistrictSelect: !!document.getElementById('officeDistrictSelect'),
+            addressDetailInput: !!document.getElementById('addressDetailInput')
+        });
+        
+        // 初始化办公地址行政区域选择器
+        const officeSelector = initDistrictSelector({
+            prefix: 'office',
+            addressFieldId: 'regionField',
+            detailInputId: 'addressDetailInput',
+            apiBaseUrl: '/api/customer/districts/',
+            addressFormat: 'name',
+            enableLogging: true  // 启用日志以便调试
+        });
+        
+        console.log('[客户表单] 选择器初始化结果:', officeSelector);
+        
+        // 标记选择器已初始化（用于其他功能依赖）
+        window.districtSelectorReady = false;
+        if (officeSelector) {
+            console.log('[客户表单] 选择器初始化成功');
+            // 监听省份数据加载完成
+            const provinceSelect = document.getElementById('officeProvinceSelect');
+            console.log('[客户表单] 省份选择框元素:', provinceSelect);
+            if (provinceSelect) {
+                const checkProvinceLoaded = setInterval(() => {
+                    if (provinceSelect.options.length > 1) {
+                        console.log('[客户表单] 省份数据加载完成，选项数量:', provinceSelect.options.length);
+                        window.districtSelectorReady = true;
+                        clearInterval(checkProvinceLoaded);
+                    }
+                }, 200);
+                // 10秒后停止检查
+                setTimeout(() => {
+                    clearInterval(checkProvinceLoaded);
+                    if (provinceSelect.options.length <= 1) {
+                        console.warn('[客户表单] 10秒内省份数据未加载完成');
+                    }
+                }, 10000);
+            } else {
+                console.error('[客户表单] 未找到省份选择框元素 officeProvinceSelect');
+            }
+        } else {
+            console.error('[客户表单] 办公地址选择器初始化失败');
+        }
+    }
+    
+    // 开始初始化
+    initOfficeSelector();
+    
+    // 启信宝客户名称搜索下拉功能已由共享模板自动初始化
+    // 无需在此处手动初始化
+});
+</script>
+
+<script src="{% static 'js/legal-risk-fetcher.js' %}"></script>
+<script>
+// 初始化法律风险信息获取器
+initLegalRiskFetcher({
+    nameInputSelector: '[name="name"]',
+    creditCodeInputSelector: '[name="unified_credit_code"]',
+    initialCompanyName: '{% if client %}{{ client.name|default:""|escapejs }}{% endif %}',
+    initialCreditCode: '{% if client %}{{ client.unified_credit_code|default:""|escapejs }}{% endif %}'
+});
+</script>
+
+{% endblock %}

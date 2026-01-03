@@ -1,0 +1,158 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}通知列表 - 诉讼管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+    </div>
+
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">{{ card.label }}</div>
+                            <div class="info-value info-value-large">{{ card.value }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 筛选和列表 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">通知列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">共 {{ total_count }} 条</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            <!-- 筛选器 -->
+            <form method="get" class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <label class="form-label">确认状态</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">全部状态</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>待确认</option>
+                        <option value="read_unconfirmed" {% if status_filter == 'read_unconfirmed' %}selected{% endif %}>已读未确认</option>
+                        <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>已确认</option>
+                        <option value="escalated" {% if status_filter == 'escalated' %}selected{% endif %}>已升级</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">通知类型</label>
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">全部类型</option>
+                        <option value="trial_reminder" {% if notification_type == 'trial_reminder' %}selected{% endif %}>开庭提醒</option>
+                        <option value="preservation_renewal" {% if notification_type == 'preservation_renewal' %}selected{% endif %}>保全续封提醒</option>
+                        <option value="appeal_deadline" {% if notification_type == 'appeal_deadline' %}selected{% endif %}>上诉期限提醒</option>
+                        <option value="evidence_deadline" {% if notification_type == 'evidence_deadline' %}selected{% endif %}>举证期限提醒</option>
+                        <option value="defense_deadline" {% if notification_type == 'defense_deadline' %}selected{% endif %}>答辩期限提醒</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary btn-sm">筛选</button>
+                        <a href="{% url 'litigation_pages:notification_list' %}" class="btn btn-outline-secondary btn-sm">重置</a>
+                    </div>
+                </div>
+            </form>
+
+            <!-- 通知列表 -->
+            {% if notifications %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="25%">通知标题</th>
+                            <th width="15%">通知类型</th>
+                            <th width="15%">案件编号</th>
+                            <th width="10%">确认状态</th>
+                            <th width="10%">紧急程度</th>
+                            <th width="10%">发送时间</th>
+                            <th width="10%">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for notification in notifications %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'litigation_pages:notification_detail' notification.id %}" class="text-decoration-none">
+                                    {{ notification.notification_title|truncatechars:40 }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ notification.get_notification_type_display }}</span>
+                            </td>
+                            <td>
+                                <a href="{% url 'litigation_pages:case_detail' notification.case.id %}" class="text-decoration-none">
+                                    {{ notification.case.case_number }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if notification.status == 'pending' %}
+                                    <span class="status-badge warning">待确认</span>
+                                {% elif notification.status == 'read_unconfirmed' %}
+                                    <span class="status-badge info">已读未确认</span>
+                                {% elif notification.status == 'confirmed' %}
+                                    <span class="status-badge success">已确认</span>
+                                {% elif notification.status == 'escalated' %}
+                                    <span class="status-badge danger">已升级</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if notification.urgency_level == 'urgent' %}
+                                    <span class="badge bg-danger">紧急</span>
+                                {% elif notification.urgency_level == 'important' %}
+                                    <span class="badge bg-warning">重要</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">一般</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ notification.sent_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'litigation_pages:notification_detail' notification.id %}" class="btn btn-outline-primary" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if notification.status != 'confirmed' %}
+                                    <a href="{% url 'litigation_pages:notification_confirm' notification.id %}" class="btn btn-outline-success" title="确认">
+                                        <i class="bi bi-check-circle"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="center-hero">
+                <div class="center-hero-title">暂无通知</div>
+                <div class="center-hero-subtitle">您当前没有收到任何通知</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

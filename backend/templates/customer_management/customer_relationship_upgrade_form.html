@@ -1,0 +1,58 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <div class="container-fluid py-4">
+        <div class="info-card info-card-compact">
+            <div class="info-card-header">
+                <h5 class="info-card-title">{{ page_title }}</h5>
+            </div>
+            <div class="info-card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="info-section">
+                        <div class="info-grid info-grid-2">
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.client.label }}</label>
+                                {{ form.client }}
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.from_level.label }}</label>
+                                {{ form.from_level }}
+                            </div>
+                            <div class="info-item">
+                                <label class="info-label info-label-required">{{ form.to_level.label }}</label>
+                                {{ form.to_level }}
+                            </div>
+                            <div class="info-item" style="grid-column: 1 / -1;">
+                                <label class="info-label">{{ form.related_contacts.label }}</label>
+                                {{ form.related_contacts }}
+                            </div>
+                            <div class="info-item" style="grid-column: 1 / -1;">
+                                <label class="info-label info-label-required">{{ form.upgrade_reason.label }}</label>
+                                {{ form.upgrade_reason }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">提交申请</button>
+                        <a href="{% url 'business_pages:customer_relationship_upgrade' %}" class="btn btn-secondary">取消</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

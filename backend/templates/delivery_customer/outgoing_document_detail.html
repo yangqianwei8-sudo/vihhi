@@ -1,0 +1,428 @@
+{% extends "shared/detail_page_base.html" %}
+{% load static %}
+
+{% block title %}发文详情 - 维海科技信息化管理平台{% endblock %}
+
+{% block detail_hero_icon %}📤{% endblock %}
+{% block detail_hero_title %}发文详情{% endblock %}
+{% block detail_hero_subtitle %}发文编号：{{ document.document_number }}{% endblock %}
+
+{% block detail_content %}
+    <!-- 基本信息 -->
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">发文编号</span>
+                    <span class="info-value"><code>{{ document.document_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">文件标题</span>
+                    <span class="info-value"><strong>{{ document.title }}</strong></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        {% if document.status == 'draft' %}
+                            <span class="badge bg-secondary">草稿</span>
+                        {% elif document.status == 'pending' %}
+                            <span class="badge bg-warning">待审核</span>
+                        {% elif document.status == 'approved' %}
+                            <span class="badge bg-success">已批准</span>
+                        {% elif document.status == 'sent' %}
+                            <span class="badge bg-info">已发送</span>
+                        {% elif document.status == 'completed' %}
+                            <span class="badge bg-success">已完成</span>
+                        {% elif document.status == 'archived' %}
+                            <span class="badge bg-dark">已归档</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ document.get_status_display }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% if document.file_category %}
+                <div class="info-item">
+                    <span class="info-label">文件分类</span>
+                    <span class="info-value">{{ document.file_category.name }}</span>
+                </div>
+                {% endif %}
+                {% if document.stage %}
+                <div class="info-item">
+                    <span class="info-label">阶段</span>
+                    <span class="info-value">{{ document.get_stage_display }}</span>
+                </div>
+                {% endif %}
+                {% if document.created_by %}
+                <div class="info-item">
+                    <span class="info-label">创建人</span>
+                    <span class="info-value">{{ document.created_by.get_full_name|default:document.created_by.username }}</span>
+                </div>
+                {% endif %}
+                {% if document.responsible_person %}
+                <div class="info-item">
+                    <span class="info-label">负责人</span>
+                    <span class="info-value">{{ document.responsible_person.get_full_name|default:document.responsible_person.username }}</span>
+                </div>
+                {% endif %}
+                {% if document.reviewer %}
+                <div class="info-item">
+                    <span class="info-label">审核人</span>
+                    <span class="info-value">{{ document.reviewer.get_full_name|default:document.reviewer.username }}</span>
+                </div>
+                {% endif %}
+                {% if document.sender %}
+                <div class="info-item">
+                    <span class="info-label">发送人</span>
+                    <span class="info-value">{{ document.sender.get_full_name|default:document.sender.username }}</span>
+                </div>
+                {% endif %}
+                {% if document.created_at %}
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ document.created_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                {% if document.sent_at %}
+                <div class="info-item">
+                    <span class="info-label">发送时间</span>
+                    <span class="info-value">{{ document.sent_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                {% if document.confirmed_at %}
+                <div class="info-item">
+                    <span class="info-label">确认时间</span>
+                    <span class="info-value">{{ document.confirmed_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 项目信息 -->
+    {% if document.project %}
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">项目信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                {% if project_number %}
+                <div class="info-item">
+                    <span class="info-label">项目编号</span>
+                    <span class="info-value">
+                        {% if project_detail_url %}
+                            <a href="{{ project_detail_url }}" class="info-value-link"><strong>{{ project_number }}</strong></a>
+                        {% else %}
+                            <strong>{{ project_number }}</strong>
+                        {% endif %}
+                    </span>
+                </div>
+                {% endif %}
+                {% if project_name %}
+                <div class="info-item">
+                    <span class="info-label">项目名称</span>
+                    <span class="info-value">
+                        {% if project_detail_url %}
+                            <a href="{{ project_detail_url }}" class="info-value-link"><strong>{{ project_name }}</strong></a>
+                        {% else %}
+                            <strong>{{ project_name }}</strong>
+                        {% endif %}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 客户信息 -->
+    {% if document.client %}
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">客户信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">客户名称</span>
+                    <span class="info-value">
+                        {% if client_detail_url %}
+                            <a href="{{ client_detail_url }}" class="info-value-link"><strong>{{ client_name }}</strong></a>
+                        {% else %}
+                            <strong>{{ client_name }}</strong>
+                        {% endif %}
+                    </span>
+                </div>
+                {% if document.client_contact %}
+                <div class="info-item">
+                    <span class="info-label">联系人</span>
+                    <span class="info-value">{{ document.client_contact.name }}</span>
+                </div>
+                {% endif %}
+                {% if document.recipient %}
+                <div class="info-item">
+                    <span class="info-label">收文单位</span>
+                    <span class="info-value">{{ document.recipient }}</span>
+                </div>
+                {% endif %}
+                {% if document.recipient_email %}
+                <div class="info-item">
+                    <span class="info-label">收文邮箱</span>
+                    <span class="info-value">{{ document.recipient_email }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 文件内容 -->
+    {% if document.content %}
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">文件内容</h5>
+        </div>
+        <div class="info-card-body">
+            <p>{{ document.content|linebreaks }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 附件 -->
+    {% if has_attachment %}
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">附件</h5>
+        </div>
+        <div class="info-card-body">
+            {% if attachment_url %}
+            <a href="{{ attachment_url }}" target="_blank" class="btn btn-outline-primary">
+                <i class="bi bi-download"></i> 下载附件
+                {% if attachment_name %}
+                    ({{ attachment_name }})
+                {% endif %}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 跟踪记录统计 -->
+    {% if tracking_stats.total > 0 %}
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">报送跟踪统计</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">总记录数</span>
+                    <span class="info-value"><strong>{{ tracking_stats.total }}</strong></span>
+                </div>
+                {% if tracking_stats.pending > 0 %}
+                <div class="info-item">
+                    <span class="info-label">待发送</span>
+                    <span class="info-value"><span class="badge bg-warning">{{ tracking_stats.pending }}</span></span>
+                </div>
+                {% endif %}
+                {% if tracking_stats.sent > 0 %}
+                <div class="info-item">
+                    <span class="info-label">已发送</span>
+                    <span class="info-value"><span class="badge bg-info">{{ tracking_stats.sent }}</span></span>
+                </div>
+                {% endif %}
+                {% if tracking_stats.delivered > 0 %}
+                <div class="info-item">
+                    <span class="info-label">已送达</span>
+                    <span class="info-value"><span class="badge bg-success">{{ tracking_stats.delivered }}</span></span>
+                </div>
+                {% endif %}
+                {% if tracking_stats.completed > 0 %}
+                <div class="info-item">
+                    <span class="info-label">已完成</span>
+                    <span class="info-value"><span class="badge bg-success">{{ tracking_stats.completed }}</span></span>
+                </div>
+                {% endif %}
+                {% if tracking_stats.failed > 0 %}
+                <div class="info-item">
+                    <span class="info-label">发送失败</span>
+                    <span class="info-value"><span class="badge bg-danger">{{ tracking_stats.failed }}</span></span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 跟踪记录详情 -->
+    {% if tracking_by_method %}
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">报送跟踪详情</h5>
+        </div>
+        <div class="info-card-body">
+            {% for method_name, trackings in tracking_by_method.items %}
+            <div class="mb-4">
+                <h6 class="mb-3">{{ method_name }}</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>状态</th>
+                                <th>发送时间</th>
+                                <th>送达时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tracking in trackings %}
+                            <tr>
+                                <td>
+                                    {% if tracking.status == 'pending' %}
+                                        <span class="badge bg-warning">待发送</span>
+                                    {% elif tracking.status == 'sent' or tracking.status == 'sending' %}
+                                        <span class="badge bg-info">已发送</span>
+                                    {% elif tracking.status == 'delivered' %}
+                                        <span class="badge bg-success">已送达</span>
+                                    {% elif tracking.status == 'completed' %}
+                                        <span class="badge bg-success">已完成</span>
+                                    {% elif tracking.status == 'failed' %}
+                                        <span class="badge bg-danger">发送失败</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ tracking.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ tracking.sent_at|date:"Y-m-d H:i:s"|default:"-" }}</td>
+                                <td>{{ tracking.delivered_at|date:"Y-m-d H:i:s"|default:"-" }}</td>
+                                <td>
+                                    <a href="{% url 'delivery_pages:outgoing_document_tracking_detail' tracking.id %}" class="btn btn-sm btn-outline-primary">
+                                        查看详情
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注 -->
+    {% if document.notes %}
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <p>{{ document.notes|linebreaks }}</p>
+        </div>
+    </div>
+    {% endif %}
+{% endblock %}
+
+{% block detail_timeline %}
+    <!-- 时间线信息 -->
+    {% if timeline_events %}
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">
+                <i class="bi bi-clock-history"></i> 时间线
+            </h5>
+        </div>
+        <div class="info-card-body">
+            <div class="timeline">
+                {% for event in timeline_events %}
+                <div class="timeline-item timeline-detailed">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        {% if event.type == 'approval' %}
+                        <div class="timeline-title">
+                            <i class="bi bi-check-circle"></i> 审批记录
+                        </div>
+                        <div class="timeline-time timeline-time-primary">
+                            <i class="bi bi-clock"></i> {{ event.time|date:"Y-m-d H:i:s" }}
+                        </div>
+                        {% if event.record.approver %}
+                        <div class="timeline-actor">
+                            <i class="bi bi-person"></i> 审批人：{{ event.record.approver.get_full_name|default:event.record.approver.username }}
+                        </div>
+                        {% endif %}
+                        {% if event.record.result %}
+                        <div class="timeline-description">
+                            结果：{% if event.record.result == 'approved' %}<span class="badge bg-success">通过</span>{% elif event.record.result == 'rejected' %}<span class="badge bg-danger">拒绝</span>{% else %}{{ event.record.get_result_display }}{% endif %}
+                        </div>
+                        {% endif %}
+                        {% if event.record.comment %}
+                        <div class="timeline-description">
+                            意见：{{ event.record.comment }}
+                        </div>
+                        {% endif %}
+                        {% elif event.type == 'status_log' %}
+                        <div class="timeline-title">
+                            <i class="bi bi-arrow-right-circle"></i> 状态变更
+                        </div>
+                        <div class="timeline-time timeline-time-primary">
+                            <i class="bi bi-clock"></i> {{ event.time|date:"Y-m-d H:i:s" }}
+                        </div>
+                        {% if event.log.actor %}
+                        <div class="timeline-actor">
+                            <i class="bi bi-person"></i> 操作人：{{ event.log.actor.get_full_name|default:event.log.actor.username }}
+                        </div>
+                        {% endif %}
+                        {% if event.log.from_status %}
+                        <div class="timeline-description">
+                            从 <span class="badge bg-secondary">{{ event.log.get_from_status_display }}</span> 
+                            变更为 <span class="badge bg-primary">{{ event.log.get_to_status_display }}</span>
+                        </div>
+                        {% endif %}
+                        {% if event.log.description %}
+                        <div class="timeline-description">
+                            {{ event.log.description }}
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endblock %}
+
+{% block detail_actions %}
+    <div class="d-flex gap-2 flex-wrap">
+        {% if list_url %}
+        <a href="{{ list_url }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        {% endif %}
+        {% if can_edit and edit_url %}
+        <a href="{{ edit_url }}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil"></i> 编辑
+        </a>
+        {% endif %}
+        {% if can_actions.submit_review %}
+        <a href="{% url 'delivery_pages:outgoing_document_submit_review' document.id %}" class="btn btn-primary">
+            <i class="bi bi-send"></i> 重新提交审核
+        </a>
+        {% endif %}
+        {% if audit_trail_url %}
+        <a href="{{ audit_trail_url }}" class="btn btn-outline-info">
+            <i class="bi bi-clock-history"></i> 审计追踪
+        </a>
+        {% endif %}
+        {% if performance_url and document_performance %}
+        <a href="{{ performance_url }}" class="btn btn-outline-success">
+            <i class="bi bi-graph-up"></i> 绩效详情 ({{ document_performance.score }}分)
+        </a>
+        {% endif %}
+    </div>
+{% endblock %}
+

@@ -1,0 +1,157 @@
+{% extends "shared/form_page_base.html" %}
+{% load static %}
+
+{% block form_page_title_text %}{{ page_title|default:"新建回款记录" }}{% endblock %}
+{% block form_page_description %}{{ description|default:"创建新的回款记录" }}{% endblock %}
+
+{% block form_id %}paymentRecordForm{% endblock %}
+
+{% block form_has_files %}False{% endblock %}
+
+{% block cancel_url %}{% url 'settlement_pages:payment_record_list' %}{% endblock %}
+
+{% block form_content %}
+    <!-- 回款计划选择 -->
+    <div class="form-section">
+        <div class="form-section-header">
+            <h5>关联回款计划</h5>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label class="form-label required-field">选择回款计划</label>
+                    <select name="payment_plan_id" id="payment_plan_id" class="form-select" required>
+                        <option value="">请选择回款计划</option>
+                        {% for plan in payment_plans %}
+                        <option value="{{ plan.id }}" 
+                                data-amount="{{ plan.planned_amount }}"
+                                data-date="{{ plan.planned_date|date:'Y-m-d' }}"
+                                data-phase="{{ plan.phase_name }}">
+                            {{ plan.contract.contract_number|default:plan.contract.id }} - {{ plan.phase_name }} 
+                            (计划金额: ¥{{ plan.planned_amount|floatformat:2 }}, 计划日期: {{ plan.planned_date|date:'Y-m-d' }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">选择要创建回款记录的回款计划</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 回款信息 -->
+    <div class="form-section">
+        <div class="form-section-header">
+            <h5>回款信息</h5>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label required-field">回款金额（元）</label>
+                    <input type="number" name="payment_amount" id="payment_amount" class="form-control" 
+                           step="0.01" min="0" placeholder="0.00" required>
+                    <small class="form-text text-muted">实际回款金额</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label required-field">回款日期</label>
+                    <input type="date" name="payment_date" id="payment_date" class="form-control" required>
+                    <small class="form-text text-muted">实际回款日期</small>
+                </div>
+            </div>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label required-field">回款方式</label>
+                    <select name="payment_method" id="payment_method" class="form-select" required>
+                        {% for code, label in payment_method_choices %}
+                        <option value="{{ code }}" {% if code == 'bank_transfer' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">发票号码</label>
+                    <input type="text" name="invoice_number" id="invoice_number" class="form-control" 
+                           placeholder="可选" maxlength="100">
+                </div>
+            </div>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label class="form-label">收款账户</label>
+                    <input type="text" name="bank_account" id="bank_account" class="form-control" 
+                           placeholder="可选，填写收款银行账户信息" maxlength="200">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 备注 -->
+    <div class="form-section">
+        <div class="form-section-header">
+            <h5>备注</h5>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <textarea name="notes" id="notes" class="form-control" rows="3" 
+                              placeholder="其他需要说明的信息"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block form_page_extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 设置默认回款日期为今天
+        const paymentDateInput = document.getElementById('payment_date');
+        if (paymentDateInput && !paymentDateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            paymentDateInput.value = today;
+        }
+
+        // 金额格式化
+        const paymentAmountInput = document.getElementById('payment_amount');
+        if (paymentAmountInput) {
+            paymentAmountInput.addEventListener('blur', function() {
+                if (this.value) {
+                    const num = parseFloat(this.value);
+                    if (!isNaN(num)) {
+                        this.value = num.toFixed(2);
+                    }
+                }
+            });
+        }
+
+        // 回款计划选择后自动填充计划金额和日期作为参考
+        const planSelect = document.getElementById('payment_plan_id');
+        const amountInput = document.getElementById('payment_amount');
+        const dateInput = document.getElementById('payment_date');
+        
+        if (planSelect && amountInput && dateInput) {
+            planSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                if (selectedOption && selectedOption.value) {
+                    const planAmount = selectedOption.getAttribute('data-amount');
+                    const planDate = selectedOption.getAttribute('data-date');
+                    
+                    // 如果金额和日期为空，自动填充计划值作为参考
+                    if (planAmount && !amountInput.value) {
+                        amountInput.value = parseFloat(planAmount).toFixed(2);
+                    }
+                    if (planDate && !dateInput.value) {
+                        dateInput.value = planDate;
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+

@@ -1,0 +1,113 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+        <div class="row">
+        <div class="col-md-8">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">基本信息</h5>
+                </div>
+                <div class="info-card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <div class="info-label">应收单号</div>
+                            <div class="info-value"><code>{{ receivable.account_number }}</code></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">客户</div>
+                            <div class="info-value">{{ receivable.customer.name|default:"-" }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">关联项目</div>
+                            <div class="info-value">{{ receivable.project.name|default:"-" }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">应收金额</div>
+                            <div class="info-value"><strong style="font-size: 20px; color: #142F5B;">¥{{ receivable.receivable_amount|floatformat:2 }}</strong></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <div class="info-label">已收金额</div>
+                            <div class="info-value">¥{{ receivable.received_amount|floatformat:2 }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">未收金额</div>
+                            <div class="info-value"><strong style="font-size: 18px; color: #dc2626;">¥{{ receivable.remaining_amount|floatformat:2 }}</strong></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">应收日期</div>
+                            <div class="info-value">{{ receivable.receivable_date|date:"Y-m-d" }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">到期日期</div>
+                            <div class="info-value">{{ receivable.due_date|date:"Y-m-d"|default:"-" }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">状态</div>
+                    <div class="info-value">
+                        {% if receivable.status == 'pending' %}
+                        <span class="badge bg-secondary">待收款</span>
+                        {% elif receivable.status == 'partial' %}
+                        <span class="badge bg-warning">部分收款</span>
+                        {% elif receivable.status == 'completed' %}
+                        <span class="badge bg-success">已完成</span>
+                        {% elif receivable.status == 'overdue' %}
+                        <span class="badge bg-danger">已逾期</span>
+                        {% else %}
+                        <span class="badge bg-dark">已取消</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if receivable.description %}
+                <div class="info-item">
+                    <div class="info-label">备注说明</div>
+                    <div class="info-value">{{ receivable.description }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="info-card">
+                <h5 class="mb-4">其他信息</h5>
+                <div class="info-item">
+                    <div class="info-label">账期</div>
+                    <div class="info-value">{{ receivable.payment_terms }}天</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">创建人</div>
+                    <div class="info-value">{{ receivable.created_by.username|default:"-" }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">创建时间</div>
+                    <div class="info-value">{{ receivable.created_time|date:"Y-m-d H:i:s" }}</div>
+                </div>
+            </div>
+            <div class="content-card mt-3">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'finance_pages:receivable_update' receivable.id %}" class="btn btn-primary">
+                        <i class="bi bi-pencil"></i> 编辑
+                    </a>
+                    <a href="{% url 'finance_pages:receivable_management' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> 返回列表
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

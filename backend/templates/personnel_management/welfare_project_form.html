@@ -1,0 +1,121 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-card h5 {
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block personnel_content %}
+<div class="info-card">
+    <div class="info-card-header">
+        <h5 class="info-card-title">{{ page_title }}</h5>
+    </div>
+    <div class="info-card-body">
+        <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <h5>项目信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">项目名称</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                    <div class="text-danger small mt-1">{{ form.name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">福利类型</label>
+                    {{ form.welfare_type }}
+                    {% if form.welfare_type.errors %}
+                    <div class="text-danger small mt-1">{{ form.welfare_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">福利周期</label>
+                    {{ form.cycle }}
+                    {% if form.cycle.errors %}
+                    <div class="text-danger small mt-1">{{ form.cycle.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">是否启用</label>
+                    <div class="form-check mt-2">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            启用此福利项目
+                        </label>
+                    </div>
+                    {% if form.is_active.errors %}
+                    <div class="text-danger small mt-1">{{ form.is_active.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label required">福利标准</label>
+                    {{ form.standard }}
+                    {% if form.standard.errors %}
+                    <div class="text-danger small mt-1">{{ form.standard.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">福利对象描述</label>
+                    {{ form.target_employees }}
+                    {% if form.target_employees.errors %}
+                    <div class="text-danger small mt-1">{{ form.target_employees.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-3 mt-4">
+            <a href="{% url 'personnel_pages:welfare_management' %}" class="btn btn-outline-secondary btn-submit">
+                <i class="bi bi-x-circle"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary btn-submit">
+                <i class="bi bi-check-circle"></i> 保存
+            </button>
+        </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

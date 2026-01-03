@@ -1,0 +1,433 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calculator-container {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .calculator-container h3 {
+        margin-bottom: 20px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+        border-bottom: 2px solid var(--vh-primary);
+        padding-bottom: 12px;
+    }
+    .result-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        padding: 32px;
+        color: white;
+        text-align: center;
+        margin-top: 24px;
+    }
+    .result-box h4 {
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        opacity: 0.9;
+        margin-bottom: 12px;
+    }
+    .result-box .value {
+        font-size: 48px;
+        font-weight: 700;
+        margin: 0;
+    }
+    .calculation-steps {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 16px;
+    }
+    .calculation-steps h5 {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #374151;
+    }
+    .step-item {
+        padding: 8px 0;
+        border-bottom: 2px solid var(--vh-primary);
+        font-size: 13px;
+        color: #6b7280;
+    }
+    .step-item:last-child {
+        border-bottom: none;
+    }
+    .mode-description {
+        background: #f0f9ff;
+        border-left: 4px solid #3b82f6;
+        border-radius: 6px;
+        padding: 12px 16px;
+        margin-top: 12px;
+        font-size: 13px;
+        color: #1e40af;
+    }
+    .param-group {
+        margin-bottom: 16px;
+    }
+    .param-group label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 6px;
+        display: block;
+    }
+    .param-group input,
+    .param-group select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+    .param-group small {
+        color: #6b7280;
+        font-size: 12px;
+        margin-top: 4px;
+        display: block;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题区域 -->
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="calculator-container">
+                <h3>报价计算</h3>
+                
+                <form id="calculatorForm">
+                    <div class="param-group">
+                        <label for="mode">报价模式 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="mode" name="mode" required>
+                            <option value="">请选择报价模式</option>
+                            {% for code, name in quotation_modes %}
+                            <option value="{{ code }}" data-description="{{ code }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div id="modeDescription" class="mode-description" style="display: none;"></div>
+                    </div>
+
+                    <div class="param-group">
+                        <label for="saved_amount">节省金额（万元） <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="saved_amount" name="saved_amount" step="0.01" min="0" required placeholder="请输入节省金额">
+                        <small>用于计算服务费的节省金额</small>
+                    </div>
+
+                    <!-- 模式参数区域（动态显示） -->
+                    <div id="modeParamsContainer"></div>
+
+                    <div class="param-group">
+                        <label for="cap_fee">封顶费（万元，可选）</label>
+                        <input type="number" class="form-control" id="cap_fee" name="cap_fee" step="0.01" min="0" placeholder="可选，设置服务费上限">
+                        <small>如果设置了封顶费，计算出的服务费不会超过此金额</small>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn btn-secondary"data-click="handle_onclick_0">重置</button>
+                        <button type="submit" class="btn btn-primary">计算</button>
+                    </div>
+                </form>
+
+                <!-- 计算结果 -->
+                <div id="resultContainer" style="display: none;">
+                    <div class="result-box">
+                        <h4>服务费（万元）</h4>
+                        <div class="value" id="serviceFee">0.00</div>
+                        <div id="cappedNotice" style="margin-top: 12px; font-size: 14px; opacity: 0.9; display: none;">
+                            <i class="bi bi-info-circle"></i> 已应用封顶费限制
+                        </div>
+                    </div>
+                    
+                    <div class="calculation-steps" id="calculationSteps">
+                        <h5>计算步骤</h5>
+                        <div id="stepsContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- 报价规则参考 -->
+            {% if quotation_rules %}
+            <div class="calculator-container">
+                <h3>报价规则参考</h3>
+                <div class="list-group">
+                    {% for rule in quotation_rules %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ rule.name }}</h6>
+                            <small class="text-muted">{{ rule.get_rule_type_display }}</small>
+                        </div>
+                        {% if rule.description %}
+                        <p class="mb-1 small text-muted">{{ rule.description|truncatewords:20 }}</p>
+                        {% endif %}
+                        {% if rule.project_type %}
+                        <small class="text-muted">项目业态：{{ rule.project_type }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 使用说明 -->
+            <div class="calculator-container">
+                <h3>使用说明</h3>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <strong>1. 选择报价模式</strong>
+                        <p class="small text-muted mb-0">根据项目需求选择合适的报价模式</p>
+                    </li>
+                    <li class="mb-2">
+                        <strong>2. 输入节省金额</strong>
+                        <p class="small text-muted mb-0">输入预计为客户节省的金额（万元）</p>
+                    </li>
+                    <li class="mb-2">
+                        <strong>3. 设置模式参数</strong>
+                        <p class="small text-muted mb-0">根据选择的模式填写相应的参数</p>
+                    </li>
+                    <li class="mb-2">
+                        <strong>4. 可选设置封顶费</strong>
+                        <p class="small text-muted mb-0">设置服务费的上限金额</p>
+                    </li>
+                    <li>
+                        <strong>5. 点击计算</strong>
+                        <p class="small text-muted mb-0">系统会自动计算服务费并显示计算步骤</p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 安全的HTML设置函数
+    function setSafeHTML(element, html) {
+        if (!element) return;
+        // 如果内容不包含HTML标签，使用textContent
+        if (!/<[^>]+>/.test(html)) {
+            element.textContent = html;
+        } else {
+            // 对于包含HTML的内容，使用innerHTML（假设内容已清理）
+            // 在生产环境中，应该使用DOMPurify等库清理HTML
+            element.innerHTML = html;
+        }
+    }
+    
+    // 安全的文本设置函数（推荐使用）
+    function setSafeText(element, text) {
+        if (element) {
+            element.textContent = text;
+        }
+    }
+
+
+    function getCsrfToken() {
+        const token = document.querySelector('[name=csrfmiddlewaretoken]');
+        return token ? token.value : '';
+    }
+// 报价模式描述
+const modeDescriptions = {
+    'rate': '服务费 = 节省金额 × 约定费率',
+    'base_fee_rate': '服务费 = 固定基本费 + (节省金额 × 约定费率)',
+    'fixed': '服务费 = 固定金额（与节省金额无关）',
+    'segmented': '服务费 = 分段累进计算（不同节省金额区间使用不同费率）',
+    'min_savings_rate': '服务费 = max(最低节省金额, 节省金额) × 约定费率',
+    'performance_linked': '服务费 = 基础费率 × 绩效系数 × 节省金额',
+    'hybrid': '服务费 = 多种模式的组合计算'
+};
+
+// 模式参数配置
+const modeParamsConfig = {
+    'rate': [
+        {name: 'rate', label: '费率（%）', type: 'number', step: '0.01', min: '0', max: '100', required: true, placeholder: '例如：15表示15%'}
+    ],
+    'base_fee_rate': [
+        {name: 'base_fee', label: '基本费（万元）', type: 'number', step: '0.01', min: '0', required: true, placeholder: '固定基本费用'},
+        {name: 'rate', label: '费率（%）', type: 'number', step: '0.01', min: '0', max: '100', required: true, placeholder: '例如：10表示10%'}
+    ],
+    'fixed': [
+        {name: 'fixed_amount', label: '固定金额（万元）', type: 'number', step: '0.01', min: '0', required: true, placeholder: '固定服务费金额'}
+    ],
+    'segmented': [
+        {name: 'segments', label: '分段配置（JSON格式）', type: 'textarea', required: true, placeholder: '例如：[{"max": 100, "rate": 0.1}, {"max": null, "rate": 0.15}]'}
+    ],
+    'min_savings_rate': [
+        {name: 'min_savings', label: '最低节省金额（万元）', type: 'number', step: '0.01', min: '0', required: true, placeholder: '最低节省金额'},
+        {name: 'rate', label: '费率（%）', type: 'number', step: '0.01', min: '0', max: '100', required: true, placeholder: '例如：12表示12%'}
+    ],
+    'performance_linked': [
+        {name: 'base_rate', label: '基础费率（%）', type: 'number', step: '0.01', min: '0', max: '100', required: true, placeholder: '基础费率'},
+        {name: 'performance_factor', label: '绩效系数', type: 'number', step: '0.01', min: '0', required: true, placeholder: '绩效系数（例如：1.2表示1.2倍）'}
+    ],
+    'hybrid': [
+        {name: 'hybrid_config', label: '混合配置（JSON格式）', type: 'textarea', required: true, placeholder: '配置多种模式的组合'}
+    ]
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const modeSelect = document.getElementById('mode');
+    const modeDescription = document.getElementById('modeDescription');
+    const modeParamsContainer = document.getElementById('modeParamsContainer');
+    
+    // 监听模式选择变化
+    modeSelect.addEventListener('change', function() {
+        const selectedMode = this.value;
+        
+        // 显示模式描述
+        if (selectedMode && modeDescriptions[selectedMode]) {
+            modeDescription.textContent = modeDescriptions[selectedMode];
+            modeDescription.style.display = 'block';
+        } else {
+            modeDescription.style.display = 'none';
+        }
+        
+        // 显示模式参数
+        if (selectedMode && modeParamsConfig[selectedMode]) {
+            let html = '<h5 style="font-size: 16px; font-weight: 600; margin-top: 20px; margin-bottom: 16px;">模式参数</h5>';
+            modeParamsConfig[selectedMode].forEach(param => {
+                html += '<div class="param-group">';
+                html += `<label for="param_${param.name}">${param.label}${param.required ? ' <span class="text-danger">*</span>' : ''}</label>`;
+                
+                if (param.type === 'textarea') {
+                    html += `<textarea class="form-control" id="param_${param.name}" name="${param.name}" ${param.required ? 'required' : ''} placeholder="${param.placeholder || ''}" rows="4"></textarea>`;
+                } else {
+                    html += `<input type="${param.type}" class="form-control" id="param_${param.name}" name="${param.name}" step="${param.step || ''}" min="${param.min || ''}" max="${param.max || ''}" ${param.required ? 'required' : ''} placeholder="${param.placeholder || ''}">`;
+                }
+                
+                html += '</div>';
+            });
+            modeParamsContainer.innerHTML = html;
+        } else {
+            modeParamsContainer.textContent = '';
+        }
+        
+        // 隐藏结果
+        document.getElementById('resultContainer').style.display = 'none';
+    });
+    
+    // 表单提交
+    document.getElementById('calculatorForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        calculate();
+    });
+});
+
+function calculate() {
+    const form = document.getElementById('calculatorForm');
+    const formData = new FormData(form);
+    
+    // 收集模式参数
+    const modeParams = {};
+    const selectedMode = formData.get('mode');
+    if (selectedMode && modeParamsConfig[selectedMode]) {
+        modeParamsConfig[selectedMode].forEach(param => {
+            const value = formData.get(param.name);
+            if (value) {
+                if (param.type === 'textarea') {
+                    // 尝试解析JSON
+                    try {
+                        modeParams[param.name] = JSON.parse(value);
+                    } catch (e) {
+                        modeParams[param.name] = value;
+                    }
+                } else if (param.type === 'number') {
+                    modeParams[param.name] = parseFloat(value);
+                } else {
+                    modeParams[param.name] = value;
+                }
+            }
+        });
+    }
+    
+    // 准备请求数据
+    const requestData = {
+        mode: formData.get('mode'),
+        saved_amount: parseFloat(formData.get('saved_amount')),
+        mode_params: modeParams,
+    };
+    
+    const capFee = formData.get('cap_fee');
+    if (capFee) {
+        requestData.cap_fee = parseFloat(capFee);
+    }
+    
+    // 发送请求
+    fetch('{% url "business_pages:quotation_calculator_api" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('计算失败：' + data.error);
+            return;
+        }
+        
+        // 显示结果
+        document.getElementById('serviceFee').textContent = data.service_fee.toFixed(2);
+        document.getElementById('cappedNotice').style.display = data.is_capped ? 'block' : 'none';
+        
+        // 显示计算步骤
+        const stepsContent = document.getElementById('stepsContent');
+        if (data.calculation_steps && data.calculation_steps.length > 0) {
+            stepsContent.innerHTML = data.calculation_steps.map(step => 
+                `<div class="step-item">${step}</div>`
+            ).join('');
+        } else {
+            // TODO: 使用DOMPurify清理HTML
+            stepsContent.innerHTML = '<div class="step-item">暂无计算步骤</div>';
+        }
+        
+        document.getElementById('resultContainer').style.display = 'block';
+    })
+    .catch(error => {
+        alert('计算失败，请检查网络连接或联系管理员');
+    });
+}
+
+function resetForm() {
+    document.getElementById('calculatorForm').reset();
+    document.getElementById('modeParamsContainer').innerHTML = '';
+    document.getElementById('modeDescription').style.display = 'none';
+    document.getElementById('resultContainer').style.display = 'none';
+}
+
+    // 事件处理器: handle_onclick_0
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('.btn');
+        if (element) {
+            element.addEventListener('click', function(e) {
+                resetForm()
+            });
+        }
+    });
+
+</script>
+{% endblock %}
+

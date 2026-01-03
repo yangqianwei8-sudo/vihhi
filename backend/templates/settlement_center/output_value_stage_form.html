@@ -1,0 +1,97 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ page_title }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">阶段名称 <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" value="{{ stage.name|default:'' }}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">阶段编码 <span class="text-danger">*</span></label>
+                            <input type="text" name="code" class="form-control" value="{{ stage.code|default:'' }}" required>
+                            <small class="text-muted">唯一标识，例如：conversion, contract, production</small>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">阶段类型 <span class="text-danger">*</span></label>
+                                <select name="stage_type" class="form-select" required>
+                                    <option value="">请选择</option>
+                                    {% for value, label in stage_types %}
+                                    <option value="{{ value }}" {% if stage.stage_type == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">计取基数类型 <span class="text-danger">*</span></label>
+                                <select name="base_amount_type" class="form-select" required>
+                                    <option value="">请选择</option>
+                                    {% for value, label in base_amount_types %}
+                                    <option value="{{ value }}" {% if stage.base_amount_type == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">阶段产值比例(%) <span class="text-danger">*</span></label>
+                                <input type="number" name="stage_percentage" class="form-control" 
+                                       value="{{ stage.stage_percentage|default:'0' }}" 
+                                       step="0.01" min="0" max="100" required>
+                                <small class="text-muted">该阶段占总产值的比例</small>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">排序</label>
+                                <input type="number" name="order" class="form-control" 
+                                       value="{{ stage.order|default:'0' }}" min="0">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">阶段描述</label>
+                            <textarea name="description" class="form-control" rows="3">{{ stage.description|default:'' }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="is_active" 
+                                       {% if not stage or stage.is_active %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">
+                                    启用
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'settlement_pages:output_value_stage_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> 返回列表
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> 保存
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

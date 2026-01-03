@@ -1,0 +1,192 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .content-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-paid { background: #d1e7dd; color: #0f5132; }
+    .status-cancelled { background: #f8d7da; color: #842029; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">采购付款列表</h3>
+            <a href="{% url 'admin_pages:purchase_payment_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> 创建付款
+            </a>
+        </div>
+
+        <!-- 筛选栏 -->
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" placeholder="搜索付款单号、凭证号..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="">全部状态</option>
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="contract_id" class="form-select">
+                        <option value="">全部合同</option>
+                        <!-- 合同选项需要从视图传递 -->
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a href="{% url 'admin_pages:purchase_payment_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 重置
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <!-- 数据表格 -->
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>付款单号</th>
+                        <th>合同编号</th>
+                        <th>供应商</th>
+                        <th>付款日期</th>
+                        <th>付款金额</th>
+                        <th>凭证号</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in page_obj %}
+                    <tr>
+                        <td><code>{{ payment.payment_number }}</code></td>
+                        <td><code>{{ payment.contract.contract_number }}</code></td>
+                        <td>{{ payment.contract.supplier.name }}</td>
+                        <td>{{ payment.payment_date|date:"Y-m-d" }}</td>
+                        <td>¥{{ payment.amount|floatformat:2 }}</td>
+                        <td>{{ payment.voucher_number|default:"-" }}</td>
+                        <td>
+                            <span class="status-badge status-{{ payment.status }}">
+                                {{ payment.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_pages:purchase_payment_detail' payment.id %}" class="btn btn-sm btn-outline-primary" title="查看详情">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">💰</div>
+                                <div class="empty-state-title">暂无数据</div>
+                                <div class="empty-state-text">
+                                    当前筛选条件下没有找到付款记录，请调整筛选条件或创建新付款。
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 分页 -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航">
+            <ul class="pagination justify-content-center mt-4">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">末页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">💰</div>
+            <div class="empty-state-title">暂无数据</div>
+            <div class="empty-state-text">
+                当前没有付款记录，请先创建付款。
+            </div>
+            <a href="{% url 'admin_pages:purchase_payment_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> 创建第一个付款
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

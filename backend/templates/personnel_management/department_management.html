@@ -1,0 +1,151 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block personnel_content %}
+<!-- 统计卡片 -->
+{% if summary_cards %}
+<div class="row g-3 mb-4">
+    {% for card in summary_cards %}
+    <div class="col-md-3 col-sm-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="text-muted mb-2" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">{{ card.label }}</h6>
+                <div class="value" style="font-size: 28px; font-weight: 700; color: #142F5B; margin-bottom: 4px;">{{ card.value }}</div>
+                <div class="hint" style="font-size: 12px; color: #6b7280;">{{ card.hint }}</div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 内容区域 -->
+<div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">部门列表</h3>
+    </div>
+
+    <!-- 筛选栏 -->
+    <form method="get" class="mb-4">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <input type="text" name="search" class="form-control" placeholder="搜索部门名称、编码..." value="{{ current_search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="is_active" class="form-select">
+                    <option value="">全部状态</option>
+                    <option value="true" {% if current_is_active == 'true' %}selected{% endif %}>启用</option>
+                    <option value="false" {% if current_is_active == 'false' %}selected{% endif %}>停用</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="parent_id" class="form-select">
+                    <option value="">全部上级部门</option>
+                    {% for dept in all_departments %}
+                    <option value="{{ dept.id }}" {% if current_parent_id == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-search"></i> 搜索
+                </button>
+                <a href="{% url 'personnel_pages:department_management' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> 清除
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <!-- 数据表格 -->
+    {% if page_obj %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>部门编码</th>
+                    <th>部门名称</th>
+                    <th>上级部门</th>
+                    <th>部门负责人</th>
+                    <th>成员数量</th>
+                    <th>排序</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for department in departments %}
+                <tr>
+                    <td><code>{{ department.code }}</code></td>
+                    <td>{{ department.name }}</td>
+                    <td>{{ department.parent.name|default:"-" }}</td>
+                    <td>{{ department.leader.get_full_name|default:department.leader.username|default:"-" }}</td>
+                    <td>
+                        {% with count=department.employees.count %}
+                        {% if count > 0 %}
+                        <span class="badge bg-primary">{{ count }} 人</span>
+                        {% else %}
+                        <span class="text-muted">0 人</span>
+                        {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>{{ department.order }}</td>
+                    <td>
+                        {% if department.is_active %}
+                        <span class="badge bg-success">启用</span>
+                        {% else %}
+                        <span class="badge bg-secondary">停用</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ department.created_time|date:"Y-m-d" }}</td>
+                    <td>
+                        <a href="#" class="btn btn-sm btn-outline-primary me-1" title="查看详情">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="#" class="btn btn-sm btn-outline-secondary" title="编辑">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">暂无数据</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 分页 -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="分页导航">
+        <ul class="pagination justify-content-center mt-4">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_is_active %}&is_active={{ current_is_active }}{% endif %}{% if current_parent_id %}&parent_id={{ current_parent_id }}{% endif %}">上一页</a>
+            </li>
+            {% endif %}
+            <li class="page-item active">
+                <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_is_active %}&is_active={{ current_is_active }}{% endif %}{% if current_parent_id %}&parent_id={{ current_parent_id }}{% endif %}">下一页</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        暂无数据或加载失败
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

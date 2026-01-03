@@ -1,0 +1,130 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}时间节点详情 - {{ timeline.timeline_name }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                {% if perms.litigation_management.timeline.manage %}
+                <a href="{% url 'litigation_pages:timeline_edit' timeline.id %}" class="btn btn-secondary">
+                    <i class="bi bi-pencil"></i> 编辑
+                </a>
+                {% endif %}
+                {% if timeline.status != 'completed' %}
+                <a href="{% url 'litigation_pages:timeline_confirm' timeline.id %}" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> 确认完成
+                </a>
+                {% endif %}
+                <a href="{% url 'litigation_pages:timeline_list' case.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">节点名称</span>
+                    <span class="info-value"><strong>{{ timeline.timeline_name }}</strong></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">节点类型</span>
+                    <span class="info-value">
+                        <span class="badge bg-info">{{ timeline.get_timeline_type_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">节点时间</span>
+                    <span class="info-value">{{ timeline.timeline_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge {{ timeline.status }}">
+                            {{ timeline.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">提醒设置</span>
+                    <span class="info-value">
+                        {% if timeline.reminder_enabled %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-bell-fill"></i> 已启用
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary">未启用</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% if timeline.reminder_enabled and timeline.reminder_days_before %}
+                <div class="info-item">
+                    <span class="info-label">提醒天数</span>
+                    <span class="info-value">
+                        提前 {{ timeline.reminder_days_before|join:", " }} 天提醒
+                    </span>
+                </div>
+                {% endif %}
+                <div class="info-item">
+                    <span class="info-label">关联案件</span>
+                    <span class="info-value">
+                        <a href="{% url 'litigation_pages:case_detail' case.id %}" class="text-decoration-none">
+                            {{ case.case_number }} - {{ case.case_name }}
+                        </a>
+                    </span>
+                </div>
+                {% if timeline.description %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">节点描述</span>
+                    <span class="info-value">{{ timeline.description|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认信息 -->
+    {% if timeline.confirmed_by %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">确认信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">确认人</span>
+                    <span class="info-value">
+                        {{ timeline.confirmed_by.name|default:timeline.confirmed_by.username }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">确认时间</span>
+                    <span class="info-value">{{ timeline.confirmed_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

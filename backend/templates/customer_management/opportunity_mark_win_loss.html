@@ -1,0 +1,103 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}标记为{{ status_label }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block module_content %}
+<div class="workspace-content">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            {% if target_status == 'won' %}
+                <i class="bi bi-check-circle-fill text-success me-2"></i>标记为赢单
+            {% else %}
+                <i class="bi bi-x-circle-fill text-danger me-2"></i>标记为输单
+            {% endif %}
+        </h2>
+    </div>
+
+    <!-- 商机信息卡片 -->
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">商机信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <label class="info-label">商机编号</label>
+                    <div class="info-value">{{ opportunity.opportunity_number|default:"未编号" }}</div>
+                </div>
+                <div class="info-item">
+                    <label class="info-label">商机名称</label>
+                    <div class="info-value">{{ opportunity.name|default:opportunity.project_name }}</div>
+                </div>
+                <div class="info-item">
+                    <label class="info-label">客户</label>
+                    <div class="info-value">{{ opportunity.client.name }}</div>
+                </div>
+                <div class="info-item">
+                    <label class="info-label">商务经理</label>
+                    <div class="info-value">{{ opportunity.business_manager.username }}</div>
+                </div>
+                <div class="info-item">
+                    <label class="info-label">当前状态</label>
+                    <div class="info-value">
+                        <span class="badge bg-info">{{ opportunity.get_status_display }}</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <label class="info-label">预计金额</label>
+                    <div class="info-value">
+                        {% if opportunity.estimated_amount %}
+                            ¥{{ opportunity.estimated_amount|floatformat:2 }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="info-item">
+                    <label class="info-label">创建时间</label>
+                    <div class="info-value">{{ opportunity.created_time|date:"Y-m-d H:i" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认操作卡片 -->
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">确认操作</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="info-item">
+                    <label class="info-label">备注（可选）</label>
+                    <textarea class="form-control" id="comment" name="comment" rows="3" 
+                              placeholder="请输入标记为{{ status_label }}的原因或备注信息"></textarea>
+                </div>
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>注意：</strong>此操作将把商机状态更新为"{{ status_label }}"，请确认无误后再提交。
+                </div>
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'business_pages:opportunity_win_loss' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 取消
+                    </a>
+                    <button type="submit" class="btn {% if target_status == 'won' %}btn-success{% else %}btn-danger{% endif %}">
+                        {% if target_status == 'won' %}
+                            <i class="bi bi-check-circle"></i> 确认标记为赢单
+                        {% else %}
+                            <i class="bi bi-x-circle"></i> 确认标记为输单
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,561 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} - 维海科技信息化管理平台</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- 统一样式 -->
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+    
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --warning-color: #f9c74f;
+            --danger-color: #f94144;
+            --success-color: #4cc9f0;
+            --light-bg: #f5f7fb;
+            --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fb 0%, #e8ecf1 100%);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .contract-home-container {
+            padding: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            background: transparent;
+        }
+        
+        .contract-home-container > *:first-child {
+            margin-top: 0;
+        }
+        
+        .contract-home-container > *:last-child {
+            margin-bottom: 0;
+        }
+        
+        .page-header-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 2rem;
+            color: white;
+            margin-bottom: 2rem;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .page-header-section h1 {
+            color: white;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-header-section p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+        
+        .stats-card {
+            border-radius: 16px;
+            border: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 100%;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+            background: white;
+        }
+        
+        .stats-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: var(--card-shadow-hover);
+        }
+        
+        .stats-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .stats-card .card-body {
+            padding: 1.75rem;
+        }
+        
+        .stats-card-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(67, 97, 238, 0.05));
+            transition: all 0.3s ease;
+        }
+        
+        .stats-card:hover .stats-card-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+        
+        .stats-card-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .quick-actions-bar {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .quick-actions-bar .btn {
+            border-radius: 10px;
+            padding: 0.625rem 1.25rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .quick-actions-bar .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .quick-actions-bar .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .quick-actions-bar .input-group {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        .main-content {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+        
+        .main-content h5 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .sidebar {
+            background: white;
+            border-radius: 16px;
+            padding: 1.75rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+        }
+        
+        .sidebar h5 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 1.5rem;
+        }
+        
+        .activity-item {
+            padding: 1rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-time {
+            font-size: 0.875rem;
+            color: #718096;
+        }
+        
+        .module-card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+        }
+        
+        .module-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--card-shadow-hover);
+        }
+        
+        .module-card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .page-header-section {
+                padding: 1.5rem;
+            }
+            
+            .page-header-section h1 {
+                font-size: 1.5rem;
+            }
+            
+            .stats-card-value {
+                font-size: 1.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    {% if full_top_nav %}
+        {% include 'shared/top_nav.html' %}
+    {% endif %}
+    
+    <div class="container-fluid">
+        <div class="row">
+        {% if module_sidebar_nav %}
+        {# 合同管理布局 - 使用统一样式模板，带左侧菜单 #}
+        <div class="workspace workspace-two-column customer-management-layout">
+            <!-- 左侧导航菜单 -->
+            <aside class="workspace-nav">
+                <nav class="sidenav">
+                    <div class="sidenav-section">
+                        <div class="sidenav-links">
+                            {% for menu_group in module_sidebar_nav %}
+                            {% with has_children=menu_group.children|length|default:0 %}
+                            <div class="sidenav-item 
+                                        {% if menu_group.active %}active{% endif %}
+                                        {% if menu_group.active or menu_group.expanded %}expanded{% endif %}
+                                        {% if has_children > 0 %}has-children{% endif %}">
+                                
+                                {% if has_children > 0 %}
+                                {# 有子菜单：使用链接，点击展开/折叠 #}
+                                <a class="sidenav-link sidenav-toggle" 
+                                   href="{{ menu_group.url|default:'#' }}"
+                                   role="button"
+                                   aria-expanded="{% if menu_group.active or menu_group.expanded %}true{% else %}false{% endif %}"
+                                   aria-controls="submenu-{{ forloop.counter }}"
+                                   {% if menu_group.active %}data-active="true" aria-current="page"{% endif %}>
+                                    {% if menu_group.icon %}<span class="sidenav-icon">{{ menu_group.icon }}</span>{% endif %}
+                                    <span class="sidenav-label">{{ menu_group.label }}</span>
+                                </a>
+                                
+                                <div id="submenu-{{ forloop.counter }}" class="submenu" 
+                                     {% if not menu_group.active and not menu_group.expanded %}style="display: none;"{% endif %}>
+                                    {% for child in menu_group.children %}
+                                    <a class="sidenav-link sidenav-sub-link {% if child.active %}active{% endif %}" 
+                                       href="{{ child.url|default:'#' }}" 
+                                       {% if child.active %}data-active="true" aria-current="page"{% endif %}>
+                                        {% if child.icon %}<span class="sidenav-icon">{{ child.icon }}</span>{% endif %}
+                                        <span class="sidenav-label">{{ child.label }}</span>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                                
+                                {% else %}
+                                {# 无子菜单：使用普通链接 #}
+                                <a class="sidenav-link {% if menu_group.active %}active{% endif %}" 
+                                   href="{{ menu_group.url|default:'#' }}"
+                                   {% if menu_group.active %}data-active="true" aria-current="page"{% endif %}>
+                                    {% if menu_group.icon %}<span class="sidenav-icon">{{ menu_group.icon }}</span>{% endif %}
+                                    <span class="sidenav-label">{{ menu_group.label }}</span>
+                                </a>
+                                {% endif %}
+                                
+                            </div>
+                            {% endwith %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </nav>
+            </aside>
+            
+            <!-- 主内容区域 -->
+            <main class="workspace-main customer-content">
+        {% else %}
+        <div class="workspace-content">
+        {% endif %}
+                <div class="contract-home-container">
+                    <!-- 页面标题 -->
+                    <div class="page-header-section">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="me-3" style="font-size: 2.5rem; opacity: 0.9;">{{ page_icon }}</div>
+                                    <div>
+                                        <h1 class="mb-0">{{ page_title }}</h1>
+                                        <p class="mb-0 mt-1">{{ description }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-light btn-sm" onclick="location.reload()" style="border-radius: 8px; backdrop-filter: blur(10px); background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);">
+                                <i class="bi bi-arrow-clockwise me-1"></i> 刷新
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 1. 数据总览卡片 -->
+                    {% if summary_cards %}
+                    <div class="position-relative">
+                    <div class="row g-4 mb-4">
+                        {% for card in summary_cards %}
+                        <div class="col-md-3 col-sm-6">
+                            <div class="card stats-card shadow-sm" 
+                                 {% if card.url %}onclick="window.location.href='{{ card.url }}'"{% endif %}>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="text-muted mb-3" style="font-size: 0.875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">{{ card.label }}</h6>
+                                            <h3 class="stats-card-value mb-2">{{ card.value }}</h3>
+                                            {% if card.subvalue %}
+                                            <small class="text-muted" style="font-size: 0.8125rem;">{{ card.subvalue }}</small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="stats-card-icon">
+                                            <span>{{ card.icon }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- 2. 快捷操作栏 -->
+                    <div class="quick-actions-bar d-flex flex-wrap gap-3 align-items-center">
+                        {% if sections %}
+                            {% for section in sections %}
+                                {% if section.title == '快捷操作' %}
+                                    {% for item in section.items %}
+                                        <a href="{{ item.url }}" class="btn btn-primary d-flex align-items-center">
+                                            <span class="me-2">{{ item.icon }}</span> {{ item.label }}
+                                        </a>
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        <a href="{% url 'business_pages:contract_management_list' %}" class="btn btn-outline-primary d-flex align-items-center">
+                            <i class="bi bi-upload me-2"></i> 批量导入
+                        </a>
+                        <a href="{% url 'business_pages:contract_management_list' %}" class="btn btn-outline-secondary d-flex align-items-center">
+                            <i class="bi bi-download me-2"></i> 导出报表
+                        </a>
+                        <div class="ms-auto d-flex">
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent border-end-0">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" placeholder="搜索合同名称、编号或客户..." 
+                                       onkeypress="if(event.key==='Enter') { window.location.href='{% url 'business_pages:contract_management_list' %}?search=' + this.value; }">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-lg-9">
+                            <!-- 3. 智能筛选区 -->
+                            <div class="main-content mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="fw-bold mb-0">合同筛选</h5>
+                                    <a href="{% url 'business_pages:contract_management_list' %}" class="text-decoration-none small">清除筛选</a>
+                                </div>
+                                
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted">合同状态</label>
+                                        <select class="form-select form-select-sm" onchange="filterContracts()">
+                                            <option selected>全部状态</option>
+                                            <option>草稿</option>
+                                            <option>进行中</option>
+                                            <option>待审批</option>
+                                            <option>已完成</option>
+                                            <option>已过期</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted">时间范围</label>
+                                        <select class="form-select form-select-sm" onchange="filterContracts()">
+                                            <option selected>全部时间</option>
+                                            <option>本周到期</option>
+                                            <option>本月到期</option>
+                                            <option>近三个月</option>
+                                            <option>本年</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted">负责人</label>
+                                        <select class="form-select form-select-sm" onchange="filterContracts()">
+                                            <option selected>全部负责人</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted">金额范围</label>
+                                        <select class="form-select form-select-sm" onchange="filterContracts()">
+                                            <option selected>全部金额</option>
+                                            <option>10万以下</option>
+                                            <option>10-50万</option>
+                                            <option>50-100万</option>
+                                            <option>100万以上</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 4. 数据看板 -->
+                            <div class="main-content">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0">合同列表</h5>
+                                </div>
+                                
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    点击 <a href="{% url 'business_pages:contract_management_list' %}" class="alert-link">合同列表</a> 查看完整的合同管理功能
+                                </div>
+                                
+                                <!-- 功能模块入口 -->
+                                {% if sections %}
+                                    {% for section in sections %}
+                                        {% if section.title == '功能模块' %}
+                                            <div class="row g-3">
+                                                {% for item in section.items %}
+                                                <div class="col-md-4">
+                                                    <div class="card module-card h-100">
+                                                        <div class="card-body">
+                                                            <span class="module-card-icon">{{ item.icon }}</span>
+                                                            <h5 class="card-title fw-bold mb-3">
+                                                                {{ item.label }}
+                                                            </h5>
+                                                            <p class="card-text text-muted mb-3">{{ item.description }}</p>
+                                                            <a href="{{ item.url }}" class="btn btn-outline-primary btn-sm">
+                                                                {{ item.link_label|default:'进入模块 →' }}
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- 5. 最近活动侧边栏 -->
+                        <div class="col-lg-3">
+                            <div class="sidebar">
+                                <h5 class="fw-bold mb-4">最近活动</h5>
+                                
+                                <div class="activity-item">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <span class="fw-semibold">欢迎使用</span>
+                                        <span class="activity-time">{% now "H:i" %}</span>
+                                    </div>
+                                    <p class="small mb-1">合同管理系统已就绪</p>
+                                    <small class="text-muted">系统 · 刚刚</small>
+                                </div>
+                                
+                                <div class="text-center mt-4">
+                                    <a href="{% url 'business_pages:contract_management_list' %}" class="text-decoration-none small">
+                                        <i class="bi bi-clock-history me-1"></i> 查看全部活动记录
+                                    </a>
+                                </div>
+                                
+                                <hr class="my-4">
+                                
+                                <h6 class="fw-bold mb-3">快捷链接</h6>
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'business_pages:contract_management_list' %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-file-earmark-text me-2"></i> 合同模板库
+                                    </a>
+                                    <a href="{% url 'business_pages:contract_management_list' %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-graph-up me-2"></i> 数据报表
+                                    </a>
+                                    <a href="{% url 'business_pages:contract_management_list' %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-gear me-2"></i> 审批流程设置
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        {% if module_sidebar_nav %}
+            </main>
+        </div>
+        {% else %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.stats-card').forEach((card, index) => {
+                card.addEventListener('click', function() {
+                    this.style.transform = 'scale(0.98)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 200);
+                });
+            });
+            
+            const elements = document.querySelectorAll('.stats-card, .main-content, .sidebar');
+            elements.forEach((el, index) => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    el.style.transition = 'all 0.5s ease-out';
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+        
+        function filterContracts() {
+            console.log('筛选功能开发中...');
+        }
+    </script>
+    <script src="{% static 'js/sidebar.js' %}"></script>
+</body>
+</html>

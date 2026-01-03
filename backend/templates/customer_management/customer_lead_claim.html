@@ -1,0 +1,49 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="info-card">
+    <div class="info-card-header">
+        <h5 class="info-card-title">认领客户线索</h5>
+    </div>
+    <div class="info-card-body">
+        <div class="info-section mb-4">
+            <h6 class="info-section-title">线索信息</h6>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">联系人</span>
+                    <span class="info-value">{{ lead.contact_name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">公司名称</span>
+                    <span class="info-value">{{ lead.company_name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">联系电话</span>
+                    <span class="info-value">{{ lead.contact_phone|default:"—" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">线索来源</span>
+                    <span class="info-value">{{ lead.get_lead_source_display }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 认领后，此线索将分配给您负责跟进。
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{% url 'business_pages:customer_lead_pool' %}" class="btn btn-outline-secondary">取消</a>
+                <button type="submit" class="btn btn-success">确认认领</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

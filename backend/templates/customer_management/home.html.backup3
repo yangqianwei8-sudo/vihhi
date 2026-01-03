@@ -1,0 +1,327 @@
+{% extends "customer_management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
+
+{% block extra_css %}
+{% load static %}
+<style>
+    :root {
+        --brand-primary: #142F5B;
+        --brand-accent: #1F3E7C;
+        --brand-soft: #F3F6FB;
+        --brand-light: #E7EEF8;
+    }
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+    .center-hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at top right, rgba(255,255,255,0.25), transparent 60%);
+        pointer-events: none;
+    }
+    .center-hero h1 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: #fff;
+    }
+    .center-hero p {
+        color: rgba(255,255,255,0.9);
+        margin: 0;
+        font-size: 15px;
+    }
+    .summary-card {
+        border-radius: 18px;
+        background: var(--vh-card-bg);
+        padding: 20px 22px;
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        height: 100%;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: default;
+    }
+    .summary-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 40px rgba(20, 47, 91, 0.12);
+    }
+    .summary-card.clickable {
+        cursor: pointer;
+    }
+    .summary-card.clickable:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 20px 48px rgba(20, 47, 91, 0.15);
+        border-color: var(--brand-primary);
+    }
+    .summary-card-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+    .summary-card-link:hover {
+        text-decoration: none;
+        color: inherit;
+    }
+    .summary-card h3 {
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        color: rgba(20, 47, 91, 0.6);
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+    .summary-card .value {
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--brand-primary);
+        margin-bottom: 6px;
+        line-height: 1.2;
+    }
+    .summary-card .hint {
+        font-size: 12px;
+        color: rgba(20, 47, 91, 0.55);
+        margin: 0;
+    }
+    .section-block {
+        background: var(--vh-card-bg);
+        border-radius: 20px;
+        padding: 24px 26px;
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        box-shadow: 0 16px 40px rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--brand-primary);
+        margin-bottom: 6px;
+    }
+    .section-desc {
+        font-size: 13px;
+        color: rgba(20, 47, 91, 0.55);
+        margin-bottom: 18px;
+    }
+    .section-item {
+        background: var(--brand-soft);
+        border-radius: 16px;
+        padding: 16px 18px;
+        height: 100%;
+        border: 1px solid rgba(20,47,91,0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .section-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(20, 47, 91, 0.1);
+    }
+    .section-item h4 {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--brand-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .section-item p {
+        font-size: 13px;
+        color: rgba(20, 47, 91, 0.6);
+        flex: 1;
+        margin: 0;
+    }
+    .section-item a {
+        align-self: flex-start;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--brand-accent);
+        text-decoration: none;
+    }
+    .section-item a:hover {
+        text-decoration: underline;
+    }
+
+    .notice-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .notice-item {
+        display: flex;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 12px;
+        border-left: 4px solid;
+        background: var(--vh-card-bg);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .notice-item:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .notice-item.notice-warning {
+        border-left-color: #f59e0b;
+        background: rgba(245, 158, 11, 0.05);
+    }
+    .notice-item.notice-info {
+        border-left-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.05);
+    }
+    .notice-icon {
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+    .notice-content {
+        flex: 1;
+    }
+    .notice-title {
+        font-weight: 600;
+        color: var(--brand-primary);
+        margin-bottom: 4px;
+        font-size: 14px;
+    }
+    .notice-text {
+        color: rgba(20, 47, 91, 0.7);
+        margin-bottom: 4px;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    .notice-meta {
+        font-size: 12px;
+        color: rgba(20, 47, 91, 0.5);
+    }
+    .notice-date {
+        margin-right: 8px;
+    }
+    .summary-card .change-indicator {
+        display: inline-block;
+        font-size: 12px;
+        margin-left: 4px;
+        font-weight: 600;
+    }
+    .summary-card .change-indicator.positive {
+        color: #10b981;
+    }
+    .summary-card .change-indicator.negative {
+        color: #ef4444;
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <h1>{{ page_title }}</h1>
+        <p>{{ description|default:"" }}</p>
+    </div>
+
+    <!-- 统计卡片区域 -->
+    {% if summary_cards %}
+    <div class="row g-3 mb-4">
+        {% for card in summary_cards %}
+        <div class="col-lg-3 col-md-6 col-sm-6">
+            {% if card.url %}
+            <a href="{{ card.url }}" class="summary-card-link">
+                <div class="summary-card clickable">
+                    <h3>{{ card.label }}</h3>
+                    <div class="value">{{ card.value }}</div>
+                    {% if card.hint %}
+                    <div class="hint">{{ card.hint }}</div>
+                    {% endif %}
+                </div>
+            </a>
+            {% else %}
+            <div class="summary-card">
+                <h3>{{ card.label }}</h3>
+                <div class="value">{{ card.value }}</div>
+                {% if card.hint %}
+                <div class="hint">{{ card.hint }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 功能模块区域 -->
+    {% for section in sections %}
+    <div class="section-block">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+            <div>
+                <div class="section-title">{{ section.title }}</div>
+                {% if section.description %}
+                <div class="section-desc">{{ section.description }}</div>
+                {% endif %}
+            </div>
+            {% if section.action %}
+            <a class="btn btn-sm btn-outline-primary" href="{{ section.action.url }}">{{ section.action.label }}</a>
+            {% endif %}
+        </div>
+        <div class="row g-3">
+            {% for item in section.items %}
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="section-item h-100">
+                    <h4>
+                        {% if item.icon %}{{ item.icon }} {% endif %}{{ item.label }}
+                    </h4>
+                    {% if item.description %}
+                    <p>{{ item.description }}</p>
+                    {% endif %}
+                    {% if item.url %}
+                    <a href="{{ item.url }}">{{ item.link_label|default:"进入模块 →" }}</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    
+    <!-- 最近动态/提醒 -->
+    {% if recent_notices %}
+    <div class="section-block">
+        <div class="section-title mb-3">📢 最近动态</div>
+        <div class="notice-list">
+            {% for notice in recent_notices %}
+            <div class="notice-item notice-{{ notice.type }}">
+                <div class="notice-icon">{{ notice.icon }}</div>
+                <div class="notice-content">
+                    <div class="notice-title">{{ notice.title }}</div>
+                    <div class="notice-text">{{ notice.content }}</div>
+                    <div class="notice-meta">
+                        <span class="notice-date">{{ notice.date|date:"Y-m-d" }}</span>
+                        {% if notice.author %}<span class="notice-author"> - {{ notice.author }}</span>{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    
+    {% if not summary_cards and not sections %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        您当前没有访问任何客户管理模块的权限，请联系管理员。
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

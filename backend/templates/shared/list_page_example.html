@@ -1,0 +1,114 @@
+{% extends "shared/list_page_base.html" %}
+{% load static %}
+
+{% comment %}
+这是一个使用共享列表页模板的完整示例
+复制此文件并根据需要修改即可快速创建新的列表页
+{% endcomment %}
+
+{% block list_page_title %}示例列表{% endblock %}
+
+{% block create_url %}{% url 'app:create' %}{% endblock %}
+{% block create_button_text %}新增示例{% endblock %}
+
+{% block list_page_summary_cards %}
+{% if summary_cards %}
+<div class="row mb-4">
+    {% for card in summary_cards %}
+    <div class="col-md-3 mb-3">
+        <div class="summary-card summary-card-{{ card.color|default:'primary' }}">
+            <h3>{{ card.label }}</h3>
+            <div class="summary-value">{{ card.value }}</div>
+            <p class="summary-hint">{{ card.hint|default:'' }}</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block list_page_tabs %}
+{% if tabs %}
+<div class="list-page-tabs mb-3">
+    <ul class="nav nav-tabs">
+        {% for tab_item in tabs %}
+        <li class="nav-item">
+            <a class="nav-link {% if tab == tab_item.value %}active{% endif %}" 
+               href="?tab={{ tab_item.value }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">
+                {{ tab_item.label }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block list_page_filter_fields %}
+<div class="list-page-filter-item" data-filter-field="status">
+    <label>状态:</label>
+    <select name="status" class="form-select form-select-sm">
+        <option value="">全部</option>
+        {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</div>
+<div class="list-page-filter-item" data-filter-field="category">
+    <label>分类:</label>
+    <select name="category" class="form-select form-select-sm">
+        <option value="">全部</option>
+        {% for category in categories %}
+        <option value="{{ category.id }}" {% if category_id == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endblock %}
+
+{% block search_placeholder %}搜索名称、编号...{% endblock %}
+
+{% block list_page_table_headers %}
+<th style="width: 200px;">名称</th>
+<th style="width: 120px;">编号</th>
+<th style="width: 150px;">分类</th>
+<th style="width: 100px; text-align: center;">状态</th>
+<th style="width: 150px; text-align: center;">创建时间</th>
+<th style="width: 150px; text-align: center;">操作</th>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td>
+    <a href="{% url 'app:detail' item.id %}" class="info-value-link">
+        {{ item.name }}
+    </a>
+</td>
+<td>{{ item.number|default:'未编号' }}</td>
+<td>{{ item.category.name|default:'未分类' }}</td>
+<td style="text-align: center;">
+    <span class="badge bg-{{ item.status_color|default:'secondary' }}">{{ item.get_status_display }}</span>
+</td>
+<td style="text-align: center;">
+    {{ item.created_time|date:'Y-m-d H:i' }}
+</td>
+<td style="text-align: center;">
+    <div class="btn-group" role="group">
+        <a href="{% url 'app:detail' item.id %}" class="btn btn-sm btn-outline-primary" title="查看详情">
+            <i class="bi bi-eye"></i>
+        </a>
+        {% if can_create %}
+        <a href="{% url 'app:edit' item.id %}" class="btn btn-sm btn-outline-secondary" title="编辑">
+            <i class="bi bi-pencil"></i>
+        </a>
+        {% endif %}
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_colspan %}7{% endblock %}
+{% block empty_message %}暂无数据{% endblock %}
+
+{% block batch_delete_api_url %}/api/app/batch-delete/{% endblock %}
+{% block batch_export_api_url %}/api/app/batch-export/{% endblock %}
+{% block export_filename %}示例列表_{{ new Date().toISOString().slice(0,10) }}.xlsx{% endblock %}
+
+{% block pagination_params %}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if category_id %}&category_id={{ category_id }}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}{% endblock %}

@@ -1,0 +1,194 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}上传文件 - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题和操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📝 上传文件</h2>
+            <p class="text-muted mb-0">准备交付文件，支持多文件上传</p>
+        </div>
+        <div>
+            <a href="{% url 'delivery_pages:delivery_file_prep_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <!-- 上传表单 - 使用样式模板 -->
+    <form method="post" id="fileUploadForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- 基本信息 - 使用样式模板 -->
+        <div class="info-card info-card-fade-in mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">关联信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-1">
+                    <div class="info-item info-item-full-width">
+                        <label class="info-label info-label-required">关联交付单</label>
+                        <select name="delivery_id" class="form-select" required id="delivery_select">
+                            <option value="">请选择交付单</option>
+                            {% for delivery in draft_deliveries %}
+                            <option value="{{ delivery.id }}">
+                                {{ delivery.delivery_number }} - {{ delivery.title }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">请选择草稿状态的交付单，或先创建交付单</small>
+                        <div class="mt-2">
+                            <a href="{% url 'delivery_pages:delivery_create' %}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="bi bi-plus-circle"></i> 创建新交付单
+                            </a>
+                        </div>
+                    </div>
+                    <div class="info-item info-item-full-width">
+                        <label class="info-label">文件分类</label>
+                        <select name="file_category" class="form-select">
+                            <option value="project">项目文件</option>
+                            <option value="non_project">非项目文件</option>
+                        </select>
+                        <small class="form-text text-muted">选择文件分类，用于文件管理</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文件上传 - 使用样式模板 -->
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">文件上传</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-1">
+                    <div class="info-item info-item-full-width">
+                        <label class="info-label info-label-required">选择文件</label>
+                        <input type="file" name="files" class="form-control" multiple required 
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.dwg,.dgn,.jpg,.jpeg,.png,.zip,.rar,.7z">
+                        <small class="form-text text-muted">
+                            支持格式：PDF、Word、Excel、PowerPoint、CAD图纸、图片、压缩包等
+                            <br>支持多文件上传，单个文件最大100MB
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- 拖拽上传区域 -->
+                <div class="mt-4">
+                    <div id="dropZone" class="border border-dashed rounded p-5 text-center" 
+                         style="border-color: #dee2e6; background-color: #f8f9fa; cursor: pointer;">
+                        <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #6c757d;"></i>
+                        <p class="mt-3 mb-0 text-muted">拖拽文件到此处或点击选择文件</p>
+                        <small class="text-muted">支持多文件上传</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <a href="{% url 'delivery_pages:delivery_file_prep_list' %}" class="btn btn-outline-secondary">取消</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-upload"></i> 上传文件
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.querySelector('input[type="file"]');
+    const form = document.getElementById('fileUploadForm');
+    
+    // 点击拖拽区域触发文件选择
+    dropZone.addEventListener('click', function() {
+        fileInput.click();
+    });
+    
+    // 文件选择变化时更新显示
+    fileInput.addEventListener('change', function() {
+        updateFileDisplay();
+    });
+    
+    // 拖拽事件
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropZone.style.borderColor = '#007bff';
+        dropZone.style.backgroundColor = '#e7f3ff';
+    });
+    
+    dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        dropZone.style.borderColor = '#dee2e6';
+        dropZone.style.backgroundColor = '#f8f9fa';
+    });
+    
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropZone.style.borderColor = '#dee2e6';
+        dropZone.style.backgroundColor = '#f8f9fa';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            // 创建新的FileList
+            const dataTransfer = new DataTransfer();
+            for (let file of files) {
+                dataTransfer.items.add(file);
+            }
+            fileInput.files = dataTransfer.files;
+            updateFileDisplay();
+        }
+    });
+    
+    function updateFileDisplay() {
+        const files = fileInput.files;
+        if (files.length > 0) {
+            let fileList = '<div class="mt-3"><strong>已选择文件：</strong><ul class="list-unstyled mt-2">';
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fileSize = (file.size / 1024 / 1024).toFixed(2);
+                fileList += `<li><i class="bi bi-file-earmark"></i> ${file.name} <small class="text-muted">(${fileSize} MB)</small></li>`;
+            }
+            fileList += '</ul></div>';
+            dropZone.innerHTML = '<i class="bi bi-cloud-upload" style="font-size: 3rem; color: #6c757d;"></i>' + 
+                                '<p class="mt-3 mb-0 text-muted">拖拽文件到此处或点击选择文件</p>' +
+                                '<small class="text-muted">支持多文件上传</small>' + fileList;
+        }
+    }
+    
+    // 表单验证
+    form.addEventListener('submit', function(e) {
+        const deliveryId = document.getElementById('delivery_select').value;
+        const files = fileInput.files;
+        
+        if (!deliveryId) {
+            e.preventDefault();
+            alert('请选择关联交付单');
+            return false;
+        }
+        
+        if (files.length === 0) {
+            e.preventDefault();
+            alert('请选择要上传的文件');
+            return false;
+        }
+        
+        // 检查文件大小（100MB限制）
+        for (let i = 0; i < files.length; i++) {
+            if (files[i].size > 100 * 1024 * 1024) {
+                e.preventDefault();
+                alert(`文件 "${files[i].name}" 超过100MB限制`);
+                return false;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
+

@@ -12,7 +12,7 @@ class Command(BaseCommand):
         # 结算中心
         'settlement_center': '结算中心',
         # 生产质量
-        'production_quality': '生产质量',
+        # 'production_quality': '生产质量',  # 已删除生产质量模块
         # 客户成功
         'customer_success': '客户成功',
         # 人事管理
@@ -68,7 +68,8 @@ class Command(BaseCommand):
             
             # 检查是否有未映射的模块
             all_modules = PermissionItem.objects.values_list('module', flat=True).distinct()
-            unmapped = [m for m in all_modules if m not in ['项目中心', '结算中心', '生产质量', '客户成功', '人事管理', '风险管理', '系统管理', '权限管理', '资源标准', '任务协作', '交付客户']]
+            valid_modules = ['生产管理', '结算管理', '生产质量', '客户管理', '商机管理', '合同管理', '人事管理', '风险管理', '系统管理', '权限管理', '资源标准', '任务协作', '交付客户']
+            unmapped = [m for m in all_modules if m not in valid_modules]
             if unmapped:
                 self.stdout.write(
                     self.style.WARNING(

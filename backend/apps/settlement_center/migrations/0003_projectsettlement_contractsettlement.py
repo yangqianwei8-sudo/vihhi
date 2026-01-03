@@ -10,8 +10,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('customer_success', '0007_contractstatuslog'),
-        ('project_center', '0018_add_project_tasks'),
+        ('production_management', '0001_initial'),
+        ('production_management', '0001_initial'),
         ('settlement_center', '0002_rename_settlement__project_c8d1e8_idx_settlement__project_3ae14d_idx_and_more'),
     ]
 
@@ -46,12 +46,12 @@ class Migration(migrations.Migration):
                 ('created_time', models.DateTimeField(default=django.utils.timezone.now, verbose_name='创建时间')),
                 ('updated_time', models.DateTimeField(auto_now=True, verbose_name='更新时间')),
                 ('confirmed_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='confirmed_settlements', to=settings.AUTH_USER_MODEL, verbose_name='确认人')),
-                ('contract', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='project_settlements', to='customer_success.businesscontract', verbose_name='关联合同')),
+                ('contract', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='project_settlements', to='production_management.businesscontract', verbose_name='关联合同')),
                 ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='created_settlements', to=settings.AUTH_USER_MODEL, verbose_name='创建人')),
                 ('finance_reviewer', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='finance_reviewed_settlements', to=settings.AUTH_USER_MODEL, verbose_name='财务审核人')),
                 ('general_manager_reviewer', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='gm_reviewed_settlements', to=settings.AUTH_USER_MODEL, verbose_name='总经理')),
                 ('manager_reviewer', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='manager_reviewed_settlements', to=settings.AUTH_USER_MODEL, verbose_name='部门经理')),
-                ('project', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='settlements', to='project_center.project', verbose_name='关联项目')),
+                ('project', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='settlements', to='production_management.project', verbose_name='关联项目')),
                 ('submitted_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='submitted_settlements', to=settings.AUTH_USER_MODEL, verbose_name='提交人')),
             ],
             options={
@@ -89,7 +89,7 @@ class Migration(migrations.Migration):
                 ('updated_time', models.DateTimeField(auto_now=True, verbose_name='更新时间')),
                 ('approver', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='approved_contract_settlements', to=settings.AUTH_USER_MODEL, verbose_name='审核人')),
                 ('confirmed_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='confirmed_contract_settlements', to=settings.AUTH_USER_MODEL, verbose_name='确认人')),
-                ('contract', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='contract_settlements', to='customer_success.businesscontract', verbose_name='关联合同')),
+                ('contract', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='contract_settlements', to='production_management.businesscontract', verbose_name='关联合同')),
                 ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='created_contract_settlements', to=settings.AUTH_USER_MODEL, verbose_name='创建人')),
                 ('submitted_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='submitted_contract_settlements', to=settings.AUTH_USER_MODEL, verbose_name='提交人')),
             ],

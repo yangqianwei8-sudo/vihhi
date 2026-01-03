@@ -10,9 +10,8 @@ import django.utils.timezone
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('production_quality', '0004_opinion_closed_at_opinion_cycle_time_hours_and_more'),
-        ('customer_success', '0007_contractstatuslog'),
-        ('project_center', '0018_add_project_tasks'),
+        # ('production_quality', '0004_opinion_closed_at_opinion_cycle_time_hours_and_more'),  # 已删除production_quality模块
+        ('production_management', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('settlement_center', '0004_remove_projectsettlement_finance_review_comment_and_more'),
     ]
@@ -149,7 +148,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='projectsettlement',
             name='project',
-            field=models.ForeignKey(help_text='仅显示状态为"已完工"的项目', on_delete=django.db.models.deletion.PROTECT, related_name='settlements', to='project_center.project', verbose_name='关联项目'),
+            field=models.ForeignKey(help_text='仅显示状态为"已完工"的项目', on_delete=django.db.models.deletion.PROTECT, related_name='settlements', to='production_management.project', verbose_name='关联项目'),
         ),
         migrations.AlterField(
             model_name='projectsettlement',
@@ -187,7 +186,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='servicefeerate',
             name='contract',
-            field=models.ForeignKey(blank=True, help_text='如果为空，则为全局费率表', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='service_fee_rates', to='customer_success.businesscontract', verbose_name='关联合同'),
+            field=models.ForeignKey(blank=True, help_text='如果为空，则为全局费率表', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='service_fee_rates', to='production_management.businesscontract', verbose_name='关联合同'),
         ),
         migrations.AddField(
             model_name='servicefeerate',

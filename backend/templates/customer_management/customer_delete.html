@@ -1,0 +1,61 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+
+
+{% block module_content %}
+<div class="workspace-content">
+    <div class="container-fluid py-4">
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">{{ page_title }}</h5>
+            </div>
+            <div class="info-card-body">
+                {% if has_relations %}
+                <div class="alert alert-danger">
+                    <h6>无法删除客户</h6>
+                    <p>该客户关联了以下数据：</p>
+                    <ul>
+                        {% if related_projects_count > 0 %}
+                        <li>{{ related_projects_count }} 个项目</li>
+                        {% endif %}
+                        {% if related_opportunities_count > 0 %}
+                        <li>{{ related_opportunities_count }} 个商机</li>
+                        {% endif %}
+                        {% if related_contracts_count > 0 %}
+                        <li>{{ related_contracts_count }} 个合同</li>
+                        {% endif %}
+                        {% if related_contacts_count > 0 %}
+                        <li>{{ related_contacts_count }} 个联系人</li>
+                        {% endif %}
+                    </ul>
+                    <p>请先解除关联关系后再删除。</p>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <h6>确认删除</h6>
+                    <p>您确定要删除客户 <strong>{{ client.name }}</strong> 吗？此操作不可恢复。</p>
+                </div>
+                {% endif %}
+                
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    {% if not has_relations %}
+                    <form method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">确认删除</button>
+                    </form>
+                    {% endif %}
+                    <a href="{% url 'business_pages:customer_detail' client.id %}" class="btn btn-secondary">取消</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

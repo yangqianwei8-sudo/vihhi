@@ -1,0 +1,128 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}{% if expense %}编辑费用{% else %}创建费用{% endif %} - {{ case.case_number }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:expense_list' case.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <!-- 表单 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">费用信息</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" enctype="multipart/form-data" id="expenseForm">
+                {% csrf_token %}
+                
+                <!-- 基本信息 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">基本信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">费用名称 <span class="text-danger">*</span></label>
+                        <input type="text" name="expense_name" class="form-control" 
+                               value="{% if expense %}{{ expense.expense_name }}{% endif %}" required placeholder="请输入费用名称">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">费用类型 <span class="text-danger">*</span></label>
+                        <select name="expense_type" class="form-select" required>
+                            <option value="">请选择</option>
+                            <option value="litigation_fee" {% if expense and expense.expense_type == 'litigation_fee' %}selected{% endif %}>诉讼费</option>
+                            <option value="lawyer_fee" {% if expense and expense.expense_type == 'lawyer_fee' %}selected{% endif %}>律师费</option>
+                            <option value="appraisal_fee" {% if expense and expense.expense_type == 'appraisal_fee' %}selected{% endif %}>鉴定费</option>
+                            <option value="travel_fee" {% if expense and expense.expense_type == 'travel_fee' %}selected{% endif %}>差旅费</option>
+                            <option value="other" {% if expense and expense.expense_type == 'other' %}selected{% endif %}>其他费用</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">金额 <span class="text-danger">*</span></label>
+                        <input type="number" name="amount" class="form-control" step="0.01" 
+                               value="{% if expense and expense.amount %}{{ expense.amount }}{% endif %}" required placeholder="0.00">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">费用日期 <span class="text-danger">*</span></label>
+                        <input type="date" name="expense_date" class="form-control" 
+                               value="{% if expense %}{{ expense.expense_date|date:'Y-m-d' }}{% else %}{{ 'now'|date:'Y-m-d' }}{% endif %}" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">支付方式</label>
+                        <select name="payment_method" class="form-select">
+                            <option value="">请选择</option>
+                            <option value="cash" {% if expense and expense.payment_method == 'cash' %}selected{% endif %}>现金</option>
+                            <option value="transfer" {% if expense and expense.payment_method == 'transfer' %}selected{% endif %}>转账</option>
+                            <option value="check" {% if expense and expense.payment_method == 'check' %}selected{% endif %}>支票</option>
+                            <option value="other" {% if expense and expense.payment_method == 'other' %}selected{% endif %}>其他</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">支付状态</label>
+                        <select name="payment_status" class="form-select">
+                            <option value="pending" {% if expense and expense.payment_status == 'pending' %}selected{% elif not expense %}selected{% endif %}>待支付</option>
+                            <option value="paid" {% if expense and expense.payment_status == 'paid' %}selected{% endif %}>已支付</option>
+                            <option value="reimbursed" {% if expense and expense.payment_status == 'reimbursed' %}selected{% endif %}>已报销</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">关联项目（可选）</label>
+                        <select name="project" class="form-select">
+                            <option value="">不关联项目</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}" {% if expense and expense.project_id == project.id %}selected{% endif %}>
+                                {{ project.project_number }} - {{ project.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">发票文件</label>
+                        <input type="file" name="invoice_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                        {% if expense and expense.invoice_file %}
+                        <small class="form-text text-muted">当前文件：<a href="{{ expense.invoice_file.url }}" target="_blank">{{ expense.invoice_file.name }}</a></small>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">费用说明</label>
+                        <textarea name="description" class="form-control" rows="3" 
+                                  placeholder="请输入费用说明">{% if expense %}{{ expense.description }}{% endif %}</textarea>
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'litigation_pages:expense_list' case.id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> 取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {% if expense %}保存{% else %}创建{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,201 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}时间节点日历{% endblock %}
+
+
+
+{% block extra_css %}
+<style>
+    .calendar-container {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background: var(--vh-border);
+        border: 1px solid var(--vh-border);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+    }
+    .calendar-day-header {
+        background: var(--vh-primary);
+        color: #fff;
+        padding: var(--spacing-sm);
+        text-align: center;
+        font-weight: 600;
+        font-size: var(--font-size-sm);
+    }
+    .calendar-day {
+        background: var(--vh-card-bg);
+        padding: var(--spacing-sm);
+        min-height: 100px;
+        position: relative;
+    }
+    .calendar-day.other-month {
+        background: var(--vh-surface);
+        color: var(--vh-text-muted);
+    }
+    .calendar-day.today {
+        background: var(--vh-primary-light);
+        border: 2px solid var(--vh-primary);
+    }
+    .calendar-day.has-events {
+        background: #fff3cd;
+    }
+    .calendar-day-number {
+        font-weight: 600;
+        margin-bottom: var(--spacing-xs);
+    }
+    .calendar-event {
+        font-size: var(--font-size-xs);
+        padding: 2px 4px;
+        margin: 2px 0;
+        border-radius: 4px;
+        background: var(--vh-info);
+        color: #fff;
+        cursor: pointer;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .calendar-event.urgent {
+        background: var(--vh-danger);
+    }
+    .calendar-event.warning {
+        background: var(--vh-warning);
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <div class="btn-group">
+                <a href="{% url 'litigation_pages:litigation_home' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回首页
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选器 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">筛选条件</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">关联案件</label>
+                    <select name="case_id" class="form-select form-select-sm">
+                        <option value="">全部案件</option>
+                        {% for case_item in cases %}
+                        <option value="{{ case_item.id }}" {% if case_id == case_item.id|stringformat:"s" %}selected{% endif %}>
+                            {{ case_item.case_number }} - {{ case_item.case_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">节点类型</label>
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">全部类型</option>
+                        <option value="trial" {% if timeline_type == 'trial' %}selected{% endif %}>开庭时间</option>
+                        <option value="appeal" {% if timeline_type == 'appeal' %}selected{% endif %}>上诉期限</option>
+                        <option value="evidence" {% if timeline_type == 'evidence' %}selected{% endif %}>举证期限</option>
+                        <option value="defense" {% if timeline_type == 'defense' %}selected{% endif %}>答辩期限</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-search"></i> 筛选
+                        </button>
+                        <a href="{% url 'litigation_pages:timeline_calendar' %}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-arrow-counterclockwise"></i> 重置
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 日历视图 -->
+    {% if timelines_by_month %}
+    {% for month_key, month_timelines in timelines_by_month.items %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">{{ month_key }} 时间节点</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>节点名称</th>
+                            <th>节点类型</th>
+                            <th>关联案件</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for timeline in month_timelines %}
+                        <tr {% if timeline.reminder_enabled and timeline.timeline_date <= warning_date and timeline.status != 'completed' %}class="table-warning"{% endif %}>
+                            <td>
+                                {{ timeline.timeline_date|date:"Y-m-d" }}
+                                {% if timeline.reminder_enabled and timeline.timeline_date <= warning_date and timeline.status != 'completed' %}
+                                <span class="badge bg-danger ms-1">即将到期</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'litigation_pages:timeline_detail' timeline.id %}" class="text-decoration-none">
+                                    <strong>{{ timeline.timeline_name }}</strong>
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ timeline.get_timeline_type_display }}</span>
+                            </td>
+                            <td>
+                                <a href="{% url 'litigation_pages:case_detail' timeline.case.id %}" class="text-decoration-none">
+                                    {{ timeline.case.case_number }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="status-badge {{ timeline.status }}">
+                                    {{ timeline.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'litigation_pages:timeline_detail' timeline.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> 查看
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="info-card">
+        <div class="info-card-body">
+            <div class="text-center py-5">
+                <i class="bi bi-calendar-x" style="font-size: 3rem; color: var(--vh-text-muted);"></i>
+                <p class="text-muted mt-3">暂无时间节点</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

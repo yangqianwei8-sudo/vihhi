@@ -1,0 +1,238 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}{% if process %}编辑流程{% else %}创建流程{% endif %} - {{ case.case_number }}{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:process_list' case.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <!-- 表单 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">流程信息</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" id="processForm">
+                {% csrf_token %}
+                
+                <!-- 基本信息 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">基本信息</h6>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">流程类型 <span class="text-danger">*</span></label>
+                        <select name="process_type" class="form-select" required>
+                            <option value="">请选择</option>
+                            <option value="filing" {% if process and process.process_type == 'filing' %}selected{% endif %}>立案</option>
+                            <option value="trial" {% if process and process.process_type == 'trial' %}selected{% endif %}>庭审</option>
+                            <option value="judgment" {% if process and process.process_type == 'judgment' %}selected{% endif %}>判决</option>
+                            <option value="execution" {% if process and process.process_type == 'execution' %}selected{% endif %}>执行</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">流程日期 <span class="text-danger">*</span></label>
+                        <input type="date" name="process_date" class="form-control" 
+                               value="{% if process %}{{ process.process_date|date:'Y-m-d' }}{% else %}{{ 'now'|date:'Y-m-d' }}{% endif %}" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">状态</label>
+                        <select name="status" class="form-select">
+                            <option value="pending" {% if process and process.status == 'pending' %}selected{% elif not process %}selected{% endif %}>待处理</option>
+                            <option value="in_progress" {% if process and process.status == 'in_progress' %}selected{% endif %}>处理中</option>
+                            <option value="completed" {% if process and process.status == 'completed' %}selected{% endif %}>已完成</option>
+                            <option value="cancelled" {% if process and process.status == 'cancelled' %}selected{% endif %}>已取消</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 立案信息 -->
+                <div class="row mb-4" id="filingSection" style="display: none;">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">立案信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">立案号</label>
+                        <input type="text" name="filing_number" class="form-control" 
+                               value="{% if process %}{{ process.filing_number }}{% endif %}" placeholder="请输入立案号">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">法院名称</label>
+                        <input type="text" name="court_name" class="form-control" 
+                               value="{% if process %}{{ process.court_name }}{% endif %}" placeholder="请输入法院名称">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">法院地址</label>
+                        <input type="text" name="court_address" class="form-control" 
+                               value="{% if process %}{{ process.court_address }}{% endif %}" placeholder="请输入法院地址">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">法院联系方式</label>
+                        <input type="text" name="court_contact" class="form-control" 
+                               value="{% if process %}{{ process.court_contact }}{% endif %}" placeholder="请输入法院联系方式">
+                    </div>
+                </div>
+
+                <!-- 庭审信息 -->
+                <div class="row mb-4" id="trialSection" style="display: none;">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">庭审信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">庭审地点</label>
+                        <input type="text" name="trial_location" class="form-control" 
+                               value="{% if process %}{{ process.trial_location }}{% endif %}" placeholder="请输入庭审地点">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">法官姓名</label>
+                        <input type="text" name="judge_name" class="form-control" 
+                               value="{% if process %}{{ process.judge_name }}{% endif %}" placeholder="请输入法官姓名">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">参与人员</label>
+                        <input type="text" name="trial_participants" class="form-control" 
+                               value="{% if process %}{{ process.trial_participants }}{% endif %}" placeholder="请输入参与人员">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">庭审结果</label>
+                        <input type="text" name="trial_result" class="form-control" 
+                               value="{% if process %}{{ process.trial_result }}{% endif %}" placeholder="请输入庭审结果">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">庭审记录</label>
+                        <textarea name="trial_notes" class="form-control" rows="4" 
+                                  placeholder="请输入庭审记录">{% if process %}{{ process.trial_notes }}{% endif %}</textarea>
+                    </div>
+                </div>
+
+                <!-- 判决信息 -->
+                <div class="row mb-4" id="judgmentSection" style="display: none;">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">判决信息</h6>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">判决书编号</label>
+                        <input type="text" name="judgment_number" class="form-control" 
+                               value="{% if process %}{{ process.judgment_number }}{% endif %}" placeholder="请输入判决书编号">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">判决金额</label>
+                        <input type="number" name="judgment_amount" class="form-control" step="0.01" 
+                               value="{% if process and process.judgment_amount %}{{ process.judgment_amount }}{% endif %}" placeholder="请输入判决金额">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">判决内容</label>
+                        <textarea name="judgment_content" class="form-control" rows="4" 
+                                  placeholder="请输入判决内容">{% if process %}{{ process.judgment_content }}{% endif %}</textarea>
+                    </div>
+                </div>
+
+                <!-- 执行信息 -->
+                <div class="row mb-4" id="executionSection" style="display: none;">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">执行信息</h6>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">执行金额</label>
+                        <input type="number" name="execution_amount" class="form-control" step="0.01" 
+                               value="{% if process and process.execution_amount %}{{ process.execution_amount }}{% endif %}" placeholder="请输入执行金额">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">利息金额</label>
+                        <input type="number" name="interest_amount" class="form-control" step="0.01" 
+                               value="{% if process and process.interest_amount %}{{ process.interest_amount }}{% endif %}" placeholder="请输入利息金额">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">执行期限</label>
+                        <input type="date" name="execution_deadline" class="form-control" 
+                               value="{% if process and process.execution_deadline %}{{ process.execution_deadline|date:'Y-m-d' }}{% endif %}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">执行状态</label>
+                        <input type="text" name="execution_status" class="form-control" 
+                               value="{% if process %}{{ process.execution_status }}{% endif %}" placeholder="请输入执行状态">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">执行结果</label>
+                        <textarea name="execution_result" class="form-control" rows="4" 
+                                  placeholder="请输入执行结果">{% if process %}{{ process.execution_result }}{% endif %}</textarea>
+                    </div>
+                </div>
+
+                <!-- 备注信息 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">备注信息</h6>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">备注</label>
+                        <textarea name="notes" class="form-control" rows="3" 
+                                  placeholder="请输入备注信息">{% if process %}{{ process.notes }}{% endif %}</textarea>
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'litigation_pages:process_list' case.id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> 取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {% if process %}保存{% else %}创建{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // 根据流程类型显示/隐藏对应的表单区域
+    document.querySelector('select[name="process_type"]').addEventListener('change', function() {
+        const processType = this.value;
+        // 隐藏所有区域
+        document.getElementById('filingSection').style.display = 'none';
+        document.getElementById('trialSection').style.display = 'none';
+        document.getElementById('judgmentSection').style.display = 'none';
+        document.getElementById('executionSection').style.display = 'none';
+        
+        // 显示对应的区域
+        if (processType === 'filing') {
+            document.getElementById('filingSection').style.display = 'block';
+        } else if (processType === 'trial') {
+            document.getElementById('trialSection').style.display = 'block';
+        } else if (processType === 'judgment') {
+            document.getElementById('judgmentSection').style.display = 'block';
+        } else if (processType === 'execution') {
+            document.getElementById('executionSection').style.display = 'block';
+        }
+    });
+    
+    // 页面加载时触发一次
+    document.querySelector('select[name="process_type"]').dispatchEvent(new Event('change'));
+</script>
+{% endblock %}
+{% endblock %}
+

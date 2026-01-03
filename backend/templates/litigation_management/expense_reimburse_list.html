@@ -1,0 +1,197 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}费用报销管理 - 诉讼管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'litigation_pages:expense_list_all' %}" class="btn btn-primary me-2">
+                <i class="bi bi-list"></i> 费用列表
+            </a>
+            <a href="{% url 'litigation_pages:case_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回案件列表
+            </a>
+        </div>
+    </div>
+
+                <div class="info-card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="info-label">{{ card.label }}</div>
+                            <div class="info-value info-value-large">{{ card.value }}</div>
+                            {% if card.hint %}
+                            <div class="info-hint">{{ card.hint }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 筛选器 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">报销状态筛选</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">报销状态</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">全部状态</option>
+                        <option value="pending" {% if reimbursement_status_filter == 'pending' %}selected{% endif %}>待审批</option>
+                        <option value="approved" {% if reimbursement_status_filter == 'approved' %}selected{% endif %}>已通过</option>
+                        <option value="rejected" {% if reimbursement_status_filter == 'rejected' %}selected{% endif %}>已驳回</option>
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-search"></i> 筛选
+                        </button>
+                        <a href="{% url 'litigation_pages:expense_reimburse_list' %}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-arrow-counterclockwise"></i> 重置
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 费用报销列表 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">费用报销列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">共 {{ expenses.paginator.count }} 条</span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            {% if expenses %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>案件编号</th>
+                            <th>案件名称</th>
+                            <th>费用名称</th>
+                            <th>费用类型</th>
+                            <th>金额</th>
+                            <th>费用日期</th>
+                            <th>报销状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in expenses %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'litigation_pages:case_detail' expense.case.id %}" class="text-decoration-none">
+                                    {{ expense.case.case_number }}
+                                </a>
+                            </td>
+                            <td>{{ expense.case.case_name }}</td>
+                            <td>{{ expense.expense_name }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ expense.get_expense_type_display }}</span>
+                            </td>
+                            <td><strong>¥{{ expense.amount|floatformat:2 }}</strong></td>
+                            <td>{{ expense.expense_date|date:"Y-m-d" }}</td>
+                            <td>
+                                {% if expense.reimbursement_status %}
+                                <span class="status-badge {{ expense.reimbursement_status }}">
+                                    {{ expense.get_reimbursement_status_display }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">未申请</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'litigation_pages:expense_detail' expense.id %}" class="btn btn-outline-primary" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if expense.reimbursement_status != 'approved' and expense.reimbursement_status != 'pending' %}
+                                    {% if perms.litigation_management.expense.manage %}
+                                    <a href="{% url 'litigation_pages:expense_reimburse' expense.id %}" class="btn btn-outline-success" title="申请报销">
+                                        <i class="bi bi-check-circle"></i> 申请报销
+                                    </a>
+                                    {% endif %}
+                                    {% elif expense.reimbursement_status == 'pending' %}
+                                    <a href="{% url 'litigation_pages:expense_submit_reimbursement' expense.id %}" class="btn btn-outline-info" title="提交审批">
+                                        <i class="bi bi-send"></i> 提交审批
+                                    </a>
+                                    {% endif %}
+                                    <a href="{% url 'litigation_pages:case_detail' expense.case.id %}" class="btn btn-outline-info" title="查看案件">
+                                        <i class="bi bi-folder"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            {% if expenses.has_other_pages %}
+            <nav aria-label="费用报销列表分页">
+                <ul class="pagination justify-content-center">
+                    {% if expenses.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ expenses.previous_page_number }}{% if reimbursement_status_filter %}&status={{ reimbursement_status_filter }}{% endif %}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in expenses.paginator.page_range %}
+                    {% if expenses.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > expenses.number|add:'-3' and num < expenses.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if reimbursement_status_filter %}&status={{ reimbursement_status_filter }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if expenses.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ expenses.next_page_number }}{% if reimbursement_status_filter %}&status={{ reimbursement_status_filter }}{% endif %}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: var(--vh-text-muted);"></i>
+                <p class="text-muted mt-3">暂无费用报销记录</p>
+                <p class="text-muted">请先在费用列表中申请费用报销</p>
+                <a href="{% url 'litigation_pages:expense_list_all' %}" class="btn btn-primary">
+                    <i class="bi bi-folder"></i> 查看费用列表
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

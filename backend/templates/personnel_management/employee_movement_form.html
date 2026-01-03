@@ -1,0 +1,167 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-card h5 {
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #142F5B;
+        box-shadow: 0 0 0 0.2rem rgba(20, 47, 91, 0.25);
+    }
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block personnel_content %}
+<div class="info-card">
+    <div class="info-card-header">
+        <h5 class="info-card-title">{{ page_title }}</h5>
+    </div>
+    <div class="info-card-body">
+        <form method="post">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-card">
+            <h5>基本信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">员工</label>
+                    {{ form.employee }}
+                    {% if form.employee.errors %}
+                    <div class="text-danger small mt-1">{{ form.employee.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">异动类型</label>
+                    {{ form.movement_type }}
+                    {% if form.movement_type.errors %}
+                    <div class="text-danger small mt-1">{{ form.movement_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">异动日期</label>
+                    {{ form.movement_date }}
+                    {% if form.movement_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.movement_date.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 异动前信息 -->
+        <div class="form-card">
+            <h5>异动前信息</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">原部门</label>
+                    {{ form.old_department }}
+                    {% if form.old_department.errors %}
+                    <div class="text-danger small mt-1">{{ form.old_department.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">原职位</label>
+                    {{ form.old_position }}
+                    {% if form.old_position.errors %}
+                    <div class="text-danger small mt-1">{{ form.old_position.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">原薪资</label>
+                    {{ form.old_salary }}
+                    {% if form.old_salary.errors %}
+                    <div class="text-danger small mt-1">{{ form.old_salary.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 异动后信息 -->
+        <div class="form-card">
+            <h5>异动后信息</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">新部门</label>
+                    {{ form.new_department }}
+                    {% if form.new_department.errors %}
+                    <div class="text-danger small mt-1">{{ form.new_department.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">新职位</label>
+                    {{ form.new_position }}
+                    {% if form.new_position.errors %}
+                    <div class="text-danger small mt-1">{{ form.new_position.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">新薪资</label>
+                    {{ form.new_salary }}
+                    {% if form.new_salary.errors %}
+                    <div class="text-danger small mt-1">{{ form.new_salary.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 异动原因 -->
+        <div class="form-card">
+            <h5>异动原因</h5>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label required">异动原因</label>
+                    {{ form.reason }}
+                    {% if form.reason.errors %}
+                    <div class="text-danger small mt-1">{{ form.reason.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="d-flex justify-content-end gap-3 mt-4">
+            <a href="{% url 'personnel_pages:employee_movement_management' %}" class="btn btn-outline-secondary btn-submit">
+                <i class="bi bi-x-circle"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary btn-submit">
+                <i class="bi bi-check-circle"></i> 保存
+            </button>
+        </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

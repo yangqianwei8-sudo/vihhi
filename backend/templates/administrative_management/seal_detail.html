@@ -1,13 +1,12 @@
-{% extends "administrative_management/base.html" %}
+{% extends "shared/module_base.html" %}
+{% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:seal_management' %}">印章管理</a></li>
-<li class="breadcrumb-item active">{{ seal.seal_name }}</li>
-{% endblock %}
+
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .center-hero {
         background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
@@ -39,7 +38,7 @@
     .info-card h5 {
         margin-bottom: 20px;
         padding-bottom: 12px;
-        border-bottom: 2px solid #e5e7eb;
+        border-bottom: 2px solid var(--vh-primary);
         font-weight: 600;
         color: #1f2937;
     }
@@ -76,11 +75,10 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block module_content %}
 <div class="container-fluid py-4">
     <!-- 页面标题区域 -->
     <div class="center-hero">
-        <div class="hero-icon">{{ page_icon }}</div>
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
     </div>
@@ -90,7 +88,7 @@
         <a href="{% url 'admin_pages:seal_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
         </a>
-        <a href="/admin/administrative_management/sealborrowing/add/?seal={{ seal.id }}" class="btn btn-outline-primary me-2">
+        <a href="{% url 'admin_pages:seal_detail' seal.id %}" class="btn btn-outline-primary me-2">
             <i class="bi bi-box-arrow-in-right"></i> 借用申请
         </a>
         <a href="{% url 'admin_pages:seal_update' seal.id %}" class="btn btn-primary">
@@ -237,7 +235,7 @@
                     </p>
                     {% endif %}
                 </div>
-                <a href="/admin/administrative_management/sealborrowing/{{ borrowing.id }}/" class="btn btn-sm btn-outline-info ms-2">
+                <a href="{% url 'admin_pages:seal_detail' seal.id %}" class="btn btn-sm btn-outline-info ms-2">
                     <i class="bi bi-eye"></i>
                 </a>
             </div>

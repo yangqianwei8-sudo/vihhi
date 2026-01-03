@@ -1,0 +1,240 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}寄送快递 - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题和操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📦 寄送快递</h2>
+            <p class="text-muted mb-0">交付单号：{{ delivery.delivery_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'delivery_pages:delivery_express_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            <a href="{% url 'delivery_pages:delivery_detail' delivery.id %}" class="btn btn-outline-primary">
+                <i class="bi bi-eye"></i> 查看详情
+            </a>
+        </div>
+    </div>
+
+    <!-- 交付记录基本信息 -->
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">交付记录信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">交付单号</span>
+                    <span class="info-value info-value-bold">{{ delivery.delivery_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">交付标题</span>
+                    <span class="info-value">{{ delivery.title }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">关联项目</span>
+                    <span class="info-value">
+                        {% if delivery.project %}
+                        <a href="#" class="text-decoration-none">
+                            {{ delivery.project.project_number }} - {{ delivery.project.name }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">优先级</span>
+                    <span class="info-value">
+                        {% if delivery.priority == 'urgent' %}
+                            <span class="badge bg-danger">紧急</span>
+                        {% elif delivery.priority == 'high' %}
+                            <span class="badge bg-warning">高</span>
+                        {% elif delivery.priority == 'normal' %}
+                            <span class="badge bg-info">普通</span>
+                        {% else %}
+                            <span class="badge bg-secondary">低</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 收件人信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">收件人信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">收件人姓名</span>
+                    <span class="info-value">{{ delivery.recipient_name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">联系电话</span>
+                    <span class="info-value">
+                        <a href="tel:{{ delivery.recipient_phone }}" class="text-decoration-none">
+                            <i class="bi bi-telephone"></i> {{ delivery.recipient_phone }}
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">收件地址</span>
+                    <span class="info-value">{{ delivery.recipient_address|default:"-" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 快递寄送表单 -->
+    <form method="post" id="expressSendForm">
+        {% csrf_token %}
+        
+        <!-- 快递信息 -->
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">快递信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">快递公司 <span class="text-danger">*</span></label>
+                        <select name="express_company" class="form-select" required>
+                            <option value="">请选择快递公司</option>
+                            {% for code, name in express_companies %}
+                            <option value="{{ code }}" {% if delivery.express_company == code %}selected{% endif %}>
+                                {{ name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">快递单号 <span class="text-danger">*</span></label>
+                        <input type="text" name="express_number" class="form-control" 
+                               value="{{ delivery.express_number }}" 
+                               required placeholder="请输入快递单号">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">快递费用</label>
+                        <div class="input-group">
+                            <span class="input-group-text">¥</span>
+                            <input type="number" name="express_fee" class="form-control" 
+                                   value="{% if delivery.express_fee %}{{ delivery.express_fee }}{% endif %}" 
+                                   step="0.01" min="0" placeholder="请输入快递费用">
+                        </div>
+                        <small class="text-muted">可选，用于记录快递费用</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快递物品信息 -->
+        {% if delivery.files.exists %}
+        <div class="info-card mb-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">快递物品清单</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="list-group">
+                    {% for file in delivery.files.all %}
+                    {% if not file.is_deleted %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-file-earmark"></i>
+                            <span class="ms-2">{{ file.file_name }}</span>
+                            <small class="text-muted ms-2">({{ file.file_size|filesizeformat }})</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <small class="text-muted mt-2 d-block">以上文件将随快递寄送</small>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 寄送按钮 -->
+        {% if can_send %}
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <a href="{% url 'delivery_pages:delivery_express_list' %}" class="btn btn-outline-secondary">取消</a>
+            <button type="submit" class="btn btn-success" onclick="return confirm('确定要寄送此快递吗？');">
+                <i class="bi bi-box-arrow-up"></i> 确认寄送
+            </button>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> 
+            该交付记录当前状态不允许寄送。只有审核通过且未寄送的记录才能寄送。
+        </div>
+        {% endif %}
+    </form>
+
+    <!-- 寄送历史（如果有） -->
+    {% if delivery.sent_at %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">寄送历史</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">寄送状态</span>
+                    <span class="info-value">
+                        {% if delivery.status == 'in_transit' %}
+                            <span class="badge bg-warning">运输中</span>
+                        {% elif delivery.status == 'delivered' %}
+                            <span class="badge bg-success">已送达</span>
+                        {% elif delivery.status == 'failed' %}
+                            <span class="badge bg-danger">寄送失败</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">寄送时间</span>
+                    <span class="info-value">{{ delivery.sent_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% if delivery.sent_by %}
+                <div class="info-item">
+                    <span class="info-label">寄送人</span>
+                    <span class="info-value">{{ delivery.sent_by.get_full_name|default:delivery.sent_by.username }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.express_company %}
+                <div class="info-item">
+                    <span class="info-label">快递公司</span>
+                    <span class="info-value">{{ delivery.express_company }}</span>
+                </div>
+                {% endif %}
+                {% if delivery.express_number %}
+                <div class="info-item">
+                    <span class="info-label">快递单号</span>
+                    <span class="info-value">
+                        <a href="#" class="text-decoration-none" target="_blank">
+                            {{ delivery.express_number }}
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                    </span>
+                </div>
+                {% endif %}
+                {% if delivery.error_message %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">失败原因</span>
+                    <span class="info-value text-danger">{{ delivery.error_message }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

@@ -9,7 +9,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 from backend.apps.system_management.models import Department, Role
-from backend.apps.project_center.models import ServiceType, ServiceProfession
+from backend.apps.production_management.models import ServiceType, ServiceProfession
 
 User = get_user_model()
 

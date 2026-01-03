@@ -1,0 +1,117 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: var(--spacing-lg);
+    }
+    .form-card h5 {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .form-label.required::after {
+        content: " *";
+        color: var(--vh-error);
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <h5>预订信息</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">会议室</label>
+                    {{ form.room }}
+                    {% if form.room.errors %}
+                    <div class="text-danger small mt-1">{{ form.room.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">预订日期</label>
+                    {{ form.booking_date }}
+                    {% if form.booking_date.errors %}
+                    <div class="text-danger small mt-1">{{ form.booking_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">开始时间</label>
+                    {{ form.start_time }}
+                    {% if form.start_time.errors %}
+                    <div class="text-danger small mt-1">{{ form.start_time.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">结束时间</label>
+                    {{ form.end_time }}
+                    {% if form.end_time.errors %}
+                    <div class="text-danger small mt-1">{{ form.end_time.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">会议主题</label>
+                    {{ form.meeting_topic }}
+                    {% if form.meeting_topic.errors %}
+                    <div class="text-danger small mt-1">{{ form.meeting_topic.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">参会人数</label>
+                    {{ form.attendees_count }}
+                    {% if form.attendees_count.errors %}
+                    <div class="text-danger small mt-1">{{ form.attendees_count.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">参会人员</label>
+                    {{ form.attendees }}
+                    <small class="text-muted">按住Ctrl键可多选</small>
+                    {% if form.attendees.errors %}
+                    <div class="text-danger small mt-1">{{ form.attendees.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">特殊需求</label>
+                    {{ form.special_requirements }}
+                    {% if form.special_requirements.errors %}
+                    <div class="text-danger small mt-1">{{ form.special_requirements.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a href="{% if is_create %}{% url 'admin_pages:meeting_room_booking_list' %}{% else %}{% url 'admin_pages:meeting_room_booking_detail' booking.id %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> 保存
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

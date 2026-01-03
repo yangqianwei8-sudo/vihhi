@@ -1,0 +1,275 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .info-card-header {
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    .info-card-title {
+        margin: 0;
+        font-weight: 600;
+        color: var(--vh-text);
+    }
+    .info-grid {
+        display: grid;
+        gap: var(--spacing-md);
+    }
+    .info-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+    .info-label {
+        font-size: var(--font-size-sm);
+        color: var(--vh-text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: var(--font-size-base);
+        color: var(--vh-text);
+        font-weight: 500;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-draft { background: #f3f4f6; color: #374151; }
+    .status-pending_approval { background: #fff3cd; color: #856404; }
+    .status-approved { background: #cfe2ff; color: #084298; }
+    .status-rejected { background: #f8d7da; color: #842029; }
+    .status-in_use { background: #d1e7dd; color: #0f5132; }
+    .status-completed { background: #d1e7dd; color: #0f5132; }
+    .status-cancelled { background: #f8d7da; color: #842029; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'admin_pages:vehicle_booking_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if can_edit %}
+            <a href="{% url 'admin_pages:vehicle_booking_update' booking.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+            {% if can_approve %}
+            <a href="{% url 'admin_pages:vehicle_booking_approve' booking.id %}" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> 审批
+            </a>
+            <a href="{% url 'admin_pages:vehicle_booking_reject' booking.id %}" class="btn btn-danger">
+                <i class="bi bi-x-circle"></i> 拒绝
+            </a>
+            {% endif %}
+            {% if can_dispatch %}
+            <a href="{% url 'admin_pages:vehicle_booking_dispatch' booking.id %}" class="btn btn-info">
+                <i class="bi bi-truck"></i> 调度
+            </a>
+            {% endif %}
+            {% if can_return %}
+            <a href="{% url 'admin_pages:vehicle_booking_return' booking.id %}" class="btn btn-warning">
+                <i class="bi bi-arrow-counterclockwise"></i> 归还
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">申请单号</span>
+                    <span class="info-value"><code>{{ booking.booking_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请人</span>
+                    <span class="info-value">{{ booking.applicant.get_full_name|default:booking.applicant.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">申请日期</span>
+                    <span class="info-value">{{ booking.booking_date|date:"Y-m-d" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        <span class="status-badge status-{{ booking.status }}">
+                            {{ booking.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 车辆信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">车辆信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">车辆</span>
+                    <span class="info-value">{{ booking.vehicle.plate_number }} - {{ booking.vehicle.brand }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">驾驶员</span>
+                    <span class="info-value">{{ booking.driver.get_full_name|default:booking.driver.username|default:"-" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用车信息 -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">用车信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">用车开始时间</span>
+                    <span class="info-value">{{ booking.start_time|date:"Y-m-d H:i" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">预计结束时间</span>
+                    <span class="info-value">{{ booking.end_time|date:"Y-m-d H:i" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">目的地</span>
+                    <span class="info-value">{{ booking.destination|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">乘车人数</span>
+                    <span class="info-value">{{ booking.passenger_count }} 人</span>
+                </div>
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">用车事由</span>
+                    <span class="info-value" style="white-space: pre-wrap;">{{ booking.purpose }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 费用信息 -->
+    {% if booking.status == 'completed' %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">费用信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">出发里程数</span>
+                    <span class="info-value">{{ booking.mileage_before|default:"-" }} km</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">返回里程数</span>
+                    <span class="info-value">{{ booking.mileage_after|default:"-" }} km</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">实际行驶里程</span>
+                    <span class="info-value">
+                        {% if booking.actual_mileage %}
+                        {{ booking.actual_mileage }} km
+                        {% else %}
+                        -
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">燃油费用</span>
+                    <span class="info-value">¥{{ booking.fuel_cost|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">停车费用</span>
+                    <span class="info-value">¥{{ booking.parking_fee|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">过路费用</span>
+                    <span class="info-value">¥{{ booking.toll_fee|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">其他费用</span>
+                    <span class="info-value">¥{{ booking.other_cost|floatformat:2 }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">总费用</span>
+                    <span class="info-value" style="font-size: var(--font-size-lg); font-weight: 700; color: var(--vh-primary);">
+                        ¥{{ booking.total_cost|floatformat:2 }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 审批信息 -->
+    {% if booking.approver %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">审批信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">审批人</span>
+                    <span class="info-value">{{ booking.approver.get_full_name|default:booking.approver.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">审批时间</span>
+                    <span class="info-value">{{ booking.approved_time|date:"Y-m-d H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 备注 -->
+    {% if booking.notes %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <p style="white-space: pre-wrap; margin: 0;">{{ booking.notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

@@ -1,0 +1,244 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .track-entry-container {
+        padding: 12px !important;
+    }
+    
+    .goal-card {
+        border: 1px solid var(--vh-border);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        transition: all var(--transition-base);
+        cursor: pointer;
+    }
+    
+    .goal-card:hover {
+        border-color: var(--vh-primary);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+    
+    .goal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .goal-title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--vh-text);
+        margin: 0;
+    }
+    
+    .goal-number {
+        font-size: var(--font-size-sm);
+        color: var(--vh-text-secondary);
+        font-family: monospace;
+    }
+    
+    .goal-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-sm);
+        margin-top: var(--spacing-sm);
+    }
+    
+    .goal-info-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        font-size: var(--font-size-sm);
+        color: var(--vh-text-secondary);
+    }
+    
+    .goal-info-item .icon {
+        font-size: 16px;
+    }
+    
+    .progress-section {
+        margin-top: var(--spacing-md);
+        padding-top: var(--spacing-md);
+        border-top: 1px solid var(--vh-border);
+    }
+    
+    .progress-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-xs);
+        font-size: var(--font-size-sm);
+    }
+    
+    .progress-value {
+        font-weight: 600;
+        color: var(--vh-primary);
+    }
+    
+    .progress-bar-container {
+        height: 24px;
+        background: #e9ecef;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        transition: width 0.3s;
+    }
+    
+    .progress-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 12px;
+        font-weight: 600;
+        color: #000;
+        z-index: 1;
+    }
+    
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .status-published { background: #cfe2ff; color: #084298; }
+    .status-in_progress { background: #fff3cd; color: #856404; }
+    .status-draft { background: #e9ecef; color: #495057; }
+    .status-completed { background: #d1e7dd; color: #0f5132; }
+    .status-cancelled { background: #f8d7da; color: #842029; }
+    
+    .goal-card.not-trackable {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    .goal-card.not-trackable:hover {
+        transform: none;
+        border-color: var(--vh-border);
+    }
+    
+    .track-btn {
+        margin-top: var(--spacing-md);
+        width: 100%;
+    }
+    
+    .track-btn:disabled {
+        cursor: not-allowed;
+    }
+    
+    .warning-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #fff3cd;
+        color: #856404;
+        border-radius: 4px;
+        font-size: 11px;
+        margin-top: var(--spacing-xs);
+    }
+    
+    .info-alert {
+        margin-bottom: var(--spacing-lg);
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="track-entry-container">
+    <!-- 页面标题 -->
+    <div class="list-page-header">
+        <h2 class="mb-0">
+            {{ page_title }}
+        </h2>
+        <p class="text-muted mb-0 mt-1">{{ description }}</p>
+    </div>
+    
+    <!-- 目标列表 -->
+    <div class="mt-4">
+        {% if goals %}
+            <div class="row g-3">
+                {% for goal in goals %}
+                <div class="col-md-6">
+                    <div class="goal-card" onclick="window.location.href='{% url 'plan_pages:strategic_goal_track' goal.id %}'">
+                        <div class="goal-header">
+                            <div>
+                                <h5 class="goal-title">{{ goal.name }}</h5>
+                                <div class="goal-number">
+                                    <code>{{ goal.goal_number }}</code>
+                                </div>
+                            </div>
+                            <span class="status-badge status-{{ goal.status }}">
+                                {{ goal.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        <div class="goal-info">
+                            <div class="goal-info-item">
+                                <span class="icon">🎯</span>
+                                <span>{{ goal.get_goal_type_display }}</span>
+                            </div>
+                            <div class="goal-info-item">
+                                <span class="icon">📅</span>
+                                <span>{{ goal.get_goal_period_display }}</span>
+                            </div>
+                            <div class="goal-info-item">
+                                <span class="icon">👤</span>
+                                <span>{{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}</span>
+                            </div>
+                            {% if goal.responsible_department %}
+                            <div class="goal-info-item">
+                                <span class="icon">🏢</span>
+                                <span>{{ goal.responsible_department.name }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="progress-section">
+                            <div class="progress-label">
+                                <span>完成进度</span>
+                                <span class="progress-value">{{ goal.completion_rate }}%</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: {{ goal.completion_rate }}%"></div>
+                                <span class="progress-text">{{ goal.completion_rate }}%</span>
+                            </div>
+                            <div class="mt-2 text-muted small">
+                                目标值：{{ goal.target_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %} | 
+                                当前值：{{ goal.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+                            </div>
+                        </div>
+                        
+                        <a href="{% url 'plan_pages:strategic_goal_track' goal.id %}" class="btn btn-primary track-btn">
+                            <i class="bi bi-graph-up me-2"></i>开始跟踪
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 48px; opacity: 0.3;"></i>
+                <p class="mt-3 mb-0">暂无可跟踪的战略目标</p>
+                <p class="text-muted small">请先创建并发布战略目标</p>
+                <a href="{% url 'plan_pages:strategic_goal_list' %}" class="btn btn-primary mt-3">
+                    <i class="bi bi-arrow-left me-2"></i>返回目标列表
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

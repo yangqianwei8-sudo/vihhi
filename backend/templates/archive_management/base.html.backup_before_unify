@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}档案管理 - 维海科技信息化管理平台{% endblock %}</main>
+    </div>
+</div>
+    </div></title>
+    {% load static %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static "css/bootstrap-icons/bootstrap-icons.css" %}">
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+    <style>
+        body {
+            padding-top: var(--navbar-height); /* 使用CSS变量 */
+        }
+        /* 下拉菜单样式已在 navigation.css 中定义，无需重复 */
+
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(20, 47, 91, 0.08);
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+            color: #fff;
+            border-radius: 16px 16px 0 0;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            color: #142F5B;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .btn {
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-approving { background: #cfe2ff; color: #084298; }
+        .status-archiving { background: #d1e7dd; color: #0f5132; }
+        .status-archived { background: #d1e7dd; color: #0f5132; }
+        .status-rejected { background: #f8d7da; color: #842029; }
+        .status-borrowed { background: #fff3cd; color: #856404; }
+        .status-destroyed { background: #f8d7da; color: #842029; }
+        
+        /* 档案管理布局样式 */
+        .archive-management-layout {
+            display: flex;
+            gap: var(--spacing-md);
+            min-height: calc(100vh - 200px);
+        }
+        
+        /* 左侧菜单样式 */
+        .archive-sidebar {
+            width: 240px;
+            flex-shrink: 0;
+            background: var(--vh-card-bg);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            box-shadow: var(--shadow-sm);
+            height: fit-content;
+            position: sticky;
+            top: 80px;
+        }
+        
+        .archive-nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+        
+        .archive-nav-link {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            color: var(--vh-text);
+            text-decoration: none;
+            transition: all var(--transition-base);
+            font-size: var(--font-size-sm);
+            position: relative;
+        }
+        
+        .archive-nav-link:hover {
+            background: var(--vh-surface);
+            color: var(--vh-primary);
+        }
+        
+        .archive-nav-link.active {
+            background: var(--vh-primary);
+            color: #fff;
+        }
+        
+        .archive-nav-link.active .nav-icon {
+            color: #fff;
+        }
+        
+        /* 单个菜单项样式 - 确保不显示任何伪元素 */
+        .archive-nav-link.archive-nav-single::after,
+        .archive-nav-link.archive-nav-single::before {
+            display: none !important;
+            content: none !important;
+        }
+        
+        .archive-nav-sub {
+            padding-left: calc(var(--spacing-md) + var(--spacing-lg));
+            font-size: var(--font-size-xs);
+        }
+        
+        .nav-icon {
+            font-size: 1.1em;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .nav-label {
+            flex: 1;
+        }
+        
+        /* 菜单分组样式 */
+        .archive-nav-group {
+            margin-top: var(--spacing-xs);
+        }
+        
+        .archive-nav-group-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            color: var(--vh-text-muted);
+            font-weight: 500;
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            user-select: none;
+        }
+        
+        .archive-nav-group-header:hover {
+            background: var(--vh-surface);
+            color: var(--vh-text);
+        }
+        
+        .archive-nav-group-header.expanded {
+            color: var(--vh-primary);
+        }
+        
+        /* 确保分组标题显示三角形 */
+        .archive-nav-group-header .nav-toggle {
+            margin-left: auto;
+            font-size: 10px;
+            color: var(--vh-text-muted);
+            transition: transform var(--transition-base);
+        }
+        
+        .archive-nav-group-header.expanded .nav-toggle {
+            color: var(--vh-primary);
+        }
+        
+        .archive-nav-group-items {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-xs);
+            padding-left: var(--spacing-sm);
+            transition: all var(--transition-base);
+        }
+        
+        .archive-nav-group-items.collapsed {
+            display: none;
+        }
+        
+        .nav-toggle {
+            font-size: 10px;
+            color: var(--vh-text-muted);
+            transition: transform var(--transition-base);
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+        
+        /* 确保只有分组标题才显示三角形 */
+        .archive-nav-group-header .nav-toggle {
+            display: block;
+        }
+        
+        /* 单个菜单项绝对不显示三角形 */
+        .archive-nav-link.archive-nav-single .nav-toggle,
+        .archive-nav-link:not(.archive-nav-sub):not(.archive-nav-group-header) .nav-toggle {
+            display: none !important;
+        }
+        
+        /* 主内容区域 */
+        .archive-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 992px) {
+            .archive-management-layout {
+                flex-direction: column;
+            }
+            
+            .archive-sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% include "shared/_top_nav.html" %}
+
+    <div class="container-fluid py-3">
+        {% if messages %}
+        <div class="alert-container">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        
+
+        <div class="archive-management-layout">
+        {% if archive_sidebar_nav %}
+        {# 档案管理布局 - 使用统一样式模板，带左侧菜单 #}
+        <div class="workspace workspace-two-column archive-management-layout">
+            <!-- 左侧导航菜单 -->
+            <aside class="workspace-nav">
+                <nav class="sidenav">
+                    <div class="sidenav-section">
+                        <div class="sidenav-links">
+                            {% for menu_group in archive_sidebar_nav %}
+                            <div class="sidenav-item {% if menu_group.active or menu_group.expanded or not menu_group.collapsed %}expanded{% endif %}">
+                                <a class="sidenav-link" 
+                                   href="{% if menu_group.url %}{{ menu_group.url }}{% else %}#{% endif %}" 
+                                   {% if menu_group.active %}data-active="true"{% endif %}>
+                                    {% if menu_group.icon %}<span>{{ menu_group.icon }}</span>{% endif %}
+                                    <span>{{ menu_group.label }}</span>
+                                    
+                                </a>
+                                {% if menu_group.items and menu_group.items|length > 0 %}
+                                <div class="submenu">
+                                    {% for child in menu_group.items %}
+                                    <a class="sidenav-link sidenav-sub-link" 
+                                       href="{{ child.url }}" 
+                                       {% if child.active %}data-active="true"{% endif %}>
+                                        {% if child.icon %}<span>{{ child.icon }}</span>{% endif %}
+                                        <span>{{ child.label }}</span>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+            </aside>
+            
+            <!-- 主内容区域 -->
+            <main class="workspace-main archive-content">
+                {% block content %}
+                {% endblock %}
+                </main>
+    </div>
+{% else %}
+        <div class="workspace-content">
+            </div>
+{% endif %}
+        
+
+    <script src="{% static 'js/sidebar.js' %}"></script>
+</body>
+</html>
+

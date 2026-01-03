@@ -1,0 +1,176 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}编辑项目归档 - 档案管理{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">✏️ 编辑项目归档</h2>
+            <p class="text-muted mb-0">编辑归档信息，仅待归档和驳回状态可以编辑</p>
+        </div>
+        <div>
+            <a href="{% url 'archive_management:project_archive_detail' archive.pk %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> 返回详情
+            </a>
+        </div>
+    </div>
+
+    <!-- 归档状态提示 -->
+    {% if archive.status not in 'pending,rejected' %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i> 当前归档状态为"{{ archive.get_status_display }}"，无法编辑。只有"待归档"或"归档驳回"状态可以编辑。
+    </div>
+    {% endif %}
+
+    <!-- 表单卡片 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">归档信息</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-{% if archive.status == 'pending' %}warning{% elif archive.status == 'rejected' %}danger{% else %}secondary{% endif %}">
+                    {{ archive.get_status_display }}
+                </span>
+            </div>
+        </div>
+        <div class="info-card-body">
+            <!-- 归档基本信息 -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <span class="info-label">归档编号</span>
+                        <span class="info-value"><code>{{ archive.archive_number }}</code></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <span class="info-label">关联项目</span>
+                        <span class="info-value">{{ archive.project.project_name|default:"-" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <h6><i class="bi bi-exclamation-triangle"></i> 表单验证失败</h6>
+                <ul class="mb-0">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                        <li>{{ field }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" id="editForm">
+                {% csrf_token %}
+                
+                <div class="row g-3">
+                    <!-- 项目选择（只读） -->
+                    <div class="col-md-12">
+                        <label class="form-label">关联项目</label>
+                        <input type="text" class="form-control" value="{{ archive.project.project_name|default:"-" }}" readonly>
+                        <small class="form-text text-muted">归档创建后无法修改关联项目</small>
+                    </div>
+
+                    <!-- 归档原因 -->
+                    <div class="col-md-12">
+                        <label for="{{ form.archive_reason.id_for_label }}" class="form-label">
+                            {{ form.archive_reason.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.archive_reason }}
+                        {% if form.archive_reason.errors %}
+                        <div class="text-danger small">{{ form.archive_reason.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 归档说明 -->
+                    <div class="col-md-12">
+                        <label for="{{ form.archive_description.id_for_label }}" class="form-label">
+                            {{ form.archive_description.label }}
+                        </label>
+                        {{ form.archive_description }}
+                        {% if form.archive_description.errors %}
+                        <div class="text-danger small">{{ form.archive_description.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'archive_management:project_archive_detail' archive.pk %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> 取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> 保存修改
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 归档历史信息 -->
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">归档历史信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <span class="info-label">申请人</span>
+                        <span class="info-value">{{ archive.applicant.username|default:"-" }}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <span class="info-label">申请时间</span>
+                        <span class="info-value">{{ archive.applied_time|date:"Y-m-d H:i"|default:"-" }}</span>
+                    </div>
+                </div>
+                {% if archive.executor %}
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <span class="info-label">执行人</span>
+                        <span class="info-value">{{ archive.executor.username|default:"-" }}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <span class="info-label">执行时间</span>
+                        <span class="info-value">{{ archive.executed_time|date:"Y-m-d H:i"|default:"-" }}</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 表单提交验证
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    const archiveReason = document.getElementById('{{ form.archive_reason.id_for_label }}').value;
+    
+    if (!archiveReason.trim()) {
+        e.preventDefault();
+        alert('请填写归档原因');
+        return false;
+    }
+    
+    if (!confirm('确定要保存修改吗？')) {
+        e.preventDefault();
+        return false;
+    }
+});
+</script>
+{% endblock %}

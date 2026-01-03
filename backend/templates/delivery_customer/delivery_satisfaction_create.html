@@ -1,0 +1,271 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}满意度评价 - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block module_content %}
+<div class="container-fluid">
+    <!-- 页面标题和操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">⭐ 满意度评价</h2>
+            <p class="text-muted mb-0">交付单号：{{ delivery.delivery_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'delivery_pages:delivery_satisfaction_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            <a href="{% url 'delivery_pages:delivery_detail' delivery.id %}" class="btn btn-outline-primary">
+                <i class="bi bi-eye"></i> 查看详情
+            </a>
+        </div>
+    </div>
+
+    <!-- 交付记录基本信息 - 使用样式模板 -->
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">交付记录信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">交付单号</span>
+                    <span class="info-value info-value-bold">{{ delivery.delivery_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">交付标题</span>
+                    <span class="info-value">{{ delivery.title }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">关联项目</span>
+                    <span class="info-value">
+                        {% if delivery.project %}
+                        <a href="#" class="text-decoration-none">
+                            {{ delivery.project.project_number }} - {{ delivery.project.name }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">交付状态</span>
+                    <span class="info-value">
+                        {% if delivery.status == 'confirmed' %}
+                            <span class="status-badge confirmed">已确认</span>
+                        {% elif delivery.status == 'received' %}
+                            <span class="status-badge received">已接收</span>
+                        {% else %}
+                            <span class="status-badge {{ delivery.status }}">{{ delivery.get_status_display }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 满意度评价表单 - 使用样式模板 -->
+    {% if can_create_satisfaction and not has_rated %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">满意度评价</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" id="satisfactionForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-12 mb-4">
+                        <label class="form-label">满意度评分 <span class="text-danger">*</span></label>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rating-input">
+                                <input type="radio" name="rating" value="5" id="rating5" required>
+                                <label for="rating5" class="rating-label">
+                                    <span class="text-warning" style="font-size: 2rem;">⭐⭐⭐⭐⭐</span>
+                                    <small class="d-block text-center mt-1">5星</small>
+                                </label>
+                            </div>
+                            <div class="rating-input">
+                                <input type="radio" name="rating" value="4" id="rating4" required>
+                                <label for="rating4" class="rating-label">
+                                    <span class="text-warning" style="font-size: 2rem;">⭐⭐⭐⭐☆</span>
+                                    <small class="d-block text-center mt-1">4星</small>
+                                </label>
+                            </div>
+                            <div class="rating-input">
+                                <input type="radio" name="rating" value="3" id="rating3" required>
+                                <label for="rating3" class="rating-label">
+                                    <span class="text-warning" style="font-size: 2rem;">⭐⭐⭐☆☆</span>
+                                    <small class="d-block text-center mt-1">3星</small>
+                                </label>
+                            </div>
+                            <div class="rating-input">
+                                <input type="radio" name="rating" value="2" id="rating2" required>
+                                <label for="rating2" class="rating-label">
+                                    <span class="text-warning" style="font-size: 2rem;">⭐⭐☆☆☆</span>
+                                    <small class="d-block text-center mt-1">2星</small>
+                                </label>
+                            </div>
+                            <div class="rating-input">
+                                <input type="radio" name="rating" value="1" id="rating1" required>
+                                <label for="rating1" class="rating-label">
+                                    <span class="text-warning" style="font-size: 2rem;">⭐☆☆☆☆</span>
+                                    <small class="d-block text-center mt-1">1星</small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">评价人姓名 <span class="text-danger">*</span></label>
+                        <input type="text" name="satisfaction_by" class="form-control" 
+                               value="{{ delivery.recipient_name }}" required placeholder="请输入评价人姓名">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">评价维度（可选）</label>
+                        <div class="row">
+                            {% for dim_code, dim_label in satisfaction_dimensions %}
+                            <div class="col-md-3 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="satisfaction_dimensions" 
+                                           value="{{ dim_code }}" id="dim_{{ dim_code }}">
+                                    <label class="form-check-label" for="dim_{{ dim_code }}">
+                                        {{ dim_label }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">评价内容</label>
+                        <textarea name="satisfaction_content" class="form-control" rows="5" 
+                                  placeholder="请输入评价内容（可选）"></textarea>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'delivery_pages:delivery_satisfaction_list' %}" class="btn btn-outline-secondary">取消</a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> 提交评价
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% elif has_rated %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> 
+        该交付记录已经评价过了。
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> 
+        该交付记录当前状态不允许评价。只有已签收或已确认状态的记录才能进行满意度评价。
+    </div>
+    {% endif %}
+
+    <!-- 历史评价记录 - 使用样式模板 -->
+    {% if delivery.feedbacks.exists %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">历史评价记录</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="list-group">
+                {% for feedback in delivery.feedbacks.all %}
+                    {% if '满意度评分' in feedback.content %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1">
+                                    {% if '5星' in feedback.content %}
+                                        <span class="text-warning">⭐⭐⭐⭐⭐</span>
+                                    {% elif '4星' in feedback.content %}
+                                        <span class="text-warning">⭐⭐⭐⭐☆</span>
+                                    {% elif '3星' in feedback.content %}
+                                        <span class="text-warning">⭐⭐⭐☆☆</span>
+                                    {% elif '2星' in feedback.content %}
+                                        <span class="text-warning">⭐⭐☆☆☆</span>
+                                    {% elif '1星' in feedback.content %}
+                                        <span class="text-warning">⭐☆☆☆☆</span>
+                                    {% endif %}
+                                    <span class="ms-2">{{ feedback.feedback_by }}</span>
+                                </h6>
+                                <small class="text-muted">{{ feedback.created_at|date:"Y-m-d H:i:s" }}</small>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <p class="mb-0">{{ feedback.content|linebreaks }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 交付文件清单 - 使用样式模板 -->
+    {% if delivery.files.exists %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">交付文件清单</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="list-group">
+                {% for file in delivery.files.all %}
+                {% if not file.is_deleted %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-file-earmark"></i>
+                        <span class="ms-2">{{ file.file_name }}</span>
+                        <small class="text-muted ms-2">({{ file.file_size|filesizeformat }})</small>
+                        {% if file.description %}
+                        <small class="text-muted ms-2">- {{ file.description }}</small>
+                        {% endif %}
+                    </div>
+                    <a href="{{ file.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                        <i class="bi bi-download"></i> 下载
+                    </a>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.rating-input {
+    flex: 1;
+    text-align: center;
+}
+
+.rating-input input[type="radio"] {
+    display: none;
+}
+
+.rating-label {
+    cursor: pointer;
+    display: block;
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.rating-input input[type="radio"]:checked + .rating-label {
+    border-color: #ffc107;
+    background-color: #fff9e6;
+}
+
+.rating-label:hover {
+    border-color: #ffc107;
+    background-color: #fff9e6;
+}
+</style>
+{% endblock %}
+

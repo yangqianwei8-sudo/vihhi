@@ -1,0 +1,207 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .content-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: var(--spacing-lg);
+    }
+    .info-table {
+        width: 100%;
+    }
+    .info-table th {
+        width: 150px;
+        padding: 12px;
+        background: #f8f9fa;
+        font-weight: 600;
+        text-align: right;
+        vertical-align: middle;
+    }
+    .info-table td {
+        padding: 12px;
+        vertical-align: middle;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-badge.draft { background: #e2e3e5; color: #383d41; }
+    .status-badge.pending { background: #fff3cd; color: #856404; }
+    .status-badge.approved { background: #d4edda; color: #155724; }
+    .status-badge.rejected { background: #f8d7da; color: #721c24; }
+    .status-badge.cancelled { background: #e2e3e5; color: #383d41; }
+    .amount-highlight {
+        font-size: 24px;
+        font-weight: 700;
+        color: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题区域 -->
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="{% url 'settlement_pages:payment_application_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        <div class="d-flex gap-2">
+            {% if can_submit %}
+            <form method="post" action="{% url 'settlement_pages:payment_application_submit' application.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success" onclick="return confirm('确定要提交此回款申请吗？提交后将进入审核流程。');">
+                    <i class="bi bi-send"></i> 提交审核
+                </button>
+            </form>
+            {% endif %}
+            {% if can_review %}
+            <a href="{% url 'settlement_pages:payment_application_review' application.id %}" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> 审核申请
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 回款申请基本信息 -->
+    <div class="content-card">
+        <h5 class="mb-3">回款申请基本信息</h5>
+        <table class="table info-table">
+            <tr>
+                <th>申请单号</th>
+                <td><strong>{{ application.application_number }}</strong></td>
+                <th>申请金额</th>
+                <td class="amount-highlight">¥{{ application.application_amount|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th>申请日期</th>
+                <td>{{ application.application_date|date:"Y-m-d" }}</td>
+                <th>期望回款日期</th>
+                <td>
+                    {% if application.expected_date %}
+                        {{ application.expected_date|date:"Y-m-d" }}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>状态</th>
+                <td>
+                    <span class="status-badge {{ application.status }}">
+                        {{ application.get_status_display }}
+                    </span>
+                </td>
+                <th>创建人</th>
+                <td>{{ application.created_by.get_full_name|default:application.created_by.username }}</td>
+            </tr>
+            <tr>
+                <th>创建时间</th>
+                <td>{{ application.created_time|date:"Y-m-d H:i" }}</td>
+                <th>提交人</th>
+                <td>
+                    {% if application.submitted_by %}
+                        {{ application.submitted_by.get_full_name|default:application.submitted_by.username }}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>提交时间</th>
+                <td>
+                    {% if application.submitted_time %}
+                        {{ application.submitted_time|date:"Y-m-d H:i" }}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <th>审核人</th>
+                <td>
+                    {% if application.approver %}
+                        {{ application.approver.get_full_name|default:application.approver.username }}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>审核时间</th>
+                <td>
+                    {% if application.approved_time %}
+                        {{ application.approved_time|date:"Y-m-d H:i" }}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <th>备注</th>
+                <td>{{ application.notes|default:"-" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- 申请原因 -->
+    <div class="content-card">
+        <h5 class="mb-3">申请原因</h5>
+        <div class="p-3 bg-light rounded">
+            {{ application.reason|linebreaks }}
+        </div>
+    </div>
+
+    <!-- 关联合同信息 -->
+    <div class="content-card">
+        <h5 class="mb-3">关联合同信息</h5>
+        <table class="table info-table">
+            <tr>
+                <th>合同编号</th>
+                <td><strong>{{ application.contract.contract_number }}</strong></td>
+                <th>合同金额</th>
+                <td>¥{{ application.contract.amount|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th>客户名称</th>
+                <td>{{ application.contract.client.name|default:"-" }}</td>
+                <th>合同日期</th>
+                <td>{{ application.contract.contract_date|date:"Y-m-d"|default:"-" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- 审核信息 -->
+    {% if application.status != 'draft' %}
+    <div class="content-card">
+        <h5 class="mb-3">审核信息</h5>
+        <table class="table info-table">
+            {% if application.review_comment %}
+            <tr>
+                <th>审核意见</th>
+                <td colspan="3">{{ application.review_comment|linebreaks }}</td>
+            </tr>
+            {% endif %}
+            {% if application.rejection_reason %}
+            <tr>
+                <th>拒绝原因</th>
+                <td colspan="3" class="text-danger">{{ application.rejection_reason|linebreaks }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

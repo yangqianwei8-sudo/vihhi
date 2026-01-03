@@ -3,7 +3,8 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.db.models import Count, Q
 
-from .models import PermissionItem
+from backend.apps.permission_management.models import PermissionItem
+from backend.core.admin_base import BaseModelAdmin, LinkAdminMixin
 
 
 class ModuleFilter(admin.SimpleListFilter):
@@ -21,30 +22,33 @@ class ModuleFilter(admin.SimpleListFilter):
 
 
 @admin.register(PermissionItem)
-class PermissionItemAdmin(admin.ModelAdmin):
+class PermissionItemAdmin(LinkAdminMixin, BaseModelAdmin):
     """权限管理 - 按模块分类"""
     list_display = ('code', 'name', 'module_badge', 'action', 'role_count', 'is_active', 'created_time')
     list_filter = (ModuleFilter, 'action', 'is_active', 'created_time')
     search_fields = ('code', 'name', 'description', 'module', 'action')
     ordering = ('module', 'action', 'code')
-    list_per_page = 50
     readonly_fields = ('created_time',)
     fieldsets = (
         ('基本信息', {
             'fields': ('code', 'name', 'module', 'action', 'description')
         }),
         ('状态信息', {
-            'fields': ('is_active', 'created_time')
+            'fields': ('is_active',)
         }),
+        # 时间信息会自动添加
     )
     
     def module_badge(self, obj):
         """显示模块标签"""
         colors = {
-            '项目中心': '#3498db',
-            '结算中心': '#2ecc71',
+            '生产管理': '#3498db',
+            '结算管理': '#2ecc71',
+            '回款管理': '#27ae60',
             '生产质量': '#e74c3c',
-            '客户成功': '#f39c12',
+            '客户管理': '#f39c12',
+            '商机管理': '#e67e22',
+            '合同管理': '#ff9800',
             '人事管理': '#9b59b6',
             '风险管理': '#1abc9c',
             '系统管理': '#34495e',
@@ -52,9 +56,14 @@ class PermissionItemAdmin(admin.ModelAdmin):
             '资源标准': '#16a085',
             '任务协作': '#e91e63',
             '交付客户': '#ff9800',
+            '档案管理': '#8e44ad',
+            '计划管理': '#2980b9',
+            '诉讼管理': '#c0392b',
+            '财务管理': '#16a085',
+            '行政管理': '#7f8c8d',
         }
         color = colors.get(obj.module, '#95a5a6')
-        module_name = obj.module  # 现在 module 本身就是中文
+        module_name = obj.module
         return format_html(
             '<span style="background: {}; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px;">{}</span>',
             color,
@@ -70,7 +79,7 @@ class PermissionItemAdmin(admin.ModelAdmin):
         count = Role.objects.filter(custom_permissions=obj, is_active=True).count()
         if count > 0:
             url = reverse('admin:system_management_role_changelist') + f'?custom_permissions__id__exact={obj.id}'
-            return format_html('<a href="{}">{} 个角色</a>', url, count)
+            return self.make_link(url, f'{count} 个角色')
         return '0 个角色'
     role_count.short_description = '角色数量'
     
@@ -96,23 +105,23 @@ class PermissionItemAdmin(admin.ModelAdmin):
         response.context_data['module_stats'] = module_stats
         return response
     
-    actions = ['activate_permissions', 'deactivate_permissions']
-    
-    def activate_permissions(self, request, queryset):
-        """批量激活权限"""
-        count = queryset.update(is_active=True)
-        self.message_user(request, f'已激活 {count} 个权限。')
-    activate_permissions.short_description = '激活选中的权限'
-    
-    def deactivate_permissions(self, request, queryset):
-        """批量停用权限"""
-        count = queryset.update(is_active=False)
-        self.message_user(request, f'已停用 {count} 个权限。')
-    deactivate_permissions.short_description = '停用选中的权限'
+    # 批量操作已由 BaseModelAdmin 提供
+    def get_actions(self, request):
+        """自定义批量操作名称"""
+        actions = super().get_actions(request)
+        # 重命名批量操作
+        # actions 字典的值是元组 (function, name, description)，元组不可变，需要创建新元组替换
+        if 'activate_items' in actions:
+            func, name, desc = actions['activate_items']
+            actions['activate_items'] = (func, name, '激活选中的权限')
+        if 'deactivate_items' in actions:
+            func, name, desc = actions['deactivate_items']
+            actions['deactivate_items'] = (func, name, '停用选中的权限')
+        return actions
 
 
 # 创建按模块分类的管理类
-class ProjectCenterPermissionAdmin(admin.ModelAdmin):
+class ProjectCenterPermissionAdmin(LinkAdminMixin, BaseModelAdmin):
     """项目中心权限"""
     list_display = ('code', 'name', 'action', 'role_count', 'is_active')
     list_filter = ('action', 'is_active')
@@ -128,7 +137,7 @@ class ProjectCenterPermissionAdmin(admin.ModelAdmin):
         count = Role.objects.filter(custom_permissions=obj, is_active=True).count()
         if count > 0:
             url = reverse('admin:system_management_role_changelist') + f'?custom_permissions__id__exact={obj.id}'
-            return format_html('<a href="{}">{} 个角色</a>', url, count)
+            return self.make_link(url, f'{count} 个角色')
         return '0 个角色'
     role_count.short_description = '角色数量'
 

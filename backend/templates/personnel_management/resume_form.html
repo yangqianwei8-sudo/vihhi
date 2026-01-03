@@ -1,0 +1,139 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+        margin-bottom: 24px;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .btn-submit {
+        padding: 12px 32px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block personnel_content %}
+<div class="info-card">
+    <div class="info-card-header">
+        <h5 class="info-card-title">{{ page_title }}</h5>
+    </div>
+    <div class="info-card-body">
+        <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-card">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">招聘需求</label>
+                    {{ form.recruitment_requirement }}
+                    {% if form.recruitment_requirement.errors %}
+                    <div class="text-danger small mt-1">{{ form.recruitment_requirement.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">状态</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                    <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">姓名</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                    <div class="text-danger small mt-1">{{ form.name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">性别</label>
+                    {{ form.gender }}
+                    {% if form.gender.errors %}
+                    <div class="text-danger small mt-1">{{ form.gender.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">手机号</label>
+                    {{ form.phone }}
+                    {% if form.phone.errors %}
+                    <div class="text-danger small mt-1">{{ form.phone.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">邮箱</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <div class="text-danger small mt-1">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">学历</label>
+                    {{ form.education }}
+                    {% if form.education.errors %}
+                    <div class="text-danger small mt-1">{{ form.education.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">工作经验（年）</label>
+                    {{ form.work_experience }}
+                    {% if form.work_experience.errors %}
+                    <div class="text-danger small mt-1">{{ form.work_experience.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">简历文件</label>
+                    {{ form.resume_file }}
+                    {% if form.resume_file.errors %}
+                    <div class="text-danger small mt-1">{{ form.resume_file.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">简历来源</label>
+                    {{ form.source }}
+                    {% if form.source.errors %}
+                    <div class="text-danger small mt-1">{{ form.source.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">备注</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-3 mt-4">
+            <a href="{% url 'personnel_pages:recruitment_management' %}" class="btn btn-outline-secondary btn-submit">
+                <i class="bi bi-x-circle"></i> 取消
+            </a>
+            <button type="submit" class="btn btn-primary btn-submit">
+                <i class="bi bi-check-circle"></i> 保存
+            </button>
+        </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

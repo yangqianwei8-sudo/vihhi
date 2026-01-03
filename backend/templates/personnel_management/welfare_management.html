@@ -1,0 +1,143 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+
+
+{% block personnel_content %}
+<!-- 统计卡片 -->
+{% if summary_cards %}
+<div class="row g-3 mb-4">
+    {% for card in summary_cards %}
+    <div class="col-md-3 col-sm-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="text-muted mb-2" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">{{ card.label }}</h6>
+                <div class="value" style="font-size: 28px; font-weight: 700; color: #142F5B; margin-bottom: 4px;">{{ card.value }}</div>
+                <div class="hint" style="font-size: 12px; color: #6b7280;">{{ card.hint }}</div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 内容区域 -->
+<div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">福利发放记录</h3>
+        <a href="{% url 'personnel_pages:welfare_distribution_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> 新增发放
+        </a>
+    </div>
+
+    <!-- 筛选栏 -->
+    <form method="get" class="mb-4">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <select name="project_id" class="form-select">
+                    <option value="">全部福利项目</option>
+                    {% for project in all_projects %}
+                    <option value="{{ project.id }}" {% if current_project_id == project.id|stringformat:"s" %}selected{% endif %}>{{ project.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="employee_id" class="form-select">
+                    <option value="">全部员工</option>
+                    {% for emp in all_employees %}
+                    <option value="{{ emp.id }}" {% if current_employee_id == emp.id|stringformat:"s" %}selected{% endif %}>{{ emp.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="start_date" class="form-control" placeholder="开始日期" value="{{ current_start_date }}">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="end_date" class="form-control" placeholder="结束日期" value="{{ current_end_date }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-search"></i> 搜索
+                </button>
+                <a href="{% url 'personnel_pages:welfare_management' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> 清除
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <!-- 数据表格 -->
+    {% if page_obj %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>福利项目</th>
+                    <th>员工</th>
+                    <th>发放日期</th>
+                    <th>发放金额</th>
+                    <th>发放方式</th>
+                    <th>创建人</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for distribution in distributions %}
+                <tr>
+                    <td>{{ distribution.welfare_project.name }}</td>
+                    <td>{{ distribution.employee.name }}</td>
+                    <td>{{ distribution.distribution_date|date:"Y-m-d" }}</td>
+                    <td>
+                        {% if distribution.amount %}
+                        <span class="text-success fw-bold">{{ distribution.amount }} 元</span>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ distribution.get_payment_method_display }}</td>
+                    <td>{{ distribution.created_by.get_full_name|default:distribution.created_by.username|default:"-" }}</td>
+                    <td>
+                        <a href="#" class="btn btn-sm btn-outline-primary" title="查看详情">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">暂无数据</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 分页 -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="分页导航">
+        <ul class="pagination justify-content-center mt-4">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_project_id %}&project_id={{ current_project_id }}{% endif %}{% if current_employee_id %}&employee_id={{ current_employee_id }}{% endif %}{% if current_start_date %}&start_date={{ current_start_date }}{% endif %}{% if current_end_date %}&end_date={{ current_end_date }}{% endif %}">上一页</a>
+            </li>
+            {% endif %}
+            <li class="page-item active">
+                <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_project_id %}&project_id={{ current_project_id }}{% endif %}{% if current_employee_id %}&employee_id={{ current_employee_id }}{% endif %}{% if current_start_date %}&start_date={{ current_start_date }}{% endif %}{% if current_end_date %}&end_date={{ current_end_date }}{% endif %}">下一页</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        暂无数据或加载失败
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

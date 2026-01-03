@@ -1,0 +1,77 @@
+{% comment %}
+统一创建/编辑弹窗模板
+
+使用方法：
+{% include "common/modal_create_form.html" with modal_id="createModal" modal_title="创建新项" form_action="your_url" %}
+
+参数说明：
+- modal_id: 弹窗的唯一ID
+- modal_title: 弹窗标题
+- modal_title_icon: 标题图标（可选，默认：bi-plus-circle）
+- form_action: 表单提交的URL
+- form_method: 表单提交方法（可选，默认：post）
+- submit_button_text: 提交按钮文字（可选，默认：保存）
+- cancel_button_text: 取消按钮文字（可选，默认：取消）
+- modal_size: 弹窗尺寸（可选：sm, md, lg, xl，默认：md）
+- show_alert: 是否显示提示信息（可选，默认：false）
+- alert_type: 提示信息类型（可选：info, warning, danger, success，默认：info）
+- alert_message: 提示信息内容（可选）
+{% endcomment %}
+
+<div class="modal fade" id="{{ modal_id|default:'createModal' }}" tabindex="-1" aria-labelledby="{{ modal_id|default:'createModal' }}Label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-dialog-{{ modal_size|default:'md' }}">
+        <div class="modal-content">
+            <!-- 弹窗头部 -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="{{ modal_id|default:'createModal' }}Label">
+                    <i class="bi {{ modal_title_icon|default:'bi-plus-circle' }}"></i>
+                    {{ modal_title|default:"创建新项" }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            
+            <!-- 弹窗主体 -->
+            <form method="{{ form_method|default:'post' }}" action="{{ form_action }}" id="{{ modal_id|default:'createModal' }}Form">
+                {% csrf_token %}
+                <div class="modal-body">
+                    {% if show_alert %}
+                    <!-- 提示信息 -->
+                    <div class="modal-alert modal-alert-{{ alert_type|default:'info' }}">
+                        <i class="bi {% if alert_type == 'warning' %}bi-exclamation-triangle{% elif alert_type == 'danger' %}bi-x-circle{% elif alert_type == 'success' %}bi-check-circle{% else %}bi-info-circle{% endif %}"></i>
+                        {{ alert_message|default:"请填写以下信息" }}
+                    </div>
+                    {% endif %}
+                    
+                    {% if form.errors %}
+                    <!-- 表单错误提示 -->
+                    <div class="modal-alert modal-alert-danger">
+                        <i class="bi bi-x-circle"></i>
+                        表单验证失败，请检查输入
+                    </div>
+                    {% endif %}
+                    
+                    <!-- 表单内容区域 -->
+                    {% block modal_form_content %}
+                    <!-- 在这里放置表单字段 -->
+                    <div class="form-group">
+                        <label class="form-label required">名称</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    {% endblock %}
+                </div>
+                
+                <!-- 弹窗底部 -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        {{ cancel_button_text|default:"取消" }}
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i>
+                        {{ submit_button_text|default:"保存" }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

@@ -1,0 +1,269 @@
+{% comment %}
+行政区域三级下拉选择框共享模板
+
+功能说明：
+- 提供省/市/区三级联动下拉选择框
+- 基于高德地图API实现
+- 自动更新地址字段
+- 支持编辑时回填已有地址
+
+使用方法：
+1. 在表单中引入此模板：
+   {% include "shared/district_selector_snippet.html" with 
+       prefix="project" 
+       province_label="省份" 
+       city_label="城市" 
+       district_label="区县"
+       address_field_id="projectAddressField"
+       address_field_name="project_address"
+       detail_input_id="addressDetailInput"
+       detail_input_name="address_detail"
+       show_detail_input=True
+       required=False
+   %}
+
+2. 在页面底部加载JavaScript文件并初始化：
+   {% block extra_js %}
+   <script src="{% static 'js/amap-district-selector.js' %}"></script>
+   <script>
+   document.addEventListener('DOMContentLoaded', function() {
+       initDistrictSelector({
+           prefix: 'project',
+           addressFieldId: 'projectAddressField',
+           detailInputId: 'addressDetailInput',
+           apiBaseUrl: '/api/customer/districts/',
+           addressFormat: 'name'  // 'name', 'code', 'both'
+       });
+   });
+   </script>
+   {% endblock %}
+
+参数说明：
+- prefix: ID前缀（必需），用于区分同一页面中的多个选择器实例
+- province_label: 省份标签（可选，默认："省份"）
+- city_label: 城市标签（可选，默认："城市"）
+- district_label: 区县标签（可选，默认："区县"）
+- address_field_id: 地址隐藏字段ID（可选，默认：prefix + "AddressField"）
+- address_field_name: 地址隐藏字段name属性（可选，默认：使用address_field_id）
+- detail_input_id: 详细地址输入框ID（可选，默认：prefix + "AddressDetail"）
+- detail_input_name: 详细地址输入框name属性（可选，默认：使用detail_input_id）
+- show_detail_input: 是否显示详细地址输入框（可选，默认：True）
+- required: 是否必填（可选，默认：False）
+- address_format: 地址格式（可选，默认：'name'）- 'name'（名称）、'code'（编码）、'both'（编码|名称）
+
+生成的HTML元素ID：
+- 省份下拉框：{prefix}ProvinceSelect
+- 城市下拉框：{prefix}CitySelect
+- 区县下拉框：{prefix}DistrictSelect
+- 地址隐藏字段：{address_field_id} 或 {prefix}AddressField
+- 详细地址输入框：{detail_input_id} 或 {prefix}AddressDetail
+
+示例：
+{% include "shared/district_selector_snippet.html" with prefix="project" %}
+{% include "shared/district_selector_snippet.html" with prefix="office" province_label="办公省份" %}
+{% endcomment %}
+
+{% load static %}
+
+{# 设置默认值 #}
+{% with prefix=prefix|default:"district" %}
+{% with province_label=province_label|default:"省份" %}
+{% with city_label=city_label|default:"城市" %}
+{% with district_label=district_label|default:"区县" %}
+{% with address_field_id=address_field_id|default:prefix|add:"AddressField" %}
+{% with address_field_name=address_field_name|default:address_field_id %}
+{% with detail_input_id=detail_input_id|default:prefix|add:"AddressDetail" %}
+{% with detail_input_name=detail_input_name|default:detail_input_id %}
+{% with show_detail_input=show_detail_input|default:True %}
+{% with required=required|default:False %}
+{% with address_format=address_format|default:"name" %}
+
+{# 地址隐藏字段（用于存储完整地址） #}
+{% with initial_address_value=initial_address_value|default:"" %}
+<input type="hidden" id="{{ address_field_id }}" name="{{ address_field_name }}" value="{{ initial_address_value|escape }}">
+{% endwith %}
+
+{# 行政区域选择器容器 #}
+<div class="row g-2 mb-2 district-selector-container" data-prefix="{{ prefix }}">
+    {# 省份选择 #}
+    <div class="col-md-4">
+        <select class="form-select" 
+                id="{{ prefix }}ProvinceSelect" 
+                name="{{ prefix }}ProvinceSelect"
+                {% if required %}required{% endif %}
+                aria-label="{{ province_label }}">
+            <option value="">选择{{ province_label }}</option>
+        </select>
+    </div>
+    
+    {# 城市选择 #}
+    <div class="col-md-4">
+        <select class="form-select" 
+                id="{{ prefix }}CitySelect" 
+                name="{{ prefix }}CitySelect"
+                {% if required %}required{% endif %}
+                aria-label="{{ city_label }}">
+            <option value="">选择{{ city_label }}</option>
+        </select>
+    </div>
+    
+    {# 区县选择 #}
+    <div class="col-md-4">
+        <select class="form-select" 
+                id="{{ prefix }}DistrictSelect" 
+                name="{{ prefix }}DistrictSelect"
+                {% if required %}required{% endif %}
+                aria-label="{{ district_label }}">
+            <option value="">选择{{ district_label }}</option>
+        </select>
+    </div>
+</div>
+
+{# 详细地址输入框（可选） #}
+{% if show_detail_input %}
+<div class="row">
+    <div class="col-md-12">
+        <input type="text" 
+               class="form-control" 
+               id="{{ detail_input_id }}" 
+               name="{{ detail_input_name }}"
+               placeholder="街道、楼栋、门牌等详细地址"
+               {% if required %}required{% endif %}>
+        <small class="form-text text-muted">完整地址会在保存前自动组合</small>
+    </div>
+</div>
+{% endif %}
+
+{# JavaScript初始化函数（全局函数，可在页面中调用） #}
+<script>
+/**
+ * 初始化行政区域选择器
+ * @param {Object} options 配置选项
+ * @param {string} options.prefix - ID前缀（必需）
+ * @param {string} options.addressFieldId - 地址隐藏字段ID（可选）
+ * @param {string} options.detailInputId - 详细地址输入框ID（可选）
+ * @param {string} options.apiBaseUrl - API基础URL（可选，默认：'/api/customer/districts/'）
+ * @param {boolean} options.autoUpdateAddress - 是否自动更新地址字段（可选，默认：true）
+ * @param {boolean} options.enableLogging - 是否启用日志（可选，默认：false）
+ * @param {string} options.addressFormat - 地址格式：'name'（名称，默认）、'code'（编码）、'both'（编码|名称）
+ */
+function initDistrictSelector(options) {
+    // 参数验证
+    if (!options || typeof options !== 'object') {
+        console.error('initDistrictSelector: 参数必须是对象');
+        return null;
+    }
+    
+    if (!options.prefix || typeof options.prefix !== 'string') {
+        console.error('initDistrictSelector: 缺少必需的prefix参数或prefix不是字符串');
+        return null;
+    }
+    
+    // 验证prefix格式（只允许字母、数字、下划线、连字符）
+    const prefix = options.prefix.trim();
+    if (!/^[a-zA-Z0-9_-]+$/.test(prefix)) {
+        console.error('initDistrictSelector: prefix只能包含字母、数字、下划线和连字符');
+        return null;
+    }
+    
+    // 检查是否已经初始化过
+    if (window.districtSelectors && window.districtSelectors[prefix]) {
+        console.warn(`initDistrictSelector: 选择器 ${prefix} 已经初始化过，返回现有实例`);
+        return window.districtSelectors[prefix];
+    }
+    
+    const addressFieldId = options.addressFieldId || prefix + 'AddressField';
+    const detailInputId = options.detailInputId || prefix + 'AddressDetail';
+    let apiBaseUrl = options.apiBaseUrl || '/api/customer/districts/';
+    const autoUpdateAddress = options.autoUpdateAddress !== false;
+    const enableLogging = options.enableLogging || false;
+    
+    // 验证addressFormat参数
+    const validFormats = ['name', 'code', 'both'];
+    const addressFormat = validFormats.includes(options.addressFormat) ? options.addressFormat : 'name';
+    
+    // 验证apiBaseUrl格式
+    if (typeof apiBaseUrl !== 'string' || !apiBaseUrl.startsWith('/')) {
+        console.warn('initDistrictSelector: apiBaseUrl格式不正确，使用默认值');
+        apiBaseUrl = '/api/customer/districts/';
+    }
+    
+    // 检查AmapDistrictSelector类是否已加载
+    if (typeof AmapDistrictSelector === 'undefined') {
+        console.error('initDistrictSelector: AmapDistrictSelector类未加载，请确保已引入amap-district-selector.js');
+        return null;
+    }
+    
+    // 检查必需的DOM元素是否存在
+    const provinceSelectId = prefix + 'ProvinceSelect';
+    const citySelectId = prefix + 'CitySelect';
+    const districtSelectId = prefix + 'DistrictSelect';
+    
+    const provinceSelect = document.getElementById(provinceSelectId);
+    const citySelect = document.getElementById(citySelectId);
+    const districtSelect = document.getElementById(districtSelectId);
+    
+    if (!provinceSelect || !citySelect || !districtSelect) {
+        console.error('initDistrictSelector: 必需的DOM元素不存在', {
+            provinceSelect: !!provinceSelect,
+            citySelect: !!citySelect,
+            districtSelect: !!districtSelect,
+            provinceSelectId: provinceSelectId,
+            citySelectId: citySelectId,
+            districtSelectId: districtSelectId
+        });
+        return null;
+    }
+    
+    try {
+        // 创建选择器实例
+        const selector = new AmapDistrictSelector({
+            provinceSelectId: provinceSelectId,
+            citySelectId: citySelectId,
+            districtSelectId: districtSelectId,
+            addressFieldId: addressFieldId,
+            detailInputId: detailInputId,
+            apiBaseUrl: apiBaseUrl,
+            autoUpdateAddress: autoUpdateAddress,
+            enableLogging: enableLogging,
+            addressFormat: addressFormat
+        });
+        
+        // 初始化选择器
+        selector.init();
+        
+        // 将选择器实例存储到全局对象中，方便后续访问
+        if (!window.districtSelectors) {
+            window.districtSelectors = {};
+        }
+        window.districtSelectors[prefix] = selector;
+        
+        if (enableLogging) {
+            console.log(`行政区域选择器已初始化: ${prefix}`);
+        }
+        
+        return selector;
+    } catch (error) {
+        console.error(`initDistrictSelector: 初始化失败 (${prefix})`, error);
+        return null;
+    }
+}
+
+// 如果页面中已经有districtSelectors对象，确保不覆盖
+if (!window.districtSelectors) {
+    window.districtSelectors = {};
+}
+</script>
+
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endwith %}
+
