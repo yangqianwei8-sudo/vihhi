@@ -4844,14 +4844,26 @@ def pre_optimization_materials_reparse(request, material_id):
                     sys.stdout.flush()
                     material.parse_status = 'processing'
                     material.parse_progress = 0
+                    material.parse_progress_message = '准备开始解析...'
                     material.save()
                     
                     print(f"[CAD解析任务] 创建 CADParserService 实例", flush=True)
                     sys.stdout.flush()
+                    material.parse_progress = 10
+                    material.parse_progress_message = '初始化解析服务...'
+                    material.save()
                     parser = CADParserService()
+                    
                     print(f"[CAD解析任务] 调用 parse_for_pre_optimization", flush=True)
                     sys.stdout.flush()
-                    result = parser.parse_for_pre_optimization(material.cad_file.path)
+                    material.parse_progress = 20
+                    material.parse_progress_message = '开始解析CAD文件...'
+                    material.save()
+                    
+                    def progress_callback(progress, message):
+                        _update_parse_progress(material, progress, message)
+                    
+                    result = parser.parse_for_pre_optimization(material.cad_file.path, progress_callback=progress_callback)
                     print(f"[CAD解析任务] 解析完成，结果: success={result.get('success')}", flush=True)
                     sys.stdout.flush()
                     
