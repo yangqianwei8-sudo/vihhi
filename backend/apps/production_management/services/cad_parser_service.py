@@ -346,12 +346,14 @@ class CADParserService:
         """解析DWG文件"""
         # DWG文件需要先转换为DXF，然后解析
         # 使用ODA File Converter工具（免费）
+        print(f"[CAD解析] 开始解析 DWG 文件: {file_path}", flush=True)
+        print(f"[CAD解析] cad2image_available: {self.cad2image_available}", flush=True)
         if not self.cad2image_available:
+            error_msg = 'DWG文件解析需要ODA File Converter工具。\n请访问 https://www.opendesign.com/guestfiles 下载免费的ODA File Converter，\n安装后确保DWGConvert命令在系统PATH中。'
+            print(f"[CAD解析] 检查失败: {error_msg}", flush=True)
             return {
                 'success': False,
-                'error': 'DWG文件解析需要ODA File Converter工具。\n'
-                         '请访问 https://www.opendesign.com/guestfiles 下载免费的ODA File Converter，\n'
-                         '安装后确保DWGConvert命令在系统PATH中。'
+                'error': error_msg
             }
         
         try:
