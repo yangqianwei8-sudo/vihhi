@@ -123,10 +123,13 @@ if not database_url and DEBUG:
 if database_url and "dbconn.sealosbja.site:45978" in database_url:
     database_url = database_url.replace("dbconn.sealosbja.site:45978", "dbconn.sealosbja.site:38013")
 
-# 仅对 Sealos 外网连接添加 directConnection 参数（本地数据库不需要）
-if database_url and "dbconn.sealosbja.site" in database_url and "directConnection" not in database_url:
-    separator = "&" if "?" in database_url else "?"
-    database_url = f"{database_url}{separator}directConnection=true"
+# 移除 directConnection 参数（这是 MongoDB 的参数，PostgreSQL 不支持）
+if database_url and "directConnection" in database_url:
+    import re
+    # 移除 directConnection 参数
+    database_url = re.sub(r'[&?]directConnection=[^&]*', '', database_url)
+    # 如果移除后 URL 以 & 结尾，清理掉
+    database_url = database_url.rstrip('&')
 
 if database_url:
     # 使用 PostgreSQL 数据库
