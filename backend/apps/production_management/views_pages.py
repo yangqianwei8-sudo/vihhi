@@ -4684,12 +4684,23 @@ def pre_optimization_materials_create(request):
                 
                 def parse_cad():
                     import sys
+                    import os
                     import django
                     from django.db import connection
+                    from django.core.wsgi import get_wsgi_application
+                    
                     material_id = material.id  # 保存 ID，避免在后台线程中使用对象
                     
                     try:
-                        # 关闭主线程的数据库连接，让后台线程创建新连接
+                        # 在后台线程中初始化 Django（如果需要）
+                        if not django.apps.apps.ready:
+                            os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.config.settings')
+                            django.setup()
+                        
+                        print(f"[CAD解析任务] 线程已启动，文件ID: {material_id}", flush=True)
+                        sys.stdout.flush()
+                        
+                        # 关闭当前线程的数据库连接，创建新连接
                         connection.close()
                         
                         print(f"[CAD解析任务] 开始解析任务，文件ID: {material_id}", flush=True)
@@ -4782,9 +4793,21 @@ def pre_optimization_materials_create(request):
                             print(f"[CAD解析任务] 保存错误状态失败: {save_error}", flush=True)
                 
                 # 在后台线程中执行解析
-                thread = threading.Thread(target=parse_cad)
+                print(f"[CAD解析] 准备启动后台线程，Material ID: {material.id}", flush=True)
+                thread = threading.Thread(target=parse_cad, name=f"CADParse-{material.id}")
                 thread.daemon = True
                 thread.start()
+                print(f"[CAD解析] 后台线程已启动，线程名: {thread.name}, 是否存活: {thread.is_alive()}", flush=True)
+                
+                # 立即更新状态为 processing（在主线程中）
+                try:
+                    material.parse_status = 'processing'
+                    material.parse_progress = 0
+                    material.parse_progress_message = '准备开始解析...'
+                    material.save(update_fields=['parse_status', 'parse_progress', 'parse_progress_message'])
+                    print(f"[CAD解析] 主线程中状态已更新为 processing", flush=True)
+                except Exception as e:
+                    print(f"[CAD解析] 主线程中更新状态失败: {e}", flush=True)
                 
                 messages.success(request, '优化前资料创建成功，CAD文件正在后台解析中，请稍后查看详情。')
             except Exception as e:
@@ -4880,12 +4903,23 @@ def pre_optimization_materials_reparse(request, material_id):
             
             def parse_cad():
                 import sys
+                import os
                 import django
                 from django.db import connection
+                from django.core.wsgi import get_wsgi_application
+                
                 material_id = material.id  # 保存 ID，避免在后台线程中使用对象
                 
                 try:
-                    # 关闭主线程的数据库连接，让后台线程创建新连接
+                    # 在后台线程中初始化 Django（如果需要）
+                    if not django.apps.apps.ready:
+                        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.config.settings')
+                        django.setup()
+                    
+                    print(f"[CAD解析任务] 重新解析线程已启动，文件ID: {material_id}", flush=True)
+                    sys.stdout.flush()
+                    
+                    # 关闭当前线程的数据库连接，创建新连接
                     connection.close()
                     
                     print(f"[CAD解析任务] 开始重新解析任务，文件ID: {material_id}", flush=True)
@@ -4961,9 +4995,21 @@ def pre_optimization_materials_reparse(request, material_id):
                     material.save()
             
             # 在后台线程中执行解析
-            thread = threading.Thread(target=parse_cad)
+            print(f"[CAD解析] 准备启动重新解析后台线程，Material ID: {material.id}", flush=True)
+            thread = threading.Thread(target=parse_cad, name=f"CADReparse-{material.id}")
             thread.daemon = True
             thread.start()
+            print(f"[CAD解析] 重新解析后台线程已启动，线程名: {thread.name}, 是否存活: {thread.is_alive()}", flush=True)
+            
+            # 立即更新状态为 processing（在主线程中）
+            try:
+                material.parse_status = 'processing'
+                material.parse_progress = 0
+                material.parse_progress_message = '准备开始解析...'
+                material.save(update_fields=['parse_status', 'parse_progress', 'parse_progress_message'])
+                print(f"[CAD解析] 主线程中重新解析状态已更新为 processing", flush=True)
+            except Exception as e:
+                print(f"[CAD解析] 主线程中更新重新解析状态失败: {e}", flush=True)
             
             messages.success(request, '已开始重新解析CAD文件，请稍后刷新页面查看结果。')
         except Exception as e:
