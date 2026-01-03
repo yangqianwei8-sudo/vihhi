@@ -4880,29 +4880,44 @@ def pre_optimization_materials_reparse(request, material_id):
             
             def parse_cad():
                 import sys
+                import django
+                from django.db import connection
+                material_id = material.id  # 保存 ID，避免在后台线程中使用对象
+                
                 try:
-                    print(f"[CAD解析任务] 开始重新解析任务，文件ID: {material.id}, 文件路径: {material.cad_file.path}", flush=True)
+                    # 关闭主线程的数据库连接，让后台线程创建新连接
+                    connection.close()
+                    
+                    print(f"[CAD解析任务] 开始重新解析任务，文件ID: {material_id}", flush=True)
                     sys.stdout.flush()
+                    
+                    # 重新获取 material 对象（在后台线程中）
+                    from .models import PreOptimizationMaterial
+                    material = PreOptimizationMaterial.objects.get(id=material_id)
+                    
+                    print(f"[CAD解析任务] 文件路径: {material.cad_file.path}", flush=True)
+                    sys.stdout.flush()
+                    
                     material.parse_status = 'processing'
                     material.parse_progress = 0
                     material.parse_progress_message = '准备开始解析...'
                     material.save()
+                    print(f"[CAD解析任务] 状态已更新为 processing", flush=True)
+                    sys.stdout.flush()
                     
                     print(f"[CAD解析任务] 创建 CADParserService 实例", flush=True)
                     sys.stdout.flush()
-                    material.parse_progress = 10
-                    material.parse_progress_message = '初始化解析服务...'
-                    material.save()
+                    _update_parse_progress(material_id, 10, '初始化解析服务...')
                     parser = CADParserService()
+                    print(f"[CAD解析任务] CADParserService 创建成功，cad2image_available: {parser.cad2image_available}", flush=True)
+                    sys.stdout.flush()
                     
                     print(f"[CAD解析任务] 调用 parse_for_pre_optimization", flush=True)
                     sys.stdout.flush()
-                    material.parse_progress = 20
-                    material.parse_progress_message = '开始解析CAD文件...'
-                    material.save()
+                    _update_parse_progress(material_id, 20, '开始解析CAD文件...')
                     
                     def progress_callback(progress, message):
-                        _update_parse_progress(material, progress, message)
+                        _update_parse_progress(material_id, progress, message)
                     
                     result = parser.parse_for_pre_optimization(material.cad_file.path, progress_callback=progress_callback)
                     print(f"[CAD解析任务] 解析完成，结果: success={result.get('success')}", flush=True)
