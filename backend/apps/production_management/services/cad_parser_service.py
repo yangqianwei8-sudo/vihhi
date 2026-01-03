@@ -376,8 +376,28 @@ class CADParserService:
                 
                 logger.info(f"使用DWG转换命令: {converter_cmd}")
                 
+                # 使用 xvfb-run 包装命令，确保在虚拟显示环境中运行
+                import shutil
+                xvfb_run = shutil.which('xvfb-run')
+                if xvfb_run:
+                    # 使用 xvfb-run 执行转换命令
+                    # xvfb-run -a -s "-screen 0 1024x768x24" command args...
+                    cmd = [
+                        xvfb_run,
+                        '-a',  # 自动选择显示编号
+                        '-s', '-screen 0 1024x768x24',  # 屏幕配置（注意：-s 后面的参数需要作为一个整体）
+                        converter_cmd,
+                        file_path,
+                        temp_dxf_path
+                    ]
+                    logger.info(f"使用 xvfb-run 执行转换: {xvfb_run} -a -s '-screen 0 1024x768x24' {converter_cmd} {file_path} {temp_dxf_path}")
+                else:
+                    # 如果没有 xvfb-run，直接执行（可能在某些环境中不需要）
+                    cmd = [converter_cmd, file_path, temp_dxf_path]
+                    logger.info(f"直接执行转换: {' '.join(cmd)}")
+                
                 result = subprocess.run(
-                    [converter_cmd, file_path, temp_dxf_path],
+                    cmd,
                     capture_output=True,
                     text=True,
                     timeout=60  # 增加超时时间到60秒
