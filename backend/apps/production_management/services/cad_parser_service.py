@@ -375,6 +375,7 @@ class CADParserService:
                     }
                 
                 logger.info(f"使用DWG转换命令: {converter_cmd}")
+                print(f"[CAD解析] 使用DWG转换命令: {converter_cmd}", flush=True)  # 确保输出到标准输出
                 
                 # 使用 xvfb-run 包装命令，确保在虚拟显示环境中运行
                 import shutil
@@ -391,11 +392,14 @@ class CADParserService:
                         temp_dxf_path
                     ]
                     logger.info(f"使用 xvfb-run 执行转换: {xvfb_run} -a -s '-screen 0 1024x768x24' {converter_cmd} {file_path} {temp_dxf_path}")
+                    print(f"[CAD解析] 使用 xvfb-run 执行转换: {' '.join(cmd)}", flush=True)
                 else:
                     # 如果没有 xvfb-run，直接执行（可能在某些环境中不需要）
                     cmd = [converter_cmd, file_path, temp_dxf_path]
                     logger.info(f"直接执行转换: {' '.join(cmd)}")
+                    print(f"[CAD解析] 直接执行转换: {' '.join(cmd)}", flush=True)
                 
+                print(f"[CAD解析] 开始执行转换命令...", flush=True)
                 result = subprocess.run(
                     cmd,
                     capture_output=True,
@@ -403,10 +407,18 @@ class CADParserService:
                     timeout=60  # 增加超时时间到60秒
                 )
                 
+                print(f"[CAD解析] 转换命令执行完成，返回码: {result.returncode}", flush=True)
+                if result.stdout:
+                    print(f"[CAD解析] 标准输出: {result.stdout[:500]}", flush=True)
+                if result.stderr:
+                    print(f"[CAD解析] 错误输出: {result.stderr[:500]}", flush=True)
+                
                 if result.returncode != 0:
+                    error_msg = f'DWG转换失败: {result.stderr}'
+                    print(f"[CAD解析] 转换失败: {error_msg}", flush=True)
                     return {
                         'success': False,
-                        'error': f'DWG转换失败: {result.stderr}'
+                        'error': error_msg
                     }
                 
                 # 转换成功后，使用DXF解析器解析
