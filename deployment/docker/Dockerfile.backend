@@ -110,8 +110,8 @@ RUN mkdir -p /tmp/runtime-root && chmod 700 /tmp/runtime-root
 
 EXPOSE 8000
 
-# 创建启动脚本（使用 xvfb-run 更可靠）
-RUN echo '#!/bin/bash\nset -e\n# 设置环境变量\nexport DISPLAY=:99\nexport XDG_RUNTIME_DIR=/tmp/runtime-root\nexport QT_X11_NO_MITSHM=1\nexport QT_QUICK_BACKEND=software\nexport QT_PLUGIN_PATH=/opt/ODAFileConverter/plugins\nexport LD_LIBRARY_PATH=/opt/ODAFileConverter/lib:${LD_LIBRARY_PATH}\nmkdir -p /tmp/runtime-root\nchmod 700 /tmp/runtime-root\n# 启动 xvfb（如果还没启动）\nif ! pgrep -x Xvfb > /dev/null 2>&1; then\n    Xvfb :99 -screen 0 1024x768x24 -ac +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 &\n    sleep 3\n    # 验证 xvfb 启动成功\n    if ! xdpyinfo -display :99 > /dev/null 2>&1; then\n        echo "Warning: Xvfb may not be ready, check /tmp/xvfb.log"\n    fi\nfi\n# 执行主命令\nexec "$@"' > /usr/local/bin/entrypoint.sh && \
+# 创建启动脚本（确保 xvfb 正确启动）
+RUN echo '#!/bin/bash\nset -e\n# 设置环境变量\nexport DISPLAY=:99\nexport XDG_RUNTIME_DIR=/tmp/runtime-root\nexport QT_X11_NO_MITSHM=1\nexport QT_QUICK_BACKEND=software\nexport QT_PLUGIN_PATH=/opt/ODAFileConverter/plugins\nexport LD_LIBRARY_PATH=/opt/ODAFileConverter/lib:${LD_LIBRARY_PATH}\nmkdir -p /tmp/runtime-root\nchmod 700 /tmp/runtime-root\n# 清理可能存在的锁文件\nrm -f /tmp/.X99-lock /tmp/.X11-unix/X99\n# 启动 xvfb\nXvfb :99 -screen 0 1024x768x24 -ac +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 &\nXVFB_PID=$!\n# 等待 xvfb 启动\nsleep 3\n# 验证 xvfb 是否运行\nif ! kill -0 $XVFB_PID 2>/dev/null; then\n    echo "Error: Xvfb failed to start, check /tmp/xvfb.log"\n    cat /tmp/xvfb.log\n    exit 1\nfi\n# 验证显示连接\nif ! xdpyinfo -display :99 > /dev/null 2>&1; then\n    echo "Warning: Xvfb started but display not ready, waiting..."\n    sleep 2\nfi\necho "Xvfb started successfully on display :99"\n# 执行主命令\nexec "$@"' > /usr/local/bin/entrypoint.sh && \
     chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
