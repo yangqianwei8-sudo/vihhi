@@ -440,9 +440,6 @@ class Plan(models.Model):
     
     STATUS_CHOICES = [
         ('draft', '草稿'),
-        ('pending_approval', '待审批'),
-        ('approving', '审批中'),
-        ('approved', '已审批'),
         ('in_progress', '执行中'),
         ('completed', '已完成'),
         ('cancelled', '已取消'),
@@ -638,19 +635,7 @@ class Plan(models.Model):
         if self.status == 'cancelled':
             return 'cancelled'
         
-        # 如果计划已审批，根据时间判断是否应该进入执行中
-        if self.status == 'approved':
-            if self.start_time and now >= self.start_time:
-                if self.end_time and now > self.end_time:
-                    # 已过结束时间，但进度未完成，保持执行中（可能需要人工确认完成）
-                    return 'in_progress'
-                else:
-                    # 在计划时间范围内，应该是执行中
-                    return 'in_progress'
-            else:
-                # 未到开始时间，保持已审批状态
-                return 'approved'
-        
+        # P1: 简化状态判断，不包含审批流程
         # 如果计划正在执行中，根据时间判断是否需要调整
         if self.status == 'in_progress':
             if self.end_time and now > self.end_time:
@@ -664,10 +649,8 @@ class Plan(models.Model):
         if not self.pk:  # 新建计划
             if self.start_time:
                 if now >= self.start_time:
-                    # 开始时间已过，直接进入待审批或执行中
-                    # 如果有审批流程，应该是待审批；否则直接执行中
-                    # 这里默认设置为待审批，需要审批后才能执行
-                    return 'pending_approval'
+                    # 开始时间已过，直接进入执行中（P1 不包含审批流程）
+                    return 'in_progress'
                 else:
                     # 开始时间未到，设置为草稿
                     return 'draft'
@@ -690,24 +673,17 @@ class Plan(models.Model):
         if self.alignment_score == 0:
             self.alignment_score = self.calculate_alignment_score()
         
-        # 自动判断计划状态
-        # 创建时总是自动判断状态；编辑时如果状态是草稿或待审批，也自动判断
-        if not self.pk:
-            # 新建计划，总是自动判断状态
-            self.status = self.determine_status()
-        elif self.status in ['draft', 'pending_approval']:
-            # 编辑时，如果状态是草稿或待审批，根据实际情况自动判断
-            self.status = self.determine_status()
+        # P1: 状态变更必须通过裁决器，不在 save() 中直接设置
+        # 新建计划默认状态为 draft（由数据库默认值或表单设置）
+        if not self.pk and not self.status:
+            self.status = 'draft'
         
         super().save(*args, **kwargs)
     
     def get_valid_transitions(self):
-        """获取有效的状态转换"""
+        """获取有效的状态转换（P1：只支持 4 状态）"""
         transitions = {
-            'draft': ['pending_approval', 'cancelled'],
-            'pending_approval': ['approving', 'cancelled'],
-            'approving': ['approved', 'cancelled'],
-            'approved': ['in_progress', 'cancelled'],
+            'draft': ['in_progress', 'cancelled'],
             'in_progress': ['completed', 'cancelled'],
             'completed': [],
             'cancelled': [],
@@ -931,4 +907,103 @@ class PlanApproval(models.Model):
     
     def __str__(self):
         return f"{self.plan.plan_number} - {self.approval_node} - {self.get_status_display()}"
+
+
+class PlanDecision(models.Model):
+    """计划决策记录（P1 轻量审批模型）"""
+    
+    REQUEST_TYPES = [
+        ('start', '启动计划'),
+        ('cancel', '取消计划'),
+    ]
+    
+    DECISION_CHOICES = [
+        ('approve', '通过'),
+        ('reject', '驳回'),
+    ]
+    
+    # 关联计划
+    plan = models.ForeignKey(
+        Plan,
+        on_delete=models.CASCADE,
+        related_name='decisions',
+        verbose_name='计划'
+    )
+    
+    # 请求类型（拆分为两段）
+    request_type = models.CharField(
+        max_length=20,
+        choices=REQUEST_TYPES,
+        verbose_name='请求类型'
+    )
+    
+    # 决策结果（pending 时为空）
+    decision = models.CharField(
+        max_length=20,
+        choices=DECISION_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name='决策结果'
+    )
+    
+    # 请求信息
+    requested_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='requested_plan_decisions',
+        verbose_name='请求人'
+    )
+    requested_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='请求时间'
+    )
+    
+    # 决策信息（pending 判定：decided_at is null）
+    decided_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='decided_plan_decisions',
+        verbose_name='决策人'
+    )
+    decided_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='决策时间'
+    )
+    
+    # 原因/说明
+    reason = models.TextField(
+        blank=True,
+        verbose_name='原因说明'
+    )
+    
+    class Meta:
+        db_table = 'plan_decision'
+        verbose_name = '计划决策记录'
+        verbose_name_plural = verbose_name
+        ordering = ['-requested_at']
+        # 约束：同一 plan + request_type 同时只能存在 1 条 pending
+        constraints = [
+            models.UniqueConstraint(
+                fields=['plan', 'request_type'],
+                condition=models.Q(decided_at__isnull=True),
+                name='unique_pending_decision_per_plan_request_type'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['plan', '-requested_at']),
+            models.Index(fields=['request_type', 'decided_at']),
+        ]
+    
+    @property
+    def is_pending(self):
+        """判断是否为待处理状态"""
+        return self.decided_at is None
+    
+    def __str__(self):
+        decision_text = self.get_decision_display() if self.decision else '待处理'
+        return f"{self.plan.plan_number} - {self.get_request_type_display()} - {decision_text}"
 

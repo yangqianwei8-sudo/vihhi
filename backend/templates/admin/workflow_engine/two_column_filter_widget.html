@@ -1,0 +1,63 @@
+{% load static %}
+<div class="two-column-filter-widget" id="two-column-filter-{{ widget.name }}">
+    <div class="filter-container">
+        <!-- 第一栏：功能模块选择 -->
+        <div class="filter-column module-column">
+            <label><strong>第一步：选择功能模块</strong></label>
+            <div class="module-list">
+                {% for module_code, module_name in widget.module_choices %}
+                <div class="module-item">
+                    <label>
+                        <input type="checkbox" 
+                               class="module-checkbox" 
+                               value="{{ module_code }}"
+                               data-module="{{ module_code }}">
+                        {{ module_name }}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- 第二栏：业务对象选择 -->
+        <div class="filter-column model-column">
+            <label><strong>第二步：选择业务对象类型</strong></label>
+            <div class="model-list" id="model-list-{{ widget.name }}">
+                <p class="hint-text">请先选择功能模块</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 隐藏字段：存储选中的模型名称 -->
+    <input type="hidden" 
+           name="{{ widget.name }}" 
+           id="hidden-input-{{ widget.name }}" 
+           value="">
+    
+    <!-- 已选择的对象显示 -->
+    <div class="selected-models">
+        <label><strong>已选择的对象：</strong></label>
+        <div class="selected-list" id="selected-list-{{ widget.name }}">
+            <span class="no-selection">暂无选择</span>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+// 模块和业务对象的映射数据
+(function() {
+    var widgetId = 'two-column-filter-{{ widget.name }}';
+    // 等待DOM加载完成
+    if (typeof jQuery !== 'undefined') {
+        jQuery(document).ready(function($) {
+            var $widget = $('#' + widgetId);
+            if ($widget.length) {
+                // 设置数据属性，供JavaScript使用
+                $widget.data('module-mapping', {{ widget.module_model_mapping_json|safe }});
+                $widget.data('selected-models', {{ widget.selected_models_json|safe }});
+            }
+        });
+    }
+})();
+</script>
+

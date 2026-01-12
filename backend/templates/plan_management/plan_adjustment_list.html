@@ -1,0 +1,115 @@
+{% extends "shared/list_page_base.html" %}
+
+{% block list_page_title %}计划调整列表{% endblock %}
+
+{% block list_page_actions %}
+{{ block.super }}
+<a href="{% url 'plan_pages:plan_adjustment_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i>创建调整申请
+</a>
+{% endblock %}
+
+{% block list_page_filter_fields %}
+<div class="filter-row" data-filter-key="status">
+    <label class="filter-label">审批状态</label>
+    <div class="filter-control">
+        <select name="status" class="form-control form-control-sm">
+            <option value="">全部状态</option>
+            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>待审批</option>
+            <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>已批准</option>
+            <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>已拒绝</option>
+        </select>
+    </div>
+</div>
+<div class="filter-row" data-filter-key="plan">
+    <label class="filter-label">计划</label>
+    <div class="filter-control">
+        <select name="plan" class="form-control form-control-sm">
+            <option value="">全部计划</option>
+            {% for plan in all_plans %}
+            <option value="{{ plan.id }}" {% if plan_filter == plan.id|stringformat:"s" %}selected{% endif %}>
+                {{ plan.plan_number }} - {{ plan.name|truncatewords:3 }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+{% endblock %}
+
+{% block search_placeholder %}搜索计划编号、调整原因、调整内容...{% endblock %}
+
+{% block list_page_table_headers %}
+<th>调整申请ID</th>
+<th>计划信息</th>
+<th>调整原因</th>
+<th>调整内容</th>
+<th>申请人</th>
+<th>申请时间</th>
+<th>审批状态</th>
+<th>审批人</th>
+<th>审批时间</th>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td><code>#{{ item.id }}</code></td>
+<td>
+    <a href="{% url 'plan_pages:plan_detail' item.plan.id %}" class="text-decoration-none">
+        {{ item.plan.plan_number }}<br>
+        <small class="text-muted">{{ item.plan.name|truncatewords:5 }}</small>
+    </a>
+</td>
+<td>{{ item.adjustment_reason|truncatewords:10 }}</td>
+<td>{{ item.adjustment_content|truncatewords:10 }}</td>
+<td>{{ item.created_by.get_full_name|default:item.created_by.username }}</td>
+<td>{{ item.created_time|date:"Y-m-d H:i" }}</td>
+<td>
+    {% if item.status == 'pending' %}
+    <span class="badge bg-warning">待审批</span>
+    {% elif item.status == 'approved' %}
+    <span class="badge bg-success">已批准</span>
+    {% elif item.status == 'rejected' %}
+    <span class="badge bg-danger">已拒绝</span>
+    {% endif %}
+</td>
+<td>
+    {% if item.approved_by %}
+    {{ item.approved_by.get_full_name|default:item.approved_by.username }}
+    {% else %}
+    <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>
+    {% if item.approved_time %}
+    {{ item.approved_time|date:"Y-m-d H:i" }}
+    {% else %}
+    <span class="text-muted">-</span>
+    {% endif %}
+</td>
+{% endblock %}
+
+{% block list_page_table_actions_cell %}
+<td>
+    <div class="list-page-table-actions">
+        <a href="{% url 'plan_pages:plan_detail' item.plan.id %}" 
+           class="action-view" 
+           title="查看计划详情">
+            <i class="bi bi-eye"></i>
+        </a>
+        {% if item.status == 'pending' %}
+        <span class="action-separator">|</span>
+        <a href="{% url 'plan_pages:plan_adjustment_approval' %}?adjustment_id={{ item.id }}" 
+           class="action-edit" 
+           title="审批">
+            <i class="bi bi-check-circle"></i>
+        </a>
+        {% endif %}
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_colspan %}9{% endblock %}
+
+{% block empty_table_message %}
+<p class="mb-0">暂无计划调整申请</p>
+{% endblock %}
+

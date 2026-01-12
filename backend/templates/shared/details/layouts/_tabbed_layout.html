@@ -1,0 +1,47 @@
+{% comment %}
+标签页布局模板
+提供标签页形式的详情页布局
+{% endcomment %}
+{% load detail_tags %}
+
+<div class="detail-tabs-container">
+    {# 标签页导航 #}
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        {% for tab in config.tabs %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if forloop.first %}active{% endif %}" 
+                        id="tab-{{ tab.id }}-tab" 
+                        data-bs-toggle="tab" 
+                        data-bs-target="#tab-{{ tab.id }}" 
+                        type="button" 
+                        role="tab">
+                    {{ tab.title }}
+                </button>
+            </li>
+        {% endfor %}
+    </ul>
+    
+    {# 标签页内容 #}
+    <div class="tab-content">
+        {% for tab in config.tabs %}
+            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" 
+                 id="tab-{{ tab.id }}" 
+                 role="tabpanel">
+                {% if tab.component %}
+                    {# 自定义组件 #}
+                    {% include tab.component with data=data tab=tab request=request %}
+                {% else %}
+                    {# 配置驱动的区块 #}
+                    {% for section_id in tab.section_ids %}
+                        {% for section in config.sections %}
+                            {% if section.id == section_id %}
+                                {% render_detail_section section data %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+

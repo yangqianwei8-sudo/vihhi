@@ -1,0 +1,123 @@
+{% extends "shared/detail_page_base.html" %}
+{% load static %}
+{% load detail_tags %}
+{% comment %}
+客户详情页面 - 配置驱动版本
+这是使用配置驱动系统的新版本模板
+{% endcomment %}
+
+{% block title %}{{ config.title }} - {{ client.name }} - 维海科技信息化管理平台{% endblock %}
+
+{% block detail_page_extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/details/detail.css' %}">
+{% endblock %}
+
+{% block detail_hero_icon %}👤{% endblock %}
+{% block detail_hero_title %}{{ config.title }}{% endblock %}
+{% block detail_hero_subtitle %}{{ client.name }}{% endblock %}
+
+{% block detail_content %}
+    {% include 'shared/details/layouts/_detail_layout.html' with config=config data=client contacts=contacts execution_records=execution_records execution_count=execution_count %}
+{% endblock %}
+
+{% block detail_approval_info %}
+<div class="container-fluid py-4">
+    <!-- 审批流程 -->
+    {% if approval_instance %}
+    <div class="info-card">
+        <div class="info-card-header d-flex justify-content-between align-items-center">
+            <div>
+            <h5 class="info-card-title">
+                <i class="bi bi-clipboard-check"></i> 审批流程
+            </h5>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                <span class="badge bg-{% if approval_instance.status == 'approved' %}success{% elif approval_instance.status == 'rejected' %}danger{% else %}warning{% endif %}">
+                    {{ approval_instance.get_status_display }}
+                </span>
+                <span class="text-muted small">审批编号：{{ approval_instance.instance_number }}</span>
+                </div>
+            </div>
+            <div>
+                {% if can_approve_workflow %}
+                <form method="post" action="{% url 'workflow_engine:approval_action' approval_instance.id %}" style="display: inline;" onsubmit="return confirm('确认审批通过？');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="approve">
+                    <input type="hidden" name="redirect_to" value="{% url 'business_pages:customer_detail' client.id %}">
+                    <button type="submit" class="btn btn-sm btn-success">
+                        <i class="bi bi-check-circle"></i> 审批通过
+                    </button>
+                </form>
+                <form method="post" action="{% url 'workflow_engine:approval_action' approval_instance.id %}" style="display: inline;" onsubmit="var reason = prompt('请输入拒绝原因：'); if (!reason) return false; var input = document.createElement('input'); input.type='hidden'; input.name='comment'; input.value=reason; this.appendChild(input); return confirm('确认审批拒绝？');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reject">
+                    <input type="hidden" name="redirect_to" value="{% url 'business_pages:customer_detail' client.id %}">
+                    <button type="submit" class="btn btn-sm btn-danger">
+                        <i class="bi bi-x-circle"></i> 审批拒绝
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        <div class="info-card-body">
+            <!-- 审批基本信息 -->
+            <div class="mb-4">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <span class="info-label">申请人</span>
+                        <span class="info-value">{{ approval_instance.applicant.get_full_name|default:approval_instance.applicant.username }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">申请时间</span>
+                        <span class="info-value">{{ approval_instance.apply_time|date:"Y-m-d H:i:s" }}</span>
+                    </div>
+                    {% if approval_instance.apply_comment %}
+                    <div class="info-item" style="grid-column: 1 / -1;">
+                        <span class="info-label">申请说明</span>
+                        <span class="info-value">{{ approval_instance.apply_comment }}</span>
+                    </div>
+                    {% endif %}
+                    {% if approval_instance.current_node %}
+                    <div class="info-item">
+                        <span class="info-label">当前节点</span>
+                        <span class="info-value">
+                            <span class="badge bg-primary">{{ approval_instance.current_node.name }}</span>
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if approval_instance.completed_time %}
+                    <div class="info-item">
+                        <span class="info-label">完成时间</span>
+                        <span class="info-value">{{ approval_instance.completed_time|date:"Y-m-d H:i:s" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            
+            <!-- 查看完整审批详情链接 -->
+            <div class="mt-3 text-center">
+                <a href="{% url 'workflow_engine:approval_detail' approval_instance.id %}" class="btn btn-sm btn-outline-primary" target="_blank">
+                    <i class="bi bi-box-arrow-up-right"></i> 查看完整审批详情
+                </a>
+            </div>
+        </div>
+    </div>
+    {% elif can_submit_approval %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">
+                <i class="bi bi-clipboard-check"></i> 审批流程
+            </h5>
+        </div>
+        <div class="info-card-body text-center py-4">
+            <p class="text-muted mb-3">该客户尚未提交审批</p>
+            <a href="{% url 'business_pages:customer_submit_approval' client.id %}" class="btn btn-primary">
+                <i class="bi bi-send"></i> 提交审批
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

@@ -1,0 +1,308 @@
+"""
+C3-2: 审批通知服务（最小闭环版）
+
+统一处理审批流程中的通知，包括：
+- 提交审批 → 通知审批人
+- 审批通过/驳回 → 通知提交人
+
+原则：
+- 通知是"附加能力"，失败不影响审批成功
+- 所有通知逻辑 try/except 包裹
+- 出异常只 logger.warning，不抛错
+"""
+import logging
+from django.contrib.auth.models import User, Permission
+from django.db.models import Q
+from .models import ApprovalNotification, Plan, StrategicGoal
+
+logger = logging.getLogger(__name__)
+
+
+def notify_approvers(obj, event, actor, comment=None):
+    """
+    C3-2: 通知审批人（用于 submit_approval）
+    
+    Args:
+        obj: Plan 或 StrategicGoal 对象
+        event: 事件类型，'submit'
+        actor: 操作人（User 对象）
+        comment: 可选，申请说明
+    
+    Returns:
+        int: 成功创建的通知数量
+    """
+    try:
+        # 确定对象类型和权限代码
+        if isinstance(obj, Plan):
+            object_type = 'plan'
+            perm_code = 'plan_management.approve_plan'
+            obj_name = obj.name
+        elif isinstance(obj, StrategicGoal):
+            object_type = 'goal'
+            perm_code = 'plan_management.approve_strategicgoal'
+            obj_name = obj.indicator_name
+        else:
+            logger.warning(f"未知对象类型：{type(obj)}")
+            return 0
+        
+        # 找审批人：拥有 approve_plan / approve_strategicgoal 权限的人
+        # 最小方案：通过 Permission 查找
+        try:
+            perm = Permission.objects.get(
+                codename=perm_code.split('.')[-1],  # 'approve_plan' 或 'approve_strategicgoal'
+                content_type__app_label='plan_management'
+            )
+            
+            # 获取所有拥有该权限的用户（包括通过组获得的）
+            approvers = User.objects.filter(
+                Q(user_permissions=perm) | Q(groups__permissions=perm)
+            ).distinct()
+            
+            # 公司隔离：只筛选同公司
+            if hasattr(obj, 'company') and obj.company:
+                # 通过 profile 过滤同公司用户
+                approvers = approvers.filter(profile__company=obj.company)
+            
+            # 排除操作人自己（如果操作人也是审批人，不需要通知自己）
+            approvers = approvers.exclude(id=actor.id)
+            
+        except Permission.DoesNotExist:
+            logger.warning(f"权限不存在：{perm_code}")
+            return 0
+        
+        # 构建通知内容
+        if event == 'submit':
+            title = f"[审批] 有新的{'计划' if object_type == 'plan' else '目标'}需要审批"
+            content = f"{actor.get_full_name() or actor.username} 提交了{'计划' if object_type == 'plan' else '目标'}《{obj_name}》，请审批"
+            if comment:
+                content += f"。说明：{comment}"
+        else:
+            logger.warning(f"未知事件类型：{event}")
+            return 0
+        
+        # 为每个审批人创建通知
+        count = 0
+        for approver in approvers:
+            try:
+                ApprovalNotification.objects.create(
+                    user=approver,
+                    title=title,
+                    content=content,
+                    object_type=object_type,
+                    object_id=str(obj.id),
+                    event=event,
+                    is_read=False
+                )
+                count += 1
+            except Exception as e:
+                logger.warning(f"创建通知失败（用户：{approver.username}）：{str(e)}")
+        
+        logger.info(f"成功创建 {count} 条审批通知（{object_type} #{obj.id}）")
+        return count
+        
+    except Exception as e:
+        logger.warning(f"通知审批人失败（不影响业务）：{str(e)}")
+        return 0
+
+
+def notify_submitter(obj, event, actor, comment=None):
+    """
+    C3-2: 通知提交人（用于 approve / reject）
+    
+    Args:
+        obj: Plan 或 StrategicGoal 对象
+        event: 事件类型，'approve' 或 'reject'
+        actor: 操作人（User 对象）
+        comment: 可选，审批意见/驳回原因
+    
+    Returns:
+        bool: 是否成功创建通知
+    """
+    try:
+        # 确定对象类型
+        if isinstance(obj, Plan):
+            object_type = 'plan'
+            obj_name = obj.name
+        elif isinstance(obj, StrategicGoal):
+            object_type = 'goal'
+            obj_name = obj.indicator_name
+        else:
+            logger.warning(f"未知对象类型：{type(obj)}")
+            return False
+        
+        # 接收人：obj.created_by
+        submitter = obj.created_by
+        if not submitter:
+            logger.warning(f"对象 {object_type} #{obj.id} 没有创建人，无法发送通知")
+            return False
+        
+        # 构建通知内容
+        if event == 'approve':
+            title = f"[审批结果] {'计划' if object_type == 'plan' else '目标'}已审批通过"
+            content = f"你的{'计划' if object_type == 'plan' else '目标'}《{obj_name}》已审批通过"
+            if comment:
+                content += f"。意见：{comment}"
+        elif event == 'reject':
+            title = f"[审批结果] {'计划' if object_type == 'plan' else '目标'}已被驳回"
+            content = f"你的{'计划' if object_type == 'plan' else '目标'}《{obj_name}》已被驳回"
+            if comment:
+                content += f"。原因：{comment}"
+        else:
+            logger.warning(f"未知事件类型：{event}")
+            return False
+        
+        # 创建通知
+        ApprovalNotification.objects.create(
+            user=submitter,
+            title=title,
+            content=content,
+            object_type=object_type,
+            object_id=str(obj.id),
+            event=event,
+            is_read=False
+        )
+        
+        logger.info(f"成功创建审批结果通知（{object_type} #{obj.id} → {submitter.username}）")
+        return True
+        
+    except Exception as e:
+        logger.warning(f"通知提交人失败（不影响业务）：{str(e)}")
+        return False
+
+
+def notify_draft_timeout(plan, days_overdue=7):
+    """
+    工作流强制推进：通知草稿超时
+    
+    Args:
+        plan: Plan 对象（状态为 draft，创建时间超过指定天数）
+        days_overdue: 超时天数，默认7天
+    
+    Returns:
+        bool: 是否成功创建通知
+    """
+    try:
+        # 接收人：计划负责人
+        recipient = plan.responsible_person
+        if not recipient:
+            logger.warning(f"计划 #{plan.id} 没有负责人，无法发送草稿超时通知")
+            return False
+        
+        # 检查是否已经发送过通知（避免重复发送）
+        # 检查最近7天内是否已有相同类型的通知
+        from datetime import timedelta
+        from django.utils import timezone
+        recent_notification = ApprovalNotification.objects.filter(
+            user=recipient,
+            object_type='plan',
+            object_id=str(plan.id),
+            event='draft_timeout',
+            created_at__gte=timezone.now() - timedelta(days=1)  # 1天内不重复发送
+        ).exists()
+        
+        if recent_notification:
+            logger.debug(f"计划 #{plan.id} 的草稿超时通知已在1天内发送过，跳过")
+            return False
+        
+        # 构建通知内容
+        title = "[提醒] 计划草稿超时，请尽快提交审批"
+        content = f"您的计划《{plan.name}》已创建超过{days_overdue}天，仍处于草稿状态。请尽快提交审批，以便开始执行。"
+        
+        # 创建通知
+        ApprovalNotification.objects.create(
+            user=recipient,
+            title=title,
+            content=content,
+            object_type='plan',
+            object_id=str(plan.id),
+            event='draft_timeout',  # 新增事件类型
+            is_read=False
+        )
+        
+        logger.info(f"成功创建草稿超时通知（计划 #{plan.id} → {recipient.username}）")
+        return True
+        
+    except Exception as e:
+        logger.warning(f"通知草稿超时失败（不影响业务）：{str(e)}")
+        return False
+
+
+def notify_approval_timeout(plan, days_overdue=3):
+    """
+    工作流强制推进：通知审批超时
+    
+    Args:
+        plan: Plan 对象（状态为 pending_approval，审批时间超过指定天数）
+        days_overdue: 超时天数，默认3天
+    
+    Returns:
+        bool: 是否成功创建通知
+    """
+    try:
+        # 接收人：审批人（拥有 approve_plan 权限的人）
+        try:
+            from django.contrib.auth.models import Permission
+            perm = Permission.objects.get(
+                codename='approve_plan',
+                content_type__app_label='plan_management'
+            )
+            
+            approvers = User.objects.filter(
+                Q(user_permissions=perm) | Q(groups__permissions=perm)
+            ).distinct()
+            
+            # 公司隔离：只筛选同公司
+            if hasattr(plan, 'company') and plan.company:
+                approvers = approvers.filter(profile__company=plan.company)
+            
+        except Permission.DoesNotExist:
+            logger.warning("权限不存在：plan_management.approve_plan")
+            return False
+        
+        if not approvers.exists():
+            logger.warning(f"计划 #{plan.id} 没有找到审批人")
+            return False
+        
+        # 检查是否已经发送过通知（避免重复发送）
+        from datetime import timedelta
+        from django.utils import timezone
+        count = 0
+        for approver in approvers:
+            recent_notification = ApprovalNotification.objects.filter(
+                user=approver,
+                object_type='plan',
+                object_id=str(plan.id),
+                event='approval_timeout',
+                created_at__gte=timezone.now() - timedelta(days=1)  # 1天内不重复发送
+            ).exists()
+            
+            if recent_notification:
+                logger.debug(f"计划 #{plan.id} 的审批超时通知已在1天内发送给 {approver.username}，跳过")
+                continue
+            
+            # 构建通知内容
+            title = "[提醒] 计划审批超时，请尽快处理"
+            content = f"计划《{plan.name}》已提交审批超过{days_overdue}天，请尽快处理。"
+            
+            # 创建通知
+            try:
+                ApprovalNotification.objects.create(
+                    user=approver,
+                    title=title,
+                    content=content,
+                    object_type='plan',
+                    object_id=str(plan.id),
+                    event='approval_timeout',  # 新增事件类型
+                    is_read=False
+                )
+                count += 1
+            except Exception as e:
+                logger.warning(f"创建审批超时通知失败（用户：{approver.username}）：{str(e)}")
+        
+        logger.info(f"成功创建 {count} 条审批超时通知（计划 #{plan.id}）")
+        return count > 0
+        
+    except Exception as e:
+        logger.warning(f"通知审批超时失败（不影响业务）：{str(e)}")
+        return False
+

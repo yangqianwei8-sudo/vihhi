@@ -1,0 +1,96 @@
+/**
+ * 详情页布局样式
+ * 
+ * 容器管理规范：
+ * - .detail-layout: 最外层布局容器
+ * - .detail-content: 内容区域容器（管理所有区块的排列）
+ * - .detail-tabs-container: 标签页容器
+ * - .detail-actions: 操作按钮容器
+ */
+
+/* ============================================
+   详情页布局容器
+   ============================================ */
+.detail-layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--detail-gap);
+    min-height: 100vh;
+    background: var(--vh-bg);
+}
+
+/* ============================================
+   操作按钮区域容器
+   ============================================ */
+.detail-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* ============================================
+   详情内容区域容器
+   用于管理所有区块的垂直排列和间距
+   注意：卡片间距统一由 cards.css 中的 .workspace-main 规则管理（16px）
+   这里不设置 gap，让卡片的 margin-bottom 来控制间距，保持与其他页面一致
+   ============================================ */
+.detail-content {
+    display: flex;
+    flex-direction: column;
+    /* gap 由卡片的 margin-bottom 统一管理，保持与其他页面一致 */
+}
+
+/* ============================================
+   标签页布局容器
+   ============================================ */
+.detail-layout.tabbed {
+    .detail-tabs-container {
+        width: 100%;
+    }
+    
+    .detail-tabs {
+        position: sticky;
+        top: var(--navbar-height);
+        background: var(--vh-card-bg);
+        z-index: 10;
+        border-bottom: 1px solid var(--vh-border);
+    }
+    
+    .tab-content {
+        padding: var(--spacing-lg) 0;
+    }
+}
+
+/* ============================================
+   响应式布局（统一使用详情页断点变量）
+   ============================================ */
+@media (min-width: 768px) {
+    /* 使用 --detail-breakpoint-md (768px) */
+    .detail-layout.standard {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .detail-layout.wide {
+        max-width: 1600px;
+    }
+}
+
+@media (max-width: 767px) {
+    /* 移动端：小于 768px */
+    .detail-layout {
+        gap: var(--spacing-md);
+    }
+    
+    /* 移动端：卡片间距由 margin-bottom 统一管理，保持一致性 */
+    
+    .detail-actions {
+        flex-direction: column;
+    }
+    
+    .detail-actions .btn {
+        width: 100%;
+    }
+}
+

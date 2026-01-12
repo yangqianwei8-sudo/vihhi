@@ -1,0 +1,85 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block title %}我方主体信息 - 维海科技信息化管理平台{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">{{ page_title|default:'我方主体信息' }}</h2>
+            <p class="text-muted mb-0">管理系统中的我方主体信息，用于合同、文件等场景</p>
+        </div>
+        <a href="/admin/production_management/ourcompany/add/" class="btn btn-primary" target="_blank">
+            <i class="bi bi-plus-circle"></i> 添加主体信息
+        </a>
+    </div>
+
+    <!-- 主体信息列表 -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">主体信息列表</h5>
+        </div>
+        <div class="card-body">
+            {% if companies %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">排序</th>
+                            <th>主体名称</th>
+                            <th>统一社会信用代码</th>
+                            <th>法定代表人</th>
+                            <th>注册地址</th>
+                            <th style="width: 100px;">状态</th>
+                            <th style="width: 150px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for company in companies %}
+                        <tr>
+                            <td>{{ company.order }}</td>
+                            <td><strong>{{ company.company_name }}</strong></td>
+                            <td>{{ company.credit_code|default:'-' }}</td>
+                            <td>{{ company.legal_representative|default:'-' }}</td>
+                            <td>{{ company.registered_address|default:'-' }}</td>
+                            <td>
+                                {% if company.is_active %}
+                                <span class="badge bg-success">启用</span>
+                                {% else %}
+                                <span class="badge bg-secondary">禁用</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="/admin/production_management/ourcompany/{{ company.id }}/change/" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   target="_blank">
+                                    <i class="bi bi-pencil"></i> 编辑
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 暂无主体信息，请点击上方"添加主体信息"按钮进行添加。
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 提示信息 -->
+    <div class="alert alert-light mt-3">
+        <i class="bi bi-info-circle"></i> 
+        <strong>提示：</strong>主体信息的管理需要在后台管理系统中进行。点击"添加主体信息"或"编辑"按钮将在新窗口中打开后台管理页面。
+    </div>
+</div>
+{% endblock %}
+

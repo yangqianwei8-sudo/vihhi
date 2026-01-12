@@ -1,0 +1,61 @@
+{% comment %}
+详情页布局模板
+提供标准布局和标签页布局两种模式
+{% endcomment %}
+{% load detail_tags %}
+{% load static %}
+
+<div class="detail-layout detail-layout-{{ config.layout }}">
+    {# Actions Section #}
+    {% if config.actions %}
+        <div class="detail-actions mb-3 d-flex justify-content-end gap-2">
+            {% for action in config.actions %}
+                {% if action.url_name %}
+                    <a href="{% url action.url_name data.id %}" 
+                       class="btn btn-{{ action.type }}"
+                       {% if action.confirm %}onclick="return confirm('{{ action.confirm }}')"{% endif %}>
+                        {% if action.icon %}<i class="bi bi-{{ action.icon }}"></i> {% endif %}
+                        {{ action.label }}
+                    </a>
+                {% elif action.ajax_url %}
+                    <button type="button"
+                            class="btn btn-{{ action.type }}"
+                            data-ajax-url="{{ action.ajax_url }}"
+                            {% if action.confirm %}
+                                onclick="if(!confirm('{{ action.confirm }}')) return false; {% if action.handler %}{{ action.handler }}(this){% endif %}"
+                            {% elif action.handler %}
+                                onclick="{{ action.handler }}(this)"
+                            {% endif %}>
+                        {% if action.icon %}<i class="bi bi-{{ action.icon }}"></i> {% endif %}
+                        {{ action.label }}
+                    </button>
+                {% elif action.handler %}
+                    <button type="button"
+                            class="btn btn-{{ action.type }}"
+                            {% if action.confirm %}
+                                onclick="if(!confirm('{{ action.confirm }}')) return false; {{ action.handler }}(this)"
+                            {% else %}
+                                onclick="{{ action.handler }}(this)"
+                            {% endif %}>
+                        {% if action.icon %}<i class="bi bi-{{ action.icon }}"></i> {% endif %}
+                        {{ action.label }}
+                    </button>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    {# Content Section #}
+    {% if config.layout == 'tabbed' %}
+        {# 标签页布局 - 传递所有上下文变量 #}
+        {% include 'shared/details/layouts/_tabbed_layout.html' with config=config data=data request=request %}
+    {% else %}
+        {# 标准布局 #}
+        <div class="detail-content">
+            {% for section in config.sections %}
+                {% render_detail_section section data %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+

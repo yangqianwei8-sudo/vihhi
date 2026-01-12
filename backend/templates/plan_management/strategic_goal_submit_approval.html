@@ -1,0 +1,66 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block module_content %}
+<div class="workspace-content">
+    <div class="container-fluid py-4">
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">{{ page_title }}</h5>
+            </div>
+            <div class="info-card-body">
+                {% if existing_instance %}
+                <div class="alert alert-warning">
+                    <h6>已有正在进行的审批</h6>
+                    <p>该战略目标已有正在进行的审批流程（审批编号：{{ existing_instance.instance_number }}）</p>
+                    <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="btn btn-secondary mt-2">返回详情</a>
+                </div>
+                {% else %}
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="info-section">
+                        <div class="info-item">
+                            <label class="info-label">目标编号</label>
+                            <span class="info-value"><code>{{ goal.goal_number }}</code></span>
+                        </div>
+                        <div class="info-item">
+                            <label class="info-label">指标名称</label>
+                            <span class="info-value">{{ goal.indicator_name }}</span>
+                        </div>
+                        <div class="info-item">
+                            <label class="info-label">目标类型</label>
+                            <span class="info-value">{{ goal.get_goal_type_display }}</span>
+                        </div>
+                        <div class="info-item">
+                            <label class="info-label">目标状态</label>
+                            <span class="info-value">
+                                <span class="badge bg-{% if goal.status == 'draft' %}secondary{% elif goal.status == 'published' %}info{% elif goal.status == 'in_progress' %}primary{% elif goal.status == 'completed' %}success{% else %}warning{% endif %}">
+                                    {{ goal.get_status_display }}
+                                </span>
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <label class="info-label">审批说明</label>
+                            <textarea name="comment" class="form-control" rows="4" placeholder="请输入审批说明">{{ goal.goal_number }}审批申请</textarea>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send me-1"></i>提交审批
+                        </button>
+                        <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="btn btn-secondary">取消</a>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

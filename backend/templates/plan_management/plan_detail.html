@@ -47,9 +47,6 @@
         font-weight: 500;
     }
     .status-draft { background: #e9ecef; color: #495057; }
-    .status-pending_approval { background: #cfe2ff; color: #084298; }
-    .status-approving { background: #fff3cd; color: #856404; }
-    .status-approved { background: #d1e7dd; color: #0f5132; }
     .status-in_progress { background: #fff3cd; color: #856404; }
     .status-completed { background: #d1e7dd; color: #0f5132; }
     .status-cancelled { background: #f8d7da; color: #842029; }
@@ -93,17 +90,49 @@
             <a href="{% url 'plan_pages:plan_list' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i>返回列表
             </a>
-            {% if can_edit %}
-            <a href="{% url 'plan_pages:plan_edit' plan.id %}" class="btn btn-primary">
-                <i class="bi bi-pencil me-1"></i>编辑
-            </a>
+            {# 草稿状态 #}
+            {% if plan.status == 'draft' %}
+                {% if can_edit %}
+                <a href="{% url 'plan_pages:plan_edit' plan.id %}" class="btn btn-primary">
+                    <i class="bi bi-pencil me-1"></i>编辑
+                </a>
+                {% endif %}
+                {% if can_submit_approval %}
+                <form method="post" action="{% url 'plan_pages:plan_request_start' plan.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-send me-1"></i>提交审批
+                    </button>
+                </form>
+                {% endif %}
             {% endif %}
-            <a href="{% url 'plan_pages:plan_execution_track' plan.id %}" class="btn btn-info">
-                <i class="bi bi-graph-up me-1"></i>跟踪
-            </a>
-            <a href="{% url 'plan_pages:plan_decompose' plan.id %}" class="btn btn-success">
-                <i class="bi bi-diagram-3 me-1"></i>分解
-            </a>
+            
+            {# 执行中状态 #}
+            {% if plan.status == 'in_progress' %}
+                <a href="{% url 'plan_pages:plan_execution_track' plan.id %}" class="btn btn-info">
+                    <i class="bi bi-graph-up me-1"></i>跟踪
+                </a>
+                {% if can_request_cancel %}
+                <form method="post" action="{% url 'plan_pages:plan_request_cancel' plan.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-x-circle me-1"></i>发起取消审批
+                    </button>
+                </form>
+                {% endif %}
+            {% endif %}
+            
+            {# 已完成/已取消：只读 #}
+            {% if plan.status == 'completed' or plan.status == 'cancelled' %}
+                <span class="text-muted">只读模式</span>
+            {% endif %}
+            
+            {# 其他按钮（分解等，根据状态显示） #}
+            {% if plan.status != 'completed' and plan.status != 'cancelled' %}
+                <a href="{% url 'plan_pages:plan_decompose' plan.id %}" class="btn btn-success">
+                    <i class="bi bi-diagram-3 me-1"></i>分解
+                </a>
+            {% endif %}
         </div>
     </div>
     
@@ -374,6 +403,46 @@
                         </td>
                         <td>{% if issue.assigned_to %}{{ issue.assigned_to.get_full_name|default:issue.assigned_to.username }}{% else %}-{% endif %}</td>
                         <td>{{ issue.discovered_time|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- P1: 待审批决策列表（审批人可见） -->
+    {% if can_approve and pending_decisions %}
+    <div class="info-card mt-4">
+        <h5>⏳ 待审批决策</h5>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>请求类型</th>
+                        <th>请求人</th>
+                        <th>请求时间</th>
+                        <th>原因</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for decision in pending_decisions %}
+                    <tr>
+                        <td>{{ decision.get_request_type_display }}</td>
+                        <td>{{ decision.requested_by.get_full_name|default:decision.requested_by.username }}</td>
+                        <td>{{ decision.requested_at|date:"Y-m-d H:i" }}</td>
+                        <td>{{ decision.reason|truncatewords:10 }}</td>
+                        <td>
+                            <form method="post" action="{% url 'plan_pages:decision_approve' decision.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-success">通过</button>
+                            </form>
+                            <form method="post" action="{% url 'plan_pages:decision_reject' decision.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger">驳回</button>
+                            </form>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

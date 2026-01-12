@@ -1,0 +1,71 @@
+{% comment %}
+单个菜单项模板（支持递归）- 按照总工作台风格改造
+参数：
+- menu_item: 菜单项对象，包含 label, icon, url, active, expanded, children 等属性
+- menu_item_id: 菜单项ID（可选，默认使用forloop.counter）
+{% endcomment %}
+
+{% with has_children=menu_item.children|length|default:0 %}
+{% with is_active=menu_item.active|default:False is_expanded=menu_item.expanded|default:False %}
+{% with menu_item_id=menu_item.id|default:forloop_counter|default:"menu_item" %}
+<div class="sidenav-item 
+            {% if is_active %}active{% endif %}
+            {% if is_active or is_expanded %}expanded{% endif %}
+            {% if has_children > 0 %}has-children{% endif %}"
+     data-menu-id="{{ menu_item_id }}"
+     {% if menu_item.label %}data-search-keywords="{{ menu_item.label }}"{% endif %}>
+    
+    {% if has_children > 0 %}
+        {# 有子菜单：使用链接，点击展开/折叠 #}
+        <a class="nav-item sidenav-toggle {% if is_active %}active{% endif %}" 
+           href="{{ menu_item.url|default:'#' }}"
+           role="button"
+           aria-expanded="{% if is_active or is_expanded %}true{% else %}false{% endif %}"
+           aria-controls="submenu-{{ menu_item_id }}"
+           id="menu-link-{{ menu_item_id }}"
+           {% if is_active %}data-active="true" aria-current="page"{% endif %}
+           title="{{ menu_item.label }}">
+            {% if menu_item.icon %}
+            <div class="icon">
+                {% if "bi-" in menu_item.icon or "fa-" in menu_item.icon or "icon-" in menu_item.icon %}
+                <i class="{{ menu_item.icon }}"></i>
+                {% else %}
+                {{ menu_item.icon|safe }}
+                {% endif %}
+            </div>
+            {% endif %}
+            <div class="text">{{ menu_item.label }}</div>
+            {% if menu_item.badge %}
+            <span class="badge bg-primary">{{ menu_item.badge }}</span>
+            {% endif %}
+        </a>
+        
+        {% include 'shared/sidebar/submenu.html' with submenu_id=menu_item_id children=menu_item.children is_expanded=is_expanded is_active=is_active %}
+        
+    {% else %}
+        {# 无子菜单：使用普通链接 #}
+        <a class="nav-item {% if is_active %}active{% endif %}" 
+           href="{{ menu_item.url|default:'#' }}"
+           {% if is_active %}data-active="true" aria-current="page"{% endif %}
+           title="{{ menu_item.label }}">
+            {% if menu_item.icon %}
+            <div class="icon">
+                {% if "bi-" in menu_item.icon or "fa-" in menu_item.icon or "icon-" in menu_item.icon %}
+                <i class="{{ menu_item.icon }}"></i>
+                {% else %}
+                {{ menu_item.icon|safe }}
+                {% endif %}
+            </div>
+            {% endif %}
+            <div class="text">{{ menu_item.label }}</div>
+            {% if menu_item.badge %}
+            <span class="badge bg-primary">{{ menu_item.badge }}</span>
+            {% endif %}
+        </a>
+    {% endif %}
+    
+</div>
+{% endwith %}
+{% endwith %}
+{% endwith %}
+

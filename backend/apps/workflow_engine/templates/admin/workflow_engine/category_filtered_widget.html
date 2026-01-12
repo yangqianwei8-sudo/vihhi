@@ -1,0 +1,78 @@
+{% load static %}
+<div class="category-filtered-widget" id="category-filtered-{{ widget.name }}">
+    <!-- 业务对象选择区域 -->
+    <div class="model-selection-area">
+        <label><strong>选择业务对象类型：</strong></label>
+        <div class="model-list" id="model-list-{{ widget.name }}">
+            <p class="hint-text">请先在上方选择"流程分类"，然后在此处选择该分类下的业务对象类型</p>
+        </div>
+    </div>
+    
+    <!-- 隐藏字段：存储选中的模型名称 -->
+    <input type="hidden" 
+           name="{{ widget.name }}" 
+           id="hidden-input-{{ widget.name }}" 
+           value="">
+    
+    <!-- 已选择的对象显示 -->
+    <div class="selected-models">
+        <label><strong>已选择的对象：</strong></label>
+        <div class="selected-list" id="selected-list-{{ widget.name }}">
+            <span class="no-selection">暂无选择</span>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+// 模块和业务对象的映射数据
+(function() {
+    var widgetId = 'category-filtered-{{ widget.name }}';
+    var moduleMapping = {{ widget.module_model_mapping_json|safe }};
+    var selectedModels = {{ widget.selected_models_json|safe }};
+    var categoryFieldId = '{{ widget.category_field_id }}';
+    
+    // 将数据存储到全局变量，以便后续使用
+    if (typeof window.categoryFilteredData === 'undefined') {
+        window.categoryFilteredData = {};
+    }
+    window.categoryFilteredData[widgetId] = {
+        moduleMapping: moduleMapping,
+        selectedModels: selectedModels,
+        categoryFieldId: categoryFieldId
+    };
+    
+    // 等待DOM加载完成
+    function initWidgetData() {
+        if (typeof jQuery !== 'undefined') {
+            var $ = jQuery;
+            $(document).ready(function() {
+                var $widget = $('#' + widgetId);
+                if ($widget.length) {
+                    // 设置数据属性，供JavaScript使用
+                    $widget.data('module-mapping', moduleMapping);
+                    $widget.data('selected-models', selectedModels);
+                    $widget.data('category-field-id', categoryFieldId);
+                    
+                    console.log('CategoryFilteredWidget: 数据已设置', {
+                        widgetId: widgetId,
+                        moduleMapping: moduleMapping,
+                        selectedModels: selectedModels,
+                        categoryFieldId: categoryFieldId
+                    });
+                    
+                    // 触发自定义事件，通知主脚本数据已准备好
+                    $widget.trigger('widget-data-ready');
+                } else {
+                    console.warn('CategoryFilteredWidget: 未找到widget元素', widgetId);
+                }
+            });
+        } else {
+            // 如果jQuery还没加载，等待一下
+            setTimeout(initWidgetData, 100);
+        }
+    }
+    
+    initWidgetData();
+})();
+</script>
+

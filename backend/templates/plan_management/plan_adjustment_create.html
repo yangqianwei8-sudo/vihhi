@@ -1,0 +1,153 @@
+{% extends "shared/form_page_base.html" %}
+{% load static %}
+
+{% block form_card_title %}创建计划调整申请{% endblock %}
+
+{% block form_page_header %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-0">创建计划调整申请</h2>
+        <p class="text-muted mb-0 mt-1">创建新的计划调整申请</p>
+    </div>
+    <a href="{% url 'plan_pages:plan_adjustment_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>返回列表
+    </a>
+</div>
+{% endblock %}
+
+{% block form_content %}
+<div class="row">
+    <div class="col-lg-8">
+        {% if plan %}
+        <div class="mb-3">
+            <label class="form-label">关联计划</label>
+            <div class="form-control-plaintext bg-light p-2 rounded">
+                <strong>{{ plan.plan_number }}</strong> - {{ plan.name }}
+                <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="btn btn-sm btn-outline-primary ms-2" target="_blank">
+                    <i class="bi bi-box-arrow-up-right"></i> 查看计划详情
+                </a>
+            </div>
+            <input type="hidden" name="plan_id" value="{{ plan.id }}">
+        </div>
+        {% else %}
+        <div class="mb-3">
+            <label class="form-label">选择计划 <span class="text-danger">*</span></label>
+            <select name="plan_id" class="form-select" required>
+                <option value="">-- 请选择计划 --</option>
+                {% for p in available_plans %}
+                <option value="{{ p.id }}" {% if request.GET.plan_id == p.id|stringformat:"s" %}selected{% endif %}>
+                    {{ p.plan_number }} - {{ p.name }} ({{ p.get_status_display }})
+                </option>
+                {% endfor %}
+            </select>
+            <small class="form-text text-muted">只能选择执行中或草稿状态的计划</small>
+        </div>
+        {% endif %}
+        
+        <div class="mb-3">
+            <label for="{{ form.adjustment_reason.id_for_label }}" class="form-label">
+                调整原因 <span class="text-danger">*</span>
+            </label>
+            {{ form.adjustment_reason }}
+            {% if form.adjustment_reason.errors %}
+            <div class="text-danger small">{{ form.adjustment_reason.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            <label for="{{ form.adjustment_content.id_for_label }}" class="form-label">
+                调整内容 <span class="text-danger">*</span>
+            </label>
+            {{ form.adjustment_content }}
+            {% if form.adjustment_content.errors %}
+            <div class="text-danger small">{{ form.adjustment_content.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <hr>
+        <h6 class="mb-3">调整项（至少填写一项）</h6>
+        
+        <div class="mb-3">
+            <label for="{{ form.new_name.id_for_label }}" class="form-label">新计划名称</label>
+            {{ form.new_name }}
+            {% if form.new_name.errors %}
+            <div class="text-danger small">{{ form.new_name.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.new_start_time.id_for_label }}" class="form-label">新开始时间</label>
+                    {{ form.new_start_time }}
+                    {% if form.new_start_time.errors %}
+                    <div class="text-danger small">{{ form.new_start_time.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.new_end_time.id_for_label }}" class="form-label">新结束时间</label>
+                    {{ form.new_end_time }}
+                    {% if form.new_end_time.errors %}
+                    <div class="text-danger small">{{ form.new_end_time.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label for="{{ form.new_responsible_person.id_for_label }}" class="form-label">新负责人</label>
+            {{ form.new_responsible_person }}
+            {% if form.new_responsible_person.errors %}
+            <div class="text-danger small">{{ form.new_responsible_person.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            <label for="{{ form.new_content.id_for_label }}" class="form-label">新计划内容</label>
+            {{ form.new_content }}
+            {% if form.new_content.errors %}
+            <div class="text-danger small">{{ form.new_content.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            <label for="{{ form.new_plan_objective.id_for_label }}" class="form-label">新计划目标</label>
+            {{ form.new_plan_objective }}
+            {% if form.new_plan_objective.errors %}
+            <div class="text-danger small">{{ form.new_plan_objective.errors }}</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% if plan %}
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">当前计划信息</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-2"><strong>计划编号：</strong>{{ plan.plan_number }}</div>
+                <div class="mb-2"><strong>计划名称：</strong>{{ plan.name }}</div>
+                <div class="mb-2"><strong>计划类型：</strong>{{ plan.get_plan_type_display }}</div>
+                <div class="mb-2"><strong>计划周期：</strong>{{ plan.get_plan_period_display }}</div>
+                <div class="mb-2"><strong>状态：</strong>{{ plan.get_status_display }}</div>
+                <div class="mb-2"><strong>负责人：</strong>{{ plan.responsible_person.get_full_name|default:plan.responsible_person.username }}</div>
+                <div class="mb-2"><strong>开始时间：</strong>{{ plan.start_time|date:"Y-m-d H:i" }}</div>
+                <div class="mb-2"><strong>结束时间：</strong>{{ plan.end_time|date:"Y-m-d H:i" }}</div>
+                <div class="mb-2"><strong>进度：</strong>{{ plan.progress }}%</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block form_actions %}
+<div class="d-flex justify-content-end gap-2 mt-4">
+    <a href="{% url 'plan_pages:plan_adjustment_list' %}" class="btn btn-secondary">取消</a>
+    <button type="submit" class="btn btn-primary" name="action" value="save">提交申请</button>
+</div>
+{% endblock %}
+

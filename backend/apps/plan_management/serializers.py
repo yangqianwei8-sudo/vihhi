@@ -1,0 +1,88 @@
+"""
+计划管理模块序列化器
+"""
+from rest_framework import serializers
+from .models import Plan, StrategicGoal, GoalAlignmentRecord
+
+
+class StrategicGoalSerializer(serializers.ModelSerializer):
+    """战略目标序列化器"""
+    parent_goal = serializers.PrimaryKeyRelatedField(
+        queryset=StrategicGoal.objects.all(),
+        required=False,
+        allow_null=True,
+        write_only=True
+    )
+    
+    class Meta:
+        model = StrategicGoal
+        fields = '__all__'
+        read_only_fields = ('goal_number', 'created_time', 'updated_time', 'completion_rate', 'status')
+    
+    def _save_parent(self, goal, parent):
+        if parent:
+            GoalAlignmentRecord.objects.update_or_create(
+                child_goal=goal,
+                defaults={"parent_goal": parent}
+            )
+        else:
+            GoalAlignmentRecord.objects.filter(child_goal=goal).delete()
+    
+    def create(self, validated_data):
+        parent = validated_data.pop("parent_goal", None)
+        obj = super().create(validated_data)
+        if "parent_goal" in self.initial_data:
+            self._save_parent(obj, parent)
+        return obj
+    
+    def update(self, instance, validated_data):
+        parent = validated_data.pop("parent_goal", None)
+        obj = super().update(instance, validated_data)
+        if "parent_goal" in self.initial_data:
+            self._save_parent(obj, parent)
+        return obj
+    
+    def validate(self, attrs):
+        """
+        W1-Fix-1: 禁止在 update/partial_update 中直接修改 status
+        """
+        if 'status' in getattr(self, 'initial_data', {}):
+            raise serializers.ValidationError({
+                'status': '不允许直接修改 status，请使用状态流转 action（submit_approval/approve/reject/cancel_approval/change_status）'
+            })
+        return attrs
+
+
+class PlanSerializer(serializers.ModelSerializer):
+    """计划序列化器"""
+    class Meta:
+        model = Plan
+        fields = '__all__'
+        read_only_fields = ('plan_number', 'created_time', 'updated_time', 'duration_days', 'alignment_score', 'status')
+    
+    def validate_related_goal(self, goal):
+        """
+        W1-Fix-2: 禁止关联 draft 或 pending_approval 状态的目标（白名单方式）
+        """
+        if goal is None:
+            return goal
+        
+        # 白名单：只允许已发布/执行中的目标
+        allowed_statuses = {'published', 'in_progress'}
+        if goal.status not in allowed_statuses:
+            raise serializers.ValidationError(
+                f"关联目标必须为已发布/执行中的目标，当前目标状态为：{goal.get_status_display()}"
+            )
+        
+        return goal
+    
+    def validate(self, attrs):
+        """
+        W1-Fix-1: 禁止在 update/partial_update 中直接修改 status
+        """
+        if 'status' in getattr(self, 'initial_data', {}):
+            raise serializers.ValidationError({
+                'status': '不允许直接修改 status，请使用状态流转 action（submit_approval/approve/reject/cancel_approval/change_status）'
+            })
+        return attrs
+

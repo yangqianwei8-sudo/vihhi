@@ -1,0 +1,165 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}计划调整审批 - 维海科技信息化管理平台{% endblock %}
+
+{% block module_content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">计划调整审批</h2>
+            <p class="text-muted mb-0 mt-1">审批待处理的计划调整申请</p>
+        </div>
+        <div>
+            <a href="{% url 'plan_pages:plan_adjustment_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>返回列表
+            </a>
+        </div>
+    </div>
+    
+    {% if pending_approvals %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">待审批申请（{{ total_count }}）</h5>
+        </div>
+        <div class="info-card-body">
+            {% for adjustment in pending_approvals %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>调整申请 #{{ adjustment.id }}</strong>
+                            <span class="badge bg-warning ms-2">待审批</span>
+                        </div>
+                        <small class="text-muted">{{ adjustment.created_time|date:"Y-m-d H:i" }}</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>计划信息</h6>
+                            <p class="mb-1"><strong>计划编号：</strong>
+                                <a href="{% url 'plan_pages:plan_detail' adjustment.plan.id %}" target="_blank">
+                                    {{ adjustment.plan.plan_number }}
+                                </a>
+                            </p>
+                            <p class="mb-1"><strong>计划名称：</strong>{{ adjustment.plan.name }}</p>
+                            <p class="mb-1"><strong>当前状态：</strong>{{ adjustment.plan.get_status_display }}</p>
+                            <p class="mb-1"><strong>负责人：</strong>{{ adjustment.plan.responsible_person.get_full_name|default:adjustment.plan.responsible_person.username }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>申请信息</h6>
+                            <p class="mb-1"><strong>申请人：</strong>{{ adjustment.created_by.get_full_name|default:adjustment.created_by.username }}</p>
+                            <p class="mb-1"><strong>调整原因：</strong>{{ adjustment.adjustment_reason }}</p>
+                            <p class="mb-1"><strong>调整内容：</strong>{{ adjustment.adjustment_content }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if adjustment.new_name or adjustment.new_start_time or adjustment.new_end_time or adjustment.new_budget or adjustment.new_responsible_person or adjustment.new_content or adjustment.new_plan_objective %}
+                    <hr>
+                    <h6>调整项详情</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {% if adjustment.new_name %}
+                            <p class="mb-1"><strong>新计划名称：</strong>{{ adjustment.new_name }}</p>
+                            {% endif %}
+                            {% if adjustment.new_start_time %}
+                            <p class="mb-1"><strong>新开始时间：</strong>{{ adjustment.new_start_time|date:"Y-m-d H:i" }}</p>
+                            {% endif %}
+                            {% if adjustment.new_end_time %}
+                            <p class="mb-1"><strong>新结束时间：</strong>{{ adjustment.new_end_time|date:"Y-m-d H:i" }}</p>
+                            {% endif %}
+                            {% if adjustment.new_budget %}
+                            <p class="mb-1"><strong>新预算：</strong>¥{{ adjustment.new_budget|floatformat:2 }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if adjustment.new_responsible_person %}
+                            <p class="mb-1"><strong>新负责人：</strong>{{ adjustment.new_responsible_person.get_full_name|default:adjustment.new_responsible_person.username }}</p>
+                            {% endif %}
+                            {% if adjustment.new_content %}
+                            <p class="mb-1"><strong>新计划内容：</strong>{{ adjustment.new_content|truncatewords:20 }}</p>
+                            {% endif %}
+                            {% if adjustment.new_plan_objective %}
+                            <p class="mb-1"><strong>新计划目标：</strong>{{ adjustment.new_plan_objective|truncatewords:20 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <hr>
+                    <form method="post" class="approval-form" data-adjustment-id="{{ adjustment.id }}">
+                        {% csrf_token %}
+                        <input type="hidden" name="adjustment_id" value="{{ adjustment.id }}">
+                        <div class="mb-3">
+                            <label for="approval_notes_{{ adjustment.id }}" class="form-label">审批意见</label>
+                            <textarea name="approval_notes" id="approval_notes_{{ adjustment.id }}" class="form-control" rows="3" placeholder="请输入审批意见（可选）"></textarea>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="submit" name="action" value="reject" class="btn btn-danger">
+                                <i class="bi bi-x-circle me-1"></i>拒绝
+                            </button>
+                            <button type="submit" name="action" value="approve" class="btn btn-success">
+                                <i class="bi bi-check-circle me-1"></i>批准
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- 分页 -->
+            {% if pending_approvals.has_other_pages %}
+            <nav aria-label="分页导航">
+                <ul class="pagination justify-content-center">
+                    {% if pending_approvals.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ pending_approvals.previous_page_number }}">上一页</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in pending_approvals.paginator.page_range %}
+                    {% if pending_approvals.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > pending_approvals.number|add:'-3' and num < pending_approvals.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if pending_approvals.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ pending_approvals.next_page_number }}">下一页</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>暂无待审批的计划调整申请
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 审批表单确认
+    document.querySelectorAll('.approval-form').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            const action = e.submitter.value;
+            const actionText = action === 'approve' ? '批准' : '拒绝';
+            if (!confirm(`确定要${actionText}此调整申请吗？`)) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
