@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     # Local apps
     'backend.apps.permission_management.apps.PermissionManagementConfig',  # 必须在 system_management 之前
     'backend.apps.system_management.apps.SystemManagementConfig',
+    'backend.apps.org.apps.OrgConfig',  # 组织管理（必须在 production_management 之前，因为 production_management.0044 依赖 org.0001_initial）
     'backend.apps.production_management.apps.ProductionManagementConfig',  # 生产管理（原项目中心）
     'backend.apps.customer_management.apps.CustomerManagementConfig',  # 客户管理（从customer_success迁移）
     'backend.apps.resource_standard',
