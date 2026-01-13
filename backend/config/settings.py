@@ -10,17 +10,19 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-weihai-tech-production-sys
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-# Default allowed hosts includes Sealos deployment domain and server IP
-DEFAULT_ALLOWED_HOSTS = 'localhost,127.0.0.1,10.107.164.84,tivpdkrxyioz.sealosbja.site,dbjhjowayeto.sealosbja.site,hrozezgtxwhk.sealosbja.site,wfnionzwqhsc.sealosbja.site,my-devbox.ns-dqyh88ke'
-# Parse ALLOWED_HOSTS from environment variable, removing any wildcard entries
-raw_hosts = [h.strip() for h in os.getenv('ALLOWED_HOSTS', DEFAULT_ALLOWED_HOSTS).split(',') if h.strip()]
-# Filter out wildcard entries (Django doesn't support them directly)
-ALLOWED_HOSTS = [h for h in raw_hosts if not h.startswith('*')]
-# Note: Wildcard support for *.sealosbja.site is handled by AllowedHostsMiddleware
+# Default allowed hosts - 生产环境只允许公网域名
+# 重要：生产环境必须通过环境变量 ALLOWED_HOSTS 设置，只包含公网域名
+DEFAULT_ALLOWED_HOSTS = 'hrozezgtxwhk.sealosbja.site'
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', DEFAULT_ALLOWED_HOSTS).split(',') if h.strip()]
+# 开发环境：允许本地和测试客户端
+if DEBUG:
+    ALLOWED_HOSTS += ["127.0.0.1", "localhost", "testserver"]
 
 # CSRF trusted origins (must include scheme)
-# Default includes common Sealos deployment domains and server IP
-DEFAULT_CSRF_ORIGINS = 'https://tivpdkrxyioz.sealosbja.site,http://tivpdkrxyioz.sealosbja.site,https://dbjhjowayeto.sealosbja.site,http://dbjhjowayeto.sealosbja.site,https://hrozezgtxwhk.sealosbja.site,http://hrozezgtxwhk.sealosbja.site,https://wfnionzwqhsc.sealosbja.site,http://wfnionzwqhsc.sealosbja.site,http://localhost:8001,http://127.0.0.1:8001,http://10.107.164.84:8001,http://localhost:8000,http://127.0.0.1:8000'
+# 生产环境只允许公网域名，开发环境允许本地访问
+DEFAULT_CSRF_ORIGINS = 'https://hrozezgtxwhk.sealosbja.site,http://hrozezgtxwhk.sealosbja.site'
+if DEBUG:
+    DEFAULT_CSRF_ORIGINS += ',http://localhost:8001,http://127.0.0.1:8001,http://localhost:8000,http://127.0.0.1:8000'
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS', DEFAULT_CSRF_ORIGINS).split(',') if o.strip()]
 
 # Application definition
@@ -41,10 +43,12 @@ INSTALLED_APPS = [
     # Local apps
     'backend.apps.permission_management.apps.PermissionManagementConfig',  # 必须在 system_management 之前
     'backend.apps.system_management.apps.SystemManagementConfig',
-    'backend.apps.org.apps.OrgConfig',  # 组织管理（必须在 production_management 之前，因为 production_management.0044 依赖 org.0001_initial）
     'backend.apps.production_management.apps.ProductionManagementConfig',  # 生产管理（原项目中心）
+    'backend.apps.project_center.apps.ProjectCenterConfig',  # 暂时保留：迁移文件依赖
     'backend.apps.customer_management.apps.CustomerManagementConfig',  # 客户管理（从customer_success迁移）
     'backend.apps.resource_standard',
+    'backend.apps.task_collaboration',
+    'backend.apps.delivery_customer',
     'backend.apps.settlement_management.apps.SettlementManagementConfig',  # 结算管理
     'backend.apps.settlement_center.apps.SettlementCenterConfig',  # 结算中心（仍被其他模块引用）
     'backend.apps.risk_management',
@@ -54,8 +58,6 @@ INSTALLED_APPS = [
     'backend.apps.financial_management.apps.FinancialManagementConfig',
     'backend.apps.personnel_management.apps.PersonnelManagementConfig',
     'backend.apps.workflow_engine.apps.WorkflowEngineConfig',
-    # 交付客户模块（必须在 archive_management 之前，因为 archive_management 依赖它）
-    'backend.apps.delivery_customer.apps.DeliveryCustomerConfig',
     # 档案管理模块
     'backend.apps.archive_management.apps.ArchiveManagementConfig',
     # 诉讼管理模块
@@ -69,10 +71,12 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    # Host 守卫中间件 - 必须在 SecurityMiddleware 之后，严格验证 Host 头
+    # 防止通过 Service IP、Pod IP、内部域名等方式绕过访问控制
+    'backend.config.middleware.HostGuardMiddleware',
     # Static files serving optimization in production
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'backend.config.middleware.AllowedHostsMiddleware',  # 动态主机名验证（必须在 CommonMiddleware 之前）
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -110,7 +114,7 @@ TEMPLATES = [
 # 注意：生产环境部署时，必须通过环境变量设置 DATABASE_URL，不要依赖此默认值
 DEVELOPMENT_DATABASE_URL = os.getenv(
     'DEVELOPMENT_DATABASE_URL',
-    "postgresql://postgres:zdg7xx28@dbconn.sealosbja.site:38013/postgres"
+    "postgresql://postgres:zdg7xx28@dbconn.sealosbja.site:38013/postgres?directConnection=true"
 )
 
 # 优先使用 DATABASE_URL 环境变量
@@ -124,13 +128,10 @@ if not database_url and DEBUG:
 if database_url and "dbconn.sealosbja.site:45978" in database_url:
     database_url = database_url.replace("dbconn.sealosbja.site:45978", "dbconn.sealosbja.site:38013")
 
-# 移除 directConnection 参数（这是 MongoDB 的参数，PostgreSQL 不支持）
-if database_url and "directConnection" in database_url:
-    import re
-    # 移除 directConnection 参数
-    database_url = re.sub(r'[&?]directConnection=[^&]*', '', database_url)
-    # 如果移除后 URL 以 & 结尾，清理掉
-    database_url = database_url.rstrip('&')
+# 仅对 Sealos 外网连接添加 directConnection 参数（本地数据库不需要）
+if database_url and "dbconn.sealosbja.site" in database_url and "directConnection" not in database_url:
+    separator = "&" if "?" in database_url else "?"
+    database_url = f"{database_url}{separator}directConnection=true"
 
 if database_url:
     # 使用 PostgreSQL 数据库
@@ -169,13 +170,9 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', COMPANY_EMAIL)
 
 # 快递查询API配置（快递100）
 # 快递100 API文档：https://www.kuaidi100.com/openapi/api_post.shtml
-# 授权信息来自：https://api.kuaidi100.com/manager/v2/myinfo/enterprise
-# 企业：四川维海科技有限公司
-KUAIDI100_CUSTOMER = os.getenv('KUAIDI100_CUSTOMER', '4E35F2EFE1EC0764032ED487AA4DC538')
-KUAIDI100_KEY = os.getenv('KUAIDI100_KEY', 'MaOnMTzX7201')
-# 其他参数（如需要）
-KUAIDI100_SECRET = os.getenv('KUAIDI100_SECRET', '676d530653cb4505add04d911b826c53')
-KUAIDI100_USERID = os.getenv('KUAIDI100_USERID', '56f5f07adbb746a28c76a25369907197')
+# 需要在快递100官网注册账号并获取customer和key
+KUAIDI100_CUSTOMER = os.getenv('KUAIDI100_CUSTOMER', '')
+KUAIDI100_KEY = os.getenv('KUAIDI100_KEY', '')
 
 # 企业微信（WeCom）配置
 WECOM_AGENT_ID = os.getenv('WECOM_AGENT_ID')
@@ -183,32 +180,12 @@ WECOM_CORP_ID = os.getenv('WECOM_CORP_ID')
 WECOM_AGENT_SECRET = os.getenv('WECOM_AGENT_SECRET')
 WECOM_DEFAULT_TO_USER = os.getenv('WECOM_DEFAULT_TO_USER', '')
 
-# 阿里云短信服务配置
-# 阿里云短信服务文档：https://help.aliyun.com/product/44282.html
-# 配置说明：
-# 1. 访问阿里云控制台：https://dysms.console.aliyun.com/
-# 2. 开通短信服务并获取 AccessKey ID 和 AccessKey Secret
-# 3. 创建短信签名和短信模板
-# 4. 配置以下参数
-ALIYUN_SMS_ACCESS_KEY_ID = os.getenv('ALIYUN_SMS_ACCESS_KEY_ID', '')
-ALIYUN_SMS_ACCESS_KEY_SECRET = os.getenv('ALIYUN_SMS_ACCESS_KEY_SECRET', '')
-ALIYUN_SMS_SIGN_NAME = os.getenv('ALIYUN_SMS_SIGN_NAME', '维海科技')  # 短信签名
-ALIYUN_SMS_TEMPLATE_CODE = os.getenv('ALIYUN_SMS_TEMPLATE_CODE', '')  # 短信模板代码（通用）
-ALIYUN_SMS_REGISTER_TEMPLATE_CODE = os.getenv('ALIYUN_SMS_REGISTER_TEMPLATE_CODE', '')  # 注册验证码模板代码（如：SMS_500485017）
-ALIYUN_SMS_REGION = os.getenv('ALIYUN_SMS_REGION', 'cn-hangzhou')  # 区域，默认杭州
-
 # DeepSeek API配置（用于合同识别）
 # DeepSeek API文档：https://platform.deepseek.com/api-docs/
 # 需要在DeepSeek官网注册账号并获取API Key
 DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY', '')
 DEEPSEEK_API_BASE_URL = os.getenv('DEEPSEEK_API_BASE_URL', 'https://api.deepseek.com')
 DEEPSEEK_MODEL = os.getenv('DEEPSEEK_MODEL', 'deepseek-chat')  # 或 deepseek-v2
-
-# ODA File Converter配置（用于DWG转DXF）
-# 如果ODA File Converter不在系统PATH中，可以在这里指定完整路径
-# Windows示例: r'C:\Program Files\ODA\ODAFileConverter 26.10.0\bin\DWGConvert.exe'
-# Linux示例: '/opt/ODAFileConverter/bin/DWGConvert' 或 '/usr/local/bin/DWGConvert'
-ODA_FILE_CONVERTER_PATH = os.getenv('ODA_FILE_CONVERTER_PATH', None)
 
 # REST Framework configuration
 REST_FRAMEWORK = {
@@ -287,12 +264,11 @@ WHITENOISE_MANIFEST_STRICT = False  # 允许静态文件即使不在 manifest �
 # 在生产环境使用 Whitenoise 压缩存储，但需要确保 manifest 文件正确
 if not DEBUG:
     try:
-        # 生产环境：使用 Whitenoise 的压缩存储（不使用 manifest，避免 .map 文件问题）
-        # 如果遇到 .map 文件缺失问题，可以使用 CompressedStaticFilesStorage 而不是 CompressedManifestStaticFilesStorage
-        STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+        # 生产环境：使用 Whitenoise 的压缩 manifest 存储
+        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
     except ImportError:
-        # 如果 Whitenoise 不可用，使用 Django 的默认存储
-        STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+        # 如果 Whitenoise 不可用，使用 Django 的 manifest 存储
+        STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 else:
     # 开发环境：使用默认存储，避免 manifest 文件问题
     # 这样可以直接访问原始文件名（如 base.css），而不需要带哈希的文件名
@@ -313,15 +289,10 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 AUTH_USER_MODEL = 'system_management.User'
 
 # Login settings
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'  # 登录成功后重定向到首页
+# P2: 彻底移除旧版 Vue SPA，统一使用 Django Admin 登录
+LOGIN_URL = '/admin/login/'
+LOGIN_REDIRECT_URL = '/admin/'
 LOGOUT_REDIRECT_URL = '/login/'
-
-# CSRF settings
-CSRF_COOKIE_SECURE = False  # 开发环境设为False，生产环境应设为True（HTTPS）
-CSRF_COOKIE_HTTPONLY = False  # 允许JavaScript访问CSRF token
-CSRF_USE_SESSIONS = False  # 使用cookie存储CSRF token（默认）
-CSRF_COOKIE_SAMESITE = 'Lax'  # 允许跨站请求
 
 # Logging configuration
 LOGGING = {
@@ -352,32 +323,17 @@ LOGGING = {
     },
     'root': {
         'handlers': ['console', 'file'],
-        'level': 'INFO',  # 开发环境使用INFO级别，减少DEBUG日志的I/O开销
+        'level': 'DEBUG',
     },
     'loggers': {
         'django': {
             'handlers': ['console', 'file'],
-            'level': 'INFO',  # 从DEBUG改为INFO，减少数据库查询日志
-            'propagate': False,
-        },
-        'django.db.backends': {
-            'handlers': ['console', 'file'],
-            'level': 'WARNING',  # 数据库查询日志设置为WARNING，只在有问题时记录
-            'propagate': False,
-        },
-        'django.template': {
-            'handlers': ['console', 'file'],
-            'level': 'WARNING',  # 模板日志设置为WARNING，减少模板异常日志
-            'propagate': False,
-        },
-        'django.utils.autoreload': {
-            'handlers': ['console', 'file'],
-            'level': 'WARNING',  # 禁用autoreload的详细日志，减少文件监控日志输出
+            'level': 'DEBUG',
             'propagate': False,
         },
         'backend.config.admin': {
             'handlers': ['console', 'file'],
-            'level': 'INFO',  # 从DEBUG改为INFO
+            'level': 'DEBUG',
             'propagate': False,
         },
     },
