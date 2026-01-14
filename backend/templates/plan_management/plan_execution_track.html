@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "plan_management/base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
@@ -49,13 +49,16 @@
         font-weight: 500;
     }
     .status-draft { background: #e9ecef; color: #495057; }
+    .status-pending_approval { background: #cfe2ff; color: #084298; }
+    .status-approving { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d1e7dd; color: #0f5132; }
     .status-in_progress { background: #fff3cd; color: #856404; }
     .status-completed { background: #d1e7dd; color: #0f5132; }
     .status-cancelled { background: #f8d7da; color: #842029; }
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
     <!-- 页面标题 -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -227,11 +230,12 @@
                             <select name="new_status" class="form-select">
                                 {% for status in valid_transitions %}
                                 <option value="{{ status }}">
-                                    {% if status == 'draft' %}草稿
+                                    {% if status == 'pending_approval' %}待审批
+                                    {% elif status == 'approving' %}审批中
+                                    {% elif status == 'approved' %}已审批
                                     {% elif status == 'in_progress' %}执行中
                                     {% elif status == 'completed' %}已完成
                                     {% elif status == 'cancelled' %}已取消
-                                    {% else %}{{ status }}
                                     {% endif %}
                                 </option>
                                 {% endfor %}

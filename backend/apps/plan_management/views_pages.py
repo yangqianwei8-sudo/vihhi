@@ -13,7 +13,31 @@ from django.views.decorators.http import require_http_methods
 from decimal import Decimal, InvalidOperation
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.apps.system_management.models import User, Department
-from backend.core.views import _permission_granted, _build_full_top_nav, _build_unified_sidebar_nav
+
+# P1: 兼容导入，避免 core.views 变更导致 plan_management 无法启动
+try:
+    from backend.core.views import _permission_granted, _build_full_top_nav, _build_unified_sidebar_nav
+except ImportError:
+    # Fallback: 如果 _build_unified_sidebar_nav 不存在，提供简单实现
+    from backend.core.views import _permission_granted, _build_full_top_nav
+    
+    def _build_unified_sidebar_nav(menu_structure, permission_set, active_id=None):
+        """Fallback: 简单的侧边栏菜单构建函数"""
+        nav = []
+        for item in menu_structure:
+            if item.get('permission'):
+                if not _permission_granted(item['permission'], permission_set):
+                    continue
+            nav_item = {
+                'label': item.get('label', ''),
+                'icon': item.get('icon', ''),
+                'url': item.get('url', '#'),
+                'active': item.get('id') == active_id if active_id else False,
+            }
+            if 'children' in item:
+                nav_item['children'] = _build_unified_sidebar_nav(item['children'], permission_set, active_id)
+            nav.append(nav_item)
+        return nav
 from .models import (
     StrategicGoal, GoalProgressRecord, GoalAdjustment, GoalStatusLog,
     Plan, PlanProgressRecord, PlanIssue, PlanStatusLog, PlanDecision
@@ -412,6 +436,8 @@ def plan_management_home(request):
 @login_required
 def plan_list(request):
     """计划列表页面"""
+    from django.template.loader import get_template
+    
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
@@ -515,6 +541,10 @@ def plan_list(request):
         'date_from': date_from,
         'date_to': date_to,
     })
+    
+    from django.template.loader import get_template
+    tpl = get_template("plan_management/plan_list.html")
+    print("TEMPLATE_ORIGIN =", tpl.origin.name)
     
     return render(request, "plan_management/plan_list.html", context)
 
@@ -646,12 +676,21 @@ def plan_create(request):
             return redirect('plan_pages:plan_detail', plan_id=plan.id)
         else:
             messages.error(request, '表单验证失败，请检查输入')
+            # 关键：无效就回渲染，不要 redirect
+            context = _context("创建计划", "➕", "创建新的工作计划", request=request)
+            context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_create')
+            context['form'] = form
+            context['page_title'] = "创建计划"
+            context['submit_text'] = "创建"
+            return render(request, "plan_management/plan_form.html", context)
     else:
         form = PlanForm(user=request.user)
     
     context = _context("创建计划", "➕", "创建新的工作计划", request=request)
     context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_create')
     context['form'] = form
+    context['page_title'] = "创建计划"
+    context['submit_text'] = "创建"
     return render(request, "plan_management/plan_form.html", context)
 
 
@@ -688,6 +727,9 @@ def plan_detail(request, plan_id):
         plan=plan
     ).select_related('assigned_to', 'created_by').order_by('-created_time')
     
+    # 获取不作为记录（系统自动生成，只读展示）
+    inactivity_logs = plan.inactivity_logs.all().order_by('-detected_at')
+    
     # 获取下级计划
     child_plans = plan.child_plans.select_related(
         'responsible_person', 'responsible_department', 'related_goal'
@@ -719,6 +761,7 @@ def plan_detail(request, plan_id):
         'status_logs': status_logs,
         'issues': issues,
         'child_plans': child_plans,
+        'inactivity_logs': inactivity_logs,  # P2: 不作为记录
         'can_edit': _permission_granted('plan_management.create', permission_set) and plan.status == 'draft',
         'can_delete': _permission_granted('plan_management.create', permission_set) and plan.status == 'draft',
         # P1 新增权限
@@ -755,6 +798,19 @@ def plan_edit(request, plan_id):
             return redirect('plan_pages:plan_detail', plan_id=plan.id)
         else:
             messages.error(request, '表单验证失败，请检查输入')
+            # 关键：无效就回渲染，不要 redirect
+            context = _context(
+                f"编辑计划 - {plan.name}",
+                "✏️",
+                "编辑工作计划",
+                request=request,
+            )
+            context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_list')
+            context['form'] = form
+            context['plan'] = plan
+            context['page_title'] = f"编辑计划 - {plan.name}"
+            context['submit_text'] = "保存"
+            return render(request, "plan_management/plan_form.html", context)
     else:
         form = PlanForm(instance=plan, user=request.user)
     
@@ -767,6 +823,8 @@ def plan_edit(request, plan_id):
     context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_list')
     context['form'] = form
     context['plan'] = plan
+    context['page_title'] = f"编辑计划 - {plan.name}"
+    context['submit_text'] = "保存"
     return render(request, "plan_management/plan_form.html", context)
 
 
@@ -944,9 +1002,40 @@ def plan_goal_alignment(request, plan_id):
 
 @login_required
 def plan_approval_list(request):
-    """计划审批列表页面（P2 功能，暂不可用）"""
-    from django.http import Http404
-    raise Http404("审批功能将在 P2 阶段实现")
+    """
+    P2: 计划审批列表（v2）
+    展示所有待裁决 PlanDecision（decided_at is null）
+    """
+    from .models import PlanDecision
+    
+    permission_set = get_user_permission_codes(request.user)
+    can_approve = _permission_granted('plan_management.approve_plan', permission_set) or request.user.is_superuser
+    
+    pending_decisions = (
+        PlanDecision.objects
+        .filter(decided_at__isnull=True)
+        .select_related("plan", "requested_by", "plan__responsible_person", "plan__created_by")
+        .order_by("-requested_at")
+    )
+    
+    # 统计信息
+    pending_count = pending_decisions.filter(request_type='start').count()
+    cancel_count = pending_decisions.filter(request_type='cancel').count()
+    
+    context = _context(
+        "计划审批列表",
+        "✅",
+        "待裁决的计划请求",
+        request=request,
+    )
+    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_approval')
+    context.update({
+        "pending_decisions": pending_decisions,
+        "can_approve": can_approve,
+        "pending_count": pending_count,
+        "cancel_count": cancel_count,
+    })
+    return render(request, "plan_management/plan_approval_list.html", context)
 
 
 @login_required

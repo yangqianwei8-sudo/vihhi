@@ -1,0 +1,385 @@
+{% extends "plan_management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .info-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid #e5e7eb;
+        margin-bottom: 20px;
+    }
+    .info-card h5 {
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: #1f2937;
+        font-size: 16px;
+    }
+    .info-row {
+        display: flex;
+        padding: 12px 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    .info-label {
+        width: 150px;
+        font-weight: 500;
+        color: #6b7280;
+        flex-shrink: 0;
+    }
+    .info-value {
+        flex: 1;
+        color: #1f2937;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    .status-draft { background: #e9ecef; color: #495057; }
+    .status-pending_approval { background: #cfe2ff; color: #084298; }
+    .status-approving { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d1e7dd; color: #0f5132; }
+    .status-in_progress { background: #fff3cd; color: #856404; }
+    .status-completed { background: #d1e7dd; color: #0f5132; }
+    .status-cancelled { background: #f8d7da; color: #842029; }
+    .progress-bar-container {
+        width: 200px;
+        height: 24px;
+        background: #e9ecef;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+    }
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        transition: width 0.3s;
+    }
+    .progress-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 12px;
+        font-weight: 600;
+        color: #000;
+        z-index: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题和操作 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">
+                {{ plan.name }}
+            </h2>
+            <p class="text-muted mb-0 mt-1">{{ plan.plan_number }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'plan_pages:plan_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>返回列表
+            </a>
+            {% if can_edit %}
+            <a href="{% url 'plan_pages:plan_edit' plan.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil me-1"></i>编辑
+            </a>
+            {% endif %}
+            <a href="{% url 'plan_pages:plan_execution_track' plan.id %}" class="btn btn-info">
+                <i class="bi bi-graph-up me-1"></i>跟踪
+            </a>
+            <a href="{% url 'plan_pages:plan_decompose' plan.id %}" class="btn btn-success">
+                <i class="bi bi-diagram-3 me-1"></i>分解
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- 左侧：基本信息 -->
+        <div class="col-md-8">
+            <!-- 基本信息 -->
+            <div class="info-card">
+                <h5>📋 基本信息</h5>
+                <div class="info-row">
+                    <div class="info-label">计划编号</div>
+                    <div class="info-value"><code>{{ plan.plan_number }}</code></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">计划名称</div>
+                    <div class="info-value"><strong>{{ plan.name }}</strong></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">计划类型</div>
+                    <div class="info-value">{{ plan.get_plan_type_display }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">计划周期</div>
+                    <div class="info-value">{{ plan.get_plan_period_display }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">计划状态</div>
+                    <div class="info-value">
+                        <span class="status-badge status-{{ plan.status }}">
+                            {{ plan.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 关联战略目标 -->
+            <div class="info-card">
+                <h5>🎯 关联战略目标</h5>
+                <div class="info-row">
+                    <div class="info-label">关联目标</div>
+                    <div class="info-value">
+                        {% if plan.related_goal %}
+                        <a href="{% url 'plan_pages:strategic_goal_detail' plan.related_goal.id %}" class="text-decoration-none">
+                            <strong>{{ plan.related_goal.name }}</strong>
+                        </a>
+                        <div class="mt-2">
+                            <span class="badge bg-info">对齐度：{{ plan.alignment_score }}分</span>
+                            {% if plan.contribution_score > 0 %}
+                            <span class="badge bg-success ms-1">贡献度：{{ plan.contribution_score }}分</span>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span class="text-muted">未关联</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 计划内容 -->
+            <div class="info-card">
+                <h5>📝 计划内容</h5>
+                <div class="info-row">
+                    <div class="info-label">计划内容</div>
+                    <div class="info-value">{{ plan.content|linebreaks }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">计划目标</div>
+                    <div class="info-value">{{ plan.plan_objective|linebreaks }}</div>
+                </div>
+                {% if plan.description %}
+                <div class="info-row">
+                    <div class="info-label">计划描述</div>
+                    <div class="info-value">{{ plan.description|linebreaks }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- 时间信息 -->
+            <div class="info-card">
+                <h5>📅 时间信息</h5>
+                <div class="info-row">
+                    <div class="info-label">开始时间</div>
+                    <div class="info-value">{{ plan.start_time|date:"Y-m-d H:i" }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">结束时间</div>
+                    <div class="info-value">{{ plan.end_time|date:"Y-m-d H:i" }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">计划周期</div>
+                    <div class="info-value">{{ plan.duration_days }} 天</div>
+                </div>
+            </div>
+            
+            <!-- 进度信息 -->
+            <div class="info-card">
+                <h5>📊 进度信息</h5>
+                <div class="info-row">
+                    <div class="info-label">执行进度</div>
+                    <div class="info-value">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {{ plan.progress }}%"></div>
+                            <span class="progress-text">{{ plan.progress }}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧：关联信息 -->
+        <div class="col-md-4">
+            <!-- 责任人信息 -->
+            <div class="info-card">
+                <h5>👥 责任人信息</h5>
+                <div class="info-row">
+                    <div class="info-label">负责人</div>
+                    <div class="info-value">
+                        <strong>{{ plan.responsible_person.get_full_name|default:plan.responsible_person.username }}</strong>
+                    </div>
+                </div>
+                {% if plan.responsible_department %}
+                <div class="info-row">
+                    <div class="info-label">负责部门</div>
+                    <div class="info-value">{{ plan.responsible_department.name }}</div>
+                </div>
+                {% endif %}
+                {% if plan.participants.exists %}
+                <div class="info-row">
+                    <div class="info-label">参与人员</div>
+                    <div class="info-value">
+                        {% for participant in plan.participants.all %}
+                        <span class="badge bg-secondary me-1">{{ participant.get_full_name|default:participant.username }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- 优先级和预算 -->
+            <div class="info-card">
+                <h5>⚡ 优先级和预算</h5>
+                <div class="info-row">
+                    <div class="info-label">优先级</div>
+                    <div class="info-value">
+                        <span class="badge bg-{% if plan.priority == 'high' %}danger{% elif plan.priority == 'medium' %}warning{% else %}secondary{% endif %}">
+                            {{ plan.get_priority_display }}
+                        </span>
+                    </div>
+                </div>
+                {% if plan.budget %}
+                <div class="info-row">
+                    <div class="info-label">预算</div>
+                    <div class="info-value">
+                        <strong>¥{{ plan.budget|floatformat:2 }}</strong>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- 关联信息 -->
+            <div class="info-card">
+                <h5>🔗 关联信息</h5>
+                {% if plan.parent_plan %}
+                <div class="info-row">
+                    <div class="info-label">父计划</div>
+                    <div class="info-value">
+                        <a href="{% url 'plan_pages:plan_detail' plan.parent_plan.id %}">
+                            {{ plan.parent_plan.name }}
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+                {% if plan.child_plans.exists %}
+                <div class="info-row">
+                    <div class="info-label">子计划</div>
+                    <div class="info-value">
+                        <span class="badge bg-info">{{ plan.child_plans.count }} 个</span>
+                        <a href="{% url 'plan_pages:plan_decompose' plan.id %}" class="ms-2 small">查看详情</a>
+                    </div>
+                </div>
+                {% endif %}
+                {% if plan.related_project %}
+                <div class="info-row">
+                    <div class="info-label">关联项目</div>
+                    <div class="info-value">
+                        <span class="badge bg-primary">{{ plan.related_project.name }}</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- 系统信息 -->
+            <div class="info-card">
+                <h5>ℹ️ 系统信息</h5>
+                <div class="info-row">
+                    <div class="info-label">创建人</div>
+                    <div class="info-value">{{ plan.created_by.get_full_name|default:plan.created_by.username }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">创建时间</div>
+                    <div class="info-value">{{ plan.created_time|date:"Y-m-d H:i" }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">更新时间</div>
+                    <div class="info-value">{{ plan.updated_time|date:"Y-m-d H:i" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 进度记录 -->
+    {% if progress_records %}
+    <div class="info-card mt-4">
+        <h5>📈 最近进度记录</h5>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>记录时间</th>
+                        <th>进度</th>
+                        <th>进度说明</th>
+                        <th>记录人</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in progress_records %}
+                    <tr>
+                        <td>{{ record.recorded_time|date:"Y-m-d H:i" }}</td>
+                        <td>{{ record.progress }}%</td>
+                        <td>{{ record.progress_description|truncatewords:20 }}</td>
+                        <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- 问题列表 -->
+    {% if issues %}
+    <div class="info-card mt-4">
+        <h5>⚠️ 计划问题</h5>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>问题标题</th>
+                        <th>严重程度</th>
+                        <th>状态</th>
+                        <th>负责人</th>
+                        <th>发现时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for issue in issues %}
+                    <tr>
+                        <td>{{ issue.title }}</td>
+                        <td>
+                            <span class="badge bg-{% if issue.severity == 'critical' %}danger{% elif issue.severity == 'high' %}warning{% elif issue.severity == 'medium' %}info{% else %}secondary{% endif %}">
+                                {{ issue.get_severity_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if issue.status == 'resolved' %}success{% elif issue.status == 'closed' %}secondary{% elif issue.status == 'in_progress' %}warning{% else %}danger{% endif %}">
+                                {{ issue.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{% if issue.assigned_to %}{{ issue.assigned_to.get_full_name|default:issue.assigned_to.username }}{% else %}-{% endif %}</td>
+                        <td>{{ issue.discovered_time|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
