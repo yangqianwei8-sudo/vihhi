@@ -654,7 +654,7 @@ def strategic_goal_list(request):
         'date_to': date_to,
     })
     
-    return render(request, "plan_management/strategic_goal_list.html", context)
+    return render(request, "goal_management/goal_list.html", context)
 
 
 # ==================== 其他占位视图函数（待实现） ====================
@@ -1394,13 +1394,22 @@ def strategic_goal_create(request):
             return redirect('plan_pages:strategic_goal_detail', goal_id=goal.id)
         else:
             messages.error(request, '表单验证失败，请检查输入')
+            # 关键：invalid 时回渲染，不要 redirect
+            context = _context("创建战略目标", "➕", "创建新的战略目标", request=request)
+            context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_list')
+            context['form'] = form
+            context['page_title'] = "创建战略目标"
+            context['submit_text'] = "创建"
+            return render(request, "goal_management/goal_form.html", context)
     else:
         form = StrategicGoalForm(user=request.user)
     
     context = _context("创建战略目标", "➕", "创建新的战略目标", request=request)
     context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_list')
     context['form'] = form
-    return render(request, "plan_management/strategic_goal_form.html", context)
+    context['page_title'] = "创建战略目标"
+    context['submit_text'] = "创建"
+    return render(request, "goal_management/goal_form.html", context)
 
 
 @login_required
@@ -1460,7 +1469,7 @@ def strategic_goal_detail(request, goal_id):
         'can_edit': _permission_granted('plan_management.manage_goal', permission_set) and goal.status in ['draft', 'published'],
         'can_delete': _permission_granted('plan_management.manage_goal', permission_set) and goal.status == 'draft' and not goal.has_related_plans(),
     })
-    return render(request, "plan_management/strategic_goal_detail.html", context)
+    return render(request, "goal_management/goal_detail.html", context)
 
 
 @login_required
@@ -1488,6 +1497,19 @@ def strategic_goal_edit(request, goal_id):
             return redirect('plan_pages:strategic_goal_detail', goal_id=goal.id)
         else:
             messages.error(request, '表单验证失败，请检查输入')
+            # 关键：invalid 时回渲染，不要 redirect
+            context = _context(
+                f"编辑战略目标 - {goal.name}",
+                "✏️",
+                "编辑战略目标信息",
+                request=request,
+            )
+            context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_list')
+            context['form'] = form
+            context['goal'] = goal
+            context['page_title'] = "编辑战略目标"
+            context['submit_text'] = "保存"
+            return render(request, "goal_management/goal_form.html", context)
     else:
         form = StrategicGoalForm(instance=goal, user=request.user)
     
@@ -1500,7 +1522,9 @@ def strategic_goal_edit(request, goal_id):
     context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_list')
     context['form'] = form
     context['goal'] = goal
-    return render(request, "plan_management/strategic_goal_form.html", context)
+    context['page_title'] = "编辑战略目标"
+    context['submit_text'] = "保存"
+    return render(request, "goal_management/goal_form.html", context)
 
 
 @login_required
