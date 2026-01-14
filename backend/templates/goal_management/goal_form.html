@@ -1,0 +1,28 @@
+{% extends "goal_management/_base.html" %}
+
+{% block pm_title %}{{ page_title|default:"创建战略目标" }}{% endblock %}
+{% block pm_subtitle %}请填写目标基本信息{% endblock %}
+
+{% block pm_actions %}
+<a class="btn btn-secondary btn-sm" href="{% url 'plan_pages:strategic_goal_list' %}">返回列表</a>
+{% endblock %}
+
+{% block pm_content %}
+<div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);">
+
+  {% include "goal_management/_partials/_form_errors.html" %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div style="color:#b02a37;margin-bottom:10px;">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    {% include "goal_management/_partials/_form_fields.html" %}
+    {% include "goal_management/_partials/_form_actions.html" %}
+  </form>
+</div>
+{% endblock %}

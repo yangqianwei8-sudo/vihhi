@@ -1,0 +1,60 @@
+<!-- 筛选和搜索 -->
+<div class="list-page-filters card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label small">搜索</label>
+                <input type="text" name="search" class="form-control form-control-sm" 
+                       value="{{ search }}" placeholder="目标编号、名称、负责人">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">状态</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">全部状态</option>
+                    {% for value, label in status_options %}
+                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">目标类型</label>
+                <select name="goal_type" class="form-select form-select-sm">
+                    <option value="">全部类型</option>
+                    <option value="personal" {% if goal_type_filter == 'personal' %}selected{% endif %}>个人目标</option>
+                    <option value="department" {% if goal_type_filter == 'department' %}selected{% endif %}>部门目标</option>
+                    <option value="company" {% if goal_type_filter == 'company' %}selected{% endif %}>公司目标</option>
+                    <option value="project" {% if goal_type_filter == 'project' %}selected{% endif %}>项目目标</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">目标周期</label>
+                <select name="goal_period" class="form-select form-select-sm">
+                    <option value="">全部周期</option>
+                    <option value="daily" {% if goal_period_filter == 'daily' %}selected{% endif %}>日目标</option>
+                    <option value="weekly" {% if goal_period_filter == 'weekly' %}selected{% endif %}>周目标</option>
+                    <option value="monthly" {% if goal_period_filter == 'monthly' %}selected{% endif %}>月目标</option>
+                    <option value="quarterly" {% if goal_period_filter == 'quarterly' %}selected{% endif %}>季度目标</option>
+                    <option value="yearly" {% if goal_period_filter == 'yearly' %}selected{% endif %}>年目标</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">负责人</label>
+                <select name="responsible_person" class="form-select form-select-sm">
+                    <option value="">全部负责人</option>
+                    {% for u in responsible_options %}
+                    <option value="{{ u.id }}" {% if filters.responsible_person|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>
+                        {{ u.get_full_name|default:u.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small">&nbsp;</label>
+                <div style="display:flex;gap:4px;">
+                    <button type="submit" class="btn btn-primary btn-sm flex-fill">筛选</button>
+                    <a class="btn btn-light btn-sm" href="{% url 'plan_pages:plan_list' %}" title="重置">重置</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
