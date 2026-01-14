@@ -19,8 +19,32 @@
 
     <div>
       <div style="color:#666;font-size:12px;">状态</div>
-      <div>{{ plan.get_status_display|default:plan.status }}</div>
+      {% with s=plan.status %}
+        <span class="pm-badge
+          {% if s == 'draft' %}pm-badge--draft
+          {% elif s == 'in_progress' %}pm-badge--in_progress
+          {% elif s == 'completed' %}pm-badge--completed
+          {% elif s == 'cancelled' %}pm-badge--cancelled
+          {% else %}pm-badge--draft{% endif %}">
+          {{ plan.get_status_display|default:plan.status }}
+        </span>
+      {% endwith %}
     </div>
+
+    {% if progress_percent is not None %}
+    <div style="grid-column:1 / -1;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+        <div style="color:#666;font-size:12px;">时间进度</div>
+        <div style="font-weight:700;">{{ progress_percent }}%</div>
+      </div>
+      <div style="height:10px;background:#eef2f7;border-radius:999px;overflow:hidden;margin-top:6px;">
+        <div style="height:10px;width:{{ progress_percent }}%;background:#c41c1c;"></div>
+      </div>
+      <div style="color:#666;font-size:12px;margin-top:6px;">
+        {{ plan.start_time|date:"Y-m-d" }} → {{ plan.end_time|date:"Y-m-d" }}
+      </div>
+    </div>
+    {% endif %}
 
     <div>
       <div style="color:#666;font-size:12px;">计划类型</div>

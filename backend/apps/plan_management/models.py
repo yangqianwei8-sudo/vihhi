@@ -484,6 +484,12 @@ class Plan(models.Model):
     # 计划内容
     content = models.TextField(max_length=5000, verbose_name='计划内容', help_text='支持富文本')
     plan_objective = models.TextField(max_length=1000, verbose_name='计划目标')
+    acceptance_criteria = models.TextField(
+        max_length=2000,
+        blank=True,
+        verbose_name='验收标准',
+        help_text='明确说明如何判定计划完成，提交审批前必填'
+    )
     description = models.TextField(blank=True, verbose_name='计划描述')
     
     # 时间信息
@@ -792,6 +798,143 @@ class PlanProgressRecord(models.Model):
     
     def __str__(self):
         return f"{self.plan.plan_number} - {self.recorded_time.strftime('%Y-%m-%d')} - {self.progress}%"
+
+
+class PlanAdjustment(models.Model):
+    """计划调整申请（延期/调整）"""
+    STATUS_CHOICES = [
+        ('pending', '待审批'),
+        ('approved', '已批准'),
+        ('rejected', '已拒绝'),
+    ]
+    
+    plan = models.ForeignKey(
+        Plan,
+        on_delete=models.CASCADE,
+        related_name='adjustments',
+        verbose_name='计划'
+    )
+    adjustment_reason = models.TextField(verbose_name='调整原因')
+    adjustment_content = models.TextField(verbose_name='调整内容')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='审批状态')
+    
+    # 调整后的值（如果调整）
+    original_end_time = models.DateTimeField(
+        default=timezone.now,
+        verbose_name='原截止时间',
+        help_text='记录调整前的截止时间'
+    )
+    new_end_time = models.DateTimeField(null=True, blank=True, verbose_name='新截止时间')
+    
+    # 审批信息
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_plan_adjustments',
+        verbose_name='审批人'
+    )
+    approved_time = models.DateTimeField(null=True, blank=True, verbose_name='审批时间')
+    approval_notes = models.TextField(blank=True, verbose_name='审批意见')
+    
+    # 系统字段
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='created_plan_adjustments',
+        verbose_name='申请人'
+    )
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='申请时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'plan_plan_adjustment'
+        verbose_name = '计划调整申请'
+        verbose_name_plural = verbose_name
+        ordering = ['-created_time']
+        indexes = [
+            models.Index(fields=['plan', '-created_time']),
+            models.Index(fields=['status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.plan.plan_number} - 调整申请 - {self.get_status_display()}"
+
+
+class PlanInactivityLog(models.Model):
+    """计划不作为记录（系统自动生成，不可修改、不可删除）"""
+    
+    REASON_CHOICES = [
+        ('overdue_and_silent', '逾期且无操作'),
+        ('overdue_no_progress', '逾期且无进度更新'),
+        ('overdue_no_feedback', '逾期且无反馈'),
+    ]
+    
+    plan = models.ForeignKey(
+        Plan,
+        on_delete=models.CASCADE,
+        related_name='inactivity_logs',
+        verbose_name='计划'
+    )
+    
+    # 检测时间
+    detected_at = models.DateTimeField(default=timezone.now, verbose_name='检测时间')
+    
+    # 检测区间
+    period_start = models.DateTimeField(verbose_name='检测区间开始')
+    period_end = models.DateTimeField(verbose_name='检测区间结束')
+    
+    # 触发原因
+    reason = models.CharField(max_length=50, choices=REASON_CHOICES, verbose_name='触发原因')
+    reason_detail = models.TextField(blank=True, verbose_name='原因详情')
+    
+    # 快照（记录当时状态，JSON格式）
+    snapshot = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='状态快照',
+        help_text='记录检测时的计划状态、责任人等信息'
+    )
+    
+    # 确认状态（是否为系统自动确认的不作为记录）
+    is_confirmed = models.BooleanField(
+        default=True,
+        editable=False,
+        verbose_name='系统确认',
+        help_text='是否为系统自动确认的不作为记录。当 is_confirmed=True 时，系统已自动确认该期间内责任人无任何行为或反馈。'
+    )
+    
+    class Meta:
+        db_table = 'plan_plan_inactivity_log'
+        verbose_name = '计划不作为记录'
+        verbose_name_plural = verbose_name
+        ordering = ['-detected_at']
+        indexes = [
+            models.Index(fields=['plan', '-detected_at']),
+            models.Index(fields=['reason', '-detected_at']),
+        ]
+        # 防止重复生成：同一计划在同一检测区间内只生成一条记录
+        constraints = [
+            models.UniqueConstraint(
+                fields=['plan', 'period_start', 'period_end', 'reason'],
+                name='unique_plan_inactivity_period'
+            ),
+        ]
+    
+    def __str__(self):
+        return f"{self.plan.plan_number} - {self.get_reason_display()} - {self.detected_at.strftime('%Y-%m-%d')}"
+    
+    def save(self, *args, **kwargs):
+        """重写 save，确保只能由系统创建，不允许修改"""
+        if self.pk:
+            # 如果记录已存在，不允许修改
+            raise ValueError("PlanInactivityLog 记录不允许修改，只能由系统自动生成")
+        super().save(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        """重写 delete，不允许删除"""
+        raise ValueError("PlanInactivityLog 记录不允许删除，作为不作为证据永久保存")
 
 
 class PlanIssue(models.Model):

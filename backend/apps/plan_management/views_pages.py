@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from decimal import Decimal, InvalidOperation
+import logging
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.apps.system_management.models import User, Department
 
@@ -446,14 +447,14 @@ def plan_list(request):
         return redirect('admin:index')
     
     # 获取筛选参数
-    search = request.GET.get('search', '')
-    status_filter = request.GET.get('status', '')
-    plan_type_filter = request.GET.get('plan_type', '')
-    plan_period_filter = request.GET.get('plan_period', '')
-    related_goal_filter = request.GET.get('related_goal', '')
-    responsible_filter = request.GET.get('responsible', '')
-    date_from = request.GET.get('date_from', '')
-    date_to = request.GET.get('date_to', '')
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    plan_type_filter = request.GET.get('plan_type', '').strip()
+    plan_period_filter = request.GET.get('plan_period', '').strip()
+    related_goal_filter = request.GET.get('related_goal', '').strip()
+    responsible_id = request.GET.get('responsible_person', '').strip() or request.GET.get('responsible', '').strip()  # 兼容旧参数名
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
     
     # 查询计划
     plans = Plan.objects.select_related(
@@ -482,8 +483,8 @@ def plan_list(request):
     if related_goal_filter:
         plans = plans.filter(related_goal_id=related_goal_filter)
     
-    if responsible_filter:
-        plans = plans.filter(responsible_person_id=responsible_filter)
+    if responsible_id:
+        plans = plans.filter(responsible_person_id=responsible_id)
     
     if date_from:
         plans = plans.filter(start_time__date__gte=date_from)
@@ -537,9 +538,16 @@ def plan_list(request):
         'plan_type_filter': plan_type_filter,
         'plan_period_filter': plan_period_filter,
         'related_goal_filter': related_goal_filter,
-        'responsible_filter': responsible_filter,
+        'responsible_filter': responsible_id,  # 保持向后兼容
         'date_from': date_from,
         'date_to': date_to,
+        # 用于筛选表单
+        'filters': {
+            'status': status_filter,
+            'responsible_person': responsible_id,
+        },
+        'status_options': Plan.STATUS_CHOICES,
+        'responsible_options': all_users,
     })
     
     from django.template.loader import get_template
@@ -735,6 +743,36 @@ def plan_detail(request, plan_id):
         'responsible_person', 'responsible_department', 'related_goal'
     ).all()
     
+    # 计算时间进度
+    def _progress_percent(plan):
+        if not plan.start_time or not plan.end_time:
+            return None
+        
+        from datetime import date
+        from django.utils import timezone
+        
+        def to_date(v):
+            return v.date() if hasattr(v, "date") else v
+        
+        start = to_date(plan.start_time)
+        end = to_date(plan.end_time)
+        today = timezone.localdate()
+        
+        if end <= start:
+            return 0
+        
+        if today <= start:
+            return 0
+        if today >= end:
+            return 100
+        
+        total = (end - start).days
+        passed = (today - start).days
+        pct = int(round(passed * 100 / total))
+        return max(0, min(100, pct))
+    
+    progress_percent = _progress_percent(plan)
+    
     context = _context(
         f"计划详情 - {plan.name}",
         "📋",
@@ -762,6 +800,7 @@ def plan_detail(request, plan_id):
         'issues': issues,
         'child_plans': child_plans,
         'inactivity_logs': inactivity_logs,  # P2: 不作为记录
+        'progress_percent': progress_percent,  # 时间进度百分比
         'can_edit': _permission_granted('plan_management.create', permission_set) and plan.status == 'draft',
         'can_delete': _permission_granted('plan_management.create', permission_set) and plan.status == 'draft',
         # P1 新增权限

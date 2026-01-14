@@ -2,8 +2,10 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import ApprovalNotification
+from .compat import get_approval_notification_model, has_approval_notification
 from .serializers_notifications import ApprovalNotificationSerializer
+
+ApprovalNotification = get_approval_notification_model()
 
 
 class NotificationListAPI(generics.ListAPIView):
@@ -15,6 +17,9 @@ class NotificationListAPI(generics.ListAPIView):
     serializer_class = ApprovalNotificationSerializer
 
     def get_queryset(self):
+        if not has_approval_notification():
+            from django.db import models
+            return models.QuerySet.none()
         qs = ApprovalNotification.objects.filter(user=self.request.user).order_by("-created_at")
 
         is_read = self.request.query_params.get("is_read")
@@ -32,7 +37,7 @@ class NotificationUnreadCountAPI(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        unread = ApprovalNotification.objects.filter(user=request.user, is_read=False).count()
+        unread = ApprovalNotification.objects.filter(user=request.user, is_read=False).count() if ApprovalNotification else 0
         return Response({"unread": unread})
 
 
@@ -44,6 +49,8 @@ class NotificationMarkReadAPI(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk: int):
+        if not ApprovalNotification:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         qs = ApprovalNotification.objects.filter(user=request.user, pk=pk)
         obj = qs.first()
         if not obj:
@@ -64,6 +71,6 @@ class NotificationMarkAllReadAPI(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        updated = ApprovalNotification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        updated = ApprovalNotification.objects.filter(user=request.user, is_read=False).update(is_read=True) if ApprovalNotification else 0
         return Response({"ok": True, "updated": updated})
 

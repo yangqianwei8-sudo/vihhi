@@ -13,7 +13,8 @@ C3-2: 审批通知服务（最小闭环版）
 import logging
 from django.contrib.auth.models import User, Permission
 from django.db.models import Q
-from .models import ApprovalNotification, Plan, StrategicGoal
+from .models import Plan, StrategicGoal
+from .compat import safe_approval_notification, has_approval_notification, get_approval_notification_model
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +85,7 @@ def notify_approvers(obj, event, actor, comment=None):
         count = 0
         for approver in approvers:
             try:
-                ApprovalNotification.objects.create(
+                safe_approval_notification(
                     user=approver,
                     title=title,
                     content=content,
@@ -152,15 +153,16 @@ def notify_submitter(obj, event, actor, comment=None):
             return False
         
         # 创建通知
-        ApprovalNotification.objects.create(
-            user=submitter,
-            title=title,
-            content=content,
-            object_type=object_type,
-            object_id=str(obj.id),
-            event=event,
-            is_read=False
-        )
+        if ApprovalNotification:
+            ApprovalNotification.objects.create(
+                user=submitter,
+                title=title,
+                content=content,
+                object_type=object_type,
+                object_id=str(obj.id),
+                event=event,
+                is_read=False
+            )
         
         logger.info(f"成功创建审批结果通知（{object_type} #{obj.id} → {submitter.username}）")
         return True
@@ -192,13 +194,17 @@ def notify_draft_timeout(plan, days_overdue=7):
         # 检查最近7天内是否已有相同类型的通知
         from datetime import timedelta
         from django.utils import timezone
-        recent_notification = ApprovalNotification.objects.filter(
-            user=recipient,
-            object_type='plan',
-            object_id=str(plan.id),
-            event='draft_timeout',
-            created_at__gte=timezone.now() - timedelta(days=1)  # 1天内不重复发送
-        ).exists()
+        recent_notification = False
+        if has_approval_notification():
+            ApprovalNotification = get_approval_notification_model()
+            if ApprovalNotification:
+                recent_notification = ApprovalNotification.objects.filter(
+                    user=recipient,
+                    object_type='plan',
+                    object_id=str(plan.id),
+                    event='draft_timeout',
+                    created_at__gte=timezone.now() - timedelta(days=1)  # 1天内不重复发送
+                ).exists()
         
         if recent_notification:
             logger.debug(f"计划 #{plan.id} 的草稿超时通知已在1天内发送过，跳过")
@@ -209,7 +215,7 @@ def notify_draft_timeout(plan, days_overdue=7):
         content = f"您的计划《{plan.name}》已创建超过{days_overdue}天，仍处于草稿状态。请尽快提交审批，以便开始执行。"
         
         # 创建通知
-        ApprovalNotification.objects.create(
+        safe_approval_notification(
             user=recipient,
             title=title,
             content=content,
@@ -268,13 +274,15 @@ def notify_approval_timeout(plan, days_overdue=3):
         from django.utils import timezone
         count = 0
         for approver in approvers:
-            recent_notification = ApprovalNotification.objects.filter(
-                user=approver,
-                object_type='plan',
-                object_id=str(plan.id),
-                event='approval_timeout',
-                created_at__gte=timezone.now() - timedelta(days=1)  # 1天内不重复发送
-            ).exists()
+            recent_notification = False
+            if ApprovalNotification:
+                recent_notification = ApprovalNotification.objects.filter(
+                    user=approver,
+                    object_type='plan',
+                    object_id=str(plan.id),
+                    event='approval_timeout',
+                    created_at__gte=timezone.now() - timedelta(days=1)  # 1天内不重复发送
+                ).exists()
             
             if recent_notification:
                 logger.debug(f"计划 #{plan.id} 的审批超时通知已在1天内发送给 {approver.username}，跳过")
@@ -286,7 +294,7 @@ def notify_approval_timeout(plan, days_overdue=3):
             
             # 创建通知
             try:
-                ApprovalNotification.objects.create(
+                safe_approval_notification(
                     user=approver,
                     title=title,
                     content=content,

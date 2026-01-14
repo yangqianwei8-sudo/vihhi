@@ -12,12 +12,14 @@ from .views_notifications import (
     NotificationMarkReadAPI,
     NotificationMarkAllReadAPI,
 )
+from .decision_views import PlanDecisionDecideAPIView, PlanDecisionViewSet
 
 app_name = 'plan'
 
 router = DefaultRouter()
 router.register(r'strategic-goals', views.StrategicGoalViewSet, basename='strategic-goals')
 router.register(r'plans', views.PlanViewSet, basename='plans')
+router.register(r'plan-decisions', PlanDecisionViewSet, basename='plan-decisions')
 
 urlpatterns = router.urls + [
     path('stats/plans/', PlanStatsAPI.as_view(), name='plan_stats'),
@@ -29,5 +31,7 @@ urlpatterns = router.urls + [
     path('notifications/unread-count/', NotificationUnreadCountAPI.as_view(), name='plan_notifications_unread_count'),
     path('notifications/<int:pk>/mark-read/', NotificationMarkReadAPI.as_view(), name='plan_notifications_mark_read'),
     path('notifications/mark-all-read/', NotificationMarkAllReadAPI.as_view(), name='plan_notifications_mark_all_read'),
+    # P1: 计划决策裁决 API（注意：plan-decisions 列表已通过 router 注册）
+    path('plan-decisions/<int:decision_id>/decide/', PlanDecisionDecideAPIView.as_view(), name='plan_decision_decide'),
 ]
 

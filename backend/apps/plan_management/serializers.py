@@ -2,7 +2,7 @@
 计划管理模块序列化器
 """
 from rest_framework import serializers
-from .models import Plan, StrategicGoal, GoalAlignmentRecord
+from .models import Plan, StrategicGoal, GoalAlignmentRecord, PlanDecision
 
 
 class StrategicGoalSerializer(serializers.ModelSerializer):
@@ -78,11 +78,35 @@ class PlanSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         """
-        W1-Fix-1: 禁止在 update/partial_update 中直接修改 status
+        P1: 禁止在 update/partial_update 中直接修改 status
+        status 只能通过裁决接口修改（start-request/cancel-request + decide）
         """
         if 'status' in getattr(self, 'initial_data', {}):
             raise serializers.ValidationError({
-                'status': '不允许直接修改 status，请使用状态流转 action（submit_approval/approve/reject/cancel_approval/change_status）'
+                'status': 'status 禁止直接修改，请使用裁决接口（start-request/cancel-request + decide）'
             })
         return attrs
+
+
+class PlanDecisionSerializer(serializers.ModelSerializer):
+    """计划决策序列化器"""
+    plan_number = serializers.CharField(source='plan.plan_number', read_only=True)
+    plan_name = serializers.CharField(source='plan.name', read_only=True)
+    requested_by_username = serializers.CharField(source='requested_by.username', read_only=True)
+    decided_by_username = serializers.CharField(source='decided_by.username', read_only=True, allow_null=True)
+    
+    class Meta:
+        model = PlanDecision
+        fields = [
+            'id', 'plan', 'plan_number', 'plan_name',
+            'request_type', 'decision',
+            'requested_by', 'requested_by_username', 'requested_at',
+            'decided_by', 'decided_by_username', 'decided_at',
+            'reason',
+        ]
+        read_only_fields = [
+            'id', 'plan_number', 'plan_name',
+            'requested_by_username', 'requested_at',
+            'decided_by_username', 'decided_at',
+        ]
 

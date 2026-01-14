@@ -15,9 +15,18 @@ from datetime import timedelta
 from django.db.models import Q
 from backend.apps.plan_management.models import Plan, StrategicGoal, PlanStatusLog, PlanProgressRecord 
 from .serializers import PlanSerializer, StrategicGoalSerializer
-from backend.apps.system_management.models import AuditLog, AuditAction
-from backend.core.audit import AuditMixin
+# Optional dependency: AuditMixin (if available)
+try:
+    from backend.core.audit import AuditMixin
+except ImportError:
+    # 可选依赖：如果 audit 模块不存在，使用占位符
+    # 实际审计功能已通过 compat.py 中的 safe_audit_log() 实现
+    class AuditMixin:
+        """占位符：AuditMixin 功能已迁移到 compat.py 中的 safe_audit_log"""
+        pass
+from .compat import safe_audit_log, get_audit_action, legacy_api_gone
 from .services import recalc_plan_status
+from .services.plan_decisions import request_start, request_cancel, PlanDecisionError
 from .adjudicator import adjudicate_plan_status
 from .filters import ListFilterSpec, apply_range, apply_mine_participating, apply_overdue
 from .audit import audit_plan_event
@@ -269,32 +278,32 @@ class StrategicGoalViewSet(AuditMixin, viewsets.ModelViewSet):
             changes["org_department"] = {"from": old_dept_id, "to": obj.org_department_id}
 
         if changes:
-            AuditLog.objects.create(
-                actor=user,
-                action=AuditAction.ORG_CHANGE,
-                object_type=f"{obj._meta.app_label}.{obj.__class__.__name__}",
-                object_id=str(obj.pk),
-                changes=changes,
-                meta={
-                    "ip": self.request.META.get("REMOTE_ADDR"),
-                    "ua": self.request.META.get("HTTP_USER_AGENT"),
-                },
-            )
+            audit_action = get_audit_action()
+            if audit_action:
+                safe_audit_log(
+                    actor=user,
+                    action=audit_action.ORG_CHANGE,
+                    object_type=f"{obj._meta.app_label}.{obj.__class__.__name__}",
+                    object_id=str(obj.pk),
+                    changes=changes,
+                    meta={
+                        "ip": self.request.META.get("REMOTE_ADDR"),
+                        "ua": self.request.META.get("HTTP_USER_AGENT"),
+                    },
+                )
 
     @action(detail=True, methods=['post'], url_path='submit-approval')
     def submit_approval(self, request, pk=None):
         """
-        B3-2: 提交审批
+        P1 v2: 接口已废弃
         
-        POST /api/plan/goals/{id}/submit-approval/
-        Body: {
-            "comment": "申请说明（可选）"
-        }
-        
-        状态流转：draft → pending_approval
+        提交审批的功能已废弃，请使用 PlanDecision 裁决机制。
         """
-        # B2-1: 统一检查 change 权限
-        self._require_change_perm(request, "plan_management.change_strategicgoal")
+        return legacy_api_gone()
+        
+        # 以下代码已废弃，保留用于参考
+        # # B2-1: 统一检查 change 权限
+        # self._require_change_perm(request, "plan_management.change_strategicgoal")
         
         # B2-2: 使用 get_object() 确保只能操作本公司数据
         goal = self.get_object()
@@ -392,17 +401,15 @@ class StrategicGoalViewSet(AuditMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='approve')
     def approve(self, request, pk=None):
         """
-        B3-2: 审批通过
+        P1 v2: 接口已废弃
         
-        POST /api/plan/goals/{id}/approve/
-        Body: {
-            "comment": "审批意见（可选）"
-        }
-        
-        状态流转：pending_approval → published
+        审批通过的功能已废弃，请使用 PlanDecision 裁决机制。
         """
-        # B3-3: 检查审批权限
-        self._require_approve_perm(request, "plan_management.approve_strategicgoal")
+        return legacy_api_gone()
+        
+        # 以下代码已废弃，保留用于参考
+        # # B3-3: 检查审批权限
+        # self._require_approve_perm(request, "plan_management.approve_strategicgoal")
         
         # B2-2: 使用 get_object() 确保只能操作本公司数据
         goal = self.get_object()
@@ -496,17 +503,15 @@ class StrategicGoalViewSet(AuditMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='reject')
     def reject(self, request, pk=None):
         """
-        B3-2: 审批驳回
+        P1 v2: 接口已废弃
         
-        POST /api/plan/goals/{id}/reject/
-        Body: {
-            "reason": "驳回原因（可选）"
-        }
-        
-        状态流转：pending_approval → draft
+        审批驳回的功能已废弃，请使用 PlanDecision 裁决机制。
         """
-        # B3-3: 检查审批权限
-        self._require_approve_perm(request, "plan_management.approve_strategicgoal")
+        return legacy_api_gone()
+        
+        # 以下代码已废弃，保留用于参考
+        # # B3-3: 检查审批权限
+        # self._require_approve_perm(request, "plan_management.approve_strategicgoal")
         
         # B2-2: 使用 get_object() 确保只能操作本公司数据
         goal = self.get_object()
@@ -600,17 +605,15 @@ class StrategicGoalViewSet(AuditMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='cancel-approval')
     def cancel_approval(self, request, pk=None):
         """
-        B3-2: 取消审批
+        P1 v2: 接口已废弃
         
-        POST /api/plan/goals/{id}/cancel-approval/
-        Body: {
-            "reason": "取消原因（可选）"
-        }
-        
-        状态流转：pending_approval → draft
+        取消审批的功能已废弃，请使用 PlanDecision 裁决机制。
         """
-        # B2-1: 统一检查 change 权限
-        self._require_change_perm(request, "plan_management.change_strategicgoal")
+        return legacy_api_gone()
+        
+        # 以下代码已废弃，保留用于参考
+        # # B2-1: 统一检查 change 权限
+        # self._require_change_perm(request, "plan_management.change_strategicgoal")
         
         # B2-2: 使用 get_object() 确保只能操作本公司数据
         goal = self.get_object()
@@ -830,6 +833,10 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
         instance = self.get_object()
         self._reject_org_change_if_needed(instance, serializer)
 
+        # P1: 硬拒绝直接修改 status
+        if "status" in self.request.data:
+            raise ValidationError("status 禁止直接修改，请使用裁决接口（start-request/cancel-request + decide）")
+
         user = self.request.user
         old_company_id = instance.company_id
         old_dept_id = instance.org_department_id
@@ -880,18 +887,20 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
                 if old_progress != obj.progress:
                     changes["progress"] = {"from": float(old_progress) if old_progress else 0, "to": float(obj.progress) if obj.progress else 0}
                 
-                AuditLog.objects.create(
-                    actor=user,
-                    action=AuditAction.PLAN_ACTION,
-                    object_type=f"{obj._meta.app_label}.{obj.__class__.__name__}",
-                    object_id=str(obj.pk),
-                    changes=changes,
-                    meta={
-                        "event": "progress_update",
-                        "ip": self.request.META.get("REMOTE_ADDR"),
-                        "ua": self.request.META.get("HTTP_USER_AGENT"),
-                    },
-                )
+                audit_action = get_audit_action()
+                if audit_action:
+                    safe_audit_log(
+                        actor=user,
+                        action=audit_action.PLAN_ACTION,
+                        object_type=f"{obj._meta.app_label}.{obj.__class__.__name__}",
+                        object_id=str(obj.pk),
+                        changes=changes,
+                        meta={
+                            "event": "progress_update",
+                            "ip": self.request.META.get("REMOTE_ADDR"),
+                            "ua": self.request.META.get("HTTP_USER_AGENT"),
+                        },
+                    )
             return
 
         # 超管：如果改了归属，写 AuditLog
@@ -911,18 +920,19 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
                 changes["progress"] = {"from": float(old_progress) if old_progress else 0, "to": float(obj.progress) if obj.progress else 0}
 
         if changes:
-            AuditLog.objects.create(
-                actor=user,
-                action=AuditAction.ORG_CHANGE if old_company_id != obj.company_id or old_dept_id != obj.org_department_id else AuditAction.PLAN_ACTION,
-                object_type=f"{obj._meta.app_label}.{obj.__class__.__name__}",
-                object_id=str(obj.pk),
-                changes=changes,
-                meta={
-                    "event": "progress_update" if status_result and status_result.changed else "org_change",
-                    "ip": self.request.META.get("REMOTE_ADDR"),
-                    "ua": self.request.META.get("HTTP_USER_AGENT"),
-                },
-            )
+            audit_action = get_audit_action()
+            if audit_action:
+                safe_audit_log(
+                    actor=user,
+                    action=audit_action.ORG_CHANGE,
+                    object_type=f"{obj._meta.app_label}.{obj.__class__.__name__}",
+                    object_id=str(obj.pk),
+                    changes=changes,
+                    meta={
+                        "ip": self.request.META.get("REMOTE_ADDR"),
+                        "ua": self.request.META.get("HTTP_USER_AGENT"),
+                    },
+                )
 
 
     @action(detail=True, methods=['post'], url_path='progress')
@@ -1034,16 +1044,18 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='status')
     def change_status(self, request, pk=None):
         """
-        手动变更计划状态
+        P1 v2: 接口已废弃
         
-        POST /api/plan/plans/{id}/status/
-        Body: {
-            "status": "in_progress",
-            "reason": "状态变更原因"
-        }
+        手动变更计划状态的功能已废弃，请使用 PlanDecision 裁决机制：
+        - 启动计划：POST /api/plan/plans/{id}/start-request/ + POST /api/plan/plan-decisions/{id}/decide/
+        - 取消计划：POST /api/plan/plans/{id}/cancel-request/ + POST /api/plan/plan-decisions/{id}/decide/
+        - 完成计划：系统自动判定（progress >= 100）
         """
-        # B2-1: 统一检查 change 权限
-        self._require_change_perm(request, "plan_management.change_plan")
+        return legacy_api_gone()
+        
+        # 以下代码已废弃，保留用于参考
+        # # B2-1: 统一检查 change 权限
+        # self._require_change_perm(request, "plan_management.change_plan")
         
         # B2-2: 使用 get_object() 确保只能操作本公司数据（已在 get_queryset 中过滤）
         plan = self.get_object()
@@ -1127,17 +1139,16 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='submit-approval')
     def submit_approval(self, request, pk=None):
         """
-        B3-2: 提交审批
+        P1 v2: 接口已废弃
         
-        POST /api/plan/plans/{id}/submit-approval/
-        Body: {
-            "comment": "申请说明（可选）"
-        }
-        
-        状态流转：draft|delayed|paused → pending_approval
+        提交审批的功能已废弃，请使用 PlanDecision 裁决机制：
+        - 启动计划：POST /api/plan/plans/{id}/start-request/ + POST /api/plan/plan-decisions/{id}/decide/
         """
-        # B2-1: 统一检查 change 权限
-        self._require_change_perm(request, "plan_management.change_plan")
+        return legacy_api_gone()
+        
+        # 以下代码已废弃，保留用于参考
+        # # B2-1: 统一检查 change 权限
+        # self._require_change_perm(request, "plan_management.change_plan")
         
         # B2-2: 使用 get_object() 确保只能操作本公司数据
         plan = self.get_object()
@@ -1237,17 +1248,16 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='approve')
     def approve(self, request, pk=None):
         """
-        B3-2: 审批通过
+        P1 v2: 接口已废弃
         
-        POST /api/plan/plans/{id}/approve/
-        Body: {
-            "comment": "审批意见（可选）"
-        }
-        
-        状态流转：pending_approval → in_progress（再调用 recalc_plan_status 做纠偏）
+        审批通过的功能已废弃，请使用 PlanDecision 裁决机制：
+        - 裁决启动请求：POST /api/plan/plan-decisions/{decision_id}/decide/ (approve=true)
         """
-        # B3-3: 检查审批权限
-        self._require_approve_perm(request, "plan_management.approve_plan")
+        return legacy_api_gone()
+        
+        # 以下代码已废弃，保留用于参考
+        # # B3-3: 检查审批权限
+        # self._require_approve_perm(request, "plan_management.approve_plan")
         
         # B2-2: 使用 get_object() 确保只能操作本公司数据
         plan = self.get_object()
@@ -1351,17 +1361,16 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='reject')
     def reject(self, request, pk=None):
         """
-        B3-2: 审批驳回
+        P1 v2: 接口已废弃
         
-        POST /api/plan/plans/{id}/reject/
-        Body: {
-            "reason": "驳回原因（可选）"
-        }
-        
-        状态流转：pending_approval → draft
+        审批驳回的功能已废弃，请使用 PlanDecision 裁决机制：
+        - 裁决启动请求：POST /api/plan/plan-decisions/{decision_id}/decide/ (approve=false)
         """
-        # B3-3: 检查审批权限
-        self._require_approve_perm(request, "plan_management.approve_plan")
+        return legacy_api_gone()
+        
+        # 以下代码已废弃，保留用于参考
+        # # B3-3: 检查审批权限
+        # self._require_approve_perm(request, "plan_management.approve_plan")
         
         # B2-2: 使用 get_object() 确保只能操作本公司数据
         plan = self.get_object()
@@ -1454,17 +1463,16 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='cancel-approval')
     def cancel_approval(self, request, pk=None):
         """
-        B3-2: 取消审批
+        P1 v2: 接口已废弃
         
-        POST /api/plan/plans/{id}/cancel-approval/
-        Body: {
-            "reason": "取消原因（可选）"
-        }
-        
-        状态流转：pending_approval → draft
+        取消审批的功能已废弃，请使用 PlanDecision 裁决机制：
+        - 取消计划：POST /api/plan/plans/{id}/cancel-request/ + POST /api/plan/plan-decisions/{id}/decide/
         """
-        # B2-1: 统一检查 change 权限
-        self._require_change_perm(request, "plan_management.change_plan")
+        return legacy_api_gone()
+        
+        # 以下代码已废弃，保留用于参考
+        # # B2-1: 统一检查 change 权限
+        # self._require_change_perm(request, "plan_management.change_plan")
         
         # B2-2: 使用 get_object() 确保只能操作本公司数据
         plan = self.get_object()
@@ -1550,3 +1558,53 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
         
         serializer = self.get_serializer(plan)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"], url_path="start-request")
+    def start_request(self, request, pk=None):
+        """
+        发起启动请求
+        
+        POST /api/plan/plans/{id}/start-request/
+        Body: {
+            "reason": "启动原因（可选）"
+        }
+        """
+        plan = self.get_object()
+        try:
+            decision = request_start(plan, request.user, reason=request.data.get("reason"))
+        except PlanDecisionError as e:
+            # P1 v2: 使用 409 Conflict 更语义化（重复请求/状态冲突）
+            error_status = getattr(e, 'status_code', status.HTTP_409_CONFLICT)
+            return Response({"success": False, "message": str(e)}, status=error_status)
+
+        return Response({
+            "success": True,
+            "plan_id": plan.id,
+            "plan_status": plan.status,
+            "decision_id": decision.id,
+        }, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="cancel-request")
+    def cancel_request(self, request, pk=None):
+        """
+        发起取消请求
+        
+        POST /api/plan/plans/{id}/cancel-request/
+        Body: {
+            "reason": "取消原因（可选）"
+        }
+        """
+        plan = self.get_object()
+        try:
+            decision = request_cancel(plan, request.user, reason=request.data.get("reason"))
+        except PlanDecisionError as e:
+            # P1 v2: 使用 409 Conflict 更语义化（重复请求/状态冲突）
+            error_status = getattr(e, 'status_code', status.HTTP_409_CONFLICT)
+            return Response({"success": False, "message": str(e)}, status=error_status)
+
+        return Response({
+            "success": True,
+            "plan_id": plan.id,
+            "plan_status": plan.status,
+            "decision_id": decision.id,
+        }, status=status.HTTP_201_CREATED)

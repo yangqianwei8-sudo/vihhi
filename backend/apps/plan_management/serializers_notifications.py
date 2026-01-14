@@ -1,12 +1,14 @@
 from rest_framework import serializers
-from .models import ApprovalNotification
+from .compat import get_approval_notification_model
+
+ApprovalNotification = get_approval_notification_model()
 
 
 class ApprovalNotificationSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
     
     class Meta:
-        model = ApprovalNotification
+        model = ApprovalNotification if ApprovalNotification else None
         fields = [
             "id",
             "title",

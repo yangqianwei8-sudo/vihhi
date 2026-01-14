@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('org', '0001_initial'),
+        ('system_management', '0001_initial'),
         ('plan_management', '0008_add_topic_plan_period'),
     ]
 
@@ -15,21 +15,21 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='plan',
             name='company',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='plans', to='org.company', verbose_name='公司'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='plans', to='system_management.ourcompany', verbose_name='公司'),
         ),
         migrations.AddField(
             model_name='plan',
             name='org_department',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='plans', to='org.department', verbose_name='部门'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='plans', to='system_management.department', verbose_name='部门'),
         ),
         migrations.AddField(
             model_name='strategicgoal',
             name='company',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='strategic_goals', to='org.company', verbose_name='公司'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='strategic_goals', to='system_management.ourcompany', verbose_name='公司'),
         ),
         migrations.AddField(
             model_name='strategicgoal',
             name='org_department',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='strategic_goals', to='org.department', verbose_name='部门'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='strategic_goals', to='system_management.department', verbose_name='部门'),
         ),
     ]

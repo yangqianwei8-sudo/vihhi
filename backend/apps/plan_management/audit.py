@@ -5,7 +5,11 @@ A3-3-8-1: 提供统一的审计日志记录接口，确保所有关键动作都�
 import logging
 from typing import Optional, Dict, Any
 from django.contrib.contenttypes.models import ContentType
-from backend.apps.system_management.models import AuditLog, AuditAction
+try:
+    from backend.apps.system_management.models import AuditLog, AuditAction
+except ImportError:
+    AuditLog = None
+    AuditAction = None
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +79,10 @@ def audit_event(
     
     # 确保 event 在 meta 中
     meta_dict["event"] = event
+    
+    if not AuditLog:
+        logger.warning("AuditLog 不可用，跳过审计记录")
+        return None
     
     try:
         audit_log = AuditLog.objects.create(

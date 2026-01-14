@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('production_management', '0045_backfill_contract_org'),
+        ('production_management', '0031_remove_contract_service_content'),
         ('plan_management', '0012_approvalnotification'),
     ]
 

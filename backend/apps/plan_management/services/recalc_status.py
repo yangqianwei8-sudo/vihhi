@@ -3,7 +3,7 @@
 """
 from dataclasses import dataclass
 from django.utils import timezone
-from .adjudicator import adjudicate_plan_status, AdjudicationResult
+from ..adjudicator import adjudicate_plan_status, AdjudicationResult
 
 
 @dataclass

@@ -66,10 +66,17 @@
                                 <span class="progress-text">{{ plan.progress }}%</span>
                             </div>
                         </td>
-                        <td>
-                            <span class="status-badge status-{{ plan.status }}">
-                                {{ plan.get_status_display }}
-                            </span>
+                        <td style="min-width:90px;">
+                            {% with s=plan.status %}
+                              <span class="pm-badge
+                                {% if s == 'draft' %}pm-badge--draft
+                                {% elif s == 'in_progress' %}pm-badge--in_progress
+                                {% elif s == 'completed' %}pm-badge--completed
+                                {% elif s == 'cancelled' %}pm-badge--cancelled
+                                {% else %}pm-badge--draft{% endif %}">
+                                {{ plan.get_status_display|default:plan.status }}
+                              </span>
+                            {% endwith %}
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">

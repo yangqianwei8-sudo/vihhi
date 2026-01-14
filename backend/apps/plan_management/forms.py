@@ -549,8 +549,8 @@ class PlanForm(forms.ModelForm):
         if start_time and end_time:
             start_dt = cleaned_data.get('start_time')
             end_dt = cleaned_data.get('end_time')
-            if end_dt <= start_dt:
-                raise ValidationError({'end_time': '结束日期必须晚于开始日期'})
+            if end_dt < start_dt:
+                self.add_error('end_time', '结束时间不能早于开始时间。')
         
         # 验证预算
         if budget is not None and budget < 0:
