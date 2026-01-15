@@ -65,8 +65,13 @@ def plan_dashboard(request):
     只读页面 + 公司隔离 + 3 个风险表 + 4 个统计卡
     """
     # B1-2: 权限检查（返回 403，不重定向）
+    # 统一使用业务权限 plan_management.view（兼容 plan_management.plan.view）
     try:
-        require_perm(request.user, "plan_management.view_plan")
+        from backend.apps.system_management.services import get_user_permission_codes
+        permission_codes = get_user_permission_codes(request.user)
+        from backend.core.views import _permission_granted
+        if not _permission_granted('plan_management.view', permission_codes):
+            raise PermissionDenied('您没有权限查看计划管理仪表板')
     except PermissionDenied as e:
         from django.contrib import messages
         from django.http import HttpResponseForbidden

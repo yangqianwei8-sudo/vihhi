@@ -1,8 +1,12 @@
 """
 创建计划管理菜单所需的权限项
-菜单使用 plan_management.view_plan 和 plan_management.view_strategicgoal
-但实际权限项可能是 plan_management.plan.view 和 plan_management.goal.view
-创建这两个权限项以确保菜单能正常工作
+
+注意：此命令已废弃，菜单系统使用 plan_management.view 权限
+业务权限应使用：
+- plan_management.plan.view（查看计划）
+- plan_management.goal.view（查看目标）
+
+这些权限在 seed_permissions.py 中已定义，无需单独创建。
 """
 from django.core.management.base import BaseCommand
 from backend.apps.permission_management.models import PermissionItem
@@ -26,23 +30,23 @@ class Command(BaseCommand):
 
         self.stdout.write('开始创建计划管理菜单权限项...\n')
 
-        # 需要创建的权限项
-        permissions_to_create = [
-            {
-                'code': 'plan_management.view_plan',
-                'module': '计划管理',
-                'action': 'view_plan',
-                'name': '计划管理-查看计划',
-                'description': '查看计划列表和详情（菜单权限）',
-            },
-            {
-                'code': 'plan_management.view_strategicgoal',
-                'module': '计划管理',
-                'action': 'view_strategicgoal',
-                'name': '计划管理-查看目标',
-                'description': '查看战略目标（菜单权限）',
-            },
-        ]
+        # 注意：此命令已废弃
+        # 菜单系统使用 plan_management.view 权限
+        # 业务权限使用 plan_management.plan.view 和 plan_management.goal.view
+        # 这些权限在 seed_permissions.py 中已定义
+        
+        self.stdout.write(self.style.WARNING('⚠️  此命令已废弃'))
+        self.stdout.write('菜单系统使用 plan_management.view 权限')
+        self.stdout.write('业务权限应使用：')
+        self.stdout.write('  - plan_management.plan.view（查看计划）')
+        self.stdout.write('  - plan_management.goal.view（查看目标）')
+        self.stdout.write('这些权限在 seed_permissions.py 中已定义，无需单独创建。')
+        self.stdout.write('')
+        self.stdout.write('如需创建权限，请运行：python manage.py seed_permissions')
+        return
+        
+        # 以下代码已废弃，保留仅用于参考
+        permissions_to_create = []
 
         created_count = 0
         for perm_data in permissions_to_create:

@@ -41,42 +41,30 @@ class Command(BaseCommand):
 
         self.stdout.write(f'\n开始为用户 {username} 分配计划管理业务权限...')
 
-        # 需要的业务权限代码（菜单使用的权限代码）
+        # 需要的业务权限代码（统一使用标准业务权限）
+        # 菜单系统使用 plan_management.view
+        # 具体业务权限使用 plan_management.plan.view 和 plan_management.goal.view
         required_permissions = [
-            'plan_management.view_plan',
-            'plan_management.view_strategicgoal',
-        ]
-        
-        # 如果上述权限不存在，尝试使用替代权限代码
-        fallback_permissions = [
-            'plan_management.plan.view',
-            'plan_management.goal.view',
+            'plan_management.view',  # 标准权限（菜单系统使用）
+            'plan_management.plan.view',  # 业务权限（查看计划）
+            'plan_management.goal.view',  # 业务权限（查看目标）
         ]
 
-        # 获取或创建权限项
+        # 获取权限项（只使用标准业务权限）
         permissions = []
+        found_perms = set()  # 避免重复添加
+        
         for perm_code in required_permissions:
+            if perm_code in found_perms:
+                continue
             try:
                 perm = PermissionItem.objects.get(code=perm_code, is_active=True)
                 permissions.append(perm)
+                found_perms.add(perm_code)
                 self.stdout.write(f'  ✓ 找到权限：{perm_code} ({perm.name})')
             except PermissionItem.DoesNotExist:
-                # 尝试使用替代权限代码
-                fallback_code = None
-                if perm_code == 'plan_management.view_plan':
-                    fallback_code = 'plan_management.plan.view'
-                elif perm_code == 'plan_management.view_strategicgoal':
-                    fallback_code = 'plan_management.goal.view'
-                
-                if fallback_code:
-                    try:
-                        perm = PermissionItem.objects.get(code=fallback_code, is_active=True)
-                        permissions.append(perm)
-                        self.stdout.write(f'  ✓ 使用替代权限：{fallback_code} ({perm.name})')
-                    except PermissionItem.DoesNotExist:
-                        self.stdout.write(self.style.WARNING(f'  ⚠ 权限不存在：{perm_code} 和 {fallback_code}'))
-                else:
-                    self.stdout.write(self.style.WARNING(f'  ⚠ 权限不存在：{perm_code}'))
+                self.stdout.write(self.style.WARNING(f'  ⚠ 权限不存在：{perm_code}'))
+                self.stdout.write(self.style.WARNING(f'     提示：请先运行 python manage.py seed_permissions 创建权限项'))
 
         if not permissions:
             self.stdout.write(self.style.ERROR('错误：没有找到任何权限项'))
@@ -123,11 +111,20 @@ class Command(BaseCommand):
         perms = get_user_permission_codes(user)
         self.stdout.write(f'\n验证结果:')
         self.stdout.write(f'  用户业务权限: {perms}')
-        self.stdout.write(f'  是否有 plan_management.view_plan: {"plan_management.view_plan" in perms}')
-        self.stdout.write(f'  是否有 plan_management.view_strategicgoal: {"plan_management.view_strategicgoal" in perms}')
+        self.stdout.write(f'  是否有 plan_management.view: {"plan_management.view" in perms}')
+        self.stdout.write(f'  是否有 plan_management.plan.view: {"plan_management.plan.view" in perms}')
+        self.stdout.write(f'  是否有 plan_management.goal.view: {"plan_management.goal.view" in perms}')
         
-        if 'plan_management.view_plan' in perms or '__all__' in perms:
+        # 检查是否有计划管理查看权限（使用标准业务权限）
+        has_view_perm = (
+            'plan_management.view' in perms or
+            'plan_management.plan.view' in perms or
+            '__all__' in perms
+        )
+        
+        if has_view_perm:
             self.stdout.write(self.style.SUCCESS('\n✅ 权限分配成功，菜单应该能正常显示'))
         else:
             self.stdout.write(self.style.ERROR('\n❌ 权限分配失败，请检查'))
+            self.stdout.write(self.style.ERROR('   提示：确保用户角色已分配 plan_management.view 或 plan_management.plan.view 权限'))
 

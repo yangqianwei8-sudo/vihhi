@@ -5,9 +5,11 @@ D1 最小验收清单：验证菜单可见性与页面可访问性的一致性
 1. admin（superuser）- 应该都能访问
 2. internal_zjl（已加入 INTERNAL_ZJL group）- 应该都能访问
 3. tester1（只有 view 权限）- 应该都能访问
-4. tester_viewless（不分配任何 plan_management.view_plan）- 应该 403 且菜单不可见
+4. tester_viewless（不分配任何 plan_management.plan.view）- 应该 403 且菜单不可见
 
 验收标准：菜单与页面不允许出现不一致（可见但 403 / 不可见但 200 都算失败）。
+
+注意：使用标准业务权限 plan_management.plan.view，不再使用 Django 自动生成的 view_plan 权限。
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
@@ -196,10 +198,11 @@ class Command(BaseCommand):
 
         # 1. 测试页面访问权限（直接检查权限，不依赖 HTTP 请求）
         # 使用与视图函数相同的权限检查逻辑
+        # 注意：视图函数使用 plan_management.view 权限，这里使用业务权限 plan_management.plan.view
         page_url = '/plan/dashboard/'
         try:
-            # 直接调用 require_perm 检查权限（与视图函数一致）
-            require_perm(user, "plan_management.view_plan")
+            # 直接调用 require_perm 检查权限（使用标准业务权限）
+            require_perm(user, "plan_management.plan.view")
             page_accessible = True
             page_status = 200
         except PermissionDenied:

@@ -24,15 +24,11 @@ class RoleAdmin(BaseModelAdmin):
     filter_horizontal = ('custom_permissions', 'permissions')
     readonly_fields = ('created_time',)
     
-    # 注意：如果以后需要权限筛选增强功能，可以创建以下静态文件：
-    # - static/admin/css/permission_filter.css
-    # - static/admin/js/permission_filter.js
-    # 然后取消下面的注释：
-    # class Media:
-    #     css = {
-    #         'all': ('admin/css/permission_filter.css',)
-    #     }
-    #     js = ('admin/js/permission_filter.js',)
+    class Media:
+        css = {
+            'all': ('admin/css/permission_filter.css',)
+        }
+        js = ('admin/js/permission_filter.js',)
     
     fieldsets = (
         ('基本信息', {
@@ -93,13 +89,21 @@ class RoleAdmin(BaseModelAdmin):
     def get_actions(self, request):
         """自定义批量操作名称"""
         actions = super().get_actions(request)
-        # 重命名批量操作（actions字典的值是tuple，需要创建新tuple替换）
+        # 重命名批量操作（元组不可变，需要创建新元组）
         if 'activate_items' in actions:
-            func, old_name, description = actions['activate_items']
-            actions['activate_items'] = (func, '激活选中的角色', description)
+            old_action = actions['activate_items']
+            actions['activate_items'] = (
+                old_action[0],  # 函数对象
+                old_action[1],  # 函数名
+                '激活选中的角色'  # 新的显示名称
+            )
         if 'deactivate_items' in actions:
-            func, old_name, description = actions['deactivate_items']
-            actions['deactivate_items'] = (func, '停用选中的角色', description)
+            old_action = actions['deactivate_items']
+            actions['deactivate_items'] = (
+                old_action[0],  # 函数对象
+                old_action[1],  # 函数名
+                '停用选中的角色'  # 新的显示名称
+            )
         return actions
 
 
@@ -151,7 +155,7 @@ class UserAdmin(DjangoUserAdmin):
         'is_superuser',
         'date_joined',
     )
-    list_filter = ('user_type', 'department', 'is_active', 'is_staff', 'is_superuser', 'roles', 'date_joined', 'profile_completed')
+    list_filter = ('user_type', 'department', 'is_active', 'is_staff', 'is_superuser', 'date_joined', 'profile_completed')
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone', 'position')
     ordering = ('-date_joined',)
     list_per_page = 50
@@ -261,49 +265,28 @@ class UserAdmin(DjangoUserAdmin):
         except ProgrammingError as e:
             # 检查是否是表或字段不存在的错误
             error_msg = str(e)
-            
-            # 处理 settlement_payment_record 表不存在
-            if ('settlement_management_payment_record' in error_msg or 'settlement_payment_record' in error_msg) and 'does not exist' in error_msg:
-                messages.error(
-                    request,
-                    '数据库表 settlement_payment_record 不存在。'
-                    '请运行迁移命令创建表：python manage.py migrate settlement_center'
-                )
+            if 'does not exist' in error_msg:
+                if 'settlement_management_payment_record' in error_msg or 'settlement_payment_record' in error_msg:
+                    messages.error(
+                        request,
+                        '数据库表 settlement_payment_record 不存在。'
+                        '请运行迁移命令创建表：python manage.py migrate settlement_center'
+                    )
+                elif 'system_role.description' in error_msg:
+                    messages.warning(
+                        request,
+                        '数据库表 system_role 缺少 description 字段。'
+                        '请运行迁移命令：python manage.py migrate system_management'
+                    )
+                else:
+                    messages.error(
+                        request,
+                        f'数据库错误：{error_msg[:200]}'
+                    )
+                # 返回一个空的响应，避免显示错误页面
                 from django.http import HttpResponseRedirect
                 from django.urls import reverse
                 return HttpResponseRedirect(reverse('admin:index'))
-            
-            # 处理 admin_reception_record.status 字段不存在
-            if 'admin_reception_record' in error_msg and 'status' in error_msg and 'does not exist' in error_msg:
-                # 这是数据库结构不一致的问题，发生在删除操作时
-                # 尝试使用强制删除方式绕过这个问题
-                if request.method == 'POST' and 'action' in request.POST and request.POST['action'] == 'delete_selected':
-                    # 这是批量删除操作，使用自定义的删除方法
-                    from django.http import HttpResponseRedirect
-                    from django.urls import reverse
-                    messages.warning(
-                        request,
-                        '检测到数据库结构不一致（admin_reception_record.status 字段不存在）。'
-                        '将使用强制删除方式处理。'
-                    )
-                    # 获取要删除的用户
-                    selected_ids = request.POST.getlist('_selected_action')
-                    queryset = self.get_queryset(request).filter(pk__in=selected_ids)
-                    # 使用自定义删除方法（强制删除）
-                    self.delete_queryset(request, queryset)
-                    # 重定向回列表页面
-                    return HttpResponseRedirect(reverse('admin:system_management_user_changelist'))
-                else:
-                    messages.warning(
-                        request,
-                        '数据库表 admin_reception_record 缺少 status 字段。'
-                        '这可能是由于模型定义与数据库结构不一致导致的。'
-                        '请运行迁移命令更新数据库结构：python manage.py migrate administrative_management'
-                    )
-                    from django.http import HttpResponseRedirect
-                    from django.urls import reverse
-                    return HttpResponseRedirect(reverse('admin:system_management_user_changelist'))
-            
             # 其他数据库错误，继续抛出
             raise
     
@@ -317,158 +300,6 @@ class UserAdmin(DjangoUserAdmin):
             return True
         # 其他情况需要检查是否有delete_user权限
         return request.user.has_perm('system_management.delete_user')
-    
-    def delete_view(self, request, object_id, extra_context=None):
-        """重写删除视图，处理外键约束错误，支持强制删除"""
-        from django.db.models.deletion import ProtectedError
-        from django.contrib import messages
-        from django.http import HttpResponseRedirect
-        from django.urls import reverse
-        from django.db import transaction
-        
-        obj = self.get_object(request, object_id)
-        if obj is None:
-            return super().delete_view(request, object_id, extra_context)
-        
-        if request.method == 'POST':
-            # 检查是否是强制删除
-            force_delete = request.POST.get('force_delete', '') == '1'
-            
-            try:
-                if force_delete:
-                    # 强制删除：先清理所有 PROTECT 约束的引用
-                    with transaction.atomic():
-                        self._cleanup_user_references(obj)
-                        obj.delete()
-                    messages.success(request, f'用户 "{obj.username}" 已强制删除（已清理相关引用）。')
-                else:
-                    # 普通删除
-                    obj.delete()
-                    messages.success(request, f'用户 "{obj.username}" 已成功删除。')
-                return HttpResponseRedirect(reverse('admin:system_management_user_changelist'))
-            except ProtectedError as e:
-                # 捕获保护错误，提供友好的错误信息和强制删除选项
-                protected_objects = e.protected_objects
-                
-                # 统计各模型的引用数量
-                model_counts = {}
-                for protected_obj in protected_objects:
-                    model_name = protected_obj._meta.verbose_name or protected_obj._meta.model_name
-                    if model_name not in model_counts:
-                        model_counts[model_name] = 0
-                    model_counts[model_name] += 1
-                
-                # 构建错误消息
-                error_msg_parts = [f'无法删除用户 "{obj.username}"，因为该用户被以下数据引用：']
-                for model_name, count in sorted(model_counts.items()):
-                    error_msg_parts.append(f'  • {model_name}: {count} 条记录')
-                error_msg_parts.append('\n如果您确定要删除，可以使用"强制删除"功能（将清理相关引用）。')
-                error_msg = '\n'.join(error_msg_parts)
-                
-                messages.error(request, error_msg)
-                # 重定向回用户详情页面，并添加强制删除选项
-                return HttpResponseRedirect(reverse('admin:system_management_user_change', args=[object_id]))
-        
-        # GET 请求，显示删除确认页面
-        return super().delete_view(request, object_id, extra_context)
-    
-    def _cleanup_user_references(self, user):
-        """清理用户的所有 PROTECT 约束引用，通过直接更新数据库绕过约束"""
-        from django.db import models, connection
-        from django.apps import apps
-        
-        # 获取 User 模型
-        User = self.model
-        
-        # 获取所有模型
-        all_models = apps.get_models()
-        
-        with connection.cursor() as cursor:
-            for model in all_models:
-                # 跳过 User 模型本身
-                if model == User:
-                    continue
-                    
-                # 检查模型的所有字段
-                for field in model._meta.get_fields():
-                    if isinstance(field, models.ForeignKey):
-                        # 检查是否是引用 User 模型的外键
-                        related_model = getattr(field, 'related_model', None)
-                        if related_model == User:
-                            # 检查是否是 PROTECT 约束
-                            if hasattr(field, 'remote_field') and field.remote_field.on_delete == models.PROTECT:
-                                # 获取表名和字段名
-                                table_name = model._meta.db_table
-                                field_name = field.column
-                                
-                                # 如果字段允许 NULL，设置为 NULL
-                                if field.null:
-                                    try:
-                                        sql = f'UPDATE {table_name} SET {field_name} = NULL WHERE {field_name} = %s'
-                                        cursor.execute(sql, [user.id])
-                                    except Exception:
-                                        pass
-                                else:
-                                    # 如果字段不允许 NULL，尝试删除相关记录
-                                    # 注意：这可能会删除重要数据，需要谨慎
-                                    try:
-                                        sql = f'DELETE FROM {table_name} WHERE {field_name} = %s'
-                                        cursor.execute(sql, [user.id])
-                                    except Exception:
-                                        pass
-    
-    def delete_queryset(self, request, queryset):
-        """重写批量删除方法，处理外键约束错误，支持强制删除"""
-        from django.db.models.deletion import ProtectedError
-        from django.db import ProgrammingError, transaction
-        from django.contrib import messages
-        
-        deleted_count = 0
-        failed_users = []
-        force_delete = request.POST.get('force_delete', '') == '1'
-        
-        for obj in queryset:
-            try:
-                if force_delete:
-                    # 强制删除：先清理引用
-                    with transaction.atomic():
-                        self._cleanup_user_references(obj)
-                        obj.delete()
-                else:
-                    obj.delete()
-                deleted_count += 1
-            except ProtectedError as e:
-                failed_users.append((obj.username, '外键约束'))
-            except ProgrammingError as e:
-                # 捕获数据库结构错误（如字段不存在）
-                error_msg = str(e)
-                if 'admin_reception_record' in error_msg and 'status' in error_msg:
-                    # 如果是因为 ReceptionRecord.status 字段不存在，尝试强制删除
-                    try:
-                        with transaction.atomic():
-                            self._cleanup_user_references(obj)
-                            obj.delete()
-                        deleted_count += 1
-                        messages.warning(request, f'用户 "{obj.username}" 已删除（数据库结构不一致，已跳过相关查询）。')
-                    except Exception as e2:
-                        failed_users.append((obj.username, f'数据库错误: {str(e2)[:50]}'))
-                else:
-                    failed_users.append((obj.username, f'数据库错误: {str(e)[:50]}'))
-            except Exception as e:
-                failed_users.append((obj.username, f'未知错误: {str(e)[:50]}'))
-        
-        if deleted_count > 0:
-            if force_delete:
-                messages.success(request, f'成功强制删除 {deleted_count} 个用户（已清理相关引用）。')
-            else:
-                messages.success(request, f'成功删除 {deleted_count} 个用户。')
-        
-        if failed_users:
-            error_msg_parts = ['以下用户无法删除：']
-            for username, reason in failed_users:
-                error_msg_parts.append(f'  • {username}: {reason}')
-            error_msg_parts.append('\n请先处理这些用户的引用关系，或使用"停用用户"功能，或使用强制删除。')
-            messages.error(request, '\n'.join(error_msg_parts))
 
 
 @admin.register(RegistrationRequest)

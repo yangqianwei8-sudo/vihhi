@@ -32,10 +32,12 @@ class Command(BaseCommand):
         self.stdout.write('=' * 60)
         self.stdout.write('')
         
+        # 使用标准业务权限进行测试
         test_permissions = [
-            'plan_management.view_plan',
-            'plan_management.view_strategicgoal',
-            'plan_management.add_plan',
+            'plan_management.view',  # 标准权限（菜单系统使用）
+            'plan_management.plan.view',  # 业务权限（查看计划）
+            'plan_management.goal.view',  # 业务权限（查看目标）
+            'plan_management.plan.create',  # 业务权限（创建计划）
         ]
         
         for user in users:
@@ -55,10 +57,10 @@ class Command(BaseCommand):
             
             self.stdout.write('\n  require_perm 检查:')
             try:
-                require_perm(user, 'plan_management.view_plan')
-                self.stdout.write(self.style.SUCCESS('    ✓ require_perm("plan_management.view_plan"): 通过'))
+                require_perm(user, 'plan_management.plan.view')
+                self.stdout.write(self.style.SUCCESS('    ✓ require_perm("plan_management.plan.view"): 通过'))
             except Exception as e:
-                self.stdout.write(self.style.ERROR(f'    ✗ require_perm 失败: {e}'))
+                self.stdout.write(self.style.ERROR(f'    ✗ require_perm("plan_management.plan.view") 失败: {e}'))
                 all_passed = False
             
             if all_passed:
