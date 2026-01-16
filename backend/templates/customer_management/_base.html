@@ -14,14 +14,39 @@
 <link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
 <link rel="stylesheet" href="{% static 'css/components/pm_page_header.css' %}">
 <style>
+  /* ⚠️ 重要：页面标题样式必须与共享模板 _shared_form_wrapper_customer.html 保持一致
+   * 
+   * 共享模板使用全局选择器（.pm-page-header），不依赖父容器类名
+   * 本基础模板的样式定义必须与共享模板完全一致，否则会导致样式不生效
+   * 
+   * 必需的样式属性：
+   * - .pm-page-header::after: 下划线（纯黑色，延伸到屏幕边缘）
+   * - h1 font-size: 24px
+   * - .pm-subtitle font-size: 12px
+   * - .pm-actions align-self: flex-end（按钮底部对齐）
+   * - .pm-page-header align-items: flex-end（标题和副标题底部对齐）
+   * 
+   * 如果修改共享模板的样式，必须同步更新本文件
+   */
+  /* 页面标题区域样式 - 桌面端 */
   .pm-page-header {
     margin-bottom: 24px !important;
     padding-bottom: 0 !important;
     border-bottom: none !important;
     display: flex !important;
-    align-items: flex-start !important;
+    align-items: flex-end !important;
     justify-content: space-between !important;
     position: relative !important;
+  }
+  
+  .pm-page-header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 4px;
+    height: 1px;
+    background-color: #000000;
   }
   
   .pm-page-header .pm-page-header-title-wrapper {
@@ -32,7 +57,6 @@
     flex: 1 !important;
     min-width: 0 !important;
     padding-bottom: 8px !important;
-    border-bottom: 1px solid #E0E0E0 !important;
     margin-bottom: 8px !important;
   }
   
@@ -41,20 +65,21 @@
     font-weight: 600 !important;
     color: #1A1A1A !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 0 0 4px 0 !important;
     display: inline-block !important;
     position: relative !important;
     line-height: 1.2 !important;
+  }
+  
   .pm-page-header .pm-page-header-title-wrapper .pm-subtitle {
     font-size: 12px !important;
     color: #999999 !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 0 0 4px 0 !important;
     white-space: nowrap !important;
     font-weight: 400 !important;
     display: inline-block !important;
     line-height: 1.2 !important;
-    
   }
   
   .pm-page-header .pm-page-header-title-wrapper .pm-subtitle span {
@@ -64,10 +89,10 @@
   .pm-page-header .pm-actions {
     flex-shrink: 0 !important;
     margin-left: 16px !important;
-    align-self: flex-start !important;
-    padding-bottom: 8px !important;
-    border-bottom: 1px solid #E0E0E0 !important;
-    margin-bottom: 8px !important;
+    align-self: flex-end !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 20px !important;
+    border-bottom: none !important;
   }
   
   /* 清除背景色 */

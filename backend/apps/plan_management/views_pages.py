@@ -1119,6 +1119,11 @@ def plan_create(request):
             context['form'] = form
             context['page_title'] = "创建计划"
             context['submit_text'] = "创建"
+            context['cancel_url_name'] = 'plan_pages:plan_list'
+            context['form_js_file'] = 'js/plan_form_date_calculator.js'
+            context['full_width_fields'] = 'content,plan_objective,description,collaboration_plan,notes'
+            context['form_page_subtitle_text'] = '请填写计划基本信息'
+            context['create_url_name'] = 'plan_pages:plan_create'
             return render(request, "plan_management/plan_form.html", context)
     else:
         form = PlanForm(user=request.user)
@@ -1128,6 +1133,10 @@ def plan_create(request):
     context['form'] = form
     context['page_title'] = "创建计划"
     context['submit_text'] = "创建"
+    context['cancel_url_name'] = 'plan_pages:plan_list'
+    context['form_js_file'] = 'js/plan_form_date_calculator.js'
+    context['full_width_fields'] = 'content,plan_objective,description,collaboration_plan,notes'
+    context['form_page_subtitle_text'] = '请填写计划基本信息'
     return render(request, "plan_management/plan_form.html", context)
 
 
@@ -1328,6 +1337,7 @@ def plan_edit(request, plan_id):
             context['plan'] = plan
             context['page_title'] = f"编辑计划 - {plan.name}"
             context['submit_text'] = "保存"
+            context['create_url_name'] = 'plan_pages:plan_create'
             return render(request, "plan_management/plan_form.html", context)
     else:
         form = PlanForm(instance=plan, user=request.user)
@@ -1914,6 +1924,11 @@ def strategic_goal_create(request):
             context['form'] = form
             context['page_title'] = "创建战略目标"
             context['submit_text'] = "创建"
+            context['cancel_url_name'] = 'plan_pages:strategic_goal_list'
+            context['form_js_file'] = 'js/goal_form_date_calculator.js'
+            context['full_width_fields'] = 'description,notes,background,significance'
+            context['form_page_subtitle_text'] = '请填写目标基本信息'
+            context['create_url_name'] = 'plan_pages:strategic_goal_create'
             return render(request, "goal_management/goal_form.html", context)
     else:
         form = StrategicGoalForm(user=request.user)
@@ -1923,6 +1938,10 @@ def strategic_goal_create(request):
     context['form'] = form
     context['page_title'] = "创建战略目标"
     context['submit_text'] = "创建"
+    context['cancel_url_name'] = 'plan_pages:strategic_goal_list'
+    context['form_js_file'] = 'js/goal_form_date_calculator.js'
+    context['full_width_fields'] = 'description,notes,background,significance'
+    context['form_page_subtitle_text'] = '请填写目标基本信息'
     return render(request, "goal_management/goal_form.html", context)
 
 
@@ -2041,6 +2060,7 @@ def strategic_goal_edit(request, goal_id):
             context['goal'] = goal
             context['page_title'] = "编辑战略目标"
             context['submit_text'] = "保存"
+            context['create_url_name'] = 'plan_pages:strategic_goal_create'
             return render(request, "goal_management/goal_form.html", context)
     else:
         form = StrategicGoalForm(instance=goal, user=request.user)

@@ -143,6 +143,13 @@ CUSTOMER_MANAGEMENT_MENU = [
                 'permission': 'customer_management.client.view',  # 自动根据权限级别显示
             },
             {
+                'id': 'customer_create',
+                'label': '创建新客户',
+                'icon': '➕',
+                'url_name': 'business_pages:customer_create',
+                'permission': 'customer_management.client.create',
+            },
+            {
                 'id': 'customer_public_sea',
                 'label': '客户公海',
                 'icon': '🌊',
@@ -1971,6 +1978,9 @@ def customer_create(request):
                         'client_type_choices': [(ct.id, ct.name) for ct in ClientType.objects.filter(is_active=True).order_by('display_order', 'name')],
                         'source_choices': Client.SOURCE_CHOICES,
                     })
+                    context['cancel_url_name'] = 'business_pages:customer_list'
+                    context['form_page_subtitle_text'] = '请填写客户基本信息'
+                    context['create_url_name'] = 'business_pages:customer_create'
                     return render(request, "customer_management/customer_form.html", context)
             
             # 最终检查：确保 client_type 有值（强制设置，避免数据库错误）
@@ -2003,6 +2013,9 @@ def customer_create(request):
                         'client_type_choices': [(ct.id, ct.name) for ct in ClientType.objects.filter(is_active=True).order_by('display_order', 'name')],
                         'source_choices': Client.SOURCE_CHOICES,
                     })
+                    context['cancel_url_name'] = 'business_pages:customer_list'
+                    context['form_page_subtitle_text'] = '请填写客户基本信息'
+                    context['create_url_name'] = 'business_pages:customer_create'
                     return render(request, "customer_management/customer_form.html", context)
             
             # 最后一次检查：确保 client_type_id 不为 None
@@ -2083,6 +2096,9 @@ def customer_create(request):
                         'client_type_choices': [(ct.id, ct.name) for ct in ClientType.objects.filter(is_active=True).order_by('display_order', 'name')],
                         'source_choices': Client.SOURCE_CHOICES,
                     })
+                    context['cancel_url_name'] = 'business_pages:customer_list'
+                    context['form_page_subtitle_text'] = '请填写客户基本信息'
+                    context['create_url_name'] = 'business_pages:customer_create'
                     return render(request, "customer_management/customer_form.html", context)
             
             # 最后一次验证：确保 client_type_id 不为 None（防止意外情况）
@@ -2182,6 +2198,9 @@ def customer_create(request):
         'client_type_choices': [(ct.id, ct.name) for ct in ClientType.objects.filter(is_active=True).order_by('display_order', 'name')],
         'source_choices': Client.SOURCE_CHOICES,
     })
+    context['cancel_url_name'] = 'business_pages:customer_list'
+    context['form_page_subtitle_text'] = '请填写客户基本信息'
+    context['create_url_name'] = 'business_pages:customer_create'
     return render(request, "customer_management/customer_form.html", context)
 
 
@@ -2499,6 +2518,9 @@ def customer_edit(request, client_id):
         'execution_count': execution_records.count(),
         'total_execution_amount': client.total_execution_amount or 0,
     })
+    context['cancel_url_name'] = 'business_pages:customer_list'
+    context['form_page_subtitle_text'] = '请填写客户基本信息'
+    context['create_url_name'] = 'business_pages:customer_create'
     return render(request, "customer_management/customer_form.html", context)
 
 
