@@ -1,0 +1,578 @@
+{% extends "shared/home_base.html" %}
+{% load static %}
+
+{% block home_extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    /* 主内容区样式 */
+    .dashboard-container {
+        padding: 30px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    /* 页面标题区域 */
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eaeaea;
+    }
+    
+    .page-title h2 {
+        font-size: 28px;
+        color: #2c3e50;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    
+    .page-title p {
+        color: #7f8c8d;
+        font-size: 15px;
+        margin: 0;
+    }
+    
+    .header-actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .header-action-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        color: #555;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 14px;
+        text-decoration: none;
+    }
+    
+    .header-action-btn i {
+        margin-right: 8px;
+    }
+    
+    .header-action-btn:hover {
+        background-color: #f8f9fa;
+        border-color: #4a9eff;
+        color: #4a9eff;
+        text-decoration: none;
+    }
+    
+    /* 仪表板卡片 */
+    .dashboard-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+    }
+    
+    .card {
+        background-color: #fff;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s, box-shadow 0.3s;
+        border: 1px solid #f0f0f0;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    }
+    
+    .card-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .card-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        font-size: 22px;
+        color: white;
+    }
+    
+    .card-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .card-content {
+        color: #666;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    
+    .card-content strong {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+    
+    /* 系统状态 */
+    .system-status {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+        font-size: 13px;
+        color: #7f8c8d;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .status-item {
+        display: flex;
+        align-items: center;
+    }
+    
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    
+    .status-online {
+        background-color: #00b894;
+    }
+    
+    .status-users {
+        background-color: #4a9eff;
+    }
+    
+    .status-date {
+        background-color: #fd79a8;
+    }
+    
+    /* 功能模块区域 */
+    .modules-section {
+        margin-top: 30px;
+    }
+    
+    .section-title {
+        font-size: 22px;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .modules-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+    }
+    
+    .module-card {
+        background-color: #fff;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s;
+        cursor: pointer;
+        border: 1px solid transparent;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+    
+    .module-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        border-color: #4a9eff;
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .module-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 15px;
+        font-size: 24px;
+        color: white;
+    }
+    
+    .module-name {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 8px;
+        font-size: 16px;
+    }
+    
+    .module-desc {
+        color: #7f8c8d;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+    
+    /* 颜色定义 */
+    .color-1 { background: linear-gradient(135deg, #4a9eff, #2c80ff); }
+    .color-2 { background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
+    .color-3 { background: linear-gradient(135deg, #00cec9, #00b894); }
+    .color-4 { background: linear-gradient(135deg, #fd79a8, #e84393); }
+    .color-5 { background: linear-gradient(135deg, #fdcb6e, #f39c12); }
+    .color-6 { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+    .color-7 { background: linear-gradient(135deg, #00b894, #00cec9); }
+    .color-8 { background: linear-gradient(135deg, #e17055, #d63031); }
+    
+    /* 响应式设计 */
+    @media (max-width: 1200px) {
+        .modules-grid {
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 20px;
+        }
+        
+        .dashboard-cards {
+            grid-template-columns: 1fr;
+        }
+        
+        .modules-grid {
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        }
+        
+        .header-actions {
+            flex-direction: column;
+        }
+        
+        .header-action-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content_inner %}
+<div class="dashboard-container">
+    <!-- 页面标题区域 -->
+    <div class="page-header">
+        <div class="page-title">
+            <h2>系统总工作台</h2>
+            <p>System Dashboard - 欢迎回来，{{ user.get_full_name|default:user.username }}</p>
+        </div>
+        
+        <div class="header-actions">
+            {% if approval_stats.my_pending > 0 %}
+            <a href="#" class="header-action-btn">
+                <i class="fas fa-bell"></i> 待审批 ({{ approval_stats.my_pending }})
+            </a>
+            {% endif %}
+            <a href="#" class="header-action-btn">
+                <i class="fas fa-calendar-alt"></i> 今日日程
+            </a>
+            <a href="#" class="header-action-btn">
+                <i class="fas fa-search"></i> 快速搜索
+            </a>
+        </div>
+    </div>
+    
+    <!-- 仪表板卡片 -->
+    <div class="dashboard-cards">
+        <!-- 系统概况卡片 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon color-1">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div>
+                    <div class="card-title">系统概况</div>
+                </div>
+            </div>
+            <div class="card-content">
+                当前系统运行正常，所有服务均在线。
+                {% if core_cards %}
+                今日新增数据统计，处理任务正常。
+                {% endif %}
+            </div>
+            <div class="system-status">
+                <div class="status-item">
+                    <span class="status-dot status-online"></span>
+                    系统状态: 正常
+                </div>
+                <div class="status-item">
+                    <span class="status-dot status-users"></span>
+                    在线用户: 活跃
+                </div>
+                <div class="status-item">
+                    <span class="status-dot status-date"></span>
+                    {% now "Y年m月d日" %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 待办事项卡片 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon color-2">
+                    <i class="fas fa-tasks"></i>
+                </div>
+                <div>
+                    <div class="card-title">待办事项</div>
+                </div>
+            </div>
+            <div class="card-content">
+                您有 <strong>{{ pending_counts.personal }} 项</strong> 待处理任务
+                {% if pending_counts.due_today > 0 %}
+                ，其中 <strong>{{ pending_counts.due_today }} 项</strong> 今日到期
+                {% endif %}
+                {% if pending_counts.overdue > 0 %}
+                ，<strong>{{ pending_counts.overdue }} 项</strong> 已逾期
+                {% endif %}
+                。
+            </div>
+        </div>
+        
+        <!-- 数据统计卡片 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon color-3">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div>
+                    <div class="card-title">数据统计</div>
+                </div>
+            </div>
+            <div class="card-content">
+                {% if core_cards %}
+                    {% for card in core_cards|slice:":3" %}
+                        {% if card.label == "进行中项目" %}
+                        进行中项目: <strong>{{ card.value }}</strong> 个
+                        {% elif card.label == "本月完成" %}
+                        ，本月完成: <strong>{{ card.value }}</strong> 个
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    系统数据统计正常，各项指标运行良好。
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 功能模块 -->
+    <div class="modules-section">
+        <h3 class="section-title">功能模块</h3>
+        <div class="modules-grid">
+            <!-- 客户管理 -->
+            <a href="{% url 'customer_pages:customer_list' %}" class="module-card" data-module="客户管理">
+                <div class="module-icon color-1">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="module-name">客户管理</div>
+                <div class="module-desc">客户信息、跟进记录、客户分类</div>
+            </a>
+            
+            <!-- 商机管理 -->
+            <a href="{% url 'opportunity_pages:opportunity_management_home' %}" class="module-card" data-module="商机管理">
+                <div class="module-icon color-2">
+                    <i class="fas fa-briefcase"></i>
+                </div>
+                <div class="module-name">商机管理</div>
+                <div class="module-desc">销售机会、商机跟踪、预测分析</div>
+            </a>
+            
+            <!-- 合同管理 -->
+            <a href="{% url 'contract_pages:contract_management_home' %}" class="module-card" data-module="合同管理">
+                <div class="module-icon color-3">
+                    <i class="fas fa-file-contract"></i>
+                </div>
+                <div class="module-name">合同管理</div>
+                <div class="module-desc">合同创建、审批流程、归档管理</div>
+            </a>
+            
+            <!-- 回款管理 -->
+            <a href="#" class="module-card" data-module="回款管理">
+                <div class="module-icon color-4">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="module-name">回款管理</div>
+                <div class="module-desc">回款计划、收款记录、财务对账</div>
+            </a>
+            
+            <!-- 生产管理 -->
+            <a href="{% url 'production_pages:project_list' %}" class="module-card" data-module="生产管理">
+                <div class="module-icon color-5">
+                    <i class="fas fa-industry"></i>
+                </div>
+                <div class="module-name">生产管理</div>
+                <div class="module-desc">生产计划、进度跟踪、质量管理</div>
+            </a>
+            
+            <!-- 资源管理 -->
+            <a href="#" class="module-card" data-module="资源管理">
+                <div class="module-icon color-6">
+                    <i class="fas fa-tools"></i>
+                </div>
+                <div class="module-name">资源管理</div>
+                <div class="module-desc">设备、物料、人力资源分配</div>
+            </a>
+            
+            <!-- 任务协作 -->
+            <a href="#" class="module-card" data-module="任务协作">
+                <div class="module-icon color-7">
+                    <i class="fas fa-tasks"></i>
+                </div>
+                <div class="module-name">任务协作</div>
+                <div class="module-desc">任务分配、团队协作、进度管理</div>
+            </a>
+            
+            <!-- 收发货管理 -->
+            <a href="{% url 'delivery_pages:delivery_list' %}" class="module-card" data-module="收发货管理">
+                <div class="module-icon color-8">
+                    <i class="fas fa-truck"></i>
+                </div>
+                <div class="module-name">收发货管理</div>
+                <div class="module-desc">出入库管理、物流跟踪、库存查询</div>
+            </a>
+            
+            <!-- 档案管理 -->
+            <a href="#" class="module-card" data-module="档案管理">
+                <div class="module-icon color-1">
+                    <i class="fas fa-archive"></i>
+                </div>
+                <div class="module-name">档案管理</div>
+                <div class="module-desc">文件归档、分类管理、权限控制</div>
+            </a>
+            
+            <!-- 计划管理 -->
+            <a href="{% url 'plan_pages:plan_list' %}" class="module-card" data-module="计划管理">
+                <div class="module-icon color-2">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="module-name">计划管理</div>
+                <div class="module-desc">项目计划、时间安排、进度监控</div>
+            </a>
+            
+            <!-- 诉讼管理 -->
+            <a href="{% url 'litigation_pages:case_list' %}" class="module-card" data-module="诉讼管理">
+                <div class="module-icon color-3">
+                    <i class="fas fa-gavel"></i>
+                </div>
+                <div class="module-name">诉讼管理</div>
+                <div class="module-desc">案件跟踪、法律文书、庭审管理</div>
+            </a>
+            
+            <!-- 风险管理 -->
+            <a href="#" class="module-card" data-module="风险管理">
+                <div class="module-icon color-4">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="module-name">风险管理</div>
+                <div class="module-desc">风险识别、评估、应对措施</div>
+            </a>
+            
+            <!-- 财务管理 -->
+            <a href="#" class="module-card" data-module="财务管理">
+                <div class="module-icon color-5">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="module-name">财务管理</div>
+                <div class="module-desc">账务处理、报表分析、预算控制</div>
+            </a>
+            
+            <!-- 人事管理 -->
+            <a href="#" class="module-card" data-module="人事管理">
+                <div class="module-icon color-6">
+                    <i class="fas fa-user-tie"></i>
+                </div>
+                <div class="module-name">人事管理</div>
+                <div class="module-desc">员工档案、考勤薪资、招聘培训</div>
+            </a>
+            
+            <!-- 行政管理 -->
+            <a href="{% url 'admin_pages:affair_list' %}" class="module-card" data-module="行政管理">
+                <div class="module-icon color-7">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="module-name">行政管理</div>
+                <div class="module-desc">办公用品、车辆管理、会议安排</div>
+            </a>
+            
+            <!-- 系统管理 -->
+            <a href="{% url 'system_pages:account_settings' %}" class="module-card" data-module="系统管理">
+                <div class="module-icon color-8">
+                    <i class="fas fa-cogs"></i>
+                </div>
+                <div class="module-name">系统管理</div>
+                <div class="module-desc">用户权限、系统配置、数据备份</div>
+            </a>
+            
+            <!-- 管理后台 -->
+            <a href="{% url 'admin:index' %}" class="module-card" data-module="管理后台">
+                <div class="module-icon color-1">
+                    <i class="fas fa-desktop"></i>
+                </div>
+                <div class="module-name">管理后台</div>
+                <div class="module-desc">系统监控、日志查询、高级设置</div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 模块点击效果
+    document.querySelectorAll('.module-card').forEach(card => {
+        card.addEventListener('click', function(e) {
+            // 移除其他模块的激活状态
+            document.querySelectorAll('.module-card').forEach(c => {
+                c.style.borderColor = 'transparent';
+            });
+            
+            // 为当前模块添加激活效果
+            this.style.borderColor = '#4a9eff';
+        });
+    });
+    
+    // 顶部操作按钮点击事件
+    document.querySelectorAll('.header-action-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            // 如果链接是#，阻止默认行为并显示提示
+            if (this.getAttribute('href') === '#') {
+                e.preventDefault();
+                const btnText = this.textContent.trim();
+                console.log(`执行操作: ${btnText}`);
+            }
+        });
+    });
+    
+    // 模拟系统状态更新
+    function updateSystemStatus() {
+        // 更新日期
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
+        const dateElement = document.querySelector('.status-date');
+        if (dateElement && dateElement.nextSibling) {
+            dateElement.nextSibling.textContent = dateStr;
+        }
+    }
+    
+    // 每30秒更新一次系统状态
+    setInterval(updateSystemStatus, 30000);
+    
+    // 初始更新
+    updateSystemStatus();
+</script>
+{% endblock %}
