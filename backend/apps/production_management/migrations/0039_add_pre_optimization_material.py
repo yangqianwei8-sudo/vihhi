@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
             name='PreOptimizationMaterial',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('cad_file', models.FileField(help_text='上传的CAD文件（支持DWG、DXF、PDF格式）', upload_to=backend.apps.production_management.models.pre_optimization_material_file_path, verbose_name='CAD文件')),
+                ('cad_file', models.FileField(help_text='上传的CAD文件（支持DWG、DXF、PDF格式）', upload_to='pre_optimization_materials/', verbose_name='CAD文件')),
                 ('file_name', models.CharField(help_text='原始文件名', max_length=255, verbose_name='文件名')),
                 ('file_size', models.BigIntegerField(help_text='文件大小，单位：字节', verbose_name='文件大小（字节）')),
                 ('file_type', models.CharField(help_text='文件扩展名（dwg/dxf/pdf）', max_length=10, verbose_name='文件类型')),

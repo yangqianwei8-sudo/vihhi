@@ -1,15 +1,15 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 {% load static %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-{% endblock %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_list' %}">客户管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_relationship' %}">客户关系</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ relationship.title }}</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="d-flex justify-content-end gap-2 mb-3">
     {% if can_edit %}
     <a href="{% url 'business_pages:customer_relationship_edit' relationship.id %}" class="btn btn-primary">编辑</a>
@@ -55,7 +55,7 @@
             <div class="info-item">
                 <span class="info-label">关联商机</span>
                 <span class="info-value">
-                    <a href="{% url 'business_pages:opportunity_detail' relationship.related_opportunity.id %}" class="text-decoration-none">
+                    <a href="{% url 'opportunity_pages:opportunity_detail' relationship.related_opportunity.id %}" class="text-decoration-none">
                         {{ relationship.related_opportunity.name }}
                     </a>
                 </span>
@@ -118,4 +118,3 @@
     </div>
 </div>
 {% endblock %}
-

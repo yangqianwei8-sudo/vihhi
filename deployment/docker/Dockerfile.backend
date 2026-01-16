@@ -3,92 +3,10 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # 安装系统依赖
-RUN apt-get update --fix-missing && \
-    apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
     gcc \
-    libpq-dev \
-    wget \
-    tar \
-    dpkg \
-    xvfb \
-    xauth \
-    libgl1 \
-    libglib2.0-0 \
-    libxcb1 \
-    libxcb-util1 \
-    libxkbcommon-x11-0 \
-    libxrender1 \
-    libfontconfig1 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxss1 \
-    libxcursor1 \
-    libxcomposite1 \
-    libasound2 \
-    libdbus-1-3 \
-    libatspi2.0-0 \
-    libxcb-xinerama0 \
-    libxcb-xinput0 \
-    libxcb-xfixes0 \
-    libxcb-icccm4 \
-    libxcb-image0 \
-    libxcb-keysyms1 \
-    libxcb-randr0 \
-    libxcb-render-util0 \
-    libxcb-shape0 \
-    libxcb-sync1 \
-    libxcb-xkb1 \
+    postgresql-dev \
     && rm -rf /var/lib/apt/lists/*
-
-# 安装ODA File Converter（用于DWG文件转换）
-# 支持两种格式：DEB包（推荐）或TAR.GZ压缩包
-# 先将ODAFileConverter安装包放到 deployment/docker/oda/ 目录
-COPY deployment/docker/oda/ /tmp/oda-files/
-RUN if ls /tmp/oda-files/ODAFileConverter_*.deb 1> /dev/null 2>&1; then \
-        cp /tmp/oda-files/ODAFileConverter_*.deb /tmp/oda.deb; \
-    fi && \
-    if ls /tmp/oda-files/ODAFileConverter_*.tar.gz 1> /dev/null 2>&1; then \
-        cp /tmp/oda-files/ODAFileConverter_*.tar.gz /tmp/oda.tar.gz; \
-    fi
-RUN if [ -f /tmp/oda.deb ]; then \
-        echo "安装ODA File Converter (DEB包)..."; \
-        mkdir -p /tmp/oda-extract && \
-        dpkg-deb -x /tmp/oda.deb /tmp/oda-extract && \
-        if [ -d /tmp/oda-extract/usr/bin/ODAFileConverter_* ]; then \
-            ODA_VERSION_DIR=$(ls -d /tmp/oda-extract/usr/bin/ODAFileConverter_* | head -1) && \
-            mkdir -p /opt/ODAFileConverter && \
-            cp -r "$ODA_VERSION_DIR"/* /opt/ODAFileConverter/ && \
-            chmod +x /opt/ODAFileConverter/ODAFileConverter && \
-            # 设置 Qt 插件路径（如果存在）
-            if [ -d /opt/ODAFileConverter/plugins ]; then \
-                echo "Qt plugins directory found"; \
-            fi && \
-            ln -sf /opt/ODAFileConverter/ODAFileConverter /usr/local/bin/DWGConvert && \
-            ln -sf /opt/ODAFileConverter/ODAFileConverter /usr/local/bin/ODAFileConverter && \
-            rm -rf /tmp/oda.deb /tmp/oda-extract && \
-            (DWGConvert --version 2>/dev/null || ODAFileConverter --version 2>/dev/null || echo "安装完成，请验证命令") && \
-            echo "✓ ODA File Converter (DEB) 安装成功"; \
-        else \
-            echo "⚠ 警告: 在DEB包中未找到ODAFileConverter目录"; \
-            rm -rf /tmp/oda.deb /tmp/oda-extract; \
-        fi; \
-    elif [ -f /tmp/oda.tar.gz ]; then \
-        echo "安装ODA File Converter (TAR.GZ包)..."; \
-        mkdir -p /opt/ODAFileConverter && \
-        tar -xzf /tmp/oda.tar.gz -C /opt/ODAFileConverter --strip-components=1 && \
-        chmod +x /opt/ODAFileConverter/bin/DWGConvert && \
-        ln -s /opt/ODAFileConverter/bin/DWGConvert /usr/local/bin/DWGConvert && \
-        rm -f /tmp/oda.tar.gz && \
-        DWGConvert --version && \
-        echo "✓ ODA File Converter (TAR.GZ) 安装成功"; \
-    else \
-        echo "⚠ 警告: ODA File Converter未安装，DWG文件解析功能将不可用"; \
-        echo "安装方法: 将ODAFileConverter_*.deb或ODAFileConverter_*.tar.gz放到deployment/docker/oda/目录"; \
-    fi
 
 # 复制依赖文件并安装
 COPY requirements.txt .
@@ -97,35 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制项目代码
 COPY . .
 
-# 将前端构建文件复制到静态文件目录（如果存在）
-# 这样 WhiteNoise 可以自动提供这些文件
-RUN if [ -d "frontend/dist" ]; then \
-        echo "前端 dist 目录存在，复制到静态文件目录..."; \
-        mkdir -p backend/static/js backend/static/css backend/static/img; \
-        cp -r frontend/dist/js/* backend/static/js/ 2>/dev/null || true; \
-        cp -r frontend/dist/css/* backend/static/css/ 2>/dev/null || true; \
-        cp -r frontend/dist/img/* backend/static/img/ 2>/dev/null || true; \
-        echo "前端文件复制完成"; \
-    else \
-        echo "警告: 前端 dist 目录不存在"; \
-    fi
-
 # 收集静态文件
-RUN python manage.py collectstatic --noinput
-
-# 设置 Qt 环境变量（使用 xvfb 虚拟显示）
-ENV DISPLAY=:99
-ENV XDG_RUNTIME_DIR=/tmp/runtime-root
-ENV QT_X11_NO_MITSHM=1
-ENV QT_PLUGIN_PATH=/opt/ODAFileConverter/plugins
-ENV LD_LIBRARY_PATH=/opt/ODAFileConverter/lib:${LD_LIBRARY_PATH}
-RUN mkdir -p /tmp/runtime-root && chmod 700 /tmp/runtime-root
+# RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
-# 创建启动脚本（使用动态显示编号）
-RUN echo '#!/bin/bash\nset -e\n# 设置环境变量\nexport XDG_RUNTIME_DIR=/tmp/runtime-root\nexport QT_X11_NO_MITSHM=1\nexport QT_QUICK_BACKEND=software\nexport QT_PLUGIN_PATH=/opt/ODAFileConverter/plugins\nexport LD_LIBRARY_PATH=/opt/ODAFileConverter/lib:${LD_LIBRARY_PATH}\nmkdir -p /tmp/runtime-root /tmp/.X11-unix\nchmod 700 /tmp/runtime-root\nchmod 1777 /tmp/.X11-unix\n# 查找可用的显示编号\nDISPLAY_NUM=99\nwhile [ $DISPLAY_NUM -lt 110 ]; do\n    # 清理该显示的锁文件\n    rm -f /tmp/.X${DISPLAY_NUM}-lock /tmp/.X11-unix/X${DISPLAY_NUM}\n    # 尝试启动 xvfb\n    Xvfb :${DISPLAY_NUM} -screen 0 1024x768x24 -ac +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 &\n    XVFB_PID=$!\n    sleep 2\n    # 验证是否启动成功\n    if kill -0 $XVFB_PID 2>/dev/null && xdpyinfo -display :${DISPLAY_NUM} > /dev/null 2>&1; then\n        export DISPLAY=:${DISPLAY_NUM}\n        echo "Xvfb started successfully on display :${DISPLAY_NUM}"\n        break\n    else\n        kill $XVFB_PID 2>/dev/null || true\n        DISPLAY_NUM=$((DISPLAY_NUM + 1))\n    fi\ndone\nif [ -z "$DISPLAY" ]; then\n    echo "Error: Failed to start Xvfb on any display"\n    cat /tmp/xvfb.log 2>/dev/null || true\n    exit 1\nfi\n# 执行主命令\nexec "$@"' > /usr/local/bin/entrypoint.sh && \
-    chmod +x /usr/local/bin/entrypoint.sh
-
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "backend.config.wsgi:application"]

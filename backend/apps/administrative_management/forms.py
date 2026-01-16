@@ -3,7 +3,7 @@ from .models import (
     OfficeSupply, SupplyPurchase, SupplyCategory, MeetingRoom, MeetingRoomBooking, Meeting, MeetingRecord, MeetingResolution,
     Vehicle, VehicleBooking, ReceptionRecord,
     Announcement, Seal, FixedAsset, ExpenseReimbursement, ExpenseItem,
-    AdministrativeAffair, TravelApplication,
+    AdministrativeAffair, AffairProgressRecord, TravelApplication,
     Supplier, PurchaseContract, PurchasePayment,
     InventoryCheck, InventoryCheckItem, InventoryAdjust, InventoryAdjustItem
 )
@@ -57,13 +57,14 @@ class OfficeSupplyForm(forms.ModelForm):
     class Meta:
         model = OfficeSupply
         fields = [
-            'code', 'name', 'supply_category', 'unit', 'specification', 'brand',
+            'code', 'name', 'category', 'supply_category', 'unit', 'specification', 'brand',
             'supplier', 'purchase_price', 'current_stock', 'min_stock',
             'max_stock', 'storage_location', 'description', 'is_active'
         ]
         widgets = {
             'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '用品编码'}),
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '用品名称'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
             'supply_category': forms.Select(attrs={'class': 'form-select'}),
             'unit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '单位'}),
             'specification': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '规格型号'}),
@@ -673,17 +674,35 @@ class AdministrativeAffairForm(forms.ModelForm):
         self.fields['participants'].queryset = User.objects.filter(is_active=True).order_by('username')
         self.fields['participants'].required = False
         self.fields['attachment'].required = False
+
+
+class AffairProgressRecordForm(forms.ModelForm):
+    """事务进度记录表单"""
     
-    def clean(self):
-        cleaned_data = super().clean()
-        planned_start_time = cleaned_data.get('planned_start_time')
-        planned_end_time = cleaned_data.get('planned_end_time')
-        
-        if planned_start_time and planned_end_time:
-            if planned_end_time <= planned_start_time:
-                self.add_error('planned_end_time', '计划完成时间必须晚于计划开始时间。')
-        
-        return cleaned_data
+    class Meta:
+        model = AffairProgressRecord
+        fields = ['progress', 'notes', 'attachment']
+        widgets = {
+            'progress': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'max': 100,
+                'placeholder': '进度（%）'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': '进度说明'
+            }),
+            'attachment': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.png'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['attachment'].required = False
 
 
 class MeetingForm(forms.ModelForm):

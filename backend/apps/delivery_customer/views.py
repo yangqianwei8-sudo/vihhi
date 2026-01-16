@@ -15,13 +15,12 @@ from .serializers import (
     DeliveryFeedbackSerializer,
     DeliveryTrackingSerializer
 )
-# from .services import (
-#     DeliveryEmailService,
-#     DeliveryTrackingService,
-#     DeliveryWarningService,
-#     DeliveryArchiveService
-# )
-# 注意：这些服务类在当前services.py中不存在，如果需要使用请实现它们
+from .services import (
+    DeliveryEmailService,
+    DeliveryTrackingService,
+    DeliveryWarningService,
+    DeliveryArchiveService
+)
 
 
 class DeliveryRecordViewSet(viewsets.ModelViewSet):
@@ -104,13 +103,11 @@ class DeliveryRecordViewSet(viewsets.ModelViewSet):
         
         if delivery.delivery_method == 'email':
             # 邮件发送
-            # TODO: 实现 DeliveryEmailService
-            # success = DeliveryEmailService.send_delivery_email(delivery, user=request.user)
-            # if success:
-            #     return Response({'status': 'sent', 'message': '邮件发送成功'})
-            # else:
-            #     return Response({'status': 'failed', 'message': delivery.error_message}, status=status.HTTP_400_BAD_REQUEST)
-            return Response({'error': '邮件发送功能待实现'}, status=status.HTTP_501_NOT_IMPLEMENTED)
+            success = DeliveryEmailService.send_delivery_email(delivery, user=request.user)
+            if success:
+                return Response({'status': 'sent', 'message': '邮件发送成功'})
+            else:
+                return Response({'status': 'failed', 'message': delivery.error_message}, status=status.HTTP_400_BAD_REQUEST)
         
         elif delivery.delivery_method == 'express':
             # 快递寄出
@@ -183,17 +180,8 @@ class DeliveryRecordViewSet(viewsets.ModelViewSet):
         if not event_type:
             return Response({'error': '请提供事件类型'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # TODO: 实现 DeliveryTrackingService
-        # tracking = DeliveryTrackingService.update_tracking(
-        #     delivery, event_type, event_description, location, request.user
-        # )
-        # 暂时直接创建跟踪记录
-        tracking = DeliveryTracking.objects.create(
-            delivery_record=delivery,
-            event_type=event_type,
-            event_description=event_description,
-            location=location or '',
-            operator=request.user
+        tracking = DeliveryTrackingService.update_tracking(
+            delivery, event_type, event_description, location, request.user
         )
         
         return Response(DeliveryTrackingSerializer(tracking).data)
@@ -239,20 +227,14 @@ class DeliveryRecordViewSet(viewsets.ModelViewSet):
     def archive(self, request, pk=None):
         """归档交付记录"""
         delivery = self.get_object()
-        # TODO: 实现 DeliveryArchiveService
-        # DeliveryArchiveService.archive_record(delivery)
-        delivery.status = 'archived'
-        delivery.save()
+        DeliveryArchiveService.archive_record(delivery)
         return Response({'status': 'archived', 'message': '交付记录已归档'})
     
     @action(detail=True, methods=['post'])
     def send_warning(self, request, pk=None):
         """发送预警通知"""
         delivery = self.get_object()
-        # TODO: 实现 DeliveryWarningService
-        # DeliveryWarningService.send_warning_notification(delivery)
-        delivery.warning_times = (delivery.warning_times or 0) + 1
-        delivery.save()
+        DeliveryWarningService.send_warning_notification(delivery)
         return Response({'warning_sent': True, 'warning_times': delivery.warning_times})
     
     @action(detail=False, methods=['get'])

@@ -1,70 +1,30 @@
 {% extends "plan_management/_base.html" %}
-
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
-
 {% load static %}
-{% block pm_extra_head %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-<style>
-    .list-page-container {
-        padding: 12px !important;
-        gap: 8px !important;
-    }
-    
-    .status-badge {
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-    
-    .status-draft { background: #e9ecef; color: #495057; }
-    .status-pending_approval { background: #cfe2ff; color: #084298; }
-    .status-approving { background: #fff3cd; color: #856404; }
-    .status-approved { background: #d1e7dd; color: #0f5132; }
-    .status-in_progress { background: #fff3cd; color: #856404; }
-    .status-completed { background: #d1e7dd; color: #0f5132; }
-    .status-cancelled { background: #f8d7da; color: #842029; }
-    
-    .progress-bar-container {
-        width: 100px;
-        height: 20px;
-        background: #e9ecef;
-        border-radius: 10px;
-        overflow: hidden;
-        position: relative;
-    }
-    
-    .progress-bar-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #28a745, #20c997);
-        transition: width 0.3s;
-    }
-    
-    .progress-text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 11px;
-        font-weight: 600;
-        color: #000;
-        z-index: 1;
-    }
-</style>
-{% endblock %}
 
 {% block pm_title %}计划列表{% endblock %}
-{% block pm_subtitle %}查看和管理所有计划{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">查看和管理所有计划</span>{% endblock %}
 
 {% block pm_actions %}
-<a href="{% url 'plan_pages:plan_create' %}" class="btn btn-danger btn-sm">
-    <i class="bi bi-plus-circle me-1"></i>创建计划
+<a href="{% url 'plan_pages:plan_create' %}" class="list-btn list-btn-primary">
+  创建计划
 </a>
 {% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+<style>
+  .list-badge-draft { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
+  .list-badge-pending_approval { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
+  .list-badge-approving { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
+  .list-badge-approved { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
+  .list-badge-in_progress { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
+  .list-badge-completed { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
+  .list-badge-cancelled { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
+</style>
+{% endblock %}
+
 {% block pm_content %}
-  {% include "plan_management/_partials/_stats.html" %}
-  {% include "plan_management/_partials/_filters.html" %}
-  {% include "plan_management/_partials/_table.html" %}
+  {% include "plan_management/_partials/_plan_stats.html" %}
+  {% include "plan_management/_partials/_plan_filters.html" %}
+  {% include "plan_management/_partials/_plan_table.html" %}
 {% endblock %}

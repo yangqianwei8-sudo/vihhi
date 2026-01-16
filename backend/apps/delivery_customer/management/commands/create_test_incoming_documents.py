@@ -212,5 +212,3 @@ class Command(BaseCommand):
             self.stdout.write(f'  {priority_name}: {count_by_priority} 条')
 
 
-
-

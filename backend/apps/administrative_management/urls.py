@@ -6,7 +6,6 @@ app_name = "admin_pages"
 urlpatterns = [
     # 行政管理主页（行政事务列表）
     path("", views_pages.administrative_home, name="administrative_home"),
-    path("home/", views_pages.administrative_home, name="administrative_home"),
     
     # 行政事务管理
     path("affairs/", views_pages.affair_list, name="affair_list"),
@@ -16,6 +15,7 @@ urlpatterns = [
     path("affairs/<int:affair_id>/start/", views_pages.affair_start, name="affair_start"),
     path("affairs/<int:affair_id>/complete/", views_pages.affair_complete, name="affair_complete"),
     path("affairs/<int:affair_id>/cancel/", views_pages.affair_cancel, name="affair_cancel"),
+    path("affairs/<int:affair_id>/progress/", views_pages.affair_add_progress, name="affair_add_progress"),
     
     # 用品分类管理
     path("supplies/categories/", views_pages.supply_category_list, name="supply_category_list"),

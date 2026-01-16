@@ -1,170 +1,26 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 {% load static %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+{% block cm_title %}{{ page_title }}{% endblock %}
+{% block cm_subtitle %}<span class="pm-subtitle">{{ description }}</span>{% endblock %}
+
+{% block cm_actions %}
+<a href="{% url 'business_pages:authorization_letter_template_create' %}" class="list-btn list-btn-primary">
+  新建模板
+</a>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
 <style>
-    .filter-bar {
-        background: #fff;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 24px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        border: 1px solid #e5e7eb;
-    }
-    .letter-table {
-        background: #fff;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
-    .table {
-        margin-bottom: 0;
-    }
-    .table thead th {
-        background: #f9fafb;
-        border-bottom: 2px solid var(--vh-primary);
-        font-weight: 600;
-        color: #374151;
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .table tbody td {
-        font-size: 13px;
-        vertical-align: middle;
-    }
-    .status-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-    .status-badge.draft {
-        background: #f3f4f6;
-        color: #6b7280;
-    }
-    .status-badge.active {
-        background: #d1fae5;
-        color: #065f46;
-    }
-    .status-badge.archived {
-        background: #fee2e2;
-        color: #991b1b;
-    }
+  /* 模板状态badge样式 */
+  .list-badge-draft { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
+  .list-badge-active { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
+  .list-badge-archived { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
 </style>
 {% endblock %}
 
-{% block module_content %}
-<div class="container-fluid py-4">
-    <div class="center-hero mb-4">
-        <div style="position: relative; z-index: 1;">
-            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
-            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
-        </div>
-    </div>
-
-
-    <div class="filter-bar">
-        <form method="get" class="row g-3">
-            <div class="col-md-3">
-                <input type="text" name="search" class="form-control" placeholder="搜索模板名称..." value="{{ search }}">
-            </div>
-            <div class="col-md-2">
-                <select name="template_type" class="form-select">
-                    <option value="">全部类型</option>
-                    {% for value, label in template_type_choices %}
-                    <option value="{{ value }}" {% if template_type == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select name="status" class="form-select">
-                    <option value="">全部状态</option>
-                    {% for value, label in status_choices %}
-                    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-5">
-                <button type="submit" class="btn btn-primary me-2">搜索</button>
-                <a href="{% url 'business_pages:authorization_letter_template_list' %}" class="btn btn-outline-secondary">重置</a>
-                <a href="{% url 'business_pages:authorization_letter_template_create' %}" class="btn btn-success ms-2">新建模板</a>
-            </div>
-        </form>
-    </div>
-
-    <div class="letter-table">
-        {% if page_obj %}
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>模板名称</th>
-                    <th>模板类型</th>
-                    <th>分类</th>
-                    <th>状态</th>
-                    <th>使用次数</th>
-                    <th>创建人</th>
-                    <th>创建时间</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for template in page_obj %}
-                <tr>
-                    <td><strong>{{ template.template_name }}</strong></td>
-                    <td>{{ template.get_template_type_display }}</td>
-                    <td>{{ template.category|default:"--" }}</td>
-                    <td><span class="status-badge {{ template.status }}">{{ template.get_status_display }}</span></td>
-                    <td>{{ template.usage_count }}</td>
-                    <td>{{ template.created_by.username }}</td>
-                    <td>{{ template.created_time|date:"Y-m-d H:i" }}</td>
-                    <td>
-                        <div class="btn-group" role="group">
-                            <a href="{% url 'business_pages:authorization_letter_create_from_template' template.id %}" class="btn btn-sm btn-success" title="使用模板创建委托书">使用</a>
-                            <a href="{% url 'business_pages:authorization_letter_template_edit' template.id %}" class="btn btn-sm btn-outline-secondary">编辑</a>
-                            {% if template.template_file %}
-                            <a href="{% url 'business_pages:authorization_letter_template_file_preview' template.id %}" target="_blank" class="btn btn-sm btn-outline-info" title="预览文件">预览</a>
-                            <a href="{% url 'business_pages:authorization_letter_template_file_download' template.id %}" class="btn btn-sm btn-outline-primary" title="下载文件">下载</a>
-                            {% endif %}
-                            <a href="{% url 'business_pages:authorization_letter_template_delete' template.id %}" class="btn btn-sm btn-outline-danger">删除</a>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <!-- 分页 -->
-        {% if page_obj.has_other_pages %}
-        <div class="pagination p-3">
-            <span class="step-links">
-                {% if page_obj.has_previous %}
-                    <a href="?page=1{% if search %}&search={{ search }}{% endif %}{% if template_type %}&template_type={{ template_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}">&laquo; 首页</a>
-                    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if template_type %}&template_type={{ template_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}">上一页</a>
-                {% endif %}
-
-                <span class="current">
-                    第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页
-                </span>
-
-                {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if template_type %}&template_type={{ template_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}">下一页</a>
-                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if template_type %}&template_type={{ template_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}">末页 &raquo;</a>
-                {% endif %}
-            </span>
-        </div>
-        {% endif %}
-        {% else %}
-        <div class="p-5 text-center text-muted">
-            <p>暂无模板数据</p>
-            <a href="{% url 'business_pages:authorization_letter_template_create' %}" class="btn btn-primary">创建第一个模板</a>
-        </div>
-        {% endif %}
-    </div>
-</div>
+{% block cm_content %}
+  {% include "customer_management/_partials/_authorization_letter_template_filters.html" %}
+  {% include "customer_management/_partials/_authorization_letter_template_table.html" %}
 {% endblock %}
-

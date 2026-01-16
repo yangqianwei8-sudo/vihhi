@@ -1,0 +1,81 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>模板名称</th>
+        <th>模板类型</th>
+        <th>分类</th>
+        <th>状态</th>
+        <th>使用次数</th>
+        <th>创建人</th>
+        <th>创建时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for template in page_obj %}
+      <tr>
+        <td><strong>{{ template.template_name }}</strong></td>
+        <td>{{ template.get_template_type_display }}</td>
+        <td>{{ template.category|default:"--" }}</td>
+        <td>
+          <span class="list-badge list-badge-{{ template.status }}">
+            {{ template.get_status_display }}
+          </span>
+        </td>
+        <td>{{ template.usage_count }}</td>
+        <td>{{ template.created_by.get_full_name|default:template.created_by.username }}</td>
+        <td>{{ template.created_time|date:"Y-m-d H:i" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'business_pages:authorization_letter_create_from_template' template.id %}" class="list-btn" title="使用模板创建委托书">使用</a>
+            <a href="{% url 'business_pages:authorization_letter_template_edit' template.id %}" class="list-btn" title="编辑">编辑</a>
+            {% if template.template_file %}
+            <a href="{% url 'business_pages:authorization_letter_template_file_preview' template.id %}" target="_blank" class="list-btn" title="预览文件">预览</a>
+            <a href="{% url 'business_pages:authorization_letter_template_file_download' template.id %}" class="list-btn" title="下载文件">下载</a>
+            {% endif %}
+            <a href="{% url 'business_pages:authorization_letter_template_delete' template.id %}" class="list-btn" title="删除">删除</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无模板数据</div>
+          <div class="list-empty-hint">请创建第一个模板开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if template_type %}&template_type={{ template_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if template_type %}&template_type={{ template_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if template_type %}&template_type={{ template_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

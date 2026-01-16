@@ -1,12 +1,20 @@
-{% extends "shared/module_base.html" %}
+{% extends "personnel_management/base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:employee_management' %}">员工档案</a></li>
+<li class="breadcrumb-item active" aria-current="page">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:employee_management' %}">员工档案</a></li>
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:employee_detail' employee.id %}">{{ employee.name }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endif %}
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .form-card {
         background: #fff;
@@ -53,7 +61,6 @@
         <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         
-        <!-- 基本信息 -->
         <div class="form-card">
             <h5>基本信息</h5>
             <div class="row g-3">
@@ -102,7 +109,6 @@
             </div>
         </div>
 
-        <!-- 工作信息 -->
         <div class="form-card">
             <h5>工作信息</h5>
             <div class="row g-3">
@@ -159,7 +165,6 @@
             </div>
         </div>
 
-        <!-- 联系信息 -->
         <div class="form-card">
             <h5>联系信息</h5>
             <div class="row g-3">
@@ -187,7 +192,6 @@
             </div>
         </div>
 
-        <!-- 附件信息 -->
         <div class="form-card">
             <h5>附件信息</h5>
             <div class="row g-3">
@@ -224,7 +228,6 @@
             </div>
         </div>
 
-        <!-- 备注信息 -->
         <div class="form-card">
             <h5>备注信息</h5>
             <div class="row g-3">
@@ -238,14 +241,12 @@
             </div>
         </div>
 
-        <!-- 表单错误 -->
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
             {{ form.non_field_errors }}
         </div>
         {% endif %}
 
-        <!-- 操作按钮 -->
         <div class="d-flex justify-content-between align-items-center mt-4">
             <a href="{% if is_create %}{% url 'personnel_pages:employee_management' %}{% else %}{% url 'personnel_pages:employee_detail' employee.id %}{% endif %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> 取消
@@ -260,4 +261,3 @@
     </div>
 </div>
 {% endblock %}
-

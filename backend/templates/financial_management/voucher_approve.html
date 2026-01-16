@@ -1,17 +1,21 @@
-{% extends "shared/module_base.html" %}
+{% extends "financial_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:voucher_management' %}">凭证管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:voucher_detail' voucher.id %}">{{ voucher.voucher_number }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">审核</li>
+{% endblock %}
 
 {% block extra_css %}
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 凭证信息预览 -->
+    
     <div class="info-card mb-4">
         <h5>凭证信息</h5>
         <div class="info-row">
@@ -54,7 +58,6 @@
         </div>
     </div>
 
-    <!-- 凭证分录 -->
     {% if voucher.entries.all %}
     <div class="info-card mb-4">
         <h5>凭证分录</h5>
@@ -104,7 +107,6 @@
     </div>
     {% endif %}
 
-    <!-- 审核操作 -->
     <div class="info-card">
         <h5>审核操作</h5>
         {% if voucher.total_debit != voucher.total_credit %}
@@ -136,4 +138,3 @@
     </div>
 </div>
 {% endblock %}
-

@@ -1,9 +1,12 @@
-{% extends "shared/module_base.html" %}
+{% extends "administrative_management/base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:meeting_list' %}">会议管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ meeting.meeting_number }}</li>
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
@@ -22,9 +25,9 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="page-title">{{ page_title }}</h1>
@@ -52,7 +55,6 @@
         </div>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">基本信息</h5>
@@ -103,7 +105,6 @@
         </div>
     </div>
 
-    <!-- 时间安排 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">时间安排</h5>
@@ -138,7 +139,6 @@
         </div>
     </div>
 
-    <!-- 参会人员 -->
     {% if meeting.attendees.exists %}
     <div class="info-card">
         <div class="info-card-header">
@@ -156,7 +156,6 @@
     </div>
     {% endif %}
 
-    <!-- 会议议程 -->
     {% if meeting.agenda %}
     <div class="info-card">
         <div class="info-card-header">
@@ -170,7 +169,6 @@
     </div>
     {% endif %}
 
-    <!-- 会议附件 -->
     {% if meeting.attachment %}
     <div class="info-card">
         <div class="info-card-header">
@@ -188,7 +186,6 @@
     </div>
     {% endif %}
 
-    <!-- 取消信息 -->
     {% if meeting.status == 'cancelled' %}
     <div class="info-card">
         <div class="info-card-header">
@@ -215,7 +212,6 @@
     </div>
     {% endif %}
 
-    <!-- 会议记录 -->
     {% if record %}
     <div class="info-card">
         <div class="info-card-header">
@@ -266,7 +262,6 @@
         </div>
     </div>
 
-    <!-- 会议决议跟踪 -->
     {% if resolutions %}
     <div class="info-card">
         <div class="info-card-header">
@@ -302,4 +297,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

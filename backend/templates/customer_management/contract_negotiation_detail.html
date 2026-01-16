@@ -1,10 +1,12 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
-
-
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item"><a href="{% url 'contract_pages:contract_management_list' %}">合同管理</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'contract_pages:contract_negotiation_list' %}">合同洽谈记录</a></li>
+    <li class="breadcrumb-item active" aria-current="page">洽谈详情</li>
+{% endblock %}
 
 {% load static %}
 {% block extra_css %}
@@ -72,9 +74,9 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="center-hero mb-4">
         <div style="position: relative; z-index: 1;">
             <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
@@ -82,15 +84,13 @@
         </div>
     </div>
 
-    <!-- 操作按钮 -->
     <div class="text-end mb-4">
-        <a href="{% url 'business_pages:contract_negotiation_list' %}" class="btn btn-secondary">返回列表</a>
+        <a href="{% url 'contract_pages:contract_negotiation_list' %}" class="btn btn-secondary">返回列表</a>
         {% if can_edit %}
         <a href="#" class="btn btn-primary">编辑</a>
         {% endif %}
     </div>
 
-    <!-- 基本信息 -->
     <div class="detail-card">
         <div class="detail-section">
             <h5>📋 基本信息</h5>
@@ -119,7 +119,6 @@
         </div>
     </div>
 
-    <!-- 关联信息 -->
     <div class="detail-card">
         <div class="detail-section">
             <h5>🔗 关联信息</h5>
@@ -127,7 +126,7 @@
                 <div class="detail-label">关联合同</div>
                 <div class="detail-value">
                     {% if negotiation.contract %}
-                        <a href="{% url 'business_pages:contract_detail' negotiation.contract.id %}">{{ negotiation.contract.contract_number|default:"未编号" }}</a>
+                        <a href="{% url 'contract_pages:contract_detail' negotiation.contract.id %}">{{ negotiation.contract.contract_number|default:"未编号" }}</a>
                     {% else %}
                         未关联
                     {% endif %}
@@ -156,7 +155,6 @@
         </div>
     </div>
 
-    <!-- 参与人员 -->
     <div class="detail-card">
         <div class="detail-section">
             <h5>👥 参与人员</h5>
@@ -177,7 +175,6 @@
         </div>
     </div>
 
-    <!-- 时间信息 -->
     <div class="detail-card">
         <div class="detail-section">
             <h5>📅 时间信息</h5>
@@ -200,7 +197,6 @@
         </div>
     </div>
 
-    <!-- 洽谈结果 -->
     {% if negotiation.result_summary or negotiation.agreed_items or negotiation.pending_items %}
     <div class="detail-card">
         <div class="detail-section">
@@ -227,7 +223,6 @@
     </div>
     {% endif %}
 
-    <!-- 其他信息 -->
     {% if negotiation.attachments or negotiation.notes %}
     <div class="detail-card">
         <div class="detail-section">
@@ -248,7 +243,6 @@
     </div>
     {% endif %}
 
-    <!-- 审计信息 -->
     <div class="detail-card">
         <div class="detail-section">
             <h5>📝 审计信息</h5>
@@ -268,4 +262,3 @@
     </div>
 </div>
 {% endblock %}
-

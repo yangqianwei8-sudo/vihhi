@@ -1,0 +1,59 @@
+<div class="list-filters">
+  <form method="get" class="list-filters-form">
+    <div class="list-filter-group">
+      <label class="list-filter-label">搜索</label>
+      <input type="text" name="search" class="list-filter-input" 
+             value="{{ search }}" placeholder="商机编号、名称、项目、客户">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">商机状态</label>
+      <select name="status" class="list-filter-input">
+        <option value="">全部状态</option>
+        {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">紧急程度</label>
+      <select name="urgency" class="list-filter-input">
+        <option value="">全部</option>
+        {% for value, label in urgency_choices %}
+        <option value="{{ value }}" {% if urgency == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">关联客户</label>
+      <select name="client_id" class="list-filter-input">
+        <option value="">全部客户</option>
+        {% for client in clients %}
+        <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">负责商务</label>
+      <select name="business_manager_id" class="list-filter-input">
+        <option value="">全部</option>
+        {% for manager in business_managers %}
+        <option value="{{ manager.id }}" {% if business_manager_id == manager.id|stringformat:"s" %}selected{% endif %}>{{ manager.get_full_name|default:manager.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">预计签约时间（起）</label>
+      <input type="date" name="expected_sign_date_from" class="list-filter-input" 
+             value="{{ expected_sign_date_from }}">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">预计签约时间（止）</label>
+      <input type="date" name="expected_sign_date_to" class="list-filter-input" 
+             value="{{ expected_sign_date_to }}">
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'opportunity_pages:opportunity_management' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>

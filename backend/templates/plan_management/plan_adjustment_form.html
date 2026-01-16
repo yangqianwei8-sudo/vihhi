@@ -1,0 +1,194 @@
+{% extends "plan_management/_base.html" %}
+{% load static %}
+
+{% block pm_title %}{{ page_title|default:"申请调整" }}{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">{{ plan.name }}</span>{% endblock %}
+
+{% block pm_actions %}
+<a href="{% url 'plan_pages:plan_detail' plan.id %}" class="list-btn">
+  返回详情
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+<style>
+  .form-container {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-label {
+    font-size: 12px;
+    color: #666666;
+    margin-bottom: 6px;
+    display: block;
+    font-weight: 500;
+  }
+  
+  .form-label.required::after {
+    content: ' *';
+    color: #999999;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    font-size: 14px;
+    color: #333333;
+    background: #FFFFFF;
+  }
+  
+  .form-control:focus {
+    outline: none;
+    border-color: #999999;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+  }
+  
+  .form-text {
+    font-size: 12px;
+    color: #999999;
+    margin-top: 4px;
+  }
+  
+  .form-error {
+    font-size: 12px;
+    color: #dc3545;
+    margin-top: 4px;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #E0E0E0;
+  }
+  
+  .form-btn {
+    padding: 10px 20px;
+    border-radius: 0;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid;
+  }
+  
+  .form-btn-secondary {
+    background: #FFFFFF;
+    color: #666666;
+    border-color: #E0E0E0;
+  }
+  
+  .form-btn-primary {
+    background: #1A1A1A;
+    color: #FFFFFF;
+    border-color: #1A1A1A;
+  }
+  
+  .form-btn-primary:hover {
+    background: #333333;
+    border-color: #333333;
+  }
+  
+  .info-box {
+    background: #F5F5F5;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  
+  .info-box-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1A1A1A;
+    margin-bottom: 8px;
+  }
+  
+  .info-box-content {
+    font-size: 12px;
+    color: #666666;
+    line-height: 1.6;
+  }
+</style>
+{% endblock %}
+
+{% block pm_content %}
+<div class="form-container">
+  <div class="info-box">
+    <div class="info-box-title">📋 计划信息</div>
+    <div class="info-box-content">
+      <strong>计划编号：</strong>{{ plan.plan_number }}<br>
+      <strong>计划名称：</strong>{{ plan.name }}<br>
+      <strong>当前截止时间：</strong>{{ plan.end_time|date:"Y-m-d H:i" }}
+    </div>
+  </div>
+
+  {% if form.non_field_errors %}
+  <div style="background: #FAFAFA; border: 1px solid #E0E0E0; padding: 12px; margin-bottom: 20px;">
+    <div style="font-size: 14px; font-weight: 600; color: #1A1A1A; margin-bottom: 8px;">提交失败</div>
+    <div style="font-size: 12px; color: #666666;">{{ form.non_field_errors }}</div>
+  </div>
+  {% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="form-group">
+      <label class="form-label required" for="{{ form.adjustment_reason.id_for_label }}">
+        {{ form.adjustment_reason.label }}
+      </label>
+      {{ form.adjustment_reason }}
+      {% if form.adjustment_reason.help_text %}
+      <div class="form-text">{{ form.adjustment_reason.help_text }}</div>
+      {% endif %}
+      {% if form.adjustment_reason.errors %}
+      <div class="form-error">{{ form.adjustment_reason.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label required" for="{{ form.adjustment_content.id_for_label }}">
+        {{ form.adjustment_content.label }}
+      </label>
+      {{ form.adjustment_content }}
+      {% if form.adjustment_content.help_text %}
+      <div class="form-text">{{ form.adjustment_content.help_text }}</div>
+      {% endif %}
+      {% if form.adjustment_content.errors %}
+      <div class="form-error">{{ form.adjustment_content.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label required" for="{{ form.new_end_time.id_for_label }}">
+        {{ form.new_end_time.label }}
+      </label>
+      {{ form.new_end_time }}
+      {% if form.new_end_time.help_text %}
+      <div class="form-text">{{ form.new_end_time.help_text }}</div>
+      {% endif %}
+      {% if form.new_end_time.errors %}
+      <div class="form-error">{{ form.new_end_time.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div class="form-actions">
+      <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="form-btn form-btn-secondary">取消</a>
+      <button type="submit" class="form-btn form-btn-primary">{{ submit_text|default:"提交申请" }}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

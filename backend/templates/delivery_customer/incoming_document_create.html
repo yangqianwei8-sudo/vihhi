@@ -1,174 +1,148 @@
-{% extends "shared/form_page_base.html" %}
+{% extends "delivery_customer/base.html" %}
 {% load static %}
 
-{% block form_page_title_text %}创建收文{% endblock %}
-{% block form_page_description %}{% endblock %}
+{% block title %}创建收文 - 维海科技信息化管理平台{% endblock %}
 
-{% block form_id %}incoming-document-form{% endblock %}
-
-{% block form_has_files %}True{% endblock %}
-
-{% block form_content %}
-        <!-- 基本信息 -->
-        <div class="form-section">
-            <div class="form-section-header">
-                <h5>基本信息</h5>
-            </div>
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label class="form-label">阶段</label>
-                        <select name="stage" class="form-select" id="stage_select" onchange="updateCategoryOptions()">
-                            <option value="">请选择阶段</option>
-                            {% for code, label in stage_choices %}
-                            <option value="{{ code }}">{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label class="form-label">文件分类</label>
-                        <select name="file_category" class="form-select" id="category_select">
-                            <option value="">请选择文件分类</option>
-                            {% for category in categories %}
-                            <option value="{{ category.id }}" data-stage="{{ category.stage }}" style="display: none;">{{ category.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label class="form-label">文件类型</label>
-                        <input type="text" name="document_type" class="form-control" placeholder="如：通知、函等">
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label class="form-label">文件日期</label>
-                        <input type="date" name="document_date" class="form-control">
-                    </div>
-                </div>
-            </div>
-            <div class="row g-3">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label class="form-label required-field">文件标题</label>
-                        <input type="text" name="title" class="form-control" required>
-                    </div>
-                </div>
-            </div>
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label class="form-label required-field">发文单位</label>
-                        <input type="text" name="sender" class="form-control" required>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label class="form-label">联系人</label>
-                        <input type="text" name="sender_contact" class="form-control">
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label class="form-label">联系电话</label>
-                        <input type="text" name="sender_phone" class="form-control">
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label class="form-label">收文日期</label>
-                        <input type="date" name="receive_date" class="form-control">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 内容 -->
-        <div class="form-section">
-            <div class="form-section-header">
-                <h5>内容</h5>
-            </div>
-            <div class="row g-3">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label class="form-label">摘要</label>
-                        <textarea name="summary" class="form-control" rows="3"></textarea>
-                    </div>
-                </div>
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label class="form-label">文件内容</label>
-                        <textarea name="content" class="form-control" rows="5"></textarea>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 处理信息 -->
-        <div class="form-section">
-            <div class="form-section-header">
-                <h5>处理信息</h5>
-            </div>
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label class="form-label">处理人</label>
-                        <select name="handler" class="form-select">
-                            <option value="">请选择处理人</option>
-                            {% for user in users %}
-                            <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <div class="row g-3">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label class="form-label">处理意见</label>
-                        <textarea name="handle_notes" class="form-control" rows="3"></textarea>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 附件 -->
-        <div class="form-section">
-            <div class="form-section-header">
-                <h5>附件</h5>
-            </div>
-            <div class="row g-3">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label class="form-label">上传附件</label>
-                        <input type="file" name="attachment" class="form-control">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 备注 -->
-        <div class="form-section">
-            <div class="form-section-header">
-                <h5>备注</h5>
-            </div>
-            <div class="row g-3">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label class="form-label">备注</label>
-                        <textarea name="notes" class="form-control" rows="3"></textarea>
-                    </div>
-                </div>
-            </div>
-        </div>
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:report_delivery' %}">收发管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:incoming_document_list' %}">收文列表</a></li>
+<li class="breadcrumb-item active" aria-current="page">创建收文</li>
 {% endblock %}
 
-{% block cancel_url %}{% url 'delivery_pages:incoming_document_list' %}{% endblock %}
+{% block content %}
+<div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">➕ 创建收文</h2>
+                    <p class="text-muted mb-0">创建新的收文记录</p>
+                </div>
+                <a href="{% url 'delivery_pages:incoming_document_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </a>
+            </div>
 
-{% block form_page_extra_js %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <h5 class="mb-3">基本信息</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">阶段</label>
+                                    <select name="stage" class="form-select" id="stage_select" onchange="updateCategoryOptions()">
+                                        <option value="">请选择阶段</option>
+                                        {% for code, label in stage_choices %}
+                                        <option value="{{ code }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">文件分类</label>
+                                    <select name="file_category" class="form-select" id="category_select">
+                                        <option value="">请选择文件分类</option>
+                                        {% for category in categories %}
+                                        <option value="{{ category.id }}" data-stage="{{ category.stage }}" style="display: none;">{{ category.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">文件标题 <span class="text-danger">*</span></label>
+                                <input type="text" name="title" class="form-control" required>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">发文单位 <span class="text-danger">*</span></label>
+                                    <input type="text" name="sender" class="form-control" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">联系人</label>
+                                    <input type="text" name="sender_contact" class="form-control">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">联系电话</label>
+                                    <input type="text" name="sender_phone" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">文件类型</label>
+                                    <input type="text" name="document_type" class="form-control" placeholder="如：通知、函等">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">文件日期</label>
+                                    <input type="date" name="document_date" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">收文日期</label>
+                                    <input type="date" name="receive_date" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5 class="mb-3">内容</h5>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">摘要</label>
+                                <textarea name="summary" class="form-control" rows="3"></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">文件内容</label>
+                                <textarea name="content" class="form-control" rows="5"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="mb-3">
+                                <label class="form-label">处理人</label>
+                                <select name="handler" class="form-select">
+                                    <option value="">请选择处理人</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">处理意见</label>
+                                <textarea name="handle_notes" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5 class="mb-3">附件</h5>
+                            <input type="file" name="attachment" class="form-control">
+                        </div>
+
+                        <div class="mb-4">
+                            <h5 class="mb-3">备注</h5>
+                            <textarea name="notes" class="form-control" rows="3"></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'delivery_pages:incoming_document_list' %}" class="btn btn-secondary">
+                                取消
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> 创建
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+</div>
+
 <script>
 // 更新文件分类选项（根据选择的阶段）
 function updateCategoryOptions() {

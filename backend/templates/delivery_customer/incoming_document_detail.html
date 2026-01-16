@@ -1,15 +1,34 @@
-{% extends "shared/detail_page_base.html" %}
+{% extends "delivery_customer/base.html" %}
 {% load static %}
 
 {% block title %}收文详情 - 维海科技信息化管理平台{% endblock %}
 
-{% block detail_hero_icon %}📥{% endblock %}
-{% block detail_hero_title %}收文详情{% endblock %}
-{% block detail_hero_subtitle %}收文编号：{{ document.document_number }}{% endblock %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:report_delivery' %}">收发管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:incoming_document_list' %}">收文列表</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ document.document_number }}</li>
+{% endblock %}
 
-{% block detail_content %}
-    <!-- 基本信息 -->
-    <div class="info-card info-card-fade-in">
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📥 收文详情</h2>
+            <p class="text-muted mb-0">收文编号：{{ document.document_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'delivery_pages:incoming_document_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if can_edit %}
+            <a href="{% url 'delivery_pages:incoming_document_edit' document.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="info-card info-card-fade-in mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">基本信息</h5>
         </div>
@@ -51,13 +70,13 @@
                     <span class="info-label">状态</span>
                     <span class="info-value">
                         {% if document.status == 'draft' %}
-                            <span class="status-badge draft">草稿</span>
+                            <span class="badge bg-secondary">草稿</span>
                         {% elif document.status == 'registered' %}
-                            <span class="status-badge submitted">已登记</span>
+                            <span class="badge bg-info">已登记</span>
                         {% elif document.status == 'processing' %}
-                            <span class="status-badge submitted">处理中</span>
+                            <span class="badge bg-warning">处理中</span>
                         {% elif document.status == 'completed' %}
-                            <span class="status-badge approved">已完成</span>
+                            <span class="badge bg-success">已完成</span>
                         {% elif document.status == 'archived' %}
                             <span class="badge bg-dark">已归档</span>
                         {% endif %}
@@ -82,8 +101,7 @@
     </div>
 
     {% if document.summary or document.content %}
-    <!-- 内容 -->
-    <div class="info-card info-card-fade-in">
+    <div class="info-card info-card-fade-in mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">内容</h5>
         </div>
@@ -105,8 +123,7 @@
     {% endif %}
 
     {% if document.handler or document.handle_notes %}
-    <!-- 处理信息 -->
-    <div class="info-card info-card-fade-in">
+    <div class="info-card info-card-fade-in mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">处理信息</h5>
         </div>
@@ -136,8 +153,7 @@
     {% endif %}
 
     {% if document.attachment %}
-    <!-- 附件 -->
-    <div class="info-card info-card-fade-in">
+    <div class="info-card info-card-fade-in mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">附件</h5>
         </div>
@@ -150,8 +166,7 @@
     {% endif %}
 
     {% if document.notes %}
-    <!-- 备注 -->
-    <div class="info-card info-card-fade-in">
+    <div class="info-card info-card-fade-in mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">备注</h5>
         </div>
@@ -160,67 +175,29 @@
         </div>
     </div>
     {% endif %}
-{% endblock %}
 
-{% block detail_timeline %}
-    <!-- 时间线信息 -->
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
-            <h5 class="info-card-title">
-                <i class="bi bi-clock-history"></i> 时间线
-            </h5>
+            <h5 class="info-card-title">时间信息</h5>
         </div>
         <div class="info-card-body">
-            <div class="timeline">
-                <div class="timeline-item timeline-detailed">
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
-                        <div class="timeline-title">
-                            <i class="bi bi-plus-circle"></i> 创建时间
-                        </div>
-                        <div class="timeline-time timeline-time-primary">
-                            <i class="bi bi-clock"></i> {{ document.created_at|date:"Y-m-d H:i:s" }}
-                        </div>
-                        {% if document.created_by %}
-                        <div class="timeline-actor">
-                            <i class="bi bi-person"></i> 创建人：{{ document.created_by.get_full_name|default:document.created_by.username }}
-                        </div>
-                        {% endif %}
-                    </div>
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ document.created_at|date:"Y-m-d H:i:s" }}</span>
                 </div>
-                {% if document.updated_at and document.updated_at != document.created_at %}
-                <div class="timeline-item timeline-detailed">
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
-                        <div class="timeline-title">
-                            <i class="bi bi-arrow-repeat"></i> 更新时间
-                        </div>
-                        <div class="timeline-time timeline-time-primary">
-                            <i class="bi bi-clock"></i> {{ document.updated_at|date:"Y-m-d H:i:s" }}
-                        </div>
-                    </div>
+                <div class="info-item">
+                    <span class="info-label">更新时间</span>
+                    <span class="info-value">{{ document.updated_at|date:"Y-m-d H:i:s" }}</span>
                 </div>
-                {% endif %}
-                {% if document.completed_at %}
-                <div class="timeline-item timeline-detailed timeline-success">
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
-                        <div class="timeline-title">
-                            <i class="bi bi-check-circle"></i> 完成时间
-                        </div>
-                        <div class="timeline-time timeline-time-success">
-                            <i class="bi bi-clock"></i> {{ document.completed_at|date:"Y-m-d H:i:s" }}
-                        </div>
-                        {% if document.handler %}
-                        <div class="timeline-actor">
-                            <i class="bi bi-person"></i> 处理人：{{ document.handler.get_full_name|default:document.handler.username }}
-                        </div>
-                        {% endif %}
-                    </div>
+                {% if document.created_by %}
+                <div class="info-item">
+                    <span class="info-label">创建人</span>
+                    <span class="info-value">{{ document.created_by.get_full_name|default:document.created_by.username }}</span>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
+</div>
 {% endblock %}
-

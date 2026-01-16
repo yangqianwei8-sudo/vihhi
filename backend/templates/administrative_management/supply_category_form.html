@@ -1,10 +1,18 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "administrative_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:supply_category_list' %}">用品分类</a></li>
+<li class="breadcrumb-item active" aria-current="page">创建</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:supply_category_list' %}">用品分类</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endif %}
+{% endblock %}
+
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .form-card {
         background: var(--vh-card-bg);
@@ -25,16 +33,16 @@
         content: " *";
         color: var(--vh-error);
     }
-    .help-text {
-        font-size: var(--font-size-sm);
-        color: var(--vh-text-muted);
-        margin-top: var(--spacing-xs);
-    }
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
     <form method="post">
         {% csrf_token %}
         
@@ -42,49 +50,43 @@
             <h5>分类信息</h5>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label required" for="{{ form.name.id_for_label }}">分类名称</label>
+                    <label class="form-label required">分类名称</label>
                     {{ form.name }}
                     {% if form.name.errors %}
                     <div class="text-danger small mt-1">{{ form.name.errors }}</div>
                     {% endif %}
-                    <div class="help-text">请输入分类名称，例如：文具用品、办公设备等</div>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="{{ form.parent.id_for_label }}">上级分类</label>
+                    <label class="form-label">上级分类</label>
                     {{ form.parent }}
                     {% if form.parent.errors %}
                     <div class="text-danger small mt-1">{{ form.parent.errors }}</div>
                     {% endif %}
-                    <div class="help-text">留空表示一级分类，选择上级分类可创建二级分类</div>
+                    <small class="text-muted">留空表示一级分类</small>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="{{ form.sort_order.id_for_label }}">排序顺序</label>
+                    <label class="form-label">排序顺序</label>
                     {{ form.sort_order }}
                     {% if form.sort_order.errors %}
                     <div class="text-danger small mt-1">{{ form.sort_order.errors }}</div>
                     {% endif %}
-                    <div class="help-text">数字越小越靠前，默认为0</div>
+                    <small class="text-muted">数字越小越靠前</small>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="{{ form.is_active.id_for_label }}">状态</label>
+                    <label class="form-label">状态</label>
                     <div class="form-check form-switch mt-2">
                         {{ form.is_active }}
                         <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                            <span id="status-label">{% if form.is_active.value %}启用{% else %}停用{% endif %}</span>
+                            {% if form.is_active.value %}启用{% else %}停用{% endif %}
                         </label>
                     </div>
-                    {% if form.is_active.errors %}
-                    <div class="text-danger small mt-1">{{ form.is_active.errors }}</div>
-                    {% endif %}
-                    <div class="help-text">停用的分类将不会在创建用品时显示</div>
                 </div>
                 <div class="col-12">
-                    <label class="form-label" for="{{ form.description.id_for_label }}">分类描述</label>
+                    <label class="form-label">分类描述</label>
                     {{ form.description }}
                     {% if form.description.errors %}
                     <div class="text-danger small mt-1">{{ form.description.errors }}</div>
                     {% endif %}
-                    <div class="help-text">可选，用于描述该分类的用途和特点</div>
                 </div>
             </div>
         </div>
@@ -94,24 +96,9 @@
                 <i class="bi bi-arrow-left"></i> 取消
             </a>
             <button type="submit" class="btn btn-primary">
-                <i class="bi bi-check-circle"></i> {% if is_create %}创建{% else %}保存{% endif %}
+                <i class="bi bi-check-circle"></i> 保存
             </button>
         </div>
     </form>
 </div>
-
-<script>
-// 状态切换时更新标签文本
-document.addEventListener('DOMContentLoaded', function() {
-    const statusCheckbox = document.getElementById('{{ form.is_active.id_for_label }}');
-    const statusLabel = document.getElementById('status-label');
-    
-    if (statusCheckbox && statusLabel) {
-        statusCheckbox.addEventListener('change', function() {
-            statusLabel.textContent = this.checked ? '启用' : '停用';
-        });
-    }
-});
-</script>
 {% endblock %}
-

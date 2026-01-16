@@ -1,9 +1,12 @@
-{% extends "shared/module_base.html" %}
+{% extends "administrative_management/base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:supply_request_list' %}">领用管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ request_obj.request_number }}</li>
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
@@ -30,9 +33,9 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="page-title">{{ page_title }}</h1>
@@ -60,7 +63,6 @@
         </div>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">基本信息</h5>
@@ -115,7 +117,6 @@
         </div>
     </div>
 
-    <!-- 用途说明 -->
     {% if request_obj.purpose %}
     <div class="info-card">
         <div class="info-card-header">
@@ -129,7 +130,6 @@
     </div>
     {% endif %}
 
-    <!-- 领用明细 -->
     {% if items %}
     <div class="info-card">
         <div class="info-card-header">
@@ -170,7 +170,6 @@
     </div>
     {% endif %}
 
-    <!-- 备注 -->
     {% if request_obj.notes %}
     <div class="info-card">
         <div class="info-card-header">
@@ -185,4 +184,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

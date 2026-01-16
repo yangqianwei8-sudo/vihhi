@@ -1,0 +1,202 @@
+{#
+本页面职责：
+计划管理模块的首页，展示统计数据和快捷入口，
+提供导航到各个功能模块的入口。
+功能入口必须与左侧栏一致（同源数据 plan_menu）。
+#}
+
+{% extends "plan_management/_base.html" %}
+{% load static %}
+
+{% block pm_title %}计划管理首页{% endblock %}
+{% block pm_subtitle %}按模块导航快速进入：战略目标、计划管理、计划分析{% endblock %}
+
+{% block extra_css %}
+<style>
+  .pm-home-wrap { padding: 8px 0 24px; }
+
+  .pm-section { margin-top: 18px; }
+  .pm-section-title {
+    font-weight: 700;
+    font-size: 16px;
+    margin: 6px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pm-section-subtitle { color: #6c757d; font-size: 13px; margin-bottom: 10px; }
+
+  .pm-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 12px;
+  }
+  .pm-card {
+    grid-column: span 4;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,.06);
+    background: #fff;
+    padding: 14px 14px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform .12s ease, box-shadow .12s ease;
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .pm-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,.08);
+  }
+  .pm-card-top { display: flex; align-items: center; gap: 10px; }
+  .pm-card-icon {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: rgba(0,0,0,.04);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex: 0 0 auto;
+  }
+  .pm-card-title { font-weight: 700; font-size: 14px; margin: 0; }
+  .pm-card-desc { margin: 6px 0 0; color: #6c757d; font-size: 12px; line-height: 1.35; }
+
+  .pm-card-foot {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #6c757d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* 响应式 */
+  @media (max-width: 1200px) { .pm-card { grid-column: span 6; } }
+  @media (max-width: 768px)  { .pm-card { grid-column: span 12; } }
+
+  .pm-empty {
+    border: 1px dashed rgba(0,0,0,.15);
+    background: rgba(0,0,0,.02);
+    border-radius: 12px;
+    padding: 14px;
+    color: #6c757d;
+    font-size: 13px;
+  }
+
+  /* 统计卡片样式（保持原有风格） */
+  .stat-card {
+    transition: all 0.3s;
+    border-radius: 12px;
+  }
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
+  }
+</style>
+{% endblock %}
+
+{% block pm_content %}
+<div class="pm-home-wrap">
+
+  {# ==============================
+     Home 页职责（治理锚点）
+     - 仅作为"计划管理模块"的入口导航与轻量概览
+     - 功能入口必须与左侧栏一致（同源数据）
+     - 不承载审批/执行/统计报表的详细内容
+     ============================== #}
+
+  {# 1) 轻量统计（如果 view 已给 summary_cards，就展示；不强行要求） #}
+  {% if summary_cards %}
+  <div class="pm-section">
+    <div class="pm-section-title">概览</div>
+    <div class="row g-4">
+      {% for card in summary_cards %}
+        <div class="col-md-4">
+          {% if card.url %}
+            <a href="{{ card.url }}" class="card border-{{ card.variant }} border-2 shadow-sm h-100 stat-card text-decoration-none" style="color: inherit;">
+          {% else %}
+            <div class="card border-{{ card.variant }} border-2 shadow-sm h-100 stat-card">
+          {% endif %}
+              <div class="card-body">
+                <div class="d-flex align-items-center">
+                  <div class="flex-grow-1">
+                    <div class="small text-muted mb-2">{{ card.label }}</div>
+                    <div class="h2 text-{{ card.variant }} mb-1 fw-bold">{{ card.value }}</div>
+                    {% if card.subvalue %}
+                    <div class="small text-muted">{{ card.subvalue }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="fs-1 text-{{ card.variant }} opacity-25">
+                    {{ card.icon }}
+                  </div>
+                </div>
+              </div>
+              {% if card.url %}
+              <div class="card-footer bg-transparent border-top-0 text-end">
+                <small class="text-muted">
+                  <i class="bi bi-arrow-right me-1"></i>查看详情
+                </small>
+              </div>
+              {% endif %}
+          {% if card.url %}
+            </a>
+          {% else %}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# 2) 主导航：优先使用 plan_menu（左侧栏同源），确保对齐 #}
+  {% if plan_menu %}
+    {# plan_menu 是一个列表，每个元素是一个 group（可能有 children） #}
+    {% include "plan_management/_partials/_home_nav_from_groups.html" with groups=plan_menu only %}
+
+  {% elif module_sidebar_nav %}
+    {# 回退：使用 module_sidebar_nav（如果 plan_menu 不存在） #}
+    {% include "plan_management/_partials/_home_nav_from_groups.html" with groups=module_sidebar_nav only %}
+
+  {% elif sections %}
+    {# 3) 回退：用 view 的 sections（如果 plan_menu 没提供结构） #}
+    {% for section in sections %}
+      <div class="pm-section">
+        <div class="pm-section-title">{{ section.title|default:"功能模块" }}</div>
+        {% if section.description %}
+          <div class="pm-section-subtitle">{{ section.description }}</div>
+        {% endif %}
+
+        {% if section.items %}
+          <div class="pm-grid">
+            {% for item in section.items %}
+              <a class="pm-card" href="{{ item.url|default:'#' }}">
+                <div class="pm-card-top">
+                  <div class="pm-card-icon">{% if item.icon %}{{ item.icon }}{% else %}📄{% endif %}</div>
+                  <div>
+                    <p class="pm-card-title">{{ item.label|default:"未命名功能" }}</p>
+                    <p class="pm-card-desc">{% if item.description %}{{ item.description }}{% else %}进入功能页面{% endif %}</p>
+                  </div>
+                </div>
+                <div class="pm-card-foot">
+                  <span>{% if item.badge %}{{ item.badge }}{% else %}&nbsp;{% endif %}</span>
+                  <span>进入 →</span>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="pm-empty">该分组暂无功能入口。</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+
+  {% else %}
+    <div class="pm-empty">
+      当前未获取到导航数据（plan_menu / module_sidebar_nav / sections 均为空）。请检查 home view 是否传入 plan_menu 或 sections。
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

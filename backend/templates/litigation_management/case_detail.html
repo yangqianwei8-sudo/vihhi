@@ -1,17 +1,16 @@
-{% extends "shared/module_base.html" %}
+{% extends "litigation_management/base.html" %}
 {% load static %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-{% endblock %}
 
 {% block title %}案件详情 - {{ case.case_number }}{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'litigation_pages:case_list' %}">诉讼管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">案件详情</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid">
-    <!-- 页面标题和操作按钮 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">{{ page_title }}</h2>
@@ -41,7 +40,6 @@
         </div>
     </div>
 
-    <!-- 审批状态 -->
     {% if approval_instance %}
     <div class="info-card mb-4">
         <div class="info-card-header">
@@ -84,7 +82,6 @@
     </div>
     {% endif %}
 
-    <!-- 基本信息 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">基本信息</h5>
@@ -197,7 +194,6 @@
         </div>
     </div>
 
-    <!-- 关联信息 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">关联信息</h5>
@@ -232,7 +228,7 @@
                     <span class="info-label">关联合同</span>
                     <span class="info-value">
                         {% if case.contract %}
-                        <a href="{% url 'business_pages:contract_detail' case.contract.id %}" class="text-decoration-none">
+                        <a href="{% url 'contract_pages:contract_detail' case.contract.id %}" class="text-decoration-none">
                             {{ case.contract.contract_number }} - {{ case.contract.name }}
                         </a>
                         {% else %}
@@ -244,7 +240,6 @@
         </div>
     </div>
 
-    <!-- 时间信息 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">时间信息</h5>
@@ -309,7 +304,6 @@
         </div>
     </div>
 
-    <!-- 诉讼流程 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">诉讼流程</h5>
@@ -357,7 +351,6 @@
         </div>
     </div>
 
-    <!-- 保全续封 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">保全续封</h5>
@@ -415,7 +408,6 @@
         </div>
     </div>
 
-    <!-- 时间节点 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">时间节点</h5>
@@ -465,7 +457,6 @@
         </div>
     </div>
 
-    <!-- 费用统计 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">费用统计</h5>
@@ -528,4 +519,3 @@
     </div>
 </div>
 {% endblock %}
-

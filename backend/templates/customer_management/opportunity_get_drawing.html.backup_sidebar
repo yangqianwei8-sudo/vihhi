@@ -1,0 +1,202 @@
+{% extends "customer_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:opportunity_management' %}">商机管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">评估需求</li>
+{% endblock %}
+
+{% block content %}
+<div class="workspace-content">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-clipboard-check me-2"></i>评估需求
+        </h2>
+    </div>
+    
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">功能说明</h5>
+        </div>
+        <div class="info-card-body">
+            <p class="text-muted">
+                {% if message %}
+                    {{ message }}
+                {% else %}
+                    评估需求功能用于记录和评估客户的具体需求，包括需求类型、优先级、来源等信息。
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    
+    <form method="post" enctype="multipart/form-data" id="requirementEvaluationForm">
+        {% csrf_token %}
+        
+        <div class="info-card info-card-fade-in">
+            <div class="info-card-header">
+                <h5 class="info-card-title">基本信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <label class="info-label info-label-required">关联商机</label>
+                        <select name="opportunity_id" class="form-select" required>
+                            <option value="">请选择商机</option>
+                            {% for opp in opportunities %}
+                            <option value="{{ opp.id }}">{{ opp.name }} ({{ opp.opportunity_number|default:'未编号' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label info-label-required">评估日期</label>
+                        <input type="date" name="evaluation_date" class="form-control" required>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label info-label-required">评估人</label>
+                        <input type="text" name="evaluator" class="form-control" 
+                               value="{{ user.get_full_name|default:user.username }}" required maxlength="50">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">需求来源</label>
+                        <select name="requirement_source" class="form-select">
+                            <option value="customer">客户提出</option>
+                            <option value="market">市场调研</option>
+                            <option value="internal">内部分析</option>
+                            <option value="competitor">竞争对手</option>
+                            <option value="other">其他</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-card info-card-fade-in">
+            <div class="info-card-header">
+                <h5 class="info-card-title">需求信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <label class="info-label info-label-required">需求类型</label>
+                        <select name="requirement_type" class="form-select" required>
+                            <option value="">请选择</option>
+                            <option value="cost_optimization">成本优化</option>
+                            <option value="quality_improvement">质量提升</option>
+                            <option value="schedule_optimization">进度优化</option>
+                            <option value="technical_consulting">技术咨询</option>
+                            <option value="process_optimization">流程优化</option>
+                            <option value="other">其他</option>
+                        </select>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label info-label-required">需求优先级</label>
+                        <select name="priority" class="form-select" required>
+                            <option value="high">高</option>
+                            <option value="medium" selected>中</option>
+                            <option value="low">低</option>
+                        </select>
+                    </div>
+                    <div class="info-item" style="grid-column: 1 / -1;">
+                        <label class="info-label info-label-required">需求描述</label>
+                        <textarea name="requirement_description" class="form-control" rows="4" 
+                                  placeholder="请详细描述客户的具体需求" required></textarea>
+                    </div>
+                    <div class="info-item" style="grid-column: 1 / -1;">
+                        <label class="info-label">需求背景</label>
+                        <textarea name="requirement_background" class="form-control" rows="3" 
+                                  placeholder="请说明需求的背景和原因（可选）"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-card info-card-fade-in">
+            <div class="info-card-header">
+                <h5 class="info-card-title">评估结果</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <label class="info-label">可行性评估</label>
+                        <select name="feasibility" class="form-select">
+                            <option value="">请选择</option>
+                            <option value="high">高</option>
+                            <option value="medium">中</option>
+                            <option value="low">低</option>
+                        </select>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">预期价值</label>
+                        <input type="text" name="expected_value" class="form-control" 
+                               placeholder="如：节省成本、提升效率等" maxlength="200">
+                    </div>
+                    <div class="info-item" style="grid-column: 1 / -1;">
+                        <label class="info-label">评估意见</label>
+                        <textarea name="evaluation_opinion" class="form-control" rows="3" 
+                                  placeholder="请输入评估意见（可选）"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-card info-card-fade-in">
+            <div class="info-card-header">
+                <h5 class="info-card-title">附件信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-1">
+                    <div class="info-item">
+                        <label class="info-label">相关附件</label>
+                        <input type="file" name="attachments" class="form-control" multiple 
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.7z">
+                        <small class="text-muted">支持上传多个文件，格式：PDF、Word、Excel、PPT、压缩包等</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-card info-card-fade-in">
+            <div class="info-card-header">
+                <h5 class="info-card-title">备注信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-1">
+                    <div class="info-item">
+                        <label class="info-label">备注说明</label>
+                        <textarea name="notes" class="form-control" rows="3" 
+                                  placeholder="请输入备注说明（可选）"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <a href="{% url 'business_pages:opportunity_management' %}" class="btn btn-outline-secondary">取消</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> 提交
+            </button>
+        </div>
+    </form>
+    
+    <style>
+        .form-control,
+        .form-select,
+        textarea.form-control {
+            color: #16A34A;
+        }
+        .form-control:focus,
+        .form-select:focus,
+        textarea.form-control:focus {
+            border-color: #16A34A;
+            box-shadow: 0 0 0 0.2rem rgba(22, 163, 74, 0.25);
+        }
+    </style>
+</div>
+{% endblock %}

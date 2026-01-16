@@ -1,95 +1,408 @@
 {% extends "plan_management/_base.html" %}
+{% load static %}
 
 {% block pm_title %}计划详情{% endblock %}
-{% block pm_subtitle %}{{ plan.name }}{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">{{ plan.name }}</span>{% endblock %}
 
 {% block pm_actions %}
-<a class="btn btn-secondary btn-sm" href="{% url 'plan_pages:plan_list' %}">返回列表</a>
-<a class="btn btn-danger btn-sm" href="{% url 'plan_pages:plan_edit' plan.id %}">编辑</a>
+<a href="{% url 'plan_pages:plan_list' %}" class="list-btn">返回列表</a>
+{% if can_edit %}
+<a href="{% url 'plan_pages:plan_edit' plan.id %}" class="list-btn list-btn-primary">编辑</a>
+{% endif %}
+{% if can_delete %}
+<a href="{% url 'plan_pages:plan_delete' plan.id %}" class="list-btn">删除</a>
+{% endif %}
+{% if can_submit_approval %}
+<a href="{% url 'plan_pages:plan_request_start' plan.id %}" class="list-btn">提交启动</a>
+{% endif %}
+{% if can_request_adjustment %}
+<a href="{% url 'plan_pages:plan_adjustment_create' plan.id %}" class="list-btn" style="margin-right: 8px;">申请调整</a>
+{% endif %}
+{% if can_request_cancel %}
+<a href="{% url 'plan_pages:plan_request_cancel' plan.id %}" class="list-btn">申请取消</a>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+<style>
+  .detail-card {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .detail-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vh-primary); /* 主题深蓝色 */
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #E0E0E0;
+  }
+  
+  .detail-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+  }
+  
+  .detail-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .detail-info-label {
+    font-size: 12px;
+    color: #666666;
+    font-weight: 400;
+  }
+  
+  .detail-info-value {
+    font-size: 14px;
+    color: var(--vh-primary); /* 主题深蓝色 */
+    font-weight: 500;
+  }
+  
+  .detail-info-value strong {
+    font-weight: 600;
+    color: var(--vh-primary); /* 主题深蓝色 */
+  }
+  
+  .detail-full-width {
+    grid-column: 1 / -1;
+  }
+  
+  .list-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid;
+  }
+  
+  .list-badge-draft { 
+    background: #F5F5F5; 
+    color: #666666; 
+    border-color: #E0E0E0; 
+  }
+  .list-badge-in_progress { 
+    background: #E8E8E8; 
+    color: var(--vh-primary); /* 主题深蓝色 */ 
+    border-color: #CCCCCC; 
+  }
+  .list-badge-completed { 
+    background: #E8E8E8; 
+    color: var(--vh-primary); /* 主题深蓝色 */ 
+    border-color: #CCCCCC; 
+  }
+  .list-badge-cancelled { 
+    background: #F5F5F5; 
+    color: #999999; 
+    border-color: #E0E0E0; 
+  }
+  
+  .progress-bar-container {
+    width: 100%;
+    height: 24px;
+    background: #E0E0E0;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    margin-top: 8px;
+  }
+  
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6c757d, #adb5bd);
+    transition: width 0.3s;
+  }
+  
+  .progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vh-primary); /* 主题深蓝色 */
+    z-index: 1;
+  }
+  
+  .text-content {
+    font-size: var(--font-size-base);
+    font-family: inherit;
+    color: var(--vh-primary); /* 主题深蓝色 - 与系统主题保持一致 */
+    white-space: pre-wrap;
+    line-height: 1.6;
+  }
+</style>
 {% endblock %}
 
 {% block pm_content %}
-<div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-
-    <div>
-      <div style="color:#666;font-size:12px;">计划名称</div>
-      <div style="font-weight:700;">{{ plan.name }}</div>
+<div class="detail-card">
+  <div class="detail-card-title">📋 基本信息</div>
+  <div class="detail-info-grid">
+    <div class="detail-info-item">
+      <div class="detail-info-label">计划编号</div>
+      <div class="detail-info-value"><code>{{ plan.plan_number }}</code></div>
     </div>
-
-    <div>
-      <div style="color:#666;font-size:12px;">状态</div>
-      {% with s=plan.status %}
-        <span class="pm-badge
-          {% if s == 'draft' %}pm-badge--draft
-          {% elif s == 'in_progress' %}pm-badge--in_progress
-          {% elif s == 'completed' %}pm-badge--completed
-          {% elif s == 'cancelled' %}pm-badge--cancelled
-          {% else %}pm-badge--draft{% endif %}">
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">计划名称</div>
+      <div class="detail-info-value"><strong>{{ plan.name }}</strong></div>
+    </div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">计划状态</div>
+      <div class="detail-info-value">
+        <span class="list-badge list-badge-{{ plan.status }}">
           {{ plan.get_status_display|default:plan.status }}
         </span>
-      {% endwith %}
+      </div>
     </div>
-
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">计划类型</div>
+      <div class="detail-info-value">{{ plan.get_plan_type_display|default:plan.plan_type }}</div>
+    </div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">计划周期</div>
+      <div class="detail-info-value">{{ plan.get_plan_period_display|default:plan.plan_period }}</div>
+    </div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">优先级</div>
+      <div class="detail-info-value">{{ plan.get_priority_display|default:plan.priority|default:"-" }}</div>
+    </div>
+    
     {% if progress_percent is not None %}
-    <div style="grid-column:1 / -1;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
-        <div style="color:#666;font-size:12px;">时间进度</div>
-        <div style="font-weight:700;">{{ progress_percent }}%</div>
-      </div>
-      <div style="height:10px;background:#eef2f7;border-radius:999px;overflow:hidden;margin-top:6px;">
-        <div style="height:10px;width:{{ progress_percent }}%;background:#c41c1c;"></div>
-      </div>
-      <div style="color:#666;font-size:12px;margin-top:6px;">
-        {{ plan.start_time|date:"Y-m-d" }} → {{ plan.end_time|date:"Y-m-d" }}
+    <div class="detail-info-item detail-full-width">
+      <div class="detail-info-label">时间进度</div>
+      <div class="detail-info-value">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span><strong>{{ progress_percent }}%</strong></span>
+          <span style="font-size: 14px; color: #666666;">
+            {{ plan.start_time|date:"Y-m-d" }} → {{ plan.end_time|date:"Y-m-d" }}
+          </span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" style="width: {{ progress_percent }}%"></div>
+          <span class="progress-text">{{ progress_percent }}%</span>
+        </div>
       </div>
     </div>
     {% endif %}
-
-    <div>
-      <div style="color:#666;font-size:12px;">计划类型</div>
-      <div>{{ plan.get_plan_type_display|default:plan.plan_type }}</div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">开始时间</div>
+      <div class="detail-info-value">{{ plan.start_time|date:"Y-m-d H:i"|default:"-" }}</div>
     </div>
-
-    <div>
-      <div style="color:#666;font-size:12px;">计划周期</div>
-      <div>{{ plan.get_plan_period_display|default:plan.plan_period }}</div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">结束时间</div>
+      <div class="detail-info-value">{{ plan.end_time|date:"Y-m-d H:i"|default:"-" }}</div>
     </div>
-
-    <div>
-      <div style="color:#666;font-size:12px;">开始时间</div>
-      <div>{{ plan.start_time|date:"Y-m-d H:i" }}</div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">负责人</div>
+      <div class="detail-info-value">{% if plan.responsible_person %}{{ plan.responsible_person.get_full_name|default:plan.responsible_person.username }}{% else %}-{% endif %}</div>
     </div>
-
-    <div>
-      <div style="color:#666;font-size:12px;">结束时间</div>
-      <div>{{ plan.end_time|date:"Y-m-d H:i" }}</div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">负责部门</div>
+      <div class="detail-info-value">{{ plan.responsible_department.name|default:"-" }}</div>
     </div>
-
-    <div>
-      <div style="color:#666;font-size:12px;">负责人</div>
-      <div>{{ plan.responsible_person.get_full_name|default:plan.responsible_person.username }}</div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">关联目标</div>
+      <div class="detail-info-value">
+        {% if plan.related_goal %}
+          <a href="{% url 'plan_pages:strategic_goal_detail' plan.related_goal.id %}">{{ plan.related_goal.name }}</a>
+        {% else %}
+          -
+        {% endif %}
+      </div>
     </div>
-
-    <div>
-      <div style="color:#666;font-size:12px;">关联目标</div>
-      <div>{% if plan.related_goal %}{{ plan.related_goal.name }}{% else %}-{% endif %}</div>
-    </div>
-
-    {% if plan.content %}
-    <div style="grid-column:1 / -1;">
-      <div style="color:#666;font-size:12px;">内容</div>
-      <div style="white-space:pre-wrap;">{{ plan.content }}</div>
-    </div>
-    {% endif %}
-
-    {% if plan.plan_objective %}
-    <div style="grid-column:1 / -1;">
-      <div style="color:#666;font-size:12px;">计划目标</div>
-      <div style="white-space:pre-wrap;">{{ plan.plan_objective }}</div>
+    
+    {% if plan.related_project %}
+    <div class="detail-info-item">
+      <div class="detail-info-label">关联项目</div>
+      <div class="detail-info-value">{{ plan.related_project.name|default:"-" }}</div>
     </div>
     {% endif %}
-
+    
+    {% if plan.budget %}
+    <div class="detail-info-item">
+      <div class="detail-info-label">预算</div>
+      <div class="detail-info-value">{{ plan.budget|default:"-" }}</div>
+    </div>
+    {% endif %}
   </div>
 </div>
+
+{% if plan.content %}
+<div class="detail-card">
+  <div class="detail-card-title">📝 计划内容</div>
+  <div class="text-content">{{ plan.content }}</div>
+</div>
+{% endif %}
+
+{% if plan.plan_objective %}
+<div class="detail-card">
+  <div class="detail-card-title">🎯 计划目标</div>
+  <div class="text-content">{{ plan.plan_objective }}</div>
+</div>
+{% endif %}
+
+{% if plan.description %}
+<div class="detail-card">
+  <div class="detail-card-title">📄 计划描述</div>
+  <div class="text-content">{{ plan.description }}</div>
+</div>
+{% endif %}
+
+{% if plan.acceptance_criteria %}
+<div class="detail-card">
+  <div class="detail-card-title">✅ 验收标准</div>
+  <div class="text-content">{{ plan.acceptance_criteria }}</div>
+</div>
+{% endif %}
+
+{% if child_plans %}
+<div class="detail-card">
+  <div class="detail-card-title">📊 下级计划 ({{ child_plans|length }})</div>
+  <div class="detail-info-grid">
+    {% for child in child_plans %}
+    <div class="detail-info-item">
+      <div class="detail-info-label">
+        <a href="{% url 'plan_pages:plan_detail' child.id %}">{{ child.plan_number }}</a>
+      </div>
+      <div class="detail-info-value">
+        {{ child.name }}
+        <span class="list-badge list-badge-{{ child.status }}" style="margin-left: 8px;">
+          {{ child.get_status_display }}
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if pending_decisions %}
+<div class="detail-card">
+  <div class="detail-card-title">⏳ 待审批决策</div>
+  <div class="detail-info-grid">
+    {% for decision in pending_decisions %}
+    <div class="detail-info-item detail-full-width">
+      <div class="detail-info-label">
+        {{ decision.get_request_type_display }}
+        {% if decision.requested_by %}({{ decision.requested_by.get_full_name|default:decision.requested_by.username }}){% endif %}
+      </div>
+      <div class="detail-info-value">
+        <span style="font-size: 14px; color: #666666;">{{ decision.requested_at|date:"Y-m-d H:i" }}</span>
+        {% if can_approve %}
+        <div style="margin-top: 8px;">
+          <a href="{% url 'plan_pages:decision_approve' decision.id %}" class="list-btn list-btn-primary" style="margin-right: 8px;">批准</a>
+          <a href="{% url 'plan_pages:decision_reject' decision.id %}" class="list-btn">拒绝</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if progress_records %}
+<div class="detail-card">
+  <div class="detail-card-title">📈 进度记录 (最近10条)</div>
+  <div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="border-bottom: 1px solid #E0E0E0;">
+          <th style="padding: 8px; text-align: left; font-size: 12px; color: #666666;">记录时间</th>
+          <th style="padding: 8px; text-align: left; font-size: 12px; color: #666666;">进度</th>
+          <th style="padding: 8px; text-align: left; font-size: 12px; color: #666666;">记录人</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in progress_records %}
+        <tr style="border-bottom: 1px solid #F5F5F5;">
+          <td style="padding: 8px; font-size: 14px;">{{ record.recorded_time|date:"Y-m-d H:i" }}</td>
+          <td style="padding: 8px; font-size: 14px;"><strong>{{ record.progress }}%</strong></td>
+          <td style="padding: 8px; font-size: 14px;">{% if record.recorded_by %}{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if status_logs %}
+<div class="detail-card">
+  <div class="detail-card-title">📋 状态变更记录 (最近10条)</div>
+  <div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="border-bottom: 1px solid #E0E0E0;">
+          <th style="padding: 8px; text-align: left; font-size: 12px; color: #666666;">变更时间</th>
+          <th style="padding: 8px; text-align: left; font-size: 12px; color: #666666;">状态变更</th>
+          <th style="padding: 8px; text-align: left; font-size: 12px; color: #666666;">变更人</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in status_logs %}
+        <tr style="border-bottom: 1px solid #F5F5F5;">
+          <td style="padding: 8px; font-size: 14px;">{{ log.changed_time|date:"Y-m-d H:i" }}</td>
+          <td style="padding: 8px; font-size: 14px;">
+            <span class="list-badge list-badge-{{ log.old_status }}">{{ log.get_old_status_display }}</span>
+            → 
+            <span class="list-badge list-badge-{{ log.new_status }}">{{ log.get_new_status_display }}</span>
+          </td>
+          <td style="padding: 8px; font-size: 14px;">{% if log.changed_by %}{{ log.changed_by.get_full_name|default:log.changed_by.username }}{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if issues %}
+<div class="detail-card">
+  <div class="detail-card-title">⚠️ 问题列表 ({{ issues|length }})</div>
+  <div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="border-bottom: 1px solid #E0E0E0;">
+          <th style="padding: 8px; text-align: left; font-size: 12px; color: #666666;">问题标题</th>
+          <th style="padding: 8px; text-align: left; font-size: 12px; color: #666666;">严重程度</th>
+          <th style="padding: 8px; text-align: left; font-size: 12px; color: #666666;">状态</th>
+          <th style="padding: 8px; text-align: left; font-size: 12px; color: #666666;">负责人</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for issue in issues %}
+        <tr style="border-bottom: 1px solid #F5F5F5;">
+          <td style="padding: 8px; font-size: 14px;">{{ issue.title }}</td>
+          <td style="padding: 8px; font-size: 14px;">{{ issue.get_severity_display|default:issue.severity }}</td>
+          <td style="padding: 8px; font-size: 14px;">{{ issue.get_status_display|default:issue.status }}</td>
+          <td style="padding: 8px; font-size: 14px;">{% if issue.assigned_to %}{{ issue.assigned_to.get_full_name|default:issue.assigned_to.username }}{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}

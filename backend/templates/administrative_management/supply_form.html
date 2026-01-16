@@ -1,12 +1,19 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "administrative_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:supplies_management' %}">办公用品</a></li>
+<li class="breadcrumb-item active" aria-current="page">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:supplies_management' %}">办公用品</a></li>
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:supply_detail' supply.id %}">{{ supply.code }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endif %}
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .btn-submit {
         padding: 12px 32px;
@@ -16,19 +23,17 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="center-hero">
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
     </div>
 
-    <!-- 表单 -->
     <form method="post">
         {% csrf_token %}
         
-        <!-- 基本信息 -->
         <div class="form-card">
             <h5>基本信息</h5>
             <div class="row g-3">
@@ -72,7 +77,6 @@
             </div>
         </div>
 
-        <!-- 详细信息 -->
         <div class="form-card">
             <h5>详细信息</h5>
             <div class="row g-3">
@@ -142,14 +146,12 @@
             </div>
         </div>
 
-        <!-- 表单错误 -->
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
             {{ form.non_field_errors }}
         </div>
         {% endif %}
 
-        <!-- 操作按钮 -->
         <div class="d-flex justify-content-between align-items-center mt-4">
             <a href="{% if is_create %}{% url 'admin_pages:supplies_management' %}{% else %}{% url 'admin_pages:supply_detail' supply.id %}{% endif %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> 取消
@@ -163,4 +165,3 @@
     </form>
 </div>
 {% endblock %}
-

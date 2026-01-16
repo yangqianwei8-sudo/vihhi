@@ -1,0 +1,303 @@
+{% extends "customer_management/_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/list-filters.css' %}">
+
+{% endblock %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+
+{% endblock %}
+{% block content %}
+<div class="workspace-content">
+    <div class="list-page-container">
+        
+        <div class="list-page-header">
+            <div>
+                <h2 class="mb-0">
+                    {{ page_title }}
+                </h2>
+            </div>
+            <div class="list-page-actions">
+                {% if can_create %}
+                <a href="{% url 'business_pages:customer_relationship_collaboration_create' %}" class="btn btn-primary">
+                    + 创建人员关系协作申请
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="list-page-filters mb-1" style="margin-bottom: 8px !important;">
+            <div class="list-page-filters-header">
+                <h6 class="list-page-filters-title">筛选条件</h6>
+                <div class="list-page-filters-actions">
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="settingsFilterFieldsBtn">
+                        ⚙️ 设置筛选字段
+                    </button>
+                </div>
+            </div>
+            <form method="get" id="filterForm">
+                <div id="basicFilters" style="display: block;">
+                    
+                    <div class="filter-row mb-3" data-filter-key="search">
+                        <label class="filter-label">搜索:</label>
+                        <div class="filter-buttons">
+                            <div class="d-inline-flex align-items-center" style="flex: 1; max-width: 400px;">
+                                <input type="text" name="search" class="form-control form-control-sm" 
+                                       value="{{ search }}" placeholder="客户名称">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-row mb-3" data-filter-key="client">
+                        <label class="filter-label">客户:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not client_id %}active{% endif %}" 
+                                    data-filter="client" data-value="">
+                                全部客户
+                            </button>
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <select name="client" class="form-select form-select-sm" style="width: 200px;" id="clientSelect">
+                                    <option value="">请选择客户</option>
+                                    {% for c in clients %}
+                                    <option value="{{ c.id }}" {% if client_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <input type="hidden" name="client" id="filter_client" value="{{ client_id }}">
+                        </div>
+                    </div>
+
+                    <div class="filter-row mb-3" data-filter-key="task_type">
+                        <label class="filter-label">申请类型:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not task_type %}active{% endif %}" 
+                                    data-filter="task_type" data-value="">
+                                全部类型
+                            </button>
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <select name="task_type" class="form-select form-select-sm" style="width: 150px;" id="taskTypeSelect">
+                                    <option value="">请选择类型</option>
+                                    {% for value, label in task_type_choices %}
+                                    <option value="{{ value }}" {% if task_type == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <input type="hidden" name="task_type" id="filter_task_type" value="{{ task_type }}">
+                        </div>
+                    </div>
+
+                    <div class="filter-row mb-3" data-filter-key="status">
+                        <label class="filter-label">申请状态:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not status %}active{% endif %}" 
+                                    data-filter="status" data-value="">
+                                全部状态
+                            </button>
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <select name="status" class="form-select form-select-sm" style="width: 150px;" id="statusSelect">
+                                    <option value="">请选择状态</option>
+                                    {% for value, label in status_choices %}
+                                    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <input type="hidden" name="status" id="filter_status" value="{{ status }}">
+                        </div>
+                    </div>
+
+                    <div class="filter-row mb-3" data-filter-key="priority">
+                        <label class="filter-label">优先级:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not priority %}active{% endif %}" 
+                                    data-filter="priority" data-value="">
+                                全部
+                            </button>
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <select name="priority" class="form-select form-select-sm" style="width: 150px;" id="prioritySelect">
+                                    <option value="">请选择优先级</option>
+                                    {% for value, label in priority_choices %}
+                                    <option value="{{ value }}" {% if priority == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <input type="hidden" name="priority" id="filter_priority" value="{{ priority }}">
+                        </div>
+                    </div>
+
+                    <div class="filter-row mb-3" data-filter-key="responsible_user">
+                        <label class="filter-label">负责人:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not responsible_user_id %}active{% endif %}" 
+                                    data-filter="responsible_user" data-value="">
+                                全部
+                            </button>
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <select name="responsible_user" class="form-select form-select-sm" style="width: 150px;" id="responsibleUserSelect">
+                                    <option value="">请选择负责人</option>
+                                    {% for u in users %}
+                                    <option value="{{ u.id }}" {% if responsible_user_id == u.id|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <input type="hidden" name="responsible_user" id="filter_responsible_user" value="{{ responsible_user_id }}">
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="list-page-action-bar mb-3 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted small">共 <strong>{{ page_obj.paginator.count|default:0 }}</strong> 条记录</span>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm">导出</button>
+            </div>
+        </div>
+
+        <div class="list-page-table">
+            {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>客户名称</th>
+                            <th>申请类型</th>
+                            <th>负责人</th>
+                            <th>优先级</th>
+                            <th>状态</th>
+                            <th>进度</th>
+                            <th>截止时间</th>
+                            <th width="100">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in page_obj %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'business_pages:customer_detail' task.client.id %}" class="text-decoration-none">
+                                    {{ task.client.name }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ task.get_task_type_display }}</span>
+                            </td>
+                            <td class="small">
+                                {% for user in task.responsible_users.all %}
+                                    {{ user.get_full_name|default:user.username }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if task.priority == 'high' %}danger{% elif task.priority == 'medium' %}warning{% else %}secondary{% endif %}">
+                                    {{ task.get_priority_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if task.status == 'completed' %}success{% elif task.status == 'cancelled' %}secondary{% elif task.status == 'in_progress' %}primary{% else %}warning{% endif %}">
+                                    {{ task.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 20px; width: 80px;">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ task.progress }}%">{{ task.progress }}%</div>
+                                </div>
+                            </td>
+                            <td class="small text-muted">
+                                {% if task.due_date %}{{ task.due_date|date:"Y-m-d H:i" }}{% else %}--{% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'business_pages:customer_relationship_collaboration_detail' task.id %}" class="btn btn-sm btn-outline-primary">查看</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">暂无人员关系协作申请</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page_obj and page_obj.has_other_pages %}
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-muted small">
+                    共 <strong>{{ page_obj.paginator.count }}</strong> 条
+                </div>
+                <nav aria-label="分页导航">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if task_type %}&task_type={{ task_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if priority %}&priority={{ priority }}{% endif %}{% if responsible_user_id %}&responsible_user_id={{ responsible_user_id }}{% endif %}">上一页</a>
+                        </li>
+                        {% endif %}
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if task_type %}&task_type={{ task_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if priority %}&priority={{ priority }}{% endif %}{% if responsible_user_id %}&responsible_user_id={{ responsible_user_id }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if task_type %}&task_type={{ task_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if priority %}&priority={{ priority }}{% endif %}{% if responsible_user_id %}&responsible_user_id={{ responsible_user_id }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if task_type %}&task_type={{ task_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if priority %}&priority={{ priority }}{% endif %}{% if responsible_user_id %}&responsible_user_id={{ responsible_user_id }}{% endif %}">下一页</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small">每页</span>
+                    <select class="form-select form-select-sm" style="width: auto;">
+                        <option value="10" selected>10条</option>
+                        <option value="20">20条</option>
+                        <option value="50">50条</option>
+                    </select>
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="alert alert-info">暂无人员关系协作申请</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+    {% include "customer_management/includes/filter_fields_settings_modal.html" %}
+
+    <script src="{% static 'js/filter-fields-settings.js' %}"></script>
+    
+    <script>
+    window.listFiltersConfig = {
+        enableFieldsSettings: true,
+        fieldsSettingsStorageKey: 'relationship_collaboration_filter_fields',
+        fieldsSettingsContainerId: 'basicFilters',
+        fieldsSettingsModalId: 'filterFieldsSettingsModal',
+        fieldsSettingsListId: 'filterFieldsList',
+        fieldsSettingsBtnId: 'settingsFilterFieldsBtn',
+        fieldsSettingsSaveBtnId: 'saveFilterFieldsSettings',
+        fieldsSettingsResetBtnId: 'resetFilterFieldsSettings',
+        maxEnabledFields: 10,
+        defaultEnabledFields: ['search', 'client', 'task_type', 'status', 'priority', 'responsible_user']
+    };
+    </script>
+    
+    <script src="{% static 'js/list-filters.js' %}"></script>
+{% endblock %}

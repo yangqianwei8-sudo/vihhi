@@ -1,0 +1,28 @@
+<div class="list-filters">
+  <form method="get" class="list-filters-form" id="filterForm">
+    <div class="list-filter-group">
+      <label class="list-filter-label">项目</label>
+      <select name="project_id" class="list-filter-input">
+        <option value="">全部项目</option>
+        {% for project in projects %}
+        <option value="{{ project.id }}" {% if project_id == project.id|stringformat:"s" %}selected{% endif %}>
+          {{ project.project_number }} - {{ project.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">状态</label>
+      <select name="status" class="list-filter-input">
+        <option value="">全部状态</option>
+        {% for code, label in status_choices %}
+        <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'settlement_pages:project_settlement_list' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>

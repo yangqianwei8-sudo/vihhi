@@ -1,0 +1,43 @@
+<div class="list-filters">
+  <form method="get" class="list-filters-form" id="filterForm">
+    <div class="list-filter-group">
+      <label class="list-filter-label">搜索</label>
+      <input type="text" name="search" class="list-filter-input" 
+             value="{{ search }}" placeholder="姓名、电话、邮箱、客户名称">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">客户</label>
+      <select name="client" class="list-filter-input" id="clientSelect">
+        <option value="">全部客户</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}" {% if client_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="client" id="filter_client" value="{{ client_id }}">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">人员角色</label>
+      <select name="role" class="list-filter-input" id="roleSelect">
+        <option value="">全部</option>
+        {% for value, label in role_choices %}
+        <option value="{{ value }}" {% if role == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="role" id="filter_role" value="{{ role }}">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">关系等级</label>
+      <select name="relationship_level" class="list-filter-input" id="relationshipLevelSelect">
+        <option value="">全部</option>
+        {% for value, label in relationship_level_choices %}
+        <option value="{{ value }}" {% if relationship_level == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="relationship_level" id="filter_relationship_level" value="{{ relationship_level }}">
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'business_pages:contact_list' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>

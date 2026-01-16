@@ -59,9 +59,15 @@ class SupplyCategory(models.Model):
 
 class OfficeSupply(models.Model):
     """办公用品"""
+    CATEGORY_CHOICES = [
+        ('consumable', '消耗品'),
+        ('fixed_asset', '固定资产'),
+        ('low_value', '低值易耗品'),
+    ]
     
     code = models.CharField(max_length=50, unique=True, verbose_name='用品编码')
     name = models.CharField(max_length=200, verbose_name='用品名称')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='consumable', verbose_name='分类')  # 保留旧字段以兼容
     supply_category = models.ForeignKey(SupplyCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='supplies', verbose_name='用品分类')
     unit = models.CharField(max_length=20, default='个', verbose_name='单位')
     specification = models.CharField(max_length=200, blank=True, verbose_name='规格型号')
@@ -85,7 +91,7 @@ class OfficeSupply(models.Model):
         ordering = ['-created_time']
         indexes = [
             models.Index(fields=['code']),
-            models.Index(fields=['supply_category', 'is_active']),
+            models.Index(fields=['category', 'is_active']),
         ]
     
     def __str__(self):
@@ -1872,4 +1878,42 @@ class AdministrativeAffair(models.Model):
             delta = self.planned_end_time - timezone.now()
             return max(0, delta.days)
         return None
+
+
+class AffairStatusHistory(models.Model):
+    """事务状态历史记录"""
+    affair = models.ForeignKey(AdministrativeAffair, on_delete=models.CASCADE, related_name='status_history', verbose_name='事务')
+    old_status = models.CharField(max_length=20, blank=True, verbose_name='原状态')
+    new_status = models.CharField(max_length=20, verbose_name='新状态')
+    operator = models.ForeignKey(User, on_delete=models.PROTECT, related_name='affair_status_changes', verbose_name='操作人')
+    operation_time = models.DateTimeField(default=timezone.now, verbose_name='操作时间')
+    notes = models.TextField(blank=True, verbose_name='备注')
+    
+    class Meta:
+        db_table = 'admin_affair_status_history'
+        verbose_name = '事务状态历史'
+        verbose_name_plural = verbose_name
+        ordering = ['-operation_time']
+    
+    def __str__(self):
+        return f"{self.affair.affair_number} - {self.old_status} -> {self.new_status}"
+
+
+class AffairProgressRecord(models.Model):
+    """事务进度记录"""
+    affair = models.ForeignKey(AdministrativeAffair, on_delete=models.CASCADE, related_name='progress_records', verbose_name='事务')
+    progress = models.IntegerField(verbose_name='进度（%）')
+    record_time = models.DateTimeField(default=timezone.now, verbose_name='记录时间')
+    recorder = models.ForeignKey(User, on_delete=models.PROTECT, related_name='affair_progress_records', verbose_name='记录人')
+    notes = models.TextField(blank=True, verbose_name='进度说明')
+    attachment = models.FileField(upload_to='affairs/progress/', null=True, blank=True, verbose_name='进度附件')
+    
+    class Meta:
+        db_table = 'admin_affair_progress_record'
+        verbose_name = '事务进度记录'
+        verbose_name_plural = verbose_name
+        ordering = ['-record_time']
+    
+    def __str__(self):
+        return f"{self.affair.affair_number} - {self.progress}% ({self.record_time})"
 

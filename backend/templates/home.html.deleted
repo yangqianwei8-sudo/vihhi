@@ -948,12 +948,9 @@
             background: linear-gradient(135deg, var(--vh-primary) 0%, var(--vh-primary-dark) 100%);
             border-radius: 0;
             padding: var(--spacing-xl) var(--spacing-2xl);
-            margin: 0 0 0 0; /* 移除底部间距，让左侧栏紧贴 */
+            margin: 0 0 var(--spacing-md) 0;
             width: 100%;
             max-width: 100%;
-            height: 120px; /* 固定高度为120px */
-            min-height: 120px;
-            max-height: 120px;
             box-shadow: var(--shadow-lg);
             color: #ffffff;
             position: sticky;
@@ -963,8 +960,6 @@
             animation: fadeInDown 0.5s ease;
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-sizing: border-box;
-            display: flex;
-            align-items: center; /* 垂直居中内容 */
         }
         
         .welcome-card::before {
@@ -1018,11 +1013,10 @@
             align-items: center;
             flex-wrap: wrap;
             gap: var(--spacing-lg);
-            width: 100%;
         }
         
         .welcome-card-left {
-            flex: 0 1 auto;
+            flex: 1;
             min-width: 280px;
             text-align: left;
         }
@@ -1051,55 +1045,48 @@
             display: flex;
             align-items: center;
             gap: var(--spacing-md);
-            flex-wrap: nowrap;
-            margin-left: auto;
-            flex-shrink: 0;
+            flex-wrap: wrap;
         }
         
         .welcome-action-btn {
-            padding: 0;
-            background: transparent !important;
-            backdrop-filter: none !important;
-            border: none !important;
-            border-radius: 0;
+            padding: var(--spacing-sm) var(--spacing-lg);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: var(--radius-md);
             color: #ffffff;
             font-size: var(--font-size-sm);
             font-weight: 500;
             text-decoration: none;
-            transition: none;
+            transition: all var(--transition-base);
             white-space: nowrap;
             display: inline-flex;
             align-items: center;
-            gap: 0;
-            box-shadow: none !important;
+            gap: var(--spacing-xs);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         .welcome-action-btn:hover {
-            background: transparent !important;
-            border: none !important;
-            transform: none !important;
-            box-shadow: none !important;
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             color: #ffffff;
             text-decoration: none;
         }
         
         .welcome-action-btn:active {
-            transform: none !important;
+            transform: translateY(0);
         }
         
         .welcome-action-btn.logout {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-            backdrop-filter: none !important;
+            background: rgba(214, 40, 40, 0.2);
+            border-color: rgba(214, 40, 40, 0.4);
         }
         
         .welcome-action-btn.logout:hover {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            transform: none !important;
+            background: rgba(214, 40, 40, 0.3);
+            border-color: rgba(214, 40, 40, 0.6);
         }
         
         @media (max-width: 768px) {
@@ -1121,8 +1108,7 @@
             
             .welcome-card-right {
                 width: 100%;
-                justify-content: flex-end;
-                margin-left: auto;
+                justify-content: flex-start;
             }
             
             .welcome-action-btn {
@@ -2135,13 +2121,18 @@
                     </div>
                 </div>
                 <div class="welcome-card-right">
-                    <a href="{% url 'admin:login' %}" class="welcome-action-btn" style="background: transparent; border: none; box-shadow: none; padding: 0; backdrop-filter: none;">
-                        <span>管理后台</span>
-                    </a>
-                    <a href="{% url 'system_pages:account_settings' %}" class="welcome-action-btn" style="background: transparent; border: none; box-shadow: none; padding: 0; backdrop-filter: none;">
+                    <a href="{% url 'system_pages:account_settings' %}" class="welcome-action-btn">
+                        <span>⚙️</span>
                         <span>账号设置</span>
                     </a>
-                    <a href="{% url 'logout' %}" class="welcome-action-btn logout" style="background: transparent; border: none; box-shadow: none; padding: 0; backdrop-filter: none;">
+                                        {% if is_superuser %}
+                    <button id="django-service-control-btn" class="welcome-action-btn" style="cursor: pointer; border: none; background: transparent; padding: 0; margin: 0;" title="Django服务控制">
+                        <span>🔄</span>
+                        <span>服务控制</span>
+                    </button>
+                    {% endif %}
+<a href="{% url 'logout' %}" class="welcome-action-btn logout">
+                        <span>🚪</span>
                         <span>退出登录</span>
                     </a>
                 </div>
@@ -2152,6 +2143,7 @@
             <aside class="workspace-nav">
                 <nav class="sidenav">
                     <div class="sidenav-section">
+                        <div class="sidenav-title">功能模块</div>
                         <div class="sidenav-links">
                             {% for menu_item in centers_navigation %}
                             {% if menu_item.children %}
@@ -2176,6 +2168,66 @@
                         </div>
                     </div>
                 </nav>
+                            <!-- 管理后台入口 -->
+                            <a class="sidenav-link" href="{% url 'admin:index' %}" style="border-top: 1px solid var(--vh-border); margin-top: var(--spacing-sm); padding-top: var(--spacing-sm);">
+                                <span>⚙️ 管理后台</span>
+                            </a>
+                <!-- 待办事项 - 优化样式 -->
+                <div class="info-card info-card-slide-up" data-card-id="todo-items" style="margin-top: var(--spacing-md);">
+                    <div class="info-card-header">
+                        <h5 class="info-card-title">待办事项</h5>
+                        <div class="info-card-actions">
+                            <a href="{% url 'production_pages:project_task_dashboard' %}" class="muted" style="font-size: var(--font-size-sm); text-decoration: none;">查看全部 →</a>
+                        </div>
+                    </div>
+                    <div class="info-card-body">
+                        <div class="info-grid info-grid-2">
+                            <!-- 待处理任务 -->
+                            <div class="info-item" style="padding: var(--spacing-md); background: var(--vh-surface); border-radius: var(--radius-md); border-left: 4px solid var(--vh-primary);">
+                                <span class="info-label">待处理任务</span>
+                                <div class="info-value" style="font-size: var(--font-size-2xl); font-weight: 700; margin-top: var(--spacing-xs); color: var(--vh-primary);">{{ pending_counts.personal }}</div>
+                                <div class="text-muted" style="font-size: var(--font-size-xs); margin-top: var(--spacing-xs);">今日 {{ pending_counts.due_today }} · 逾期 <span style="color: var(--vh-error); font-weight: 600;">{{ pending_counts.overdue }}</span></div>
+                            </div>
+                            
+                            <!-- 待我审批 -->
+                            {% if approval_stats.my_pending > 0 %}
+                            <div class="info-item" style="padding: var(--spacing-md); background: var(--vh-error-soft); border-radius: var(--radius-md); border-left: 4px solid var(--vh-error);">
+                                <span class="info-label">✍️ 待我审批</span>
+                                <div class="info-value" style="font-size: var(--font-size-2xl); font-weight: 700; margin-top: var(--spacing-xs); color: var(--vh-error);">{{ approval_stats.my_pending }}</div>
+                                <div class="text-muted" style="font-size: var(--font-size-xs); margin-top: var(--spacing-xs);">我提交的 {{ approval_stats.my_submitted }}</div>
+                            </div>
+                            {% else %}
+                            <div class="info-item" style="padding: var(--spacing-md); background: var(--vh-surface); border-radius: var(--radius-md); border-left: 4px solid var(--vh-success);">
+                                <span class="info-label">✍️ 待我审批</span>
+                                <div class="info-value" style="font-size: var(--font-size-2xl); font-weight: 700; margin-top: var(--spacing-xs); color: var(--vh-success);">0</div>
+                                <div class="text-muted" style="font-size: var(--font-size-xs); margin-top: var(--spacing-xs);">暂无待审批事项</div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- 待接收事项 -->
+                            {% if delivery_stats.pending > 0 %}
+                            <div class="info-item" style="padding: var(--spacing-md); background: var(--vh-warning-soft); border-radius: var(--radius-md); border-left: 4px solid var(--vh-warning);">
+                                <span class="info-label">待接收事项</span>
+                                <div class="info-value" style="font-size: var(--font-size-2xl); font-weight: 700; margin-top: var(--spacing-xs); color: var(--vh-warning);">{{ delivery_stats.pending }}</div>
+                                <div class="text-muted" style="font-size: var(--font-size-xs); margin-top: var(--spacing-xs);">项目接收 · 交付接收</div>
+                            </div>
+                            {% else %}
+                            <div class="info-item" style="padding: var(--spacing-md); background: var(--vh-surface); border-radius: var(--radius-md); border-left: 4px solid var(--vh-success);">
+                                <span class="info-label">待接收事项</span>
+                                <div class="info-value" style="font-size: var(--font-size-2xl); font-weight: 700; margin-top: var(--spacing-xs); color: var(--vh-success);">0</div>
+                                <div class="text-muted" style="font-size: var(--font-size-xs); margin-top: var(--spacing-xs);">暂无待接收事项</div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- 待回复事项（预留，可根据实际业务扩展） -->
+                            <div class="info-item" style="padding: var(--spacing-md); background: var(--vh-surface); border-radius: var(--radius-md); border-left: 4px solid var(--vh-info);">
+                                <span class="info-label">💬 待回复事项</span>
+                                <div class="info-value" style="font-size: var(--font-size-2xl); font-weight: 700; margin-top: var(--spacing-xs); color: var(--vh-info);">0</div>
+                                <div class="text-muted" style="font-size: var(--font-size-xs); margin-top: var(--spacing-xs);">意见回复 · 客户反馈</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </aside>
             <section class="workspace-main" id="workspaceMain">
                 <!-- 统计卡片区域 - 使用统一样式优化 -->
@@ -2297,13 +2349,13 @@
             </div>
         </div>
         
-                <!-- 本周工作计划 -->
-                <div class="info-card info-card-slide-up" data-card-id="weekly-plan">
+                <!-- 我参与的项目 - 优化卡片样式 -->
+                <div class="info-card info-card-slide-up" data-card-id="my-projects">
                     <div class="info-card-header">
-                        <h5 class="info-card-title">📅 本周工作计划</h5>
+                        <h5 class="info-card-title">🏗️ 我参与的项目</h5>
                         <div class="info-card-actions" style="display: flex; align-items: center; gap: var(--spacing-sm);">
                             <a href="{% url 'production_pages:project_list' %}" class="muted" style="font-size: var(--font-size-sm); text-decoration: none;">查看更多 →</a>
-                            <button class="btn btn-sm btn-outline-secondary card-settings-btn" data-card-id="weekly-plan" style="padding: 4px 10px; font-size: var(--font-size-xs); opacity: 0; transition: opacity var(--transition-base);" title="卡片设置">
+                            <button class="btn btn-sm btn-outline-secondary card-settings-btn" data-card-id="my-projects" style="padding: 4px 10px; font-size: var(--font-size-xs); opacity: 0; transition: opacity var(--transition-base);" title="卡片设置">
                                 <span>⚙️</span>
                             </button>
                     </div>
@@ -3257,64 +3309,62 @@
             </section>
 
             <section class="workspace-side">
-                <!-- 待办事项 - 已从左侧栏移至右侧栏，无需分类 -->
-                <div class="info-card info-card-slide-up" data-card-id="todo-items">
-                    <div class="info-card-header">
-                        <h5 class="info-card-title">待办事项</h5>
-                        <div class="info-card-actions">
-                            <a href="{% url 'production_pages:project_task_dashboard' %}" class="muted" style="font-size: var(--font-size-sm); text-decoration: none;">查看全部 →</a>
-                        </div>
-                    </div>
-                    <div class="info-card-body" style="min-height: 120px; display: flex; align-items: center; justify-content: center;">
-                        {% with total_todos=pending_counts.personal|add:approval_stats.my_pending %}
-                        <div class="info-item" style="padding: var(--spacing-lg); text-align: center; width: 100%;">
-                            <div class="info-value" style="font-size: 48px; font-weight: 700; color: var(--vh-primary); line-height: 1.2;">{{ total_todos }}</div>
-                            <div class="info-label" style="font-size: var(--font-size-base); margin-top: var(--spacing-sm); color: var(--vh-text-muted);">待办事项总数</div>
-                        </div>
-                        {% endwith %}
-                    </div>
-                </div>
-                
-                <!-- 企业微信待办 - 占位卡片 -->
-                <div class="info-card info-card-slide-up" data-card-id="wecom-todo">
-                    <div class="info-card-header">
-                        <h5 class="info-card-title">企业微信待办</h5>
-                        <div class="info-card-actions">
-                            <span class="muted" style="font-size: var(--font-size-sm);">待集成</span>
-                        </div>
-                    </div>
-                    <div class="info-card-body" style="min-height: 120px; display: flex; align-items: center; justify-content: center;">
-                        <div class="info-item" style="padding: var(--spacing-lg); text-align: center; width: 100%;">
-                            <div style="font-size: 32px; margin-bottom: var(--spacing-sm);">📱</div>
-                            <div class="info-label" style="font-size: var(--font-size-base); color: var(--vh-text-muted);">企业微信待办事项集成中</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 通知中心 - 简化版 -->
+                <!-- 通知中心 - 优化样式 -->
                 <div class="info-card info-card-slide-up">
                     <div class="info-card-header">
-                        <h5 class="info-card-title">🔔 通知中心</h5>
+                        <h5 class="info-card-title"><span style="letter-spacing: 0.3em;">🔔 通知中心</span></h5>
+                        <div class="info-card-actions" style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                            <!-- 通知筛选 -->
+                            <select id="notificationFilter" class="notification-filter" style="padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--vh-border); font-size: var(--font-size-xs); background: #fff; cursor: pointer;">
+                                <option value="all">全部</option>
+                                <option value="system">系统通知</option>
+                                <option value="task">任务通知</option>
+                                <option value="approval">审批通知</option>
+                                <option value="business">业务通知</option>
+                            </select>
+                            <!-- 通知搜索 -->
+                            <input type="text" id="notificationSearch" placeholder="搜索通知..." class="notification-search" style="padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--vh-border); font-size: var(--font-size-xs); width: 120px;">
+                            <a href="#" class="muted" style="font-size: var(--font-size-sm); text-decoration: none;">管理</a>
+                    </div>
                     </div>
                     <div class="info-card-body">
                     {% if notification_center %}
                         {% for block in notification_center %}
                             {% if block.title != '任务提醒' %}
-                            <div class="notify-block">
+                            <div class="notify-block" data-block-title="{{ block.title }}" data-notification-type="{% if '系统' in block.title %}system{% elif '任务' in block.title %}task{% elif '审批' in block.title %}approval{% elif '质量' in block.title or '团队' in block.title %}business{% else %}all{% endif %}">
+                                <div class="notify-header">
+                                    <span>{{ block.title }}</span>
+                                    {% if block.unread_count %}
+                                        <div class="notify-header-actions">
+                                            <span class="badge badge-pill badge-danger">{{ block.unread_count }}</span>
+                                            <button class="btn btn-sm btn-outline-primary notify-mark-all" style="padding: 4px 12px; font-size: var(--font-size-xs); white-space: nowrap;" data-endpoint="/project/api/notifications/mark-all-read/" data-block-title="{{ block.title }}">全部标记已读</button>
+                                        </div>
+                                    {% endif %}
+                                </div>
                                 {% if block.items %}
                                     {% for item in block.items %}
-                                        <div class="notify-item{% if item.is_unread %} notify-item--unread{% endif %}">
-                                            <div class="notify-item-title">
-                                                {% if item.url %}
-                                                    <a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
-                                                {% else %}
-                                                    {{ item.title }}
+                                        <div class="notify-item{% if item.is_unread %} notify-item--unread{% endif %}" data-notification-id="{{ item.id }}" data-notification-title="{{ item.title|lower }}" data-notification-detail="{{ item.detail|lower|default:'' }}">
+                                            <div class="notify-item-row">
+                                                <div class="notify-item-title">
+                                                    {% if item.url %}
+                                                        <a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
+                                                    {% else %}
+                                                        {{ item.title }}
+                                                    {% endif %}
+                                                </div>
+                                                <div style="display: flex; gap: var(--spacing-xs); align-items: center;">
+                                                {% if item.is_unread %}
+                                                        <button class="btn btn-sm btn-primary notify-mark-read" style="padding: 4px 12px; font-size: var(--font-size-xs); flex-shrink: 0; white-space: nowrap;" data-endpoint="/project/api/notifications/{{ item.id }}/mark-read/" data-notification-id="{{ item.id }}">已读</button>
                                                 {% endif %}
+                                                    <button class="btn btn-sm btn-outline-secondary notify-delete" style="padding: 4px 8px; font-size: var(--font-size-xs); opacity: 0.6; transition: opacity var(--transition-base);" data-notification-id="{{ item.id }}" title="删除通知" onclick="deleteNotification({{ item.id }}); return false;">✕</button>
+                                                </div>
                                             </div>
+                                            {% if item.subtitle %}<div class="notify-item-subtitle">{{ item.subtitle }}</div>{% endif %}
+                                            {% if item.detail %}<div class="notify-item-detail">{{ item.detail }}</div>{% endif %}
                                         </div>
                                     {% endfor %}
                                 {% else %}
-                                    <div class="muted" style="font-size: var(--font-size-sm);">暂无提醒</div>
+                                    <div class="muted" style="font-size:12px;">暂无提醒</div>
                                 {% endif %}
                             </div>
                             {% endif %}
@@ -3458,7 +3508,176 @@
         });
     }
 
-    // 通知中心已简化，删除了筛选、搜索、标记已读、删除等功能
+    // 标记通知已读
+    document.querySelectorAll('.notify-mark-read').forEach(button => {
+        button.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const endpoint = this.dataset.endpoint;
+            const container = this.closest('.notify-item');
+            const originalText = this.textContent;
+            
+            // 添加加载状态
+            this.disabled = true;
+            this.textContent = '处理中...';
+            this.style.opacity = '0.6';
+            
+            postJson(endpoint)
+                .then(() => {
+                    // 添加淡出动画
+                    if (container) {
+                        container.style.transition = 'all 0.3s ease';
+                        container.style.opacity = '0';
+                        container.style.transform = 'translateX(-20px)';
+                        setTimeout(() => {
+                            container.classList.remove('notify-item--unread');
+                            container.style.opacity = '1';
+                            container.style.transform = 'translateX(0)';
+                    this.remove();
+                        }, 300);
+                    } else {
+                        this.remove();
+                    }
+                })
+                .catch(err => {
+                    console.error('标记已读失败:', err);
+                    this.disabled = false;
+                    this.textContent = originalText;
+                    this.style.opacity = '1';
+                    alert('操作失败，请稍后重试');
+                });
+        });
+    });
+
+    // 通知筛选功能
+    const notificationFilter = document.getElementById('notificationFilter');
+    const notificationSearch = document.getElementById('notificationSearch');
+    
+    function filterNotifications() {
+        const filterValue = notificationFilter ? notificationFilter.value : 'all';
+        const searchValue = notificationSearch ? notificationSearch.value.toLowerCase() : '';
+        
+        document.querySelectorAll('.notify-block').forEach(block => {
+            const blockType = block.dataset.notificationType || 'all';
+            let shouldShow = true;
+            
+            // 类型筛选
+            if (filterValue !== 'all' && blockType !== filterValue) {
+                shouldShow = false;
+            }
+            
+            // 搜索筛选
+            if (shouldShow && searchValue) {
+                const items = block.querySelectorAll('.notify-item');
+                let hasMatch = false;
+                items.forEach(item => {
+                    const title = item.dataset.notificationTitle || '';
+                    const detail = item.dataset.notificationDetail || '';
+                    if (title.includes(searchValue) || detail.includes(searchValue)) {
+                        item.style.display = '';
+                        hasMatch = true;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                shouldShow = hasMatch;
+            } else if (shouldShow && searchValue) {
+                // 如果有搜索但block不匹配，隐藏block内的所有item
+                block.querySelectorAll('.notify-item').forEach(item => {
+                    const title = item.dataset.notificationTitle || '';
+                    const detail = item.dataset.notificationDetail || '';
+                    if (!title.includes(searchValue) && !detail.includes(searchValue)) {
+                        item.style.display = 'none';
+                    }
+                });
+            } else if (!searchValue) {
+                // 没有搜索时，显示所有item
+                block.querySelectorAll('.notify-item').forEach(item => {
+                    item.style.display = '';
+                });
+            }
+            
+            block.style.display = shouldShow ? '' : 'none';
+        });
+    }
+    
+    if (notificationFilter) {
+        notificationFilter.addEventListener('change', filterNotifications);
+    }
+    if (notificationSearch) {
+        notificationSearch.addEventListener('input', filterNotifications);
+    }
+    
+    // 删除通知功能
+    function deleteNotification(notificationId) {
+        if (!confirm('确定要删除这条通知吗？')) {
+            return;
+        }
+        
+        const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
+        if (item) {
+            // 添加删除动画
+            item.style.transition = 'all 0.3s ease';
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(20px)';
+            setTimeout(() => {
+                item.remove();
+                // 检查是否还有通知
+                const remainingItems = document.querySelectorAll('.notify-item');
+                if (remainingItems.length === 0) {
+                    const body = document.querySelector('.info-card-body');
+                    if (body) {
+                        body.innerHTML = '<div class="muted" style="font-size: var(--font-size-sm); padding: var(--spacing-md); text-align: center;">当前没有新的提醒。</div>';
+                    }
+                }
+            }, 300);
+        }
+    }
+    
+    // 全部标记已读
+    document.querySelectorAll('.notify-mark-all').forEach(button => {
+        button.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const endpoint = this.dataset.endpoint;
+            const block = this.closest('.notify-block');
+            const originalText = this.textContent;
+            
+            // 添加加载状态
+            this.disabled = true;
+            this.textContent = '处理中...';
+            this.style.opacity = '0.6';
+            
+            postJson(endpoint)
+                .then(() => {
+                    // 批量移除未读状态
+                    const unreadItems = block?.querySelectorAll('.notify-item--unread');
+                    if (unreadItems && unreadItems.length > 0) {
+                        unreadItems.forEach((item, index) => {
+                            setTimeout(() => {
+                                item.style.transition = 'all 0.3s ease';
+                                item.style.opacity = '0';
+                                item.style.transform = 'translateX(-20px)';
+                                setTimeout(() => {
+                        item.classList.remove('notify-item--unread');
+                                    item.style.opacity = '1';
+                                    item.style.transform = 'translateX(0)';
+                        item.querySelector('.notify-mark-read')?.remove();
+                                }, 300);
+                            }, index * 50);
+                    });
+                    }
+                    setTimeout(() => {
+                    this.remove();
+                    }, unreadItems ? unreadItems.length * 50 + 300 : 300);
+                })
+                .catch(err => {
+                    console.error('批量标记已读失败:', err);
+                    this.disabled = false;
+                    this.textContent = originalText;
+                    this.style.opacity = '1';
+                    alert('操作失败，请稍后重试');
+                });
+        });
+    });
 
     // 左侧菜单：根据当前路径为同一模块下的子路由添加前缀高亮
     (function prefixActivateSidenav() {
@@ -4666,7 +4885,6 @@
     document.addEventListener('DOMContentLoaded', function() {
         const welcomeCard = document.querySelector('.welcome-card');
         const topModulesNav = document.querySelector('.top-modules-nav');
-        const workspaceNav = document.querySelector('.workspace-nav');
         
         function updateNavPosition() {
             if (welcomeCard && topModulesNav) {
@@ -4680,24 +4898,6 @@
                 topModulesNav.style.top = totalHeight + 'px';
                 topModulesNav.style.position = 'sticky';
                 topModulesNav.style.zIndex = '99';
-            }
-            
-            // 调整左侧栏位置，使其紧贴欢迎卡片下边缘
-            if (welcomeCard && workspaceNav) {
-                // 欢迎卡片固定高度为120px
-                // 总工作台首页没有顶部导航栏，所以左侧栏直接从欢迎卡片下方开始
-                const welcomeCardHeight = 120;
-                const welcomeCardMarginBottom = parseInt(window.getComputedStyle(welcomeCard).marginBottom) || 0;
-                const totalTop = welcomeCardHeight + welcomeCardMarginBottom;
-                
-                // 设置左侧栏的top值，使其紧贴在欢迎卡片下方
-                workspaceNav.style.top = totalTop + 'px';
-                
-                // 调整高度，确保填满剩余空间
-                const remainingHeight = window.innerHeight - totalTop;
-                workspaceNav.style.height = remainingHeight + 'px';
-                workspaceNav.style.minHeight = remainingHeight + 'px';
-                workspaceNav.style.maxHeight = remainingHeight + 'px';
             }
         }
         
@@ -4714,6 +4914,180 @@
     });
 </script>
 
+    <!-- Django服务控制模态框 -->
+    {% if is_superuser %}
+    <div id="service-control-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600;">Django服务控制</h3>
+                <button id="close-service-modal" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">&times;</button>
+            </div>
+            <div id="service-status" style="margin-bottom: 20px; padding: 12px; background: #f5f5f5; border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="status-indicator" style="width: 12px; height: 12px; border-radius: 50%; background: #999;"></span>
+                    <span id="status-text">检查中...</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="btn-check-status" style="flex: 1; padding: 10px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">检查状态</button>
+                <button id="btn-restart-service" style="flex: 1; padding: 10px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">重启服务</button>
+                <button id="btn-stop-service" style="flex: 1; padding: 10px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">停止服务</button>
+                <button id="btn-start-service" style="flex: 1; padding: 10px; background: #17a2b8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">启动服务</button>
+            </div>
+            <div id="service-message" style="margin-top: 15px; padding: 10px; border-radius: 6px; display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const modal = document.getElementById('service-control-modal');
+        const btn = document.getElementById('django-service-control-btn');
+        const closeBtn = document.getElementById('close-service-modal');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const messageDiv = document.getElementById('service-message');
+        
+        const btnCheckStatus = document.getElementById('btn-check-status');
+        const btnRestart = document.getElementById('btn-restart-service');
+        const btnStop = document.getElementById('btn-stop-service');
+        const btnStart = document.getElementById('btn-start-service');
+        
+        if (!modal || !btn) return; // 如果不是超级用户，直接返回
+        
+        // 打开模态框
+        btn.addEventListener('click', function() {
+            modal.style.display = 'flex';
+            checkServiceStatus();
+        });
+        
+        // 关闭模态框
+        closeBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+        
+        // 点击背景关闭
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+        
+        // 检查服务状态
+        function checkServiceStatus() {
+            statusText.textContent = '检查中...';
+            statusIndicator.style.background = '#999';
+            
+            fetch('/api/service/control/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: 'action=status'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.status === 'running') {
+                        statusIndicator.style.background = '#28a745';
+                        statusText.textContent = '服务运行中 (PID: ' + (data.pids.join(', ') || 'N/A') + ')';
+                    } else {
+                        statusIndicator.style.background = '#dc3545';
+                        statusText.textContent = '服务已停止';
+                    }
+                } else {
+                    statusIndicator.style.background = '#ffc107';
+                    statusText.textContent = '检查失败: ' + (data.error || '未知错误');
+                }
+            })
+            .catch(error => {
+                statusIndicator.style.background = '#dc3545';
+                statusText.textContent = '检查失败: ' + error.message;
+            });
+        }
+        
+        // 执行服务操作
+        function performAction(action, actionName) {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '执行中...';
+            hideMessage();
+            
+            fetch('/api/service/control/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: 'action=' + action
+            })
+            .then(response => response.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.textContent = originalText;
+                
+                if (data.success) {
+                    showMessage(data.message || actionName + '成功', 'success');
+                    setTimeout(checkServiceStatus, 2000);
+                } else {
+                    showMessage(data.error || actionName + '失败', 'error');
+                }
+            })
+            .catch(error => {
+                btn.disabled = false;
+                btn.textContent = originalText;
+                showMessage(actionName + '失败: ' + error.message, 'error');
+            });
+        }
+        
+        // 绑定按钮事件
+        btnCheckStatus.addEventListener('click', checkServiceStatus);
+        btnRestart.addEventListener('click', () => {
+            if (confirm('确定要重启Django服务吗？这可能会影响正在使用的用户。')) {
+                performAction('restart', '重启');
+            }
+        });
+        btnStop.addEventListener('click', () => {
+            if (confirm('确定要停止Django服务吗？这将导致网站无法访问。')) {
+                performAction('stop', '停止');
+            }
+        });
+        btnStart.addEventListener('click', () => {
+            performAction('start', '启动');
+        });
+        
+        // 显示消息
+        function showMessage(message, type) {
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+            messageDiv.style.background = type === 'success' ? '#d4edda' : '#f8d7da';
+            messageDiv.style.color = type === 'success' ? '#155724' : '#721c24';
+            messageDiv.style.border = '1px solid ' + (type === 'success' ? '#c3e6cb' : '#f5c6cb');
+        }
+        
+        function hideMessage() {
+            messageDiv.style.display = 'none';
+        }
+        
+        // 获取Cookie
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    })();
+    </script>
+    {% endif %}
 
 </body>
 </html>

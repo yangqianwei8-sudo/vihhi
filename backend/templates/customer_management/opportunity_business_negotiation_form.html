@@ -1,53 +1,42 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
 
 {% load static %}
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
-<style>
-    .form-card {
-        max-width: 1000px;
-        margin: 0 auto;
-    }
-</style>
+
 {% endblock %}
 
 
 
-{% block module_content %}
-<div class="workspace-content">
-    {% if opportunity %}
-    <div class="info-card mb-4">
-        <div class="info-card-header">
-            <h5 class="info-card-title">关联商机信息</h5>
-        </div>
-        <div class="info-card-body">
-            <div class="info-grid info-grid-2">
-                <div class="info-item">
-                    <span class="info-label">商机名称</span>
-                    <span class="info-value">{{ opportunity.name }}</span>
+{% block cm_title %}商务谈判表单{% endblock %}
+{% block cm_subtitle %}<span class="pm-subtitle">请填写表单信息</span>{% endblock %}
+
+{% block cm_actions %}
+<a href="{% url 'opportunity_pages:opportunity_business_negotiation' %}" class="list-btn">返回</a>
+{% endblock %}
+
+{% block cm_content %}
+<div class="form-container">
+{% if opportunity %}
+    <div class="form-section">
+            <div class="form-section-title">关联商机信息</div>
+            <div class="form-row" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="form-group"><label class="form-label">商机名称</label><div class="form-control" style="background: #F5F5F5; color: #666666;">{{ opportunity.name }}</div></div>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">商机编号</span>
-                    <span class="info-value">{{ opportunity.opportunity_number|default:'未编号' }}</span>
+                <div class="form-group"><label class="form-label">商机编号</label><div class="form-control" style="background: #F5F5F5; color: #666666;">{{ opportunity.opportunity_number|default:'未编号' }}</div></div>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">关联客户</span>
-                    <span class="info-value">{{ opportunity.client.name|default:'未关联' }}</span>
+                <div class="form-group"><label class="form-label">关联客户</label><div class="form-control" style="background: #F5F5F5; color: #666666;">{{ opportunity.client.name|default:'未关联' }}</div></div>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">当前状态</span>
-                    <span class="info-value">
-                        <span class="badge bg-primary">{{ opportunity.get_status_display }}</span>
-                    </span>
+                <div class="form-group">
+                    <div class="form-group"><label class="form-label">当前状态</label><div class="form-control" style="background: #F5F5F5; color: #666666; padding: 8px 12px;">{{ opportunity.get_status_display }}</div></div>
                 </div>
-            </div>
-        </div>
-    </div>
+          </div>
     {% endif %}
     
-    <form method="post"  id="negotiationForm" novalidate>
+    <form method="post" class="form-card" id="negotiationForm" novalidate>
         {% csrf_token %}
         
         <div class="form-section">
@@ -125,12 +114,10 @@
             </div>
         </div>
         
-        <!-- 提交按钮 -->
-        <div class="d-flex justify-content-end gap-2 mt-4">
-            <button type="submit" class="btn btn-primary">保存商务洽谈登记</button>
-            <a href="{% url 'business_pages:opportunity_business_negotiation' %}" class="btn btn-secondary">取消</a>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #E0E0E0;">
+            <button type="submit" class="list-btn list-btn-primary">保存商务洽谈登记</button>
+            <a href="{% url 'opportunity_pages:opportunity_business_negotiation' %}" class="list-btn">取消</a>
         </div>
     </form>
 </div>
 {% endblock %}
-

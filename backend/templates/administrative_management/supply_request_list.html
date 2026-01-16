@@ -1,114 +1,213 @@
-{% extends "shared/list_page_base.html" %}
-{% comment %}
-领用管理列表页面模板 (Supply Request List Template)
+{% extends "administrative_management/base.html" %}
 
-功能说明：
-- 展示领用申请记录的列表页面
-- 支持按状态等多维度筛选
-- 支持领用申请的查看、编辑、审批、出库等操作
-- 包含复选框功能，支持批量操作
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-主要功能：
-1. 筛选功能：
-   - 状态筛选：全部、草稿、待审批、已批准、已拒绝、已出库等
-2. 表格展示：申请单号、申请人、申请日期、用途、状态、创建时间、操作
-3. 复选框功能：支持全选和批量操作（继承自list_page_base.html）
-4. 操作功能：查看详情、编辑、审批、出库
-{% endcomment %}
-{% load static %}
-
-{% block list_page_title %}领用管理{% endblock %}
-
-{% block list_page_actions %}
-{% if can_create %}
-<a href="{% url 'admin_pages:supply_request_create' %}" class="btn btn-primary">
-    <i class="bi bi-plus-circle"></i> 创建申请
-</a>
-{% endif %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
 {% endblock %}
 
-{% block search_placeholder %}搜索申请单号、用途说明...{% endblock %}
-
-{% block reset_url %}{% url 'admin_pages:supply_request_list' %}{% endblock %}
-
-<!-- 表格复选框列 -->
-{% block list_page_table_checkbox_header %}
-<th style="width: 40px;">
-    <input type="checkbox" id="selectAll" title="全选/取消全选">
-</th>
+{% block extra_css %}
+<style>
+    .page-title {
+        font-size: var(--font-size-2xl);
+        font-weight: 700;
+        margin: 0 0 var(--spacing-sm) 0;
+    }
+    .page-description {
+        font-size: var(--font-size-base);
+        opacity: 0.9;
+        margin: 0;
+    }
+    .content-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--vh-text-muted);
+    }
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: var(--spacing-md);
+        opacity: 0.5;
+    }
+    .empty-state-title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--vh-text);
+        margin-bottom: var(--spacing-sm);
+    }
+    .empty-state-text {
+        font-size: var(--font-size-base);
+        color: var(--vh-text-muted);
+        margin-bottom: var(--spacing-lg);
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-draft { background: #e7f3ff; color: #0066cc; }
+    .status-pending_approval { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d1e7dd; color: #0f5132; }
+    .status-rejected { background: #f8d7da; color: #842029; }
+    .status-issued { background: #d1e7dd; color: #0f5132; }
+</style>
 {% endblock %}
 
-{% block list_page_table_headers %}
-<th style="width: 10%;">申请单号</th>
-<th style="width: 10%;">申请人</th>
-<th style="width: 10%;">申请日期</th>
-<th style="width: 20%;">用途</th>
-<th style="width: 10%;">状态</th>
-<th style="width: 12%;">创建时间</th>
-{% endblock %}
-
-{% block list_page_table_checkbox_cell %}
-<td>
-    <input type="checkbox" class="row-checkbox" value="{{ item.id }}" title="选择此项">
-</td>
-{% endblock %}
-
-{% block list_page_table_row_content %}
-<td>
-    <a href="{% url 'admin_pages:supply_request_detail' request_id=item.id %}" class="text-decoration-none">
-        <code>{{ item.request_number }}</code>
-    </a>
-</td>
-<td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
-<td>{{ item.request_date|date:"Y-m-d" }}</td>
-<td>{{ item.purpose|truncatewords:10 }}</td>
-<td>
-    {% if item.status == 'draft' %}
-        <span class="badge bg-secondary">草稿</span>
-    {% elif item.status == 'pending_approval' %}
-        <span class="badge bg-warning">待审批</span>
-    {% elif item.status == 'approved' %}
-        <span class="badge bg-success">已批准</span>
-    {% elif item.status == 'rejected' %}
-        <span class="badge bg-danger">已拒绝</span>
-    {% elif item.status == 'issued' %}
-        <span class="badge bg-info">已出库</span>
-    {% else %}
-        <span class="badge bg-secondary">{{ item.get_status_display }}</span>
-    {% endif %}
-</td>
-<td>{{ item.created_time|date:"Y-m-d H:i" }}</td>
-<td>
-    <div class="list-page-table-actions">
-        <a href="{% url 'admin_pages:supply_request_detail' request_id=item.id %}" class="action-view" title="查看详情">
-            <i class="bi bi-eye"></i>
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <a href="{% url 'admin_pages:supply_request_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> 创建申请
         </a>
-        {% if item.status in 'draft,pending_approval' and item.applicant == request.user %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'admin_pages:supply_request_update' request_id=item.id %}" class="action-edit" title="编辑">
-            <i class="bi bi-pencil"></i>
-        </a>
+    </div>
+
+    <div class="content-card">
+        
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="搜索申请单号、用途说明..." value="{{ search }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">全部状态</option>
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a href="{% url 'admin_pages:supply_request_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 清除
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>申请单号</th>
+                        <th>申请人</th>
+                        <th>申请日期</th>
+                        <th>用途说明</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for request_obj in page_obj %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'admin_pages:supply_request_detail' request_id=request_obj.id %}" class="text-decoration-none">
+                                <code>{{ request_obj.request_number }}</code>
+                            </a>
+                        </td>
+                        <td>{{ request_obj.applicant.get_full_name|default:request_obj.applicant.username }}</td>
+                        <td>{{ request_obj.request_date|date:"Y-m-d" }}</td>
+                        <td>{{ request_obj.purpose|truncatewords:10|default:"-" }}</td>
+                        <td>
+                            <span class="status-badge status-{{ request_obj.status }}">
+                                {{ request_obj.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ request_obj.created_time|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'admin_pages:supply_request_detail' request_id=request_obj.id %}" class="btn btn-outline-primary" title="查看详情">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if request_obj.status in 'draft,pending_approval' and request_obj.applicant == request.user %}
+                                <a href="{% url 'admin_pages:supply_request_update' request_id=request_obj.id %}" class="btn btn-outline-secondary" title="编辑">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                                {% if request_obj.status == 'pending_approval' %}
+                                <a href="{% url 'admin_pages:supply_request_approve' request_id=request_obj.id %}" class="btn btn-outline-success" title="审批">
+                                    <i class="bi bi-check-circle"></i>
+                                </a>
+                                {% endif %}
+                                {% if request_obj.status == 'approved' %}
+                                <a href="{% url 'admin_pages:supply_request_issue' request_id=request_obj.id %}" class="btn btn-outline-info" title="发放">
+                                    <i class="bi bi-box-arrow-up"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📋</div>
+                                <div class="empty-state-title">暂无数据</div>
+                                <div class="empty-state-text">当前筛选条件下没有找到领用申请记录</div>
+                                <a href="{% url 'admin_pages:supply_request_create' %}" class="btn btn-primary mt-3">
+                                    <i class="bi bi-plus-circle"></i> 创建第一个申请
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">末页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
         {% endif %}
-        {% if item.status == 'pending_approval' %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'admin_pages:supply_request_approve' request_id=item.id %}" class="action-edit" title="审批">
-            <i class="bi bi-check-circle"></i>
-        </a>
-        {% endif %}
-        {% if item.status == 'approved' %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'admin_pages:supply_request_issue' request_id=item.id %}" class="action-view" title="出库">
-            <i class="bi bi-box-arrow-up"></i>
-        </a>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <div class="empty-state-title">暂无数据</div>
+            <div class="empty-state-text">当前筛选条件下没有找到领用申请记录</div>
+            <a href="{% url 'admin_pages:supply_request_create' %}" class="btn btn-primary mt-3">
+                <i class="bi bi-plus-circle"></i> 创建第一个申请
+            </a>
+        </div>
         {% endif %}
     </div>
-</td>
+</div>
 {% endblock %}
-
-{% block empty_colspan %}8{% endblock %}
-
-{% block empty_table_message %}暂无数据{% endblock %}
-
-{% block empty_message %}暂无数据{% endblock %}
-
-{% block empty_create_url %}{% url 'admin_pages:supply_request_create' %}{% endblock %}

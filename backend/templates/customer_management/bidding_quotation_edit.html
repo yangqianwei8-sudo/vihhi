@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
@@ -70,11 +70,15 @@
 </style>
 {% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'opportunity_pages:opportunity_management' %}">商机管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}">投标报价</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="workspace-content">
-    <!-- 页面标题 -->
+    
     <div class="center-hero mb-4">
         <div style="position: relative; z-index: 1;">
             <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
@@ -82,11 +86,9 @@
         </div>
     </div>
 
-    <!-- 表单 -->
     <form method="post" class="form-card" id="biddingQuotationForm" novalidate>
         {% csrf_token %}
         
-        <!-- 表单错误提示 -->
         {% if messages %}
         <div class="mb-4">
             {% for message in messages %}
@@ -98,7 +100,6 @@
         </div>
         {% endif %}
         
-        <!-- 基本信息 -->
         <div class="form-section">
             <h5>基本信息</h5>
             <div class="row">
@@ -147,7 +148,6 @@
             </div>
         </div>
         
-        <!-- 招标要求 -->
         <div class="form-section">
             <h5>招标要求</h5>
             <div class="form-group mb-3">
@@ -157,7 +157,6 @@
             </div>
         </div>
         
-        <!-- 技术标信息 -->
         <div class="form-section">
             <h5>技术标信息</h5>
             <div class="row">
@@ -192,7 +191,6 @@
             </div>
         </div>
         
-        <!-- 商务标信息 -->
         <div class="form-section">
             <h5>商务标信息</h5>
             <div class="row">
@@ -220,7 +218,6 @@
                 </div>
             </div>
             
-            <!-- 模式参数配置 -->
             <div id="mode_params_rate" class="mode-params">
                 <div class="row">
                     <div class="col-md-6">
@@ -272,7 +269,6 @@
                 </div>
             </div>
             
-            <!-- 封顶费 -->
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group mb-3">
@@ -295,7 +291,6 @@
                 </div>
             </div>
             
-            <!-- 计算结果显示 -->
             <div id="calculation_result" class="calculation-result" style="display: none;">
                 <strong>计算结果：</strong>
                 <div id="service_fee_display" style="font-size: 20px; color: #dc3545; margin-top: 8px;"></div>
@@ -328,7 +323,6 @@
             </div>
         </div>
         
-        <!-- 类似业绩 -->
         {% if completed_projects %}
         <div class="form-section">
             <h5>类似业绩</h5>
@@ -347,7 +341,6 @@
         </div>
         {% endif %}
         
-        <!-- 备注 -->
         <div class="form-section">
             <h5>备注说明</h5>
             <div class="form-group mb-3">
@@ -357,7 +350,6 @@
             </div>
         </div>
         
-        <!-- 表单操作按钮 -->
         <div class="d-flex justify-content-between align-items-center mt-4">
             <a href="{% url 'business_pages:bidding_quotation_detail' bidding_quotation.id %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> 返回详情
@@ -474,4 +466,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

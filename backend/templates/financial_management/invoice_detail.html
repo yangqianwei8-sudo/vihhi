@@ -1,17 +1,20 @@
-{% extends "shared/module_base.html" %}
+{% extends "financial_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:invoice_management' %}">发票管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ invoice.invoice_number }}</li>
+{% endblock %}
 
 {% block extra_css %}
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-        <!-- 操作按钮 -->
+        
     <div class="text-end mb-4">
         <a href="{% url 'finance_pages:invoice_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
@@ -21,7 +24,6 @@
         </a>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">基本信息</h5>
@@ -63,7 +65,6 @@
         </div>
     </div>
 
-    <!-- 金额信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">金额信息</h5>
@@ -89,7 +90,6 @@
         </div>
     </div>
 
-    <!-- 单位信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">单位信息</h5>
@@ -110,7 +110,6 @@
         </div>
     </div>
 
-    <!-- 认证信息 -->
     {% if invoice.verified_by or invoice.verified_time %}
     <div class="info-card">
         <div class="info-card-header">
@@ -135,7 +134,6 @@
     </div>
     {% endif %}
 
-    <!-- 附件信息 -->
     {% if invoice.attachment %}
     <div class="info-card">
         <div class="info-card-header">
@@ -155,7 +153,6 @@
     </div>
     {% endif %}
 
-    <!-- 备注信息 -->
     {% if invoice.notes %}
     <div class="info-card">
         <div class="info-card-header">
@@ -167,7 +164,6 @@
     </div>
     {% endif %}
 
-    <!-- 其他信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">其他信息</h5>
@@ -187,4 +183,3 @@
     </div>
 </div>
 {% endblock %}
-

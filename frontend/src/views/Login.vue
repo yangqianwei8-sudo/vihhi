@@ -31,12 +31,11 @@
             </div>
           </div>
           <h2 class="welcome-title">维海星图</h2>
-          <p class="welcome-subtitle">{{ isRegisterMode ? '注册新账号' : '请登录您的账号以继续使用系统' }}</p>
+          <p class="welcome-subtitle">请登录您的账号以继续使用系统</p>
         </div>
         
         <!-- 登录表单 -->
         <el-form 
-          v-if="!isRegisterMode"
           :model="loginForm" 
           :rules="rules" 
           ref="loginFormRef"
@@ -105,152 +104,6 @@
               <span v-else>登录中...</span>
             </el-button>
           </el-form-item>
-          
-          <!-- 注册入口 -->
-          <div class="register-link">
-            <span class="register-text">还没有账号？</span>
-            <a href="#" class="register-button" @click.prevent="isRegisterMode = true">
-              立即注册
-            </a>
-          </div>
-        </el-form>
-        
-        <!-- 注册表单 -->
-        <el-form 
-          v-if="isRegisterMode"
-          :model="registerForm" 
-          :rules="registerRules" 
-          ref="registerFormRef"
-          class="login-form"
-          @submit.prevent="handleRegister"
-        >
-          <el-form-item prop="phone">
-            <div class="input-wrapper">
-              <el-input 
-                v-model="registerForm.phone" 
-                placeholder="请输入手机号"
-                @keyup.enter="handleRegister"
-                size="large"
-                class="login-input"
-                clearable
-                maxlength="11"
-              >
-                <template #prefix>
-                  <el-icon class="input-icon"><Phone /></el-icon>
-                </template>
-              </el-input>
-            </div>
-          </el-form-item>
-          
-          <el-form-item prop="verificationCode">
-            <div class="input-wrapper">
-              <el-input 
-                v-model="registerForm.verificationCode" 
-                placeholder="请输入验证码"
-                @keyup.enter="handleRegister"
-                size="large"
-                class="login-input verification-code-input"
-                clearable
-                maxlength="6"
-              >
-                <template #prefix>
-                  <el-icon class="input-icon"><Message /></el-icon>
-                </template>
-                <template #suffix>
-                  <el-button 
-                    :disabled="codeCountdown > 0 || sendingCode"
-                    :loading="sendingCode"
-                    @click="handleSendCode"
-                    size="small"
-                    type="primary"
-                    text
-                    class="code-button"
-                  >
-                    {{ codeCountdown > 0 ? `${codeCountdown}秒后重试` : '获取验证码' }}
-                  </el-button>
-                </template>
-              </el-input>
-            </div>
-          </el-form-item>
-          
-          <el-form-item prop="password">
-            <div class="input-wrapper">
-              <el-input 
-                type="password" 
-                v-model="registerForm.password" 
-                placeholder="请输入密码（至少6位）"
-                @keyup.enter="handleRegister"
-                show-password
-                size="large"
-                class="login-input"
-                clearable
-              >
-                <template #prefix>
-                  <el-icon class="input-icon"><Lock /></el-icon>
-                </template>
-              </el-input>
-            </div>
-          </el-form-item>
-          
-          <el-form-item prop="confirmPassword">
-            <div class="input-wrapper">
-              <el-input 
-                type="password" 
-                v-model="registerForm.confirmPassword" 
-                placeholder="请再次输入密码"
-                @keyup.enter="handleRegister"
-                show-password
-                size="large"
-                class="login-input"
-                clearable
-              >
-                <template #prefix>
-                  <el-icon class="input-icon"><Lock /></el-icon>
-                </template>
-              </el-input>
-            </div>
-          </el-form-item>
-          
-          <el-form-item prop="clientType">
-            <div class="input-wrapper">
-              <el-select 
-                v-model="registerForm.clientType" 
-                placeholder="请选择账户类型"
-                size="large"
-                class="login-input"
-                style="width: 100%"
-              >
-                <el-option label="服务单位" value="service_provider" />
-                <el-option label="委托单位" value="client_owner" />
-                <el-option label="设计单位" value="design_partner" />
-              </el-select>
-            </div>
-          </el-form-item>
-          
-          <el-form-item>
-            <el-button 
-              type="primary" 
-              @click="handleRegister" 
-              :loading="registering"
-              size="large"
-              class="login-button"
-              native-type="submit"
-            >
-              <span v-if="!registering">
-                <el-icon class="button-icon"><Right /></el-icon>
-                立即注册
-              </span>
-              <span v-else>注册中...</span>
-            </el-button>
-          </el-form-item>
-          
-          <!-- 返回登录入口 -->
-          <div class="register-link">
-            <span class="register-text">已有账号？</span>
-            <a href="#" class="register-button" @click.prevent="isRegisterMode = false">
-              立即登录
-            </a>
-          </div>
         </el-form>
         
         <!-- 错误提示 -->
@@ -283,9 +136,9 @@
 </template>
 
 <script>
-import { login, sendVerificationCode, verifyCode, register } from '../api/system'
+import { login } from '../api/system'
 import { ElMessage } from 'element-plus'
-import { User, Lock, InfoFilled, Right, Phone, Message } from '@element-plus/icons-vue'
+import { User, Lock, InfoFilled, Right } from '@element-plus/icons-vue'
 
 export default {
   name: 'Login',
@@ -293,52 +146,17 @@ export default {
     User,
     Lock,
     InfoFilled,
-    Right,
-    Phone,
-    Message
+    Right
   },
   data() {
-    // 验证手机号
-    const validatePhone = (rule, value, callback) => {
-      if (!value) {
-        callback(new Error('请输入手机号'))
-      } else if (!/^1[3-9]\d{9}$/.test(value)) {
-        callback(new Error('请输入正确的手机号'))
-      } else {
-        callback()
-      }
-    }
-    // 验证确认密码
-    const validateConfirmPassword = (rule, value, callback) => {
-      if (!value) {
-        callback(new Error('请再次输入密码'))
-      } else if (value !== this.registerForm.password) {
-        callback(new Error('两次输入的密码不一致'))
-      } else {
-        callback()
-      }
-    }
-    
     return {
-      isRegisterMode: false,
       loginForm: {
         username: '',
         password: ''
       },
-      registerForm: {
-        phone: '',
-        verificationCode: '',
-        password: '',
-        confirmPassword: '',
-        clientType: ''
-      },
       loading: false,
-      registering: false,
       errorMessage: '',
       rememberMe: false,
-      sendingCode: false,
-      codeCountdown: 0,
-      countdownTimer: null,
       rules: {
         username: [
           { required: true, message: '请输入用户名', trigger: 'blur' }
@@ -346,27 +164,6 @@ export default {
         password: [
           { required: true, message: '请输入密码', trigger: 'blur' },
           { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
-        ]
-      },
-      registerRules: {
-        phone: [
-          { required: true, message: '请输入手机号', trigger: 'blur' },
-          { validator: validatePhone, trigger: 'blur' }
-        ],
-        verificationCode: [
-          { required: true, message: '请输入验证码', trigger: 'blur' },
-          { len: 6, message: '验证码为6位数字', trigger: 'blur' }
-        ],
-        password: [
-          { required: true, message: '请输入密码', trigger: 'blur' },
-          { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
-        ],
-        confirmPassword: [
-          { required: true, message: '请再次输入密码', trigger: 'blur' },
-          { validator: validateConfirmPassword, trigger: 'blur' }
-        ],
-        clientType: [
-          { required: true, message: '请选择账户类型', trigger: 'change' }
         ]
       }
     }
@@ -379,12 +176,6 @@ export default {
       this.loginForm.username = rememberedUsername
       this.loginForm.password = rememberedPassword
       this.rememberMe = true
-    }
-  },
-  beforeUnmount() {
-    // 清理倒计时定时器
-    if (this.countdownTimer) {
-      clearInterval(this.countdownTimer)
     }
   },
   methods: {
@@ -467,124 +258,6 @@ export default {
     },
     handleContact() {
       ElMessage.info('请联系系统管理员获取帮助')
-    },
-    async handleSendCode() {
-      // 验证手机号
-      if (!this.registerForm.phone) {
-        ElMessage.warning('请先输入手机号')
-        return
-      }
-      if (!/^1[3-9]\d{9}$/.test(this.registerForm.phone)) {
-        ElMessage.warning('请输入正确的手机号')
-        return
-      }
-      
-      this.sendingCode = true
-      try {
-        const response = await sendVerificationCode(this.registerForm.phone)
-        if (response.success) {
-          ElMessage.success(response.message || '验证码已发送')
-          // 开始倒计时
-          this.codeCountdown = 60
-          this.countdownTimer = setInterval(() => {
-            this.codeCountdown--
-            if (this.codeCountdown <= 0) {
-              clearInterval(this.countdownTimer)
-              this.countdownTimer = null
-            }
-          }, 1000)
-        } else {
-          ElMessage.error(response.message || '发送失败，请稍后重试')
-        }
-      } catch (error) {
-        console.error('发送验证码错误:', error)
-        ElMessage.error(error.message || '发送失败，请稍后重试')
-      } finally {
-        this.sendingCode = false
-      }
-    },
-    async handleRegister() {
-      this.$refs.registerFormRef.validate(async (valid) => {
-        if (!valid) {
-          return false
-        }
-        
-        this.registering = true
-        this.errorMessage = ''
-        
-        try {
-          // 先验证验证码
-          const verifyResponse = await verifyCode(this.registerForm.phone, this.registerForm.verificationCode)
-          if (!verifyResponse.success) {
-            this.errorMessage = verifyResponse.message || '验证码错误'
-            ElMessage.error(this.errorMessage)
-            this.registering = false
-            return
-          }
-          
-          // 提交注册
-          const formData = new FormData()
-          formData.append('phone', this.registerForm.phone)
-          formData.append('password', this.registerForm.password)
-          formData.append('confirm_password', this.registerForm.confirmPassword)
-          formData.append('client_type', this.registerForm.clientType)
-          formData.append('verification_code', this.registerForm.verificationCode)
-          
-          const response = await fetch('/register/', {
-            method: 'POST',
-            body: formData,
-            headers: {
-              'X-CSRFToken': this.getCsrfToken()
-            }
-          })
-          
-          if (response.ok) {
-            const result = await response.text()
-            // 如果返回的是HTML（重定向到成功页面），则跳转
-            if (response.redirected || response.url.includes('submitted')) {
-              window.location.href = '/register/submitted/'
-            } else {
-              ElMessage.success('注册申请已提交，待管理员审核')
-              // 切换到登录模式
-              this.isRegisterMode = false
-              // 清空注册表单
-              this.registerForm = {
-                phone: '',
-                verificationCode: '',
-                password: '',
-                confirmPassword: '',
-                clientType: ''
-              }
-            }
-          } else {
-            const errorData = await response.json().catch(() => ({}))
-            this.errorMessage = errorData.message || '注册失败，请稍后重试'
-            ElMessage.error(this.errorMessage)
-          }
-        } catch (error) {
-          console.error('注册错误:', error)
-          this.errorMessage = error.message || '注册失败，请稍后重试'
-          ElMessage.error(this.errorMessage)
-        } finally {
-          this.registering = false
-        }
-      })
-    },
-    getCsrfToken() {
-      // 从cookie中获取CSRF token
-      const name = 'csrftoken'
-      let cookieValue = null
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';')
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim()
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1))
-            break
-          }
-        }
-      }
-      return cookieValue
     },
     getParticleStyle(index) {
       const size = Math.random() * 4 + 2
@@ -958,45 +631,6 @@ export default {
   font-weight: 400;
 }
 
-.verification-code-input :deep(.el-input__wrapper) {
-  padding-right: 100px;
-}
-
-.code-button {
-  font-size: 13px;
-  padding: 4px 12px;
-  min-width: 90px;
-}
-
-.code-button.is-disabled {
-  color: #9CA3AF;
-}
-
-.register-link {
-  text-align: center;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #E4E8F4;
-}
-
-.register-text {
-  color: #6B7280;
-  font-size: 14px;
-  margin-right: 8px;
-}
-
-.register-button {
-  color: #1F2A57;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 600;
-  transition: color 0.3s;
-}
-
-.register-button:hover {
-  color: #1F4A85;
-  text-decoration: underline;
-}
 
 .login-form {
   margin-top: 40px;

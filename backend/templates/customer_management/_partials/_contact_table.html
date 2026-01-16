@@ -1,0 +1,98 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th width="40">
+          <input type="checkbox" id="selectAll" class="form-check-input">
+        </th>
+        <th>客户名称</th>
+        <th>联系人姓名</th>
+        <th>人员角色</th>
+        <th>关系等级</th>
+        <th>职务</th>
+        <th>电话</th>
+        <th>邮箱</th>
+        <th>创建时间</th>
+        <th width="150">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for contact in page_obj %}
+      <tr>
+        <td>
+          <input type="checkbox" name="contact_ids" value="{{ contact.id }}" class="form-check-input row-checkbox">
+        </td>
+        <td>
+          <a href="{% url 'business_pages:customer_detail' contact.client.id %}">
+            {{ contact.client.name }}
+          </a>
+        </td>
+        <td>
+          <a href="{% url 'business_pages:contact_detail' contact.id %}">
+            {{ contact.name }}
+          </a>
+        </td>
+        <td>
+          {% if contact.role %}
+          <span class="list-badge">{{ contact.get_role_display }}</span>
+          {% else %}
+          <span style="color: #999999;">未设置</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="list-badge">{{ contact.get_relationship_level_display }}</span>
+        </td>
+        <td>{{ contact.position|default:"未填写" }}</td>
+        <td>{{ contact.phone|default:"未填写" }}</td>
+        <td style="color: #666666;">{{ contact.email|default:"未填写" }}</td>
+        <td style="color: #666666;">{{ contact.created_time|date:"Y-m-d" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'business_pages:contact_detail' contact.id %}" class="list-btn" title="查看">查看</a>
+            {% if can_create %}
+            <a href="{% url 'business_pages:contact_edit' contact.id %}" class="list-btn" title="编辑">编辑</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="10" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无联系人数据</div>
+          <div class="list-empty-hint">请创建第一个联系人开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if role %}&role={{ role }}{% endif %}{% if relationship_level %}&relationship_level={{ relationship_level }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if role %}&role={{ role }}{% endif %}{% if relationship_level %}&relationship_level={{ relationship_level }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if role %}&role={{ role }}{% endif %}{% if relationship_level %}&relationship_level={{ relationship_level }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

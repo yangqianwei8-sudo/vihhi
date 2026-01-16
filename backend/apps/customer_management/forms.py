@@ -238,63 +238,46 @@ class ContractForm(forms.ModelForm):
         
         if 'project_number' in self.fields:
             self.fields['project_number'].required = False
-            # 自动生成项目编号：HT-YYYY-NNNN格式（与业务委托书一致）
+            # 自动生成项目编号：YYYYMMDD-0000格式
             if not self.instance or not self.instance.pk or not self.instance.project_number:
-                # 新建模式：优先从关联的商机赢单的项目编号获取
-                project_number_initial = None
+                # 新建模式：自动生成项目编号
+                from datetime import datetime
+                from django.db.models import Max
+                from backend.apps.customer_management.models import AuthorizationLetter
                 
-                # 如果表单数据中有opportunity字段，尝试从商机获取项目编号
-                if self.data and 'opportunity' in self.data and self.data['opportunity']:
+                current_date = datetime.now().strftime('%Y%m%d')
+                date_prefix = f'{current_date}-'
+                
+                # 查找当天最大项目编号（从业务委托书和合同中查找）
+                max_letter = AuthorizationLetter.objects.filter(
+                    project_number__startswith=date_prefix
+                ).aggregate(max_num=Max('project_number'))['max_num']
+                
+                max_contract = BusinessContract.objects.filter(
+                    project_number__startswith=date_prefix
+                ).exclude(id=self.instance.id if self.instance.id else None).aggregate(max_num=Max('project_number'))['max_num']
+                
+                # 取两者中的最大值
+                max_project_number = None
+                if max_letter and max_contract:
+                    max_project_number = max(max_letter, max_contract)
+                elif max_letter:
+                    max_project_number = max_letter
+                elif max_contract:
+                    max_project_number = max_contract
+                
+                if max_project_number:
                     try:
-                        # BusinessOpportunity已在文件顶部导入
-                        opportunity = BusinessOpportunity.objects.get(id=self.data['opportunity'])
-                        if opportunity.project_number:
-                            project_number_initial = opportunity.project_number
-                    except (BusinessOpportunity.DoesNotExist, ValueError):
-                        pass
-                
-                # 如果没有从商机获取到，则自动生成项目编号
-                if not project_number_initial:
-                    from datetime import datetime
-                    from django.db.models import Max
-                    # AuthorizationLetter和BusinessOpportunity已在文件顶部导入
-                    
-                    current_year = datetime.now().strftime('%Y')
-                    year_prefix = f'HT-{current_year}-'
-                    
-                    # 查找当年最大项目编号（从业务委托书和合同中查找）
-                    # 注意：商机项目编号格式为 YYYYMMDD-NNNN，与合同/业务委托书的 HT-YYYY-NNNN 格式不同
-                    # 因此不将商机项目编号纳入比较范围
-                    max_letter = AuthorizationLetter.objects.filter(
-                        project_number__startswith=year_prefix
-                    ).aggregate(max_num=Max('project_number'))['max_num']
-                    
-                    max_contract = BusinessContract.objects.filter(
-                        project_number__startswith=year_prefix
-                    ).exclude(id=self.instance.id if self.instance.id else None).aggregate(max_num=Max('project_number'))['max_num']
-                    
-                    # 取两者中的最大值
-                    max_project_number = None
-                    if max_letter and max_contract:
-                        max_project_number = max(max_letter, max_contract)
-                    elif max_letter:
-                        max_project_number = max_letter
-                    elif max_contract:
-                        max_project_number = max_contract
-                    
-                    if max_project_number:
-                        try:
-                            # 提取序列号，格式：HT-YYYY-NNNN
-                            seq_str = max_project_number.split('-')[-1]
-                            seq = int(seq_str) + 1
-                        except (ValueError, IndexError):
-                            seq = 1
-                    else:
+                        # 提取序列号，格式：YYYYMMDD-0000
+                        seq_str = max_project_number.split('-')[-1]
+                        seq = int(seq_str) + 1
+                    except (ValueError, IndexError):
                         seq = 1
-                    
-                    project_number_initial = f'{year_prefix}{seq:04d}'
+                else:
+                    seq = 1
                 
                 # 设置初始值
+                project_number_initial = f'{date_prefix}{seq:04d}'
                 self.fields['project_number'].initial = project_number_initial
                 
                 # 自动生成合同编号：HT-项目编号
@@ -363,17 +346,14 @@ class CustomerForm(forms.ModelForm):
     class Meta:
         model = Client
         fields = [
-            'customer_number', 'name', 'unified_credit_code',
+            'name', 'unified_credit_code',
             'legal_representative', 'established_date', 'registered_capital',
             'company_phone', 'company_email', 'company_address',
             'grade', 'client_type',
             'region', 'source',
             'responsible_user',
-            'legal_risk_level', 'litigation_count', 'executed_person_count',
-            'final_case_count', 'consumption_limit_count',
         ]
         widgets = {
-            'customer_number': forms.TextInput(attrs={'class': 'form-control', 'readonly': True}),
             'name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
             'unified_credit_code': forms.TextInput(attrs={'class': 'form-control'}),
             'legal_representative': forms.TextInput(attrs={'class': 'form-control'}),
@@ -387,51 +367,11 @@ class CustomerForm(forms.ModelForm):
             'region': forms.TextInput(attrs={'class': 'form-control'}),
             'source': forms.Select(attrs={'class': 'form-select'}),
             'responsible_user': forms.Select(attrs={'class': 'form-select'}),
-            'legal_risk_level': forms.TextInput(attrs={'class': 'form-control', 'readonly': True}),
-            'litigation_count': forms.NumberInput(attrs={'class': 'form-control', 'readonly': True, 'min': 0}),
-            'executed_person_count': forms.NumberInput(attrs={'class': 'form-control', 'readonly': True, 'min': 0}),
-            'final_case_count': forms.NumberInput(attrs={'class': 'form-control', 'readonly': True, 'min': 0}),
-            'consumption_limit_count': forms.NumberInput(attrs={'class': 'form-control', 'readonly': True, 'min': 0}),
         }
     
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        
-        # 设置客户编号字段为只读（自动生成，不允许手动修改）
-        self.fields['customer_number'].required = False
-        # 创建模式和编辑模式都显示字段，但都是只读
-        if not self.instance or not self.instance.pk:
-            # 创建模式：显示字段，提示保存后自动生成
-            self.fields['customer_number'].widget = forms.TextInput(attrs={
-                'class': 'form-control',
-                'readonly': True,
-                'placeholder': '保存后系统自动生成'
-            })
-        else:
-            # 编辑模式：显示实际的客户编号（只读）
-            # 如果客户编号为空，自动生成并设置初始值（用于显示，保存时会正式生成）
-            if not self.instance.customer_number:
-                try:
-                    # 生成客户编号（仅在内存中，用于显示）
-                    generated_number = self.instance.generate_customer_number()
-                    # 设置表单字段的初始值，这样在表单中就能看到生成的编号
-                    self.fields['customer_number'].initial = generated_number
-                    # 同时更新instance的值（用于后续保存）
-                    self.instance.customer_number = generated_number
-                except Exception:
-                    # 如果生成失败，留空显示提示
-                    pass
-                placeholder = '系统自动生成'
-            else:
-                placeholder = ''
-            
-            self.fields['customer_number'].widget = forms.TextInput(attrs={
-                'class': 'form-control',
-                'readonly': True,
-                'placeholder': placeholder
-            })
-        
         # 设置空选项
         self.fields['grade'].empty_label = '-- 自动计算 --'
         # client_type 设为必填，不允许为空
@@ -439,29 +379,7 @@ class CustomerForm(forms.ModelForm):
         self.fields['client_type'].empty_label = None  # 不允许空选项
         self.fields['source'].empty_label = '-- 选择来源 --'
         # 设置字段标签
-        self.fields['company_address'].label = '注册地址'
         self.fields['region'].label = '办公地址'
-        
-        # 设置法律风险字段为只读
-        self.fields['legal_risk_level'].required = False
-        self.fields['litigation_count'].required = False
-        self.fields['executed_person_count'].required = False
-        self.fields['final_case_count'].required = False
-        self.fields['consumption_limit_count'].required = False
-        
-        # 添加负责部门字段（只读，根据负责人自动显示）
-        self.fields['responsible_department'] = forms.CharField(
-            required=False,
-            label='负责部门',
-            widget=forms.TextInput(attrs={
-                'class': 'form-control',
-                'readonly': True,
-                'placeholder': '选择负责人后自动显示'
-            })
-        )
-        # 如果是编辑模式，设置负责部门的初始值
-        if self.instance and self.instance.pk and self.instance.responsible_user and self.instance.responsible_user.department:
-            self.fields['responsible_department'].initial = self.instance.responsible_user.department.name
         
         # 设置负责人字段
         from backend.apps.system_management.models import User
@@ -590,7 +508,7 @@ class ContactForm(forms.ModelForm):
     class Meta:
         model = ClientContact
         fields = [
-            'contact_number', 'client', 'name', 'gender', 'birthplace',
+            'client', 'name', 'gender', 'birthplace',
             'phone', 'email', 'wechat',
             'office_address',
             'role', 'relationship_level', 'decision_influence',
@@ -602,17 +520,7 @@ class ContactForm(forms.ModelForm):
             'resume_file', 'resume_source',
         ]
         widgets = {
-            'contact_number': forms.TextInput(attrs={
-                'class': 'form-control',
-                'readonly': True,
-                'placeholder': '保存后系统自动生成'
-            }),
-            'client': forms.Select(attrs={
-                'class': 'form-select client-search-select', 
-                'required': True,
-                'data-search': 'true',
-                'data-api-url': '/api/customer/clients/'
-            }),
+            'client': forms.Select(attrs={'class': 'form-select', 'required': True}),
             'name': forms.TextInput(attrs={'class': 'form-control', 'required': True, 'placeholder': '请输入联系人姓名'}),
             'gender': forms.Select(attrs={'class': 'form-select'}),
             'birthplace': forms.HiddenInput(),  # 改为隐藏字段，由省市区选择器自动填充
@@ -644,15 +552,9 @@ class ContactForm(forms.ModelForm):
             self.is_draft = True
         
         super().__init__(*args, **kwargs)
-        # 设置联系人编号字段为只读
-        if 'contact_number' in self.fields:
-            self.fields['contact_number'].required = False
-            self.fields['contact_number'].widget.attrs['readonly'] = True
-        
         # 设置查询集
         self.fields['client'].queryset = Client.objects.filter(is_active=True).order_by('name')
-        self.fields['client'].empty_label = '-- 选择关联客户 --'
-        self.fields['client'].label = '关联客户'
+        self.fields['client'].empty_label = '-- 选择客户 --'
         
         # 如果不是保存草稿，设置必填字段
         if not self.is_draft:
@@ -682,43 +584,6 @@ class ContactForm(forms.ModelForm):
             self.fields['tracking_cycle_days'].help_text = '留空则根据角色和关系等级自动计算跟踪周期'
         self.fields['resume_source'].empty_label = '-- 请选择 --'
         
-        # 添加负责部门字段（只读，根据负责人自动显示）
-        self.fields['responsible_department'] = forms.CharField(
-            required=False,
-            label='负责部门',
-            widget=forms.TextInput(attrs={
-                'class': 'form-control',
-                'readonly': True,
-                'placeholder': '选择负责人后自动显示'
-            })
-        )
-        
-        # 添加负责人字段
-        from backend.apps.system_management.models import User
-        self.fields['responsible_user'] = forms.ModelChoiceField(
-            queryset=User.objects.filter(is_active=True).order_by('username'),
-            required=False,
-            label='负责人',
-            empty_label='-- 选择负责人 --',
-            widget=forms.Select(attrs={
-                'class': 'form-select',
-                'id': 'id_responsible_user'
-            })
-        )
-        
-        # 如果是编辑模式，设置负责部门和负责人的初始值
-        if self.instance and self.instance.pk:
-            # 从关联的客户获取负责人信息（如果联系人有客户）
-            if self.instance.client and self.instance.client.responsible_user:
-                self.fields['responsible_user'].initial = self.instance.client.responsible_user
-                if self.instance.client.responsible_user.department:
-                    self.fields['responsible_department'].initial = self.instance.client.responsible_user.department.name
-        else:
-            # 创建模式：默认使用当前用户（如果通过request.user传入）
-            # 注意：这里需要从kwargs中获取user，但ContactForm的__init__可能没有user参数
-            # 所以暂时不设置默认值，由视图层处理
-            pass
-        
         # 如果是编辑模式，加载现有的多选字段值
         if self.instance and self.instance.pk:
             if self.instance.preferred_contact_methods:
@@ -743,21 +608,6 @@ class ContactForm(forms.ModelForm):
     def clean(self):
         """验证联系方式至少填写两项（仅在提交时验证，保存草稿时不验证）"""
         cleaned_data = super().clean()
-        
-        # 保存负责人信息到表单实例，供视图使用
-        # 这些字段不在联系人模型中，但需要用于更新关联客户的负责人
-        self._responsible_user = cleaned_data.get('responsible_user')
-        self._responsible_department = cleaned_data.get('responsible_department')
-        
-        # 移除负责部门和负责人字段，这些字段不在模型中，只用于显示
-        # 它们不会保存到数据库，所以从cleaned_data中移除以避免保存错误
-        cleaned_data.pop('responsible_department', None)
-        cleaned_data.pop('responsible_user', None)
-        
-        # 联系人编号由系统自动生成，不允许用户修改
-        # 如果是创建模式，从cleaned_data中移除contact_number，让模型自动生成
-        if not self.instance or not self.instance.pk:
-            cleaned_data.pop('contact_number', None)
         
         # 如果是保存草稿，跳过验证
         action = cleaned_data.get('action', 'submit')

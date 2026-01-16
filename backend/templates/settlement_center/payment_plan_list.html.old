@@ -1,0 +1,184 @@
+{% extends "settlement_center/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">回款计划管理</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .content-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--vh-text-muted);
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-badge.pending { background: #fff3cd; color: #856404; }
+    .status-badge.partial { background: #d1ecf1; color: #0c5460; }
+    .status-badge.completed { background: #d4edda; color: #155724; }
+    .status-badge.overdue { background: #f8d7da; color: #721c24; }
+    .status-badge.cancelled { background: #e2e3e5; color: #383d41; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <div class="content-card">
+        
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="搜索阶段名称、项目/合同编号..." value="{{ search }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="plan_type" class="form-select">
+                        <option value="">全部类型</option>
+                        <option value="project" {% if plan_type == 'project' %}selected{% endif %}>项目回款计划</option>
+                        <option value="business" {% if plan_type == 'business' %}selected{% endif %}>商务回款计划</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">全部状态</option>
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>类型</th>
+                        <th>阶段名称</th>
+                        <th>关联项目/合同</th>
+                        <th>计划金额</th>
+                        <th>实际金额</th>
+                        <th>计划日期</th>
+                        <th>实际日期</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for plan in page_obj %}
+                    <tr>
+                        <td>
+                            {% if plan.type == 'project' %}
+                                <span class="badge bg-info">项目</span>
+                            {% else %}
+                                <span class="badge bg-success">商务</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ plan.phase_name }}</strong></td>
+                        <td>
+                            <div>{{ plan.related_number }}</div>
+                            <small class="text-muted">{{ plan.related_name }}</small>
+                        </td>
+                        <td>¥{{ plan.planned_amount|floatformat:2 }}</td>
+                        <td>
+                            {% if plan.actual_amount %}
+                                <strong style="color: #28a745;">¥{{ plan.actual_amount|floatformat:2 }}</strong>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ plan.planned_date|date:"Y-m-d" }}</td>
+                        <td>
+                            {% if plan.actual_date %}
+                                {{ plan.actual_date|date:"Y-m-d" }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge {{ plan.status }}">
+                                {% for code, label in status_choices %}
+                                    {% if code == plan.status %}{{ label }}{% endif %}
+                                {% endfor %}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'settlement_pages:payment_plan_detail' plan.type plan.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> 查看
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center empty-state">
+                            <i class="bi bi-inbox" style="font-size: 48px; opacity: 0.3;"></i>
+                            <p class="mt-3">暂无回款计划数据</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航">
+            <ul class="pagination justify-content-center mt-4">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if plan_type %}&plan_type={{ plan_type }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if plan_type %}&plan_type={{ plan_type }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if plan_type %}&plan_type={{ plan_type }}{% endif %}">下一页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-inbox" style="font-size: 48px; opacity: 0.3;"></i>
+            <p class="mt-3">暂无回款计划数据</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

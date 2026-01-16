@@ -1,66 +1,43 @@
 /**
  * 卡片组件样式
  * 维海科技信息化管理平台
- * 版本: 3.1
- * 修改记录:
- * - 移除了不必要的 !important 声明
- * - 重构了字体优化样式，避免重复
- * - 优化了移动端响应式样式
- * - 修复了样式优先级问题
- * - 添加了可访问性支持
+ * 版本: 3.0
  */
-
-/* ============================================
-   通用字体渲染优化
-   ============================================ */
-   .font-optimize {
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: "kern" 1, "liga" 1;
-}
 
 /* ============================================
    卡片组件
    ============================================ */
 .card {
-    background: var(--vh-card-bg, #ffffff);
-    border-radius: var(--vh-card-radius, 0);
-    box-shadow: var(--vh-card-shadow, none);
-    padding: var(--spacing-lg, 1.5rem);
-    border: 1px solid var(--vh-card-border, rgba(20, 47, 91, 0.08));
+    background: var(--vh-card-bg);
+    border-radius: 0 !important;
+    box-shadow: var(--shadow-md);
+    padding: var(--spacing-lg);
+    border: 1px solid rgba(20, 47, 91, 0.08);
+    transition: box-shadow var(--transition-base), transform var(--transition-base);
     position: relative;
-    transition: border-color 0.2s ease, background-color 0.2s ease;
-    composes: font-optimize; /* 字体渲染优化 */
 }
 
-.card:focus-within {
-    outline: 2px solid var(--vh-primary, #0066cc);
-    outline-offset: 2px;
-}
-
-/* 悬停效果改为更温和的样式 */
 .card:hover {
-    border-color: var(--vh-primary-light, rgba(0, 102, 204, 0.2));
-    background-color: var(--vh-card-hover-bg, #f8f9fa);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
 }
 
 .card-header {
-    border-bottom: none;
-    background-color: var(--vh-surface, #ffffff);
-    padding-bottom: var(--spacing-md, 1rem);
-    margin-bottom: var(--spacing-md, 1rem);
-    border-radius: 0;
+    border-bottom: 2px solid var(--vh-primary);
+    background-color: var(--vh-surface);
+    padding-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    border-radius: 0 !important;
 }
 
 .card-title {
-    color: var(--vh-primary, #0066cc);
+    color: var(--vh-primary);
     font-weight: 600;
-    font-size: var(--font-size-lg, 1.25rem);
+    font-size: var(--font-size-lg);
     margin: 0;
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm, 0.5rem);
+    gap: var(--spacing-sm);
 }
 
 .card-body {
@@ -68,38 +45,30 @@
 }
 
 .card-footer {
-    border-top: 1px solid var(--vh-border, #dee2e6);
-    padding-top: var(--spacing-md, 1rem);
-    margin-top: var(--spacing-md, 1rem);
-    background-color: var(--vh-surface, #ffffff);
-    border-radius: 0;
+    border-top: 1px solid var(--vh-border);
+    padding-top: var(--spacing-md);
+    margin-top: var(--spacing-md);
+    background-color: var(--vh-surface);
+    border-radius: 0 !important;
 }
 
-/* ============================================
-   信息卡片
-   ============================================ */
+/* 信息卡片 */
 .info-card {
-    background: var(--info-card-bg, #ffffff);
-    border-radius: var(--info-card-radius, 0);
-    box-shadow: var(--info-card-shadow, none);
-    padding: var(--info-card-padding, 1.5rem);
-    margin-bottom: var(--info-card-margin-bottom, 1rem);
-    border: var(--info-card-border-width, 1px) solid var(--info-card-border-color, rgba(20, 47, 91, 0.08));
+    background: var(--info-card-bg);
+    background-image: var(--info-card-bg-gradient);
+    border-radius: 0 !important;
+    box-shadow: var(--info-card-shadow);
+    padding: var(--info-card-padding);
+    margin-bottom: var(--info-card-margin-bottom);
+    border: var(--info-card-border-width) solid var(--info-card-border-color);
+    transition: all var(--info-animation-duration-base) var(--info-animation-easing);
     position: relative;
-    transition: all 0.2s ease;
-    composes: font-optimize; /* 字体渲染优化 */
-}
-
-/* 移除已删除的伪元素样式 */
-.info-card:focus-within {
-    outline: 2px solid var(--vh-primary, #0066cc);
-    outline-offset: 2px;
-}
-
-/* 信息卡片悬停效果 */
-.info-card:hover {
-    border-color: var(--vh-primary-light, rgba(0, 102, 204, 0.2));
-    background-color: var(--info-card-hover-bg, #f8f9fa);
+    overflow: hidden;
+    /* 字体渲染优化 - 根据样式模板统一方案规定 */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1, "liga" 1;
 }
 
 /* 信息卡片上移样式 - 用于表单页面紧凑布局 */
@@ -107,24 +76,62 @@
     margin-top: -64px;
 }
 
+.info-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--vh-primary) 0%, var(--vh-accent) 100%);
+    opacity: 0;
+    transition: opacity var(--info-animation-duration-base) var(--info-animation-easing);
+}
+
+.info-card:hover {
+    box-shadow: var(--info-card-shadow-hover);
+    transform: translateY(-2px);
+    border-color: rgba(20, 47, 91, 0.15);
+}
+
+.info-card:hover::before {
+    opacity: 1;
+}
+
 .info-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-md, 1rem);
-    padding-bottom: var(--spacing-sm, 0.5rem);
-    border-bottom: none;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 2px solid var(--vh-primary);
 }
 
 .info-card-title {
-    font-size: var(--info-title-font-size, 1.25rem);
-    font-weight: var(--info-title-font-weight, 600);
-    line-height: var(--info-title-line-height, 1.4);
-    color: var(--vh-primary, #0066cc);
+    font-size: var(--info-title-font-size);
+    font-weight: var(--info-title-font-weight);
+    line-height: var(--info-title-line-height);
+    color: var(--vh-primary);
     margin: 0;
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm, 0.5rem);
+    gap: var(--spacing-sm);
+}
+
+.info-card-value {
+    font-size: var(--info-value-font-size, 1.5rem);
+    font-weight: var(--info-value-font-weight, 600);
+    line-height: var(--info-value-line-height, 1.2);
+    color: var(--info-value-color, var(--vh-text-primary));
+    margin: 0;
+}
+
+.info-card-title::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(180deg, var(--vh-primary) 0%, var(--vh-accent) 100%);
+    border-radius: var(--radius-full);
 }
 
 .info-card-body {
@@ -133,9 +140,9 @@
 
 .info-card-actions {
     display: flex;
-    gap: var(--spacing-sm, 0.5rem);
+    gap: var(--spacing-sm);
     justify-content: flex-end;
-    margin-top: var(--spacing-md, 1rem);
+    margin-top: var(--spacing-md);
 }
 
 /* 信息卡片变体样式 */
@@ -146,47 +153,45 @@
 
 .info-card-flat {
     box-shadow: none;
-    border: 1px solid var(--vh-border-light, #e9ecef);
+    border: 1px solid var(--vh-border-light);
 }
 
 .info-card-outlined {
     background: transparent;
     box-shadow: none;
-    border: 2px solid var(--vh-border, #dee2e6);
+    border: 2px solid var(--vh-border);
 }
 
 .info-card-elevated {
-    box-shadow: var(--shadow-xl, 0 10px 40px rgba(0, 0, 0, 0.1));
+    box-shadow: var(--shadow-xl);
 }
 
 /* 信息卡片状态样式 */
 .info-card-success {
-    border-left: 4px solid var(--vh-success, #28a745);
-    background: var(--vh-success-soft, rgba(40, 167, 69, 0.05));
+    border-left: 4px solid var(--vh-success);
+    background: var(--vh-success-soft);
 }
 
 .info-card-warning {
-    border-left: 4px solid var(--vh-warning, #ffc107);
-    background: var(--vh-warning-soft, rgba(255, 193, 7, 0.05));
+    border-left: 4px solid var(--vh-warning);
+    background: var(--vh-warning-soft);
 }
 
 .info-card-danger {
-    border-left: 4px solid var(--vh-error, #dc3545);
-    background: var(--vh-error-soft, rgba(220, 53, 69, 0.05));
+    border-left: 4px solid var(--vh-error);
+    background: var(--vh-error-soft);
 }
 
 .info-card-info {
-    border-left: 4px solid var(--vh-info, #17a2b8);
-    background: var(--vh-info-soft, rgba(23, 162, 184, 0.05));
+    border-left: 4px solid var(--vh-info);
+    background: var(--vh-info-soft);
 }
 
-/* ============================================
-   信息网格
-   ============================================ */
+/* 信息网格 */
 .info-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--info-grid-gap, 1rem);
+    gap: var(--info-grid-gap);
 }
 
 .info-grid-1 {
@@ -208,35 +213,47 @@
 .info-item {
     display: flex;
     flex-direction: column;
-    gap: var(--info-item-gap, 0.5rem);
-    padding: var(--info-item-padding, 0.5rem 0);
-    border-radius: 0;
-    transition: background-color 0.2s ease;
-    composes: font-optimize; /* 字体渲染优化 */
+    gap: var(--info-item-gap);
+    padding: var(--info-item-padding);
+    border-radius: 0 !important;
+    transition: var(--info-item-transition);
+    /* 字体渲染优化 - 根据样式模板统一方案规定 */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1, "liga" 1;
 }
 
 .info-item:hover {
-    background-color: var(--vh-surface, #f8f9fa);
+    background-color: var(--vh-surface);
 }
 
 .info-label {
-    font-size: var(--info-label-font-size, 0.875rem);
-    color: var(--info-label-color, #6c757d);
-    font-weight: var(--info-label-font-weight, 500);
-    letter-spacing: var(--info-label-letter-spacing, 0.01em);
-    line-height: var(--info-label-line-height, 1.4);
-    text-transform: var(--info-label-text-transform, none);
-    margin-bottom: var(--info-label-margin-bottom, 0.25rem);
-    composes: font-optimize; /* 字体渲染优化 */
+    font-size: var(--info-label-font-size);
+    color: var(--info-label-color);
+    font-weight: var(--info-label-font-weight);
+    letter-spacing: var(--info-label-letter-spacing);
+    line-height: var(--info-label-line-height);
+    text-transform: var(--info-label-text-transform);
+    margin-bottom: var(--info-label-margin-bottom);
+    /* 字体渲染优化 - 根据样式模板统一方案规定 */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1, "liga" 1;
 }
 
 .info-value {
-    font-size: var(--info-value-font-size, 1rem);
-    color: var(--info-value-color, #212529);
-    font-weight: var(--info-value-font-weight, 400);
-    line-height: var(--info-value-line-height, 1.5);
-    word-break: var(--info-value-word-break, break-word);
-    composes: font-optimize; /* 字体渲染优化 */
+    font-size: var(--info-value-font-size);
+    color: var(--info-value-color);
+    font-weight: var(--info-value-font-weight);
+    line-height: var(--info-value-line-height);
+    word-break: var(--info-value-word-break);
+    /* 字体渲染优化 - 根据样式模板统一方案规定 */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1, "liga" 1;
 }
 
 .info-value-bold {
@@ -244,20 +261,20 @@
 }
 
 .info-value-large {
-    font-size: var(--font-size-lg, 1.25rem);
+    font-size: var(--font-size-lg);
 }
 
 .info-value-muted {
-    color: var(--vh-text-muted, #6c757d);
+    color: var(--vh-text-muted);
     font-weight: 400;
 }
 
 .info-value-empty {
-    color: var(--vh-text-light, #adb5bd);
+    color: var(--vh-text-light);
     font-style: italic;
 }
 
-/* 数字显示优化 */
+/* 数字显示优化 - 根据样式模板统一方案规定 */
 .info-value-numeric {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
@@ -265,73 +282,66 @@
 }
 
 .info-section-title {
-    font-size: var(--info-section-title-font-size, 1.25rem);
-    font-weight: var(--info-section-title-font-weight, 600);
-    line-height: var(--info-section-title-line-height, 1.4);
-    color: var(--info-section-title-color, #2c3e50);
+    font-size: var(--info-section-title-font-size);
+    font-weight: var(--info-section-title-font-weight);
+    line-height: var(--info-section-title-line-height);
+    color: #2c3e50;
     margin-bottom: 1.5rem;
     padding-bottom: 0.75rem;
-    border-bottom: 2px solid var(--info-section-title-border-color, #3498db);
+    border-bottom: 2px solid #3498db;
 }
 
-/* ============================================
-   表单卡片
-   ============================================ */
+/* 表单卡片 */
 .form-card {
-    background: var(--vh-card-bg, #ffffff);
-    border-radius: var(--vh-card-radius, 0);
-    box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
-    padding: var(--spacing-lg, 1.5rem);
-    border: 1px solid var(--vh-border, #dee2e6);
+    background: var(--vh-card-bg);
+    border-radius: 0 !important;
+    box-shadow: var(--shadow-md);
+    padding: var(--spacing-lg);
+    border: 1px solid var(--vh-border);
 }
 
 /* 表单区域（表单卡片别名，用于保持一致性） */
 .form-section {
-    background: var(--vh-card-bg, #ffffff);
-    border-radius: var(--vh-card-radius, 0);
-    box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
-    padding: var(--spacing-lg, 1.5rem);
-    margin-bottom: var(--spacing-lg, 1.5rem);
-    border: 1px solid var(--vh-border, #dee2e6);
+    background: var(--vh-card-bg);
+    border-radius: 0 !important;
+    box-shadow: var(--shadow-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    border: 1px solid var(--vh-border);
 }
 
-/* 当 form-section 嵌套在 form 标签的 form-card 内时 */
+/* 当 form-section 嵌套在 form 标签的 form-card 内时，form 作为容器，去掉自己的卡片样式，让 form-section 显示为独立卡片 */
 form.form-card {
     background: transparent;
     box-shadow: none;
     border: none;
     padding: 0;
-    margin-bottom: 0;
 }
 
 /* 当 form-section 嵌套在 form.form-card 内时，保持 form-section 的独立卡片样式 */
-form.form-card > .form-section {
-    background: var(--vh-card-bg, #ffffff);
-    box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
-    border: 1px solid var(--vh-border, #dee2e6);
-    padding: var(--spacing-lg, 1.5rem);
-    margin-bottom: var(--spacing-lg, 1.5rem);
-}
-
-/* 避免嵌套过深导致的样式重复 */
-form.form-card > .form-section:last-child {
-    margin-bottom: 0;
+form.form-card .form-section {
+    /* 保持 form-section 的独立卡片样式 */
+    background: var(--vh-card-bg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--vh-border);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
 }
 
 .form-section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-md, 1rem);
-    padding-bottom: var(--spacing-sm, 0.5rem);
-    border-bottom: 2px solid var(--vh-primary, #0066cc);
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 2px solid var(--vh-primary);
 }
 
 .form-section-header h5 {
     margin: 0;
-    font-size: var(--font-size-lg, 1.25rem);
+    font-size: var(--font-size-lg);
     font-weight: 600;
-    color: var(--vh-text, #212529);
+    color: var(--vh-text);
 }
 
 /* 修复 form-section 内 table-responsive 的对齐问题 */
@@ -342,132 +352,87 @@ form.form-card > .form-section:last-child {
     padding-right: 0;
 }
 
-/* ============================================
-   响应式调整
-   ============================================ */
-
-/* 平板设备 (768px - 992px) */
+/* 响应式调整 */
 @media (max-width: 992px) {
     .form-card,
     .form-section {
-        padding: var(--spacing-lg, 1.25rem);
-    }
-    
-    .info-grid-4 {
-        grid-template-columns: repeat(2, 1fr);
+        padding: var(--spacing-lg);
     }
 }
 
-/* 大屏手机 (576px - 768px) */
 @media (max-width: 768px) {
     .card {
-        padding: var(--spacing-md, 1rem);
+        padding: var(--spacing-md);
+        border-radius: 0;
     }
     
     .form-card,
     .form-section {
-        padding: var(--spacing-md, 1rem);
-    }
-    
-    .info-grid-3,
-    .info-grid-4 {
-        grid-template-columns: repeat(2, 1fr);
+        padding: var(--spacing-md);
+        border-radius: 0;
     }
 }
 
-/* 小屏手机 (< 576px) */
 @media (max-width: 576px) {
     .card {
-        padding: var(--spacing-md, 1rem);
-        margin-bottom: var(--spacing-md, 1rem);
+        padding: var(--spacing-md);
+        border-radius: 0;
+        margin-bottom: var(--spacing-md);
     }
     
     .form-card,
     .form-section {
-        padding: var(--spacing-md, 1rem);
-        margin-bottom: var(--spacing-md, 1rem);
+        padding: var(--spacing-md);
     }
     
     .info-card {
-        padding: var(--spacing-md, 1rem);
-        margin-bottom: var(--spacing-md, 1rem);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
     }
     
     .info-card-header {
-        padding: 0 0 var(--spacing-sm, 0.5rem) 0;
-        margin: 0 0 var(--spacing-sm, 0.5rem) 0;
-        width: 100%;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--spacing-sm, 0.5rem);
+        padding: var(--spacing-sm) var(--spacing-md);
+        margin: calc(-1 * var(--spacing-md)) calc(-1 * var(--spacing-md)) var(--spacing-md);
+        width: calc(100% + 2 * var(--spacing-md));
+        margin-left: calc(-1 * var(--spacing-md));
+        margin-right: calc(-1 * var(--spacing-md));
     }
     
-    .info-grid,
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+    
     .info-grid-1,
     .info-grid-2,
     .info-grid-3,
     .info-grid-4 {
         grid-template-columns: 1fr;
-        gap: var(--spacing-sm, 0.75rem);
+    }
+    
+    .info-card-title::before {
+        width: 3px;
+        height: 16px;
     }
     
     .info-card-actions {
         width: 100%;
         justify-content: flex-start;
         flex-wrap: wrap;
-        gap: var(--spacing-sm, 0.5rem);
     }
     
     .info-label {
-        font-size: var(--font-size-xs, 0.75rem);
-        margin-bottom: 0.25rem;
+        font-size: 11px;
+        margin-bottom: 4px;
     }
     
     .info-value {
-        font-size: var(--font-size-sm, 0.875rem);
+        font-size: var(--font-size-sm);
     }
     
     .info-section-title {
-        font-size: var(--font-size-md, 1rem);
-        margin-bottom: var(--spacing-sm, 0.75rem);
-        padding-bottom: var(--spacing-sm, 0.5rem);
+        font-size: var(--font-size-sm);
+        margin-bottom: var(--spacing-sm);
     }
 }
 
-/* ============================================
-   高对比度模式支持
-   ============================================ */
-@media (prefers-contrast: high) {
-    .card,
-    .info-card,
-    .form-card,
-    .form-section {
-        border-width: 2px;
-        border-color: currentColor;
-    }
-    
-    .card-title,
-    .info-card-title {
-        color: #000080; /* 深蓝色，在高对比度下更易读 */
-    }
-    
-    .info-label {
-        color: #000;
-        font-weight: 700;
-    }
-    
-    .info-value {
-        color: #000;
-    }
-}
-
-/* ============================================
-   减少动画偏好支持
-   ============================================ */
-@media (prefers-reduced-motion: reduce) {
-    .card,
-    .info-card,
-    .info-item {
-        transition: none;
-    }
-}

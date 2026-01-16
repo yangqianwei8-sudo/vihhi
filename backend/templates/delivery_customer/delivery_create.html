@@ -1,9 +1,13 @@
-{% extends "shared/module_base.html" %}
+{% extends "delivery_customer/base.html" %}
 {% load static %}
 
 {% block title %}创建交付单 - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:report_delivery' %}">收发管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:delivery_list' %}">交付记录</a></li>
+<li class="breadcrumb-item active" aria-current="page">创建交付单</li>
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
@@ -205,7 +209,7 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="workspace-content">
     <div class="container-fluid py-4">
         <div class="info-card info-card-compact">
@@ -221,7 +225,6 @@
                 <form method="post" id="deliveryCreateForm" enctype="multipart/form-data">
                     {% csrf_token %}
                     
-                    <!-- 交付类型选择 -->
                     <div class="info-section">
                         <h6 class="info-section-title">交付类型</h6>
                         <div class="delivery-type-group">
@@ -238,7 +241,6 @@
                         </div>
                     </div>
                     
-                    <!-- 基本信息 -->
                     <div class="info-section">
                         <h6 class="info-section-title">基本信息</h6>
                         <div class="info-grid info-grid-2">
@@ -269,7 +271,6 @@
                         </div>
                     </div>
                     
-                    <!-- 关联信息（项目文件） -->
                     <div class="info-section conditional-field" id="project_fields">
                         <h6 class="info-section-title">关联信息</h6>
                         <div class="info-grid info-grid-2">
@@ -293,7 +294,6 @@
                         </div>
                     </div>
                     
-                    <!-- 关联信息（非项目文件） -->
                     <div class="info-section conditional-field hidden" id="non_project_fields">
                         <h6 class="info-section-title">关联信息</h6>
                         <div class="info-grid info-grid-2">
@@ -320,7 +320,6 @@
                         </div>
                     </div>
                     
-                    <!-- 交付方式 -->
                     <div class="info-section">
                         <h6 class="info-section-title">交付方式</h6>
                         <div class="delivery-method-group">
@@ -341,7 +340,6 @@
                             </label>
                         </div>
                         
-                        <!-- 邮件相关信息 -->
                         <div class="conditional-field" id="email_fields">
                             <div class="info-grid info-grid-2">
                                 <div class="info-item info-item-full-width">
@@ -363,7 +361,6 @@
                             </div>
                         </div>
                         
-                        <!-- 快递相关信息 -->
                         <div class="conditional-field hidden" id="express_fields">
                             <div class="info-grid info-grid-2">
                                 <div class="info-item">
@@ -390,7 +387,6 @@
                             </div>
                         </div>
                         
-                        <!-- 送达相关信息 -->
                         <div class="conditional-field hidden" id="hand_delivery_fields">
                             <div class="info-grid info-grid-2">
                                 <div class="info-item info-item-full-width">
@@ -401,7 +397,6 @@
                         </div>
                     </div>
                     
-                    <!-- 收件人信息 -->
                     <div class="info-section">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="info-section-title mb-0">收件人信息</h6>
@@ -430,7 +425,6 @@
                         </div>
                     </div>
                     
-                    <!-- 时间设置 -->
                     <div class="info-section">
                         <h6 class="info-section-title">时间设置</h6>
                         <div class="info-grid info-grid-2">
@@ -447,7 +441,6 @@
                         </div>
                     </div>
                     
-                    <!-- 其他设置 -->
                     <div class="info-section">
                         <h6 class="info-section-title">其他设置</h6>
                         <div class="info-grid info-grid-2">
@@ -473,7 +466,6 @@
                         </div>
                     </div>
                     
-                    <!-- 提交按钮 -->
                     <div class="d-flex justify-content-end gap-2 mt-4">
                         <a href="{% url 'delivery_pages:delivery_list' %}" class="btn btn-secondary">取消</a>
                         <button type="submit" class="btn btn-primary">

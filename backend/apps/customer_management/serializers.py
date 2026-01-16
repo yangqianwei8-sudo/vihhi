@@ -29,7 +29,7 @@ class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
         fields = [
-            'id', 'customer_number', 'name', 'unified_credit_code',
+            'id', 'name', 'unified_credit_code',
             'legal_representative', 'established_date', 'registered_capital',
             'company_phone', 'company_email', 'company_address',
             'client_level', 'client_level_display', 'grade', 'grade_display', 'grade_code',
@@ -46,7 +46,7 @@ class ClientSerializer(serializers.ModelSerializer):
             'created_by', 'created_by_name',
             'created_time', 'updated_time',
         ]
-        read_only_fields = ['created_time', 'updated_time', 'score', 'grade', 'health_score', 'customer_number']
+        read_only_fields = ['created_time', 'updated_time', 'score', 'grade', 'health_score']
 
 
 class ClientCreateSerializer(serializers.ModelSerializer):

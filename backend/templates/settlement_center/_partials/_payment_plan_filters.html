@@ -1,0 +1,30 @@
+<div class="list-filters">
+  <form method="get" class="list-filters-form" id="filterForm">
+    <div class="list-filter-group">
+      <label class="list-filter-label">搜索</label>
+      <input type="text" name="search" class="list-filter-input" 
+             value="{{ search }}" placeholder="阶段名称、项目/合同编号">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">类型</label>
+      <select name="plan_type" class="list-filter-input">
+        <option value="">全部类型</option>
+        <option value="project" {% if plan_type == 'project' %}selected{% endif %}>项目回款计划</option>
+        <option value="business" {% if plan_type == 'business' %}selected{% endif %}>商务回款计划</option>
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">状态</label>
+      <select name="status" class="list-filter-input">
+        <option value="">全部状态</option>
+        {% for code, label in status_choices %}
+        <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'settlement_pages:payment_plan_list' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>

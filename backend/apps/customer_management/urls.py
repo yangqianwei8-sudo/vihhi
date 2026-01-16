@@ -47,14 +47,9 @@ urlpatterns = [
     path('regeocode/', views.regeocode_location, name='regeocode_location'),
     path('ip-location/', views.ip_location_api, name='ip_location_api'),
     path('districts/', views.get_districts, name='get_districts'),
-    path('geocode/', views.geocode_address, name='geocode_address'),
     # 业务委托书相关API
     path('authorization-letters/opportunities/', views.get_opportunities_by_client_name, name='get_opportunities_by_client_name'),
     path('authorization-letters/contacts/', views.get_contacts_by_client_id, name='get_contacts_by_client_id'),
-    # 批量操作API
-    path('opportunities/batch-delete/', views.opportunity_batch_delete, name='opportunity_batch_delete'),
-    path('opportunities/batch-update/', views.opportunity_batch_update, name='opportunity_batch_update'),
-    path('opportunities/batch-export/', views.opportunity_batch_export, name='opportunity_batch_export'),
     # 我方主体信息API
     path('our-company/info/', views.get_our_company_info, name='get_our_company_info'),
     # 学校搜索API

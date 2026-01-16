@@ -1,17 +1,17 @@
-{% extends "shared/module_base.html" %}
+{% extends "delivery_customer/base.html" %}
 {% load static %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-{% endblock %}
 
 {% block title %}物流跟踪 - 维海科技信息化管理平台{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:report_delivery' %}">收发管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:delivery_logistics_list' %}">物流跟踪</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ delivery.delivery_number }}</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid">
-    <!-- 页面标题和操作按钮 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">🚚 物流跟踪</h2>
@@ -27,7 +27,6 @@
         </div>
     </div>
 
-    <!-- 快递信息 - 使用样式模板 -->
     <div class="info-card info-card-fade-in mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">快递信息</h5>
@@ -98,7 +97,6 @@
         </div>
     </div>
 
-    <!-- 物流操作 - 使用样式模板 -->
     {% if delivery.express_number %}
     <div class="info-card mb-4">
         <div class="info-card-header">
@@ -134,7 +132,6 @@
     </div>
     {% endif %}
 
-    <!-- 物流时间线 - 使用样式模板 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">物流轨迹</h5>
@@ -182,7 +179,6 @@
         </div>
     </div>
 
-    <!-- 关联项目信息 - 使用样式模板 -->
     {% if delivery.project %}
     <div class="info-card mb-4">
         <div class="info-card-header">
@@ -208,7 +204,6 @@
     {% endif %}
 </div>
 
-<!-- 手动更新物流状态模态框 -->
 <div class="modal fade" id="updateTrackingModal" tabindex="-1" aria-labelledby="updateTrackingModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -348,4 +343,3 @@ document.getElementById('queryLogisticsForm').addEventListener('submit', functio
 });
 </script>
 {% endblock %}
-

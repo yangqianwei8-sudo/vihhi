@@ -1,0 +1,56 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-only-from-ingress
+  namespace: ns-dqyh88ke
+  labels:
+    app: backend
+    purpose: access-control
+spec:
+  # 选择 backend Pod
+  podSelector:
+    matchLabels:
+      app: backend
+  # 只定义入站规则（Ingress）
+  policyTypes:
+  - Ingress
+  ingress:
+  # 规则1：允许来自 Ingress Controller 的流量
+  # Sealos 使用 Traefik 或 Nginx Ingress，通常运行在 ingress-nginx 或 kube-system namespace
+  # 这里使用 podSelector 匹配 Ingress Controller 的标签
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx  # 如果 Sealos 使用 ingress-nginx
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: ingress-nginx
+    # 或者使用更通用的方式：允许来自特定 namespace 的所有 Pod
+    # 如果上面的 selector 不匹配，可以尝试这个：
+    # - namespaceSelector:
+    #     matchLabels:
+    #       name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8000  # backend 服务端口
+    - protocol: TCP
+      port: 8001  # Sealos DevBox 可能使用的端口
+  # 规则2：允许来自同一 namespace 内的健康检查（如果需要）
+  # 注意：这可能会允许其他 Pod 访问，如果不需要可以删除
+  # - from:
+  #   - podSelector:
+  #       matchLabels:
+  #         app: backend  # 允许 backend Pod 之间通信（用于健康检查等）
+  #   ports:
+  #   - protocol: TCP
+  #     port: 8000
+
+---
+# 说明：
+# 1. 此 NetworkPolicy 会拒绝所有未明确允许的入站流量
+# 2. 只有来自 Ingress Controller 的流量才能访问 backend
+# 3. 如果 Sealos 的 Ingress Controller 标签不同，需要调整 namespaceSelector 和 podSelector
+# 4. 应用前请确认：
+#    - kubectl get namespaces --show-labels | grep ingress
+#    - kubectl get pods -n <ingress-namespace> --show-labels | grep ingress
+# 5. 如果平台不支持 NetworkPolicy，此文件将无法应用，需要依赖应用层防护

@@ -1,13 +1,17 @@
-{% extends "shared/module_base.html" %}
+{% extends "archive_management/base.html" %}
 {% load static %}
 
 {% block title %}编辑项目归档 - 档案管理{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'archive_management:project_archive_list' %}">项目归档</a></li>
+<li class="breadcrumb-item"><a href="{% url 'archive_management:project_archive_detail' archive.pk %}">归档详情</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid">
-    <!-- 页面标题 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">✏️ 编辑项目归档</h2>
@@ -20,14 +24,12 @@
         </div>
     </div>
 
-    <!-- 归档状态提示 -->
     {% if archive.status not in 'pending,rejected' %}
     <div class="alert alert-warning">
         <i class="bi bi-exclamation-triangle"></i> 当前归档状态为"{{ archive.get_status_display }}"，无法编辑。只有"待归档"或"归档驳回"状态可以编辑。
     </div>
     {% endif %}
 
-    <!-- 表单卡片 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">归档信息</h5>
@@ -38,7 +40,7 @@
             </div>
         </div>
         <div class="info-card-body">
-            <!-- 归档基本信息 -->
+            
             <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="info-item">
@@ -71,14 +73,13 @@
                 {% csrf_token %}
                 
                 <div class="row g-3">
-                    <!-- 项目选择（只读） -->
+                    
                     <div class="col-md-12">
                         <label class="form-label">关联项目</label>
                         <input type="text" class="form-control" value="{{ archive.project.project_name|default:"-" }}" readonly>
                         <small class="form-text text-muted">归档创建后无法修改关联项目</small>
                     </div>
 
-                    <!-- 归档原因 -->
                     <div class="col-md-12">
                         <label for="{{ form.archive_reason.id_for_label }}" class="form-label">
                             {{ form.archive_reason.label }} <span class="text-danger">*</span>
@@ -89,7 +90,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 归档说明 -->
                     <div class="col-md-12">
                         <label for="{{ form.archive_description.id_for_label }}" class="form-label">
                             {{ form.archive_description.label }}
@@ -101,7 +101,6 @@
                     </div>
                 </div>
 
-                <!-- 提交按钮 -->
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="d-flex justify-content-end gap-2">
@@ -118,7 +117,6 @@
         </div>
     </div>
 
-    <!-- 归档历史信息 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">归档历史信息</h5>

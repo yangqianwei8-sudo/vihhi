@@ -1,0 +1,99 @@
+{% load static %}
+
+<aside class="vh-sb" aria-label="左侧栏（全屏固定）">
+  <div class="vh-sb__top">
+    <div class="vh-sb__topInner">
+      <div class="vh-sb__titleWrap">
+        {% if sidebar_module_title %}
+          <div class="vh-sb__title">{{ sidebar_module_title }}</div>
+          <div class="vh-sb__sub">{{ sidebar_module_subtitle|default:"Management" }}</div>
+        {% elif request.path|slice:":10" == "/customers/" or request.path|slice:":9" == "/customers" %}
+          <div class="vh-sb__title">客户管理</div>
+          <div class="vh-sb__sub">Customer Management</div>
+        {% elif request.path|slice:":14" == "/opportunities/" or request.path|slice:":13" == "/opportunities" %}
+          <div class="vh-sb__title">商机管理</div>
+          <div class="vh-sb__sub">Opportunity Management</div>
+        {% elif request.path|slice:":10" == "/contracts/" or request.path|slice:":9" == "/contracts" %}
+          <div class="vh-sb__title">合同管理</div>
+          <div class="vh-sb__sub">Contract Management</div>
+        {% else %}
+          <div class="vh-sb__title">{% block sidebar_title %}客户管理{% endblock %}</div>
+          <div class="vh-sb__sub">{% block sidebar_subtitle %}Customer Management{% endblock %}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <nav class="vh-sb__nav">
+    {% if module_sidebar_nav %}
+      {% for item in module_sidebar_nav %}
+        {% if item.children %}
+          <div class="vh-sb__parent">
+            <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
+              <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
+              <span class="vh-sb__label">{{ item.label }}</span>
+            </a>
+            <div class="vh-sb__children {% if item.expanded %}is-expanded{% endif %}">
+              {% for child in item.children %}
+                <a href="{{ child.url }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
+                  <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
+                  <span class="vh-sb__label">{{ child.label }}</span>
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        {% else %}
+          <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
+            <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
+            <span class="vh-sb__label">{{ item.label }}</span>
+            {% if item.badge %}
+              <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
+                {{ item.badge }}
+              </span>
+            {% endif %}
+          </a>
+        {% endif %}
+      {% endfor %}
+    {% elif customer_menu %}
+      {% for item in customer_menu %}
+        {% if item.children %}
+          <div class="vh-sb__parent">
+            <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
+              <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
+              <span class="vh-sb__label">{{ item.label }}</span>
+            </a>
+            <div class="vh-sb__children {% if item.expanded %}is-expanded{% endif %}">
+              {% for child in item.children %}
+                <a href="{{ child.url }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
+                  <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
+                  <span class="vh-sb__label">{{ child.label }}</span>
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        {% else %}
+          <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
+            <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
+            <span class="vh-sb__label">{{ item.label }}</span>
+            {% if item.badge %}
+              <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
+                {{ item.badge }}
+              </span>
+            {% endif %}
+          </a>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <div class="vh-sb__item is-active">
+        <span class="vh-sb__icon">▣</span>
+        <span class="vh-sb__label">{% block sidebar_default_label %}客户管理首页{% endblock %}</span>
+      </div>
+    {% endif %}
+  </nav>
+
+  <div class="vh-sb__bottom">
+    <div class="vh-sb__mini">帮助</div>
+    <div class="vh-sb__mini">设置</div>
+    <div class="vh-sb__mini">反馈</div>
+  </div>
+</aside>

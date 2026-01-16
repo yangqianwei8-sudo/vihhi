@@ -1,220 +1,357 @@
-{% extends "plan_management/base.html" %}
+{% extends "plan_management/_base.html" %}
 {% load static %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+{% block pm_title %}统计报表{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">统计计划、目标、问题等数据情况</span>{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
 <style>
-    .stat-card {
-        background: #fff;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        height: 100%;
+  .analysis-filters {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    padding: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .analysis-filters-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+  
+  .analysis-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .analysis-filter-label {
+    font-size: 12px;
+    color: #666666;
+    font-weight: 400;
+  }
+  
+  .analysis-filter-input {
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    padding: 6px 10px;
+    font-size: 14px;
+    color: #333333;
+    background: #FFFFFF;
+    width: 100%;
+  }
+  
+  .analysis-filter-input:focus {
+    outline: none;
+    border-color: #999999;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+  }
+  
+  .analysis-filter-actions {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  
+  .analysis-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .analysis-stat-card {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s ease;
+  }
+  
+  .analysis-stat-card:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+  
+  .analysis-stat-value {
+    font-size: 32px;
+    font-weight: 600;
+    color: #1A1A1A;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  
+  .analysis-stat-label {
+    font-size: 12px;
+    color: #666666;
+    font-weight: 400;
+  }
+  
+  .analysis-charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  
+  .analysis-chart-card {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+  
+  .analysis-chart-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #E0E0E0;
+    background: #F5F5F5;
+  }
+  
+  .analysis-chart-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1A1A1A;
+    margin: 0;
+  }
+  
+  .analysis-chart-body {
+    padding: 20px;
+  }
+  
+  .analysis-chart-container {
+    position: relative;
+    height: 300px;
+  }
+  
+  .analysis-trend-chart-container {
+    position: relative;
+    height: 400px;
+  }
+  
+  @media (max-width: 768px) {
+    .analysis-filters-form {
+      grid-template-columns: 1fr;
     }
-    .stat-value {
-        font-size: 32px;
-        font-weight: 700;
-        color: #142F5B;
+    .analysis-charts {
+      grid-template-columns: 1fr;
     }
-    .stat-label {
-        font-size: 14px;
-        color: #6c757d;
-        margin-top: 8px;
-    }
+  }
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="container-fluid py-4">
-    <!-- 页面标题 -->
-    <div class="list-page-header mb-4">
-        <h2 class="mb-0">
-            {{ page_title }}
-        </h2>
-        <p class="text-muted mb-0 mt-1">{{ description }}</p>
+{% block pm_content %}
+<div class="analysis-filters">
+  <form method="get" class="analysis-filters-form">
+    <div class="analysis-filter-group">
+      <label class="analysis-filter-label">开始时间</label>
+      <input type="date" name="date_from" class="analysis-filter-input" value="{{ date_from }}">
     </div>
-    
-    <!-- 筛选 -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label small">开始时间</label>
-                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small">结束时间</label>
-                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small">&nbsp;</label>
-                    <button type="submit" class="btn btn-primary btn-sm w-100">筛选</button>
-                </div>
-            </form>
-        </div>
+    <div class="analysis-filter-group">
+      <label class="analysis-filter-label">结束时间</label>
+      <input type="date" name="date_to" class="analysis-filter-input" value="{{ date_to }}">
     </div>
-    
-    <!-- 统计卡片 -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-value">{{ plan_total }}</div>
-                <div class="stat-label">计划总数</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-value text-success">{{ goal_total }}</div>
-                <div class="stat-label">目标总数</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-value text-warning">{{ issue_total }}</div>
-                <div class="stat-label">问题总数</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-value text-info">{{ progress_record_count }}</div>
-                <div class="stat-label">进度记录数</div>
-            </div>
-        </div>
+    <div class="analysis-filter-group analysis-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'plan_pages:plan_statistics' %}" class="list-btn">重置</a>
     </div>
-    
-    <!-- 图表 -->
-    <div class="row g-3">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">计划状态分布</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="planStatusChart" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">目标状态分布</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="goalStatusChart" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row g-3 mt-3">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">问题状态分布</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="issueStatusChart" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">问题严重程度分布</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="issueSeverityChart" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row g-3 mt-3">
-        <div class="col-md-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">最近30天进度更新趋势</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="trendChart" height="100"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
+  </form>
 </div>
 
+<div class="analysis-stats">
+  <div class="analysis-stat-card">
+    <div class="analysis-stat-value">{{ plan_total }}</div>
+    <div class="analysis-stat-label">计划总数</div>
+  </div>
+  <div class="analysis-stat-card">
+    <div class="analysis-stat-value">{{ goal_total }}</div>
+    <div class="analysis-stat-label">目标总数</div>
+  </div>
+  <div class="analysis-stat-card">
+    <div class="analysis-stat-value">{{ issue_total }}</div>
+    <div class="analysis-stat-label">问题总数</div>
+  </div>
+  <div class="analysis-stat-card">
+    <div class="analysis-stat-value">{{ progress_record_count }}</div>
+    <div class="analysis-stat-label">进度记录数</div>
+  </div>
+</div>
+
+<div class="analysis-charts">
+  <div class="analysis-chart-card">
+    <div class="analysis-chart-header">
+      <h5 class="analysis-chart-title">计划状态分布</h5>
+    </div>
+    <div class="analysis-chart-body">
+      <div class="analysis-chart-container">
+        <canvas id="planStatusChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <div class="analysis-chart-card">
+    <div class="analysis-chart-header">
+      <h5 class="analysis-chart-title">目标状态分布</h5>
+    </div>
+    <div class="analysis-chart-body">
+      <div class="analysis-chart-container">
+        <canvas id="goalStatusChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <div class="analysis-chart-card">
+    <div class="analysis-chart-header">
+      <h5 class="analysis-chart-title">问题状态分布</h5>
+    </div>
+    <div class="analysis-chart-body">
+      <div class="analysis-chart-container">
+        <canvas id="issueStatusChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <div class="analysis-chart-card">
+    <div class="analysis-chart-header">
+      <h5 class="analysis-chart-title">问题严重程度分布</h5>
+    </div>
+    <div class="analysis-chart-body">
+      <div class="analysis-chart-container">
+        <canvas id="issueSeverityChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="analysis-chart-card" style="grid-column: 1 / -1;">
+  <div class="analysis-chart-header">
+    <h5 class="analysis-chart-title">最近30天进度更新趋势</h5>
+  </div>
+  <div class="analysis-chart-body">
+    <div class="analysis-trend-chart-container">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// 计划状态分布图表
+const planStatusMap = {
+    'draft': '草稿',
+    'in_progress': '执行中',
+    'completed': '已完成',
+    'cancelled': '已取消'
+};
+
+const goalStatusMap = {
+    'draft': '制定中',
+    'published': '已发布',
+    'in_progress': '执行中',
+    'completed': '已完成',
+    'cancelled': '已取消'
+};
+
+const issueStatusMap = {
+    'open': '待处理',
+    'in_progress': '处理中',
+    'resolved': '已解决',
+    'closed': '已关闭'
+};
+
+const issueSeverityMap = {
+    'critical': '严重',
+    'high': '高',
+    'medium': '中',
+    'low': '低'
+};
+
 const planStatusCtx = document.getElementById('planStatusChart').getContext('2d');
+const planStatusLabels = [
+    {% for stat in plan_by_status %}
+    planStatusMap['{{ stat.status }}'] || '{{ stat.status }}',
+    {% endfor %}
+];
+const planStatusData = [
+    {% for stat in plan_by_status %}
+    {{ stat.count }},
+    {% endfor %}
+];
 new Chart(planStatusCtx, {
     type: 'doughnut',
     data: {
-        labels: [
-            {% for stat in plan_by_status %}
-            '{{ stat.status }}',
-            {% endfor %}
-        ],
+        labels: planStatusLabels,
         datasets: [{
-            data: [
-                {% for stat in plan_by_status %}
-                {{ stat.count }},
-                {% endfor %}
-            ],
-            backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d', '#20c997']
+            data: planStatusData,
+            backgroundColor: ['#E0E0E0', '#999999', '#666666', '#333333']
         }]
     },
     options: {
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
     }
 });
 
-// 目标状态分布图表
 const goalStatusCtx = document.getElementById('goalStatusChart').getContext('2d');
+const goalStatusLabels = [
+    {% for stat in goal_by_status %}
+    goalStatusMap['{{ stat.status }}'] || '{{ stat.status }}',
+    {% endfor %}
+];
+const goalStatusData = [
+    {% for stat in goal_by_status %}
+    {{ stat.count }},
+    {% endfor %}
+];
 new Chart(goalStatusCtx, {
     type: 'doughnut',
     data: {
-        labels: [
-            {% for stat in goal_by_status %}
-            '{{ stat.status }}',
-            {% endfor %}
-        ],
+        labels: goalStatusLabels,
         datasets: [{
-            data: [
-                {% for stat in goal_by_status %}
-                {{ stat.count }},
-                {% endfor %}
-            ],
-            backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d']
+            data: goalStatusData,
+            backgroundColor: ['#E0E0E0', '#CCCCCC', '#999999', '#666666', '#333333']
         }]
     },
     options: {
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
     }
 });
 
-// 问题状态分布图表
 const issueStatusCtx = document.getElementById('issueStatusChart').getContext('2d');
+const issueStatusLabels = [
+    {% for stat in issue_by_status %}
+    issueStatusMap['{{ stat.status }}'] || '{{ stat.status }}',
+    {% endfor %}
+];
+const issueStatusData = [
+    {% for stat in issue_by_status %}
+    {{ stat.count }},
+    {% endfor %}
+];
 new Chart(issueStatusCtx, {
     type: 'bar',
     data: {
-        labels: [
-            {% for stat in issue_by_status %}
-            '{{ stat.status }}',
-            {% endfor %}
-        ],
+        labels: issueStatusLabels,
         datasets: [{
             label: '问题数量',
-            data: [
-                {% for stat in issue_by_status %}
-                {{ stat.count }},
-                {% endfor %}
-            ],
-            backgroundColor: '#dc3545'
+            data: issueStatusData,
+            backgroundColor: '#666666'
         }]
     },
     options: {
@@ -222,30 +359,39 @@ new Chart(issueStatusCtx, {
         maintainAspectRatio: false,
         scales: {
             y: {
-                beginAtZero: true
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
             }
         }
     }
 });
 
-// 问题严重程度分布图表
 const issueSeverityCtx = document.getElementById('issueSeverityChart').getContext('2d');
+const issueSeverityLabels = [
+    {% for stat in issue_by_severity %}
+    issueSeverityMap['{{ stat.severity }}'] || '{{ stat.severity }}',
+    {% endfor %}
+];
+const issueSeverityData = [
+    {% for stat in issue_by_severity %}
+    {{ stat.count }},
+    {% endfor %}
+];
 new Chart(issueSeverityCtx, {
     type: 'bar',
     data: {
-        labels: [
-            {% for stat in issue_by_severity %}
-            '{{ stat.severity }}',
-            {% endfor %}
-        ],
+        labels: issueSeverityLabels,
         datasets: [{
             label: '问题数量',
-            data: [
-                {% for stat in issue_by_severity %}
-                {{ stat.count }},
-                {% endfor %}
-            ],
-            backgroundColor: '#ffc107'
+            data: issueSeverityData,
+            backgroundColor: '#999999'
         }]
     },
     options: {
@@ -253,33 +399,44 @@ new Chart(issueSeverityCtx, {
         maintainAspectRatio: false,
         scales: {
             y: {
-                beginAtZero: true
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
             }
         }
     }
 });
 
-// 进度更新趋势图表
 const trendCtx = document.getElementById('trendChart').getContext('2d');
+const trendLabels = [
+    {% for item in trend_data %}
+    '{{ item.date|slice:":5" }}',
+    {% endfor %}
+];
+const trendData = [
+    {% for item in trend_data %}
+    {{ item.count }},
+    {% endfor %}
+];
 new Chart(trendCtx, {
     type: 'line',
     data: {
-        labels: [
-            {% for item in trend_data %}
-            '{{ item.date }}',
-            {% endfor %}
-        ],
+        labels: trendLabels,
         datasets: [{
             label: '进度更新次数',
-            data: [
-                {% for item in trend_data %}
-                {{ item.count }},
-                {% endfor %}
-            ],
-            borderColor: '#0d6efd',
-            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            data: trendData,
+            borderColor: '#666666',
+            backgroundColor: 'rgba(102, 102, 102, 0.1)',
             tension: 0.4,
-            fill: true
+            fill: true,
+            pointRadius: 4,
+            pointHoverRadius: 6
         }]
     },
     options: {
@@ -287,7 +444,22 @@ new Chart(trendCtx, {
         maintainAspectRatio: false,
         scales: {
             y: {
-                beginAtZero: true
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            },
+            x: {
+                ticks: {
+                    maxRotation: 45,
+                    minRotation: 45
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top'
             }
         }
     }

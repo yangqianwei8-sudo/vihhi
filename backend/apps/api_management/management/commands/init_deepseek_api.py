@@ -84,7 +84,7 @@ class Command(BaseCommand):
             {
                 'code': 'DEEPSEEK-00001',
                 'name': 'Chat Completion API',
-                'url': '/chat/completions',  # 根据DeepSeek官方文档，端点应该是 /chat/completions
+                'url': '/v1/chat/completions',
                 'method': 'POST',
                 'auth_type': 'bearer_token',
                 'auth_config': {
@@ -140,7 +140,7 @@ class Command(BaseCommand):
             {
                 'code': 'DEEPSEEK-00002',
                 'name': 'Vision API (合同识别)',
-                'url': '/chat/completions',  # 根据DeepSeek官方文档，端点应该是 /chat/completions
+                'url': '/v1/chat/completions',
                 'method': 'POST',
                 'auth_type': 'bearer_token',
                 'auth_config': {

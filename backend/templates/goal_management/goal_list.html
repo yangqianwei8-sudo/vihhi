@@ -1,16 +1,44 @@
 {% extends "goal_management/_base.html" %}
+{% load static %}
 
-{% block pm_title %}战略目标{% endblock %}
-{% block pm_subtitle %}查看和管理所有战略目标{% endblock %}
+{% block pm_title %}目标列表{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">查看和管理所有战略目标</span>{% endblock %}
 
 {% block pm_actions %}
-<a href="{% url 'plan_pages:strategic_goal_create' %}" class="btn btn-danger btn-sm">
-    <i class="bi bi-plus-circle me-1"></i>创建战略目标
+<a href="{% url 'plan_pages:strategic_goal_create' %}" class="list-btn list-btn-primary">
+  创建战略目标
 </a>
 {% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+<style>
+  /* 目标列表操作列字体设为白色 - 使用 !important 确保优先级 */
+  .list-table-container .list-table tbody td:nth-child(10),
+  .list-table-container .list-table tbody td:last-child {
+    color: #FFFFFF !important;
+  }
+  
+  /* 操作列中的按钮文字也设为白色 */
+  .list-table-container .list-table tbody td:nth-child(10) .list-btn,
+  .list-table-container .list-table tbody td:last-child .list-btn,
+  .list-table-container .list-table tbody td:nth-child(10) .list-actions .list-btn,
+  .list-table-container .list-table tbody td:last-child .list-actions .list-btn {
+    color: #FFFFFF !important;
+  }
+  
+  /* 操作列中的链接文字设为白色 */
+  .list-table-container .list-table tbody td:nth-child(10) a,
+  .list-table-container .list-table tbody td:last-child a,
+  .list-table-container .list-table tbody td:nth-child(10) .list-actions a,
+  .list-table-container .list-table tbody td:last-child .list-actions a {
+    color: #FFFFFF !important;
+  }
+</style>
+{% endblock %}
+
 {% block pm_content %}
-  {% include "goal_management/_partials/_stats.html" %}
-  {% include "goal_management/_partials/_filters.html" %}
-  {% include "goal_management/_partials/_table.html" %}
+  {% include "goal_management/_partials/_list_stats.html" %}
+  {% include "goal_management/_partials/_list_filters.html" %}
+  {% include "goal_management/_partials/_list_table.html" %}
 {% endblock %}

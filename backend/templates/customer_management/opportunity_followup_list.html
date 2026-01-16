@@ -1,124 +1,14 @@
-{% extends "shared/list_page_base.html" %}
-{% comment %}
-商机跟进列表页面模板 (Opportunity Followup List Template)
-
-功能说明：
-- 展示商机跟进记录的列表页面
-- 支持按关联商机、跟进方式筛选
-- 支持搜索跟进内容、商机名称
-- 支持查看商机详情
-
-主要功能：
-1. 筛选功能：
-   - 搜索：跟进内容、商机名称、商机编号
-   - 关联商机筛选：下拉选择商机
-   - 跟进方式筛选：下拉选择跟进方式
-2. 表格展示：跟进日期、关联商机、跟进方式、跟进内容、跟进人、创建时间、操作
-3. 操作功能：查看商机详情
-
-JavaScript功能：
-- 筛选字段设置功能（继承自list_page_base.html）
-{% endcomment %}
+{% extends "customer_management/_base.html" %}
 {% load static %}
 
-{% block list_page_title %}跟进记录{% endblock %}
+{% block cm_title %}{{ page_title }}{% endblock %}
+{% block cm_subtitle %}<span class="pm-subtitle">查看和管理所有商机跟进记录</span>{% endblock %}
 
-{% block search_placeholder %}搜索跟进内容、商机名称、商机编号...{% endblock %}
-
-{% block list_page_filter_fields %}
-<!-- 关联商机筛选 -->
-<div class="filter-row" data-filter-key="opportunity_id">
-    <label class="filter-label">关联商机:</label>
-    <div class="filter-control">
-        <select name="opportunity_id" class="form-control form-control-sm" id="opportunitySelect">
-            <option value="">全部商机</option>
-            {% for opp in opportunities %}
-            <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>
-                {{ opp.name }} ({{ opp.opportunity_number|default:'未编号' }})
-            </option>
-            {% endfor %}
-        </select>
-    </div>
-</div>
-
-<!-- 跟进方式筛选 -->
-<div class="filter-row" data-filter-key="follow_type">
-    <label class="filter-label">跟进方式:</label>
-    <div class="filter-control">
-        <select name="follow_type" class="form-control form-control-sm" id="followTypeSelect">
-            <option value="">全部</option>
-            {% for value, label in follow_type_choices %}
-            <option value="{{ value }}" {% if follow_type == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-    </div>
-</div>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
 {% endblock %}
 
-{% block list_page_table_headers %}
-<th style="width: 10%;">跟进日期</th>
-<th style="width: 18%;">关联商机</th>
-<th style="width: 10%;">跟进方式</th>
-<th style="width: 25%;">跟进内容</th>
-<th style="width: 10%;">跟进人</th>
-<th style="width: 12%;">创建时间</th>
-{% endblock %}
-
-{% block list_page_table_actions_header %}
-<th style="width: 8%;">
-    操作
-    <span id="columnSettingsBtn"
-          data-bs-toggle="modal"
-          data-bs-target="#columnSettingsModal"
-          aria-label="设置表格字段"
-          title="设置表格字段"
-          style="cursor: pointer; color: #000000 !important; font-size: 16px; vertical-align: middle; margin-left: 8px; display: inline-block;">
-        <i class="bi bi-gear" style="color: #000000 !important;"></i>
-    </span>
-</th>
-{% endblock %}
-
-{% block list_page_table_row_content %}
-<td>{{ item.follow_date|date:'Y-m-d' }}</td>
-<td>
-    <a href="{% url 'business_pages:opportunity_detail' item.opportunity.id %}" class="text-decoration-none">
-        {{ item.opportunity.name }}
-    </a>
-</td>
-<td>
-    <span class="badge bg-info">{{ item.get_follow_type_display }}</span>
-</td>
-<td class="small">{{ item.content|truncatewords:20 }}</td>
-<td class="small">{{ item.created_by.get_full_name|default:item.created_by.username }}</td>
-<td class="small text-muted">{{ item.created_time|date:'Y-m-d H:i' }}</td>
-{% endblock %}
-
-{% block list_page_table_actions_cell %}
-<td>
-    <div class="list-page-table-actions">
-        <a href="{% url 'business_pages:opportunity_detail' item.opportunity.id %}" 
-           class="action-view" 
-           title="查看商机">
-            <i class="bi bi-eye"></i>
-        </a>
-    </div>
-</td>
-{% endblock %}
-
-{% block empty_table_message %}暂无跟进记录{% endblock %}
-
-{% block empty_message %}暂无跟进记录{% endblock %}
-
-{% block list_page_custom_js %}
-// 配置筛选字段设置功能（继承自 list_page_base.html）
-window.listPageFilterFieldsSettingsConfig = {
-    enableFieldsSettings: true,
-    storageKey: 'opportunity_followup_list_filter_fields',
-    defaultEnabledFields: ['opportunity_id', 'follow_type'],
-    maxEnabledFields: 10,
-    requiredFields: [],
-    containerId: 'filterFieldsContainer',
-    modalId: 'filterFieldsSettingsModal',
-    settingsBtnId: 'settingsFilterFieldsBtn'
-};
+{% block cm_content %}
+  {% include "customer_management/_partials/_opportunity_followup_filters.html" %}
+  {% include "customer_management/_partials/_opportunity_followup_table.html" %}
 {% endblock %}

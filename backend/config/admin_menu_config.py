@@ -16,15 +16,16 @@ Django Admin 菜单映射配置
 MENU_URL_MAPPING = {
     '首页': '/admin/',
     '客户管理': '/admin/customer_management/',
-    # '合同管理': '/admin/production_management/businesscontract/',  # 已从后台管理中移除，请使用前端管理页面
+    '合同管理': '/admin/production_management/businesscontract/',
     '商机管理': '/admin/customer_success/',
     '生产管理': '/admin/production_management/',
     '结算管理': '/admin/settlement_center/',
+    '收发管理': '/admin/delivery_customer/',
     '档案管理': '/admin/archive_management/',
     '财务管理': '/admin/financial_management/',
     '人事管理': '/admin/personnel_management/',
-    '行政管理': '/administrative/',  # 已从后台管理中移除，使用前端管理页面
-    '计划管理': '/plan/',  # 已从后台管理中移除，使用前端管理页面
+    '行政管理': '/admin/administrative_management/',
+    '计划管理': '/admin/plan_management/',
     '诉讼管理': '/admin/litigation_management/',
     '风险管理': '/admin/risk_management/',
     '资源管理': '/admin/resource_standard/',
@@ -41,42 +42,41 @@ MENU_URL_MAPPING = {
 # 菜单映射：{应用名: {模型名: 菜单路径}}
 # 菜单路径格式：主菜单 > 子菜单（可选）
 MENU_MAPPING = {
-    # 行政管理模块的所有模型已从后台管理中移除，请使用前端管理页面 /administrative/
-    # 'administrative_management': {
-    #     'AdministrativeAffair': '行政管理 > 行政事务',
-    #     'AffairProgressRecord': '行政管理 > 行政事务',
-    #     'AffairStatusHistory': '行政管理 > 行政事务',
-    #     'Announcement': '行政管理',
-    #     'AnnouncementRead': '行政管理',
-    #     'AssetMaintenance': '行政管理 > 固定资产管理',
-    #     'AssetTransfer': '行政管理 > 固定资产管理',
-    #     'ExpenseItem': '行政管理 > 差旅管理',
-    #     'ExpenseReimbursement': '行政管理 > 差旅管理',
-    #     'FixedAsset': '行政管理 > 固定资产管理',
-    #     'InventoryAdjust': '行政管理 > 办公用品管理',
-    #     'InventoryCheck': '行政管理 > 办公用品管理',
-    #     'Meeting': '行政管理 > 会议管理',
-    #     'MeetingRecord': '行政管理 > 会议管理',
-    #     'MeetingResolution': '行政管理 > 会议管理',
-    #     'MeetingRoom': '行政管理 > 会议管理',
-    #     'MeetingRoomBooking': '行政管理 > 会议管理',
-    #     'OfficeSupply': '行政管理 > 办公用品管理',
-    #     'PurchaseContract': '行政管理',
-    #     'PurchasePayment': '行政管理',
-    #     'ReceptionExpense': '行政管理 > 接待管理',
-    #     'ReceptionRecord': '行政管理 > 接待管理',
-    #     'Seal': '行政管理 > 印章管理',
-    #     'SealBorrowing': '行政管理 > 印章管理',
-    #     'SealUsage': '行政管理 > 印章管理',
-    #     'Supplier': '行政管理',
-    #     'SupplyCategory': '行政管理 > 办公用品管理',
-    #     'SupplyPurchase': '行政管理 > 办公用品管理',
-    #     'SupplyRequest': '行政管理 > 办公用品管理',
-    #     'TravelApplication': '行政管理 > 差旅管理',
-    #     'Vehicle': '行政管理 > 车辆管理',
-    #     'VehicleBooking': '行政管理 > 车辆管理',
-    #     'VehicleMaintenance': '行政管理 > 车辆管理',
-    # },
+    'administrative_management': {
+        'AdministrativeAffair': '行政管理 > 行政事务',
+        'AffairProgressRecord': '行政管理 > 行政事务',
+        'AffairStatusHistory': '行政管理 > 行政事务',
+        'Announcement': '行政管理',
+        'AnnouncementRead': '行政管理',
+        'AssetMaintenance': '行政管理 > 固定资产管理',
+        'AssetTransfer': '行政管理 > 固定资产管理',
+        'ExpenseItem': '行政管理 > 差旅管理',
+        'ExpenseReimbursement': '行政管理 > 差旅管理',
+        'FixedAsset': '行政管理 > 固定资产管理',
+        'InventoryAdjust': '行政管理 > 办公用品管理',
+        'InventoryCheck': '行政管理 > 办公用品管理',
+        'Meeting': '行政管理 > 会议管理',
+        'MeetingRecord': '行政管理 > 会议管理',
+        'MeetingResolution': '行政管理 > 会议管理',
+        'MeetingRoom': '行政管理 > 会议管理',
+        'MeetingRoomBooking': '行政管理 > 会议管理',
+        'OfficeSupply': '行政管理 > 办公用品管理',
+        'PurchaseContract': '行政管理',
+        'PurchasePayment': '行政管理',
+        'ReceptionExpense': '行政管理 > 接待管理',
+        'ReceptionRecord': '行政管理 > 接待管理',
+        'Seal': '行政管理 > 印章管理',
+        'SealBorrowing': '行政管理 > 印章管理',
+        'SealUsage': '行政管理 > 印章管理',
+        'Supplier': '行政管理',
+        'SupplyCategory': '行政管理 > 办公用品管理',
+        'SupplyPurchase': '行政管理 > 办公用品管理',
+        'SupplyRequest': '行政管理 > 办公用品管理',
+        'TravelApplication': '行政管理 > 差旅管理',
+        'Vehicle': '行政管理 > 车辆管理',
+        'VehicleBooking': '行政管理 > 车辆管理',
+        'VehicleMaintenance': '行政管理 > 车辆管理',
+    },
     'archive_management': {
         '*': '档案管理',  # 所有模型都放在档案管理下
     },
@@ -86,6 +86,11 @@ MENU_MAPPING = {
         'ContractApproval': '合同管理',
         'ContractStatusLog': '合同管理',
         '*': '客户管理',
+    },
+    'delivery_customer': {
+        'IncomingDocument': '收发管理 > 收文管理',
+        'OutgoingDocument': '收发管理 > 发文管理',
+        '*': '收发管理',  # 其他模型放在收发管理下
     },
     'financial_management': {
         '*': '财务管理',
@@ -99,13 +104,12 @@ MENU_MAPPING = {
     'personnel_management': {
         '*': '人事管理',
     },
-    # 计划管理模块的所有模型已从后台管理中移除，请使用前端管理页面 /plan/
-    # 'plan_management': {
-    #     '*': '计划管理',
-    # },
+    'plan_management': {
+        '*': '计划管理',
+    },
     'production_management': {
-        # 'BusinessContract': '合同管理',  # 商务合同 - 已从后台管理中移除
-        # 'BusinessPaymentPlan': '合同管理',  # 回款计划 - 已从后台管理中移除
+        'BusinessContract': '合同管理',  # 商务合同
+        'BusinessPaymentPlan': '合同管理',  # 回款计划
         'ComprehensiveAdjustmentCoefficient': '合同管理 > 综合调整系数',  # 综合调整系数
         'ServiceType': '合同管理',  # 服务类型
         'ServiceProfession': '合同管理',  # 服务专业
@@ -154,6 +158,7 @@ MAIN_MENU_ITEMS = [
     {'label': '商机管理', 'icon': 'bi-briefcase', 'path': '商机管理', 'order': 3},
     {'label': '生产管理', 'icon': 'bi-gear', 'path': '生产管理', 'order': 4},
     {'label': '结算管理', 'icon': 'bi-cash-coin', 'path': '结算管理', 'order': 5},
+    {'label': '收发管理', 'icon': 'bi-box-seam', 'path': '收发管理', 'order': 7},
     {'label': '档案管理', 'icon': 'bi-folder', 'path': '档案管理', 'order': 8},
     {'label': '财务管理', 'icon': 'bi-wallet2', 'path': '财务管理', 'order': 9},
     {'label': '人事管理', 'icon': 'bi-person', 'path': '人事管理', 'order': 10},
@@ -163,41 +168,35 @@ MAIN_MENU_ITEMS = [
     {'label': '风险管理', 'icon': 'bi-exclamation-triangle', 'path': '风险管理', 'order': 14},
     {'label': '资源管理', 'icon': 'bi-folder2', 'path': '资源管理', 'order': 15},
     {'label': '报表管理', 'icon': 'bi-graph-up', 'path': '报表管理', 'order': 16},
-    {'label': '权限设置', 'icon': 'bi-shield-lock', 'path': '权限设置', 'order': 17},
-    {'label': '流程设置', 'icon': 'bi-diagram-3', 'path': '流程设置', 'order': 18},
-    {'label': '系统设置', 'icon': 'bi-gear-fill', 'path': '系统设置', 'order': 19},
+    {'label': '系统设置', 'icon': 'bi-gear-fill', 'path': '系统设置', 'order': 17},
+    {'label': '权限设置', 'icon': 'bi-shield-lock', 'path': '权限设置', 'order': 18},
+    {'label': '流程设置', 'icon': 'bi-diagram-3', 'path': '流程设置', 'order': 19},
     {'label': 'API管理', 'icon': 'bi-code-slash', 'path': 'API管理', 'order': 20},
     {'label': '团队管理', 'icon': 'bi-people-fill', 'path': '团队管理', 'order': 21},
 ]
 
-# 按自定义顺序排序（首页、系统设置、权限设置固定在前三位）
+# 按汉语拼音排序（首页固定第一位）
 try:
     from pypinyin import lazy_pinyin, Style
     
     def get_pinyin_sort_key(item):
-        """获取拼音排序键，首页固定在最前面，系统设置在API管理之前"""
+        """获取拼音排序键，首页固定第一位"""
         label = item.get('label', '')
         if label == '首页':
             return ('0', '')  # 首页排在最前面
-        elif label == '系统设置':
-            return ('1', '19')  # 系统设置排在API管理之前
-        elif label == 'API管理':
-            return ('1', '20')  # API管理排在系统设置之后
-        # 其他菜单按拼音排序
+        # 获取拼音首字母并转换为字符串
         pinyin_list = lazy_pinyin(label, style=Style.FIRST_LETTER)
         pinyin_str = ''.join(pinyin_list).lower()
-        return ('2', pinyin_str)
+        return ('1', pinyin_str)  # 其他菜单按拼音排序
     
     MAIN_MENU_ITEMS.sort(key=get_pinyin_sort_key)
 except ImportError:
-    # 如果没有pypinyin库，使用order排序（首页、系统设置、权限设置固定在前三位）
+    # 如果没有pypinyin库，使用order排序（首页固定第一位）
     def get_order_sort_key(item):
-        """获取order排序键，首页固定在最前面，系统设置在API管理之前"""
-        label = item.get('label', '')
-        if label == '首页':
+        """获取order排序键，首页固定第一位"""
+        if item.get('label') == '首页':
             return (0, 0)
-        # 系统设置和API管理使用order排序，确保系统设置在API管理之前
-        return (1, item.get('order', 999))  # 其他菜单按order排序
+        return (1, item.get('order', 999))
     
     MAIN_MENU_ITEMS.sort(key=get_order_sort_key)
 

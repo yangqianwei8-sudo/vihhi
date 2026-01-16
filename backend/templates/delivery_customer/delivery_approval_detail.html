@@ -1,345 +1,252 @@
-{% extends "shared/workflow_detail_page_base.html" %}
+{% extends "delivery_customer/base.html" %}
 {% load static %}
 
-{% block workflow_hero_icon %}✅{% endblock %}
-{% block workflow_hero_title %}交付审核详情 - {{ delivery.delivery_number }}{% endblock %}
-{% block workflow_hero_subtitle %}交付标题：{{ delivery.title }}{% endblock %}
+{% block title %}交付审核详情 - 维海科技信息化管理平台{% endblock %}
 
-{% block workflow_detail_extra_css %}
-<style>
-    .content-object-card {
-        background: white;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 24px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-    .info-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-    }
-    .info-item {
-        display: flex;
-        flex-direction: column;
-    }
-    .info-label {
-        font-size: 0.85rem;
-        color: #666;
-        margin-bottom: 4px;
-    }
-    .info-value {
-        font-size: 1rem;
-        color: #333;
-        font-weight: 500;
-    }
-    /* 审核历史时间线样式 */
-    .timeline {
-        position: relative;
-        padding-left: 30px;
-    }
-    .timeline-item {
-        position: relative;
-        padding-bottom: 24px;
-    }
-    .timeline-item:last-child {
-        padding-bottom: 0;
-    }
-    .timeline-marker {
-        position: absolute;
-        left: -38px;
-        top: 4px;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: #ddd;
-        border: 2px solid white;
-        box-shadow: 0 0 0 2px #ddd;
-    }
-    .timeline-item.timeline-approved .timeline-marker {
-        background: #28a745;
-        box-shadow: 0 0 0 2px #28a745;
-    }
-    .timeline-item.timeline-rejected .timeline-marker {
-        background: #dc3545;
-        box-shadow: 0 0 0 2px #dc3545;
-    }
-    .timeline-item.timeline-pending .timeline-marker {
-        background: #ffc107;
-        box-shadow: 0 0 0 2px #ffc107;
-    }
-    .timeline-item:not(:last-child)::before {
-        content: '';
-        position: absolute;
-        left: -32px;
-        top: 16px;
-        width: 2px;
-        height: calc(100% - 4px);
-        background: #e0e0e0;
-    }
-    .timeline-content {
-        background: #f9fafb;
-        padding: 16px;
-        border-radius: 8px;
-        border-left: 3px solid #e0e0e0;
-    }
-    .timeline-item.timeline-approved .timeline-content {
-        border-left-color: #28a745;
-    }
-    .timeline-item.timeline-rejected .timeline-content {
-        border-left-color: #dc3545;
-    }
-    .timeline-item.timeline-pending .timeline-content {
-        border-left-color: #ffc107;
-    }
-</style>
-{% endblock workflow_detail_extra_css %}
-
-{% block workflow_actions %}
-<a href="{% url 'delivery_pages:delivery_approval_list' %}" class="btn btn-outline-secondary">
-    <i class="bi bi-arrow-left"></i> 返回列表
-</a>
-<a href="{% url 'delivery_pages:delivery_detail' delivery.id %}" class="btn btn-outline-primary">
-    <i class="bi bi-eye"></i> 查看详情
-</a>
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:report_delivery' %}">收发管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:delivery_approval_list' %}">交付审核</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ delivery.delivery_number }}</li>
 {% endblock %}
 
-{% block workflow_content %}
-<!-- 基本信息 -->
-<div class="workflow-content-card">
-    <h5>基本信息</h5>
-    <div class="info-grid">
-        <div class="info-item">
-            <span class="info-label">交付单号</span>
-            <span class="info-value"><code>{{ delivery.delivery_number }}</code></span>
+{% block content %}
+<div class="container-fluid">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">✅ 交付审核详情</h2>
+            <p class="text-muted mb-0">交付单号：{{ delivery.delivery_number }}</p>
         </div>
-        <div class="info-item">
-            <span class="info-label">交付标题</span>
-            <span class="info-value">{{ delivery.title }}</span>
+        <div>
+            <a href="{% url 'delivery_pages:delivery_approval_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            <a href="{% url 'delivery_pages:delivery_detail' delivery.id %}" class="btn btn-outline-primary">
+                <i class="bi bi-eye"></i> 查看详情
+            </a>
         </div>
-        <div class="info-item">
-            <span class="info-label">交付方式</span>
-            <span class="info-value">
-                {% if delivery.delivery_method == 'email' %}
-                    <i class="bi bi-envelope"></i> 邮件
-                {% elif delivery.delivery_method == 'express' %}
-                    <i class="bi bi-box-seam"></i> 快递
-                {% elif delivery.delivery_method == 'hand_delivery' %}
-                    <i class="bi bi-person-walking"></i> 送达
-                {% endif %}
-            </span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">交付状态</span>
-            <span class="info-value">
-                <span class="badge bg-{% if delivery.status == 'completed' %}success{% elif delivery.status == 'rejected' %}danger{% elif delivery.status == 'pending_approval' or delivery.status == 'approving' %}warning{% else %}secondary{% endif %}">
-                    {{ delivery.get_status_display }}
-                </span>
-            </span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">优先级</span>
-            <span class="info-value">
-                {% if delivery.priority == 'urgent' %}
-                    <span class="badge bg-danger">紧急</span>
-                {% elif delivery.priority == 'high' %}
-                    <span class="badge bg-warning">高</span>
-                {% elif delivery.priority == 'normal' %}
-                    <span class="badge bg-info">普通</span>
-                {% else %}
-                    <span class="badge bg-secondary">低</span>
-                {% endif %}
-            </span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">创建人</span>
-            <span class="info-value">{{ delivery.created_by.get_full_name|default:delivery.created_by.username }}</span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">创建时间</span>
-            <span class="info-value">{{ delivery.created_at|date:"Y-m-d H:i" }}</span>
-        </div>
-        {% if delivery.project %}
-        <div class="info-item">
-            <span class="info-label">关联项目</span>
-            <span class="info-value">
-                <a href="#" class="text-decoration-none">
-                    {{ delivery.project.project_number }} - {{ delivery.project.name }}
-                </a>
-            </span>
-        </div>
-        {% endif %}
     </div>
-    {% if delivery.description %}
-    <div class="mt-3">
-        <span class="info-label">交付说明</span>
-        <div class="mt-2 p-3 bg-light rounded">{{ delivery.description|linebreaks }}</div>
+
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">交付单号</span>
+                    <span class="info-value info-value-bold">{{ delivery.delivery_number }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">交付标题</span>
+                    <span class="info-value">{{ delivery.title }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">交付方式</span>
+                    <span class="info-value">
+                        {% if delivery.delivery_method == 'email' %}
+                            <i class="bi bi-envelope"></i> 邮件
+                        {% elif delivery.delivery_method == 'express' %}
+                            <i class="bi bi-box-seam"></i> 快递
+                        {% elif delivery.delivery_method == 'hand_delivery' %}
+                            <i class="bi bi-person-walking"></i> 送达
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">交付状态</span>
+                    <span class="info-value">
+                        <span class="status-badge {{ delivery.status }}">
+                            {{ delivery.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">优先级</span>
+                    <span class="info-value">
+                        {% if delivery.priority == 'urgent' %}
+                            <span class="badge bg-danger">紧急</span>
+                        {% elif delivery.priority == 'high' %}
+                            <span class="badge bg-warning">高</span>
+                        {% elif delivery.priority == 'normal' %}
+                            <span class="badge bg-info">普通</span>
+                        {% else %}
+                            <span class="badge bg-secondary">低</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">创建人</span>
+                    <span class="info-value">{{ delivery.created_by.get_full_name|default:delivery.created_by.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ delivery.created_at|date:"Y-m-d H:i" }}</span>
+                </div>
+                {% if delivery.project %}
+                <div class="info-item">
+                    <span class="info-label">关联项目</span>
+                    <span class="info-value">
+                        <a href="#" class="text-decoration-none">
+                            {{ delivery.project.project_number }} - {{ delivery.project.name }}
+                        </a>
+                    </span>
+                </div>
+                {% endif %}
+                {% if delivery.description %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">交付说明</span>
+                    <span class="info-value">{{ delivery.description|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if can_perform_approval %}
+    <div class="info-card info-card-warning mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">审核操作</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" action="{% url 'delivery_pages:delivery_approval_action' delivery.id %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">审核意见 <span class="text-danger">*</span></label>
+                    <textarea name="comment" class="form-control" rows="4" required placeholder="请输入审核意见"></textarea>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" name="action" value="approve" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> 审核通过
+                    </button>
+                    <button type="submit" name="action" value="reject" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> 审核驳回
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
     {% endif %}
-</div>
 
-<!-- 审核操作（如果有审核权限且可以审核） -->
-{% if can_perform_approval %}
-<div class="workflow-content-card">
-    <h5>审核操作</h5>
-    <form method="post" action="{% url 'delivery_pages:delivery_approval_action' delivery.id %}">
-        {% csrf_token %}
-        <div class="mb-3">
-            <label class="form-label">审核意见 <span class="text-danger">*</span></label>
-            <textarea name="comment" class="form-control" rows="4" required placeholder="请输入审核意见"></textarea>
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">审核历史记录</h5>
         </div>
-        <div class="d-grid gap-2">
-            <button type="submit" name="action" value="approve" class="btn btn-success btn-lg">
-                <i class="bi bi-check-circle"></i> 审核通过
-            </button>
-            <button type="submit" name="action" value="reject" class="btn btn-danger btn-lg">
-                <i class="bi bi-x-circle"></i> 审核驳回
-            </button>
-        </div>
-    </form>
-</div>
-{% endif %}
-
-<!-- 审核历史记录 -->
-<div class="workflow-content-card">
-    <h5>审核历史记录</h5>
-    {% if approval_history %}
-    <div class="timeline">
-        {% for approval in approval_history %}
-        <div class="timeline-item timeline-{{ approval.result }}">
-            <div class="timeline-marker"></div>
-            <div class="timeline-content">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                        <strong>{{ approval.approver.get_full_name|default:approval.approver.username }}</strong>
-                        <div class="text-muted" style="font-size: 0.85rem; margin-top: 4px;">
-                            {% if approval.approval_time %}
-                                {{ approval.approval_time|date:"Y-m-d H:i" }}
+        <div class="info-card-body">
+            {% if approval_history %}
+            <div class="timeline">
+                {% for approval in approval_history %}
+                <div class="timeline-item mb-4">
+                    <div class="d-flex">
+                        <div class="timeline-marker me-3">
+                            {% if approval.result == 'approved' %}
+                                <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
+                            {% elif approval.result == 'rejected' %}
+                                <i class="bi bi-x-circle-fill text-danger" style="font-size: 1.5rem;"></i>
                             {% else %}
-                                {{ approval.created_at|date:"Y-m-d H:i" }}
+                                <i class="bi bi-clock-history text-warning" style="font-size: 1.5rem;"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1">
+                                        {% if approval.result == 'approved' %}
+                                            <span class="badge bg-success">审核通过</span>
+                                        {% elif approval.result == 'rejected' %}
+                                            <span class="badge bg-danger">审核驳回</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">待审核</span>
+                                        {% endif %}
+                                        <span class="ms-2">{{ approval.approver.get_full_name|default:approval.approver.username }}</span>
+                                    </h6>
+                                    <small class="text-muted">
+                                        {% if approval.approval_time %}
+                                            {{ approval.approval_time|date:"Y-m-d H:i" }}
+                                        {% else %}
+                                            {{ approval.created_at|date:"Y-m-d H:i" }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% if approval.approval_level %}
+                                <span class="badge bg-secondary">第{{ approval.approval_level }}级审核</span>
+                                {% endif %}
+                            </div>
+                            {% if approval.comment %}
+                            <div class="alert alert-light mb-0">
+                                {{ approval.comment|linebreaks }}
+                            </div>
+                            {% endif %}
+                            {% if approval.transferred_from %}
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-arrow-right"></i> 
+                                    由 {{ approval.transferred_from.get_full_name|default:approval.transferred_from.username }} 转交
+                                    {% if approval.transferred_to %}
+                                        至 {{ approval.transferred_to.get_full_name|default:approval.transferred_to.username }}
+                                    {% endif %}
+                                </small>
+                            </div>
                             {% endif %}
                         </div>
                     </div>
-                    <div>
-                        {% if approval.approval_level %}
-                        <span class="badge bg-secondary me-2">第{{ approval.approval_level }}级审核</span>
-                        {% endif %}
-                        <span class="badge bg-{% if approval.result == 'approved' %}success{% elif approval.result == 'rejected' %}danger{% elif approval.result == 'pending' %}warning{% else %}secondary{% endif %}">
-                            {% if approval.result == 'approved' %}
-                                审核通过
-                            {% elif approval.result == 'rejected' %}
-                                审核驳回
-                            {% else %}
-                                待审核
-                            {% endif %}
-                        </span>
-                    </div>
                 </div>
-                {% if approval.comment %}
-                <div class="mt-2 p-2 bg-light rounded" style="font-size: 0.9rem;">
-                    {{ approval.comment|linebreaks }}
-                </div>
-                {% endif %}
-                {% if approval.transferred_from %}
-                <div class="mt-2">
-                    <small class="text-muted">
-                        <i class="bi bi-arrow-right"></i> 
-                        由 {{ approval.transferred_from.get_full_name|default:approval.transferred_from.username }} 转交
-                        {% if approval.transferred_to %}
-                            至 {{ approval.transferred_to.get_full_name|default:approval.transferred_to.username }}
-                        {% endif %}
-                    </small>
-                </div>
-                {% endif %}
+                {% endfor %}
             </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="text-center py-4">
-        <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
-        <p class="text-muted mt-2">暂无审核历史记录</p>
-    </div>
-    {% endif %}
-</div>
-
-<!-- 交付文件 -->
-{% if delivery.files.exists %}
-<div class="workflow-content-card">
-    <h5>交付文件</h5>
-    <div class="list-group">
-        {% for file in delivery.files.all %}
-        {% if not file.is_deleted %}
-        <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-                <i class="bi bi-file-earmark"></i>
-                <span class="ms-2">{{ file.file_name }}</span>
-                <small class="text-muted ms-2">({{ file.file_size|filesizeformat }})</small>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+                <p class="text-muted mt-2">暂无审核历史记录</p>
             </div>
-            <a href="{{ file.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
-                <i class="bi bi-download"></i> 下载
-            </a>
-        </div>
-        {% endif %}
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-{% endblock workflow_content %}
-
-{% block workflow_nodes_sidebar_title_text %}审核流程{% endblock %}
-
-{% block workflow_nodes_sidebar %}
-<div class="workflow-node-visual">
-    <!-- 审核状态概览 -->
-    <div class="workflow-node-item {% if delivery.status == 'completed' %}start-node{% elif delivery.status == 'rejected' %}end-node{% else %}approval-node{% endif %}">
-        <div class="workflow-node-name">
-            <span class="badge bg-secondary me-2">当前</span>
-            {{ delivery.get_status_display }}
-        </div>
-        <div class="workflow-node-meta">
-            <span class="badge bg-{% if delivery.status == 'completed' %}success{% elif delivery.status == 'rejected' %}danger{% elif delivery.status == 'pending_approval' or delivery.status == 'approving' %}warning{% else %}secondary{% endif %}">
-                {{ delivery.status }}
-            </span>
-        </div>
-    </div>
-    
-    <!-- 审核历史概览 -->
-    {% if approval_history %}
-    {% for approval in approval_history|slice:":5" %}
-    <div class="workflow-node-item {% if approval.result == 'approved' %}start-node{% elif approval.result == 'rejected' %}end-node{% else %}approval-node{% endif %}">
-        <div class="workflow-node-name">
-            <span class="badge bg-secondary me-2">#{{ forloop.counter }}</span>
-            {{ approval.approver.get_full_name|default:approval.approver.username }}
-        </div>
-        <div class="workflow-node-meta">
-            <span class="badge bg-{% if approval.result == 'approved' %}success{% elif approval.result == 'rejected' %}danger{% elif approval.result == 'pending' %}warning{% else %}secondary{% endif %}">
-                {% if approval.result == 'approved' %}
-                    通过
-                {% elif approval.result == 'rejected' %}
-                    驳回
-                {% else %}
-                    待审核
-                {% endif %}
-            </span>
-            {% if approval.approval_level %}
-            <span class="ms-2 text-muted" style="font-size: 0.8rem;">
-                第{{ approval.approval_level }}级
-            </span>
             {% endif %}
         </div>
     </div>
-    {% endfor %}
-    {% if approval_history|length > 5 %}
-    <div class="text-center mt-2">
-        <small class="text-muted">还有 {{ approval_history|length|add:"-5" }} 条记录</small>
-    </div>
-    {% endif %}
-    {% else %}
-    <div class="workflow-empty-state">
-        <i class="bi bi-inbox workflow-empty-state-icon" aria-hidden="true"></i>
-        <p class="workflow-empty-state-text">暂无审核记录</p>
+
+    {% if delivery.files.exists %}
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">交付文件</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="list-group">
+                {% for file in delivery.files.all %}
+                {% if not file.is_deleted %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-file-earmark"></i>
+                        <span class="ms-2">{{ file.file_name }}</span>
+                        <small class="text-muted ms-2">({{ file.file_size|filesizeformat }})</small>
+                    </div>
+                    <a href="{{ file.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                        <i class="bi bi-download"></i> 下载
+                    </a>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
     </div>
     {% endif %}
 </div>
-{% endblock workflow_nodes_sidebar %}
+
+<style>
+.timeline-item {
+    position: relative;
+    padding-left: 0;
+}
+
+.timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 0.75rem;
+    top: 2rem;
+    bottom: -1rem;
+    width: 2px;
+    background: var(--vh-border-light);
+}
+
+.timeline-marker {
+    flex-shrink: 0;
+}
+</style>
+{% endblock %}

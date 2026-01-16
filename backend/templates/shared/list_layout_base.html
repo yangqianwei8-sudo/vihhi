@@ -1,0 +1,95 @@
+{% load static %}
+
+<div class="list-layout">
+  {% block list_stats %}
+  {% if stats %}
+  <div class="list-stats">
+    {% for stat in stats %}
+    <div class="list-stat-card">
+      <div class="list-stat-label">{{ stat.label }}</div>
+      <div class="list-stat-value">{{ stat.value }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endblock %}
+
+  {% block list_action_bar %}
+  <div class="list-action-bar">
+    <div class="list-action-left">
+      {% block list_actions_left %}
+      {% endblock %}
+    </div>
+    <div class="list-action-right">
+      {% block list_actions_right %}
+      <span>共 {{ total_count|default:0 }} 条记录</span>
+      {% endblock %}
+    </div>
+  </div>
+  {% endblock %}
+
+  {% block list_filters %}
+  {% if show_filters %}
+  <div class="list-filters">
+    <form method="get" class="list-filters-form">
+      {% block filter_fields %}
+      {% endblock %}
+      <div class="list-filter-actions">
+        <button type="submit" class="list-btn list-btn-primary">筛选</button>
+        <a href="{{ request.path }}" class="list-btn">重置</a>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+  {% endblock %}
+
+  {% block list_table %}
+  <div class="list-table-container">
+    <table class="list-table">
+      <thead>
+        {% block table_head %}
+        {% endblock %}
+      </thead>
+      <tbody>
+        {% block table_body %}
+        {% endblock %}
+      </tbody>
+    </table>
+  </div>
+  {% endblock %}
+
+  {% block list_pagination %}
+  {% if pagination %}
+  <div class="list-pagination">
+    <div class="list-pagination-info">
+      {% block pagination_info %}
+      显示第 {{ pagination.start_index }} - {{ pagination.end_index }} 条，共 {{ pagination.total }} 条
+      {% endblock %}
+    </div>
+    <div class="list-pagination-nav">
+      {% block pagination_nav %}
+      {% if pagination.has_previous %}
+      <a href="?page={{ pagination.previous_page_number }}{{ query_string }}" class="list-pagination-btn">上一页</a>
+      {% else %}
+      <span class="list-pagination-btn disabled">上一页</span>
+      {% endif %}
+      
+      {% for num in pagination.page_range %}
+      {% if num == pagination.number %}
+      <span class="list-pagination-btn active">{{ num }}</span>
+      {% elif num > pagination.number|add:'-3' and num < pagination.number|add:'3' %}
+      <a href="?page={{ num }}{{ query_string }}" class="list-pagination-btn">{{ num }}</a>
+      {% endif %}
+      {% endfor %}
+      
+      {% if pagination.has_next %}
+      <a href="?page={{ pagination.next_page_number }}{{ query_string }}" class="list-pagination-btn">下一页</a>
+      {% else %}
+      <span class="list-pagination-btn disabled">下一页</span>
+      {% endif %}
+      {% endblock %}
+    </div>
+  </div>
+  {% endif %}
+  {% endblock %}
+</div>

@@ -1,12 +1,19 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "administrative_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:expense_management' %}">报销申请</a></li>
+<li class="breadcrumb-item active" aria-current="page">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:expense_management' %}">报销申请</a></li>
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:expense_detail' expense.id %}">{{ expense.reimbursement_number }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endif %}
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .btn-submit {
         padding: 12px 32px;
@@ -34,7 +41,7 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
     <div class="center-hero">
         <h1 class="hero-title">{{ page_title }}</h1>
@@ -85,7 +92,6 @@
             </div>
         </div>
 
-        <!-- 费用明细 -->
         <div class="form-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0">费用明细</h5>
@@ -155,7 +161,6 @@
                 {% endfor %}
             </div>
 
-            <!-- 合计行 -->
             <div class="total-row">
                 <div class="row">
                     <div class="col-md-6 text-end">
@@ -290,4 +295,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

@@ -1,0 +1,127 @@
+{% extends "customer_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .mark-form {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:opportunity_win_loss' %}">赢单与输单</a></li>
+<li class="breadcrumb-item"><a href="{% url 'business_pages:opportunity_detail' opportunity.id %}">商机详情</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="workspace-content">
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">商机信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">商机名称</span>
+                    <span class="info-value">{{ opportunity.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">商机编号</span>
+                    <span class="info-value">{{ opportunity.opportunity_number|default:'未编号' }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">关联客户</span>
+                    <span class="info-value">
+                        <a href="{% url 'business_pages:customer_detail' opportunity.client.id %}" class="info-value-link">
+                            {{ opportunity.client.name }}
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">当前状态</span>
+                    <span class="info-value">
+                        <span class="badge bg-primary">{{ opportunity.get_status_display }}</span>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">预计金额（万元）</span>
+                    <span class="info-value info-value-numeric">{{ opportunity.estimated_amount|floatformat:2|default:'未填写' }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">加权金额（万元）</span>
+                    <span class="info-value info-value-numeric info-value-bold">{{ opportunity.weighted_amount|floatformat:2|default:'未填写' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">标记为{{ status_label }}</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" class="mark-form">
+                {% csrf_token %}
+                <input type="hidden" name="target_status" value="{{ target_status }}">
+                
+                {% if target_status == 'won' %}
+                
+                <div class="form-group mb-3">
+                    <label for="actual_amount" class="form-label">实际签约金额（万元）</label>
+                    <input type="number" name="actual_amount" id="actual_amount" class="form-control" 
+                           step="0.01" min="0" placeholder="请输入实际签约金额" value="{{ opportunity.actual_amount|default:'' }}">
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="contract_number" class="form-label">合同编号</label>
+                    <input type="text" name="contract_number" id="contract_number" class="form-control" 
+                           placeholder="请输入合同编号" value="{{ opportunity.contract_number|default:'' }}">
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="actual_sign_date" class="form-label">实际签约日期</label>
+                    <input type="date" name="actual_sign_date" id="actual_sign_date" class="form-control" 
+                           value="{% if opportunity.actual_sign_date %}{{ opportunity.actual_sign_date|date:'Y-m-d' }}{% endif %}">
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="win_reason" class="form-label">赢单原因</label>
+                    <textarea name="win_reason" id="win_reason" class="form-control" rows="4" 
+                              placeholder="请输入赢单原因分析（可选）">{{ opportunity.win_reason|default:'' }}</textarea>
+                </div>
+                {% else %}
+                
+                <div class="form-group mb-3">
+                    <label for="loss_reason" class="form-label">输单原因 <span class="text-danger">*</span></label>
+                    <textarea name="loss_reason" id="loss_reason" class="form-control" rows="6" 
+                              placeholder="请输入输单原因分析（必填）" required>{{ opportunity.loss_reason|default:'' }}</textarea>
+                    <small class="form-text text-muted">请详细说明输单原因，包括竞争对手信息、客户反馈等</small>
+                </div>
+                {% endif %}
+                
+                <div class="form-group mb-3">
+                    <label for="comment" class="form-label">备注说明</label>
+                    <textarea name="comment" id="comment" class="form-control" rows="3" 
+                              placeholder="请输入备注说明（可选）"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" class="btn {% if target_status == 'won' %}btn-success{% else %}btn-danger{% endif %}">
+                        <i class="bi {% if target_status == 'won' %}bi-check-circle{% else %}bi-x-circle{% endif %}"></i> 
+                        确认标记为{{ status_label }}
+                    </button>
+                    <a href="{% url 'business_pages:opportunity_win_loss_select' %}?target_status={{ target_status }}" class="btn btn-outline-secondary">
+                        取消
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

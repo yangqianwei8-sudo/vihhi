@@ -1,116 +1,216 @@
-{% extends "shared/list_page_base.html" %}
-{% comment %}
-采购管理列表页面模板 (Supply Purchase List Template)
+{% extends "administrative_management/base.html" %}
 
-功能说明：
-- 展示采购单记录的列表页面
-- 支持按状态等多维度筛选
-- 支持采购单的查看、编辑、审批、收货等操作
-- 包含复选框功能，支持批量操作
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-主要功能：
-1. 筛选功能：
-   - 状态筛选：全部、草稿、待审批、已批准、已收货等
-2. 表格展示：采购单号、供应商、采购日期、采购金额、创建人、状态、创建时间、操作
-3. 复选框功能：支持全选和批量操作（继承自list_page_base.html）
-4. 操作功能：查看详情、编辑、审批、收货
-{% endcomment %}
-{% load static %}
-
-{% block list_page_title %}采购管理{% endblock %}
-
-{% block list_page_actions %}
-{% if can_create %}
-<a href="{% url 'admin_pages:supply_purchase_create' %}" class="btn btn-primary">
-    <i class="bi bi-plus-circle"></i> 创建采购单
-</a>
-{% endif %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
 {% endblock %}
 
-{% block search_placeholder %}搜索采购单号、供应商...{% endblock %}
-
-{% block reset_url %}{% url 'admin_pages:supply_purchase_list' %}{% endblock %}
-
-<!-- 表格复选框列 -->
-{% block list_page_table_checkbox_header %}
-<th style="width: 40px;">
-    <input type="checkbox" id="selectAll" title="全选/取消全选">
-</th>
+{% block extra_css %}
+<style>
+    .page-title {
+        font-size: var(--font-size-2xl);
+        font-weight: 700;
+        margin: 0 0 var(--spacing-sm) 0;
+    }
+    .page-description {
+        font-size: var(--font-size-base);
+        opacity: 0.9;
+        margin: 0;
+    }
+    .content-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--vh-text-muted);
+    }
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: var(--spacing-md);
+        opacity: 0.5;
+    }
+    .empty-state-title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--vh-text);
+        margin-bottom: var(--spacing-sm);
+    }
+    .empty-state-text {
+        font-size: var(--font-size-base);
+        color: var(--vh-text-muted);
+        margin-bottom: var(--spacing-lg);
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-draft { background: #e7f3ff; color: #0066cc; }
+    .status-pending_approval { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d1e7dd; color: #0f5132; }
+    .status-rejected { background: #f8d7da; color: #842029; }
+    .status-purchased { background: #cfe2ff; color: #084298; }
+    .status-received { background: #d1e7dd; color: #0f5132; }
+</style>
 {% endblock %}
 
-{% block list_page_table_headers %}
-<th style="width: 10%;">采购单号</th>
-<th style="width: 12%;">供应商</th>
-<th style="width: 10%;">采购日期</th>
-<th style="width: 10%;">采购金额</th>
-<th style="width: 10%;">创建人</th>
-<th style="width: 10%;">状态</th>
-<th style="width: 12%;">创建时间</th>
-{% endblock %}
-
-{% block list_page_table_checkbox_cell %}
-<td>
-    <input type="checkbox" class="row-checkbox" value="{{ item.id }}" title="选择此项">
-</td>
-{% endblock %}
-
-{% block list_page_table_row_content %}
-<td>
-    <a href="{% url 'admin_pages:supply_purchase_detail' purchase_id=item.id %}" class="text-decoration-none">
-        <code>{{ item.purchase_number }}</code>
-    </a>
-</td>
-<td>{{ item.supplier }}</td>
-<td>{{ item.purchase_date|date:"Y-m-d" }}</td>
-<td>¥{{ item.total_amount|floatformat:2 }}</td>
-<td>{{ item.created_by.get_full_name|default:item.created_by.username }}</td>
-<td>
-    {% if item.status == 'draft' %}
-        <span class="badge bg-secondary">草稿</span>
-    {% elif item.status == 'pending_approval' %}
-        <span class="badge bg-warning">待审批</span>
-    {% elif item.status == 'approved' %}
-        <span class="badge bg-success">已批准</span>
-    {% elif item.status == 'rejected' %}
-        <span class="badge bg-danger">已拒绝</span>
-    {% elif item.status == 'received' %}
-        <span class="badge bg-info">已收货</span>
-    {% else %}
-        <span class="badge bg-secondary">{{ item.get_status_display }}</span>
-    {% endif %}
-</td>
-<td>{{ item.created_time|date:"Y-m-d H:i" }}</td>
-<td>
-    <div class="list-page-table-actions">
-        <a href="{% url 'admin_pages:supply_purchase_detail' purchase_id=item.id %}" class="action-view" title="查看详情">
-            <i class="bi bi-eye"></i>
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <a href="{% url 'admin_pages:supply_purchase_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> 创建采购单
         </a>
-        {% if item.status in 'draft,pending_approval' and item.created_by == request.user %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'admin_pages:supply_purchase_update' purchase_id=item.id %}" class="action-edit" title="编辑">
-            <i class="bi bi-pencil"></i>
-        </a>
+    </div>
+
+    <div class="content-card">
+        
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="搜索采购单号、供应商..." value="{{ search }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">全部状态</option>
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a href="{% url 'admin_pages:supply_purchase_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 清除
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>采购单号</th>
+                        <th>供应商</th>
+                        <th>采购日期</th>
+                        <th>采购金额</th>
+                        <th>创建人</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for purchase in page_obj %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'admin_pages:supply_purchase_detail' purchase_id=purchase.id %}" class="text-decoration-none">
+                                <code>{{ purchase.purchase_number }}</code>
+                            </a>
+                        </td>
+                        <td>{{ purchase.supplier }}</td>
+                        <td>{{ purchase.purchase_date|date:"Y-m-d" }}</td>
+                        <td>¥{{ purchase.total_amount|floatformat:2 }}</td>
+                        <td>{{ purchase.created_by.get_full_name|default:purchase.created_by.username }}</td>
+                        <td>
+                            <span class="status-badge status-{{ purchase.status }}">
+                                {{ purchase.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ purchase.created_time|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'admin_pages:supply_purchase_detail' purchase_id=purchase.id %}" class="btn btn-outline-primary" title="查看详情">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if purchase.status in 'draft,pending_approval' and purchase.created_by == request.user %}
+                                <a href="{% url 'admin_pages:supply_purchase_update' purchase_id=purchase.id %}" class="btn btn-outline-secondary" title="编辑">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                                {% if purchase.status == 'pending_approval' %}
+                                <a href="{% url 'admin_pages:supply_purchase_approve' purchase_id=purchase.id %}" class="btn btn-outline-success" title="审批">
+                                    <i class="bi bi-check-circle"></i>
+                                </a>
+                                {% endif %}
+                                {% if purchase.status == 'approved' %}
+                                <a href="{% url 'admin_pages:supply_purchase_receive' purchase_id=purchase.id %}" class="btn btn-outline-info" title="收货">
+                                    <i class="bi bi-box-arrow-in-down"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🛒</div>
+                                <div class="empty-state-title">暂无数据</div>
+                                <div class="empty-state-text">当前筛选条件下没有找到采购单记录</div>
+                                <a href="{% url 'admin_pages:supply_purchase_create' %}" class="btn btn-primary mt-3">
+                                    <i class="bi bi-plus-circle"></i> 创建第一个采购单
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">末页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
         {% endif %}
-        {% if item.status == 'pending_approval' %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'admin_pages:supply_purchase_approve' purchase_id=item.id %}" class="action-edit" title="审批">
-            <i class="bi bi-check-circle"></i>
-        </a>
-        {% endif %}
-        {% if item.status == 'approved' %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'admin_pages:supply_purchase_receive' purchase_id=item.id %}" class="action-view" title="收货">
-            <i class="bi bi-box-arrow-in-down"></i>
-        </a>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🛒</div>
+            <div class="empty-state-title">暂无数据</div>
+            <div class="empty-state-text">当前筛选条件下没有找到采购单记录</div>
+            <a href="{% url 'admin_pages:supply_purchase_create' %}" class="btn btn-primary mt-3">
+                <i class="bi bi-plus-circle"></i> 创建第一个采购单
+            </a>
+        </div>
         {% endif %}
     </div>
-</td>
+</div>
 {% endblock %}
-
-{% block empty_colspan %}9{% endblock %}
-
-{% block empty_table_message %}暂无数据{% endblock %}
-
-{% block empty_message %}暂无数据{% endblock %}
-
-{% block empty_create_url %}{% url 'admin_pages:supply_purchase_create' %}{% endblock %}

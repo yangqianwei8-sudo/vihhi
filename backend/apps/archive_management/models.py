@@ -11,12 +11,7 @@ import os
 from backend.apps.system_management.models import User, Department
 from backend.apps.production_management.models import Project
 from backend.apps.customer_management.models import Client
-
-# 尝试导入交付相关模型（如果存在，已移除delivery_customer应用）
-try:
-    from backend.apps.delivery_customer.models import DeliveryRecord
-except ImportError:
-    DeliveryRecord = None
+from backend.apps.delivery_customer.models import DeliveryRecord
 
 # 尝试导入图纸相关模型（如果存在）
 try:
@@ -531,13 +526,11 @@ class ArchivePushRecord(models.Model):
     ]
     
     delivery_record = models.ForeignKey(
-        'delivery_customer.DeliveryRecord',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        DeliveryRecord,
+        on_delete=models.CASCADE,
         related_name='archive_push_records',
         verbose_name='交付记录',
-        db_constraint=False  # 允许外部表不存在
+        db_constraint=True
     )
     project = models.ForeignKey(
         Project,
@@ -571,9 +564,7 @@ class ArchivePushRecord(models.Model):
         ]
     
     def __str__(self):
-        if self.delivery_record:
-            return f"{self.delivery_record.delivery_number} - {self.get_push_status_display()}"
-        return f"交付推送记录 #{self.id} - {self.get_push_status_display()}"
+        return f"{self.delivery_record.delivery_number} - {self.get_push_status_display()}"
 
 
 # ==================== 图纸归档 ====================
@@ -737,15 +728,13 @@ class ProjectDeliveryArchive(models.Model):
     
     archive_number = models.CharField('归档编号', max_length=100, unique=True, db_index=True)
     
-    # 关联交付记录（已移除delivery_customer应用）
+    # 关联交付记录
     delivery_record = models.ForeignKey(
-        'delivery_customer.DeliveryRecord',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        DeliveryRecord,
+        on_delete=models.CASCADE,
         related_name='manual_archive_records',
         verbose_name='交付记录',
-        db_constraint=False  # 允许外部表不存在
+        db_constraint=True
     )
     project = models.ForeignKey(
         Project,

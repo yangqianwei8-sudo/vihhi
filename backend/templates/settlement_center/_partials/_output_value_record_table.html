@@ -1,0 +1,81 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>项目编号</th>
+        <th>项目名称</th>
+        <th>阶段</th>
+        <th>里程碑</th>
+        <th>事件</th>
+        <th>责任人</th>
+        <th>计取基数</th>
+        <th>计算产值</th>
+        <th>状态</th>
+        <th>计算时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for record in records %}
+      <tr>
+        <td>{{ record.project.project_number }}</td>
+        <td>{{ record.project.name }}</td>
+        <td>{{ record.stage.name }}</td>
+        <td>{{ record.milestone.name }}</td>
+        <td>{{ record.event.name }}</td>
+        <td>{{ record.responsible_user.get_full_name|default:record.responsible_user.username }}</td>
+        <td>{{ record.base_amount|floatformat:2 }}</td>
+        <td><strong>{{ record.calculated_value|floatformat:2 }}</strong></td>
+        <td>
+          <span class="list-badge list-badge-{{ record.status }}">
+            {{ record.get_status_display }}
+          </span>
+        </td>
+        <td>{{ record.calculated_time|date:"Y-m-d H:i" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'settlement_pages:project_output_value_detail' record.project.id %}" class="list-btn" title="查看项目产值">查看</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="11" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无产值记录</div>
+          <div class="list-empty-hint">请创建第一个产值记录开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if records.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ records.start_index }} - {{ records.end_index }} 条，共 {{ records.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if records.has_previous %}
+    <a href="?page={{ records.previous_page_number }}{% if request.GET.project_id %}&project_id={{ request.GET.project_id }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in records.paginator.page_range %}
+    {% if records.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > records.number|add:'-3' and num < records.number|add:'3' %}
+    <a href="?page={{ num }}{% if request.GET.project_id %}&project_id={{ request.GET.project_id }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if records.has_next %}
+    <a href="?page={{ records.next_page_number }}{% if request.GET.project_id %}&project_id={{ request.GET.project_id }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

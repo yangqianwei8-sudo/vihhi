@@ -13,76 +13,9 @@ import logging
 import functools
 
 from backend.apps.system_management.services import get_user_permission_codes
-from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav, _build_unified_sidebar_nav
+from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav
 
 logger = logging.getLogger(__name__)
-
-
-def _get_pagination_params(request, default_per_page=10, allowed_sizes=None):
-    """
-    获取分页参数的辅助函数
-    
-    Args:
-        request: Django request 对象
-        default_per_page: 默认每页数量
-        allowed_sizes: 允许的每页数量列表，默认为 [10, 20, 50]
-    
-    Returns:
-        tuple: (per_page, page_number)
-    """
-    if allowed_sizes is None:
-        allowed_sizes = [10, 20, 50]
-    
-    page_size = request.GET.get('page_size', str(default_per_page))
-    try:
-        per_page = int(page_size)
-        if per_page not in allowed_sizes:
-            per_page = default_per_page
-    except (ValueError, TypeError):
-        per_page = default_per_page
-    
-    page_number = request.GET.get('page', 1)
-    return per_page, page_number
-
-
-def _apply_text_search_filter(queryset, search_term, search_fields):
-    """
-    应用文本搜索筛选的辅助函数
-    
-    Args:
-        queryset: Django QuerySet
-        search_term: 搜索关键词
-        search_fields: 要搜索的字段列表，例如 ['name', 'code', 'description']
-    
-    Returns:
-        QuerySet: 筛选后的 QuerySet
-    """
-    if not search_term:
-        return queryset
-    
-    # 构建 Q 对象进行 OR 查询
-    q_objects = Q()
-    for field in search_fields:
-        q_objects |= Q(**{f'{field}__icontains': search_term})
-    
-    return queryset.filter(q_objects)
-
-
-def _apply_status_filter(queryset, status_value, status_field='status'):
-    """
-    应用状态筛选的辅助函数
-    
-    Args:
-        queryset: Django QuerySet
-        status_value: 状态值
-        status_field: 状态字段名，默认为 'status'
-    
-    Returns:
-        QuerySet: 筛选后的 QuerySet
-    """
-    if not status_value:
-        return queryset
-    return queryset.filter(**{status_field: status_value})
 
 
 def handle_view_errors(view_func):
@@ -124,7 +57,7 @@ from backend.apps.administrative_management.models import (
     Seal, SealBorrowing, SealUsage,
     FixedAsset, AssetTransfer, AssetMaintenance,
     ExpenseReimbursement, ExpenseItem,
-    AdministrativeAffair,
+    AdministrativeAffair, AffairStatusHistory, AffairProgressRecord,
     TravelApplication,
     Supplier, PurchaseContract, PurchasePayment,
 )
@@ -132,7 +65,7 @@ from .forms import (
     OfficeSupplyForm, SupplyCategoryForm, MeetingRoomForm, MeetingRoomBookingForm, MeetingForm, MeetingRecordForm,
     VehicleForm, VehicleBookingForm, ReceptionRecordForm,
     AnnouncementForm, SealForm, FixedAssetForm, ExpenseReimbursementForm, ExpenseItemForm,
-    AdministrativeAffairForm, TravelApplicationForm,
+    AdministrativeAffairForm, AffairProgressRecordForm, TravelApplicationForm,
     SupplierForm, PurchaseContractForm, PurchasePaymentForm,
     InventoryCheckForm, InventoryCheckItemForm, InventoryAdjustForm, InventoryAdjustItemForm,
 )
@@ -153,24 +86,18 @@ ExpenseItemFormSet = inlineformset_factory(
 # 行政管理模块左侧导航菜单结构（分组格式）
 ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
     {
-        'id': 'administrative_home',
-        'label': '行政管理首页',
-        'icon': '🏠',
-        'url_name': 'admin_pages:administrative_home',
-        'permission': 'administrative_management.view',
-    },
-    {
         'id': 'affairs',
         'label': '行政事务',
         'icon': '📋',
         'permission': None,  # 所有用户都可以访问
+        'expanded': True,
         'children': [
             {
                 'id': 'affair_list',
                 'label': '行政事务列表',
-                'icon': '📋',
                 'url_name': 'admin_pages:affair_list',
                 'permission': None,
+                'path_keywords': ['affair', 'administrative_home'],
             },
         ],
     },
@@ -179,42 +106,49 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
         'label': '办公用品管理',
         'icon': '📦',
         'permission': 'administrative_management.supplies.view',
+        'expanded': False,
         'children': [
             {
                 'id': 'supplies_management',
                 'label': '用品管理',
                 'url_name': 'admin_pages:supplies_management',
                 'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['supplies', 'supply'],
             },
             {
                 'id': 'supply_category',
                 'label': '用品分类',
                 'url_name': 'admin_pages:supply_category_list',
                 'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['supplies/categories', 'category'],
             },
             {
                 'id': 'supply_purchase',
                 'label': '采购管理',
                 'url_name': 'admin_pages:supply_purchase_list',
                 'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['supplies/purchases', 'purchase'],
             },
             {
                 'id': 'supply_request',
                 'label': '领用管理',
                 'url_name': 'admin_pages:supply_request_list',
                 'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['supplies/requests', 'request'],
             },
             {
                 'id': 'inventory_check',
                 'label': '库存盘点',
                 'url_name': 'admin_pages:inventory_check_list',
                 'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['supplies/inventory/checks', 'inventory_check'],
             },
             {
                 'id': 'inventory_adjust',
                 'label': '库存调整',
                 'url_name': 'admin_pages:inventory_adjust_list',
                 'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['supplies/inventory/adjusts', 'inventory_adjust'],
             },
         ],
     },
@@ -223,24 +157,28 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
         'label': '会议管理',
         'icon': '🏢',
         'permission': 'administrative_management.meeting_room.view',
+        'expanded': False,
         'children': [
             {
                 'id': 'meeting_room',
                 'label': '会议室管理',
                 'url_name': 'admin_pages:meeting_room_management',
                 'permission': 'administrative_management.meeting_room.view',
+                'path_keywords': ['meeting', 'meeting_room'],
             },
             {
                 'id': 'meeting_room_booking',
                 'label': '会议室预订',
                 'url_name': 'admin_pages:meeting_room_booking_list',
                 'permission': 'administrative_management.meeting_room.view',
+                'path_keywords': ['meeting-rooms/bookings', 'booking'],
             },
             {
                 'id': 'meeting_list',
                 'label': '会议安排',
                 'url_name': 'admin_pages:meeting_list',
                 'permission': 'administrative_management.meeting_room.view',
+                'path_keywords': ['meetings', 'meeting'],
             },
         ],
     },
@@ -249,18 +187,21 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
         'label': '车辆管理',
         'icon': '🚗',
         'permission': 'administrative_management.vehicle.view',
+        'expanded': False,
         'children': [
             {
                 'id': 'vehicle_management',
                 'label': '车辆管理',
                 'url_name': 'admin_pages:vehicle_management',
                 'permission': 'administrative_management.vehicle.view',
+                'path_keywords': ['vehicle'],
             },
             {
                 'id': 'vehicle_booking',
                 'label': '用车申请',
                 'url_name': 'admin_pages:vehicle_booking_list',
                 'permission': 'administrative_management.vehicle.view',
+                'path_keywords': ['vehicles/bookings', 'booking'],
             },
         ],
     },
@@ -269,18 +210,21 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
         'label': '固定资产管理',
         'icon': '🏛️',
         'permission': 'administrative_management.asset.view',
+        'expanded': False,
         'children': [
             {
                 'id': 'asset_management',
                 'label': '固定资产',
                 'url_name': 'admin_pages:asset_management',
                 'permission': 'administrative_management.asset.view',
+                'path_keywords': ['asset'],
             },
             {
                 'id': 'asset_transfer',
                 'label': '资产转移',
                 'url_name': 'admin_pages:asset_transfer_list',
                 'permission': 'administrative_management.asset.view',
+                'path_keywords': ['assets/transfers', 'transfer'],
             },
         ],
     },
@@ -289,12 +233,14 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
         'label': '印章管理',
         'icon': '🔐',
         'permission': 'administrative_management.seal.view',
+        'expanded': False,
         'children': [
             {
                 'id': 'seal_management',
                 'label': '印章管理',
                 'url_name': 'admin_pages:seal_management',
                 'permission': 'administrative_management.seal.view',
+                'path_keywords': ['seal'],
             },
         ],
     },
@@ -303,12 +249,14 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
         'label': '接待管理',
         'icon': '🎫',
         'permission': 'administrative_management.reception.view',
+        'expanded': False,
         'children': [
             {
                 'id': 'reception_management',
                 'label': '接待管理',
                 'url_name': 'admin_pages:reception_management',
                 'permission': 'administrative_management.reception.view',
+                'path_keywords': ['reception'],
             },
         ],
     },
@@ -317,18 +265,21 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
         'label': '差旅管理',
         'icon': '✈️',
         'permission': 'administrative_management.travel.view',
+        'expanded': False,
         'children': [
             {
                 'id': 'travel_list',
                 'label': '差旅申请',
                 'url_name': 'admin_pages:travel_list',
                 'permission': 'administrative_management.travel.view',
+                'path_keywords': ['travel', 'expense'],
             },
             {
                 'id': 'expense_management',
                 'label': '报销管理',
                 'url_name': 'admin_pages:expense_management',
                 'permission': 'administrative_management.travel.view',
+                'path_keywords': ['expenses', 'expense'],
             },
         ],
     },
@@ -337,24 +288,28 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
         'label': '采购管理',
         'icon': '🛒',
         'permission': 'administrative_management.supplies.view',
+        'expanded': False,
         'children': [
             {
                 'id': 'supplier_list',
                 'label': '供应商管理',
                 'url_name': 'admin_pages:supplier_list',
                 'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['suppliers', 'supplier'],
             },
             {
                 'id': 'purchase_contract',
                 'label': '采购合同',
                 'url_name': 'admin_pages:purchase_contract_list',
                 'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['purchases/contracts', 'contract'],
             },
             {
                 'id': 'purchase_payment',
                 'label': '采购付款',
                 'url_name': 'admin_pages:purchase_payment_list',
                 'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['purchases/payments', 'payment'],
             },
         ],
     },
@@ -363,22 +318,108 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
         'label': '公告通知',
         'icon': '📢',
         'permission': None,  # 所有用户都可以访问
+        'expanded': False,
         'children': [
             {
                 'id': 'announcement_management',
                 'label': '公告管理',
                 'url_name': 'admin_pages:announcement_management',
                 'permission': None,
+                'path_keywords': ['announcements', 'announcement'],
             },
         ],
     },
 ]
 
 
-def _build_administrative_sidebar_nav(permission_set, request_path=None, active_id=None):
-    """生成行政管理模块的左侧菜单导航（统一格式）"""
-    # 使用统一的菜单构建函数
-    return _build_unified_sidebar_nav(ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU, permission_set, active_id=active_id)
+def _build_administrative_sidebar_nav(permission_set, request_path=None):
+    """生成行政管理模块的左侧菜单导航（分组格式）
+    
+    Args:
+        permission_set: 用户权限集合
+        request_path: 当前请求路径，用于判断激活状态
+    
+    Returns:
+        list: 分组菜单项列表，格式为：
+        [
+            {
+                'label': '分组名称',
+                'icon': '图标',
+                'expanded': True/False,
+                'children': [
+                    {
+                        'label': '子菜单项名称',
+                        'url': 'URL',
+                        'active': True/False,
+                    },
+                    ...
+                ],
+            },
+            ...
+        ]
+    """
+    from django.urls import reverse, NoReverseMatch
+    
+    # 构建分组菜单
+    menu_groups = []
+    try:
+        for group in ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU:
+            # 检查分组权限
+            if group.get('permission') and not _permission_granted(group['permission'], permission_set):
+                continue
+            
+            # 构建子菜单项
+            children = []
+            for child in group.get('children', []):
+                try:
+                    # 检查子项权限
+                    if child.get('permission') and not _permission_granted(child['permission'], permission_set):
+                        continue
+                    
+                    # 获取URL
+                    try:
+                        url = reverse(child['url_name'])
+                    except NoReverseMatch:
+                        url = '#'
+                    
+                    # 判断是否激活
+                    active = False
+                    if request_path:
+                        for keyword in child.get('path_keywords', []):
+                            if keyword in request_path:
+                                active = True
+                                break
+                    
+                    children.append({
+                        'label': child['label'],
+                        'url': url,
+                        'active': active,
+                    })
+                except Exception as e:
+                    logger.warning('构建子菜单项失败: %s, 错误: %s', child.get('label', 'unknown'), str(e))
+                    continue
+            
+            # 只有当分组有可见的子项时才添加分组
+            if children:
+                # 判断分组是否应该展开（如果有激活的子项，则展开）
+                expanded = group.get('expanded', False)
+                if not expanded and request_path:
+                    for child in children:
+                        if child.get('active'):
+                            expanded = True
+                            break
+                
+                menu_groups.append({
+                    'label': group['label'],
+                    'icon': group.get('icon', ''),
+                    'expanded': expanded,
+                    'children': children,
+                })
+    except Exception as e:
+        logger.exception('构建行政管理左侧菜单导航失败: %s', str(e))
+        return []
+    
+    return menu_groups
 
 
 def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None, use_administrative_nav=False):
@@ -401,19 +442,17 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
             # 统一使用全局系统主菜单（与客户管理、财务管理模块保持一致）
             context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
             
-            # 添加左侧菜单导航（统一使用module_sidebar_nav变量名，与其他模块保持一致）
-            context['module_sidebar_nav'] = _build_administrative_sidebar_nav(permission_set, request.path)
-            # 保留sidebar_menu以兼容旧模板（逐步迁移）
-            context['sidebar_menu'] = context['module_sidebar_nav']
+            # 添加左侧菜单导航（使用统一的变量名 sidebar_menu）
+            context['sidebar_menu'] = _build_administrative_sidebar_nav(permission_set, request.path)
         except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
             logger.exception('构建页面上下文失败: %s', str(e))
             # 发生错误时使用空列表，避免页面崩溃
             context['full_top_nav'] = []
-            context['module_sidebar_nav'] = []
             context['sidebar_menu'] = []
     else:
         context['full_top_nav'] = []
-        context['module_sidebar_nav'] = []
         context['sidebar_menu'] = []
     
     return context
@@ -469,6 +508,8 @@ def administrative_home(request):
                 'hint': '在用车辆'
             })
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计数据失败: %s', str(e))
     
     # 功能模块区域
@@ -547,6 +588,8 @@ def administrative_home(request):
 @login_required
 def affair_list(request):
     """行政事务列表"""
+    import logging
+    logger = logging.getLogger(__name__)
     
     try:
         # 获取筛选参数
@@ -572,21 +615,29 @@ def affair_list(request):
                 ).distinct()
             
             # 应用筛选条件
-            affairs = _apply_text_search_filter(
-                affairs, 
-                search, 
-                ['affair_number', 'title', 'content']
-            )
+            if search:
+                affairs = affairs.filter(
+                    Q(affair_number__icontains=search) |
+                    Q(title__icontains=search) |
+                    Q(content__icontains=search)
+                )
             if affair_type:
                 affairs = affairs.filter(affair_type=affair_type)
-            affairs = _apply_status_filter(affairs, status)
+            if status:
+                affairs = affairs.filter(status=status)
             if priority:
                 affairs = affairs.filter(priority=priority)
             if responsible_user_id:
                 affairs = affairs.filter(responsible_user_id=responsible_user_id)
             
-            # 分页 - 固定每页10条数据（按照 list_page_base.html 的要求）
-            per_page = 10
+            # 分页
+            page_size = request.GET.get('page_size', '10')
+            try:
+                per_page = int(page_size)
+                if per_page not in [10, 20, 50]:
+                    per_page = 10
+            except (ValueError, TypeError):
+                per_page = 10
             paginator = Paginator(affairs, per_page)
             page_number = request.GET.get('page', 1)
             page_obj = paginator.get_page(page_number)
@@ -606,42 +657,6 @@ def affair_list(request):
             logger.exception('获取统计信息失败: %s', str(e))
             summary_cards = []
         
-        # 配置筛选面板
-        filter_config = {
-            'fields': [
-                {
-                    'key': 'affair_type',
-                    'label': '事务类型',
-                    'type': 'select',
-                    'options': [{'value': '', 'label': '全部类型'}] + [
-                        {'value': code, 'label': label} 
-                        for code, label in AdministrativeAffair.AFFAIR_TYPE_CHOICES
-                    ],
-                    'value': affair_type,
-                },
-                {
-                    'key': 'status',
-                    'label': '状态',
-                    'type': 'select',
-                    'options': [{'value': '', 'label': '全部状态'}] + [
-                        {'value': code, 'label': label} 
-                        for code, label in AdministrativeAffair.STATUS_CHOICES
-                    ],
-                    'value': status,
-                },
-                {
-                    'key': 'priority',
-                    'label': '优先级',
-                    'type': 'select',
-                    'options': [{'value': '', 'label': '全部优先级'}] + [
-                        {'value': code, 'label': label} 
-                        for code, label in AdministrativeAffair.PRIORITY_CHOICES
-                    ],
-                    'value': priority,
-                },
-            ],
-        }
-        
         context = _context(
             "行政事务管理",
             "📋",
@@ -660,9 +675,6 @@ def affair_list(request):
             'affair_type_choices': AdministrativeAffair.AFFAIR_TYPE_CHOICES,
             'status_choices': AdministrativeAffair.STATUS_CHOICES,
             'priority_choices': AdministrativeAffair.PRIORITY_CHOICES,
-            'filter_config': filter_config,
-            'can_create': _permission_granted('administrative_management.affair.create', permission_codes),
-            'user': request.user,  # 传递用户对象到模板
         })
         return render(request, "administrative_management/affair_list.html", context)
     except Exception as e:
@@ -685,8 +697,6 @@ def affair_list(request):
             'description': '管理日常行政事务',
             'full_top_nav': [],
             'sidebar_nav': [],
-            'filter_config': {},
-            'can_create': False,
         })
 
 
@@ -908,6 +918,8 @@ def administrative_home_old(request):
                 pass
         
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计数据失败: %s', str(e))
     
     context = _context(
@@ -1010,132 +1022,34 @@ def supply_category_list(request):
         messages.error(request, '您没有权限查看用品分类')
         return redirect('admin_pages:administrative_home')
     
-    # 处理批量操作（POST请求）
-    if request.method == 'POST':
-        can_manage = _permission_granted('administrative_management.supplies.manage', permission_codes)
-        if not can_manage:
-            messages.error(request, '您没有权限执行此操作')
-            return redirect('admin_pages:supply_category_list')
-        
-        # 批量删除
-        delete_ids = request.POST.getlist('delete_ids')
-        if delete_ids:
-            try:
-                categories_to_delete = SupplyCategory.objects.filter(id__in=delete_ids)
-                deleted_count = 0
-                failed_items = []
-                
-                for category in categories_to_delete:
-                    # 检查是否有子分类
-                    if category.children.exists():
-                        failed_items.append(f'{category.name}（有子分类）')
-                        continue
-                    
-                    # 检查是否有用品使用此分类
-                    if category.supplies.exists():
-                        failed_items.append(f'{category.name}（有用品使用）')
-                        continue
-                    
-                    category.delete()
-                    deleted_count += 1
-                
-                if deleted_count > 0:
-                    messages.success(request, f'成功删除 {deleted_count} 个分类')
-                if failed_items:
-                    messages.warning(request, f'以下分类无法删除：{", ".join(failed_items)}')
-                    
-            except Exception as e:
-                logger.exception('批量删除分类失败: %s', str(e))
-                messages.error(request, '批量删除失败，请稍后重试')
-            
-            return redirect('admin_pages:supply_category_list')
-        
-        # 批量状态更新
-        update_ids = request.POST.getlist('update_ids')
-        batch_is_active = request.POST.get('batch_is_active')
-        if update_ids and batch_is_active:
-            try:
-                is_active_value = batch_is_active == 'true'
-                categories_to_update = SupplyCategory.objects.filter(id__in=update_ids)
-                updated_count = categories_to_update.update(is_active=is_active_value)
-                
-                status_label = '启用' if is_active_value else '停用'
-                messages.success(request, f'成功将 {updated_count} 个分类状态更新为"{status_label}"')
-                    
-            except Exception as e:
-                logger.exception('批量更新分类状态失败: %s', str(e))
-                messages.error(request, '批量更新状态失败，请稍后重试')
-            
-            return redirect('admin_pages:supply_category_list')
-    
-    # GET请求：显示列表
-    # 获取筛选参数
-    search = request.GET.get('search', '')
-    is_active = request.GET.get('is_active', '')
-    parent_id = request.GET.get('parent_id', '')
-    
     try:
         categories = SupplyCategory.objects.select_related('parent').order_by('sort_order', 'name')
         
-        # 应用筛选条件
-        categories = _apply_text_search_filter(
-            categories,
-            search,
-            ['name', 'code', 'description']
-        )
+        # 构建树形结构
+        def build_tree(categories_list):
+            tree = []
+            category_dict = {cat.id: cat for cat in categories_list}
+            
+            for category in categories_list:
+                if category.parent is None:
+                    tree.append(category)
+                else:
+                    if category.parent.id not in category_dict:
+                        tree.append(category)
+                    else:
+                        if not hasattr(category.parent, 'children_list'):
+                            category.parent.children_list = []
+                        category.parent.children_list.append(category)
+            
+            return tree
         
-        if is_active == 'true':
-            categories = categories.filter(is_active=True)
-        elif is_active == 'false':
-            categories = categories.filter(is_active=False)
-        
-        if parent_id:
-            categories = categories.filter(parent_id=parent_id)
-        
-        # 分页 - 固定每页10条数据（按照 list_page_base.html 的要求）
-        per_page = 10
-        paginator = Paginator(categories, per_page)
-        page_number = request.GET.get('page', 1)
-        page_obj = paginator.get_page(page_number)
+        category_tree = build_tree(list(categories))
         
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取用品分类列表失败: %s', str(e))
-        page_obj = None
-    
-    # 获取父分类选项（用于筛选）
-    try:
-        parent_categories = SupplyCategory.objects.filter(parent__isnull=True).order_by('sort_order', 'name')
-        parent_choices = [{'value': '', 'label': '全部分类'}] + [
-            {'value': str(cat.id), 'label': cat.name} 
-            for cat in parent_categories
-        ]
-    except Exception as e:
-        logger.exception('获取父分类列表失败: %s', str(e))
-        parent_choices = [{'value': '', 'label': '全部分类'}]
-    
-    # 配置筛选面板
-    filter_config = {
-        'fields': [
-            {
-                'key': 'is_active',
-                'label': '状态',
-                'type': 'select',
-                'options': [
-                    {'value': '', 'label': '全部状态'},
-                    {'value': 'true', 'label': '启用'},
-                    {'value': 'false', 'label': '停用'},
-                ],
-                'value': is_active,
-            },
-            {
-                'key': 'parent_id',
-                'label': '父分类',
-                'type': 'select',
-                'options': parent_choices,
-                'value': parent_id,
-            },
-        ],
-    }
+        category_tree = []
     
     # 统计信息
     try:
@@ -1145,6 +1059,8 @@ def supply_category_list(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -1157,12 +1073,7 @@ def supply_category_list(request):
         use_administrative_nav=True
     )
     context.update({
-        'page_obj': page_obj,
-        'search': search,
-        'is_active': is_active,
-        'parent_id': parent_id,
-        'filter_config': filter_config,
-        'can_create': _permission_granted('administrative_management.supplies.manage', permission_codes),
+        'category_tree': category_tree,
     })
     return render(request, "administrative_management/supply_category_list.html", context)
 
@@ -1293,7 +1204,7 @@ def supplies_management(request):
                 Q(supplier__icontains=search)
             )
         if category:
-            supplies = supplies.filter(supply_category_id=category)
+            supplies = supplies.filter(category=category)
         if is_active == 'true':
             supplies = supplies.filter(is_active=True)
         elif is_active == 'false':
@@ -1301,22 +1212,22 @@ def supplies_management(request):
         if low_stock == 'true':
             supplies = supplies.filter(current_stock__lte=F('min_stock'))
         
-        # 分页 - 固定每页10条数据（按照 list_page_base.html 的要求）
-        per_page = 10
+        # 分页
+        page_size = request.GET.get('page_size', '10')
+        try:
+            per_page = int(page_size)
+            if per_page not in [10, 20, 50]:
+                per_page = 10
+        except (ValueError, TypeError):
+            per_page = 10
         paginator = Paginator(supplies, per_page)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取办公用品列表失败: %s', str(e))
         page_obj = None
-    
-    # 获取分类选项
-    try:
-        categories = SupplyCategory.objects.filter(is_active=True).order_by('sort_order', 'name')
-        category_choices = [(str(cat.id), str(cat)) for cat in categories]
-    except Exception as e:
-        logger.exception('获取分类列表失败: %s', str(e))
-        category_choices = []
     
     # 统计信息
     try:
@@ -1330,6 +1241,8 @@ def supplies_management(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -1341,49 +1254,13 @@ def supplies_management(request):
         request=request,
         use_administrative_nav=True
     )
-    # 配置筛选面板
-    filter_config = {
-        'fields': [
-            {
-                'key': 'category',
-                'label': '分类',
-                'type': 'select',
-                'options': [{'value': '', 'label': '全部分类'}] + [
-                    {'value': str(cat[0]), 'label': cat[1]} 
-                    for cat in category_choices
-                ],
-                'value': category,
-            },
-            {
-                'key': 'is_active',
-                'label': '状态',
-                'type': 'select',
-                'options': [
-                    {'value': '', 'label': '全部状态'},
-                    {'value': 'true', 'label': '启用'},
-                    {'value': 'false', 'label': '停用'},
-                ],
-                'value': is_active,
-            },
-            {
-                'key': 'low_stock',
-                'label': '低库存',
-                'type': 'checkbox',
-                'value': low_stock == 'true',
-            },
-        ],
-    }
-    
-    permission_codes = get_user_permission_codes(request.user)
     context.update({
         'page_obj': page_obj,
         'search': search,
         'category': category,
         'is_active': is_active,
         'low_stock': low_stock,
-        'category_choices': category_choices,
-        'filter_config': filter_config,
-        'can_create': _permission_granted('administrative_management.supply.create', permission_codes),
+        'category_choices': OfficeSupply.CATEGORY_CHOICES,
     })
     return render(request, "administrative_management/supplies_list.html", context)
 
@@ -1440,19 +1317,28 @@ def supply_purchase_list(request):
         ).prefetch_related('items').order_by('-purchase_date', '-created_time')
         
         # 应用筛选条件
-        purchases = _apply_text_search_filter(
-            purchases,
-            search,
-            ['purchase_number', 'supplier']
-        )
-        purchases = _apply_status_filter(purchases, status)
+        if search:
+            purchases = purchases.filter(
+                Q(purchase_number__icontains=search) |
+                Q(supplier__icontains=search)
+            )
+        if status:
+            purchases = purchases.filter(status=status)
         
-        # 分页 - 固定每页10条数据（按照 list_page_base.html 的要求）
-        per_page = 10
+        # 分页
+        page_size = request.GET.get('page_size', '10')
+        try:
+            per_page = int(page_size)
+            if per_page not in [10, 20, 50]:
+                per_page = 10
+        except (ValueError, TypeError):
+            per_page = 10
         paginator = Paginator(purchases, per_page)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取采购列表失败: %s', str(e))
         page_obj = None
     
@@ -1465,6 +1351,8 @@ def supply_purchase_list(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -1476,30 +1364,11 @@ def supply_purchase_list(request):
         request=request,
         use_administrative_nav=True
     )
-    # 配置筛选面板
-    filter_config = {
-        'fields': [
-            {
-                'key': 'status',
-                'label': '状态',
-                'type': 'select',
-                'options': [{'value': '', 'label': '全部状态'}] + [
-                    {'value': code, 'label': label} 
-                    for code, label in SupplyPurchase.STATUS_CHOICES
-                ],
-                'value': status,
-            },
-        ],
-    }
-    
-    permission_codes = get_user_permission_codes(request.user)
     context.update({
         'page_obj': page_obj,
         'search': search,
         'status': status,
         'status_choices': SupplyPurchase.STATUS_CHOICES,
-        'filter_config': filter_config,
-        'can_create': _permission_granted('administrative_management.supply.purchase', permission_codes),
     })
     return render(request, "administrative_management/supply_purchase_list.html", context)
 
@@ -1801,12 +1670,20 @@ def supply_request_list(request):
         if status:
             requests = requests.filter(status=status)
         
-        # 分页 - 固定每页10条数据（按照 list_page_base.html 的要求）
-        per_page = 10
+        # 分页
+        page_size = request.GET.get('page_size', '10')
+        try:
+            per_page = int(page_size)
+            if per_page not in [10, 20, 50]:
+                per_page = 10
+        except (ValueError, TypeError):
+            per_page = 10
         paginator = Paginator(requests, per_page)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取领用申请列表失败: %s', str(e))
         page_obj = None
     
@@ -1819,6 +1696,8 @@ def supply_request_list(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -1830,30 +1709,11 @@ def supply_request_list(request):
         request=request,
         use_administrative_nav=True
     )
-    # 配置筛选面板
-    filter_config = {
-        'fields': [
-            {
-                'key': 'status',
-                'label': '状态',
-                'type': 'select',
-                'options': [{'value': '', 'label': '全部状态'}] + [
-                    {'value': code, 'label': label} 
-                    for code, label in SupplyRequest.STATUS_CHOICES
-                ],
-                'value': status,
-            },
-        ],
-    }
-    
-    permission_codes = get_user_permission_codes(request.user)
     context.update({
         'page_obj': page_obj,
         'search': search,
         'status': status,
         'status_choices': SupplyRequest.STATUS_CHOICES,
-        'filter_config': filter_config,
-        'can_create': _permission_granted('administrative_management.supply.request', permission_codes),
     })
     return render(request, "administrative_management/supply_request_list.html", context)
 
@@ -2736,6 +2596,8 @@ def meeting_room_management(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取会议室列表失败: %s', str(e))
         page_obj = None
     
@@ -2754,6 +2616,8 @@ def meeting_room_management(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -2863,6 +2727,8 @@ def meeting_room_booking_list(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取会议室预订列表失败: %s', str(e))
         page_obj = None
     
@@ -2884,6 +2750,8 @@ def meeting_room_booking_list(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -3111,6 +2979,8 @@ def vehicle_management(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取车辆列表失败: %s', str(e))
         page_obj = None
     
@@ -3129,6 +2999,8 @@ def vehicle_management(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -3241,6 +3113,8 @@ def vehicle_booking_list(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取用车申请列表失败: %s', str(e))
         page_obj = None
     
@@ -3260,6 +3134,8 @@ def vehicle_booking_list(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -3623,6 +3499,8 @@ def reception_management(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取接待记录列表失败: %s', str(e))
         page_obj = None
     
@@ -3646,6 +3524,8 @@ def reception_management(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -3747,6 +3627,8 @@ def announcement_management(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取公告列表失败: %s', str(e))
         page_obj = None
     
@@ -3765,6 +3647,8 @@ def announcement_management(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -3868,6 +3752,8 @@ def seal_management(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取印章列表失败: %s', str(e))
         page_obj = None
     
@@ -3880,6 +3766,8 @@ def seal_management(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -3975,6 +3863,8 @@ def asset_management(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取资产列表失败: %s', str(e))
         page_obj = None
     
@@ -3988,6 +3878,8 @@ def asset_management(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -4092,6 +3984,8 @@ def asset_transfer_list(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取资产转移列表失败: %s', str(e))
         page_obj = None
     
@@ -4104,6 +3998,8 @@ def asset_transfer_list(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -4457,6 +4353,8 @@ def expense_management(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取报销列表失败: %s', str(e))
         page_obj = None
     
@@ -4493,6 +4391,8 @@ def expense_management(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -4569,6 +4469,15 @@ def affair_create(request):
             affair.save()
             form.save_m2m()  # 保存 ManyToMany 字段
             
+            # 记录状态历史
+            AffairStatusHistory.objects.create(
+                affair=affair,
+                old_status='',
+                new_status=affair.status,
+                operator=request.user,
+                notes='创建事务'
+            )
+            
             messages.success(request, f'行政事务 {affair.affair_number} 创建成功！')
             return redirect('admin_pages:affair_detail', affair_id=affair.id)
     else:
@@ -4612,6 +4521,16 @@ def affair_update(request, affair_id):
             affair = form.save()
             form.save_m2m()
             
+            # 如果状态改变，记录状态历史
+            if affair.status != old_status:
+                AffairStatusHistory.objects.create(
+                    affair=affair,
+                    old_status=old_status,
+                    new_status=affair.status,
+                    operator=request.user,
+                    notes='编辑事务'
+                )
+            
             messages.success(request, f'行政事务 {affair.affair_number} 更新成功！')
             return redirect('admin_pages:affair_detail', affair_id=affair.id)
     else:
@@ -4636,47 +4555,15 @@ def affair_update(request, affair_id):
 def affair_detail(request, affair_id):
     """行政事务详情"""
     affair = get_object_or_404(
-        AdministrativeAffair.objects.select_related('responsible_user', 'created_by').prefetch_related('participants'),
+        AdministrativeAffair.objects.prefetch_related('participants', 'status_history', 'progress_records'),
         id=affair_id
     )
     
-    # 获取状态历史记录（如果模型存在）
-    status_history = []
-    try:
-        if hasattr(affair, 'status_history'):
-            status_history = list(affair.status_history.all().order_by('-operation_time')[:20])
-    except Exception:
-        pass
+    # 获取状态历史记录
+    status_history = affair.status_history.all().order_by('-operation_time')
     
-    # 获取进度记录（如果模型存在）
-    progress_records = []
-    try:
-        if hasattr(affair, 'progress_records'):
-            progress_records = list(affair.progress_records.all().order_by('-record_time')[:20])
-    except Exception:
-        pass
-    
-    # 权限检查
-    permission_codes = get_user_permission_codes(request.user)
-    can_edit = (
-        (affair.created_by == request.user or affair.responsible_user == request.user) and
-        affair.status not in ['completed', 'cancelled']
-    ) or _permission_granted('administrative_management.affair.manage', permission_codes)
-    
-    can_start = (
-        affair.status == 'pending' and
-        affair.responsible_user == request.user
-    )
-    
-    can_complete = (
-        affair.status == 'in_progress' and
-        affair.responsible_user == request.user
-    )
-    
-    can_cancel = (
-        affair.status not in ['completed', 'cancelled'] and
-        (affair.created_by == request.user or _permission_granted('administrative_management.affair.manage', permission_codes))
-    )
+    # 获取进度记录
+    progress_records = affair.progress_records.all().order_by('-record_time')
     
     context = _context(
         f"行政事务详情 - {affair.title}",
@@ -4689,10 +4576,6 @@ def affair_detail(request, affair_id):
         'affair': affair,
         'status_history': status_history,
         'progress_records': progress_records,
-        'can_edit': can_edit,
-        'can_start': can_start,
-        'can_complete': can_complete,
-        'can_cancel': can_cancel,
     })
     return render(request, "administrative_management/affair_detail.html", context)
 
@@ -4711,9 +4594,19 @@ def affair_start(request, affair_id):
         messages.error(request, '只有待处理状态的事务可以开始处理')
         return redirect('admin_pages:affair_detail', affair_id=affair_id)
     
+    old_status = affair.status
     affair.status = 'in_progress'
     affair.actual_start_time = timezone.now()
     affair.save()
+    
+    # 记录状态历史
+    AffairStatusHistory.objects.create(
+        affair=affair,
+        old_status=old_status,
+        new_status=affair.status,
+        operator=request.user,
+        notes='开始处理事务'
+    )
     
     messages.success(request, f'事务 {affair.affair_number} 已开始处理')
     return redirect('admin_pages:affair_detail', affair_id=affair_id)
@@ -4735,11 +4628,21 @@ def affair_complete(request, affair_id):
     
     if request.method == 'POST':
         completion_notes = request.POST.get('completion_notes', '')
+        old_status = affair.status
         affair.status = 'completed'
         affair.progress = 100
         affair.actual_end_time = timezone.now()
         affair.completion_notes = completion_notes
         affair.save()
+        
+        # 记录状态历史
+        AffairStatusHistory.objects.create(
+            affair=affair,
+            old_status=old_status,
+            new_status=affair.status,
+            operator=request.user,
+            notes=f'完成事务：{completion_notes}'
+        )
         
         messages.success(request, f'事务 {affair.affair_number} 已完成')
         return redirect('admin_pages:affair_detail', affair_id=affair_id)
@@ -4776,8 +4679,18 @@ def affair_cancel(request, affair_id):
     
     if request.method == 'POST':
         cancel_reason = request.POST.get('cancel_reason', '')
+        old_status = affair.status
         affair.status = 'cancelled'
         affair.save()
+        
+        # 记录状态历史
+        AffairStatusHistory.objects.create(
+            affair=affair,
+            old_status=old_status,
+            new_status=affair.status,
+            operator=request.user,
+            notes=f'取消事务：{cancel_reason}'
+        )
         
         messages.success(request, f'事务 {affair.affair_number} 已取消')
         return redirect('admin_pages:affair_detail', affair_id=affair_id)
@@ -4794,6 +4707,52 @@ def affair_cancel(request, affair_id):
         'affair': affair,
     })
     return render(request, "administrative_management/affair_cancel.html", context)
+
+
+@login_required
+def affair_add_progress(request, affair_id):
+    """添加进度记录"""
+    affair = get_object_or_404(AdministrativeAffair, id=affair_id)
+    
+    # 检查权限：只有负责人可以添加进度
+    if affair.responsible_user != request.user:
+        messages.error(request, '只有负责人可以添加进度记录')
+        return redirect('admin_pages:affair_detail', affair_id=affair_id)
+    
+    if affair.status not in ['in_progress']:
+        messages.error(request, '只有处理中状态的事务可以添加进度')
+        return redirect('admin_pages:affair_detail', affair_id=affair_id)
+    
+    if request.method == 'POST':
+        form = AffairProgressRecordForm(request.POST, request.FILES)
+        if form.is_valid():
+            progress_record = form.save(commit=False)
+            progress_record.affair = affair
+            progress_record.recorder = request.user
+            progress_record.save()
+            
+            # 更新事务进度
+            affair.progress = progress_record.progress
+            affair.processing_notes = progress_record.notes
+            affair.save()
+            
+            messages.success(request, '进度记录添加成功')
+            return redirect('admin_pages:affair_detail', affair_id=affair_id)
+    else:
+        form = AffairProgressRecordForm(initial={'progress': affair.progress})
+    
+    context = _context(
+        f"添加进度 - {affair.title}",
+        "📊",
+        f"为事务 {affair.affair_number} 添加进度记录",
+        request=request,
+        use_administrative_nav=True
+    )
+    context.update({
+        'form': form,
+        'affair': affair,
+    })
+    return render(request, "administrative_management/affair_progress_form.html", context)
 
 
 # ==================== 会议管理视图 ====================
@@ -4845,6 +4804,8 @@ def meeting_list(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取会议列表失败: %s', str(e))
         page_obj = None
     
@@ -4857,6 +4818,8 @@ def meeting_list(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -5175,6 +5138,8 @@ def travel_list(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取差旅申请列表失败: %s', str(e))
         page_obj = None
     
@@ -5194,6 +5159,8 @@ def travel_list(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -5410,117 +5377,67 @@ def travel_reject(request, travel_id):
 # ==================== 供应商管理视图 ====================
 
 @login_required
-@login_required
 def supplier_list(request):
     """供应商列表"""
-    permission_codes = get_user_permission_codes(request.user)
-    if not _permission_granted('administrative_management.supplier.view', permission_codes):
-        messages.error(request, '您没有权限查看供应商')
-        return redirect('admin_pages:administrative_home')
-    
-    # 处理批量操作（POST请求）
-    if request.method == 'POST':
-        can_manage = _permission_granted('administrative_management.supplier.manage', permission_codes)
-        if not can_manage:
-            messages.error(request, '您没有权限执行此操作')
-            return redirect('admin_pages:supplier_list')
-        
-        # 批量删除
-        delete_ids = request.POST.getlist('delete_ids')
-        if delete_ids:
-            try:
-                suppliers_to_delete = Supplier.objects.filter(id__in=delete_ids)
-                deleted_count = suppliers_to_delete.count()
-                suppliers_to_delete.delete()
-                messages.success(request, f'成功删除 {deleted_count} 个供应商')
-            except Exception as e:
-                logger.exception('批量删除供应商失败: %s', str(e))
-                messages.error(request, '批量删除失败，请稍后重试')
-            return redirect('admin_pages:supplier_list')
-        
-        # 批量状态更新
-        update_ids = request.POST.getlist('update_ids')
-        batch_is_active = request.POST.get('batch_is_active')
-        if update_ids and batch_is_active:
-            try:
-                is_active_value = batch_is_active == 'true'
-                suppliers_to_update = Supplier.objects.filter(id__in=update_ids)
-                updated_count = suppliers_to_update.update(is_active=is_active_value)
-                status_label = '启用' if is_active_value else '停用'
-                messages.success(request, f'成功将 {updated_count} 个供应商状态更新为"{status_label}"')
-            except Exception as e:
-                logger.exception('批量更新供应商状态失败: %s', str(e))
-                messages.error(request, '批量更新状态失败，请稍后重试')
-            return redirect('admin_pages:supplier_list')
-    
-    # GET请求：显示列表
     # 获取筛选参数
     search = request.GET.get('search', '')
     rating = request.GET.get('rating', '')
     is_active = request.GET.get('is_active', '')
     
+    # 获取供应商列表
     try:
         suppliers = Supplier.objects.select_related('created_by').order_by('name')
         
         # 应用筛选条件
-        suppliers = _apply_text_search_filter(
-            suppliers,
-            search,
-            ['name', 'contact_person', 'contact_phone']
-        )
-        
+        if search:
+            suppliers = suppliers.filter(
+                Q(name__icontains=search) |
+                Q(contact_person__icontains=search) |
+                Q(contact_phone__icontains=search)
+            )
         if rating:
             suppliers = suppliers.filter(rating=rating)
-        
         if is_active == 'true':
             suppliers = suppliers.filter(is_active=True)
         elif is_active == 'false':
             suppliers = suppliers.filter(is_active=False)
         
-        # 分页 - 固定每页10条数据（按照 list_page_base.html 的要求）
-        per_page = 10
+        # 分页
+        page_size = request.GET.get('page_size', '10')
+        try:
+            per_page = int(page_size)
+            if per_page not in [10, 20, 50]:
+                per_page = 10
+        except (ValueError, TypeError):
+            per_page = 10
         paginator = Paginator(suppliers, per_page)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
-        
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取供应商列表失败: %s', str(e))
         page_obj = None
     
-    # 配置筛选面板
-    rating_choices = [{'value': '', 'label': '全部评级'}] + [
-        {'value': code, 'label': label} 
-        for code, label in Supplier.RATING_CHOICES
-    ]
-    
-    filter_config = {
-        'fields': [
-            {
-                'key': 'rating',
-                'label': '评级',
-                'type': 'select',
-                'options': rating_choices,
-                'value': rating,
-            },
-            {
-                'key': 'is_active',
-                'label': '状态',
-                'type': 'select',
-                'options': [
-                    {'value': '', 'label': '全部状态'},
-                    {'value': 'true', 'label': '启用'},
-                    {'value': 'false', 'label': '停用'},
-                ],
-                'value': is_active,
-            },
-        ],
-    }
+    # 统计信息
+    try:
+        total_suppliers = Supplier.objects.count()
+        active_suppliers = Supplier.objects.filter(is_active=True).count()
+        a_rating_count = Supplier.objects.filter(rating='A', is_active=True).count()
+        total_purchase_amount = sum(float(s.total_purchase_amount) for s in Supplier.objects.filter(is_active=True))
+        
+        summary_cards = []
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception('获取统计信息失败: %s', str(e))
+        summary_cards = []
     
     context = _context(
         "供应商管理",
         "🏢",
         "管理供应商信息和评级。",
-        summary_cards=[],
+        summary_cards=summary_cards,
         request=request,
         use_administrative_nav=True
     )
@@ -5529,8 +5446,7 @@ def supplier_list(request):
         'search': search,
         'rating': rating,
         'is_active': is_active,
-        'filter_config': filter_config,
-        'can_create': _permission_granted('administrative_management.supplier.create', permission_codes),
+        'rating_choices': Supplier.RATING_CHOICES,
     })
     return render(request, "administrative_management/supplier_list.html", context)
 
@@ -5643,85 +5559,64 @@ def supplier_update(request, supplier_id):
 @login_required
 def purchase_contract_list(request):
     """采购合同列表"""
-    permission_codes = get_user_permission_codes(request.user)
-    if not _permission_granted('administrative_management.contract.view', permission_codes):
-        messages.error(request, '您没有权限查看采购合同')
-        return redirect('admin_pages:administrative_home')
-    
     # 获取筛选参数
     search = request.GET.get('search', '')
     status = request.GET.get('status', '')
     supplier_id = request.GET.get('supplier_id', '')
     
+    # 获取合同列表
     try:
         contracts = PurchaseContract.objects.select_related(
             'supplier', 'purchase', 'created_by'
         ).order_by('-created_time')
         
         # 应用筛选条件
-        contracts = _apply_text_search_filter(
-            contracts,
-            search,
-            ['contract_number', 'contract_name']
-        )
-        
+        if search:
+            contracts = contracts.filter(
+                Q(contract_number__icontains=search) |
+                Q(contract_name__icontains=search)
+            )
         if status:
             contracts = contracts.filter(status=status)
-        
         if supplier_id:
             contracts = contracts.filter(supplier_id=supplier_id)
         
-        # 分页 - 固定每页10条数据（按照 list_page_base.html 的要求）
-        per_page = 10
+        # 分页
+        page_size = request.GET.get('page_size', '10')
+        try:
+            per_page = int(page_size)
+            if per_page not in [10, 20, 50]:
+                per_page = 10
+        except (ValueError, TypeError):
+            per_page = 10
         paginator = Paginator(contracts, per_page)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
-        
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取采购合同列表失败: %s', str(e))
         page_obj = None
     
-    # 获取供应商选项（用于筛选）
+    # 统计信息
     try:
-        suppliers = Supplier.objects.filter(is_active=True).order_by('name')
-        supplier_choices = [{'value': '', 'label': '全部供应商'}] + [
-            {'value': str(s.id), 'label': s.name} 
-            for s in suppliers
-        ]
+        total_contracts = PurchaseContract.objects.count()
+        pending_count = PurchaseContract.objects.filter(status='pending_approval').count()
+        signed_count = PurchaseContract.objects.filter(status='signed').count()
+        total_amount = sum(float(c.contract_amount) for c in PurchaseContract.objects.filter(status__in=['signed', 'executing']))
+        
+        summary_cards = []
     except Exception as e:
-        logger.exception('获取供应商列表失败: %s', str(e))
-        supplier_choices = [{'value': '', 'label': '全部供应商'}]
-    
-    # 配置筛选面板
-    status_choices = [{'value': '', 'label': '全部状态'}] + [
-        {'value': code, 'label': label} 
-        for code, label in PurchaseContract.STATUS_CHOICES
-    ]
-    
-    filter_config = {
-        'fields': [
-            {
-                'key': 'status',
-                'label': '状态',
-                'type': 'select',
-                'options': status_choices,
-                'value': status,
-            },
-            {
-                'key': 'supplier_id',
-                'label': '供应商',
-                'type': 'select',
-                'options': supplier_choices,
-                'value': supplier_id,
-            },
-        ],
-    }
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception('获取统计信息失败: %s', str(e))
+        summary_cards = []
     
     context = _context(
         "采购合同管理",
         "📄",
         "管理采购合同的签订和执行。",
-        summary_cards=[],
+        summary_cards=summary_cards,
         request=request,
         use_administrative_nav=True
     )
@@ -5730,8 +5625,7 @@ def purchase_contract_list(request):
         'search': search,
         'status': status,
         'supplier_id': supplier_id,
-        'filter_config': filter_config,
-        'can_create': _permission_granted('administrative_management.contract.create', permission_codes),
+        'status_choices': PurchaseContract.STATUS_CHOICES,
     })
     return render(request, "administrative_management/purchase_contract_list.html", context)
 
@@ -5874,6 +5768,8 @@ def purchase_payment_list(request):
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取采购付款列表失败: %s', str(e))
         page_obj = None
     
@@ -5886,6 +5782,8 @@ def purchase_payment_list(request):
         
         summary_cards = []
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取统计信息失败: %s', str(e))
         summary_cards = []
     
@@ -6024,16 +5922,16 @@ def inventory_check_list(request):
     status = request.GET.get('status', '')
     check_date = request.GET.get('check_date', '')
     
+    # 获取盘点列表
     try:
         checks = InventoryCheck.objects.select_related('checker', 'approver').prefetch_related('participants').order_by('-check_date', '-created_time')
         
         # 应用筛选条件
-        checks = _apply_text_search_filter(
-            checks,
-            search,
-            ['check_number', 'check_scope']
-        )
-        
+        if search:
+            checks = checks.filter(
+                Q(check_number__icontains=search) |
+                Q(check_scope__icontains=search)
+            )
         if status:
             checks = checks.filter(status=status)
         if check_date:
@@ -6043,45 +5941,48 @@ def inventory_check_list(request):
         if not _permission_granted('administrative_management.supplies.manage', permission_codes):
             checks = checks.filter(checker=request.user)
         
-        # 分页 - 固定每页10条数据（按照 list_page_base.html 的要求）
-        per_page = 10
+        # 分页
+        page_size = request.GET.get('page_size', '10')
+        try:
+            per_page = int(page_size)
+            if per_page not in [10, 20, 50]:
+                per_page = 10
+        except (ValueError, TypeError):
+            per_page = 10
         paginator = Paginator(checks, per_page)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
-        
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取库存盘点列表失败: %s', str(e))
         page_obj = None
     
-    # 配置筛选面板
-    status_choices = [{'value': '', 'label': '全部状态'}] + [
-        {'value': code, 'label': label} 
-        for code, label in InventoryCheck.STATUS_CHOICES
-    ]
-    
-    filter_config = {
-        'fields': [
-            {
-                'key': 'status',
-                'label': '状态',
-                'type': 'select',
-                'options': status_choices,
-                'value': status,
-            },
-            {
-                'key': 'check_date',
-                'label': '盘点日期',
-                'type': 'date',
-                'value': check_date,
-            },
-        ],
-    }
+    # 统计信息
+    try:
+        if _permission_granted('administrative_management.supplies.manage', permission_codes):
+            total_checks = InventoryCheck.objects.count()
+            in_progress_count = InventoryCheck.objects.filter(status='in_progress').count()
+            completed_count = InventoryCheck.objects.filter(status='completed').count()
+            approved_count = InventoryCheck.objects.filter(status='approved').count()
+        else:
+            total_checks = InventoryCheck.objects.filter(checker=request.user).count()
+            in_progress_count = InventoryCheck.objects.filter(checker=request.user, status='in_progress').count()
+            completed_count = InventoryCheck.objects.filter(checker=request.user, status='completed').count()
+            approved_count = InventoryCheck.objects.filter(checker=request.user, status='approved').count()
+        
+        summary_cards = []
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception('获取统计信息失败: %s', str(e))
+        summary_cards = []
     
     context = _context(
         "库存盘点管理",
         "📊",
         "管理库存盘点计划和执行。",
-        summary_cards=[],
+        summary_cards=summary_cards,
         request=request,
         use_administrative_nav=True
     )
@@ -6090,8 +5991,6 @@ def inventory_check_list(request):
         'search': search,
         'status': status,
         'check_date': check_date,
-        'filter_config': filter_config,
-        'can_create': _permission_granted('administrative_management.supplies.manage', permission_codes),
     })
     return render(request, "administrative_management/inventory_check_list.html", context)
 
@@ -6300,16 +6199,16 @@ def inventory_adjust_list(request):
     status = request.GET.get('status', '')
     adjust_date = request.GET.get('adjust_date', '')
     
+    # 获取调整列表
     try:
         adjusts = InventoryAdjust.objects.select_related('created_by', 'approver', 'executed_by').order_by('-adjust_date', '-created_time')
         
         # 应用筛选条件
-        adjusts = _apply_text_search_filter(
-            adjusts,
-            search,
-            ['adjust_number', 'reason']
-        )
-        
+        if search:
+            adjusts = adjusts.filter(
+                Q(adjust_number__icontains=search) |
+                Q(reason__icontains=search)
+            )
         if status:
             adjusts = adjusts.filter(status=status)
         if adjust_date:
@@ -6319,45 +6218,48 @@ def inventory_adjust_list(request):
         if not _permission_granted('administrative_management.supplies.manage', permission_codes):
             adjusts = adjusts.filter(created_by=request.user)
         
-        # 分页 - 固定每页10条数据（按照 list_page_base.html 的要求）
-        per_page = 10
+        # 分页
+        page_size = request.GET.get('page_size', '10')
+        try:
+            per_page = int(page_size)
+            if per_page not in [10, 20, 50]:
+                per_page = 10
+        except (ValueError, TypeError):
+            per_page = 10
         paginator = Paginator(adjusts, per_page)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
-        
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
         logger.exception('获取库存调整列表失败: %s', str(e))
         page_obj = None
     
-    # 配置筛选面板
-    status_choices = [{'value': '', 'label': '全部状态'}] + [
-        {'value': code, 'label': label} 
-        for code, label in InventoryAdjust.STATUS_CHOICES
-    ]
-    
-    filter_config = {
-        'fields': [
-            {
-                'key': 'status',
-                'label': '状态',
-                'type': 'select',
-                'options': status_choices,
-                'value': status,
-            },
-            {
-                'key': 'adjust_date',
-                'label': '调整日期',
-                'type': 'date',
-                'value': adjust_date,
-            },
-        ],
-    }
+    # 统计信息
+    try:
+        if _permission_granted('administrative_management.supplies.manage', permission_codes):
+            total_adjusts = InventoryAdjust.objects.count()
+            pending_count = InventoryAdjust.objects.filter(status='pending_approval').count()
+            approved_count = InventoryAdjust.objects.filter(status='approved').count()
+            executed_count = InventoryAdjust.objects.filter(status='executed').count()
+        else:
+            total_adjusts = InventoryAdjust.objects.filter(created_by=request.user).count()
+            pending_count = InventoryAdjust.objects.filter(created_by=request.user, status='pending_approval').count()
+            approved_count = InventoryAdjust.objects.filter(created_by=request.user, status='approved').count()
+            executed_count = InventoryAdjust.objects.filter(created_by=request.user, status='executed').count()
+        
+        summary_cards = []
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception('获取统计信息失败: %s', str(e))
+        summary_cards = []
     
     context = _context(
         "库存调整管理",
         "🔄",
         "管理库存调整申请和执行。",
-        summary_cards=[],
+        summary_cards=summary_cards,
         request=request,
         use_administrative_nav=True
     )
@@ -6366,8 +6268,6 @@ def inventory_adjust_list(request):
         'search': search,
         'status': status,
         'adjust_date': adjust_date,
-        'filter_config': filter_config,
-        'can_create': _permission_granted('administrative_management.supplies.manage', permission_codes),
     })
     return render(request, "administrative_management/inventory_adjust_list.html", context)
 

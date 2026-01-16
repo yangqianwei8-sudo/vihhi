@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
@@ -6,29 +6,11 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
-    /* 统一字体设置 - 与系统其他模块保持一致 */
-    .lead-tabs,
-    .lead-filters,
-    .lead-actions,
-    .lead-table,
-    .lead-table .btn,
-    .lead-table .form-select,
-    .lead-table .form-control,
-    .lead-filters .btn,
-    .lead-filters .form-select,
-    .lead-filters .form-control,
-    .lead-actions .btn,
-    .lead-actions .form-select,
-    .lead-actions .form-control {
-        font-family: var(--font-family);
-    }
-    
     .lead-tabs {
         display: flex;
         gap: var(--spacing-sm);
         margin-bottom: var(--spacing-md);
-        border-bottom: 2px solid var(--vh-border);
-        flex-wrap: wrap;
+        border-bottom: 2px solid var(--vh-primary);
     }
     
     .lead-tab {
@@ -39,17 +21,12 @@
         color: var(--vh-text-muted);
         cursor: pointer;
         font-size: var(--font-size-base);
-        font-family: var(--font-family);
-        font-weight: 400;
         transition: all var(--transition-base);
         margin-bottom: -2px;
-        text-decoration: none;
-        white-space: nowrap;
     }
     
     .lead-tab:hover {
         color: var(--vh-primary);
-        text-decoration: none;
     }
     
     .lead-tab.active {
@@ -71,7 +48,7 @@
         display: flex;
         flex-wrap: wrap;
         gap: var(--spacing-md);
-        align-items: flex-start;
+        align-items: center;
         margin-bottom: var(--spacing-sm);
     }
     
@@ -83,45 +60,35 @@
         display: flex;
         align-items: center;
         gap: var(--spacing-xs);
-        flex-shrink: 0;
-        min-width: 0;
     }
     
     .filter-item label {
         font-size: var(--font-size-sm);
-        font-family: var(--font-family);
-        font-weight: 400;
         color: var(--vh-text-muted);
         white-space: nowrap;
-        flex-shrink: 0;
     }
     
     .filter-item select,
     .filter-item input {
         font-size: var(--font-size-sm);
-        font-family: var(--font-family);
-        font-weight: 400;
         padding: var(--spacing-xs) var(--spacing-sm);
         border: 1px solid var(--vh-border);
         border-radius: var(--radius-sm);
-        min-width: 120px;
-        flex-shrink: 0;
     }
     
     .lead-actions {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
+        align-items: center;
         margin-bottom: var(--spacing-md);
         flex-wrap: wrap;
-        gap: var(--spacing-md);
+        gap: var(--spacing-sm);
     }
     
     .lead-action-buttons {
         display: flex;
         gap: var(--spacing-sm);
         flex-wrap: wrap;
-        align-items: center;
     }
     
     .lead-table {
@@ -130,62 +97,34 @@
         overflow: hidden;
         box-shadow: var(--shadow-md);
         border: 1px solid var(--vh-border);
-        width: 100%;
-    }
-    
-    .lead-table .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
     }
     
     .lead-table table {
         margin-bottom: 0;
-        width: 100%;
-        min-width: 1200px; /* 确保表格有最小宽度，避免列挤压 */
     }
     
     .lead-table thead th {
         background: var(--vh-surface);
         border-bottom: 2px solid var(--vh-primary);
         font-weight: 600;
-        font-family: var(--font-family);
         color: var(--vh-text);
         font-size: var(--font-size-sm);
-        padding: var(--spacing-sm) var(--spacing-md);
+        padding: calc(var(--spacing-sm) * 0.7) calc(var(--spacing-md) * 0.7);
         white-space: nowrap;
         position: relative;
         line-height: 1.4;
-        vertical-align: middle;
     }
     
     .lead-table tbody td {
-        font-size: var(--font-size-base);
-        font-family: var(--font-family);
-        font-weight: 400;
-        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: var(--font-size-sm);
+        padding: calc(var(--spacing-md) * 0.7);
         vertical-align: middle;
-        border-bottom: 1px solid var(--vh-border-light);
+        border-bottom: 2px solid var(--vh-primary);
         line-height: 1.4;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 200px;
-        color: var(--vh-text);
-    }
-    
-    /* 某些列允许换行 */
-    .lead-table tbody td[data-column="latest_followup_note"] {
-        white-space: normal;
-        max-width: 300px;
-    }
-    
-    .lead-table tbody td[data-column="company_name"] {
-        max-width: 250px;
     }
     
     .lead-table tbody tr {
         line-height: 1.4;
-        transition: background-color 0.2s ease;
     }
     
     .lead-table tbody tr:hover {
@@ -194,41 +133,6 @@
     
     .lead-table tbody tr.selected {
         background-color: var(--vh-primary-soft);
-    }
-    
-    /* 响应式布局 */
-    @media (max-width: 1200px) {
-        .lead-table table {
-            min-width: 1000px;
-        }
-    }
-    
-    @media (max-width: 768px) {
-        .lead-actions {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        
-        .lead-action-buttons {
-            width: 100%;
-            justify-content: flex-start;
-        }
-        
-        .filter-row {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        
-        .filter-item {
-            width: 100%;
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        
-        .filter-item select,
-        .filter-item input {
-            width: 100%;
-        }
     }
     
     .contact-avatar {
@@ -241,17 +145,14 @@
         justify-content: center;
         color: var(--vh-card-bg);
         font-weight: 600;
-        font-family: var(--font-family);
         font-size: var(--font-size-sm);
         margin-right: var(--spacing-sm);
     }
-    
     
     .days-badge {
         padding: var(--spacing-xs) var(--spacing-sm);
         border-radius: var(--radius-sm);
         font-size: var(--font-size-xs);
-        font-family: var(--font-family);
         font-weight: 500;
     }
     
@@ -278,8 +179,6 @@
         cursor: pointer;
         color: var(--vh-warning);
         font-size: var(--font-size-base);
-        font-family: var(--font-family);
-        font-weight: 400;
         padding: var(--spacing-xs);
         border-radius: var(--radius-sm);
         transition: all var(--transition-base);
@@ -301,8 +200,6 @@
         border: 1px solid var(--vh-border);
         border-radius: var(--radius-sm);
         font-size: var(--font-size-sm);
-        font-family: var(--font-family);
-        font-weight: 400;
         cursor: move;
         margin: var(--spacing-xs);
     }
@@ -310,9 +207,7 @@
     .column-tag .remove-btn {
         cursor: pointer;
         color: var(--vh-text-muted);
-        font-size: var(--font-size-base);
-        font-family: var(--font-family);
-        font-weight: 400;
+        font-size: var(--font-size-md);
         line-height: 1;
         padding: 0;
         background: none;
@@ -333,8 +228,6 @@
         border: 1px solid var(--vh-border);
         border-radius: var(--radius-sm);
         font-size: var(--font-size-sm);
-        font-family: var(--font-family);
-        font-weight: 400;
         cursor: pointer;
         margin: var(--spacing-xs);
         transition: all var(--transition-base);
@@ -369,8 +262,6 @@
         justify-content: center;
         color: var(--vh-text-muted);
         font-size: var(--font-size-sm);
-        font-family: var(--font-family);
-        font-weight: 400;
     }
     
     /* 自定义筛选字段样式 */
@@ -389,9 +280,7 @@
     
     .filter-field-drag-handle {
         color: var(--vh-text-muted);
-        font-size: var(--font-size-lg);
-        font-family: var(--font-family);
-        font-weight: 400;
+        font-size: 1.2rem;
         cursor: move;
         padding: 0 8px;
     }
@@ -406,8 +295,6 @@
     
     .filter-field-label {
         font-weight: 500;
-        font-family: var(--font-family);
-        font-size: var(--font-size-base);
         color: var(--vh-text);
     }
     
@@ -417,28 +304,27 @@
 </style>
 {% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_list' %}">客户管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 客户线索主卡片 -->
-    <div class="info-card">
-        <div class="info-card-body">
-            <!-- 标签页 -->
-            <div class="lead-tabs">
-                <a href="?tab=all{% if search %}&search={{ search }}{% endif %}" class="lead-tab {% if tab == 'all' %}active{% endif %}">
-                    全部客户线索
-                </a>
-                <a href="?tab=not_friend{% if search %}&search={{ search }}{% endif %}" class="lead-tab {% if tab == 'not_friend' %}active{% endif %}">
-                    未加好友
-                </a>
-                <a href="?tab=friend_added{% if search %}&search={{ search }}{% endif %}" class="lead-tab {% if tab == 'friend_added' %}active{% endif %}">
-                    已加好友
-                </a>
-            </div>
-            
-            <!-- 筛选栏 -->
-            <div class="lead-filters">
+    
+    <div class="lead-tabs">
+        <a href="?tab=all{% if search %}&search={{ search }}{% endif %}" class="lead-tab {% if tab == 'all' %}active{% endif %}">
+            全部客户线索
+        </a>
+        <a href="?tab=not_friend{% if search %}&search={{ search }}{% endif %}" class="lead-tab {% if tab == 'not_friend' %}active{% endif %}">
+            未加好友
+        </a>
+        <a href="?tab=friend_added{% if search %}&search={{ search }}{% endif %}" class="lead-tab {% if tab == 'friend_added' %}active{% endif %}">
+            已加好友
+        </a>
+    </div>
+    
+    <div class="lead-filters">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <h6 class="mb-0">筛选条件</h6>
             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#filterFieldsModal" title="自定义筛选字段">
@@ -499,12 +385,11 @@
                     </select>
                 </div>
                 
-                <!-- 其他可选筛选字段（默认隐藏） -->
                 <div class="filter-item" data-filter-field="region" style="display: none;">
                     <label>地区:</label>
                     <select name="region" class="form-select form-select-sm" style="width: 150px;">
                         <option value="">全部</option>
-                        <!-- 地区选项待实现 -->
+                        
                     </select>
                 </div>
                 
@@ -541,7 +426,6 @@
         </form>
     </div>
     
-    <!-- 操作栏 -->
     <div class="lead-actions">
         <div class="lead-action-buttons">
             {% if can_create %}
@@ -559,10 +443,10 @@
             <button class="btn btn-outline-secondary btn-sm">导入</button>
         </div>
         
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="text-muted" style="font-size: var(--font-size-sm); font-family: var(--font-family); white-space: nowrap;">已选<span id="selectedCount">0</span>个</span>
-            <div id="bulkActions" style="display: none;" class="d-flex gap-2 flex-wrap">
-                <select id="bulkActionSelect" class="form-select form-select-sm" style="width: 120px; min-width: 120px;">
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted" style="font-size: var(--font-size-sm);">已选<span id="selectedCount">0</span>个</span>
+            <div id="bulkActions" style="display: none;" class="d-flex gap-2">
+                <select id="bulkActionSelect" class="form-select form-select-sm" style="width: 120px;">
                     <option value="">批量操作</option>
                     <option value="assign">分配负责人</option>
                     <option value="update_status">更新状态</option>
@@ -571,14 +455,14 @@
                 </select>
                 <button id="executeBulkAction" class="btn btn-primary btn-sm">执行</button>
             </div>
-            <div class="input-group input-group-sm" style="width: 100%; max-width: 500px; min-width: 300px;">
-                <select name="search_field" class="form-select form-select-sm" style="width: auto; min-width: 100px; flex-shrink: 0;">
+            <div class="input-group input-group-sm" style="width: 350px;">
+                <select name="search_field" class="form-select form-select-sm" style="width: 120px;">
                     <option value="all" {% if not request.GET.search_field or request.GET.search_field == 'all' %}selected{% endif %}>全部字段</option>
                     <option value="company_name" {% if request.GET.search_field == 'company_name' %}selected{% endif %}>公司名称</option>
                     <option value="contact_name" {% if request.GET.search_field == 'contact_name' %}selected{% endif %}>联系人</option>
                     <option value="contact_phone" {% if request.GET.search_field == 'contact_phone' %}selected{% endif %}>联系电话</option>
                 </select>
-                <input type="text" name="search" class="form-control" placeholder="请输入搜索内容" value="{{ search }}" style="flex: 1; min-width: 0;">
+                <input type="text" name="search" class="form-control" placeholder="请输入搜索内容" value="{{ search }}">
                 <button class="btn btn-outline-secondary" type="submit" form="filterForm">
                     搜索
                 </button>
@@ -589,7 +473,6 @@
         </div>
     </div>
     
-    <!-- 线索列表表格 -->
     {% if page_obj %}
     <div class="lead-table">
         <div class="table-responsive">
@@ -711,7 +594,6 @@
             </table>
         </div>
         
-        <!-- 自定义显示列模态框 -->
         <div class="modal fade" id="columnSettingsModal" tabindex="-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
@@ -736,14 +618,14 @@
                                 <div>
                                     <label class="form-label fw-bold">已选列</label>
                                     <div id="selectedColumns" class="column-list-container">
-                                        <!-- 已选列将通过JavaScript动态生成 -->
+                                        
                                     </div>
                                 </div>
                                 
                                 <div class="mt-4">
                                     <label class="form-label fw-bold">可用字段</label>
                                     <div id="availableColumns" class="column-list-container">
-                                        <!-- 可用字段将通过JavaScript动态生成 -->
+                                        
                                     </div>
                                 </div>
                             </div>
@@ -762,7 +644,6 @@
             </div>
         </div>
         
-        <!-- 自定义筛选字段模态框 -->
         <div class="modal fade" id="filterFieldsModal" tabindex="-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
@@ -787,7 +668,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="filterFieldsList">
-                                    <!-- 筛选字段列表将通过JavaScript动态生成 -->
+                                    
                                 </tbody>
                             </table>
                         </div>
@@ -801,7 +682,6 @@
             </div>
         </div>
         
-        <!-- 批量操作模态框 -->
         <div class="modal fade" id="bulkActionModal" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -823,7 +703,6 @@
             </div>
         </div>
         
-        <!-- 分页 -->
         {% if page_obj.has_other_pages %}
         <div class="pagination-wrapper p-3">
             <div class="d-flex justify-content-between align-items-center">
@@ -877,16 +756,13 @@
         {% endif %}
     </div>
     {% else %}
-    <div class="info-card" style="margin-top: var(--spacing-md);">
+    <div class="info-card">
         <div class="info-card-body">
             <p class="text-muted text-center py-5">暂无线索数据</p>
         </div>
     </div>
     {% endif %}
-        </div>
-    </div>
     
-    <!-- 统计图表区域 -->
     {% if follow_status_stats or lead_source_stats %}
     <div class="row g-2 mt-3 align-items-start">
         {% if follow_status_stats %}
@@ -937,7 +813,6 @@
             element.textContent = text;
         }
     }
-
 
     function getCsrfToken() {
         const token = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -1693,10 +1568,8 @@
     applyFilterFieldsVisibility();
 </script>
 
-<!-- 引入SortableJS用于拖拽排序 -->
 <script src="{% static 'js/lib/Sortable.min.js' %}"></script>
 
-<!-- 统计图表（使用 Chart.js） -->
 {% if follow_status_stats or lead_source_stats %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
@@ -1780,7 +1653,6 @@
         }
     });
 
-
     // 事件处理器: handle_onclick_1
     document.addEventListener('DOMContentLoaded', function() {
         const element = document.querySelector('.dropdown-item');
@@ -1790,7 +1662,6 @@
             });
         }
     });
-
 
     // 事件处理器: handle_onclick_2
     document.addEventListener('DOMContentLoaded', function() {
@@ -1802,7 +1673,6 @@
         }
     });
 
-
     // 事件处理器: handle_onchange_3
     document.addEventListener('DOMContentLoaded', function() {
         const element = document.querySelector('.form-select');
@@ -1813,7 +1683,6 @@
         }
     });
 
-
     // 事件处理器: handle_onclick_4
     document.addEventListener('DOMContentLoaded', function() {
         const element = document.querySelector('.remove-btn');
@@ -1823,7 +1692,6 @@
             });
         }
     });
-
 
     // 事件处理器: handle_onclick_5
     document.addEventListener('DOMContentLoaded', function() {

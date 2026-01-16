@@ -5,10 +5,6 @@ from . import views_pages
 app_name = "task_collaboration"
 
 urlpatterns = [
-    # 首页
-    path("", views_pages.task_collaboration_home, name="task_collaboration_home"),
-    path("home/", views_pages.task_collaboration_home, name="task_collaboration_home"),
-    
     path("board/", views_pages.task_board, name="task_board"),
     path("workspace/", views_pages.collaboration_workspace, name="workspace"),
     path("process/", views_pages.process_engine, name="process_engine"),

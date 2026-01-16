@@ -1,6 +1,6 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
 
 {% load static %}
 {% block extra_css %}
@@ -9,22 +9,16 @@
 
 
 
-{% block module_content %}
-<div class="workspace-content">
-    <!-- 页面标题和操作按钮 -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+{% block cm_title %}商机详情{% endblock %}
+
+{% block cm_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="mb-0">
-                <a href="{% url 'business_pages:opportunity_management' %}" class="text-decoration-none">
-                    <i class="bi bi-arrow-left"></i>
-            </a>
-                商机详情
-            </h2>
             <p class="text-muted mb-0">商机编号：{{ opportunity.opportunity_number|default:'未编号' }}</p>
         </div>
         <div class="btn-group">
             {% if can_edit %}
-            <a href="{% url 'business_pages:opportunity_edit' opportunity.id %}" class="btn btn-primary">
+            <a href="{% url 'opportunity_pages:opportunity_edit' opportunity.id %}" class="btn btn-primary">
                 <i class="bi bi-pencil"></i> 编辑
             </a>
             {% endif %}
@@ -34,18 +28,18 @@
             </button>
             <ul class="dropdown-menu">
                 <li>
-                    <a class="dropdown-item" href="{% url 'business_pages:opportunity_followup_create' opportunity.id %}">
+                    <a class="dropdown-item" href="{% url 'opportunity_pages:opportunity_followup_create' opportunity.id %}">
                         <i class="bi bi-plus-circle"></i> 记录跟进
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item" href="{% url 'business_pages:opportunity_status_transition' opportunity.id %}">
+                    <a class="dropdown-item" href="{% url 'opportunity_pages:opportunity_status_transition' opportunity.id %}">
                 <i class="bi bi-arrow-repeat"></i> 状态流转
             </a>
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                    <a class="dropdown-item text-danger" href="{% url 'business_pages:opportunity_delete' opportunity.id %}">
+                    <a class="dropdown-item text-danger" href="{% url 'opportunity_pages:opportunity_delete' opportunity.id %}">
                         <i class="bi bi-trash"></i> 删除
             </a>
                 </li>
@@ -53,13 +47,12 @@
         </div>
     </div>
     
-    <!-- 基本信息卡片（根据商机管理专项设计方案） -->
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
             <h5 class="info-card-title">基本信息</h5>
             <div class="info-card-actions">
                 {% if can_edit %}
-                <a href="{% url 'business_pages:opportunity_edit' opportunity.id %}" class="btn btn-sm btn-outline-primary">编辑</a>
+                <a href="{% url 'opportunity_pages:opportunity_edit' opportunity.id %}" class="btn btn-sm btn-outline-primary">编辑</a>
                 {% endif %}
             </div>
         </div>
@@ -117,7 +110,6 @@
         </div>
     </div>
     
-    <!-- 项目信息卡片 -->
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
             <h5 class="info-card-title">项目信息</h5>
@@ -158,7 +150,6 @@
         </div>
     </div>
     
-    <!-- 金额和概率卡片 -->
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
             <h5 class="info-card-title">金额和概率</h5>
@@ -193,7 +184,6 @@
         </div>
     </div>
     
-    <!-- 商机描述 -->
     {% if opportunity.description %}
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
@@ -207,7 +197,6 @@
     </div>
     {% endif %}
     
-    <!-- 审批流程卡片 -->
     {% if approval_instance %}
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
@@ -278,7 +267,6 @@
     </div>
     {% endif %}
     
-    <!-- 审批流程时间轴样式CSS -->
     <style>
         .approval-timeline {
             position: relative;
@@ -340,7 +328,6 @@
         }
     </style>
     
-    <!-- 赢单/输单信息卡片（根据总体设计方案） -->
     {% if opportunity.status == 'won' or opportunity.status == 'lost' %}
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
@@ -386,7 +373,6 @@
     </div>
     {% endif %}
     
-    <!-- 健康度评分卡片（根据总体设计方案，API已实现） -->
     {% if opportunity.health_score and opportunity.health_score > 0 %}
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
@@ -414,12 +400,11 @@
     </div>
     {% endif %}
     
-    <!-- 跟进记录卡片 -->
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
             <h5 class="info-card-title">跟进记录</h5>
             <div class="info-card-actions">
-                <a href="{% url 'business_pages:opportunity_followup_create' opportunity.id %}" 
+                <a href="{% url 'opportunity_pages:opportunity_followup_create' opportunity.id %}" 
                    class="btn btn-sm btn-primary">
                     <i class="bi bi-plus-circle"></i> 新增跟进
                 </a>
@@ -427,7 +412,7 @@
         </div>
         <div class="info-card-body">
             {% if followups %}
-            <!-- 时间轴样式展示跟进记录 -->
+            
             <div class="timeline">
                 {% for followup in followups %}
                 <div class="timeline-item">
@@ -447,11 +432,11 @@
                             </div>
                             <div class="btn-group btn-group-sm">
                                 {% if followup.created_by == user or can_edit %}
-                                <a href="{% url 'business_pages:opportunity_followup_edit' opportunity.id followup.id %}" 
+                                <a href="{% url 'opportunity_pages:opportunity_followup_edit' opportunity.id followup.id %}" 
                                    class="btn btn-outline-secondary btn-sm" title="编辑">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a href="{% url 'business_pages:opportunity_followup_delete' opportunity.id followup.id %}" 
+                                <a href="{% url 'opportunity_pages:opportunity_followup_delete' opportunity.id followup.id %}" 
                                    class="btn btn-outline-danger btn-sm" title="删除">
                                     <i class="bi bi-trash"></i>
                                 </a>
@@ -494,7 +479,7 @@
             <div class="text-center text-muted py-4">
                 <i class="bi bi-inbox" style="font-size: 3rem;"></i>
                 <p class="mt-3">暂无跟进记录</p>
-                <a href="{% url 'business_pages:opportunity_followup_create' opportunity.id %}" 
+                <a href="{% url 'opportunity_pages:opportunity_followup_create' opportunity.id %}" 
                    class="btn btn-primary mt-2">
                     <i class="bi bi-plus-circle"></i> 创建第一条跟进记录
                 </a>
@@ -503,7 +488,6 @@
         </div>
     </div>
     
-    <!-- 时间轴样式CSS -->
     <style>
         .timeline {
             position: relative;
@@ -554,7 +538,6 @@
         }
     </style>
     
-    <!-- 报价记录 -->
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
             <h5 class="info-card-title">报价记录</h5>
@@ -563,7 +546,7 @@
                 <span class="badge bg-secondary">{{ quotations|length }} 个版本</span>
                 {% endif %}
                 {% if can_edit %}
-                <a href="{% url 'business_pages:opportunity_bidding_quotation' %}?opportunity_id={{ opportunity.id }}" 
+                <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?opportunity_id={{ opportunity.id }}" 
                    class="btn btn-sm btn-primary" title="创建报价">
                     <i class="bi bi-plus-circle"></i> 新建报价
                 </a>
@@ -614,12 +597,12 @@
                             <td>{{ quotation.created_time|date:'Y-m-d H:i' }}</td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'business_pages:opportunity_bidding_quotation' %}?quotation_id={{ quotation.id }}" 
+                                    <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?quotation_id={{ quotation.id }}" 
                                        class="btn btn-outline-primary" title="查看详情">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                     {% if can_edit %}
-                                    <a href="{% url 'business_pages:opportunity_bidding_quotation' %}?quotation_id={{ quotation.id }}&edit=1" 
+                                    <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?quotation_id={{ quotation.id }}&edit=1" 
                                        class="btn btn-outline-secondary" title="编辑">
                                         <i class="bi bi-pencil"></i>
                                     </a>
@@ -645,7 +628,7 @@
                 <i class="bi bi-inbox" style="font-size: 3rem;"></i>
                 <p class="mt-3">暂无报价记录</p>
                 {% if can_edit %}
-                <a href="{% url 'business_pages:opportunity_bidding_quotation' %}?opportunity_id={{ opportunity.id }}" 
+                <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?opportunity_id={{ opportunity.id }}" 
                    class="btn btn-primary mt-2">
                     <i class="bi bi-plus-circle"></i> 创建第一个报价
                 </a>
@@ -654,6 +637,4 @@
             {% endif %}
         </div>
     </div>
-</div>
 {% endblock %}
-

@@ -1,0 +1,113 @@
+{% extends "plan_management/_base.html" %}
+{% load static %}
+
+{% block pm_title %}计划调整申请{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">查看和管理计划调整申请</span>{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+<style>
+  .list-badge-pending { background: #FFF3CD; color: #856404; border-color: #FFE69C; }
+  .list-badge-approved { background: #D1E7DD; color: #0F5132; border-color: #A3CFBB; }
+  .list-badge-rejected { background: #F8D7DA; color: #842029; border-color: #F1AEB5; }
+  
+  /* 所有按钮统一为黑色背景 */
+  .list-btn {
+    background: #1A1A1A !important;
+    color: #FFFFFF !important;
+    border-color: #1A1A1A !important;
+  }
+  
+  .list-btn:hover {
+    background: #333333 !important;
+    color: #FFFFFF !important;
+    border-color: #333333 !important;
+  }
+</style>
+{% endblock %}
+
+{% block pm_content %}
+<div class="detail-card">
+  <div class="detail-card-title">📊 统计信息</div>
+  <div class="detail-info-grid">
+    <div class="detail-info-item">
+      <div class="detail-info-label">总计</div>
+      <div class="detail-info-value">{{ total_count }}</div>
+    </div>
+    <div class="detail-info-item">
+      <div class="detail-info-label">待审批</div>
+      <div class="detail-info-value">{{ pending_count }}</div>
+    </div>
+    <div class="detail-info-item">
+      <div class="detail-info-label">已批准</div>
+      <div class="detail-info-value">{{ approved_count }}</div>
+    </div>
+    <div class="detail-info-item">
+      <div class="detail-info-label">已拒绝</div>
+      <div class="detail-info-value">{{ rejected_count }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="detail-card" style="margin-top: 20px;">
+  <div class="detail-card-title">📝 调整申请列表</div>
+  <div style="padding: 16px;">
+    <div style="margin-bottom: 16px;">
+      <a href="?status=" class="list-btn" style="margin-right: 8px;">全部</a>
+      <a href="?status=pending" class="list-btn" style="margin-right: 8px;">待审批</a>
+      <a href="?status=approved" class="list-btn" style="margin-right: 8px;">已批准</a>
+      <a href="?status=rejected" class="list-btn">已拒绝</a>
+    </div>
+    
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="border-bottom: 1px solid #E0E0E0;">
+          <th style="padding: 12px; text-align: left; font-size: 12px; color: #666666; font-weight: 500;">计划编号</th>
+          <th style="padding: 12px; text-align: left; font-size: 12px; color: #666666; font-weight: 500;">计划名称</th>
+          <th style="padding: 12px; text-align: left; font-size: 12px; color: #666666; font-weight: 500;">申请人</th>
+          <th style="padding: 12px; text-align: left; font-size: 12px; color: #666666; font-weight: 500;">申请时间</th>
+          <th style="padding: 12px; text-align: left; font-size: 12px; color: #666666; font-weight: 500;">状态</th>
+          <th style="padding: 12px; text-align: left; font-size: 12px; color: #666666; font-weight: 500;">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for adjustment in page_obj %}
+        <tr style="border-bottom: 1px solid #F5F5F5;">
+          <td style="padding: 12px; font-size: 12px; color: #333333;">{{ adjustment.plan.plan_number }}</td>
+          <td style="padding: 12px; font-size: 12px; color: #333333;">{{ adjustment.plan.name }}</td>
+          <td style="padding: 12px; font-size: 12px; color: #333333;">{% if adjustment.created_by %}{{ adjustment.created_by.get_full_name|default:adjustment.created_by.username }}{% else %}-{% endif %}</td>
+          <td style="padding: 12px; font-size: 12px; color: #666666;">{{ adjustment.created_time|date:"Y-m-d H:i" }}</td>
+          <td style="padding: 12px;">
+            <span class="list-badge list-badge-{{ adjustment.status }}">
+              {{ adjustment.get_status_display }}
+            </span>
+          </td>
+          <td style="padding: 12px;">
+            {% if adjustment.status == 'pending' and can_approve %}
+            <a href="{% url 'plan_pages:plan_adjustment_approve' adjustment.id %}" class="list-btn" style="margin-right: 8px;">审批</a>
+            {% endif %}
+            <a href="{% url 'plan_pages:plan_detail' adjustment.plan.id %}" class="list-btn">查看计划</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="padding: 24px; text-align: center; color: #999999; font-size: 12px;">暂无调整申请</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    
+    {% if page_obj.has_other_pages %}
+    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 8px;">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="list-btn">上一页</a>
+      {% endif %}
+      <span style="padding: 10px 20px; font-size: 12px; color: #666666;">第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页</span>
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="list-btn">下一页</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

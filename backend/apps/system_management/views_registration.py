@@ -88,29 +88,30 @@ def registration_detail(request, pk):
     })
 
 
-@login_required
-def complete_profile(request):
-    user = request.user
-    if user.profile_completed:
-        return redirect('admin:index')
-
-    if request.method == 'POST':
-        form = ProfileCompletionForm(request.POST, user=user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, '个人资料已完善')
-            return redirect('admin:index')
-    else:
-        form = ProfileCompletionForm(user=user)
-
-    current_category = form.initial.get('service_category', user.user_type or 'internal')
-    service_category_label = dict(SERVICE_CATEGORY_CHOICES).get(current_category, '服务单位')
-
-    return render(request, 'registration/complete_profile.html', {
-        'form': form,
-        'service_category': current_category,
-        'service_category_label': service_category_label,
-        'service_options': form.get_service_options(),
-        'department_group_map': form.get_department_group_map(),
-    })
+# 已注释：禁用资料完善页面
+# @login_required
+# def complete_profile(request):
+#     user = request.user
+#     if user.profile_completed:
+#         return redirect('admin:index')
+# 
+#     if request.method == 'POST':
+#         form = ProfileCompletionForm(request.POST, user=user)
+#         if form.is_valid():
+#             form.save()
+#             messages.success(request, '个人资料已完善')
+#             return redirect('admin:index')
+#     else:
+#         form = ProfileCompletionForm(user=user)
+# 
+#     current_category = form.initial.get('service_category', user.user_type or 'internal')
+#     service_category_label = dict(SERVICE_CATEGORY_CHOICES).get(current_category, '服务单位')
+# 
+#     return render(request, 'registration/complete_profile.html', {
+#         'form': form,
+#         'service_category': current_category,
+#         'service_category_label': service_category_label,
+#         'service_options': form.get_service_options(),
+#         'department_group_map': form.get_department_group_map(),
+#     })
 

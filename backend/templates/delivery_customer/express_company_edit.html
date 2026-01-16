@@ -1,15 +1,20 @@
-{% extends "shared/module_base.html" %}
+{% extends "delivery_customer/base.html" %}
 {% load static %}
 
 {% block title %}编辑快递公司 - 维海科技信息化管理平台{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:report_delivery' %}">收发管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:express_company_list' %}">快递公司列表</a></li>
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:express_company_detail' company.id %}">{{ company.name }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-lg-8 col-xl-6 mx-auto">
-            <!-- 页面标题 -->
+            
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h2 class="mb-1">✏️ 编辑快递公司</h2>
@@ -22,13 +27,11 @@
                 </div>
             </div>
 
-            <!-- 表单卡片 -->
             <div class="card shadow-sm">
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
                         
-                        <!-- 基本信息 -->
                         <div class="mb-4">
                             <h5 class="mb-3">基本信息</h5>
                             
@@ -56,7 +59,6 @@
                             </div>
                         </div>
 
-                        <!-- 联系方式 -->
                         <div class="mb-4">
                             <h5 class="mb-3">联系方式</h5>
                             
@@ -82,7 +84,6 @@
                             </div>
                         </div>
 
-                        <!-- 设置 -->
                         <div class="mb-4">
                             <h5 class="mb-3">设置</h5>
                             
@@ -116,14 +117,12 @@
                             </div>
                         </div>
 
-                        <!-- 备注 -->
                         <div class="mb-4">
                             <h5 class="mb-3">备注</h5>
                             <textarea name="notes" class="form-control" rows="3" 
                                       placeholder="其他备注信息">{{ company.notes|default:'' }}</textarea>
                         </div>
 
-                        <!-- 提交按钮 -->
                         <div class="d-flex justify-content-end gap-2">
                             <a href="{% url 'delivery_pages:express_company_detail' company.id %}" class="btn btn-secondary">
                                 取消
@@ -139,4 +138,3 @@
     </div>
 </div>
 {% endblock %}
-

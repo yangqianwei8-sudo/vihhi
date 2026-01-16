@@ -1,14 +1,14 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "customer_management/_base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
-
-
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item"><a href="{% url 'contract_pages:contract_management_list' %}">合同管理</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'contract_pages:contract_negotiation_list' %}">合同洽谈记录</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .form-card {
         background: #fff;
@@ -59,9 +59,9 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="center-hero mb-4">
         <div style="position: relative; z-index: 1;">
             <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
@@ -69,11 +69,9 @@
         </div>
     </div>
 
-    <!-- 表单 -->
-    <form method="post" >
+    <form method="post" class="form-card">
         {% csrf_token %}
         
-        <!-- 关联信息 -->
         <div class="form-section">
             <h5>🔗 关联信息</h5>
             <div class="row">
@@ -121,7 +119,6 @@
             </div>
         </div>
 
-        <!-- 基本信息 -->
         <div class="form-section">
             <h5>📋 基本信息</h5>
             <div class="row">
@@ -183,7 +180,6 @@
             </div>
         </div>
 
-        <!-- 参与人员 -->
         <div class="form-section">
             <h5>👥 参与人员</h5>
             <div class="row">
@@ -218,7 +214,6 @@
             </div>
         </div>
 
-        <!-- 时间信息 -->
         <div class="form-section">
             <h5>📅 时间信息</h5>
             <div class="row">
@@ -277,7 +272,6 @@
             </div>
         </div>
 
-        <!-- 洽谈结果 -->
         <div class="form-section">
             <h5>✅ 洽谈结果</h5>
             <div class="row">
@@ -328,7 +322,6 @@
             </div>
         </div>
 
-        <!-- 其他信息 -->
         <div class="form-section">
             <h5>📎 其他信息</h5>
             <div class="row">
@@ -362,7 +355,6 @@
             </div>
         </div>
 
-        <!-- 表单错误提示 -->
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
             <ul class="mb-0">
@@ -373,12 +365,10 @@
         </div>
         {% endif %}
 
-        <!-- 操作按钮 -->
         <div class="d-flex justify-content-end gap-2 mt-4">
-            <a href="{% if contract %}{% url 'business_pages:contract_detail' contract.id %}{% else %}{% url 'business_pages:contract_management_list' %}{% endif %}" class="btn btn-secondary">取消</a>
+            <a href="{% if contract %}{% url 'contract_pages:contract_detail' contract.id %}{% else %}{% url 'contract_pages:contract_management_list' %}{% endif %}" class="btn btn-secondary">取消</a>
             <button type="submit" class="btn btn-primary">保存</button>
         </div>
     </form>
 </div>
 {% endblock %}
-

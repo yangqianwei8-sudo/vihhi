@@ -1,9 +1,12 @@
-{% extends "shared/module_base.html" %}
+{% extends "administrative_management/base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:travel_list' %}">差旅管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ travel.application_number }}</li>
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
@@ -23,9 +26,9 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="page-title">{{ page_title }}</h1>
@@ -56,7 +59,6 @@
         </div>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">基本信息</h5>
@@ -95,7 +97,6 @@
         </div>
     </div>
 
-    <!-- 差旅信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">差旅信息</h5>
@@ -144,7 +145,6 @@
         </div>
     </div>
 
-    <!-- 差旅人员 -->
     {% if travel.travelers.exists %}
     <div class="info-card">
         <div class="info-card-header">
@@ -162,7 +162,6 @@
     </div>
     {% endif %}
 
-    <!-- 审批信息 -->
     {% if travel.approver %}
     <div class="info-card">
         <div class="info-card-header">
@@ -189,7 +188,6 @@
     </div>
     {% endif %}
 
-    <!-- 备注 -->
     {% if travel.notes %}
     <div class="info-card">
         <div class="info-card-header">
@@ -203,7 +201,6 @@
     </div>
     {% endif %}
 
-    <!-- 关联报销 -->
     {% if reimbursements %}
     <div class="info-card">
         <div class="info-card-header">
@@ -247,4 +244,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

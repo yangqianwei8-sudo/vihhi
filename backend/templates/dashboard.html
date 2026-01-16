@@ -1,578 +1,956 @@
-{% extends "shared/home_base.html" %}
 {% load static %}
-
-{% block home_extra_css %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-    /* 主内容区样式 */
-    .dashboard-container {
-        padding: 30px;
-        max-width: 1400px;
-        margin: 0 auto;
-    }
-    
-    /* 页面标题区域 */
-    .page-header {
-        margin-bottom: 30px;
-        padding-bottom: 20px;
-        border-bottom: 1px solid #eaeaea;
-    }
-    
-    .page-title h2 {
-        font-size: 28px;
-        color: #2c3e50;
-        font-weight: 700;
-        margin-bottom: 5px;
-    }
-    
-    .page-title p {
-        color: #7f8c8d;
-        font-size: 15px;
-        margin: 0;
-    }
-    
-    .header-actions {
-        display: flex;
-        gap: 15px;
-        margin-top: 20px;
-        flex-wrap: wrap;
-    }
-    
-    .header-action-btn {
-        display: inline-flex;
-        align-items: center;
-        padding: 10px 20px;
-        background-color: #fff;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        color: #555;
-        cursor: pointer;
-        transition: all 0.3s;
-        font-size: 14px;
-        text-decoration: none;
-    }
-    
-    .header-action-btn i {
-        margin-right: 8px;
-    }
-    
-    .header-action-btn:hover {
-        background-color: #f8f9fa;
-        border-color: #4a9eff;
-        color: #4a9eff;
-        text-decoration: none;
-    }
-    
-    /* 仪表板卡片 */
-    .dashboard-cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 25px;
-        margin-bottom: 40px;
-    }
-    
-    .card {
-        background-color: #fff;
-        border-radius: 12px;
-        padding: 25px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-        transition: transform 0.3s, box-shadow 0.3s;
-        border: 1px solid #f0f0f0;
-    }
-    
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-    }
-    
-    .card-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-    
-    .card-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 15px;
-        font-size: 22px;
-        color: white;
-    }
-    
-    .card-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: #2c3e50;
-    }
-    
-    .card-content {
-        color: #666;
-        font-size: 14px;
-        line-height: 1.6;
-    }
-    
-    .card-content strong {
-        color: #2c3e50;
-        font-weight: 600;
-    }
-    
-    /* 系统状态 */
-    .system-status {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 20px;
-        font-size: 13px;
-        color: #7f8c8d;
-        flex-wrap: wrap;
-        gap: 15px;
-    }
-    
-    .status-item {
-        display: flex;
-        align-items: center;
-    }
-    
-    .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 8px;
-    }
-    
-    .status-online {
-        background-color: #00b894;
-    }
-    
-    .status-users {
-        background-color: #4a9eff;
-    }
-    
-    .status-date {
-        background-color: #fd79a8;
-    }
-    
-    /* 功能模块区域 */
-    .modules-section {
-        margin-top: 30px;
-    }
-    
-    .section-title {
-        font-size: 22px;
-        font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid #f0f0f0;
-    }
-    
-    .modules-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 20px;
-    }
-    
-    .module-card {
-        background-color: #fff;
-        border-radius: 10px;
-        padding: 20px;
-        text-align: center;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-        transition: all 0.3s;
-        cursor: pointer;
-        border: 1px solid transparent;
-        text-decoration: none;
-        color: inherit;
-        display: block;
-    }
-    
-    .module-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-        border-color: #4a9eff;
-        text-decoration: none;
-        color: inherit;
-    }
-    
-    .module-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 15px;
-        font-size: 24px;
-        color: white;
-    }
-    
-    .module-name {
-        font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 8px;
-        font-size: 16px;
-    }
-    
-    .module-desc {
-        color: #7f8c8d;
-        font-size: 13px;
-        line-height: 1.4;
-    }
-    
-    /* 颜色定义 */
-    .color-1 { background: linear-gradient(135deg, #4a9eff, #2c80ff); }
-    .color-2 { background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
-    .color-3 { background: linear-gradient(135deg, #00cec9, #00b894); }
-    .color-4 { background: linear-gradient(135deg, #fd79a8, #e84393); }
-    .color-5 { background: linear-gradient(135deg, #fdcb6e, #f39c12); }
-    .color-6 { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
-    .color-7 { background: linear-gradient(135deg, #00b894, #00cec9); }
-    .color-8 { background: linear-gradient(135deg, #e17055, #d63031); }
-    
-    /* 响应式设计 */
-    @media (max-width: 1200px) {
-        .modules-grid {
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        }
-    }
-    
-    @media (max-width: 768px) {
-        .dashboard-container {
-            padding: 20px;
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}维海科技信息化管理平台 - 工作台{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
         }
         
-        .dashboard-cards {
-            grid-template-columns: 1fr;
+        :root {
+            --primary-black: #000000;
+            --dark-gray: #333333;
+            --medium-gray: #666666;
+            --light-gray: #999999;
+            --border-gray: #dddddd;
+            --background-light: #f8f9fa;
+            --white: #ffffff;
+            --accent-color: #0056b3;
+            --card-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            --button-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         
-        .modules-grid {
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        }
-        
-        .header-actions {
+        body {
+            background-color: var(--white);
+            color: var(--dark-gray);
+            min-height: 100vh;
+            display: flex;
             flex-direction: column;
         }
         
-        .header-action-btn {
-            width: 100%;
+        /* 顶部导航栏 */
+        .top-nav {
+            background-color: var(--white);
+            padding: 0 20px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-gray);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            z-index: 100;
+        }
+        
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo {
+            width: 36px;
+            height: 36px;
+            background-color: var(--primary-black);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
             justify-content: center;
+            color: white;
+            font-weight: bold;
         }
-    }
-</style>
-{% endblock %}
-
-{% block content_inner %}
-<div class="dashboard-container">
-    <!-- 页面标题区域 -->
-    <div class="page-header">
-        <div class="page-title">
-            <h2>系统总工作台</h2>
-            <p>System Dashboard - 欢迎回来，{{ user.get_full_name|default:user.username }}</p>
-        </div>
         
-        <div class="header-actions">
-            {% if approval_stats.my_pending > 0 %}
-            <a href="#" class="header-action-btn">
-                <i class="fas fa-bell"></i> 待审批 ({{ approval_stats.my_pending }})
-            </a>
-            {% endif %}
-            <a href="#" class="header-action-btn">
-                <i class="fas fa-calendar-alt"></i> 今日日程
-            </a>
-            <a href="#" class="header-action-btn">
-                <i class="fas fa-search"></i> 快速搜索
-            </a>
-        </div>
-    </div>
-    
-    <!-- 仪表板卡片 -->
-    <div class="dashboard-cards">
-        <!-- 系统概况卡片 -->
-        <div class="card">
-            <div class="card-header">
-                <div class="card-icon color-1">
-                    <i class="fas fa-chart-bar"></i>
-                </div>
-                <div>
-                    <div class="card-title">系统概况</div>
-                </div>
-            </div>
-            <div class="card-content">
-                当前系统运行正常，所有服务均在线。
-                {% if core_cards %}
-                今日新增数据统计，处理任务正常。
-                {% endif %}
-            </div>
-            <div class="system-status">
-                <div class="status-item">
-                    <span class="status-dot status-online"></span>
-                    系统状态: 正常
-                </div>
-                <div class="status-item">
-                    <span class="status-dot status-users"></span>
-                    在线用户: 活跃
-                </div>
-                <div class="status-item">
-                    <span class="status-dot status-date"></span>
-                    {% now "Y年m月d日" %}
-                </div>
-            </div>
-        </div>
+        .system-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--primary-black);
+        }
         
-        <!-- 待办事项卡片 -->
-        <div class="card">
-            <div class="card-header">
-                <div class="card-icon color-2">
-                    <i class="fas fa-tasks"></i>
-                </div>
-                <div>
-                    <div class="card-title">待办事项</div>
-                </div>
-            </div>
-            <div class="card-content">
-                您有 <strong>{{ pending_counts.personal }} 项</strong> 待处理任务
-                {% if pending_counts.due_today > 0 %}
-                ，其中 <strong>{{ pending_counts.due_today }} 项</strong> 今日到期
-                {% endif %}
-                {% if pending_counts.overdue > 0 %}
-                ，<strong>{{ pending_counts.overdue }} 项</strong> 已逾期
-                {% endif %}
-                。
-            </div>
-        </div>
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
         
-        <!-- 数据统计卡片 -->
-        <div class="card">
-            <div class="card-header">
-                <div class="card-icon color-3">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <div>
-                    <div class="card-title">数据统计</div>
-                </div>
-            </div>
-            <div class="card-content">
-                {% if core_cards %}
-                    {% for card in core_cards|slice:":3" %}
-                        {% if card.label == "进行中项目" %}
-                        进行中项目: <strong>{{ card.value }}</strong> 个
-                        {% elif card.label == "本月完成" %}
-                        ，本月完成: <strong>{{ card.value }}</strong> 个
-                        {% endif %}
-                    {% endfor %}
-                {% else %}
-                    系统数据统计正常，各项指标运行良好。
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    
-    <!-- 功能模块 -->
-    <div class="modules-section">
-        <h3 class="section-title">功能模块</h3>
-        <div class="modules-grid">
-            <!-- 客户管理 -->
-            <a href="{% url 'customer_pages:customer_list' %}" class="module-card" data-module="客户管理">
-                <div class="module-icon color-1">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="module-name">客户管理</div>
-                <div class="module-desc">客户信息、跟进记录、客户分类</div>
-            </a>
-            
-            <!-- 商机管理 -->
-            <a href="{% url 'opportunity_pages:opportunity_management_home' %}" class="module-card" data-module="商机管理">
-                <div class="module-icon color-2">
-                    <i class="fas fa-briefcase"></i>
-                </div>
-                <div class="module-name">商机管理</div>
-                <div class="module-desc">销售机会、商机跟踪、预测分析</div>
-            </a>
-            
-            <!-- 合同管理 -->
-            <a href="{% url 'contract_pages:contract_management_home' %}" class="module-card" data-module="合同管理">
-                <div class="module-icon color-3">
-                    <i class="fas fa-file-contract"></i>
-                </div>
-                <div class="module-name">合同管理</div>
-                <div class="module-desc">合同创建、审批流程、归档管理</div>
-            </a>
-            
-            <!-- 回款管理 -->
-            <a href="#" class="module-card" data-module="回款管理">
-                <div class="module-icon color-4">
-                    <i class="fas fa-money-bill-wave"></i>
-                </div>
-                <div class="module-name">回款管理</div>
-                <div class="module-desc">回款计划、收款记录、财务对账</div>
-            </a>
-            
-            <!-- 生产管理 -->
-            <a href="{% url 'production_pages:project_list' %}" class="module-card" data-module="生产管理">
-                <div class="module-icon color-5">
-                    <i class="fas fa-industry"></i>
-                </div>
-                <div class="module-name">生产管理</div>
-                <div class="module-desc">生产计划、进度跟踪、质量管理</div>
-            </a>
-            
-            <!-- 资源管理 -->
-            <a href="#" class="module-card" data-module="资源管理">
-                <div class="module-icon color-6">
-                    <i class="fas fa-tools"></i>
-                </div>
-                <div class="module-name">资源管理</div>
-                <div class="module-desc">设备、物料、人力资源分配</div>
-            </a>
-            
-            <!-- 任务协作 -->
-            <a href="#" class="module-card" data-module="任务协作">
-                <div class="module-icon color-7">
-                    <i class="fas fa-tasks"></i>
-                </div>
-                <div class="module-name">任务协作</div>
-                <div class="module-desc">任务分配、团队协作、进度管理</div>
-            </a>
-            
-            <!-- 收发货管理 -->
-            <a href="{% url 'delivery_pages:delivery_list' %}" class="module-card" data-module="收发货管理">
-                <div class="module-icon color-8">
-                    <i class="fas fa-truck"></i>
-                </div>
-                <div class="module-name">收发货管理</div>
-                <div class="module-desc">出入库管理、物流跟踪、库存查询</div>
-            </a>
-            
-            <!-- 档案管理 -->
-            <a href="#" class="module-card" data-module="档案管理">
-                <div class="module-icon color-1">
-                    <i class="fas fa-archive"></i>
-                </div>
-                <div class="module-name">档案管理</div>
-                <div class="module-desc">文件归档、分类管理、权限控制</div>
-            </a>
-            
-            <!-- 计划管理 -->
-            <a href="{% url 'plan_pages:plan_list' %}" class="module-card" data-module="计划管理">
-                <div class="module-icon color-2">
-                    <i class="fas fa-calendar-alt"></i>
-                </div>
-                <div class="module-name">计划管理</div>
-                <div class="module-desc">项目计划、时间安排、进度监控</div>
-            </a>
-            
-            <!-- 诉讼管理 -->
-            <a href="{% url 'litigation_pages:case_list' %}" class="module-card" data-module="诉讼管理">
-                <div class="module-icon color-3">
-                    <i class="fas fa-gavel"></i>
-                </div>
-                <div class="module-name">诉讼管理</div>
-                <div class="module-desc">案件跟踪、法律文书、庭审管理</div>
-            </a>
-            
-            <!-- 风险管理 -->
-            <a href="#" class="module-card" data-module="风险管理">
-                <div class="module-icon color-4">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="module-name">风险管理</div>
-                <div class="module-desc">风险识别、评估、应对措施</div>
-            </a>
-            
-            <!-- 财务管理 -->
-            <a href="#" class="module-card" data-module="财务管理">
-                <div class="module-icon color-5">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <div class="module-name">财务管理</div>
-                <div class="module-desc">账务处理、报表分析、预算控制</div>
-            </a>
-            
-            <!-- 人事管理 -->
-            <a href="#" class="module-card" data-module="人事管理">
-                <div class="module-icon color-6">
-                    <i class="fas fa-user-tie"></i>
-                </div>
-                <div class="module-name">人事管理</div>
-                <div class="module-desc">员工档案、考勤薪资、招聘培训</div>
-            </a>
-            
-            <!-- 行政管理 -->
-            <a href="{% url 'admin_pages:affair_list' %}" class="module-card" data-module="行政管理">
-                <div class="module-icon color-7">
-                    <i class="fas fa-building"></i>
-                </div>
-                <div class="module-name">行政管理</div>
-                <div class="module-desc">办公用品、车辆管理、会议安排</div>
-            </a>
-            
-            <!-- 系统管理 -->
-            <a href="{% url 'system_pages:account_settings' %}" class="module-card" data-module="系统管理">
-                <div class="module-icon color-8">
-                    <i class="fas fa-cogs"></i>
-                </div>
-                <div class="module-name">系统管理</div>
-                <div class="module-desc">用户权限、系统配置、数据备份</div>
-            </a>
-            
-            <!-- 管理后台 -->
-            <a href="{% url 'admin:index' %}" class="module-card" data-module="管理后台">
-                <div class="module-icon color-1">
-                    <i class="fas fa-desktop"></i>
-                </div>
-                <div class="module-name">管理后台</div>
-                <div class="module-desc">系统监控、日志查询、高级设置</div>
-            </a>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    // 模块点击效果
-    document.querySelectorAll('.module-card').forEach(card => {
-        card.addEventListener('click', function(e) {
-            // 移除其他模块的激活状态
-            document.querySelectorAll('.module-card').forEach(c => {
-                c.style.borderColor = 'transparent';
-            });
-            
-            // 为当前模块添加激活效果
-            this.style.borderColor = '#4a9eff';
-        });
-    });
-    
-    // 顶部操作按钮点击事件
-    document.querySelectorAll('.header-action-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            // 如果链接是#，阻止默认行为并显示提示
-            if (this.getAttribute('href') === '#') {
-                e.preventDefault();
-                const btnText = this.textContent.trim();
-                console.log(`执行操作: ${btnText}`);
+        .nav-controls i {
+            font-size: 18px;
+            color: var(--dark-gray);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .nav-controls i:hover {
+            color: var(--accent-color);
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--primary-black);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+        }
+        
+        /* 主要内容区域 */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        /* 侧边导航 */
+        .sidebar {
+            width: 240px;
+            background-color: var(--white);
+            border-right: 1px solid var(--border-gray);
+            padding: 20px 0;
+            overflow-y: auto;
+            transition: width 0.3s;
+        }
+        
+        .menu-section {
+            margin-bottom: 25px;
+        }
+        
+        .menu-title {
+            color: var(--medium-gray);
+            font-size: 14px;
+            padding: 0 20px 10px;
+            border-bottom: 1px solid var(--border-gray);
+            margin-bottom: 10px;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        
+        .menu-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--dark-gray);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            text-decoration: none;
+        }
+        
+        .menu-item:hover {
+            background-color: rgba(0, 0, 0, 0.03);
+            border-left-color: var(--primary-black);
+        }
+        
+        .menu-item.active {
+            background-color: rgba(0, 0, 0, 0.05);
+            border-left-color: var(--primary-black);
+            color: var(--primary-black);
+            font-weight: 500;
+        }
+        
+        .menu-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+            color: var(--dark-gray);
+        }
+        
+        /* 主内容区 */
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            background-color: var(--background-light);
+        }
+        
+        .welcome-section {
+            margin-bottom: 30px;
+            background-color: var(--white);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--primary-black);
+        }
+        
+        .welcome-subtitle {
+            color: var(--medium-gray);
+            font-size: 16px;
+        }
+        
+        /* 六大工作场景 */
+        .work-scenarios {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .scenario-card {
+            background-color: var(--white);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-gray);
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .scenario-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .scenario-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+        
+        .scenario-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: var(--white);
+            flex-shrink: 0;
+        }
+        
+        .scenario-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-black);
+            margin-bottom: 5px;
+        }
+        
+        .scenario-desc {
+            font-size: 14px;
+            color: var(--medium-gray);
+            line-height: 1.5;
+        }
+        
+        .scenario-features {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-gray);
+        }
+        
+        .feature-list {
+            list-style-type: none;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: var(--dark-gray);
+        }
+        
+        .feature-item i {
+            color: var(--primary-black);
+            margin-right: 10px;
+            width: 18px;
+        }
+        
+        .scenario-action {
+            margin-top: 25px;
+        }
+        
+        .btn-scenario {
+            display: inline-block;
+            background-color: var(--primary-black);
+            color: var(--white);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            font-size: 14px;
+            box-shadow: var(--button-shadow);
+        }
+        
+        .btn-scenario:hover {
+            background-color: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* 快速访问模块 */
+        .quick-access {
+            background-color: var(--white);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-gray);
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            color: var(--primary-black);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title i {
+            color: var(--primary-black);
+        }
+        
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .module-item {
+            background-color: var(--white);
+            border-radius: 8px;
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid var(--border-gray);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .module-item:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+            border-color: var(--primary-black);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .module-icon {
+            width: 45px;
+            height: 45px;
+            background-color: var(--background-light);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            font-size: 20px;
+            color: var(--primary-black);
+        }
+        
+        .module-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--dark-gray);
+        }
+        
+        /* 系统状态 */
+        .system-status {
+            background-color: var(--white);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-gray);
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        
+        .status-card {
+            padding: 20px;
+            border-radius: 8px;
+            background-color: var(--background-light);
+        }
+        
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .status-title {
+            font-size: 14px;
+            color: var(--medium-gray);
+        }
+        
+        .status-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--white);
+            background-color: var(--primary-black);
+        }
+        
+        .status-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--primary-black);
+            margin-bottom: 5px;
+        }
+        
+        .status-change {
+            font-size: 13px;
+            color: #27ae60;
+        }
+        
+        .status-change.negative {
+            color: #e74c3c;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .work-scenarios {
+                grid-template-columns: repeat(2, 1fr);
             }
-        });
-    });
-    
-    // 模拟系统状态更新
-    function updateSystemStatus() {
-        // 更新日期
-        const now = new Date();
-        const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
-        const dateElement = document.querySelector('.status-date');
-        if (dateElement && dateElement.nextSibling) {
-            dateElement.nextSibling.textContent = dateStr;
+            
+            .module-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
         }
-    }
+        
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 70px;
+            }
+            
+            .menu-title, .menu-item span {
+                display: none;
+            }
+            
+            .menu-item {
+                justify-content: center;
+                padding: 15px 0;
+            }
+            
+            .menu-item i {
+                font-size: 18px;
+            }
+            
+            .system-name {
+                display: none;
+            }
+            
+            .work-scenarios {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .module-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .content-area {
+                padding: 20px;
+            }
+            
+            .system-status {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .module-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .system-status {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="top-nav">
+        <div class="logo-area">
+            <div class="logo">
+                <span>IM</span>
+            </div>
+            <h1 class="system-name">维海科技信息化管理平台</h1>
+        </div>
+        
+        <div class="nav-controls">
+            <i class="fas fa-question-circle" title="帮助"></i>
+            <i class="fas fa-cog" title="设置"></i>
+            <i class="fas fa-comment-dots" title="反馈"></i>
+            <div class="user-profile">
+                <div class="user-avatar">
+                    {% if user.is_authenticated %}
+                        <i class="fas fa-user"></i>
+                    {% else %}
+                        <i class="fas fa-user"></i>
+                    {% endif %}
+                </div>
+                <span style="color: var(--primary-black);">
+                    {% if user.is_authenticated %}
+                        {{ user.get_full_name|default:user.username }}
+                    {% else %}
+                        访客
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </header>
     
-    // 每30秒更新一次系统状态
-    setInterval(updateSystemStatus, 30000);
-    
-    // 初始更新
-    updateSystemStatus();
-</script>
-{% endblock %}
+    <!-- 主要内容区域 -->
+    <div class="main-container">
+        <!-- 侧边导航 -->
+        <nav class="sidebar">
+            <div class="menu-section">
+                <div class="menu-title">功能模块</div>
+                <a href="{% url 'dashboard' %}" class="menu-item active">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>系统工作台</span>
+                </a>
+                <a href="{% url 'customer_pages:customer_management_home' %}" class="menu-item">
+                    <i class="fas fa-users"></i>
+                    <span>客户管理</span>
+                </a>
+                <a href="{% url 'opportunity_pages:opportunity_management_home' %}" class="menu-item">
+                    <i class="fas fa-bullseye"></i>
+                    <span>商机管理</span>
+                </a>
+                <a href="{% url 'contract_pages:contract_management_home' %}" class="menu-item">
+                    <i class="fas fa-file-contract"></i>
+                    <span>合同管理</span>
+                </a>
+                <a href="#" class="menu-item">
+                    <i class="fas fa-money-check-alt"></i>
+                    <span>回款管理</span>
+                </a>
+                <a href="{% url 'production_pages:project_list' %}" class="menu-item">
+                    <i class="fas fa-industry"></i>
+                    <span>生产管理</span>
+                </a>
+                <a href="{% url 'resource_standard_pages:standard_list' %}" class="menu-item">
+                    <i class="fas fa-boxes"></i>
+                    <span>资源管理</span>
+                </a>
+                <a href="#" class="menu-item">
+                    <i class="fas fa-tasks"></i>
+                    <span>任务协作</span>
+                </a>
+                <a href="{% url 'delivery_pages:delivery_list' %}" class="menu-item">
+                    <i class="fas fa-truck-loading"></i>
+                    <span>收发货管理</span>
+                </a>
+                <a href="#" class="menu-item">
+                    <i class="fas fa-archive"></i>
+                    <span>档案管理</span>
+                </a>
+                <a href="{% url 'plan_pages:plan_management_home' %}" class="menu-item">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>计划管理</span>
+                </a>
+                <a href="{% url 'litigation_pages:litigation_home' %}" class="menu-item">
+                    <i class="fas fa-gavel"></i>
+                    <span>诉讼管理</span>
+                </a>
+                <a href="#" class="menu-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>风险管理</span>
+                </a>
+                <a href="#" class="menu-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>财务管理</span>
+                </a>
+                <a href="{% url 'personnel_pages:personnel_home' %}" class="menu-item">
+                    <i class="fas fa-user-tie"></i>
+                    <span>人事管理</span>
+                </a>
+                <a href="{% url 'admin_pages:administrative_home' %}" class="menu-item">
+                    <i class="fas fa-building"></i>
+                    <span>行政管理</span>
+                </a>
+                <a href="{% url 'system_pages:system_settings' %}" class="menu-item">
+                    <i class="fas fa-cogs"></i>
+                    <span>系统管理</span>
+                </a>
+            </div>
+        </nav>
+        
+        <!-- 主内容区 -->
+        <main class="content-area">
+            <!-- 欢迎区域 -->
+            <div class="welcome-section">
+                <h2 class="welcome-title">欢迎使用维海科技信息化管理平台</h2>
+                <p class="welcome-subtitle">
+                    {% now "Y年m月d日" %}，{{ weekday }}。
+                    {% if user.is_authenticated %}
+                        当前系统运行正常，您有 <strong>{{ pending_counts.personal|default:0 }}</strong> 个待处理任务，
+                        <strong>{{ approval_stats.my_pending|default:0 }}</strong> 个待审批申请。
+                    {% else %}
+                        请登录以使用系统功能。
+                    {% endif %}
+                </p>
+            </div>
+            
+            <!-- 六大工作场景 -->
+            <div class="work-scenarios">
+                <!-- 客户协同场景 -->
+                <div class="scenario-card">
+                    <div class="scenario-header">
+                        <div class="scenario-icon" style="background-color: #3498db;">
+                            <i class="fas fa-handshake"></i>
+                        </div>
+                        <div>
+                            <h3 class="scenario-title">客户协同</h3>
+                            <p class="scenario-desc">全流程客户关系管理，从商机到合同再到回款，一体化协同工作平台。</p>
+                        </div>
+                    </div>
+                    <div class="scenario-features">
+                        <ul class="feature-list">
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 客户信息全景视图</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 商机跟进与预测</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 合同在线签订与管理</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 回款计划与执行跟踪</li>
+                        </ul>
+                    </div>
+                    <div class="scenario-action">
+                        <a href="{% url 'customer_pages:customer_management_home' %}" class="btn-scenario">进入客户协同</a>
+                    </div>
+                </div>
+                
+                <!-- 生产执行场景 -->
+                <div class="scenario-card">
+                    <div class="scenario-header">
+                        <div class="scenario-icon" style="background-color: #2ecc71;">
+                            <i class="fas fa-industry"></i>
+                        </div>
+                        <div>
+                            <h3 class="scenario-title">生产执行</h3>
+                            <p class="scenario-desc">生产计划、任务分配、进度跟踪、质量管理一体化生产执行系统。</p>
+                        </div>
+                    </div>
+                    <div class="scenario-features">
+                        <ul class="feature-list">
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 生产计划排程</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 任务分配与进度跟踪</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 质量管理与检验</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 设备与资源调度</li>
+                        </ul>
+                    </div>
+                    <div class="scenario-action">
+                        <a href="{% url 'production_pages:project_list' %}" class="btn-scenario">进入生产执行</a>
+                    </div>
+                </div>
+                
+                <!-- 资源调度场景 -->
+                <div class="scenario-card">
+                    <div class="scenario-header">
+                        <div class="scenario-icon" style="background-color: #9b59b6;">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div>
+                            <h3 class="scenario-title">资源调度</h3>
+                            <p class="scenario-desc">人力、设备、物料等资源统一调度与优化配置，提升资源利用效率。</p>
+                        </div>
+                    </div>
+                    <div class="scenario-features">
+                        <ul class="feature-list">
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 人力资源调配</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 设备资源管理</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 物料库存管理</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 资源使用分析</li>
+                        </ul>
+                    </div>
+                    <div class="scenario-action">
+                        <a href="{% url 'resource_standard_pages:standard_list' %}" class="btn-scenario">进入资源调度</a>
+                    </div>
+                </div>
+                
+                <!-- 风险控制场景 -->
+                <div class="scenario-card">
+                    <div class="scenario-header">
+                        <div class="scenario-icon" style="background-color: #e74c3c;">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div>
+                            <h3 class="scenario-title">风险控制</h3>
+                            <p class="scenario-desc">全面风险管理，识别、评估、监控和应对企业运营中的各类风险。</p>
+                        </div>
+                    </div>
+                    <div class="scenario-features">
+                        <ul class="feature-list">
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 风险识别与评估</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 风险监控与预警</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 应对策略与预案</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 诉讼案件管理</li>
+                        </ul>
+                    </div>
+                    <div class="scenario-action">
+                        <a href="{% url 'litigation_pages:litigation_home' %}" class="btn-scenario">进入风险控制</a>
+                    </div>
+                </div>
+                
+                <!-- 财务分析场景 -->
+                <div class="scenario-card">
+                    <div class="scenario-header">
+                        <div class="scenario-icon" style="background-color: #f39c12;">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div>
+                            <h3 class="scenario-title">财务分析</h3>
+                            <p class="scenario-desc">财务报表、预算管理、成本分析、资金监控一体化财务管理平台。</p>
+                        </div>
+                    </div>
+                    <div class="scenario-features">
+                        <ul class="feature-list">
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 财务报表与分析</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 预算编制与执行</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 成本核算与控制</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 资金流监控</li>
+                        </ul>
+                    </div>
+                    <div class="scenario-action">
+                        <a href="#" class="btn-scenario">进入财务分析</a>
+                    </div>
+                </div>
+                
+                <!-- 行政办公场景 -->
+                <div class="scenario-card">
+                    <div class="scenario-header">
+                        <div class="scenario-icon" style="background-color: #34495e;">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <div>
+                            <h3 class="scenario-title">行政办公</h3>
+                            <p class="scenario-desc">人事管理、行政事务、档案管理、协同办公一体化行政办公平台。</p>
+                        </div>
+                    </div>
+                    <div class="scenario-features">
+                        <ul class="feature-list">
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 人事档案与考勤</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 行政事务管理</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 档案归档与查询</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> 协同办公与审批</li>
+                        </ul>
+                    </div>
+                    <div class="scenario-action">
+                        <a href="{% url 'admin_pages:administrative_home' %}" class="btn-scenario">进入行政办公</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 快速访问模块 -->
+            <div class="quick-access">
+                <h3 class="section-title">
+                    <i class="fas fa-bolt"></i>
+                    快速访问
+                </h3>
+                <div class="module-grid">
+                    <a href="{% url 'customer_pages:customer_management_home' %}" class="module-item">
+                        <div class="module-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="module-name">客户管理</div>
+                    </a>
+                    
+                    <a href="{% url 'contract_pages:contract_management_home' %}" class="module-item">
+                        <div class="module-icon">
+                            <i class="fas fa-file-contract"></i>
+                        </div>
+                        <div class="module-name">合同管理</div>
+                    </a>
+                    
+                    <a href="#" class="module-item">
+                        <div class="module-icon">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div class="module-name">任务协作</div>
+                    </a>
+                    
+                    <a href="{% url 'production_pages:project_list' %}" class="module-item">
+                        <div class="module-icon">
+                            <i class="fas fa-industry"></i>
+                        </div>
+                        <div class="module-name">生产管理</div>
+                    </a>
+                    
+                    <a href="#" class="module-item">
+                        <div class="module-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="module-name">财务管理</div>
+                    </a>
+                    
+                    <a href="{% url 'personnel_pages:personnel_home' %}" class="module-item">
+                        <div class="module-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="module-name">人事管理</div>
+                    </a>
+                    
+                    <a href="#" class="module-item">
+                        <div class="module-icon">
+                            <i class="fas fa-archive"></i>
+                        </div>
+                        <div class="module-name">档案管理</div>
+                    </a>
+                    
+                    <a href="{% url 'system_pages:system_settings' %}" class="module-item">
+                        <div class="module-icon">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <div class="module-name">系统管理</div>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- 系统状态 -->
+            <div class="system-status">
+                <div class="status-card">
+                    <div class="status-header">
+                        <div class="status-title">系统用户</div>
+                        <div class="status-icon">
+                            <i class="fas fa-user-friends"></i>
+                        </div>
+                    </div>
+                    <div class="status-value">{{ user_count|default:"1,248" }}</div>
+                    <div class="status-change">+12 本周新增</div>
+                </div>
+                
+                <div class="status-card">
+                    <div class="status-header">
+                        <div class="status-title">活跃会话</div>
+                        <div class="status-icon">
+                            <i class="fas fa-laptop"></i>
+                        </div>
+                    </div>
+                    <div class="status-value">326</div>
+                    <div class="status-change">+8 较昨日</div>
+                </div>
+                
+                <div class="status-card">
+                    <div class="status-header">
+                        <div class="status-title">待处理任务</div>
+                        <div class="status-icon">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                    </div>
+                    <div class="status-value">{{ pending_counts.personal|default:89 }}</div>
+                    <div class="status-change negative">+15 较昨日</div>
+                </div>
+                
+                <div class="status-card">
+                    <div class="status-header">
+                        <div class="status-title">系统可用性</div>
+                        <div class="status-icon">
+                            <i class="fas fa-server"></i>
+                        </div>
+                    </div>
+                    <div class="status-value">99.8%</div>
+                    <div class="status-change">+0.1% 较上周</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 为菜单项添加点击事件
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                // 移除所有菜单项的active类
+                document.querySelectorAll('.menu-item').forEach(el => {
+                    el.classList.remove('active');
+                });
+                // 为当前点击的菜单项添加active类
+                this.classList.add('active');
+            });
+        });
+        
+        // 为快速访问模块添加点击事件
+        document.querySelectorAll('.module-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                // 链接已通过href处理，这里可以添加额外的逻辑
+            });
+        });
+        
+        // 为工作场景按钮添加点击事件
+        document.querySelectorAll('.btn-scenario').forEach(button => {
+            button.addEventListener('click', function(e) {
+                // 链接已通过href处理，这里可以添加额外的逻辑
+            });
+        });
+        
+        // 为顶部导航图标添加点击事件
+        document.querySelectorAll('.nav-controls i').forEach(icon => {
+            icon.addEventListener('click', function() {
+                const title = this.getAttribute('title');
+                if (title === '设置') {
+                    window.location.href = "{% url 'system_pages:account_settings' %}";
+                } else {
+                    alert(`打开${title}功能`);
+                }
+            });
+        });
+        
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard页面加载完成');
+            
+            // 可以根据当前URL高亮对应的菜单项
+            const currentPath = window.location.pathname;
+            document.querySelectorAll('.menu-item').forEach(item => {
+                if (item.getAttribute('href') === currentPath) {
+                    item.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

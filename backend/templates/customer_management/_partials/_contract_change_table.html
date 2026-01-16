@@ -1,0 +1,73 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>合同编号</th>
+        <th>合同名称</th>
+        <th>变更类型</th>
+        <th>变更日期</th>
+        <th>变更原因</th>
+        <th>变更金额</th>
+        <th>创建人</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for change in page_obj %}
+      <tr>
+        <td><code>{{ change.contract.contract_number|default:"未编号" }}</code></td>
+        <td>{{ change.contract.contract_name|default:change.contract.contract_number }}</td>
+        <td>
+          <span class="list-badge">{{ change.get_change_type_display }}</span>
+        </td>
+        <td>{{ change.change_date|date:"Y-m-d" }}</td>
+        <td>{{ change.change_reason|truncatewords:10 }}</td>
+        <td style="text-align: right;">{% if change.change_amount %}¥{{ change.change_amount|floatformat:2 }}{% else %}--{% endif %}</td>
+        <td>{{ change.created_by.get_full_name|default:change.created_by.username }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'contract_pages:contract_detail' change.contract.id %}" class="list-btn" title="查看合同">查看合同</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无合同变更记录</div>
+          <div class="list-empty-hint">请创建第一个合同变更记录开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_change_type %}&change_type={{ selected_change_type }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if selected_change_type %}&change_type={{ selected_change_type }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_change_type %}&change_type={{ selected_change_type }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

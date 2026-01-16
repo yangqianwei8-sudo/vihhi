@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
@@ -8,12 +8,15 @@
 <link rel="stylesheet" href="{% static 'css/approval_path.css' %}">
 {% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_list' %}">客户列表</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ client.name }}</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="workspace-content">
     <div class="container-fluid py-4">
-        <!-- 操作按钮 -->
+        
         <div class="d-flex justify-content-end gap-2 mb-3">
             {% if can_edit %}
             <a href="{% url 'business_pages:customer_edit' client.id %}" class="btn btn-primary">编辑客户</a>
@@ -23,7 +26,6 @@
             {% endif %}
         </div>
         
-        <!-- 基本信息 -->
         <div class="info-card">
             <div class="info-card-header">
                 <h5 class="info-card-title">基本信息</h5>
@@ -42,7 +44,6 @@
             </div>
         </div>
         
-        <!-- 企业信息 -->
         <div class="info-card">
             <div class="info-card-header">
                 <h5 class="info-card-title">企业信息</h5>
@@ -73,7 +74,6 @@
             </div>
         </div>
         
-        <!-- 客户分类 -->
         <div class="info-card">
             <div class="info-card-header">
                 <h5 class="info-card-title">客户分类</h5>
@@ -112,7 +112,6 @@
             </div>
         </div>
         
-        <!-- 财务信息 -->
         <div class="info-card">
             <div class="info-card-header">
                 <h5 class="info-card-title">财务信息</h5>
@@ -139,7 +138,6 @@
             </div>
         </div>
         
-        <!-- 负责人信息 -->
         <div class="info-card">
             <div class="info-card-header">
                 <h5 class="info-card-title">负责人信息</h5>
@@ -170,7 +168,6 @@
             </div>
         </div>
         
-        <!-- 关联联系人 -->
         {% if contacts %}
         <div class="info-card">
             <div class="info-card-header">
@@ -209,7 +206,6 @@
         </div>
         {% endif %}
         
-        <!-- 被执行信息 -->
         <div class="info-card">
             <div class="info-card-header d-flex justify-content-between align-items-center">
                 <div>
@@ -267,44 +263,21 @@
             </div>
         </div>
         
-        <!-- 审批流程 -->
         {% if approval_instance %}
         <div class="info-card">
-            <div class="info-card-header d-flex justify-content-between align-items-center">
-                <div>
+            <div class="info-card-header">
                 <h5 class="info-card-title">
                     <i class="bi bi-clipboard-check"></i> 审批流程
                 </h5>
-                    <div class="d-flex align-items-center gap-2 mt-2">
+                <div class="d-flex align-items-center gap-2">
                     <span class="badge bg-{% if approval_instance.status == 'approved' %}success{% elif approval_instance.status == 'rejected' %}danger{% else %}warning{% endif %}">
                         {{ approval_instance.get_status_display }}
                     </span>
                     <span class="text-muted small">审批编号：{{ approval_instance.instance_number }}</span>
-                    </div>
-                </div>
-                <div>
-                    {% if can_approve_workflow %}
-                    <form method="post" action="{% url 'workflow_engine:approval_action' approval_instance.id %}" style="display: inline;" onsubmit="return confirm('确认审批通过？');">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="approve">
-                        <input type="hidden" name="redirect_to" value="{% url 'business_pages:customer_detail' client.id %}">
-                        <button type="submit" class="btn btn-sm btn-success">
-                            <i class="bi bi-check-circle"></i> 审批通过
-                        </button>
-                    </form>
-                    <form method="post" action="{% url 'workflow_engine:approval_action' approval_instance.id %}" style="display: inline;" onsubmit="var reason = prompt('请输入拒绝原因：'); if (!reason) return false; var input = document.createElement('input'); input.type='hidden'; input.name='comment'; input.value=reason; this.appendChild(input); return confirm('确认审批拒绝？');">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="reject">
-                        <input type="hidden" name="redirect_to" value="{% url 'business_pages:customer_detail' client.id %}">
-                        <button type="submit" class="btn btn-sm btn-danger">
-                            <i class="bi bi-x-circle"></i> 审批拒绝
-                        </button>
-                    </form>
-                    {% endif %}
                 </div>
             </div>
             <div class="info-card-body">
-                <!-- 审批基本信息 -->
+                
                 <div class="mb-4">
                     <div class="info-grid info-grid-2">
                         <div class="info-item">
@@ -338,10 +311,8 @@
                     </div>
                 </div>
                 
-                <!-- 审批路径时间轴 -->
                 {% include 'customer_management/partials/approval_path_timeline.html' with approval_instance=approval_instance approval_path_nodes=approval_path_nodes %}
                 
-                <!-- 查看完整审批详情链接 -->
                 <div class="mt-3 text-center">
                     <a href="{% url 'workflow_engine:approval_detail' approval_instance.id %}" class="btn btn-sm btn-outline-primary" target="_blank">
                         <i class="bi bi-box-arrow-up-right"></i> 查看完整审批详情
@@ -366,8 +337,6 @@
         {% endif %}
     </div>
 </div>
-
-
 {% endblock %}
 
 {% block extra_js %}
@@ -487,4 +456,3 @@
 }
 </style>
 {% endblock %}
-

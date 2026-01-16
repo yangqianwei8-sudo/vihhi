@@ -119,10 +119,22 @@ def decide(decision_id: int, user, approve: bool, reason: str | None = None) -> 
     if decision.decided_at is not None:
         raise PlanDecisionError("该裁决已处理，不能重复裁决")
 
-    # 这里先复用现有权限体系：最小可行做法
-    # 你们若已有"裁决权限"，替换成对应 has_perm
-    if not user.is_superuser and not user.has_perm("plan_management.change_plan"):
-        raise PermissionDenied("无裁决权限")
+    # 权限检查：使用业务权限 plan_management.approve_plan 或 plan_management.approve（兼容）
+    from backend.apps.system_management.services import get_user_permission_codes
+    permission_set = get_user_permission_codes(user)
+    
+    # 检查是否有审批权限
+    # 超级用户或拥有全部权限的用户可以直接审批
+    # 兼容两种权限码：plan_management.approve_plan 和 plan_management.approve
+    has_approve_permission = (
+        user.is_superuser or 
+        '__all__' in permission_set or
+        'plan_management.approve_plan' in permission_set or
+        'plan_management.approve' in permission_set
+    )
+    
+    if not has_approve_permission:
+        raise PermissionDenied("无裁决权限，需要 plan_management.approve_plan 或 plan_management.approve 权限")
 
     decision.decision = "approve" if approve else "reject"
     decision.decided_by = user
@@ -134,14 +146,35 @@ def decide(decision_id: int, user, approve: bool, reason: str | None = None) -> 
 
     # 只有 approve 才改 Plan.status
     if approve:
+        old_status = plan.status  # 保存旧状态用于日志
         if decision.request_type == "start":
             _ensure_plan_status(plan, {"draft"}, "start_approve")
             plan.status = "in_progress"
             plan.save(update_fields=["status"])
+            
+            # 创建状态变更日志
+            from backend.apps.plan_management.models import PlanStatusLog
+            PlanStatusLog.objects.create(
+                plan=plan,
+                old_status=old_status,
+                new_status="in_progress",
+                changed_by=user,
+                change_reason=f"审批通过启动请求：{reason or '无说明'}"
+            )
         elif decision.request_type == "cancel":
             _ensure_plan_status(plan, {"draft", "in_progress"}, "cancel_approve")
             plan.status = "cancelled"
             plan.save(update_fields=["status"])
+            
+            # 创建状态变更日志
+            from backend.apps.plan_management.models import PlanStatusLog
+            PlanStatusLog.objects.create(
+                plan=plan,
+                old_status=old_status,
+                new_status="cancelled",
+                changed_by=user,
+                change_reason=f"审批通过取消请求：{reason or '无说明'}"
+            )
         else:
             raise PlanDecisionError(f"未知 request_type={decision.request_type}")
 
@@ -181,8 +214,19 @@ def system_complete_if_ready(plan: Plan) -> bool:
     result = adjudicate_plan_status(plan, decision=None, system_facts={'all_tasks_completed': True})
     
     if result.changed:
+        old_status = plan.status  # 保存旧状态用于日志
         plan.status = result.new_status
         plan.save(update_fields=["status"])
+        
+        # 创建状态变更日志（系统自动完成）
+        from backend.apps.plan_management.models import PlanStatusLog
+        PlanStatusLog.objects.create(
+            plan=plan,
+            old_status=old_status,
+            new_status=result.new_status,
+            changed_by=None,  # 系统自动完成，无操作人
+            change_reason=result.reason or '系统自动完成：进度达到100%'
+        )
         return True
     
     return False

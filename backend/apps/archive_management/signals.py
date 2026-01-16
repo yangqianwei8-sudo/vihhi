@@ -5,54 +5,44 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-# 已移除delivery_customer应用，注释掉相关信号处理器
-# from backend.apps.delivery_customer.models import DeliveryRecord
+from backend.apps.delivery_customer.models import DeliveryRecord
 from backend.apps.production_management.models import Project
 from backend.apps.archive_management.models import ArchivePushRecord, ProjectArchiveDocument, ArchiveProjectArchive
 
-# 尝试导入DeliveryRecord（如果delivery_customer应用仍存在）
-try:
-    from backend.apps.delivery_customer.models import DeliveryRecord
-    DELIVERY_RECORD_AVAILABLE = True
-except ImportError:
-    DeliveryRecord = None
-    DELIVERY_RECORD_AVAILABLE = False
 
-
-if DELIVERY_RECORD_AVAILABLE:
-    @receiver(post_save, sender=DeliveryRecord)
-    def handle_delivery_archive_push(sender, instance, created, **kwargs):
-        """
-        监听交付记录状态变化，当状态为"已确认"或"已反馈"时，自动推送到档案管理模块
-        """
-        # 只处理状态为"已确认"或"已反馈"的记录
-        if instance.status not in ['confirmed', 'feedback_received']:
-            return
-        
-        # 检查是否已经推送过
-        existing_push = ArchivePushRecord.objects.filter(
-            delivery_record=instance,
-            push_status='success'
-        ).exists()
-        
-        if existing_push:
-            return
-        
-        # 创建推送记录
-        push_record = ArchivePushRecord.objects.create(
-            delivery_record=instance,
-            project=instance.project,
-            push_status='pending',
-            push_time=timezone.now()
-        )
-        
-        # 异步处理推送（这里先同步处理，后续可以改为Celery任务）
-        try:
-            _process_delivery_push(push_record)
-        except Exception as e:
-            push_record.push_status = 'failed'
-            push_record.error_message = str(e)
-            push_record.save()
+@receiver(post_save, sender=DeliveryRecord)
+def handle_delivery_archive_push(sender, instance, created, **kwargs):
+    """
+    监听交付记录状态变化，当状态为"已确认"或"已反馈"时，自动推送到档案管理模块
+    """
+    # 只处理状态为"已确认"或"已反馈"的记录
+    if instance.status not in ['confirmed', 'feedback_received']:
+        return
+    
+    # 检查是否已经推送过
+    existing_push = ArchivePushRecord.objects.filter(
+        delivery_record=instance,
+        push_status='success'
+    ).exists()
+    
+    if existing_push:
+        return
+    
+    # 创建推送记录
+    push_record = ArchivePushRecord.objects.create(
+        delivery_record=instance,
+        project=instance.project,
+        push_status='pending',
+        push_time=timezone.now()
+    )
+    
+    # 异步处理推送（这里先同步处理，后续可以改为Celery任务）
+    try:
+        _process_delivery_push(push_record)
+    except Exception as e:
+        push_record.push_status = 'failed'
+        push_record.error_message = str(e)
+        push_record.save()
 
 
 def _process_delivery_push(push_record):
@@ -155,16 +145,15 @@ def _check_project_archive_conditions(project):
         # 如果结算模块不存在，跳过此检查
         pass
     
-    # 条件2：检查是否有未完成的交付记录（已移除delivery_customer应用，跳过此检查）
-    if DELIVERY_RECORD_AVAILABLE:
-        incomplete_deliveries = DeliveryRecord.objects.filter(
-            project=project
-        ).exclude(
-            status__in=['confirmed', 'feedback_received', 'archived', 'cancelled']
-        ).exists()
-        
-        if incomplete_deliveries:
-            return False
+    # 条件2：检查是否有未完成的交付记录
+    incomplete_deliveries = DeliveryRecord.objects.filter(
+        project=project
+    ).exclude(
+        status__in=['confirmed', 'feedback_received', 'archived', 'cancelled']
+    ).exists()
+    
+    if incomplete_deliveries:
+        return False
     
     # 条件3：检查项目复盘（如果有复盘功能）
     # TODO: 根据实际复盘模块实现检查逻辑

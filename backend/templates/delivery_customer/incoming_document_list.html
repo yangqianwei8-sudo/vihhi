@@ -1,159 +1,246 @@
-{% extends "shared/list_page_base.html" %}
-{% comment %}
-收文列表页面模板 (Incoming Document List Template)
-
-功能说明：
-- 展示收文记录的列表页面
-- 支持按状态、优先级、阶段、文件分类等多维度筛选
-- 支持收文记录的查看、编辑操作
-- 包含复选框功能，支持批量操作
-
-主要功能：
-1. 筛选功能：
-   - 状态筛选：全部及各状态选项
-   - 优先级筛选：全部、紧急、高、普通、低
-   - 阶段筛选：全部及各阶段选项
-   - 文件分类筛选：根据选择的阶段动态显示对应的分类选项
-2. 表格展示：序号、收文编号、文件标题、发文单位、状态、优先级、阶段、文件分类、收文日期、处理人、操作
-3. 复选框功能：支持全选和批量操作（继承自list_page_base.html）
-4. 操作功能：查看详情、编辑
-
-特殊功能：
-- 文件分类选项根据选择的阶段动态显示/隐藏（通过筛选面板的依赖关系实现）
-- 支持创建新收文记录
-{% endcomment %}
+{% extends "delivery_customer/base.html" %}
 {% load static %}
 
-{% block list_page_title %}收文列表{% endblock %}
+{% block title %}收文列表 - 维海科技信息化管理平台{% endblock %}
 
-{% block list_page_actions %}
-{% if can_create %}
-<a href="{% url 'delivery_pages:incoming_document_create' %}" 
-   class="btn btn-primary btn-sm"
-   aria-label="创建新收文">
-    <i class="bi bi-plus-circle"></i> 创建收文
-</a>
-{% endif %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:report_delivery' %}">收发管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">收文列表</li>
 {% endblock %}
 
-{% block empty_create_url %}{% url 'delivery_pages:incoming_document_create' %}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
+<style>
+.list-page-container {
+    padding: 12px !important;
+    gap: 8px !important;
+}
 
-{# 筛选区域已通过 filter_config 在 list_page_base.html 中自动渲染 #}
-{# 如需自定义筛选区域，可覆盖 list_page_filters 块 #}
+.list-page-header {
+    margin-bottom: 8px !important;
+    padding: 6px 0 !important;
+}
 
-<!-- 表格复选框列 -->
-{% block list_page_table_checkbox_header %}
-<th style="width: 40px;">
-    <input type="checkbox" id="selectAll" title="全选/取消全选">
-</th>
+.list-page-action-bar {
+    margin-bottom: 8px !important;
+    padding: 6px 10px !important;
+}
+
+.table {
+    margin-bottom: 8px;
+}
+
+.table th,
+.table td {
+    padding: 8px 10px;
+    font-size: 13px;
+}
+
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+</style>
 {% endblock %}
 
-{% block list_page_table_headers %}
-<th style="width: 4%;">#</th>
-<th style="width: 10%;">收文编号</th>
-<th style="width: 18%;">文件标题</th>
-<th style="width: 12%;">发文单位</th>
-<th style="width: 8%;">状态</th>
-<th style="width: 8%;">优先级</th>
-<th style="width: 8%;">阶段</th>
-<th style="width: 10%;">文件分类</th>
-<th style="width: 8%;">收文日期</th>
-<th style="width: 8%;">处理人</th>
-{% endblock %}
-{% block list_page_table_actions_header %}
-<th style="width: 10%;">
-    操作
-    <span id="columnSettingsBtn"
-          data-bs-toggle="modal"
-          data-bs-target="#columnSettingsModal"
-          aria-label="设置表格字段"
-          title="设置表格字段"
-          style="cursor: pointer; color: #000000 !important; font-size: 16px; vertical-align: middle; margin-left: 8px; display: inline-block;">
-        <i class="bi bi-gear" style="color: #000000 !important;"></i>
-    </span>
-</th>
-{% endblock %}
-
-{% block list_page_table_checkbox_cell %}
-<td>
-    <input type="checkbox" class="row-checkbox" value="{{ item.id }}" title="选择此项">
-</td>
-{% endblock %}
-
-{% block list_page_table_row_content %}
-<td>{{ forloop.counter0|add:page_obj.start_index }}</td>
-<td><code>{{ item.document_number }}</code></td>
-<td>
-    <strong>{{ item.title|truncatewords:10 }}</strong>
-</td>
-<td>{{ item.sender }}</td>
-<td>
-    {% if item.status %}
-        <span class="badge bg-{% if item.status == 'completed' %}success{% elif item.status == 'processing' %}warning{% elif item.status == 'archived' %}secondary{% else %}info{% endif %}">
-            {{ item.get_status_display }}
-        </span>
-    {% else %}
-        <span class="text-muted">-</span>
-    {% endif %}
-</td>
-<td>
-    {% if item.priority %}
-        <span class="badge bg-{% if item.priority == 'urgent' %}danger{% elif item.priority == 'high' %}warning{% elif item.priority == 'normal' %}info{% else %}secondary{% endif %}">
-            {{ item.get_priority_display }}
-        </span>
-    {% else %}
-        <span class="text-muted">-</span>
-    {% endif %}
-</td>
-<td>
-    {% if item.stage %}
-        <span class="badge bg-info">{{ item.get_stage_display }}</span>
-    {% else %}
-        <span class="text-muted">-</span>
-    {% endif %}
-</td>
-<td>
-    {% if item.file_category %}
-        <span class="badge bg-secondary">{{ item.file_category.name }}</span>
-    {% else %}
-        <span class="text-muted">-</span>
-    {% endif %}
-</td>
-<td>{{ item.receive_date|date:"Y-m-d"|default:"-" }}</td>
-<td>
-    {% if item.handler %}
-        {{ item.handler.get_full_name|default:item.handler.username }}
-    {% else %}
-        <span class="text-muted">-</span>
-    {% endif %}
-</td>
-{% endblock %}
-
-{% block list_page_table_actions_cell %}
-<td>
-    <div class="list-page-table-actions">
-        <a href="{% url 'delivery_pages:incoming_document_detail' item.id %}" 
-           class="action-view" title="查看详情">
-            <i class="bi bi-eye"></i>
-        </a>
+{% block content %}
+<div class="list-page-container">
+    
+    <div class="list-page-header d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0">📥 收文列表</h4>
+            <small class="text-muted">管理收到的文件记录</small>
+        </div>
         {% if can_create %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'delivery_pages:incoming_document_edit' item.id %}" 
-           class="action-edit" title="编辑">
-            <i class="bi bi-pencil"></i>
-        </a>
-        <span class="action-separator">|</span>
-        <a href="{% url 'delivery_pages:incoming_document_delete' item.id %}" 
-           class="action-delete" title="删除" onclick="return confirm('确定要删除这条收文吗？');">
-            <i class="bi bi-trash"></i>
-        </a>
+        <div>
+            <a href="{% url 'delivery_pages:incoming_document_create' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> 创建收文
+            </a>
+        </div>
         {% endif %}
     </div>
-</td>
-{% endblock %}
 
-{% block empty_table_message %}
-<i class="bi bi-inbox"></i> 暂无收文数据
-{% endblock %}
+    <div class="list-page-filters mb-2">
+        <form method="get" class="d-flex gap-2 align-items-end">
+            <div class="flex-grow-1">
+                <label class="form-label small mb-1">搜索</label>
+                <input type="text" name="search" class="form-control form-control-sm" 
+                       placeholder="收文编号、标题、发文单位、联系人..." 
+                       value="{{ search_query }}">
+            </div>
+            <div style="width: 130px;">
+                <label class="form-label small mb-1">阶段</label>
+                <select name="stage" class="form-select form-select-sm" id="stage_filter" onchange="updateCategoryOptions()">
+                    <option value="all" {% if stage_filter == 'all' %}selected{% endif %}>全部</option>
+                    {% for code, label in stage_choices %}
+                    <option value="{{ code }}" {% if stage_filter == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="width: 150px;">
+                <label class="form-label small mb-1">文件分类</label>
+                <select name="category" class="form-select form-select-sm" id="category_filter">
+                    <option value="all" {% if category_filter == 'all' %}selected{% endif %}>全部</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" data-stage="{{ category.stage }}" 
+                            {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}
+                            style="{% if stage_filter != 'all' and category.stage != stage_filter %}display: none;{% endif %}">
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-search"></i> 搜索
+                </button>
+                <a href="{% url 'delivery_pages:incoming_document_list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-circle"></i> 重置
+                </a>
+            </div>
+        </form>
+    </div>
 
-{% block empty_colspan %}12{% endblock %}
+    <div class="list-page-table">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 4%;">#</th>
+                        <th style="width: 10%;">收文编号</th>
+                        <th style="width: 18%;">文件标题</th>
+                        <th style="width: 12%;">发文单位</th>
+                        <th style="width: 8%;">阶段</th>
+                        <th style="width: 10%;">文件分类</th>
+                        <th style="width: 8%;">收文日期</th>
+                        <th style="width: 8%;">处理人</th>
+                        <th style="width: 10%;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if documents %}
+                        {% for doc in documents %}
+                        <tr>
+                            <td>{{ forloop.counter0|add:documents.start_index }}</td>
+                            <td><code>{{ doc.document_number }}</code></td>
+                            <td>
+                                <strong>{{ doc.title|truncatewords:10 }}</strong>
+                            </td>
+                            <td>{{ doc.sender }}</td>
+                            <td>
+                                {% if doc.stage %}
+                                    <span class="badge bg-info">{{ doc.get_stage_display }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if doc.file_category %}
+                                    <span class="badge bg-secondary">{{ doc.file_category.name }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ doc.receive_date|date:"Y-m-d"|default:"-" }}</td>
+                            <td>
+                                {% if doc.handler %}
+                                    {{ doc.handler.get_full_name|default:doc.handler.username }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'delivery_pages:incoming_document_detail' doc.id %}" 
+                                       class="btn btn-outline-info" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if can_create %}
+                                    <a href="{% url 'delivery_pages:incoming_document_edit' doc.id %}" 
+                                       class="btn btn-outline-primary" title="编辑">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox"></i> 暂无数据
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if documents.has_other_pages %}
+    <nav aria-label="分页导航">
+        <ul class="pagination justify-content-center mb-0">
+            {% if documents.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if stage_filter != 'all' %}&stage={{ stage_filter }}{% endif %}{% if category_filter != 'all' %}&category={{ category_filter }}{% endif %}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ documents.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if stage_filter != 'all' %}&stage={{ stage_filter }}{% endif %}{% if category_filter != 'all' %}&category={{ category_filter }}{% endif %}">上一页</a>
+                </li>
+            {% endif %}
+            
+            {% for num in documents.paginator.page_range %}
+                {% if documents.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > documents.number|add:'-3' and num < documents.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if stage_filter != 'all' %}&stage={{ stage_filter }}{% endif %}{% if category_filter != 'all' %}&category={{ category_filter }}{% endif %}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if documents.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ documents.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if stage_filter != 'all' %}&stage={{ stage_filter }}{% endif %}{% if category_filter != 'all' %}&category={{ category_filter }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ documents.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if stage_filter != 'all' %}&stage={{ stage_filter }}{% endif %}{% if category_filter != 'all' %}&category={{ category_filter }}{% endif %}">末页</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<script>
+// 更新文件分类选项（根据选择的阶段）
+function updateCategoryOptions() {
+    const stageSelect = document.getElementById('stage_filter');
+    const categorySelect = document.getElementById('category_filter');
+    const selectedStage = stageSelect.value;
+    
+    // 显示/隐藏分类选项
+    const options = categorySelect.querySelectorAll('option[data-stage]');
+    options.forEach(option => {
+        if (selectedStage === 'all' || option.getAttribute('data-stage') === selectedStage) {
+            option.style.display = '';
+        } else {
+            option.style.display = 'none';
+            // 如果当前选中的分类不在当前阶段，重置为"全部"
+            if (option.selected && option.getAttribute('data-stage') !== selectedStage) {
+                categorySelect.value = 'all';
+            }
+        }
+    });
+}
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    updateCategoryOptions();
+});
+</script>
+{% endblock %}

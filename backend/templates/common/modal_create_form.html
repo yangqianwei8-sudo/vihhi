@@ -21,7 +21,7 @@
 <div class="modal fade" id="{{ modal_id|default:'createModal' }}" tabindex="-1" aria-labelledby="{{ modal_id|default:'createModal' }}Label" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-dialog-{{ modal_size|default:'md' }}">
         <div class="modal-content">
-            <!-- 弹窗头部 -->
+            
             <div class="modal-header">
                 <h5 class="modal-title" id="{{ modal_id|default:'createModal' }}Label">
                     <i class="bi {{ modal_title_icon|default:'bi-plus-circle' }}"></i>
@@ -30,12 +30,11 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
             </div>
             
-            <!-- 弹窗主体 -->
             <form method="{{ form_method|default:'post' }}" action="{{ form_action }}" id="{{ modal_id|default:'createModal' }}Form">
                 {% csrf_token %}
                 <div class="modal-body">
                     {% if show_alert %}
-                    <!-- 提示信息 -->
+                    
                     <div class="modal-alert modal-alert-{{ alert_type|default:'info' }}">
                         <i class="bi {% if alert_type == 'warning' %}bi-exclamation-triangle{% elif alert_type == 'danger' %}bi-x-circle{% elif alert_type == 'success' %}bi-check-circle{% else %}bi-info-circle{% endif %}"></i>
                         {{ alert_message|default:"请填写以下信息" }}
@@ -43,24 +42,22 @@
                     {% endif %}
                     
                     {% if form.errors %}
-                    <!-- 表单错误提示 -->
+                    
                     <div class="modal-alert modal-alert-danger">
                         <i class="bi bi-x-circle"></i>
                         表单验证失败，请检查输入
                     </div>
                     {% endif %}
                     
-                    <!-- 表单内容区域 -->
                     {% block modal_form_content %}
-                    <!-- 在这里放置表单字段 -->
+                    
                     <div class="form-group">
                         <label class="form-label required">名称</label>
-                        <input type="text" name="name" class="form-control" required>
+                        <input type="text" name="name" class="form-control" required placeholder="请输入名称">
                     </div>
                     {% endblock %}
                 </div>
                 
-                <!-- 弹窗底部 -->
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         {{ cancel_button_text|default:"取消" }}
@@ -74,4 +71,3 @@
         </div>
     </div>
 </div>
-

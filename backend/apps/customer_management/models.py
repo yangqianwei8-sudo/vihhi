@@ -95,7 +95,6 @@ class Client(models.Model):
     ]
     
     # 基础信息
-    customer_number = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name='客户编号', help_text='系统自动生成：KH-YYYYMMDD-NNNN')
     name = models.CharField(max_length=200, verbose_name='客户名称')
     unified_credit_code = models.CharField(max_length=50, blank=True, verbose_name='统一信用代码')
     
@@ -199,7 +198,6 @@ class Client(models.Model):
         verbose_name_plural = verbose_name
         ordering = ['-created_time']
         indexes = [
-            models.Index(fields=['customer_number']),
             models.Index(fields=['name']),
             models.Index(fields=['unified_credit_code']),
             models.Index(fields=['responsible_user', 'is_active']),
@@ -292,76 +290,12 @@ class Client(models.Model):
             logger.warning(f"未找到代码为 '{grade_code}' 的客户分级，且没有可用的默认分级")
             return None
     
-    def generate_customer_number(self):
-        """生成客户编号：KH-YYYYMMDD-NNNN（NNNN全局累计递增）"""
-        from datetime import date
-        from django.db import transaction
-        import re
-        
-        today = date.today()
-        date_prefix = today.strftime('%Y%m%d')
-        prefix = f'KH-{date_prefix}-'
-        
-        # 使用数据库锁确保并发安全
-        with transaction.atomic():
-            # 查询所有以KH-开头的客户编号，获取最大的序号
-            all_numbers = Client.objects.filter(
-                customer_number__isnull=False
-            ).exclude(customer_number='').filter(
-                customer_number__startswith='KH-'
-            ).select_for_update().values_list('customer_number', flat=True)
-            
-            max_num = 0
-            # 从所有编号中提取序号部分（最后4位数字）
-            for number in all_numbers:
-                if number and '-' in number:
-                    try:
-                        # 提取最后一个-后面的数字部分
-                        num_part = number.split('-')[-1]
-                        if re.match(r'^\d{1,4}$', num_part):  # 确保是1-4位数字
-                            num_value = int(num_part)
-                            if num_value > max_num:
-                                max_num = num_value
-                    except (ValueError, IndexError):
-                        continue
-            
-            # 下一个序号
-            next_num = max_num + 1
-            
-            # 如果超过9999，抛出异常
-            if next_num > 9999:
-                raise ValueError(f"客户编号已达到最大值9999，无法生成新的客户编号")
-            
-            # 格式化为4位数字，不足4位前面补0
-            number_suffix = str(next_num).zfill(4)
-            customer_number = f'{prefix}{number_suffix}'
-            
-            # 再次检查是否已存在（防止并发创建时的冲突）
-            attempt_count = 0
-            while Client.objects.filter(customer_number=customer_number).exists() and attempt_count < 100:
-                # 如果已存在，继续尝试下一个序号
-                next_num += 1
-                if next_num > 9999:
-                    raise ValueError(f"客户编号已达到最大值9999，无法生成新的客户编号")
-                number_suffix = str(next_num).zfill(4)
-                customer_number = f'{prefix}{number_suffix}'
-                attempt_count += 1
-            
-            if attempt_count >= 100:
-                raise ValueError(f"无法生成唯一的客户编号，已尝试100次")
-            
-            return customer_number
-    
     def save(self, *args, **kwargs):
         # 自动计算评分和分级
         # 对于新对象（首次保存），总是自动计算评分和分级
         # 对于已存在的对象，只有在明确指定update_score=True或update_grade=True时才更新
         
         is_new = self.pk is None
-        
-        # 如果没有客户编号，自动生成（新建或已有客户都需要）
-        if not self.customer_number:
-            self.customer_number = self.generate_customer_number()
         
         # 计算评分
         if kwargs.get('update_score', False) or is_new:
@@ -459,16 +393,6 @@ class ClientContact(models.Model):
     
     # 基础关联
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='contacts', verbose_name='客户')
-    
-    # 联系人编号
-    contact_number = models.CharField(
-        max_length=20, 
-        unique=True, 
-        blank=True, 
-        null=True,
-        verbose_name='联系人编号',
-        help_text='格式：LXR-YYYYMMDD-NNNN，系统自动生成'
-    )
     
     # 基本信息
     name = models.CharField(max_length=100, verbose_name='联系人姓名')
@@ -596,66 +520,6 @@ class ClientContact(models.Model):
     def __str__(self):
         return f"{self.name} - {self.client.name}"
     
-    def generate_contact_number(self):
-        """生成联系人编号：LXR-YYYYMMDD-NNNN（NNNN全局累计递增，不关联日期）"""
-        from datetime import date
-        from django.db import transaction
-        import re
-        
-        today = date.today()
-        date_prefix = today.strftime('%Y%m%d')
-        prefix = f'LXR-{date_prefix}-'
-        
-        # 使用数据库锁确保并发安全
-        with transaction.atomic():
-            # 查询所有以LXR-开头的联系人编号，获取最大的序号
-            all_numbers = ClientContact.objects.filter(
-                contact_number__isnull=False
-            ).exclude(contact_number='').filter(
-                contact_number__startswith='LXR-'
-            ).select_for_update().values_list('contact_number', flat=True)
-            
-            max_num = 0
-            # 从所有编号中提取序号部分（最后4位数字）
-            for number in all_numbers:
-                if number and '-' in number:
-                    try:
-                        # 提取最后一个-后面的数字部分
-                        num_part = number.split('-')[-1]
-                        if re.match(r'^\d{1,4}$', num_part):  # 确保是1-4位数字
-                            num_value = int(num_part)
-                            if num_value > max_num:
-                                max_num = num_value
-                    except (ValueError, IndexError):
-                        continue
-            
-            # 下一个序号
-            next_num = max_num + 1
-            
-            # 如果超过9999，抛出异常
-            if next_num > 9999:
-                raise ValueError(f"联系人编号已达到最大值9999，无法生成新的联系人编号")
-            
-            # 格式化为4位数字，不足4位前面补0
-            number_suffix = str(next_num).zfill(4)
-            contact_number = f'{prefix}{number_suffix}'
-            
-            # 再次检查是否已存在（防止并发创建时的冲突）
-            attempt_count = 0
-            while ClientContact.objects.filter(contact_number=contact_number).exists() and attempt_count < 100:
-                # 如果已存在，继续尝试下一个序号
-                next_num += 1
-                if next_num > 9999:
-                    raise ValueError(f"联系人编号已达到最大值9999，无法生成新的联系人编号")
-                number_suffix = str(next_num).zfill(4)
-                contact_number = f'{prefix}{number_suffix}'
-                attempt_count += 1
-            
-            if attempt_count >= 100:
-                raise ValueError(f"无法生成唯一的联系人编号，已尝试100次")
-            
-            return contact_number
-    
     def calculate_relationship_score(self):
         """计算关系评分（0-100分）"""
         score = 0
@@ -772,10 +636,6 @@ class ClientContact(models.Model):
         return (timezone.now().date() - next_date).days
     
     def save(self, *args, **kwargs):
-        # 如果没有联系人编号，自动生成（新建或已有联系人都需要）
-        if not self.contact_number:
-            self.contact_number = self.generate_contact_number()
-        
         # 自动计算关系评分
         if kwargs.get('update_relationship_score', True):
             self.relationship_score = self.calculate_relationship_score()
@@ -1660,7 +1520,6 @@ class BusinessOpportunity(models.Model):
     approval_comment = models.TextField(blank=True, verbose_name='审批意见')
     
     # 赢单/输单信息
-    project_number = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name='项目编号', help_text='赢单后自动生成：YYYYMMDD-NNNN，不可修改')
     actual_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, verbose_name='实际签约金额（万元）')
     contract_number = models.CharField(max_length=100, blank=True, verbose_name='合同编号')
     win_reason = models.TextField(blank=True, verbose_name='赢单原因')
@@ -1679,59 +1538,6 @@ class BusinessOpportunity(models.Model):
     created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
     updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
     
-
-
-
-class BusinessOpportunityAttachment(models.Model):
-    """商机附件模型（用于存储赢单附件等）"""
-    opportunity = models.ForeignKey(
-        BusinessOpportunity,
-        on_delete=models.CASCADE,
-        related_name='attachments',
-        verbose_name='关联商机'
-    )
-    file = models.FileField(
-        upload_to='opportunity_attachments/%Y/%m/%d/',
-        verbose_name='附件文件'
-    )
-    file_name = models.CharField(max_length=255, verbose_name='文件名称')
-    file_type = models.CharField(max_length=50, blank=True, verbose_name='文件类型', help_text='如：业务委托书、中标通知书等')
-    description = models.TextField(blank=True, verbose_name='文件描述')
-    uploaded_by = models.ForeignKey(
-        User,
-        on_delete=models.PROTECT,
-        related_name='uploaded_opportunity_attachments',
-        verbose_name='上传人'
-    )
-    uploaded_time = models.DateTimeField(default=timezone.now, verbose_name='上传时间')
-    
-    class Meta:
-        db_table = 'business_opportunity_attachment'
-        verbose_name = '商机附件'
-        verbose_name_plural = verbose_name
-        ordering = ['-uploaded_time']
-        indexes = [
-            models.Index(fields=['opportunity']),
-            models.Index(fields=['file_type']),
-        ]
-    
-    def __str__(self):
-        return f"{self.opportunity.opportunity_number or '未编号'} - {self.file_name}"
-
-
-    class Meta:
-        db_table = 'business_opportunity_attachment'
-        verbose_name = '商机附件'
-        verbose_name_plural = verbose_name
-        ordering = ['-uploaded_time']
-        indexes = [
-            models.Index(fields=['opportunity']),
-            models.Index(fields=['file_type']),
-        ]
-    
-    def __str__(self):
-        return f"{self.opportunity.opportunity_number or '未编号'} - {self.file_name}"
-
     class Meta:
         db_table = 'business_opportunity'
         verbose_name = '商机'
@@ -1748,49 +1554,28 @@ class BusinessOpportunityAttachment(models.Model):
         return f"{self.opportunity_number or '未编号'} - {self.name}"
     
     def save(self, *args, **kwargs):
-        # 自动生成商机编号：SJ-YYYYMMDD-NNNN
-        # 其中 YYYYMMDD 是创建日期，NNNN 是全局连续编号（所有商机按顺序编号，不按日期分组）
+        # 自动生成商机编号：SJ-YYYYMMDD-0000（连续编号）
         if not self.opportunity_number:
-            from django.db import transaction
+            from django.db.models import Max
             from datetime import datetime
-            import re
+            current_date = datetime.now().strftime('%Y%m%d')
+            date_prefix = f'SJ-{current_date}-'
             
-            # 使用事务和数据库锁确保线程安全，避免并发时产生重复编号
-            with transaction.atomic():
-                current_date = datetime.now().strftime('%Y%m%d')
-                
-                # 查找所有商机编号，提取最大序号（全局连续编号）
-                # 使用select_for_update()加锁，确保同一时间只有一个请求能获取最大编号
-                all_opps = BusinessOpportunity.objects.exclude(
-                    opportunity_number__isnull=True
-                ).exclude(
-                    opportunity_number=''
-                ).select_for_update().values_list('opportunity_number', flat=True)
-                
-                max_seq = 0
-                for opp_num in all_opps:
-                    if opp_num and opp_num.startswith('SJ-'):
-                        try:
-                            # 提取编号中的序号部分（最后4位数字）
-                            parts = opp_num.split('-')
-                            if len(parts) == 3:
-                                seq = int(parts[2])
-                                max_seq = max(max_seq, seq)
-                        except (ValueError, IndexError):
-                            continue
-                
-                # 下一个序号
-                next_seq = max_seq + 1
-                
-                # 生成新编号：SJ-YYYYMMDD-NNNN（日期是创建日期，序号是全局连续）
-                new_number = f'SJ-{current_date}-{next_seq:04d}'
-                
-                # 双重检查：确保编号唯一（虽然理论上不会重复，但为了安全）
-                while BusinessOpportunity.objects.filter(opportunity_number=new_number).exists():
-                    next_seq += 1
-                    new_number = f'SJ-{current_date}-{next_seq:04d}'
-                
-                self.opportunity_number = new_number
+            # 查找当天最大编号
+            max_opp = BusinessOpportunity.objects.filter(
+                opportunity_number__startswith=date_prefix
+            ).aggregate(max_num=Max('opportunity_number'))['max_num']
+            
+            if max_opp:
+                try:
+                    # 提取最后4位数字作为序号
+                    seq = int(max_opp.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            
+            self.opportunity_number = f'{date_prefix}{seq:04d}'
         
         # 自动计算加权金额
         if self.estimated_amount and self.success_probability:
@@ -2096,21 +1881,6 @@ class BusinessOpportunityAttachment(models.Model):
             )
         
         return True
-
-
-
-    class Meta:
-        db_table = 'business_opportunity_attachment'
-        verbose_name = '商机附件'
-        verbose_name_plural = verbose_name
-        ordering = ['-uploaded_time']
-        indexes = [
-            models.Index(fields=['opportunity']),
-            models.Index(fields=['file_type']),
-        ]
-    
-    def __str__(self):
-        return f"{self.opportunity.opportunity_number or '未编号'} - {self.file_name}"
 
 
 class OpportunityFollowUp(models.Model):
@@ -3460,55 +3230,45 @@ class AuthorizationLetter(models.Model):
                 self.client_address = self.client_contact.office_address
         
         # 自动生成项目编号：HT-YYYY-NNNN
-        # 优先从关联的商机赢单的项目编号获取
         if not self.project_number:
-            # 如果关联了商机且商机有项目编号（赢单后生成），使用商机的项目编号
-            if self.opportunity and self.opportunity.project_number:
-                self.project_number = self.opportunity.project_number
-            else:
-                # 否则自动生成项目编号
-                from django.db.models import Max
-                from datetime import datetime
-                current_year = datetime.now().strftime('%Y')
-                year_prefix = f'HT-{current_year}-'
-                
-                # 查找当年最大项目编号（从业务委托书、合同和商机中查找）
-                from backend.apps.production_management.models import BusinessContract
-                
-                # 查找业务委托书中的最大项目编号
-                max_letter = AuthorizationLetter.objects.filter(
-                    project_number__startswith=year_prefix
-                ).exclude(id=self.id if self.id else None).aggregate(max_num=Max('project_number'))['max_num']
-                
-                # 查找合同中的最大项目编号
-                max_contract = BusinessContract.objects.filter(
-                    project_number__startswith=year_prefix
-                ).aggregate(max_num=Max('project_number'))['max_num']
-                
-                # 注意：商机项目编号格式为 YYYYMMDD-NNNN，与业务委托书/合同的 HT-YYYY-NNNN 格式不同
-                # 因此不将商机项目编号纳入比较范围
-                # 只比较业务委托书和合同的项目编号
-                
-                # 取两者中的最大值
-                max_project_number = None
-                if max_letter and max_contract:
-                    max_project_number = max(max_letter, max_contract)
-                elif max_letter:
-                    max_project_number = max_letter
-                elif max_contract:
-                    max_project_number = max_contract
-                
-                if max_project_number:
-                    try:
-                        # 提取序列号，格式：HT-YYYY-NNNN
-                        seq_str = max_project_number.split('-')[-1]
-                        seq = int(seq_str) + 1
-                    except (ValueError, IndexError):
-                        seq = 1
-                else:
+            from django.db.models import Max
+            from datetime import datetime
+            current_year = datetime.now().strftime('%Y')
+            year_prefix = f'HT-{current_year}-'
+            
+            # 查找当年最大项目编号（从业务委托书和合同中查找）
+            from backend.apps.production_management.models import BusinessContract
+            
+            # 查找业务委托书中的最大项目编号
+            max_letter = AuthorizationLetter.objects.filter(
+                project_number__startswith=year_prefix
+            ).exclude(id=self.id if self.id else None).aggregate(max_num=Max('project_number'))['max_num']
+            
+            # 查找合同中的最大项目编号
+            max_contract = BusinessContract.objects.filter(
+                project_number__startswith=year_prefix
+            ).aggregate(max_num=Max('project_number'))['max_num']
+            
+            # 取两者中的最大值
+            max_project_number = None
+            if max_letter and max_contract:
+                max_project_number = max(max_letter, max_contract)
+            elif max_letter:
+                max_project_number = max_letter
+            elif max_contract:
+                max_project_number = max_contract
+            
+            if max_project_number:
+                try:
+                    # 提取序列号，格式：HT-YYYY-NNNN
+                    seq_str = max_project_number.split('-')[-1]
+                    seq = int(seq_str) + 1
+                except (ValueError, IndexError):
                     seq = 1
-                
-                self.project_number = f'{year_prefix}{seq:04d}'
+            else:
+                seq = 1
+            
+            self.project_number = f'{year_prefix}{seq:04d}'
         
         # 自动计算委托期限（天）
         if self.start_date and self.end_date:
@@ -3688,117 +3448,4 @@ class AuthorizationLetterTemplate(models.Model):
                 self.template_file_size = None
         
         super().save(*args, **kwargs)
-
-
-class ClientInfoChange(models.Model):
-    """客户信息变更记录模型"""
-    CHANGE_TYPE_CHOICES = [
-        ('basic_info', '基本信息变更'),
-        ('contact_info', '联系信息变更'),
-        ('financial_info', '财务信息变更'),
-        ('other', '其他信息变更'),
-    ]
-    
-    APPROVAL_STATUS_CHOICES = [
-        ('draft', '草稿'),
-        ('submitted', '已提交'),
-        ('approved', '已通过'),
-        ('rejected', '已驳回'),
-        ('cancelled', '已取消'),
-    ]
-    
-    # 关联客户
-    client = models.ForeignKey(
-        Client,
-        on_delete=models.CASCADE,
-        related_name='info_changes',
-        verbose_name='关联客户'
-    )
-    
-    # 变更类型
-    change_type = models.CharField(
-        max_length=20,
-        choices=CHANGE_TYPE_CHOICES,
-        default='basic_info',
-        verbose_name='变更类型'
-    )
-    
-    # 变更原因
-    change_reason = models.TextField(verbose_name='变更原因', help_text='说明为什么要进行此次变更')
-    
-    # 变更内容（JSON格式存储变更前后的值）
-    # 格式：{"field_name": {"old": "旧值", "new": "新值"}, ...}
-    change_content = models.JSONField(
-        default=dict,
-        verbose_name='变更内容',
-        help_text='JSON格式存储变更前后的值'
-    )
-    
-    # 审批相关
-    approval_status = models.CharField(
-        max_length=20,
-        choices=APPROVAL_STATUS_CHOICES,
-        default='draft',
-        verbose_name='审批状态'
-    )
-    approval_instance = models.ForeignKey(
-        'workflow_engine.ApprovalInstance',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='client_info_changes',
-        verbose_name='审批实例'
-    )
-    
-    # 审计字段
-    created_by = models.ForeignKey(
-        User,
-        on_delete=models.PROTECT,
-        related_name='created_client_info_changes',
-        verbose_name='创建人'
-    )
-    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
-    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
-    
-    class Meta:
-        db_table = 'customer_client_info_change'
-        verbose_name = '客户信息变更记录'
-        verbose_name_plural = verbose_name
-        ordering = ['-created_time']
-        indexes = [
-            models.Index(fields=['client', 'approval_status']),
-            models.Index(fields=['change_type']),
-            models.Index(fields=['created_time']),
-        ]
-    
-    def __str__(self):
-        return f"{self.client.name} - {self.get_change_type_display()} - {self.get_approval_status_display()}"
-    
-    def get_changed_fields_display(self):
-        """获取变更字段的显示文本"""
-        if not self.change_content:
-            return "无变更内容"
-        
-        field_labels = {
-            'name': '客户名称',
-            'unified_credit_code': '统一信用代码',
-            'legal_representative': '法定代表人',
-            'responsible_user': '负责人',
-            'client_type': '客户类型',
-            'grade': '客户分级',
-            'region': '办公地址',
-            'source': '客户来源',
-            'company_phone': '联系电话',
-            'company_email': '邮箱',
-            'company_address': '注册地址',
-        }
-        
-        changed_fields = []
-        for field_name, change_data in self.change_content.items():
-            field_label = field_labels.get(field_name, field_name)
-            old_value = change_data.get('old', '')
-            new_value = change_data.get('new', '')
-            changed_fields.append(f"{field_label}: {old_value} → {new_value}")
-        
-        return "; ".join(changed_fields) if changed_fields else "无变更内容"
 

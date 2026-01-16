@@ -1,74 +1,428 @@
 {% extends "goal_management/_base.html" %}
+{% load static %}
 
 {% block pm_title %}战略目标详情{% endblock %}
 {% block pm_subtitle %}{{ goal.name }}{% endblock %}
 
 {% block pm_actions %}
-<a class="btn btn-secondary" href="{% url 'plan_pages:strategic_goal_list' %}">返回列表</a>
+<a href="{% url 'plan_pages:strategic_goal_list' %}" class="list-btn">返回列表</a>
 {% if can_edit %}
-<a class="btn btn-danger" href="{% url 'plan_pages:strategic_goal_edit' goal.id %}">编辑</a>
+<a href="{% url 'plan_pages:strategic_goal_edit' goal.id %}" class="list-btn list-btn-primary">编辑</a>
+{% endif %}
+{% if can_publish %}
+<form method="post" style="display: inline;">
+    {% csrf_token %}
+    <button type="submit" name="publish_goal" class="list-btn list-btn-success" onclick="return confirm('确定要发布此目标吗？发布后目标状态将变为已发布。');">
+        发布目标
+    </button>
+</form>
+{% endif %}
+<a href="{% url 'plan_pages:strategic_goal_track' goal.id %}" class="list-btn">跟踪</a>
+<a href="{% url 'plan_pages:strategic_goal_decompose' goal.id %}" class="list-btn">分解</a>
+{% if can_delete %}
+<a href="{% url 'plan_pages:strategic_goal_delete' goal.id %}" class="list-btn">删除</a>
 {% endif %}
 {% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+<style>
+  .detail-container {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .detail-section {
+    margin-bottom: 24px;
+  }
+
+  .detail-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .detail-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vh-primary); /* 主题深蓝色 */
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #E0E0E0;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+  }
+
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .detail-label {
+    font-size: 12px;
+    color: #666666;
+    font-weight: 400;
+  }
+
+  .detail-value {
+    font-size: 13px;
+    color: var(--vh-primary); /* 主题深蓝色 */
+    font-weight: 500;
+  }
+
+  .detail-value strong {
+    font-weight: 600;
+  }
+
+  .detail-value code {
+    background: #F5F5F5;
+    padding: 2px 6px;
+    border-radius: 0;
+    font-size: 12px;
+    color: var(--vh-primary); /* 主题深蓝色 */
+    border: 1px solid #E0E0E0;
+  }
+
+  .detail-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 0;
+    border: 1px solid #E0E0E0;
+    background: #F5F5F5;
+    color: #666666;
+  }
+
+  .detail-badge-draft {
+    background: #F5F5F5;
+    color: #666666;
+    border-color: #E0E0E0;
+  }
+
+  .detail-badge-published {
+    background: #E8E8E8;
+    color: var(--vh-primary); /* 主题深蓝色 */
+    border-color: #CCCCCC;
+  }
+
+  .detail-badge-in_progress {
+    background: #E8E8E8;
+    color: var(--vh-primary); /* 主题深蓝色 */
+    border-color: #CCCCCC;
+  }
+
+  .detail-badge-completed {
+    background: #E8E8E8;
+    color: var(--vh-primary); /* 主题深蓝色 */
+    border-color: #CCCCCC;
+  }
+
+  .detail-badge-cancelled {
+    background: #F5F5F5;
+    color: #999999;
+    border-color: #E0E0E0;
+  }
+
+  .progress-bar-container {
+    width: 200px;
+    height: 24px;
+    background: #E0E0E0;
+    border-radius: 0;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #CCCCCC;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: #1A1A1A;
+    transition: width 0.3s;
+  }
+
+  .progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    font-weight: 600;
+    color: #FFFFFF;
+    z-index: 1;
+  }
+
+  .detail-full-width {
+    grid-column: 1 / -1;
+  }
+
+  .detail-text-content {
+    font-size: var(--font-size-base);
+    font-family: inherit;
+    color: var(--vh-primary); /* 主题深蓝色 - 与系统主题保持一致 */
+    white-space: pre-wrap;
+    line-height: 1.6;
+  }
+</style>
+{% endblock %}
+
 {% block pm_content %}
-<div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-
-    <div>
-      <div style="color:#666;font-size:12px;">目标名称</div>
-      <div style="font-weight:700;">{{ goal.name }}</div>
+<div class="detail-container">
+  <div class="detail-section">
+    <div class="detail-section-title">基本信息</div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">目标编号</div>
+        <div class="detail-value"><code>{{ goal.goal_number }}</code></div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">目标名称</div>
+        <div class="detail-value"><strong>{{ goal.name }}</strong></div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">目标类型</div>
+        <div class="detail-value">{{ goal.get_goal_type_display }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">目标周期</div>
+        <div class="detail-value">{{ goal.get_goal_period_display }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">目标状态</div>
+        <div class="detail-value">
+          <span class="detail-badge detail-badge-{{ goal.status }}">
+            {{ goal.get_status_display }}
+          </span>
+        </div>
+      </div>
     </div>
-
-    <div>
-      <div style="color:#666;font-size:12px;">状态</div>
-      {% with s=goal.status %}
-        <span class="pm-badge
-          {% if s == 'draft' %}pm-badge--draft
-          {% elif s == 'published' %}pm-badge--published
-          {% elif s == 'in_progress' %}pm-badge--in_progress
-          {% elif s == 'completed' %}pm-badge--completed
-          {% elif s == 'cancelled' %}pm-badge--cancelled
-          {% else %}pm-badge--draft{% endif %}">
-          {{ goal.get_status_display|default:goal.status }}
-        </span>
-      {% endwith %}
-    </div>
-
-    {% if goal.goal_number %}
-    <div>
-      <div style="color:#666;font-size:12px;">目标编号</div>
-      <div>{{ goal.goal_number }}</div>
-    </div>
-    {% endif %}
-
-    {% if goal.responsible_person %}
-    <div>
-      <div style="color:#666;font-size:12px;">负责人</div>
-      <div>{{ goal.responsible_person.full_name|default:goal.responsible_person.username }}</div>
-    </div>
-    {% endif %}
-
-    {% if goal.start_date %}
-    <div>
-      <div style="color:#666;font-size:12px;">开始日期</div>
-      <div>{{ goal.start_date|date:"Y-m-d" }}</div>
-    </div>
-    {% endif %}
-
-    {% if goal.end_date %}
-    <div>
-      <div style="color:#666;font-size:12px;">结束日期</div>
-      <div>{{ goal.end_date|date:"Y-m-d" }}</div>
-    </div>
-    {% endif %}
-
-    {% if goal.description %}
-    <div style="grid-column:1 / -1;">
-      <div style="color:#666;font-size:12px;">目标描述</div>
-      <div style="white-space:pre-wrap;">{{ goal.description }}</div>
-    </div>
-    {% endif %}
-
   </div>
+
+  <div class="detail-section">
+    <div class="detail-section-title">目标指标</div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">指标名称</div>
+        <div class="detail-value">{{ goal.indicator_name }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">指标类型</div>
+        <div class="detail-value">{{ goal.get_indicator_type_display }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">指标单位</div>
+        <div class="detail-value">{{ goal.indicator_unit|default:"-" }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">目标值</div>
+        <div class="detail-value">
+          <strong>{{ goal.target_value }}</strong>
+          {% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+        </div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">当前值</div>
+        <div class="detail-value">
+          <strong>{{ goal.current_value }}</strong>
+          {% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+        </div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">完成率</div>
+        <div class="detail-value">
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: {{ goal.completion_rate }}%"></div>
+            <span class="progress-text">{{ goal.completion_rate }}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <div class="detail-section-title">时间信息</div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">开始日期</div>
+        <div class="detail-value">{{ goal.start_date|date:"Y-m-d" }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">结束日期</div>
+        <div class="detail-value">{{ goal.end_date|date:"Y-m-d" }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">目标周期（天）</div>
+        <div class="detail-value">{{ goal.duration_days }} 天</div>
+      </div>
+    </div>
+  </div>
+
+  {% if goal.description or goal.background or goal.significance %}
+  <div class="detail-section">
+    <div class="detail-section-title">目标描述</div>
+    <div class="detail-grid">
+      {% if goal.description %}
+      <div class="detail-item detail-full-width">
+        <div class="detail-label">目标描述</div>
+        <div class="detail-value detail-text-content">{{ goal.description|linebreaks }}</div>
+      </div>
+      {% endif %}
+      {% if goal.background %}
+      <div class="detail-item detail-full-width">
+        <div class="detail-label">目标背景</div>
+        <div class="detail-value detail-text-content">{{ goal.background|linebreaks }}</div>
+      </div>
+      {% endif %}
+      {% if goal.significance %}
+      <div class="detail-item detail-full-width">
+        <div class="detail-label">目标意义</div>
+        <div class="detail-value detail-text-content">{{ goal.significance|linebreaks }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="detail-section">
+    <div class="detail-section-title">责任人信息</div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">负责人</div>
+        <div class="detail-value">
+          <strong>{{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}</strong>
+        </div>
+      </div>
+      {% if goal.responsible_department %}
+      <div class="detail-item">
+        <div class="detail-label">负责部门</div>
+        <div class="detail-value">{{ goal.responsible_department.name }}</div>
+      </div>
+      {% endif %}
+      {% if goal.participants.exists %}
+      <div class="detail-item detail-full-width">
+        <div class="detail-label">参与人员</div>
+        <div class="detail-value">
+          {% for participant in goal.participants.all %}
+          <span class="detail-badge">{{ participant.get_full_name|default:participant.username }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <div class="detail-section-title">关联信息</div>
+    <div class="detail-grid">
+      {% if goal.parent_goal %}
+      <div class="detail-item">
+        <div class="detail-label">上级目标</div>
+        <div class="detail-value">
+          <a href="{% url 'plan_pages:strategic_goal_detail' goal.parent_goal.id %}" style="color: var(--vh-primary); /* 主题深蓝色 */ text-decoration: none;">
+            {{ goal.parent_goal.name }}
+          </a>
+        </div>
+      </div>
+      {% endif %}
+      {% if goal.child_goals.exists %}
+      <div class="detail-item">
+        <div class="detail-label">下级目标</div>
+        <div class="detail-value">
+          <span class="detail-badge">{{ goal.child_goals.count }} 个</span>
+          <a href="{% url 'plan_pages:strategic_goal_decompose' goal.id %}" class="list-btn" style="margin-left: 8px;">查看详情</a>
+        </div>
+      </div>
+      {% endif %}
+      {% if goal.related_projects.exists %}
+      <div class="detail-item detail-full-width">
+        <div class="detail-label">关联项目</div>
+        <div class="detail-value">
+          {% for project in goal.related_projects.all %}
+          <span class="detail-badge">{{ project.name }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% if related_plans_count > 0 %}
+      <div class="detail-item">
+        <div class="detail-label">关联计划</div>
+        <div class="detail-value">
+          <span class="detail-badge">{{ related_plans_count }} 个</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if goal.weight > 0 %}
+  <div class="detail-section">
+    <div class="detail-section-title">权重信息</div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">目标权重</div>
+        <div class="detail-value"><strong>{{ goal.weight }}%</strong></div>
+      </div>
+      {% if goal.weight_description %}
+      <div class="detail-item detail-full-width">
+        <div class="detail-label">权重说明</div>
+        <div class="detail-value detail-text-content">{{ goal.weight_description|linebreaks }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="detail-section">
+    <div class="detail-section-title">系统信息</div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">创建人</div>
+        <div class="detail-value">{{ goal.created_by.get_full_name|default:goal.created_by.username }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">创建时间</div>
+        <div class="detail-value">{{ goal.created_time|date:"Y-m-d H:i" }}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">更新时间</div>
+        <div class="detail-value">{{ goal.updated_time|date:"Y-m-d H:i" }}</div>
+      </div>
+    </div>
+  </div>
+
+  {% if progress_records %}
+  <div class="detail-section">
+    <div class="detail-section-title">最近进度记录</div>
+    <div class="list-table-container">
+      <table class="list-table">
+        <thead>
+          <tr>
+            <th>记录时间</th>
+            <th>当前值</th>
+            <th>完成率</th>
+            <th>进度说明</th>
+            <th>记录人</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in progress_records %}
+          <tr>
+            <td>{{ record.recorded_time|date:"Y-m-d H:i" }}</td>
+            <td>{{ record.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</td>
+            <td>{{ record.completion_rate }}%</td>
+            <td>{{ record.progress_description|truncatewords:20 }}</td>
+            <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

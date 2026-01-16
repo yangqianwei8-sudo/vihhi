@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
@@ -75,12 +75,15 @@
 </style>
 {% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_visit' %}">创建联系人拜访</a></li>
+<li class="breadcrumb-item active" aria-current="page">客户拜访流程</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="workspace-content">
     <div class="container-fluid py-4">
-        <!-- 步骤指示器 -->
+        
         <div class="step-indicator">
             <div class="step-item {% if current_step >= 1 %}completed{% endif %} {% if current_step == 1 %}active{% endif %}" data-step="1">
                 <div class="step-number">1</div>
@@ -119,7 +122,6 @@
                     <input type="hidden" name="plan_id" value="{{ visit_plan.id }}">
                     {% endif %}
                     
-                    <!-- 第一步：创建计划 -->
                     <div class="step-content {% if current_step == 1 %}active{% endif %}" data-step="1">
                         <div class="card mb-4">
                             <div class="card-header bg-primary text-white">
@@ -177,7 +179,6 @@
                         </div>
                     </div>
 
-                    <!-- 第二步：沟通清单准备 -->
                     <div class="step-content {% if current_step == 2 %}active{% endif %}" data-step="2">
                         <div class="card mb-4">
                             <div class="card-header bg-info text-white">
@@ -191,7 +192,7 @@
                         </div>
                         <div class="info-section">
                             {% if questions_by_part %}
-                            <!-- 显示沟通清单问题 -->
+                            
                             {% for part, questions in questions_by_part.items %}
                             <div class="card mb-3">
                                 <div class="card-header">
@@ -236,7 +237,6 @@
                             </div>
                             {% endfor %}
                             
-                            <!-- 保存沟通清单文本 -->
                             <div class="mt-3">
                                 <label class="info-label info-label-required">{{ forms.step2.communication_checklist.label }}</label>
                                 {{ forms.step2.communication_checklist }}
@@ -246,7 +246,7 @@
                                 <small class="text-muted">请总结沟通清单的关键要点和注意事项</small>
                             </div>
                             {% else %}
-                            <!-- 如果没有问题模板，显示原来的文本输入框 -->
+                            
                             <div class="info-item" style="grid-column: 1 / -1;">
                                 <label class="info-label info-label-required">{{ forms.step2.communication_checklist.label }}</label>
                                 {{ forms.step2.communication_checklist }}
@@ -259,7 +259,6 @@
                         </div>
                     </div>
 
-                    <!-- 第三步：拜访定位打卡 -->
                     <div class="step-content {% if current_step == 3 %}active{% endif %}" data-step="3">
                         <div class="card mb-4">
                             <div class="card-header bg-success text-white">
@@ -301,7 +300,7 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- 定位功能 -->
+                        
                         <div class="mt-3">
                             <button type="button" class="btn btn-outline-primary"data-click="handle_onclick_0">
                                 <i class="bi bi-geo-alt-fill"></i> 获取当前位置
@@ -309,7 +308,6 @@
                         </div>
                         <div id="locationDisplay" class="mt-3 p-3 bg-light rounded"></div>
                         
-                        <!-- 当前地理位置显示 -->
                         <div class="mt-4">
                             <div class="card">
                                 <div class="card-header bg-light">
@@ -328,7 +326,6 @@
                         </div>
                     </div>
 
-                    <!-- 第四步：拜访结果复盘 -->
                     <div class="step-content {% if current_step == 4 %}active{% endif %}" data-step="4">
                         <div class="card mb-4">
                             <div class="card-header bg-warning text-dark">
@@ -684,4 +681,3 @@
 
 </script>
 {% endblock %}
-

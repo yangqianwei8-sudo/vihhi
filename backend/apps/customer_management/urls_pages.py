@@ -7,8 +7,7 @@ app_name = "business"
 
 urlpatterns = [
     # ==================== 客户管理首页 ====================
-    path("home/", views_pages.customer_management_home, name="customer_management_home"),
-    path("", views_pages.customer_management_home, name="customer_management_home_alt"),
+    path("", views_pages.customer_management_home, name="customer_management_home"),
     
     # ==================== 客户管理路由（按《客户管理详细设计方案 v1.12》实现）====================
     # 客户信息管理
@@ -23,9 +22,6 @@ urlpatterns = [
     path("customers/export/", views_pages.customer_export, name="customer_export"),
     path("customers/public-sea/", views_pages.customer_public_sea, name="customer_public_sea"),
     path("customers/public-sea/<int:client_id>/claim/", views_pages.customer_public_sea_claim, name="customer_public_sea_claim"),
-    path("customers/info-change/", views_pages.customer_info_change_list, name="customer_info_change_list"),
-    path("customers/info-change/create/", views_pages.customer_info_change_create, name="customer_info_change_create"),
-    path("customers/info-change/<int:change_id>/", views_pages.customer_info_change_detail, name="customer_info_change_detail"),
     
     # 人员关系管理
     path("contacts/", views_pages.contact_list, name="contact_list"),
@@ -97,11 +93,7 @@ urlpatterns = [
     # path("visit-plan/<int:plan_id>/edit/", views_pages.visit_plan_edit, name="visit_plan_edit"),
     # path("visit-plan/<int:plan_id>/complete/", views_pages.visit_plan_complete, name="visit_plan_complete"),
     # path("followup-record/", views_pages.followup_record, name="followup_record"),
-    # 合同管理首页
-    path("contracts/", views_pages.contract_management_home, name="contract_management_home"),
-    path("contracts/home/", views_pages.contract_management_home, name="contract_management_home"),
-    # 合同管理列表（显示所有状态的合同）
-    path("contracts/management/", views_pages.contract_management_list, name="contract_management_list"),
+    path("contracts/management/", views_pages.contract_management_list, name="contract_management_list"),  # 合同管理列表（显示所有状态的合同）
     path("contracts/<int:contract_id>/", views_pages.contract_detail, name="contract_detail"),
     path("contracts/create/", views_pages.contract_create, name="contract_create"),
     path("contracts/<int:contract_id>/edit/", views_pages.contract_edit, name="contract_edit"),
@@ -126,16 +118,13 @@ urlpatterns = [
     path("contracts/payment-reminder/", views_pages.contract_payment_reminder, name="contract_payment_reminder"),
     # 风险预警
     path("contracts/risk-warning/", views_pages.contract_risk_warning, name="contract_risk_warning"),
-    # 动态表格测试（正式合同签署下）
-    path("contracts/sign/dynamic-table-test/", views_pages.dynamic_table_test, name="dynamic_table_test"),
     path("settlements/", views_pages.project_settlement, name="project_settlement"),
     path("analysis/", views_pages.output_analysis, name="output_analysis"),
     path("payments/", views_pages.payment_tracking, name="payment_tracking"),
     
-    # 商机管理首页
+    # 商机管理（根据总体设计方案）
     path("opportunities/", views_pages.opportunity_management_home, name="opportunity_management_home"),
     path("opportunities/home/", views_pages.opportunity_management_home, name="opportunity_management_home"),
-    # 商机管理列表（根据总体设计方案）
     path("opportunities/list/", views_pages.opportunity_management, name="opportunity_management"),
     path("opportunities/import/", views_pages.opportunity_import, name="opportunity_import"),
     path("opportunities/create/", views_pages.opportunity_create, name="opportunity_create"),
@@ -166,11 +155,8 @@ urlpatterns = [
     path("opportunities/tech-meeting/", views_pages.opportunity_tech_meeting, name="opportunity_tech_meeting"),
     path("opportunities/followup/", views_pages.opportunity_followup_list, name="opportunity_followup_list"),
     path("opportunities/forecast/", views_pages.opportunity_sales_forecast, name="opportunity_sales_forecast"),
-    # 赢单/输单管理
     path("opportunities/win-loss/", views_pages.opportunity_win_loss, name="opportunity_win_loss"),
-    path("opportunities/win-loss/get-opportunities/", views_pages.opportunity_win_loss_get_opportunities, name="opportunity_win_loss_get_opportunities"),
     path("opportunities/win-loss/select/", views_pages.opportunity_win_loss_select, name="opportunity_win_loss_select"),
-    path("opportunities/win-loss/test-api/", views_pages.opportunity_win_loss_test_api, name="opportunity_win_loss_test_api"),
     path("opportunities/<int:opportunity_id>/win-loss/mark/", views_pages.opportunity_mark_win_loss, name="opportunity_mark_win_loss"),
     
     # 商务洽谈与表单

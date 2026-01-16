@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from backend.apps.system_management.models import User, Department
+from backend.apps.system_management.models import User
 
 
 class ServiceType(models.Model):
@@ -176,6 +176,14 @@ class Project(models.Model):
         ('pushed', '报告已推送'),
     ]
     
+    SUBSIDIARY_CHOICES = [
+        ('sichuan', '四川维海科技有限公司'),
+        ('chongqing', '重庆维海科技有限公司'),
+        ('xian', '西安维海科技有限公司'),
+        ('hejian_chengdu', '禾间成都建筑设计咨询有限公司'),
+        ('hongtian', '成都宏天升荣科技有限公司'),
+    ]
+    
     # 成果文件与服务类型对应关系
     DELIVERABLES_MAP = {
         'result_optimization': ['咨询意见书', '三方沟通成果', '核图意见书'],
@@ -217,8 +225,14 @@ class Project(models.Model):
     # 基础信息
     project_number = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name='项目编号')
     name = models.CharField(max_length=200, verbose_name='项目名称')
-    responsible_department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='responsible_projects', verbose_name='负责部门')
-    responsible_person = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='responsible_projects', verbose_name='负责人')
+    alias = models.CharField(max_length=200, blank=True, verbose_name='项目别名')
+    description = models.TextField(blank=True, verbose_name='项目描述')
+    
+    # 服务信息
+    service_type = models.ForeignKey(ServiceType, on_delete=models.SET_NULL, null=True, blank=True, related_name='projects', verbose_name='服务类型')
+    business_type = models.ForeignKey('BusinessType', on_delete=models.SET_NULL, null=True, blank=True, related_name='projects', verbose_name='项目业态', db_column='business_type')
+    design_stage = models.ForeignKey('DesignStage', on_delete=models.SET_NULL, null=True, blank=True, related_name='projects', verbose_name='图纸阶段', db_column='design_stage')
+    service_professions = models.ManyToManyField('ServiceProfession', blank=True, related_name='projects', verbose_name='服务专业')
     
     # 委托单位（甲方）信息
     client = models.ForeignKey('customer_management.Client', on_delete=models.PROTECT, null=True, blank=True, verbose_name='客户')
@@ -2059,276 +2073,5 @@ class ResultFileType(models.Model):
     
     def __str__(self):
         return f"{self.get_service_category_display()} - {self.name}"
-
-
-class AIAdvisorSelectedSolution(models.Model):
-    """AI顾问选中的优化方案"""
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='selected_solutions',
-        verbose_name='用户'
-    )
-    project = models.ForeignKey(
-        'Project',
-        on_delete=models.CASCADE,
-        related_name='ai_advisor_solutions',
-        null=True,
-        blank=True,
-        verbose_name='关联项目',
-        help_text='AI顾问方案关联的项目'
-    )
-    problem_description = models.TextField(verbose_name='问题描述')
-    constraints = models.TextField(blank=True, verbose_name='约束条件')
-    solution_title = models.CharField(max_length=200, verbose_name='方案标题')
-    solution_description = models.TextField(verbose_name='方案描述')
-    solution_index = models.IntegerField(verbose_name='方案序号', help_text='在AI返回的多个方案中的序号')
-    savings = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name='预计节省金额（万元）'
-    )
-    risk_level = models.CharField(
-        max_length=20,
-        choices=[
-            ('low', '低风险'),
-            ('medium', '中风险'),
-            ('high', '高风险'),
-        ],
-        default='medium',
-        verbose_name='风险等级'
-    )
-    advantages = models.TextField(blank=True, verbose_name='优势')
-    considerations = models.TextField(blank=True, verbose_name='注意事项')
-    service_type_id = models.IntegerField(null=True, blank=True, verbose_name='服务类型ID')
-    profession_code = models.CharField(max_length=50, blank=True, verbose_name='专业编码')
-    budget_impact = models.CharField(max_length=20, blank=True, verbose_name='预算影响')
-    metadata = models.JSONField(default=dict, blank=True, verbose_name='扩展信息', help_text='存储完整的方案数据')
-    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
-    
-    class Meta:
-        db_table = 'production_management_ai_advisor_selected_solution'
-        verbose_name = 'AI顾问选中方案'
-        verbose_name_plural = 'AI顾问选中方案'
-        ordering = ['-created_time']
-        indexes = [
-            models.Index(fields=['user', '-created_time']),
-            models.Index(fields=['service_type_id', 'profession_code']),
-            models.Index(fields=['project', '-created_time']),
-        ]
-    
-    def __str__(self):
-        return f"{self.user.username if self.user else '未知用户'} - {self.solution_title}"
-
-
-def pre_optimization_material_file_path(instance, filename):
-    """优化前资料文件上传路径"""
-    return f"pre_optimization_materials/{instance.project.id if instance.project else 'unknown'}/{timezone.now().strftime('%Y%m%d')}/{filename}"
-
-
-class PreOptimizationMaterial(models.Model):
-    """优化前资料"""
-    
-    PARSE_STATUS_CHOICES = [
-        ('pending', '待解析'),
-        ('processing', '解析中'),
-        ('success', '解析成功'),
-        ('failed', '解析失败'),
-        ('partial', '部分成功'),
-    ]
-    
-    project = models.ForeignKey(
-        'Project',
-        on_delete=models.CASCADE,
-        related_name='pre_optimization_materials',
-        verbose_name='关联项目',
-        help_text='关联的项目'
-    )
-    
-    # 文件信息
-    cad_file = models.FileField(
-        upload_to=pre_optimization_material_file_path,
-        verbose_name='CAD文件',
-        help_text='上传的CAD文件（支持DWG、DXF、PDF格式）'
-    )
-    file_name = models.CharField(
-        max_length=255,
-        verbose_name='文件名',
-        help_text='原始文件名'
-    )
-    file_size = models.BigIntegerField(
-        verbose_name='文件大小（字节）',
-        help_text='文件大小，单位：字节'
-    )
-    file_type = models.CharField(
-        max_length=10,
-        verbose_name='文件类型',
-        help_text='文件扩展名（dwg/dxf/pdf）'
-    )
-    
-    # 基本信息（从CAD中提取）
-    design_unit = models.CharField(
-        max_length=200,
-        blank=True,
-        verbose_name='设计单位',
-        help_text='从CAD文件中提取的设计单位'
-    )
-    drawing_version = models.CharField(
-        max_length=50,
-        blank=True,
-        verbose_name='图纸版本',
-        help_text='从CAD文件中提取的图纸版本'
-    )
-    general_description = models.TextField(
-        blank=True,
-        verbose_name='总说明',
-        help_text='从CAD文件中提取的总说明'
-    )
-    
-    # 技术经济指标（JSON存储）
-    technical_economic_indicators = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name='技术经济指标',
-        help_text='从CAD文件中提取的技术经济指标表数据'
-    )
-    # 示例结构：
-    # {
-    #   "total_area": 10000.0,  # 总建筑面积（平方米）
-    #   "building_area": 8000.0,  # 建筑占地面积（平方米）
-    #   "plot_ratio": 2.5,  # 容积率
-    #   "building_density": 0.3,  # 建筑密度
-    #   "green_rate": 0.35,  # 绿地率
-    #   "parking_spaces": 200,  # 停车位数量
-    #   ...
-    # }
-    
-    # 图纸目录（JSON存储）
-    drawing_catalog = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name='图纸目录',
-        help_text='从CAD文件中提取的图纸目录信息'
-    )
-    # 示例结构：
-    # {
-    #   "architecture": [
-    #     {
-    #       "sheet_name": "建施-01",
-    #       "sheet_number": "A-01",
-    #       "building_name": "1#楼",
-    #       "building_area": 2000.0,  # 建筑面积（平方米）
-    #       "floors": 10,  # 层数
-    #       "floor_height": 3.0,  # 层高（米）
-    #       "underground_floors": 1,  # 地下层数
-    #       "description": "首层平面图"
-    #     }
-    #   ],
-    #   "structure": [...],
-    #   "mep": [...],
-    #   ...
-    # }
-    
-    # CAD解析结果（完整JSON）
-    cad_parse_result = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name='CAD解析结果',
-        help_text='完整的CAD文件解析结果，包含图层、实体、设计参数等'
-    )
-    
-    # 解析状态
-    parse_status = models.CharField(
-        max_length=20,
-        choices=PARSE_STATUS_CHOICES,
-        default='pending',
-        verbose_name='解析状态',
-        help_text='CAD文件解析状态'
-    )
-    parse_error = models.TextField(
-        blank=True,
-        verbose_name='解析错误信息',
-        help_text='如果解析失败，记录错误信息'
-    )
-    parse_progress = models.IntegerField(
-        default=0,
-        verbose_name='解析进度',
-        help_text='解析进度百分比（0-100）'
-    )
-    parse_progress_message = models.CharField(
-        max_length=200,
-        blank=True,
-        default='',
-        verbose_name='解析进度消息',
-        help_text='当前解析步骤的描述信息'
-    )
-    
-    # 元数据
-    description = models.TextField(
-        blank=True,
-        verbose_name='备注说明',
-        help_text='人工添加的备注说明'
-    )
-    uploaded_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='uploaded_pre_optimization_materials',
-        verbose_name='上传人'
-    )
-    uploaded_time = models.DateTimeField(
-        default=timezone.now,
-        verbose_name='上传时间'
-    )
-    parsed_time = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='解析完成时间'
-    )
-    created_time = models.DateTimeField(
-        default=timezone.now,
-        verbose_name='创建时间'
-    )
-    updated_time = models.DateTimeField(
-        auto_now=True,
-        verbose_name='更新时间'
-    )
-    
-    class Meta:
-        db_table = 'production_management_pre_optimization_material'
-        verbose_name = '优化前资料'
-        verbose_name_plural = '优化前资料'
-        ordering = ['-uploaded_time']
-        indexes = [
-            models.Index(fields=['project', '-uploaded_time']),
-            models.Index(fields=['parse_status', '-uploaded_time']),
-            models.Index(fields=['uploaded_by', '-uploaded_time']),
-        ]
-    
-    def __str__(self):
-        return f"{self.project.project_number if self.project else '未知项目'} - {self.file_name}"
-    
-    def get_file_size_display(self):
-        """获取文件大小的友好显示"""
-        size = self.file_size
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if size < 1024.0:
-                return f"{size:.2f} {unit}"
-            size /= 1024.0
-        return f"{size:.2f} TB"
-    
-    def get_parse_status_display_class(self):
-        """获取解析状态的CSS类"""
-        status_classes = {
-            'pending': 'secondary',
-            'processing': 'info',
-            'success': 'success',
-            'failed': 'danger',
-            'partial': 'warning',
-        }
-        return status_classes.get(self.parse_status, 'secondary')
 
 

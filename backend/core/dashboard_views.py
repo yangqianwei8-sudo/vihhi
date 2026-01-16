@@ -31,18 +31,11 @@ def dashboard_stats(request):
     
     user = request.user
     
-    # 检查是否有全局缓存失效标记
-    cache_invalidated = cache.get('dashboard_cache_invalidated', False)
-    
     # 使用缓存键（基于用户ID）
     cache_key = f'dashboard_stats_{user.id}'
-    cached_data = None
-    
-    # 只有在没有全局失效标记时才使用缓存
-    if not cache_invalidated:
-        cached_data = cache.get(cache_key)
-        if cached_data is not None:
-            return JsonResponse(cached_data)
+    cached_data = cache.get(cache_key)
+    if cached_data is not None:
+        return JsonResponse(cached_data)
     
     # 初始化默认值
     pending_tasks = 0
@@ -153,18 +146,11 @@ def dashboard_todos(request):
     
     user = request.user
     
-    # 检查是否有全局缓存失效标记
-    cache_invalidated = cache.get('dashboard_cache_invalidated', False)
-    
     # 使用缓存键（基于用户ID）
     cache_key = f'dashboard_todos_{user.id}'
-    cached_data = None
-    
-    # 只有在没有全局失效标记时才使用缓存
-    if not cache_invalidated:
-        cached_data = cache.get(cache_key)
-        if cached_data is not None:
-            return JsonResponse(cached_data)
+    cached_data = cache.get(cache_key)
+    if cached_data is not None:
+        return JsonResponse(cached_data)
     
     todos = []
     
@@ -177,7 +163,7 @@ def dashboard_todos(request):
                 status='pending',
                 records__approver=user,
                 records__result='pending'
-            ).select_related('workflow').prefetch_related('records').distinct()[:5]
+            ).select_related('workflow').prefetch_related('records').distinct()[:50]
             
             for approval in pending_approvals:
                 try:
@@ -207,7 +193,7 @@ def dashboard_todos(request):
                 pending_affairs = AdministrativeAffair.objects.filter(
                     status='pending',
                     responsible_user=user
-                ).select_related('responsible_user', 'created_by')[:3]
+                ).select_related('responsible_user', 'created_by')[:50]
                 
                 for affair in pending_affairs:
                     try:
@@ -220,7 +206,7 @@ def dashboard_todos(request):
                             'description': content,
                             'priority': priority,
                             'time': time_ago,
-                            'url': f'/administrative/affairs/{affair.id}/'  # 已从后台管理移除，使用前端管理页面
+                            'url': f'/admin/administrative_management/administrativeaffair/{affair.id}/change/'
                         })
                     except Exception as e:
                         print(f'处理行政事务失败: {e}')
@@ -257,7 +243,7 @@ def dashboard_todos(request):
         ]
     
     result = {
-        'todos': todos[:10],  # 最多返回10条
+        'todos': todos[:100],  # 最多返回100条（已移除限制，显示所有内容）
         'success': True
     }
     

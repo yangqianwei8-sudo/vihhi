@@ -5,12 +5,8 @@ from . import views_pages
 app_name = "delivery_pages"
 
 urlpatterns = [
-    # 首页
-    path("", views_pages.delivery_customer_home, name="delivery_customer_home"),
-    path("home/", views_pages.delivery_customer_home, name="delivery_customer_home"),
-    
-    # 收发管理首页（保留用于向后兼容）
-    path("report/", views_pages.report_delivery, name="report_delivery"),
+    # 收发管理首页
+    path("", views_pages.report_delivery, name="report_delivery"),
     
     # 交付记录管理页面（收发管理模块）
     path("list/", views_pages.delivery_list, name="delivery_list"),
@@ -72,62 +68,17 @@ urlpatterns = [
     path("file-prep/", views_pages.delivery_file_prep_list, name="delivery_file_prep_list"),
     path("file-prep/upload/", views_pages.delivery_file_prep_upload, name="delivery_file_prep_upload"),
     
-    # 收文管理首页
-    path("incoming-document/home/", views_pages.incoming_document_home, name="incoming_document_home"),
-    # 收文管理列表
+    # 收文管理
     path("incoming-document/", views_pages.incoming_document_list, name="incoming_document_list"),
     path("incoming-document/create/", views_pages.incoming_document_create, name="incoming_document_create"),
     path("incoming-document/<int:document_id>/", views_pages.incoming_document_detail, name="incoming_document_detail"),
     path("incoming-document/<int:document_id>/edit/", views_pages.incoming_document_edit, name="incoming_document_edit"),
-    path("incoming-document/<int:document_id>/delete/", views_pages.incoming_document_delete, name="incoming_document_delete"),
     
-    # 发文管理首页
-    path("outgoing-document/home/", views_pages.outgoing_document_home, name="outgoing_document_home"),
-    # 发文管理列表
+    # 发文管理
     path("outgoing-document/", views_pages.outgoing_document_list, name="outgoing_document_list"),
     path("outgoing-document/create/", views_pages.outgoing_document_create, name="outgoing_document_create"),
-    # 注意：recipient-units 必须在 <int:document_id> 之前，否则会被误匹配
-    path("outgoing-document/recipient-units/", views_pages.get_recipient_units, name="get_recipient_units"),
-    path("outgoing-document/recipient-contacts/", views_pages.get_recipient_contacts, name="get_recipient_contacts"),
     path("outgoing-document/<int:document_id>/", views_pages.outgoing_document_detail, name="outgoing_document_detail"),
     path("outgoing-document/<int:document_id>/edit/", views_pages.outgoing_document_edit, name="outgoing_document_edit"),
-    path("outgoing-document/<int:document_id>/delete/", views_pages.outgoing_document_delete, name="outgoing_document_delete"),
-    path("outgoing-document/batch-import/", views_pages.outgoing_document_batch_import, name="outgoing_document_batch_import"),
-    path("outgoing-document/import-template/", views_pages.outgoing_document_import_template, name="outgoing_document_import_template"),
-    # 发文状态流转操作
-    path("outgoing-document/<int:document_id>/submit-review/", views_pages.outgoing_document_submit_review, name="outgoing_document_submit_review"),
-    path("outgoing-document/<int:document_id>/approve/", views_pages.outgoing_document_approve, name="outgoing_document_approve"),
-    path("outgoing-document/<int:document_id>/reject/", views_pages.outgoing_document_reject, name="outgoing_document_reject"),
-    path("outgoing-document/<int:document_id>/send/", views_pages.outgoing_document_send, name="outgoing_document_send"),
-    path("outgoing-document/<int:document_id>/complete/", views_pages.outgoing_document_complete, name="outgoing_document_complete"),
-    path("outgoing-document/<int:document_id>/archive/", views_pages.outgoing_document_archive, name="outgoing_document_archive"),
-    # 邮件相关路由（放在前面，避免被其他路由拦截）
-    # 邮件跟踪像素（用于检测邮件是否被打开）
-    path("email-tracking/<str:tracking_id>/", views_pages.email_tracking_pixel, name="email_tracking_pixel"),
-    # 邮件确认收取（收件人点击确认收取链接后查看完整内容）
-    path("email-receipt-confirm/<str:tracking_id>/", views_pages.email_receipt_confirm, name="email_receipt_confirm"),
-    # 短信送达状态回调（阿里云短信服务回调接口）
-    path("sms-callback/", views_pages.sms_callback, name="sms_callback"),
-    # 发文跟踪
-    path("outgoing-document/receipt/", views_pages.outgoing_document_receipt_list, name="outgoing_document_receipt_list"),
-    path("outgoing-document/tracking/<int:tracking_id>/", views_pages.outgoing_document_tracking_detail, name="outgoing_document_tracking_detail"),
-    path("outgoing-document/tracking/<int:tracking_id>/send/", views_pages.outgoing_document_send_from_tracking, name="outgoing_document_send_from_tracking"),
-    path("outgoing-document/tracking/<int:tracking_id>/recipients/", views_pages.get_tracking_recipients, name="get_tracking_recipients"),
-    path("outgoing-document/tracking/<int:tracking_id>/mark-email-read/", views_pages.mark_tracking_email_read, name="mark_tracking_email_read"),
-    path("outgoing-document/tracking/batch-mark-email-read/", views_pages.batch_mark_tracking_email_read, name="batch_mark_tracking_email_read"),
-    path("outgoing-document/tracking/<int:tracking_id>/update-express-info/", views_pages.update_tracking_express_info, name="update_tracking_express_info"),
-    path("outgoing-document/tracking/<int:tracking_id>/hand-delivery-checkin/", views_pages.hand_delivery_checkin, name="hand_delivery_checkin"),
-    path("outgoing-document/tracking/<int:tracking_id>/confirm-email-received/", views_pages.confirm_email_received, name="confirm_email_received"),
-    path("outgoing-document/<int:document_id>/receipt-confirm/", views_pages.outgoing_document_receipt_confirm, name="outgoing_document_receipt_confirm"),
-    path("outgoing-document/<int:document_id>/record-remedy/", views_pages.outgoing_document_record_remedy, name="outgoing_document_record_remedy"),
-    # 发文效能报告
-    path("outgoing-document/performance-report/", views_pages.outgoing_document_performance_report, name="outgoing_document_performance_report"),
-    # 发文审计追踪
-    path("outgoing-document/<int:document_id>/audit-trail/", views_pages.outgoing_document_audit_trail, name="outgoing_document_audit_trail"),
-    path("outgoing-document/audit-query/", views_pages.outgoing_document_audit_query, name="outgoing_document_audit_query"),
-    # 发文责任人绩效
-    path("outgoing-document/performance/", views_pages.outgoing_document_performance_list, name="outgoing_document_performance_list"),
-    path("outgoing-document/performance/<int:user_id>/", views_pages.outgoing_document_performance_detail, name="outgoing_document_performance_detail"),
     
     # 快递公司管理
     path("express-company/", views_pages.express_company_list, name="express_company_list"),

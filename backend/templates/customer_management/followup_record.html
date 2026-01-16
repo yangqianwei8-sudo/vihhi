@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
@@ -82,11 +82,14 @@
 </style>
 {% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_list' %}">客户管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 操作栏 -->
+    
     <div class="d-flex justify-content-end mb-3">
         <div class="btn-group">
             <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
@@ -99,7 +102,6 @@
         </div>
     </div>
     
-    <!-- 筛选栏 -->
     <div class="followup-filters">
         <form method="get" id="filterForm">
             <div class="filter-row">
@@ -166,7 +168,6 @@
         </form>
     </div>
     
-    <!-- 跟进记录列表 -->
     {% if page_obj %}
     <div class="followup-table">
         <div class="table-responsive">
@@ -189,7 +190,7 @@
                     <tr>
                         <td>{{ followup.follow_date|date:"Y-m-d" }}</td>
                         <td>
-                            <a href="{% url 'business_pages:opportunity_detail' followup.opportunity.id %}" class="text-decoration-none">
+                            <a href="{% url 'opportunity_pages:opportunity_detail' followup.opportunity.id %}" class="text-decoration-none">
                                 {{ followup.opportunity.name|truncatechars:20 }}
                             </a>
                         </td>
@@ -215,7 +216,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{% url 'business_pages:opportunity_detail' followup.opportunity.id %}" class="btn btn-sm btn-outline-primary">查看</a>
+                            <a href="{% url 'opportunity_pages:opportunity_detail' followup.opportunity.id %}" class="btn btn-sm btn-outline-primary">查看</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -223,7 +224,6 @@
             </table>
         </div>
         
-        <!-- 分页 -->
         {% if page_obj.has_other_pages %}
         <div class="pagination-wrapper p-3">
             <div class="d-flex justify-content-between align-items-center">

@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from backend.apps.system_management.services import get_user_permission_codes
-from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav, _build_unified_sidebar_nav
+from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav
 from backend.apps.litigation_management.models import (
     LitigationCase, LitigationProcess, LitigationDocument,
     LitigationExpense, LitigationPerson, LitigationTimeline,
@@ -36,191 +36,466 @@ logger = logging.getLogger(__name__)
 from backend.core.views import _build_full_top_nav
 
 
-def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None, use_litigation_nav=False, active_menu_id=None):
+def _build_litigation_sidebar_nav(permission_set, request_path=None):
+    """生成诉讼管理左侧菜单"""
+    nav_items = []
+    
+    # 案件管理分组（首页）
+    case_items = []
+    
+    # 基础权限检查：只要有诉讼管理查看权限就可以看到案件列表
+    if _permission_granted('litigation_management.view', permission_set) or _permission_granted('litigation_management.case.view', permission_set):
+        try:
+            case_list_url = reverse('litigation_pages:case_list')
+            case_items.append({
+                'label': '案件列表',
+                'icon': '📋',
+                'url': case_list_url,
+                'active': request_path == case_list_url or (request_path and '/cases/' in request_path),
+            })
+        except NoReverseMatch:
+            pass
+    
+    if _permission_granted('litigation_management.case.create', permission_set) or _permission_granted('litigation_management.view', permission_set):
+        try:
+            create_url = reverse('litigation_pages:case_create')
+            case_items.append({
+                'label': '案件登记',
+                'icon': '➕',
+                'url': create_url,
+                'active': request_path == create_url,
+            })
+        except NoReverseMatch:
+            pass
+    
+    if case_items:
+        nav_items.append({
+            'label': '案件管理',
+            'icon': '📋',
+            'items': case_items,
+            'collapsed': not any(item.get('active') for item in case_items),
+        })
+    
+    # 诉讼流程分组 - 指向案件列表页面（通过process_type筛选）
+    process_items = []
+    
+    if _permission_granted('litigation_management.process.manage', permission_set) or _permission_granted('litigation_management.view', permission_set):
+        try:
+            filing_url = reverse('litigation_pages:case_list') + '?process_type=filing'
+            process_items.append({
+                'label': '立案管理',
+                'icon': '📄',
+                'url': filing_url,
+                'active': request_path and ('process_type=filing' in request_path or '/processes/' in request_path),
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            trial_url = reverse('litigation_pages:case_list') + '?process_type=trial'
+            process_items.append({
+                'label': '庭审管理',
+                'icon': '⚖️',
+                'url': trial_url,
+                'active': request_path and ('process_type=trial' in request_path or '/processes/' in request_path),
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            judgment_url = reverse('litigation_pages:case_list') + '?process_type=judgment'
+            process_items.append({
+                'label': '判决管理',
+                'icon': '📜',
+                'url': judgment_url,
+                'active': request_path and ('process_type=judgment' in request_path or '/processes/' in request_path),
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            execution_url = reverse('litigation_pages:case_list') + '?process_type=execution'
+            process_items.append({
+                'label': '执行管理',
+                'icon': '⚡',
+                'url': execution_url,
+                'active': request_path and ('process_type=execution' in request_path or '/processes/' in request_path),
+            })
+        except NoReverseMatch:
+            pass
+    
+    if process_items:
+        nav_items.append({
+            'label': '诉讼流程',
+            'icon': '⚖️',
+            'items': process_items,
+            'collapsed': not any(item.get('active') for item in process_items),
+        })
+    
+    # 保全续封分组（⚠️ 极高优先级）- 指向全局保全续封列表页面
+    preservation_items = []
+    
+    if _permission_granted('litigation_management.process.manage', permission_set) or _permission_granted('litigation_management.view', permission_set):
+        try:
+            preservation_url = reverse('litigation_pages:preservation_list_all')
+            preservation_items.append({
+                'label': '保全续封',
+                'icon': '🔒',
+                'url': preservation_url,
+                'active': request_path and '/preservation/' in request_path and '/cases/' not in request_path,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            expiring_url = reverse('litigation_pages:preservation_list_all') + '?expiring=1'
+            preservation_items.append({
+                'label': '即将到期',
+                'icon': '⚠️',
+                'url': expiring_url,
+                'active': request_path and ('/preservation/' in request_path and 'expiring=1' in request_path or '/preservation/' in request_path),
+            })
+        except NoReverseMatch:
+            pass
+    
+    if preservation_items:
+        nav_items.append({
+            'label': '保全续封',
+            'icon': '🔒',
+            'items': preservation_items,
+            'collapsed': not any(item.get('active') for item in preservation_items),
+        })
+    
+    # 诉讼文档分组 - 指向全局文档列表页面
+    document_items = []
+    
+    if _permission_granted('litigation_management.document.view', permission_set) or _permission_granted('litigation_management.view', permission_set):
+        try:
+            document_list_url = reverse('litigation_pages:document_list_all')
+            document_items.append({
+                'label': '文档管理',
+                'icon': '📄',
+                'url': document_list_url,
+                'active': request_path and '/documents/' in request_path and '/cases/' not in request_path,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            evidence_url = reverse('litigation_pages:document_list_all') + '?type=evidence'
+            document_items.append({
+                'label': '证据管理',
+                'icon': '🔍',
+                'url': evidence_url,
+                'active': request_path and '/documents/' in request_path and 'type=evidence' in request_path,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            legal_doc_url = reverse('litigation_pages:document_list_all') + '?type=legal_document'
+            document_items.append({
+                'label': '文书管理',
+                'icon': '📝',
+                'url': legal_doc_url,
+                'active': request_path and '/documents/' in request_path and 'type=legal_document' in request_path,
+            })
+        except NoReverseMatch:
+            pass
+    
+    if document_items:
+        nav_items.append({
+            'label': '诉讼文档',
+            'icon': '📄',
+            'items': document_items,
+            'collapsed': not any(item.get('active') for item in document_items),
+        })
+    
+    # 费用管理分组 - 指向全局费用列表页面
+    expense_items = []
+    
+    if _permission_granted('litigation_management.expense.view', permission_set) or _permission_granted('litigation_management.view', permission_set):
+        try:
+            expense_list_url = reverse('litigation_pages:expense_list_all')
+            expense_items.append({
+                'label': '费用登记',
+                'icon': '💰',
+                'url': expense_list_url,
+                'active': request_path and '/expenses/' in request_path and '/cases/' not in request_path and '/reimburse' not in request_path,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            expense_stats_url = reverse('litigation_pages:expense_statistics')
+            expense_items.append({
+                'label': '费用统计',
+                'icon': '📊',
+                'url': expense_stats_url,
+                'active': request_path == expense_stats_url or (request_path and '/statistics/expenses' in request_path),
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            expense_reimburse_url = reverse('litigation_pages:expense_reimburse_list')
+            expense_items.append({
+                'label': '费用报销',
+                'icon': '💳',
+                'url': expense_reimburse_url,
+                'active': request_path and '/expenses/reimburse' in request_path,
+            })
+        except NoReverseMatch:
+            pass
+    
+    if expense_items:
+        nav_items.append({
+            'label': '费用管理',
+            'icon': '💰',
+            'items': expense_items,
+            'collapsed': not any(item.get('active') for item in expense_items),
+        })
+    
+    # 人员管理分组 - 指向全局人员列表页面
+    person_items = []
+    
+    if _permission_granted('litigation_management.person.manage', permission_set) or _permission_granted('litigation_management.view', permission_set):
+        try:
+            person_list_url = reverse('litigation_pages:person_list_all') + '?type=lawyer'
+            person_items.append({
+                'label': '律师管理',
+                'icon': '👨‍⚖️',
+                'url': person_list_url,
+                'active': request_path and '/persons/' in request_path and '/cases/' not in request_path and 'type=lawyer' in request_path,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            judge_url = reverse('litigation_pages:person_list_all') + '?type=judge'
+            person_items.append({
+                'label': '法官管理',
+                'icon': '⚖️',
+                'url': judge_url,
+                'active': request_path and '/persons/' in request_path and '/cases/' not in request_path and 'type=judge' in request_path,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            party_url = reverse('litigation_pages:person_list_all') + '?type=party'
+            person_items.append({
+                'label': '当事人管理',
+                'icon': '👥',
+                'url': party_url,
+                'active': request_path and '/persons/' in request_path and '/cases/' not in request_path and 'type=party' in request_path,
+            })
+        except NoReverseMatch:
+            pass
+    
+    if person_items:
+        nav_items.append({
+            'label': '人员管理',
+            'icon': '👥',
+            'items': person_items,
+            'collapsed': not any(item.get('active') for item in person_items),
+        })
+    
+    # 时间管理分组 - 指向全局时间节点列表页面或日历视图
+    timeline_items = []
+    
+    if _permission_granted('litigation_management.timeline.manage', permission_set) or _permission_granted('litigation_management.view', permission_set):
+        try:
+            timeline_list_url = reverse('litigation_pages:timeline_list_all')
+            timeline_items.append({
+                'label': '时间节点',
+                'icon': '📅',
+                'url': timeline_list_url,
+                'active': request_path and '/timelines/' in request_path and '/cases/' not in request_path and '/calendar/' not in request_path,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            reminder_url = reverse('litigation_pages:timeline_list_all') + '?reminder=1'
+            timeline_items.append({
+                'label': '提醒设置',
+                'icon': '🔔',
+                'url': reminder_url,
+                'active': request_path and '/timelines/' in request_path and 'reminder=1' in request_path,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            calendar_url = reverse('litigation_pages:timeline_calendar')
+            timeline_items.append({
+                'label': '日历视图',
+                'icon': '📆',
+                'url': calendar_url,
+                'active': request_path == calendar_url or '/timelines/calendar' in request_path,
+            })
+        except NoReverseMatch:
+            pass
+    
+    if timeline_items:
+        nav_items.append({
+            'label': '时间管理',
+            'icon': '📅',
+            'items': timeline_items,
+            'collapsed': not any(item.get('active') for item in timeline_items),
+        })
+    
+    # 案件统计
+    if _permission_granted('litigation_management.statistics.view', permission_set):
+        try:
+            stats_url = reverse('litigation_pages:case_statistics')
+            nav_items.append({
+                'label': '案件统计',
+                'icon': '📊',
+                'url': stats_url,
+                'active': request_path == stats_url or (request_path and '/statistics/' in request_path),
+            })
+        except NoReverseMatch:
+            pass
+    
+    return nav_items
+
+
+def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None):
     """构建页面上下文"""
     context = {
-        'page_title': page_title,
-        'page_icon': page_icon,
-        'description': description,
-        'summary_cards': summary_cards or [],
-        'sections': sections or [],
+        "page_title": page_title,
+        "page_icon": page_icon,
+        "description": description,
+        "summary_cards": summary_cards or [],
+        "sections": sections or [],
     }
+    
+    # 添加顶部导航菜单
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
-        context['user'] = request.user
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        if use_litigation_nav:
-            context['sidebar_menu'] = _build_unified_sidebar_nav(
-                LITIGATION_MANAGEMENT_MENU_STRUCTURE, 
-                permission_set,
-                active_id=active_menu_id
-            )
+        
+        # 添加左侧菜单
+        request_path = request.path
+        context['litigation_sidebar_nav'] = _build_litigation_sidebar_nav(permission_set, request_path)
+    
     return context
 
 
-# 诉讼管理菜单结构定义
-LITIGATION_MANAGEMENT_MENU_STRUCTURE = [
-    {
-        'id': 'litigation_home',
-        'label': '诉讼管理首页',
-        'icon': '🏠',
-        'url_name': 'litigation_pages:litigation_home',
-        'permission': 'litigation_management.view',
-    },
-    {
-        'id': 'case_management',
-        'label': '案件管理',
-        'icon': '📋',
-        'permission': 'litigation_management.view',
-        'children': [
-            {
-                'id': 'case_list',
-                'label': '案件列表',
-                'icon': '📋',
-                'url_name': 'litigation_pages:case_list',
-                'permission': 'litigation_management.view',
-            },
-            {
-                'id': 'case_create',
-                'label': '案件登记',
-                'icon': '➕',
-                'url_name': 'litigation_pages:case_create',
-                'permission': 'litigation_management.case.create',
-            },
-        ]
-    },
-    {
-        'id': 'process_management',
-        'label': '诉讼流程',
-        'icon': '⚖️',
-        'permission': 'litigation_management.view',
-        'children': [
-            {
-                'id': 'process_filing',
-                'label': '立案管理',
-                'icon': '📄',
-                'url_name': 'litigation_pages:case_list',
-                'permission': 'litigation_management.process.manage',
-            },
-            {
-                'id': 'process_trial',
-                'label': '庭审管理',
-                'icon': '⚖️',
-                'url_name': 'litigation_pages:case_list',
-                'permission': 'litigation_management.process.manage',
-            },
-            {
-                'id': 'process_judgment',
-                'label': '判决管理',
-                'icon': '📜',
-                'url_name': 'litigation_pages:case_list',
-                'permission': 'litigation_management.process.manage',
-            },
-            {
-                'id': 'process_execution',
-                'label': '执行管理',
-                'icon': '⚡',
-                'url_name': 'litigation_pages:case_list',
-                'permission': 'litigation_management.process.manage',
-            },
-        ]
-    },
-    {
-        'id': 'preservation_management',
-        'label': '保全续封',
-        'icon': '🔒',
-        'permission': 'litigation_management.view',
-        'children': [
-            {
-                'id': 'preservation_list',
-                'label': '保全续封',
-                'icon': '🔒',
-                'url_name': 'litigation_pages:preservation_list_all',
-                'permission': 'litigation_management.process.manage',
-            },
-        ]
-    },
-    {
-        'id': 'document_management',
-        'label': '诉讼文档',
-        'icon': '📄',
-        'permission': 'litigation_management.view',
-        'children': [
-            {
-                'id': 'document_list',
-                'label': '文档管理',
-                'icon': '📄',
-                'url_name': 'litigation_pages:document_list_all',
-                'permission': 'litigation_management.document.view',
-            },
-        ]
-    },
-]
-
-
-def _build_litigation_sidebar_nav(permission_set, request_path=None, active_id=None):
-    """生成诉讼管理左侧菜单（统一格式）"""
-    # 使用统一的菜单构建函数
-    return _build_unified_sidebar_nav(LITIGATION_MANAGEMENT_MENU_STRUCTURE, permission_set, active_id=active_id)
+# ==================== 诉讼管理首页 ====================
 
 @login_required
 def litigation_home(request):
     """诉讼管理首页"""
     permission_codes = get_user_permission_codes(request.user)
-    today = timezone.now().date()
-    this_month_start = today.replace(day=1)
     
-    # 权限检查
+    # 检查权限
     if not _permission_granted('litigation_management.view', permission_codes):
         messages.error(request, '您没有权限访问诉讼管理')
         return redirect('admin:index')
     
-    # 收集统计数据
+    # 获取案件列表
+    cases = LitigationCase.objects.select_related(
+        'project', 'client', 'contract', 'case_manager', 'registered_by'
+    ).all()
+    
+    # 权限过滤
+    if not _permission_granted('litigation_management.case.view_all', permission_codes):
+        cases = cases.filter(Q(case_manager=request.user) | Q(registered_by=request.user))
+    
+    # 统计信息
+    total_cases = cases.count()
+    pending_filing = cases.filter(status='pending_filing').count()
+    trial = cases.filter(status='trial').count()
+    closed = cases.filter(status='closed').count()
+    urgent = cases.filter(priority='urgent').count()
+    
+    # 检查即将到期的时间节点和保全续封
+    today = timezone.now().date()
+    # timeline_date是DateTimeField，需要转换为datetime范围
+    today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+    today_end = timezone.make_aware(datetime.combine(today + timedelta(days=7), datetime.max.time()))
+    expiring_timelines = LitigationTimeline.objects.filter(
+        case__in=cases,
+        reminder_enabled=True,
+        timeline_date__lte=today_end,
+        timeline_date__gte=today_start,
+        status__in=['pending', 'in_progress']
+    ).count()
+    
+    expiring_seals = PreservationSeal.objects.filter(
+        case__in=cases,
+        status='active',
+        end_date__lte=today + timedelta(days=7),
+        end_date__gte=today
+    ).count()
+    
+    urgent_count = expiring_timelines + expiring_seals
+    
+    # 费用统计
+    total_expenses = LitigationExpense.objects.filter(case__in=cases).aggregate(
+        total=Sum('amount')
+    )['total'] or Decimal('0')
+    
+    # 统计卡片
     summary_cards = []
     
-    try:
-        from django.db.models import Sum, Count, Q
-        from decimal import Decimal
-        
-        # 基础查询集（考虑权限）
-        base_queryset = LitigationCase.objects.all()
-        if not _permission_granted('litigation_management.case.view_all', permission_codes):
-            base_queryset = base_queryset.filter(Q(case_manager=request.user) | Q(registered_by=request.user))
-        
-        total_cases = base_queryset.count()
-        active_cases = base_queryset.filter(
-            status__in=['pending_filing', 'filed', 'trial', 'executing']
-        ).count()
-        this_month_cases = base_queryset.filter(
-            created_at__gte=this_month_start
-        ).count()
-        
-        # 待立案案件数
-        pending_filing = base_queryset.filter(status='pending_filing').count()
-        
+    if _permission_granted('litigation_management.case.view', permission_codes):
         summary_cards.append({
             'label': '案件总数',
-            'icon': '⚖️',
-            'value': str(total_cases),
-            'subvalue': f'进行中 {active_cases} 个 · 本月新增 {this_month_cases} 个',
-            'url': reverse('litigation_pages:case_list'),
-            'variant': 'info'
+            'value': total_cases,
+            'hint': '所有案件数量'
         })
-        
+    
+    if _permission_granted('litigation_management.case.view', permission_codes):
         summary_cards.append({
             'label': '待立案',
-            'icon': '📋',
-            'value': str(pending_filing),
-            'subvalue': '待立案案件数量',
-            'url': reverse('litigation_pages:case_list') + '?status=pending_filing',
-            'variant': 'warning'
+            'value': pending_filing,
+            'hint': '待立案案件'
         })
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('获取统计数据失败: %s', str(e))
-        
-    # 快捷操作
+    
+    if _permission_granted('litigation_management.case.view', permission_codes):
+        summary_cards.append({
+            'label': '审理中',
+            'value': trial,
+            'hint': '正在审理的案件'
+        })
+    
+    if _permission_granted('litigation_management.case.view', permission_codes):
+        summary_cards.append({
+            'label': '紧急事项',
+            'value': urgent_count,
+            'hint': '即将到期的时间节点和保全续封'
+        })
+    
+    # 最近案件
+    recent_cases = cases.order_by('-created_at')[:5]
+    
+    # 即将到期的时间节点（timeline_date是DateTimeField，需要转换为datetime范围）
+    today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+    today_end = timezone.make_aware(datetime.combine(today + timedelta(days=7), datetime.max.time()))
+    upcoming_timelines = LitigationTimeline.objects.filter(
+        case__in=cases,
+        reminder_enabled=True,
+        timeline_date__lte=today_end,
+        timeline_date__gte=today_start,
+        status__in=['pending', 'in_progress']
+    ).select_related('case').order_by('timeline_date')[:5]
+    
+    # 即将到期的保全续封
+    upcoming_seals = PreservationSeal.objects.filter(
+        case__in=cases,
+        status='active',
+        end_date__lte=today + timedelta(days=7),
+        end_date__gte=today
+    ).select_related('case').order_by('end_date')[:5]
+    
+    # 功能模块区域
+    sections = []
+    
+    # 快捷操作区域
     quick_actions = []
     
     if _permission_granted('litigation_management.case.create', permission_codes):
@@ -228,82 +503,59 @@ def litigation_home(request):
             quick_actions.append({
                 'label': '登记案件',
                 'icon': '➕',
-                'description': '创建新的诉讼案件',
+                'description': '登记新的诉讼案件',
                 'url': reverse('litigation_pages:case_create'),
-                'link_label': '创建案件 →'
+                'link_label': '登记案件 →'
             })
-        except Exception:
+        except NoReverseMatch:
             pass
-    
-    # 功能模块入口
-    module_entries = []
-    
-    try:
-        module_entries.append({
-            'label': '案件列表',
-            'icon': '📋',
-            'description': '查看和管理所有案件',
-            'url': reverse('litigation_pages:case_list'),
-            'link_label': '进入模块 →'
-        })
-        
-        if _permission_granted('litigation_management.timeline.view', permission_codes):
-            try:
-                module_entries.append({
-                    'label': '时间管理',
-                    'icon': '📅',
-                    'description': '管理案件时间节点，查看时间日历',
-                    'url': reverse('litigation_pages:timeline_calendar'),
-                    'link_label': '进入模块 →'
-                })
-            except Exception:
-                pass
-        
-        if _permission_granted('litigation_management.expense.view', permission_codes):
-            try:
-                module_entries.append({
-                    'label': '费用管理',
-                    'icon': '💰',
-                    'description': '管理诉讼相关费用，跟踪费用支出',
-                    'url': reverse('litigation_pages:expense_list_all'),
-                    'link_label': '进入模块 →'
-                })
-            except Exception:
-                pass
-    except Exception:
-        pass
-    
-    # 构建区域
-    sections = []
     
     if quick_actions:
         sections.append({
             'title': '快捷操作',
             'description': '常用的快速操作入口',
-            'items': quick_actions,
-            'layout': 'grid'
+            'items': quick_actions
         })
     
-    if module_entries:
+    # 功能模块区域
+    modules = []
+    
+    if _permission_granted('litigation_management.case.view', permission_codes):
+        try:
+            modules.append({
+                'label': '案件管理',
+                'icon': '⚖️',
+                'description': '管理诉讼案件信息',
+                'url': reverse('litigation_pages:case_list'),
+                'link_label': '进入模块 →'
+            })
+        except NoReverseMatch:
+            pass
+    
+    if modules:
         sections.append({
             'title': '功能模块',
             'description': '诉讼管理的各个功能模块入口',
-            'items': module_entries,
-            'layout': 'grid'
+            'items': modules
         })
     
-    # 构建上下文
     context = _context(
-        page_title="诉讼管理",
-        page_icon="⚖️",
-        description="全面管理企业的诉讼案件，包括案件登记、诉讼流程跟踪、诉讼文档管理、诉讼费用管理等",
+        "诉讼管理",
+        "⚖️",
+        "全面管理企业的诉讼案件，包括案件登记、诉讼流程跟踪、诉讼文档管理、诉讼费用管理等",
         summary_cards=summary_cards,
         sections=sections,
-        request=request,
-        active_menu_id='litigation_home',
+        request=request
     )
     
-    return render(request, "litigation_management/home.html", context)
+    context.update({
+        'recent_cases': recent_cases,
+        'upcoming_timelines': upcoming_timelines,
+        'upcoming_seals': upcoming_seals,
+        'urgent_count': urgent_count,
+    })
+    
+    return render(request, 'litigation_management/home.html', context)
 
 
 # ==================== 案件管理 ====================

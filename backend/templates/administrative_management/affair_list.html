@@ -1,330 +1,273 @@
-{% extends "shared/list_page_base.html" %}
-{% comment %}
-行政事务列表页面模板 (Administrative Affair List Template)
+{% extends "administrative_management/base.html" %}
 
-功能说明：
-- 展示行政事务记录的列表页面
-- 支持按事务类型、状态、优先级等多维度筛选
-- 支持行政事务的查看、编辑、开始处理、更新进度、完成等操作
-- 包含复选框功能，支持批量操作
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-主要功能：
-1. 筛选功能：
-   - 事务类型筛选：全部、日常事务、专项事务、紧急事务、其他
-   - 状态筛选：全部、待处理、处理中、已完成、已取消
-   - 优先级筛选：全部、低、普通、高、紧急
-2. 表格展示：事务编号、事务标题、事务类型、优先级、负责人、状态、进度、计划时间、创建时间、操作
-3. 复选框功能：支持全选和批量操作（继承自list_page_base.html）
-4. 操作功能：查看详情、编辑、开始处理、更新进度、完成
-
-特殊功能：
-- 根据用户权限显示不同的操作按钮
-- 支持进度条显示
-- 支持计划时间显示
-{% endcomment %}
-{% load static %}
-
-{% block list_page_title %}行政事务管理{% endblock %}
-
-{% block list_page_actions %}
-{% if can_create %}
-<a href="{% url 'admin_pages:affair_create' %}" class="btn btn-primary">
-    <i class="bi bi-plus-circle"></i> 创建事务
-</a>
-{% endif %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
 {% endblock %}
 
-{% block search_placeholder %}搜索事务编号、标题、内容...{% endblock %}
-
-{% block reset_url %}{% url 'admin_pages:affair_list' %}{% endblock %}
-
-<!-- 表格复选框列 -->
-{% block list_page_table_checkbox_header %}
-<th style="width: 40px;">
-    <input type="checkbox" id="selectAll" title="全选/取消全选">
-</th>
-{% endblock %}
-
-{% block list_page_table_headers %}
-<th style="width: 8%;">事务编号</th>
-<th style="width: 15%;">事务标题</th>
-<th style="width: 8%;">事务类型</th>
-<th style="width: 6%;">优先级</th>
-<th style="width: 8%;">负责人</th>
-<th style="width: 8%;">状态</th>
-<th style="width: 10%;">进度</th>
-<th style="width: 12%;">计划时间</th>
-<th style="width: 10%;">创建时间</th>
-{% endblock %}
-
-{% block list_page_table_checkbox_cell %}
-<td>
-    <input type="checkbox" class="row-checkbox" value="{{ item.id }}" title="选择此项">
-</td>
-{% endblock %}
-
-{% block list_page_table_row_content %}
-<td>
-    <a href="{% url 'admin_pages:affair_detail' affair_id=item.id %}" class="text-decoration-none">
-        <code>{{ item.affair_number }}</code>
-    </a>
-</td>
-<td>
-    <a href="{% url 'admin_pages:affair_detail' affair_id=item.id %}" class="text-decoration-none">
-        {{ item.title|truncatewords:10 }}
-    </a>
-</td>
-<td>{{ item.get_affair_type_display }}</td>
-<td>
-    {% if item.priority == 'urgent' %}
-        <span class="badge bg-danger">紧急</span>
-    {% elif item.priority == 'high' %}
-        <span class="badge bg-warning">高</span>
-    {% elif item.priority == 'normal' %}
-        <span class="badge bg-info">普通</span>
-    {% elif item.priority == 'low' %}
-        <span class="badge bg-secondary">低</span>
-    {% else %}
-        <span class="badge bg-secondary">{{ item.get_priority_display }}</span>
-    {% endif %}
-</td>
-<td>{{ item.responsible_user.get_full_name|default:item.responsible_user.username }}</td>
-<td>
-    {% if item.status == 'pending' %}
-        <span class="badge bg-warning">待处理</span>
-    {% elif item.status == 'in_progress' %}
-        <span class="badge bg-info">处理中</span>
-    {% elif item.status == 'completed' %}
-        <span class="badge bg-success">已完成</span>
-    {% elif item.status == 'cancelled' %}
-        <span class="badge bg-secondary">已取消</span>
-    {% else %}
-        <span class="badge bg-secondary">{{ item.get_status_display }}</span>
-    {% endif %}
-</td>
-<td>
-    <div class="d-flex align-items-center gap-2">
-        <div class="progress flex-grow-1" style="height: 8px; width: 100px;">
-            <div class="progress-bar" role="progressbar" style="width: {{ item.progress }}%">
-            </div>
-        </div>
-        <span class="small">{{ item.progress }}%</span>
-    </div>
-</td>
-<td>
-    <div class="small">
-        <div>开始：{{ item.planned_start_time|date:"Y-m-d H:i" }}</div>
-        <div>结束：{{ item.planned_end_time|date:"Y-m-d H:i" }}</div>
-    </div>
-</td>
-<td>{{ item.created_time|date:"Y-m-d H:i" }}</td>
-<td>
-    <div class="list-page-table-actions">
-        <a href="{% url 'admin_pages:affair_detail' affair_id=item.id %}" class="action-view" title="查看详情">
-            <i class="bi bi-eye"></i>
-        </a>
-        {% if item.status == 'pending' and item.responsible_user == request.user %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'admin_pages:affair_start' affair_id=item.id %}" class="action-edit" title="开始处理" onclick="return confirm('确认开始处理此事务？');">
-            <i class="bi bi-play-circle"></i>
-        </a>
-        {% endif %}
-        {% if item.status == 'in_progress' and item.responsible_user == request.user %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'admin_pages:affair_complete' affair_id=item.id %}" class="action-edit" title="完成" onclick="return confirm('确认完成此事务？');">
-            <i class="bi bi-check-circle"></i>
-        </a>
-        {% endif %}
-        {% if item.status not in 'completed,cancelled' and item.created_by == request.user %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'admin_pages:affair_update' affair_id=item.id %}" class="action-edit" title="编辑">
-            <i class="bi bi-pencil"></i>
-        </a>
-        {% endif %}
-    </div>
-</td>
-{% endblock %}
-
-{% block empty_colspan %}10{% endblock %}
-
-{% block empty_table_message %}暂无数据{% endblock %}
-
-{% block empty_message %}暂无数据{% endblock %}
-
-{% block empty_create_url %}{% url 'admin_pages:affair_create' %}{% endblock %}
-
-{% block list_page_extra_css %}
+{% block extra_css %}
 <style>
-    .progress {
-        background-color: var(--vh-border-light);
-        border-radius: 4px;
+    .page-title {
+        font-size: var(--font-size-2xl);
+        font-weight: 700;
+        margin: 0 0 var(--spacing-sm) 0;
     }
-    .progress-bar {
-        background-color: var(--vh-primary);
+    .page-description {
+        font-size: var(--font-size-base);
+        opacity: 0.9;
+        margin: 0;
+    }
+    .content-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--vh-text-muted);
+    }
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: var(--spacing-md);
+        opacity: 0.5;
+    }
+    .empty-state-title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--vh-text);
+        margin-bottom: var(--spacing-sm);
+    }
+    .empty-state-text {
+        font-size: var(--font-size-base);
+        color: var(--vh-text-muted);
+        margin-bottom: var(--spacing-lg);
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-in_progress { background: #cfe2ff; color: #084298; }
+    .status-completed { background: #d1e7dd; color: #0f5132; }
+    .status-cancelled { background: #f8d7da; color: #842029; }
+    .priority-badge {
+        padding: 2px 8px;
+        border-radius: 8px;
+        font-size: var(--font-size-xs);
+        font-weight: 500;
+    }
+    .priority-low { background: #e7f3ff; color: #0066cc; }
+    .priority-normal { background: #f0f0f0; color: #666; }
+    .priority-high { background: #fff4e6; color: #cc6600; }
+    .priority-urgent { background: #ffe6e6; color: #cc0000; }
+    .progress-bar-custom {
+        height: 8px;
+        border-radius: 4px;
+        background: var(--vh-border-light);
     }
 </style>
 {% endblock %}
 
-{% block list_page_batch_delete_js %}
-// 批量删除功能
-document.addEventListener('DOMContentLoaded', function() {
-    const batchDeleteBtn = document.getElementById('batchDeleteBtn');
-    if (batchDeleteBtn) {
-        batchDeleteBtn.addEventListener('click', function() {
-            const checked = document.querySelectorAll('.row-checkbox:checked');
-            if (checked.length === 0) {
-                showError('请先选择要删除的数据');
-                return;
-            }
-            
-            if (!confirm(`确定要删除选中的 ${checked.length} 条事务吗？此操作不可撤销。`)) {
-                return;
-            }
-            
-            const ids = Array.from(checked).map(cb => cb.value);
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '{% url "admin_pages:affair_list" %}';
-            
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-            if (csrfToken) {
-                const csrfInput = document.createElement('input');
-                csrfInput.type = 'hidden';
-                csrfInput.name = 'csrfmiddlewaretoken';
-                csrfInput.value = csrfToken.value;
-                form.appendChild(csrfInput);
-            }
-            
-            ids.forEach(id => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'delete_ids';
-                input.value = id;
-                form.appendChild(input);
-            });
-            
-            document.body.appendChild(form);
-            form.submit();
-        });
-    }
-});
-{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">{{ page_title }}</h1>
+            <p class="page-description">{{ description }}</p>
+        </div>
+        <a href="{% url 'admin_pages:affair_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> 创建事务
+        </a>
+    </div>
 
-{% block list_page_batch_export_js %}
-// 批量导出功能
-document.addEventListener('DOMContentLoaded', function() {
-    const batchExportBtn = document.getElementById('batchExportBtn');
-    if (batchExportBtn) {
-        batchExportBtn.addEventListener('click', function() {
-            const checked = document.querySelectorAll('.row-checkbox:checked');
-            if (checked.length === 0) {
-                showError('请先选择要导出的数据');
-                return;
-            }
-            
-            const ids = Array.from(checked).map(cb => cb.value);
-            const format = this.dataset.exportFormat || 'excel';
-            const url = '{% url "admin_pages:affair_list" %}?export=1&format=' + format + '&ids=' + ids.join(',');
-            window.location.href = url;
-        });
-    }
-});
-{% endblock %}
+    <div class="content-card">
+        
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" placeholder="搜索事务编号、标题、内容..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="affair_type" class="form-select">
+                        <option value="">全部类型</option>
+                        {% for code, label in affair_type_choices %}
+                        <option value="{{ code }}" {% if affair_type == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="">全部状态</option>
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="priority" class="form-select">
+                        <option value="">全部优先级</option>
+                        {% for code, label in priority_choices %}
+                        <option value="{{ code }}" {% if priority == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a href="{% url 'admin_pages:affair_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 清除
+                    </a>
+                </div>
+            </div>
+        </form>
 
-{% block list_page_batch_dropdown_items %}
-<li><a class="dropdown-item" href="#" id="batchStatusPendingBtn"><i class="bi bi-clock"></i> 批量设为待处理</a></li>
-<li><a class="dropdown-item" href="#" id="batchStatusInProgressBtn"><i class="bi bi-play-circle"></i> 批量设为处理中</a></li>
-<li><a class="dropdown-item" href="#" id="batchStatusCompletedBtn"><i class="bi bi-check-circle"></i> 批量设为已完成</a></li>
-<li><a class="dropdown-item" href="#" id="batchStatusCancelledBtn"><i class="bi bi-x-circle"></i> 批量设为已取消</a></li>
-<li><hr class="dropdown-divider"></li>
-<li><a class="dropdown-item" href="#" id="batchPrintBtn"><i class="bi bi-printer"></i> 打印选中</a></li>
-{% endblock %}
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>事务编号</th>
+                        <th>事务标题</th>
+                        <th>事务类型</th>
+                        <th>优先级</th>
+                        <th>负责人</th>
+                        <th>状态</th>
+                        <th>进度</th>
+                        <th>计划时间</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for affair in page_obj %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'admin_pages:affair_detail' affair_id=affair.id %}" class="text-decoration-none">
+                                <code>{{ affair.affair_number }}</code>
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_pages:affair_detail' affair_id=affair.id %}" class="text-decoration-none">
+                                {{ affair.title|truncatewords:10 }}
+                            </a>
+                        </td>
+                        <td>{{ affair.get_affair_type_display }}</td>
+                        <td>
+                            <span class="priority-badge priority-{{ affair.priority }}">
+                                {{ affair.get_priority_display }}
+                            </span>
+                        </td>
+                        <td>{{ affair.responsible_user.get_full_name|default:affair.responsible_user.username }}</td>
+                        <td>
+                            <span class="status-badge status-{{ affair.status }}">
+                                {{ affair.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress progress-bar-custom flex-grow-1" style="width: 100px;">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ affair.progress }}%">
+                                    </div>
+                                </div>
+                                <span class="small">{{ affair.progress }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small">
+                                <div>开始：{{ affair.planned_start_time|date:"Y-m-d H:i" }}</div>
+                                <div>结束：{{ affair.planned_end_time|date:"Y-m-d H:i" }}</div>
+                            </div>
+                        </td>
+                        <td>{{ affair.created_time|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'admin_pages:affair_detail' affair_id=affair.id %}" class="btn btn-outline-primary" title="查看详情">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if affair.status == 'pending' and affair.responsible_user == request.user %}
+                                <a href="{% url 'admin_pages:affair_start' affair_id=affair.id %}" class="btn btn-outline-success" title="开始处理" onclick="return confirm('确认开始处理此事务？');">
+                                    <i class="bi bi-play-circle"></i>
+                                </a>
+                                {% endif %}
+                                {% if affair.status == 'in_progress' and affair.responsible_user == request.user %}
+                                <a href="{% url 'admin_pages:affair_add_progress' affair_id=affair.id %}" class="btn btn-outline-info" title="更新进度">
+                                    <i class="bi bi-graph-up"></i>
+                                </a>
+                                <a href="{% url 'admin_pages:affair_complete' affair_id=affair.id %}" class="btn btn-outline-success" title="完成">
+                                    <i class="bi bi-check-circle"></i>
+                                </a>
+                                {% endif %}
+                                {% if affair.status not in 'completed,cancelled' and affair.created_by == request.user %}
+                                <a href="{% url 'admin_pages:affair_update' affair_id=affair.id %}" class="btn btn-outline-secondary" title="编辑">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-5">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📋</div>
+                                <div class="empty-state-title">暂无数据</div>
+                                <div class="empty-state-text">当前筛选条件下没有找到行政事务记录</div>
+                                <a href="{% url 'admin_pages:affair_create' %}" class="btn btn-primary mt-3">
+                                    <i class="bi bi-plus-circle"></i> 创建第一个事务
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-{% block list_page_custom_js %}
-// 批量状态更新功能
-function batchUpdateStatus(newStatus) {
-    const checked = document.querySelectorAll('.row-checkbox:checked');
-    if (checked.length === 0) {
-        showError('请先选择要操作的数据');
-        return;
-    }
-    
-    const statusLabels = {
-        'pending': '待处理',
-        'in_progress': '处理中',
-        'completed': '已完成',
-        'cancelled': '已取消'
-    };
-    
-    if (!confirm(`确定要将选中的 ${checked.length} 条事务状态更新为"${statusLabels[newStatus] || newStatus}"吗？`)) {
-        return;
-    }
-    
-    const ids = Array.from(checked).map(cb => cb.value);
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{% url "admin_pages:affair_list" %}';
-    
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (csrfToken) {
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrfmiddlewaretoken';
-        csrfInput.value = csrfToken.value;
-        form.appendChild(csrfInput);
-    }
-    
-    const statusInput = document.createElement('input');
-    statusInput.type = 'hidden';
-    statusInput.name = 'batch_status';
-    statusInput.value = newStatus;
-    form.appendChild(statusInput);
-    
-    ids.forEach(id => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'update_ids';
-        input.value = id;
-        form.appendChild(input);
-    });
-    
-    document.body.appendChild(form);
-    form.submit();
-}
-
-// 绑定批量状态更新按钮
-document.addEventListener('DOMContentLoaded', function() {
-    const batchStatusPendingBtn = document.getElementById('batchStatusPendingBtn');
-    const batchStatusInProgressBtn = document.getElementById('batchStatusInProgressBtn');
-    const batchStatusCompletedBtn = document.getElementById('batchStatusCompletedBtn');
-    const batchStatusCancelledBtn = document.getElementById('batchStatusCancelledBtn');
-    
-    if (batchStatusPendingBtn) {
-        batchStatusPendingBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            batchUpdateStatus('pending');
-        });
-    }
-    
-    if (batchStatusInProgressBtn) {
-        batchStatusInProgressBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            batchUpdateStatus('in_progress');
-        });
-    }
-    
-    if (batchStatusCompletedBtn) {
-        batchStatusCompletedBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            batchUpdateStatus('completed');
-        });
-    }
-    
-    if (batchStatusCancelledBtn) {
-        batchStatusCancelledBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            batchUpdateStatus('cancelled');
-        });
-    }
-});
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if affair_type %}&affair_type={{ affair_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if priority %}&priority={{ priority }}{% endif %}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if affair_type %}&affair_type={{ affair_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if priority %}&priority={{ priority }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if affair_type %}&affair_type={{ affair_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if priority %}&priority={{ priority }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if affair_type %}&affair_type={{ affair_type }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if priority %}&priority={{ priority }}{% endif %}">末页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <div class="empty-state-title">暂无数据</div>
+            <div class="empty-state-text">当前筛选条件下没有找到行政事务记录</div>
+            <a href="{% url 'admin_pages:affair_create' %}" class="btn btn-primary mt-3">
+                <i class="bi bi-plus-circle"></i> 创建第一个事务
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}

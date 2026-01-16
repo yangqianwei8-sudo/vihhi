@@ -1,244 +1,143 @@
-{% extends "plan_management/base.html" %}
-
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
-
+{% extends "plan_management/_base.html" %}
 {% load static %}
+
+{% block pm_title %}目标跟踪{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">选择要跟踪的战略目标</span>{% endblock %}
+
+{% block pm_actions %}
+<a href="{% url 'plan_pages:strategic_goal_list' %}" class="list-btn">
+  返回列表
+</a>
+{% endblock %}
+
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-<style>
-    .track-entry-container {
-        padding: 12px !important;
-    }
-    
-    .goal-card {
-        border: 1px solid var(--vh-border);
-        border-radius: var(--radius-md);
-        padding: var(--spacing-md);
-        margin-bottom: var(--spacing-md);
-        transition: all var(--transition-base);
-        cursor: pointer;
-    }
-    
-    .goal-card:hover {
-        border-color: var(--vh-primary);
-        box-shadow: var(--shadow-md);
-        transform: translateY(-2px);
-    }
-    
-    .goal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: start;
-        margin-bottom: var(--spacing-sm);
-    }
-    
-    .goal-title {
-        font-size: var(--font-size-lg);
-        font-weight: 600;
-        color: var(--vh-text);
-        margin: 0;
-    }
-    
-    .goal-number {
-        font-size: var(--font-size-sm);
-        color: var(--vh-text-secondary);
-        font-family: monospace;
-    }
-    
-    .goal-info {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: var(--spacing-sm);
-        margin-top: var(--spacing-sm);
-    }
-    
-    .goal-info-item {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-        font-size: var(--font-size-sm);
-        color: var(--vh-text-secondary);
-    }
-    
-    .goal-info-item .icon {
-        font-size: 16px;
-    }
-    
-    .progress-section {
-        margin-top: var(--spacing-md);
-        padding-top: var(--spacing-md);
-        border-top: 1px solid var(--vh-border);
-    }
-    
-    .progress-label {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: var(--spacing-xs);
-        font-size: var(--font-size-sm);
-    }
-    
-    .progress-value {
-        font-weight: 600;
-        color: var(--vh-primary);
-    }
-    
-    .progress-bar-container {
-        height: 24px;
-        background: #e9ecef;
-        border-radius: 12px;
-        overflow: hidden;
-        position: relative;
-    }
-    
-    .progress-bar-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #28a745, #20c997);
-        transition: width 0.3s;
-    }
-    
-    .progress-text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 12px;
-        font-weight: 600;
-        color: #000;
-        z-index: 1;
-    }
-    
-    .status-badge {
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-    
-    .status-published { background: #cfe2ff; color: #084298; }
-    .status-in_progress { background: #fff3cd; color: #856404; }
-    .status-draft { background: #e9ecef; color: #495057; }
-    .status-completed { background: #d1e7dd; color: #0f5132; }
-    .status-cancelled { background: #f8d7da; color: #842029; }
-    
-    .goal-card.not-trackable {
-        opacity: 0.7;
-        cursor: not-allowed;
-    }
-    
-    .goal-card.not-trackable:hover {
-        transform: none;
-        border-color: var(--vh-border);
-    }
-    
-    .track-btn {
-        margin-top: var(--spacing-md);
-        width: 100%;
-    }
-    
-    .track-btn:disabled {
-        cursor: not-allowed;
-    }
-    
-    .warning-badge {
-        display: inline-block;
-        padding: 4px 8px;
-        background: #fff3cd;
-        color: #856404;
-        border-radius: 4px;
-        font-size: 11px;
-        margin-top: var(--spacing-xs);
-    }
-    
-    .info-alert {
-        margin-bottom: var(--spacing-lg);
-    }
-</style>
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
 {% endblock %}
 
-{% block content %}
-<div class="track-entry-container">
-    <!-- 页面标题 -->
-    <div class="list-page-header">
-        <h2 class="mb-0">
-            {{ page_title }}
-        </h2>
-        <p class="text-muted mb-0 mt-1">{{ description }}</p>
-    </div>
-    
-    <!-- 目标列表 -->
-    <div class="mt-4">
-        {% if goals %}
-            <div class="row g-3">
-                {% for goal in goals %}
-                <div class="col-md-6">
-                    <div class="goal-card" onclick="window.location.href='{% url 'plan_pages:strategic_goal_track' goal.id %}'">
-                        <div class="goal-header">
-                            <div>
-                                <h5 class="goal-title">{{ goal.name }}</h5>
-                                <div class="goal-number">
-                                    <code>{{ goal.goal_number }}</code>
-                                </div>
-                            </div>
-                            <span class="status-badge status-{{ goal.status }}">
-                                {{ goal.get_status_display }}
-                            </span>
-                        </div>
-                        
-                        <div class="goal-info">
-                            <div class="goal-info-item">
-                                <span class="icon">🎯</span>
-                                <span>{{ goal.get_goal_type_display }}</span>
-                            </div>
-                            <div class="goal-info-item">
-                                <span class="icon">📅</span>
-                                <span>{{ goal.get_goal_period_display }}</span>
-                            </div>
-                            <div class="goal-info-item">
-                                <span class="icon">👤</span>
-                                <span>{{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}</span>
-                            </div>
-                            {% if goal.responsible_department %}
-                            <div class="goal-info-item">
-                                <span class="icon">🏢</span>
-                                <span>{{ goal.responsible_department.name }}</span>
-                            </div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="progress-section">
-                            <div class="progress-label">
-                                <span>完成进度</span>
-                                <span class="progress-value">{{ goal.completion_rate }}%</span>
-                            </div>
-                            <div class="progress-bar-container">
-                                <div class="progress-bar-fill" style="width: {{ goal.completion_rate }}%"></div>
-                                <span class="progress-text">{{ goal.completion_rate }}%</span>
-                            </div>
-                            <div class="mt-2 text-muted small">
-                                目标值：{{ goal.target_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %} | 
-                                当前值：{{ goal.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
-                            </div>
-                        </div>
-                        
-                        <a href="{% url 'plan_pages:strategic_goal_track' goal.id %}" class="btn btn-primary track-btn">
-                            <i class="bi bi-graph-up me-2"></i>开始跟踪
-                        </a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="alert alert-info text-center py-5">
-                <i class="bi bi-inbox" style="font-size: 48px; opacity: 0.3;"></i>
-                <p class="mt-3 mb-0">暂无可跟踪的战略目标</p>
-                <p class="text-muted small">请先创建并发布战略目标</p>
-                <a href="{% url 'plan_pages:strategic_goal_list' %}" class="btn btn-primary mt-3">
-                    <i class="bi bi-arrow-left me-2"></i>返回目标列表
-                </a>
-            </div>
-        {% endif %}
-    </div>
+{% block pm_content %}
+<div class="list-stats">
+  <div class="list-stat-card">
+    <div class="list-stat-label">目标总数</div>
+    <div class="list-stat-value">{{ total_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">制定中</div>
+    <div class="list-stat-value">{{ draft_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">已发布</div>
+    <div class="list-stat-value">{{ published_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">执行中</div>
+    <div class="list-stat-value">{{ in_progress_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">已完成</div>
+    <div class="list-stat-value">{{ completed_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">已取消</div>
+    <div class="list-stat-value">{{ cancelled_count|default:0 }}</div>
+  </div>
 </div>
-{% endblock %}
 
+{% if goals %}
+<div class="list-action-bar">
+  <div class="list-action-left">
+    <span style="font-weight: 600;">目标列表</span>
+  </div>
+  <div class="list-action-right">
+    <span>共 {{ goals|length }} 条记录</span>
+  </div>
+</div>
+
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>目标编号</th>
+        <th>目标名称</th>
+        <th>目标类型</th>
+        <th>目标周期</th>
+        <th>负责人</th>
+        <th>时间范围</th>
+        <th>进度</th>
+        <th>状态</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for goal in goals %}
+      <tr {% if goal.status not in 'published,in_progress' %}style="opacity: 0.6;"{% endif %}>
+        <td><code>{{ goal.goal_number }}</code></td>
+        <td>
+          <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}">
+            {{ goal.name }}
+          </a>
+        </td>
+        <td>{{ goal.get_goal_type_display }}</td>
+        <td>{{ goal.get_goal_period_display }}</td>
+        <td>
+          {{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}
+          {% if goal.responsible_department %}
+          <div style="font-size: 12px; color: #999999;">{{ goal.responsible_department.name }}</div>
+          {% endif %}
+        </td>
+        <td>
+          {% if goal.start_date and goal.end_date %}
+          <div style="font-size: 12px; color: #666666;">
+            {{ goal.start_date|date:"Y-m-d" }}<br>
+            {{ goal.end_date|date:"Y-m-d" }}
+          </div>
+          {% else %}
+          <span style="color: #999999;">-</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="list-progress">
+            <div class="list-progress-fill" style="width: {{ goal.completion_rate }}%"></div>
+            <span class="list-progress-text">{{ goal.completion_rate }}%</span>
+          </div>
+          <div style="font-size: 12px; color: #999999; margin-top: 4px;">
+            {{ goal.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %} / {{ goal.target_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+          </div>
+        </td>
+        <td>
+          <span class="list-badge list-badge-{{ goal.status }}">{{ goal.get_status_display }}</span>
+        </td>
+        <td>
+          <div class="list-actions">
+            {% if goal.status in 'published,in_progress' %}
+            <a href="{% url 'plan_pages:strategic_goal_track' goal.id %}" class="list-btn" title="开始跟踪">跟踪</a>
+            {% else %}
+            <span class="list-btn" style="opacity: 0.5; cursor: not-allowed;" title="只有已发布或执行中的目标可以跟踪">不可跟踪</span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无可跟踪的战略目标</div>
+          <div class="list-empty-hint">请先创建并发布战略目标</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="list-empty-state">
+  <div class="list-empty-icon">▢</div>
+  <div class="list-empty-text">暂无可跟踪的战略目标</div>
+  <div class="list-empty-hint">请先创建并发布战略目标</div>
+  <div style="margin-top: 16px;">
+    <a href="{% url 'plan_pages:strategic_goal_list' %}" class="list-btn list-btn-primary">
+      创建目标
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

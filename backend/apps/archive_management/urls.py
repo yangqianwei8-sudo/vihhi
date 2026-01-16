@@ -7,12 +7,8 @@ from . import views_pages
 app_name = 'archive_management'
 
 urlpatterns = [
-    # 首页
-    path('', views_pages.archive_management_home, name='archive_management_home'),
-    path('home/', views_pages.archive_management_home, name='archive_management_home'),
-    
-    # 档案管理首页（保留用于向后兼容）
-    path('list/', views_pages.archive_list, name='archive_list'),
+    # 档案管理首页
+    path('', views_pages.archive_list, name='archive_list'),
     
     # 项目档案
     path('project/', views_pages.project_archive_list, name='project_archive_list'),

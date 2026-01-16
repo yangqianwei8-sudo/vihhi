@@ -1,145 +1,169 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
+
+
+
 {% load static %}
-
-{% block title %}选择商机标记为{{ status_label }} - 维海科技信息化管理平台{% endblock %}
-
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
 {% endblock %}
 
-{% block module_content %}
-<div class="workspace-content">
-    <div class="list-page-container">
+
+
+{% block cm_title %}选择输赢{% endblock %}
+
+{% block cm_content %}
+<div class="list-page-container">
+        
         <div class="list-page-header">
-            <h1 class="list-page-title">
-                <i class="bi bi-list-check me-2"></i>选择商机标记为赢单/输单
-            </h1>
+            <div>
+                <h2 class="mb-0">
+                    选择商机 - 标记为{{ status_label }}
+                </h2>
+                <p class="text-muted mb-0 mt-2">请选择要标记为{{ status_label }}的商机（显示状态为"商务谈判"或有商务洽谈记录的商机）</p>
+            </div>
             <div class="list-page-actions">
-                <a href="{% url 'business_pages:opportunity_win_loss' %}" class="btn btn-outline-secondary">
+                <a href="{% url 'opportunity_pages:opportunity_win_loss' %}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> 返回
                 </a>
             </div>
         </div>
 
-        <!-- 筛选表单 -->
-        <form method="get" class="list-page-filters">
-            <div class="list-page-filter-row">
-                <div class="list-page-filter-item">
-                    <label>客户:</label>
-                    <select name="client_id" class="form-select form-select-sm">
-                        <option value="">全部</option>
-                        {% for client in clients %}
-                        <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="list-page-filter-item">
-                    <label>商务经理:</label>
-                    <select name="business_manager_id" class="form-select form-select-sm">
-                        <option value="">全部</option>
-                        {% for manager in business_managers %}
-                        <option value="{{ manager.id }}" {% if business_manager_id == manager.id|stringformat:"s" %}selected{% endif %}>{{ manager.username }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="list-page-filter-actions">
-                    <button type="submit" class="btn btn-sm btn-primary">
-                        <i class="bi bi-search"></i> 筛选
-                    </button>
-                    <a href="{% url 'business_pages:opportunity_win_loss_select' %}" class="btn btn-sm btn-outline-secondary">重置</a>
-                </div>
+        <div class="list-page-filters">
+            <div class="list-page-filters-header">
+                <h6 class="list-page-filters-title">筛选条件</h6>
             </div>
-        </form>
-
-        <!-- 商机列表 -->
+            <form method="get" id="filterForm">
+                <input type="hidden" name="target_status" value="{{ target_status }}">
+                <div class="list-page-filter-row" id="filterFieldsContainer">
+                    <div class="list-page-filter-item" data-filter-field="client_id">
+                        <label>关联客户:</label>
+                        <select name="client_id" class="form-select form-select-sm">
+                            <option value="">全部客户</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="list-page-filter-item" data-filter-field="business_manager_id">
+                        <label>负责商务:</label>
+                        <select name="business_manager_id" class="form-select form-select-sm">
+                            <option value="">全部</option>
+                            {% for manager in business_managers %}
+                            <option value="{{ manager.id }}" {% if business_manager_id == manager.id|stringformat:"s" %}selected{% endif %}>
+                                {{ manager.get_full_name|default:manager.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="list-page-filter-search">
+                    <div class="list-page-filter-search-input">
+                        <input type="text" name="search" class="form-control form-control-sm" 
+                               placeholder="搜索商机编号、名称、项目、客户..." value="{{ search }}">
+                    </div>
+                    <div class="list-page-filter-actions">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="bi bi-search"></i> 搜索
+                        </button>
+                        <a href="{% url 'opportunity_pages:opportunity_win_loss_select' %}?target_status={{ target_status }}" class="btn btn-sm btn-outline-secondary">重置</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
         {% if page_obj %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>商机编号</th>
-                        <th>商机名称</th>
-                        <th>客户</th>
-                        <th>商务经理</th>
-                        <th>当前状态</th>
-                        <th>预计金额</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for opportunity in page_obj %}
-                    <tr>
-                        <td>{{ opportunity.opportunity_number }}</td>
-                        <td>
-                            <a href="{% url 'business_pages:opportunity_detail' opportunity.id %}">
-                                {{ opportunity.name|default:opportunity.project_name }}
-                            </a>
-                        </td>
-                        <td>{{ opportunity.client.name }}</td>
-                        <td>{{ opportunity.business_manager.username }}</td>
-                        <td>
-                            <span class="badge bg-info">{{ opportunity.get_status_display }}</span>
-                        </td>
-                        <td>
-                            {% if opportunity.estimated_amount %}
-                                ¥{{ opportunity.estimated_amount|floatformat:2 }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="btn-group" role="group">
-                                <a href="{% url 'business_pages:opportunity_mark_win_loss' opportunity.id %}?target_status=won" 
-                                   class="btn btn-sm btn-success" title="标记为赢单">
-                                    <i class="bi bi-check-circle"></i> 赢单
+        <div class="list-page-table-container">
+            <div class="list-page-table-wrapper">
+                <table class="list-page-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">商机名称</th>
+                            <th style="width: 120px;">商机编号</th>
+                            <th style="width: 150px;">关联客户</th>
+                            <th style="width: 100px;">负责商务</th>
+                            <th style="width: 120px; text-align: right;">预计金额（万元）</th>
+                            <th style="width: 120px; text-align: right;">加权金额（万元）</th>
+                            <th style="width: 150px; text-align: center;">更新时间</th>
+                            <th style="width: 150px; text-align: center;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for opportunity in page_obj %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'opportunity_pages:opportunity_detail' opportunity.id %}" class="info-value-link">
+                                    {{ opportunity.name }}
                                 </a>
-                                <a href="{% url 'business_pages:opportunity_mark_win_loss' opportunity.id %}?target_status=lost" 
-                                   class="btn btn-sm btn-danger" title="标记为输单">
-                                    <i class="bi bi-x-circle"></i> 输单
+                            </td>
+                            <td>{{ opportunity.opportunity_number|default:'未编号' }}</td>
+                            <td>
+                                <a href="{% url 'business_pages:customer_detail' opportunity.client.id %}" class="info-value-link">
+                                    {{ opportunity.client.name }}
                                 </a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" class="text-center text-muted">暂无可用商机</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                            <td>{{ opportunity.business_manager.get_full_name|default:opportunity.business_manager.username }}</td>
+                            <td style="text-align: right;" class="info-value-numeric">
+                                {{ opportunity.estimated_amount|floatformat:2|default:'未填写' }}
+                            </td>
+                            <td style="text-align: right;" class="info-value-numeric info-value-bold">
+                                {{ opportunity.weighted_amount|floatformat:2|default:'未填写' }}
+                            </td>
+                            <td style="text-align: center;">{{ opportunity.updated_time|date:'Y-m-d H:i' }}</td>
+                            <td style="text-align: center;">
+                                <a href="{% url 'opportunity_pages:opportunity_mark_win_loss' opportunity.id %}?target_status={{ target_status }}" 
+                                   class="btn btn-sm {% if target_status == 'won' %}btn-success{% else %}btn-danger{% endif %}">
+                                    <i class="bi {% if target_status == 'won' %}bi-check-circle{% else %}bi-x-circle{% endif %}"></i> 
+                                    标记为{{ status_label }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px;">
+                                <p class="text-muted">暂无可以标记为{{ status_label }}的商机（显示状态为"商务谈判"或有商务洽谈记录的商机）</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- 分页 -->
         {% if page_obj.has_other_pages %}
-        <nav aria-label="分页导航">
-            <ul class="pagination justify-content-center">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page=1{% if client_id %}&client_id={{ client_id }}{% endif %}{% if business_manager_id %}&business_manager_id={{ business_manager_id }}{% endif %}">首页</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if business_manager_id %}&business_manager_id={{ business_manager_id }}{% endif %}">上一页</a>
-                </li>
-                {% endif %}
-                <li class="page-item active">
-                    <span class="page-link">第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页</span>
-                </li>
-                {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if business_manager_id %}&business_manager_id={{ business_manager_id }}{% endif %}">下一页</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if business_manager_id %}&business_manager_id={{ business_manager_id }}{% endif %}">末页</a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
+        <div class="list-page-pagination">
+            <div class="list-page-pagination-info">
+                <span>共 <strong>{{ page_obj.paginator.count }}</strong> 条</span>
+            </div>
+            <div class="list-page-pagination-controls">
+                <nav class="list-page-pagination-nav">
+                    {% if page_obj.has_previous %}
+                    <a href="?page=1&target_status={{ target_status }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if business_manager_id %}&business_manager_id={{ business_manager_id }}{% endif %}" class="list-page-pagination-page">&laquo; 首页</a>
+                    <a href="?page={{ page_obj.previous_page_number }}&target_status={{ target_status }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if business_manager_id %}&business_manager_id={{ business_manager_id }}{% endif %}" class="list-page-pagination-page">上一页</a>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <span class="list-page-pagination-page active">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}&target_status={{ target_status }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if business_manager_id %}&business_manager_id={{ business_manager_id }}{% endif %}" class="list-page-pagination-page">{{ num }}</a>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}&target_status={{ target_status }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if business_manager_id %}&business_manager_id={{ business_manager_id }}{% endif %}" class="list-page-pagination-page">下一页</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}&target_status={{ target_status }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client_id={{ client_id }}{% endif %}{% if business_manager_id %}&business_manager_id={{ business_manager_id }}{% endif %}" class="list-page-pagination-page">末页 &raquo;</a>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
         {% endif %}
         {% else %}
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> 暂无可用商机
+        
+        <div class="list-page-empty">
+            <div class="list-page-empty-icon">📭</div>
+            <p class="list-page-empty-text">暂无可以标记为{{ status_label }}的商机</p>
+            <p class="text-muted">显示状态为"商务谈判"或有商务洽谈记录的商机</p>
         </div>
         {% endif %}
     </div>
-</div>
 {% endblock %}

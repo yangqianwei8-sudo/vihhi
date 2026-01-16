@@ -1,17 +1,21 @@
-{% extends "shared/module_base.html" %}
+{% extends "financial_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:budget_management' %}">预算管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:budget_detail' budget.id %}">{{ budget.budget_number }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">审批</li>
+{% endblock %}
 
 {% block extra_css %}
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 预算信息预览 -->
+    
     <div class="info-card mb-4">
         <h5>预算信息</h5>
         <div class="info-row">
@@ -56,7 +60,6 @@
         </div>
     </div>
 
-    <!-- 备注信息 -->
     {% if budget.description %}
     <div class="info-card mb-4">
         <h5>备注说明</h5>
@@ -64,7 +67,6 @@
     </div>
     {% endif %}
 
-    <!-- 审批操作 -->
     <div class="info-card">
         <h5>审批操作</h5>
         <form method="post">
@@ -89,9 +91,3 @@
     </div>
 </div>
 {% endblock %}
-
-
-
-
-
-

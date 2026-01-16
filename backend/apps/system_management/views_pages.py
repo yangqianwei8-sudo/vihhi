@@ -15,167 +15,16 @@ from backend.apps.system_management.serializers import (
 )
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.apps.system_management.forms import POSITION_CHOICES
-from backend.core.views import _permission_granted, _build_full_top_nav, _build_unified_sidebar_nav
 
 
-# 系统管理菜单结构定义
-SYSTEM_MANAGEMENT_MENU_STRUCTURE = [
-    {
-        'id': 'system_management_home',
-        'label': '系统管理首页',
-        'icon': '🏠',
-        'url_name': 'system_pages:system_management_home',
-        'permission': 'system_management.view',
-    },
-]
-
-
-def _build_system_management_sidebar_nav(permission_set, request_path=None, active_id=None):
-    """生成系统管理左侧菜单（统一格式）"""
-    # 使用统一的菜单构建函数
-    return _build_unified_sidebar_nav(SYSTEM_MANAGEMENT_MENU_STRUCTURE, permission_set, active_id=active_id)
-
-
-def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None):
-    context = {
+def _context(page_title, page_icon, description, summary_cards=None, sections=None):
+    return {
         "page_title": page_title,
         "page_icon": page_icon,
         "description": description,
         "summary_cards": summary_cards or [],
         "sections": sections or [],
     }
-    
-    if request and request.user.is_authenticated:
-        permission_set = get_user_permission_codes(request.user)
-        context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        context['module_sidebar_nav'] = _build_system_management_sidebar_nav(permission_set, request.path)
-    else:
-        context['full_top_nav'] = []
-        context['module_sidebar_nav'] = []
-    
-    return context
-
-
-@login_required
-def system_management_home(request):
-    """系统管理首页"""
-    permission_codes = get_user_permission_codes(request.user)
-    
-    # 权限检查
-    if not _permission_granted('system_management.view', permission_codes):
-        messages.error(request, '您没有权限访问系统管理')
-        return redirect('admin:index')
-    
-    # 收集统计数据
-    summary_cards = []
-    
-    try:
-        # 用户统计
-        if _permission_granted('system_management.user.view', permission_codes):
-            try:
-                total_users = User.objects.count()
-                active_users = User.objects.filter(is_active=True).count()
-                
-                summary_cards.append({
-                    'label': '用户总数',
-                    'icon': '👥',
-                    'value': str(total_users),
-                    'subvalue': f'活跃用户 {active_users} 人',
-                    'url': '/admin/system_management/user/',
-                    'variant': 'info'
-                })
-            except Exception:
-                pass
-        
-        # 角色统计
-        if _permission_granted('system_management.role.view', permission_codes):
-            try:
-                total_roles = Role.objects.count()
-                
-                summary_cards.append({
-                    'label': '角色总数',
-                    'icon': '🎭',
-                    'value': str(total_roles),
-                    'subvalue': '系统角色',
-                    'url': '/admin/system_management/role/',
-                    'variant': 'info'
-                })
-            except Exception:
-                pass
-        
-        # 部门统计
-        if _permission_granted('system_management.department.view', permission_codes):
-            try:
-                total_departments = Department.objects.count()
-                active_departments = Department.objects.filter(is_active=True).count()
-                
-                summary_cards.append({
-                    'label': '部门总数',
-                    'icon': '🏢',
-                    'value': str(total_departments),
-                    'subvalue': f'启用 {active_departments} 个',
-                    'url': '/admin/system_management/department/',
-                    'variant': 'info'
-                })
-            except Exception:
-                pass
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('获取统计数据失败: %s', str(e))
-    
-    # 功能模块入口
-    module_entries = []
-    
-    if _permission_granted('system_management.user.view', permission_codes):
-        module_entries.append({
-            'label': '用户管理',
-            'icon': '👥',
-            'description': '管理系统用户',
-            'url': '/admin/system_management/user/',
-            'link_label': '进入模块 →'
-        })
-    
-    if _permission_granted('system_management.role.view', permission_codes):
-        module_entries.append({
-            'label': '角色管理',
-            'icon': '🎭',
-            'description': '管理系统角色',
-            'url': '/admin/system_management/role/',
-            'link_label': '进入模块 →'
-        })
-    
-    if _permission_granted('system_management.department.view', permission_codes):
-        module_entries.append({
-            'label': '部门管理',
-            'icon': '🏢',
-            'description': '管理部门组织',
-            'url': '/admin/system_management/department/',
-            'link_label': '进入模块 →'
-        })
-    
-    # 构建区域
-    sections = []
-    
-    if module_entries:
-        sections.append({
-            'title': '功能模块',
-            'description': '系统管理的各个功能模块入口',
-            'items': module_entries,
-            'layout': 'grid'
-        })
-    
-    # 构建上下文
-    context = _context(
-        page_title="系统管理",
-        page_icon="⚙️",
-        description="管理系统设置、用户和权限",
-        summary_cards=summary_cards,
-        sections=sections,
-        request=request,
-    )
-    
-    return render(request, "system_management/home.html", context)
 
 
 @login_required
@@ -319,7 +168,7 @@ def system_settings(request):
             }
         ],
     )
-    return render(request, "system_management/home.html", context)
+    return render(request, "shared/center_dashboard.html", context)
 
 
 @login_required
@@ -347,7 +196,7 @@ def operation_logs(request):
             }
         ],
     )
-    return render(request, "system_management/home.html", context)
+    return render(request, "shared/center_dashboard.html", context)
 
 
 @login_required
@@ -375,7 +224,7 @@ def data_dictionary(request):
             }
         ],
     )
-    return render(request, "system_management/home.html", context)
+    return render(request, "shared/center_dashboard.html", context)
 
 
 @login_required

@@ -2,11 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.db.models import Max
 from datetime import datetime
-from typing import Optional
-import logging
 from backend.apps.system_management.models import User
-
-logger = logging.getLogger(__name__)
 
 
 class ExternalSystem(models.Model):
@@ -219,106 +215,3 @@ class ApiTestRecord(models.Model):
     
     def __str__(self):
         return f"{self.api_interface.name} - {self.test_name} - {self.get_status_display()}"
-
-
-class ApiIpWhitelist(models.Model):
-    """API IP白名单"""
-    STATUS_CHOICES = [
-        ('active', '启用'),
-        ('inactive', '停用'),
-    ]
-    
-    external_system = models.ForeignKey(
-        ExternalSystem, 
-        on_delete=models.CASCADE, 
-        related_name='ip_whitelists', 
-        verbose_name='所属系统',
-        help_text='选择需要配置IP白名单的外部系统（如启信宝）'
-    )
-    ip_address = models.GenericIPAddressField(verbose_name='IP地址', help_text='需要添加到白名单的IP地址（IPv4或IPv6）')
-    description = models.CharField(max_length=200, blank=True, verbose_name='描述', help_text='说明此IP的用途，如：开发服务器、生产服务器等')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', verbose_name='状态')
-    is_active = models.BooleanField(default=True, verbose_name='是否启用')
-    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_ip_whitelists', verbose_name='创建人')
-    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
-    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
-    
-    class Meta:
-        db_table = 'api_ip_whitelist'
-        verbose_name = 'API IP白名单'
-        verbose_name_plural = verbose_name
-        ordering = ['-created_time']
-        unique_together = [('external_system', 'ip_address')]  # 同一系统的同一IP只能有一条记录
-        indexes = [
-            models.Index(fields=['external_system', 'status']),
-            models.Index(fields=['ip_address', 'is_active']),
-            models.Index(fields=['created_time']),
-        ]
-    
-    def __str__(self):
-        return f"{self.external_system.name} - {self.ip_address} ({self.get_status_display()})"
-    
-    def clean(self):
-        """验证IP地址格式"""
-        from django.core.exceptions import ValidationError
-        if not self.ip_address:
-            raise ValidationError({'ip_address': 'IP地址不能为空'})
-    
-    @staticmethod
-    def get_whitelisted_ips(external_system_code: str) -> list:
-        """
-        获取指定外部系统的所有启用IP白名单
-        
-        Args:
-            external_system_code: 外部系统编码（如'QIXINBAO'）
-        
-        Returns:
-            IP地址列表
-        """
-        try:
-            system = ExternalSystem.objects.filter(code=external_system_code, is_active=True).first()
-            if not system:
-                return []
-            
-            whitelist = ApiIpWhitelist.objects.filter(
-                external_system=system,
-                status='active',
-                is_active=True
-            ).values_list('ip_address', flat=True)
-            
-            return list(whitelist)
-        except Exception as e:
-            logger.error(f'获取IP白名单失败: {str(e)}')
-            return []
-    
-    @staticmethod
-    def get_current_server_ip() -> Optional[str]:
-        """
-        获取当前服务器的公网IP地址
-        
-        Returns:
-            IP地址字符串，失败返回None
-        """
-        import requests
-        ip_services = [
-            'https://api.ipify.org',
-            'https://ifconfig.me/ip',
-            'https://ipinfo.io/ip',
-        ]
-        
-        for service in ip_services:
-            try:
-                response = requests.get(service, timeout=3)
-                if response.status_code == 200:
-                    ip = response.text.strip()
-                    # 验证IP格式
-                    from ipaddress import ip_address
-                    try:
-                        ip_address(ip)
-                        return ip
-                    except ValueError:
-                        continue
-            except:
-                continue
-        
-        return None

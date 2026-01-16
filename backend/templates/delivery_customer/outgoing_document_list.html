@@ -1,558 +1,165 @@
-{% extends "shared/list_page_base.html" %}
-{% comment %}
-发文列表页面模板 (Outgoing Document List Template)
-
-功能说明：
-- 展示发文记录的列表页面
-- 支持按状态、优先级、阶段、文件分类等多维度筛选
-- 支持发文记录的查看、编辑、删除操作
-- 包含复选框功能，支持批量操作
-
-主要功能：
-1. 筛选功能：
-   - 状态筛选：全部、草稿、审核中、已批准、已发出、已完成、已归档
-   - 优先级筛选：全部、紧急、高、普通、低
-   - 阶段筛选：全部及各阶段选项
-   - 文件分类筛选：根据选择的阶段动态显示对应的分类选项
-2. 表格展示：序号、发文编号、文件标题、收文单位、联系人、状态、优先级、文件分类、创建人、创建时间、审核人、操作
-3. 复选框功能：支持全选和批量操作（继承自list_page_base.html）
-4. 操作功能：查看详情、编辑、删除
-
-特殊功能：
-- 文件分类选项根据选择的阶段动态显示/隐藏（通过updateCategoryOptions函数实现）
-- 支持创建新发文记录
-
-JavaScript功能：
-- initCheckboxFeature(): 初始化复选框全选/取消全选功能
-- updateCategoryOptions(): 根据阶段筛选更新文件分类选项
-- getSelectedIds(): 获取选中项的ID列表
-- getSelectedRows(): 获取选中项的行元素
-{% endcomment %}
+{% extends "delivery_customer/base.html" %}
 {% load static %}
 
-{% block list_page_title %}发文列表{% endblock %}
+{% block title %}发文列表 - 维海科技信息化管理平台{% endblock %}
 
-{% block list_page_actions %}
-{% if can_create %}
-<a href="{% url 'delivery_pages:outgoing_document_create' %}" 
-   class="btn btn-primary btn-sm"
-   aria-label="创建新发文">
-    <i class="bi bi-plus-circle"></i> 创建发文
-</a>
-{% endif %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:report_delivery' %}">收发管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">发文列表</li>
 {% endblock %}
 
-{% block empty_create_url %}{% url 'delivery_pages:outgoing_document_create' %}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
+<style>
+.list-page-container {
+    padding: 12px !important;
+    gap: 8px !important;
+}
 
-{# 筛选区域已通过 filter_config 在 list_page_base.html 中自动渲染 #}
-{# 如需自定义筛选区域，可覆盖 list_page_filters 块 #}
+.list-page-header {
+    margin-bottom: 8px !important;
+    padding: 6px 0 !important;
+}
 
-<!-- 表格复选框列 -->
-{% block list_page_table_checkbox_header %}
-<th style="width: 40px;">
-    <input type="checkbox" id="selectAll" title="全选/取消全选">
-</th>
+.table {
+    margin-bottom: 8px;
+}
+
+.table th,
+.table td {
+    padding: 8px 10px;
+    font-size: 13px;
+}
+</style>
 {% endblock %}
 
-{% block list_page_table_headers %}
-<th style="width: 3%;">#</th>
-<th style="width: 7%;">发文编号</th>
-<th style="width: 13%;">文件标题</th>
-<th style="width: 9%;">收文单位</th>
-<th style="width: 5%;">联系人</th>
-<th style="width: 5%;">联系电话</th>
-<th style="width: 7%;">联系邮箱</th>
-<th style="width: 5%;">阶段</th>
-<th style="width: 7%;">文件分类</th>
-<th style="width: 8%;">报送方式</th>
-<th style="width: 5%;">状态</th>
-<th style="width: 4%;">优先级</th>
-<th style="width: 5%;">负责人</th>
-<th style="width: 7%;">创建时间</th>
-{% endblock %}
-{% block list_page_table_actions_header %}
-<th style="width: 4%;">
-    操作
-    <span id="columnSettingsBtn"
-          data-bs-toggle="modal"
-          data-bs-target="#columnSettingsModal"
-          aria-label="设置表格字段"
-          title="设置表格字段"
-          style="cursor: pointer; color: #000000 !important; font-size: 16px; vertical-align: middle; margin-left: 8px; display: inline-block;">
-        <i class="bi bi-gear" style="color: #000000 !important;"></i>
-    </span>
-</th>
-{% endblock %}
-
-{% block list_page_table_checkbox_cell %}
-<td>
-    <input type="checkbox" class="row-checkbox" value="{{ item.id }}" title="选择此项">
-</td>
-{% endblock %}
-
-{% block list_page_table_row_content %}
-<td>{{ forloop.counter0|add:page_obj.start_index }}</td>
-<td><code>{{ item.document_number }}</code></td>
-<td>
-    <strong>{{ item.title|truncatewords:8 }}</strong>
-</td>
-<td>{% if item.recipient %}{{ item.recipient|truncatewords:5 }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
-<td>{% if item.recipient_contact %}{{ item.recipient_contact }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
-<td>{% if item.recipient_phone %}{{ item.recipient_phone }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
-<td>{% if item.recipient_email %}{{ item.recipient_email|truncatewords:1 }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
-<td>
-    {% if item.stage %}
-        <span class="badge bg-info">{{ item.get_stage_display }}</span>
-    {% else %}
-        <span class="text-muted">-</span>
-    {% endif %}
-</td>
-<td>
-    {% if item.file_category %}
-        <span class="badge bg-secondary">{{ item.file_category.name|truncatewords:3 }}</span>
-    {% else %}
-        <span class="text-muted">-</span>
-    {% endif %}
-</td>
-<td>
-    {% if item.delivery_methods_display %}
-        {% for method_name in item.delivery_methods_display %}
-            <span class="badge bg-primary me-1">{{ method_name }}</span>
-        {% endfor %}
-    {% else %}
-        <span class="text-muted">-</span>
-    {% endif %}
-</td>
-<td>
-    {% if item.status == 'draft' %}
-        <span class="badge bg-secondary">草稿</span>
-    {% elif item.status == 'reviewing' %}
-        <span class="badge bg-warning">审核中</span>
-    {% elif item.status == 'approved' %}
-        <span class="badge bg-success">已批准</span>
-    {% elif item.status == 'sent' %}
-        <span class="badge bg-info">已发出</span>
-    {% elif item.status == 'completed' %}
-        <span class="badge bg-primary">已完成</span>
-    {% elif item.status == 'archived' %}
-        <span class="badge bg-dark">已归档</span>
-    {% else %}
-        <span class="badge bg-secondary">{{ item.get_status_display }}</span>
-    {% endif %}
-</td>
-<td>
-    {% if item.priority == 'urgent' %}
-        <span class="badge bg-danger">紧急</span>
-    {% elif item.priority == 'high' %}
-        <span class="badge bg-warning">高</span>
-    {% elif item.priority == 'normal' %}
-        <span class="badge bg-info">普通</span>
-    {% elif item.priority == 'low' %}
-        <span class="badge bg-secondary">低</span>
-    {% else %}
-        <span class="badge bg-secondary">{{ item.get_priority_display|default:"-" }}</span>
-    {% endif %}
-</td>
-<td>
-    {% if item.responsible_person %}
-        {{ item.responsible_person.get_full_name|default:item.responsible_person.username }}
-    {% else %}
-        <span class="text-muted">-</span>
-    {% endif %}
-</td>
-<td>{{ item.created_at|date:"Y-m-d H:i"|default:"-" }}</td>
-{% endblock %}
-
-{% block list_page_table_actions_cell %}
-<td>
-    <div class="list-page-table-actions">
-        {% if item.approval_instance_id %}
-            <a href="{% url 'workflow_engine:approval_detail' item.approval_instance_id %}" 
-               class="action-view" title="查看审批详情">
-                <i class="bi bi-eye"></i>
-            </a>
-        {% else %}
-            <a href="{% url 'delivery_pages:outgoing_document_detail' item.id %}" 
-               class="action-view" title="查看详情">
-                <i class="bi bi-eye"></i>
-            </a>
-        {% endif %}
+{% block content %}
+<div class="list-page-container">
+    <div class="list-page-header d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0">📤 发文列表</h4>
+            <small class="text-muted">管理发出的文件记录</small>
+        </div>
         {% if can_create %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'delivery_pages:outgoing_document_edit' item.id %}" 
-           class="action-edit" title="编辑">
-            <i class="bi bi-pencil"></i>
-        </a>
-        <span class="action-separator">|</span>
-        <a href="{% url 'delivery_pages:outgoing_document_delete' item.id %}" 
-           class="action-delete" title="删除" onclick="return confirm('确定要删除这条发文吗？');">
-            <i class="bi bi-trash"></i>
-        </a>
+        <div>
+            <a href="{% url 'delivery_pages:outgoing_document_create' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> 创建发文
+            </a>
+        </div>
         {% endif %}
     </div>
-</td>
-{% endblock %}
 
-{% block empty_table_message %}
-<i class="bi bi-inbox"></i> 暂无发文数据
-{% endblock %}
+    <div class="list-page-filters mb-2">
+        <form method="get" class="d-flex gap-2 align-items-end">
+            <div class="flex-grow-1">
+                <label class="form-label small mb-1">搜索</label>
+                <input type="text" name="search" class="form-control form-control-sm" 
+                       placeholder="发文编号、标题、收文单位、联系人..." 
+                       value="{{ search_query }}">
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-search"></i> 搜索
+                </button>
+                <a href="{% url 'delivery_pages:outgoing_document_list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-circle"></i> 重置
+                </a>
+            </div>
+        </form>
+    </div>
 
-{% block empty_colspan %}16{% endblock %}
+    <div class="list-page-table">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 12%;">发文编号</th>
+                        <th style="width: 20%;">文件标题</th>
+                        <th style="width: 15%;">收文单位</th>
+                        <th style="width: 10%;">发文日期</th>
+                        <th style="width: 10%;">审核人</th>
+                        <th style="width: 12%;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if documents %}
+                        {% for doc in documents %}
+                        <tr>
+                            <td>{{ forloop.counter0|add:documents.start_index }}</td>
+                            <td><code>{{ doc.document_number }}</code></td>
+                            <td><strong>{{ doc.title|truncatewords:10 }}</strong></td>
+                            <td>{{ doc.recipient }}</td>
+                            <td>{{ doc.send_date|date:"Y-m-d"|default:"-" }}</td>
+                            <td>
+                                {% if doc.reviewer %}
+                                    {{ doc.reviewer.get_full_name|default:doc.reviewer.username }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'delivery_pages:outgoing_document_detail' doc.id %}" 
+                                       class="btn btn-outline-info" title="查看详情">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if can_create %}
+                                    <a href="{% url 'delivery_pages:outgoing_document_edit' doc.id %}" 
+                                       class="btn btn-outline-primary" title="编辑">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox"></i> 暂无数据
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-{% block list_page_batch_import_modal %}
-{% include "shared/modals/batch_import_modal.html" %}
-{% endblock %}
-
-{% block list_page_custom_js %}
-// 文件分类选项的依赖关系处理
-// 当阶段变化时，动态更新文件分类选项
-(function() {
-    // 等待筛选面板初始化完成
-    function initCategoryDependency() {
-        const filterPanel = window.filterPanels && window.filterPanels['outgoingDocumentFilter'];
-        if (!filterPanel) {
-            // 如果筛选面板还未初始化，稍后重试
-            setTimeout(initCategoryDependency, 100);
-            return;
-        }
-        
-        const form = document.getElementById('filterForm_outgoingDocumentFilter');
-        if (!form) return;
-        
-        const stageSelect = form.querySelector('[name="stage"]');
-        const categorySelect = form.querySelector('[name="category"]');
-        
-        if (!stageSelect || !categorySelect) return;
-        
-        // 获取分类选项的原始数据（从模板传递）
-        const allCategories = [
-            {% for category in categories %}
-            {value: '{{ category.id }}', label: '{{ category.name|escapejs }}', stage: '{{ category.stage }}'},
+    {% if documents.has_other_pages %}
+    <nav aria-label="分页导航">
+        <ul class="pagination justify-content-center mb-0">
+            {% if documents.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ documents.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">上一页</a>
+                </li>
+            {% endif %}
+            
+            {% for num in documents.paginator.page_range %}
+                {% if documents.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > documents.number|add:'-3' and num < documents.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
+                    </li>
+                {% endif %}
             {% endfor %}
-        ];
-        
-        // 更新分类选项的函数
-        function updateCategoryOptions() {
-            const selectedStage = stageSelect.value;
             
-            // 保存当前选中的值
-            const currentValue = categorySelect.value;
-            
-            // 清空现有选项（保留"全部"选项）
-            categorySelect.innerHTML = '<option value="all">全部</option>';
-            
-            // 根据选择的阶段添加选项
-            if (selectedStage === 'all') {
-                // 显示所有分类
-                allCategories.forEach(cat => {
-                    const option = document.createElement('option');
-                    option.value = cat.value;
-                    option.textContent = cat.label;
-                    categorySelect.appendChild(option);
-                });
-            } else {
-                // 只显示当前阶段的分类
-                allCategories.forEach(cat => {
-                    if (cat.stage === selectedStage) {
-                        const option = document.createElement('option');
-                        option.value = cat.value;
-                        option.textContent = cat.label;
-                        categorySelect.appendChild(option);
-                    }
-                });
-            }
-            
-            // 如果之前选中的值仍然存在，恢复选中；否则选中"全部"
-            const optionExists = Array.from(categorySelect.options).some(opt => opt.value === currentValue);
-            if (optionExists && currentValue !== 'all') {
-                categorySelect.value = currentValue;
-            } else {
-                categorySelect.value = 'all';
-            }
-        }
-        
-        // 监听阶段变化
-        stageSelect.addEventListener('change', updateCategoryOptions);
-        
-        // 初始化时执行一次
-        updateCategoryOptions();
-    }
-    
-    // DOM加载完成后初始化
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initCategoryDependency);
-    } else {
-        setTimeout(initCategoryDependency, 200);  // 延迟以确保筛选面板已初始化
-    }
-})();
-
-// 获取选中的ID列表
-function getSelectedIds() {
-    const checked = document.querySelectorAll('.row-checkbox:checked');
-    return Array.from(checked).map(cb => cb.value);
-}
-
-// 获取选中的行元素
-function getSelectedRows() {
-    const checked = document.querySelectorAll('.row-checkbox:checked');
-    return Array.from(checked).map(cb => cb.closest('tr'));
-}
-{% endblock %}
-
-{% block list_page_batch_delete_js %}
-// 发文列表批量删除
-(function() {
-    // 等待批量操作栏初始化完成后再添加事件监听
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(function() {
-            const batchDeleteBtn = document.getElementById('batchDeleteBtn');
-            if (!batchDeleteBtn) return;
-            
-            // 移除可能存在的旧事件监听器
-            const newBtn = batchDeleteBtn.cloneNode(true);
-            batchDeleteBtn.parentNode.replaceChild(newBtn, batchDeleteBtn);
-            
-            newBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const checked = document.querySelectorAll('.row-checkbox:checked');
-                if (checked.length === 0) {
-                    showError('请先选择要删除的发文');
-                    return;
-                }
-                
-                if (!confirm(`确定要删除选中的 ${checked.length} 个发文吗？只有草稿状态的发文可以删除，此操作不可恢复。`)) {
-                    return;
-                }
-                
-                const ids = Array.from(checked).map(cb => cb.value);
-                const btn = this;
-                const originalHtml = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<i class="bi bi-hourglass-split"></i> 删除中...';
-                showLoading('正在删除...');
-                
-                // 批量删除：逐个调用删除接口
-                let successCount = 0;
-                let failCount = 0;
-                const total = ids.length;
-                
-                // 使用 Promise.allSettled 确保所有请求都完成
-                const deletePromises = ids.map(id => {
-                    const formData = new FormData();
-                    formData.append('csrfmiddlewaretoken', getCsrfToken());
-                    
-                    return fetch(`{% url 'delivery_pages:outgoing_document_delete' document_id=999999 %}`.replace('999999', id), {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': getCsrfToken()
-                        },
-                        credentials: 'same-origin',
-                        body: formData,
-                        redirect: 'manual' // 不自动跟随重定向
-                    })
-                    .then(response => {
-                        // 302 重定向表示删除成功
-                        if (response.status === 302 || response.ok) {
-                            successCount++;
-                            return { success: true, id: id };
-                        } else {
-                            failCount++;
-                            return { success: false, id: id, status: response.status };
-                        }
-                    })
-                    .catch(error => {
-                        failCount++;
-                        return { success: false, id: id, error: error.message };
-                    });
-                });
-                
-                Promise.all(deletePromises).then(results => {
-                    hideLoading();
-                    btn.disabled = false;
-                    btn.innerHTML = originalHtml;
-                    
-                    if (successCount > 0) {
-                        showSuccess(`成功删除 ${successCount} 个发文${failCount > 0 ? `，${failCount} 个删除失败（可能不是草稿状态）` : ''}`);
-                        // 刷新页面
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1500);
-                    } else {
-                        showError(`删除失败：所有 ${total} 个发文都无法删除（可能不是草稿状态）`);
-                    }
-                });
-            });
-        }, 500); // 延迟500ms确保批量操作栏已初始化
-    });
-})();
-{% endblock %}
-
-{% block list_page_batch_import_js %}
-// 批量导入功能
-(function() {
-    document.addEventListener('DOMContentLoaded', function() {
-        const batchImportBtn = document.getElementById('batchImportBtn');
-        const batchImportConfirmBtn = document.getElementById('batchImportConfirmBtn');
-        const batchImportForm = document.getElementById('batchImportForm');
-        const importFile = document.getElementById('importFile');
-        const importProgress = document.getElementById('importProgress');
-        const importProgressBar = document.getElementById('importProgressBar');
-        const importStatus = document.getElementById('importStatus');
-        const downloadTemplateBtn = document.getElementById('downloadTemplateBtn');
-        const batchImportModal = document.getElementById('batchImportModal');
-        
-        if (!batchImportBtn || !batchImportConfirmBtn) return;
-        
-        // 下载模板按钮 - 设置点击事件触发下载
-        if (downloadTemplateBtn) {
-            const templateUrl = '{% url "delivery_pages:outgoing_document_import_template" %}';
-            downloadTemplateBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                // 直接跳转到模板下载URL
-                if (templateUrl) {
-                    window.location.href = templateUrl;
-                }
-            });
-        }
-        
-        // 重置表单
-        function resetImportForm() {
-            if (batchImportForm) {
-                batchImportForm.reset();
-            }
-            if (importProgress) {
-                importProgress.classList.add('d-none');
-            }
-            if (importProgressBar) {
-                importProgressBar.style.width = '0%';
-                importProgressBar.textContent = '0%';
-            }
-            if (importStatus) {
-                importStatus.textContent = '';
-            }
-        }
-        
-        // 模态框关闭时重置表单
-        if (batchImportModal) {
-            batchImportModal.addEventListener('hidden.bs.modal', function() {
-                resetImportForm();
-            });
-        }
-        
-        // 导入确认按钮点击事件
-        batchImportConfirmBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            if (!importFile || !importFile.files || importFile.files.length === 0) {
-                showError('请选择要导入的文件');
-                return;
-            }
-            
-            const file = importFile.files[0];
-            const fileSize = file.size / 1024 / 1024; // MB
-            
-            if (fileSize > 10) {
-                showError('文件大小不能超过 10MB');
-                return;
-            }
-            
-            const formData = new FormData(batchImportForm);
-            const mode = document.getElementById('importMode')?.value || 'create';
-            formData.append('mode', mode);
-            
-            // 显示进度条
-            if (importProgress) {
-                importProgress.classList.remove('d-none');
-            }
-            if (importProgressBar) {
-                importProgressBar.style.width = '10%';
-                importProgressBar.textContent = '10%';
-            }
-            if (importStatus) {
-                importStatus.textContent = '正在上传文件...';
-            }
-            
-            // 禁用按钮
-            const btn = this;
-            const spinner = document.getElementById('batchImportSpinner');
-            const confirmText = document.getElementById('batchImportConfirmText');
-            const originalHtml = btn.innerHTML;
-            btn.disabled = true;
-            if (spinner) spinner.classList.remove('d-none');
-            if (confirmText) confirmText.textContent = '导入中...';
-            
-            // 发送请求
-            fetch('{% url "delivery_pages:outgoing_document_batch_import" %}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCsrfToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                credentials: 'same-origin',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                // 更新进度条
-                if (importProgressBar) {
-                    importProgressBar.style.width = '100%';
-                    importProgressBar.textContent = '100%';
-                }
-                
-                if (data.success) {
-                    if (importStatus) {
-                        importStatus.textContent = data.message || '导入完成';
-                    }
-                    
-                    // 显示详细结果
-                    let resultMessage = `导入完成：成功 ${data.success_count} 条，失败 ${data.failure_count} 条`;
-                    
-                    if (data.failure_count > 0 && data.results) {
-                        const errors = data.results.filter(r => r.status === 'error').slice(0, 10);
-                        if (errors.length > 0) {
-                            resultMessage += '\n\n失败详情：\n';
-                            errors.forEach(err => {
-                                resultMessage += `第 ${err.row} 行：${err.message}\n`;
-                            });
-                            if (data.failure_count > 10) {
-                                resultMessage += `\n... 还有 ${data.failure_count - 10} 条失败记录`;
-                            }
-                        }
-                    }
-                    
-                    if (data.success_count > 0) {
-                        showSuccess(resultMessage);
-                        // 延迟刷新页面
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    } else {
-                        showError(resultMessage);
-                    }
-                } else {
-                    if (importStatus) {
-                        importStatus.textContent = data.error || '导入失败';
-                    }
-                    showError(data.error || '导入失败');
-                }
-            })
-            .catch(error => {
-                // 错误已通过 showError 显示给用户，无需控制台输出
-                if (importStatus) {
-                    importStatus.textContent = '导入失败：' + error.message;
-                }
-                showError('导入失败：' + error.message);
-            })
-            .finally(() => {
-                // 恢复按钮
-                btn.disabled = false;
-                if (spinner) spinner.classList.add('d-none');
-                if (confirmText) confirmText.textContent = '开始导入';
-            });
-        });
-    });
-})();
+            {% if documents.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ documents.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ documents.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}">末页</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
 {% endblock %}

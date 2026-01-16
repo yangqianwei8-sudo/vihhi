@@ -236,7 +236,7 @@
                         
                         // 如果存在已存在的客户，显示链接
                         if (data.existing_client) {
-                            const clientUrl = `/business/customers/${data.existing_client.id}/`;
+                            const clientUrl = `/customers/customers/${data.existing_client.id}/`;
                             message += ` <a href="${clientUrl}" target="_blank" class="text-decoration-underline">查看详情</a>`;
                         }
                         el.innerHTML = message;

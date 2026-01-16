@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('production_management', '0001_initial'),  # 改为依赖 production_management
+        ('production_management', '0001_initial'),
         ('resource_standard', '0002_opiniontemplate_reporttemplate_reporttemplateversion_and_more'),
     ]
 

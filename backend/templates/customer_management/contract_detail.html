@@ -1,14 +1,13 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "customer_management/_base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
-
-
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item"><a href="{% url 'contract_pages:contract_management_list' %}">合同管理</a></li>
+    <li class="breadcrumb-item active" aria-current="page">合同详情</li>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .contract-detail-nav {
         background: #fff;
@@ -197,10 +196,10 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
-<!-- DEBUG_MARKER_START_合同详情模板已加载 -->
+{% block content %}
+
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="center-hero mb-4">
         <div style="position: relative; z-index: 1;">
             <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
@@ -208,9 +207,8 @@
         </div>
     </div>
 
-    <!-- 操作按钮 -->
     <div class="text-end mb-4">
-        <!-- 状态流转按钮 -->
+        
         <div class="btn-group me-2" role="group">
             <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                 状态流转
@@ -232,7 +230,7 @@
             </ul>
         </div>
         {% if can_edit %}
-        <a href="{% url 'business_pages:contract_edit' contract.id %}" class="btn btn-primary me-2">编辑合同</a>
+        <a href="{% url 'contract_pages:contract_edit' contract.id %}" class="btn btn-primary me-2">编辑合同</a>
         {% endif %}
         {% if can_manage %}
         {% if contract.status in 'pending_review,reviewing' %}
@@ -241,24 +239,23 @@
         </button>
         {% endif %}
         <a href="{% url 'admin:customer_management_businesspaymentplan_add' %}?contract={{ contract.id }}" class="btn btn-outline-primary me-2" target="_blank">添加回款计划</a>
-        <a href="{% url 'business_pages:contract_file_upload' contract.id %}" class="btn btn-outline-primary me-2">上传文件</a>
-        <a href="{% url 'business_pages:contract_change_create' contract.id %}" class="btn btn-outline-warning me-2">创建变更</a>
+        <a href="{% url 'contract_pages:contract_file_upload' contract.id %}" class="btn btn-outline-primary me-2">上传文件</a>
+        <a href="{% url 'contract_pages:contract_change_create' contract.id %}" class="btn btn-outline-warning me-2">创建变更</a>
         {% if approval_instance %}
         <a href="{% url 'workflow_engine:approval_detail' approval_instance.id %}" class="btn btn-info me-2">查看审批详情</a>
         {% elif can_submit_approval %}
-        <a href="{% url 'business_pages:contract_submit_approval' contract.id %}" class="btn btn-info me-2">提交审批</a>
+        <a href="{% url 'contract_pages:contract_submit_approval' contract.id %}" class="btn btn-info me-2">提交审批</a>
         {% endif %}
         {% if contract.status == 'draft' %}
-        <form method="post" action="{% url 'business_pages:contract_delete' contract.id %}" style="display: inline;" onsubmit="return confirm('确定要删除合同 {{ contract.contract_number }} 吗？此操作不可恢复！');">
+        <form method="post" action="{% url 'contract_pages:contract_delete' contract.id %}" style="display: inline;" onsubmit="return confirm('确定要删除合同 {{ contract.contract_number }} 吗？此操作不可恢复！');">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-danger me-2">删除合同</button>
         </form>
         {% endif %}
         {% endif %}
-        <a href="{% url 'business_pages:contract_management_list' %}" class="btn btn-outline-secondary">返回列表</a>
+        <a href="{% url 'contract_pages:contract_management_list' %}" class="btn btn-outline-secondary">返回列表</a>
     </div>
     
-    <!-- 审批状态 -->
     {% if approval_instance %}
     <div class="info-card {% if approval_instance.status == 'approved' %}info-card-success{% elif approval_instance.status == 'rejected' %}info-card-danger{% elif approval_instance.status == 'pending' %}info-card-warning{% else %}info-card-info{% endif %}" style="margin-bottom: 24px;">
         <div class="info-card-header">
@@ -345,11 +342,10 @@
     </div>
     {% endif %}
     
-    <!-- 状态流转模态框 -->
     <div class="modal fade" id="statusTransitionModal" tabindex="-1" aria-labelledby="statusTransitionModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="post" action="{% url 'business_pages:contract_status_transition' contract.id %}">
+                <form method="post" action="{% url 'contract_pages:contract_status_transition' contract.id %}">
                     {% csrf_token %}
                     <input type="hidden" name="target_status" id="target_status_input">
                     <div class="modal-header">
@@ -404,7 +400,6 @@
         }
     });
 
-
     // 事件处理器: handle_onclick_1
     document.addEventListener('DOMContentLoaded', function() {
         const element = document.querySelector('.btn');
@@ -417,11 +412,10 @@
 
 </script>
 
-    <!-- 签章操作模态框 -->
     <div class="modal fade" id="signModal" tabindex="-1" aria-labelledby="signModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="post" action="{% url 'business_pages:contract_status_transition' contract.id %}">
+                <form method="post" action="{% url 'contract_pages:contract_status_transition' contract.id %}">
                     {% csrf_token %}
                     <input type="hidden" name="target_status" id="sign_target_status_input">
                     <div class="modal-header">
@@ -455,7 +449,6 @@
         </div>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <h5>📋 基本信息</h5>
         <div class="info-grid">
@@ -486,7 +479,7 @@
             {% if contract.parent_contract %}
             <div class="info-item">
                 <span class="info-label">主合同</span>
-                <span class="info-value"><a href="{% url 'business_pages:contract_detail' contract.parent_contract.id %}">{{ contract.parent_contract.contract_number }}</a></span>
+                <span class="info-value"><a href="{% url 'contract_pages:contract_detail' contract.parent_contract.id %}">{{ contract.parent_contract.contract_number }}</a></span>
             </div>
             {% endif %}
         </div>
@@ -498,15 +491,13 @@
         {% endif %}
     </div>
 
-    <!-- 商机信息 -->
-    <!-- TEST_MARKER_商机信息卡片_2025 -->
     <div class="info-card" style="border: 2px solid #059669; background-color: #f0fdf4;">
         <h5>🎯 商机信息</h5>
         {% if contract.opportunity %}
         <div class="info-grid">
             <div class="info-item">
                 <span class="info-label">关联商机</span>
-                <span class="info-value"><a href="{% url 'business_pages:opportunity_detail' contract.opportunity.id %}">{{ contract.opportunity.opportunity_number|default:contract.opportunity.name }}</a> - {{ contract.opportunity.name }}</span>
+                <span class="info-value"><a href="{% url 'opportunity_pages:opportunity_detail' contract.opportunity.id %}">{{ contract.opportunity.opportunity_number|default:contract.opportunity.name }}</a> - {{ contract.opportunity.name }}</span>
             </div>
             <div class="info-item">
                 <span class="info-label">商机编号</span>
@@ -592,7 +583,7 @@
         </div>
         {% endif %}
         <div class="mt-3">
-            <a href="{% url 'business_pages:opportunity_detail' contract.opportunity.id %}" class="btn btn-sm btn-outline-primary">
+            <a href="{% url 'opportunity_pages:opportunity_detail' contract.opportunity.id %}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-eye"></i> 查看商机详情
             </a>
         </div>
@@ -603,7 +594,6 @@
         {% endif %}
     </div>
 
-    <!-- 金额信息 -->
     {% if contract.contract_amount %}
     <div class="info-card">
         <h5>💰 金额信息</h5>
@@ -640,7 +630,6 @@
     </div>
     {% endif %}
 
-    <!-- 时间信息 -->
     <div class="info-card">
         <h5>📅 时间信息</h5>
         <div class="info-grid">
@@ -669,7 +658,6 @@
         </div>
     </div>
 
-    <!-- 签约主体 -->
     <div class="info-card">
         <h5>👥 签约主体</h5>
         {% if contract.parties.exists %}
@@ -739,7 +727,7 @@
             </div>
             {% endfor %}
         {% else %}
-            <!-- 兼容旧数据：显示原有字段 -->
+            
             <div class="info-grid">
                 <div class="info-item">
                     <span class="info-label">甲方名称</span>
@@ -761,7 +749,6 @@
         {% endif %}
     </div>
 
-    <!-- 回款计划 -->
     <div class="info-card">
         <h5>💳 回款计划 ({{ payment_plans.count }})</h5>
         {% if payment_plans %}
@@ -809,8 +796,6 @@
         {% endif %}
     </div>
 
-    
-    <!-- 回款记录 -->
     <div class="info-card">
         <h5>💰 回款记录 ({{ payment_records|length }})</h5>
         {% if payment_plans %}
@@ -859,7 +844,6 @@
         {% endif %}
     </div>
 
-<!-- 合同文件 -->
     <div class="info-card">
         <h5>📎 合同文件 ({{ files.count }})</h5>
         {% if files %}
@@ -873,9 +857,9 @@
                 {% endif %}
             </div>
             <div>
-                <a href="{% url 'business_pages:contract_file_download' file.id %}" class="btn btn-sm btn-primary">下载</a>
+                <a href="{% url 'contract_pages:contract_file_download' file.id %}" class="btn btn-sm btn-primary">下载</a>
                 {% if can_manage %}
-                <form method="post" action="{% url 'business_pages:contract_file_delete' file.id %}" style="display: inline;" onsubmit="return confirm('确定要删除文件 {{ file.file_name }} 吗？');">
+                <form method="post" action="{% url 'contract_pages:contract_file_delete' file.id %}" style="display: inline;" onsubmit="return confirm('确定要删除文件 {{ file.file_name }} 吗？');">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-danger">删除</button>
                 </form>
@@ -886,12 +870,11 @@
         {% else %}
         <div class="empty-state">
             <p>暂无合同文件</p>
-            <a href="{% url 'business_pages:contract_file_upload' contract.id %}" class="btn btn-primary">上传文件</a>
+            <a href="{% url 'contract_pages:contract_file_upload' contract.id %}" class="btn btn-primary">上传文件</a>
         </div>
         {% endif %}
     </div>
 
-    <!-- 审核记录 -->
     {% if approvals %}
     <div class="info-card">
         <h5>✅ 审核记录 ({{ approvals.count }})</h5>
@@ -912,7 +895,6 @@
     </div>
     {% endif %}
 
-    <!-- 变更记录 -->
     {% if changes %}
     <div class="info-card">
         <h5>📝 变更记录 ({{ changes.count }})</h5>
@@ -934,7 +916,6 @@
     </div>
     {% endif %}
 
-    <!-- 状态流转历史 -->
     {% if status_logs %}
     <div class="info-card">
         <h5>🔄 状态流转历史 ({{ status_logs|length }})</h5>
@@ -955,14 +936,13 @@
     </div>
     {% endif %}
 
-    <!-- 子合同 -->
     {% if sub_contracts %}
     <div class="info-card">
         <h5>📄 子合同/补充协议 ({{ sub_contracts.count }})</h5>
         {% for sub in sub_contracts %}
         <div class="payment-plan-item">
             <div>
-                <strong><a href="{% url 'business_pages:contract_detail' sub.id %}">{{ sub.contract_number }}</a></strong>
+                <strong><a href="{% url 'contract_pages:contract_detail' sub.id %}">{{ sub.contract_number }}</a></strong>
                 <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">{{ sub.contract_name|default:sub.contract_number }} | {{ sub.get_contract_type_display }} | <span class="status-badge {{ sub.status }}">{{ sub.get_status_display }}</span></p>
             </div>
         </div>
@@ -970,7 +950,6 @@
     </div>
     {% endif %}
 
-    <!-- 其他信息 -->
     {% if contract.notes %}
     <div class="info-card">
         <h5>📝 备注信息</h5>
@@ -978,7 +957,6 @@
     </div>
     {% endif %}
 
-    <!-- 审计信息 -->
     <div class="info-card">
         <h5>🔍 审计信息</h5>
         <div class="info-grid">
@@ -998,4 +976,3 @@
     </div>
 </div>
 {% endblock %}
-

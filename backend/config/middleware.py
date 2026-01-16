@@ -1,9 +1,11 @@
 """
 自动登录中间件 - 绕过登录页面，直接进入dashboard
-动态主机名验证中间件 - 支持 *.sealosbja.site 通配符
+Host 守卫中间件 - 严格限制访问来源
 """
 from django.contrib.auth import get_user_model, login
+from django.http import HttpResponseForbidden
 from django.utils.deprecation import MiddlewareMixin
+import os
 
 
 class AutoLoginMiddleware(MiddlewareMixin):
@@ -35,45 +37,40 @@ class AutoLoginMiddleware(MiddlewareMixin):
         return None
 
 
-class AllowedHostsMiddleware(MiddlewareMixin):
+class HostGuardMiddleware(MiddlewareMixin):
     """
-    动态主机名验证中间件
-    支持 *.sealosbja.site 通配符模式
-    允许所有以 .sealosbja.site 结尾的子域名
+    Host 守卫中间件
+    严格验证请求的 Host 头，只允许指定的公网域名访问
+    防止通过 Service IP、Pod IP、内部域名等方式绕过访问控制
+    """
     
-    这个中间件必须在 CommonMiddleware 之前运行
-    """
+    # 健康检查路径（允许任何 Host，用于 K8s 健康检查）
+    HEALTH_CHECK_PATHS = ['/__health', '/health', '/healthz', '/ready', '/readiness']
     
     def process_request(self, request):
-        try:
-            # 从 HTTP_HOST 头获取主机名（不触发 Django 的验证）
-            host_header = request.META.get('HTTP_HOST', '')
-            if not host_header:
-                return None
-            
-            host = host_header.split(':')[0]  # 移除端口号
-            
-            # 检查是否以 .sealosbja.site 结尾（支持通配符）
-            if host.endswith('.sealosbja.site'):
-                from django.conf import settings
-                
-                # 动态添加到 ALLOWED_HOSTS（如果还没有的话）
-                if host not in settings.ALLOWED_HOSTS:
-                    settings.ALLOWED_HOSTS.append(host)
-                
-                # 同时添加到 CSRF_TRUSTED_ORIGINS（支持 HTTP 和 HTTPS）
-                scheme = 'https' if request.is_secure() else 'http'
-                http_origin = f'http://{host}'
-                https_origin = f'https://{host}'
-                
-                if http_origin not in settings.CSRF_TRUSTED_ORIGINS:
-                    settings.CSRF_TRUSTED_ORIGINS.append(http_origin)
-                if https_origin not in settings.CSRF_TRUSTED_ORIGINS:
-                    settings.CSRF_TRUSTED_ORIGINS.append(https_origin)
-                
-                return None
-        except Exception:
-            # 如果获取主机名失败，让 Django 的默认验证处理
-            pass
+        # 健康检查路径允许任何 Host（K8s 健康检查可能使用内部 IP）
+        if any(request.path.startswith(path) for path in self.HEALTH_CHECK_PATHS):
+            return None
+        
+        # 从 Django settings 获取允许的 Host 列表（与 ALLOWED_HOSTS 保持一致）
+        from django.conf import settings
+        allowed_hosts = getattr(settings, 'ALLOWED_HOSTS', [])
+        
+        # 获取请求的 Host（不包含端口）
+        request_host = request.get_host().split(':')[0]
+        
+        # 严格匹配：Host 必须完全等于允许的域名之一
+        if request_host not in allowed_hosts:
+            # 记录拒绝的请求（用于安全审计）
+            import logging
+            logger = logging.getLogger('backend.config.middleware')
+            logger.warning(
+                f"HostGuardMiddleware: 拒绝访问 - Host: {request_host}, "
+                f"Path: {request.path}, "
+                f"RemoteAddr: {request.META.get('REMOTE_ADDR', 'unknown')}"
+            )
+            return HttpResponseForbidden(
+                "Forbidden: 访问被拒绝。只允许通过指定的公网域名访问。"
+            )
         
         return None

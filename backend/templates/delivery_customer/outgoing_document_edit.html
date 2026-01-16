@@ -1,11 +1,16 @@
-{% extends "shared/module_base.html" %}
+{% extends "delivery_customer/base.html" %}
 {% load static %}
 
 {% block title %}编辑发文 - 维海科技信息化管理平台{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:report_delivery' %}">收发管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:outgoing_document_list' %}">发文列表</a></li>
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:outgoing_document_detail' document.id %}">{{ document.document_number }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-lg-10 col-xl-8 mx-auto">
@@ -77,10 +82,6 @@
                                         {% endfor %}
                                     </select>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">联系邮箱</label>
-                                    <input type="email" name="recipient_email" class="form-control" id="recipient_email" value="{{ document.recipient_email|default:'' }}">
-                                </div>
                             </div>
                             
                             <div class="mb-3">
@@ -95,32 +96,30 @@
                             </div>
                         </div>
 
-                                                <div class="mb-4">
-                            <h5 class="mb-3">关联信息</h5>
+                        <div class="mb-4">
+                            <h5 class="mb-3">收文单位信息</h5>
                             
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">关联客户</label>
-                                    <select name="client" class="form-select" id="client_select" onchange="loadClientContacts()">
-                                        <option value="">请选择客户</option>
-                                        {% for client in clients %}
-                                        <option value="{{ client.id }}" {% if document.client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <small class="form-text text-muted">选择客户后，可自动填充收文地址</small>
+                                    <label class="form-label">收文单位 <span class="text-danger">*</span></label>
+                                    <input type="text" name="recipient" class="form-control" value="{{ document.recipient }}" required>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">签约主体代表</label>
-                                    <select name="client_contact" class="form-select" id="client_contact_select" onchange="fillContactInfo()">
-                                        <option value="">请先选择客户</option>
-                                        {% if document.client_id %}
-                                        {% for contact in document.client.clientcontact_set.all %}
-                                        <option value="{{ contact.id }}" data-phone="{{ contact.phone|default:'' }}" data-email="{{ contact.email|default:'' }}" {% if document.client_contact_id == contact.id %}selected{% endif %}>{{ contact.name }}</option>
-                                        {% endfor %}
-                                        {% endif %}
-                                    </select>
-                                    <small class="form-text text-muted">从客户联系人中选择，可自动填充联系人信息</small>
+                                    <label class="form-label">联系人</label>
+                                    <input type="text" name="recipient_contact" class="form-control" value="{{ document.recipient_contact|default:'' }}">
                                 </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">联系电话</label>
+                                    <input type="text" name="recipient_phone" class="form-control" value="{{ document.recipient_phone|default:'' }}">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">收文地址</label>
+                                <textarea name="recipient_address" class="form-control" rows="2">{{ document.recipient_address|default:'' }}</textarea>
                             </div>
                         </div>
 
@@ -160,37 +159,6 @@
                                         </label>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <h5 class="mb-3">收文单位信息</h5>
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">收文单位 <span class="text-danger">*</span></label>
-                                    <input type="text" name="recipient" class="form-control" value="{{ document.recipient }}" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">联系人</label>
-                                    <input type="text" name="recipient_contact" id="recipient_contact" class="form-control" value="{{ document.recipient_contact|default:'' }}">
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">联系电话</label>
-                                    <input type="text" name="recipient_phone" id="recipient_phone" id="recipient_phone" class="form-control" value="{{ document.recipient_phone|default:'' }}">
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">联系邮箱</label>
-                                    <input type="email" name="recipient_email" class="form-control" id="recipient_email" value="{{ document.recipient_email|default:'' }}">
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">收文地址</label>
-                                <textarea name="recipient_address" id="recipient_address" class="form-control" rows="2">{{ document.recipient_address|default:'' }}</textarea>
                             </div>
                         </div>
 
@@ -261,73 +229,10 @@ function updateProjectName() {
     }
 }
 
-// 加载客户联系人列表
-function loadClientContacts() {
-    const clientSelect = document.getElementById('client_select');
-    const contactSelect = document.getElementById('client_contact_select');
-    const clientId = clientSelect.value;
-    
-    // 清空联系人选择框（保留第一个选项）
-    contactSelect.innerHTML = '<option value="">请选择联系人</option>';
-    
-    if (!clientId) {
-        return;
-    }
-    
-    // 加载客户地址
-    fetch(`/api/customer/clients/info/?client_id=${clientId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.data && data.data.office_address) {
-                document.getElementById('recipient_address').value = data.data.office_address;
-            }
-        })
-        .catch(error => console.error('加载客户地址失败:', error));
-    
-    // 加载联系人列表
-    fetch(`/api/customer/authorization-letters/contacts/?client_id=${clientId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.contacts) {
-                data.contacts.forEach(contact => {
-                    const option = document.createElement('option');
-                    option.value = contact.id;
-                    option.textContent = contact.name;
-                    option.setAttribute('data-phone', contact.phone || '');
-                    option.setAttribute('data-email', contact.email || '');
-                    contactSelect.appendChild(option);
-                });
-            }
-        })
-        .catch(error => console.error('加载联系人列表失败:', error));
-}
-
-// 填充联系人信息
-function fillContactInfo() {
-    const contactSelect = document.getElementById('client_contact_select');
-    const selectedOption = contactSelect.options[contactSelect.selectedIndex];
-    
-    if (selectedOption && selectedOption.value) {
-        const phone = selectedOption.getAttribute('data-phone') || '';
-        const email = selectedOption.getAttribute('data-email') || '';
-        
-        document.getElementById('recipient_contact').value = selectedOption.textContent;
-        document.getElementById('recipient_phone').value = phone;
-        if (document.getElementById('recipient_email')) {
-            document.getElementById('recipient_email').value = email;
-        }
-    }
-}
-
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', function() {
     updateCategoryOptions();
     updateProjectName();
-    // 如果已经选择了客户，加载联系人列表
-    const clientSelect = document.getElementById('client_select');
-    if (clientSelect && clientSelect.value) {
-        loadClientContacts();
-    }
-});</script>
+});
+</script>
 {% endblock %}
-

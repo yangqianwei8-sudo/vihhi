@@ -1,13 +1,17 @@
-{% extends "shared/module_base.html" %}
+{% extends "delivery_customer/base.html" %}
 {% load static %}
 
 {% block title %}发送邮件 - 维海科技信息化管理平台{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:report_delivery' %}">收发管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:delivery_email_list' %}">邮件发送</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ delivery.delivery_number }}</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid">
-    <!-- 页面标题和操作按钮 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">📧 发送邮件</h2>
@@ -23,7 +27,6 @@
         </div>
     </div>
 
-    <!-- 交付记录基本信息 -->
     <div class="info-card info-card-fade-in mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">交付记录信息</h5>
@@ -68,11 +71,9 @@
         </div>
     </div>
 
-    <!-- 邮件发送表单 -->
     <form method="post" id="emailSendForm">
         {% csrf_token %}
         
-        <!-- 收件人信息 -->
         <div class="info-card mb-4">
             <div class="info-card-header">
                 <h5 class="info-card-title">收件人信息</h5>
@@ -95,7 +96,6 @@
             </div>
         </div>
 
-        <!-- 邮件内容 -->
         <div class="info-card mb-4">
             <div class="info-card-header">
                 <h5 class="info-card-title">邮件内容</h5>
@@ -130,7 +130,6 @@
             </div>
         </div>
 
-        <!-- 邮件附件 -->
         {% if delivery.files.exists %}
         <div class="info-card mb-4">
             <div class="info-card-header">
@@ -156,7 +155,6 @@
         </div>
         {% endif %}
 
-        <!-- 发送按钮 -->
         {% if can_send %}
         <div class="d-flex justify-content-end gap-2 mb-4">
             <a href="{% url 'delivery_pages:delivery_email_list' %}" class="btn btn-outline-secondary">取消</a>
@@ -172,7 +170,6 @@
         {% endif %}
     </form>
 
-    <!-- 发送历史（如果有） -->
     {% if delivery.sent_at %}
     <div class="info-card mb-4">
         <div class="info-card-header">
@@ -212,4 +209,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

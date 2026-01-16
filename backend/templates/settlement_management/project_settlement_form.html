@@ -1,27 +1,32 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "settlement_center/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'settlement_pages:project_settlement_list' %}">项目结算管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'settlement_pages:project_settlement_list' %}">项目结算管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'settlement_pages:project_settlement_detail' settlement.id %}">{{ settlement.settlement_number }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endif %}
 {% endblock %}
 
-{% block module_content %}
+{% block extra_css %}
+{% endblock %}
+
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="center-hero">
         <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
         <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
     </div>
 
-    <!-- 表单 -->
     <form method="post" enctype="multipart/form-data" id="settlementForm">
         {% csrf_token %}
         
-        <!-- 基本信息 -->
         <div class="form-card">
             <h5>基本信息</h5>
             <div class="row g-3">
@@ -74,7 +79,6 @@
             </div>
         </div>
 
-        <!-- 参考信息 -->
         <div class="form-card">
             <h5>参考信息</h5>
             <div class="info-box">
@@ -100,7 +104,6 @@
             </div>
         </div>
 
-        <!-- 产值信息 -->
         <div class="form-card">
             <h5>产值信息</h5>
             <div class="info-box">
@@ -131,7 +134,6 @@
             </div>
         </div>
 
-        <!-- 附件和备注 -->
         <div class="form-card">
             <h5>附件和备注</h5>
             <div class="row g-3">
@@ -166,7 +168,6 @@
             </div>
         </div>
 
-        <!-- 操作按钮 -->
         <div class="d-flex justify-content-between align-items-center">
             <a href="{% url 'settlement_pages:project_settlement_list' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> 返回列表
@@ -282,4 +283,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

@@ -7,14 +7,7 @@ from typing import List, Dict, Optional
 
 from backend.apps.system_management.models import User
 from backend.apps.production_management.models import Project
-# 已移除delivery_customer应用
-try:
-    from backend.apps.delivery_customer.models import DeliveryRecord
-    DELIVERY_RECORD_AVAILABLE = True
-except ImportError:
-    DeliveryRecord = None
-    DELIVERY_RECORD_AVAILABLE = False
-
+from backend.apps.delivery_customer.models import DeliveryRecord
 from backend.apps.archive_management.models import (
     ArchiveProjectArchive,
     ProjectArchiveDocument,
@@ -37,13 +30,10 @@ class ArchivePushService:
     """交付推送服务"""
     
     @staticmethod
-    def push_delivery_to_archive(delivery_record, user: User) -> ArchivePushRecord:
+    def push_delivery_to_archive(delivery_record: DeliveryRecord, user: User) -> ArchivePushRecord:
         """
-        手动推送交付记录到档案管理模块（已移除delivery_customer应用，此方法已失效）
+        手动推送交付记录到档案管理模块
         """
-        if not DELIVERY_RECORD_AVAILABLE or not delivery_record:
-            raise ValueError("交付记录功能已移除")
-        
         # 检查是否已经推送过
         existing_push = ArchivePushRecord.objects.filter(
             delivery_record=delivery_record,

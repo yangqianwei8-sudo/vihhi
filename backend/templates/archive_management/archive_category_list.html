@@ -1,23 +1,21 @@
-{% extends "shared/module_base.html" %}
+{% extends "archive_management/base.html" %}
 {% load static %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-{% endblock %}
 
 {% block title %}档案分类 - 档案管理{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">档案分类</li>
+{% endblock %}
 
-
-{% block module_content %}
-<div class="list-page-container">
-    <!-- 页面标题和操作按钮 -->
-    <div class="list-page-header">
+{% block content %}
+<div class="container-fluid">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="list-page-title">🗂️ 档案分类</h2>
+            <h2 class="mb-1">🗂️ 档案分类</h2>
             <p class="text-muted mb-0">管理档案分类体系，支持项目档案分类和行政档案分类</p>
         </div>
-        <div class="list-page-actions">
+        <div>
             <a href="{% url 'archive_management:archive_category_create' %}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> 新建分类
             </a>
@@ -27,14 +25,15 @@
         </div>
     </div>
 
-    <!-- 筛选和列表 -->
-    <div class="list-page-filters">
-        <div class="list-page-filters-header">
-            <h5 class="list-page-filters-title">筛选条件</h5>
-            
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">档案分类列表</h5>
+            <div class="info-card-actions">
+                <span class="badge bg-secondary">共 {{ categories|length }} 条</span>
+            </div>
         </div>
-        <div class="list-page-filter-row">
-            <!-- 筛选器 -->
+        <div class="info-card-body">
+            
             <form method="get" class="row g-3 mb-3">
                 <div class="col-md-3">
                     <label class="form-label">分类类型</label>
@@ -57,7 +56,6 @@
                 </div>
             </form>
 
-            <!-- 分类列表 -->
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
@@ -127,4 +125,3 @@
     </div>
 </div>
 {% endblock %}
-

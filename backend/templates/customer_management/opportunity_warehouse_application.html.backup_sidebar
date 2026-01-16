@@ -1,0 +1,85 @@
+{% extends "customer_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:opportunity_management' %}">商机管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">入库申请</li>
+{% endblock %}
+
+{% block content %}
+<div class="workspace-content">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-box-seam me-2"></i>入库申请
+        </h2>
+    </div>
+    
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">功能说明</h5>
+        </div>
+        <div class="info-card-body">
+            <p class="text-muted">
+                入库申请功能用于提交入库申请，填写相关信息后提交申请，等待审批处理。
+            </p>
+        </div>
+    </div>
+    
+    <form method="post" enctype="multipart/form-data" id="warehouseApplicationForm">
+        {% csrf_token %}
+        
+        <div class="info-card info-card-fade-in">
+            <div class="info-card-header">
+                <h5 class="info-card-title">基本信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <label class="info-label info-label-required">关联商机</label>
+                        <select name="opportunity_id" class="form-select" required>
+                            <option value="">请选择商机</option>
+                            {% for opp in opportunities %}
+                            <option value="{{ opp.id }}">{{ opp.name }} - {{ opp.client.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">申请日期</label>
+                        <input type="date" name="application_date" class="form-control" value="{% now 'Y-m-d' %}">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-card info-card-fade-in">
+            <div class="info-card-header">
+                <h5 class="info-card-title">申请信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <label class="info-label">申请说明</label>
+                        <textarea name="description" class="form-control" rows="4" placeholder="请输入申请说明"></textarea>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">附件</label>
+                        <input type="file" name="attachments" class="form-control" multiple>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <a href="{% url 'business_pages:opportunity_management' %}" class="btn btn-outline-secondary">取消</a>
+            <button type="submit" class="btn btn-primary">提交申请</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+<div class="list-page-filters card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label small">搜索</label>
+                <input type="text" name="search" class="form-control form-control-sm" 
+                       value="{{ search }}" placeholder="投标编号、商机名称、客户">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">关联商机</label>
+                <select name="opportunity_id" class="form-select form-select-sm">
+                    <option value="">全部商机</option>
+                    {% for opp in opportunities %}
+                    <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>
+                        {{ opp.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">状态</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">全部状态</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small">&nbsp;</label>
+                <button type="submit" class="btn btn-primary btn-sm w-100">筛选</button>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small">&nbsp;</label>
+                <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}" class="btn btn-outline-secondary btn-sm w-100">重置</a>
+            </div>
+        </form>
+    </div>
+</div>

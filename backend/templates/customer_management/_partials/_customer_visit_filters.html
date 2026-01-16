@@ -1,0 +1,33 @@
+<div class="list-filters">
+  <form method="get" class="list-filters-form" id="filterForm">
+    <div class="list-filter-group">
+      <label class="list-filter-label">搜索</label>
+      <input type="text" name="search" class="list-filter-input" 
+             value="{{ search }}" placeholder="客户名称、拜访内容">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">客户</label>
+      <select name="client" class="list-filter-input" id="clientSelect">
+        <option value="">全部客户</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}" {% if client_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="client" id="filter_client" value="{{ client_id }}">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">拜访类型</label>
+      <select name="visit_type" class="list-filter-input" id="visitTypeSelect">
+        <option value="">全部类型</option>
+        {% for value, label in visit_type_choices %}
+        <option value="{{ value }}" {% if visit_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="visit_type" id="filter_visit_type" value="{{ visit_type }}">
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'business_pages:customer_visit' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>

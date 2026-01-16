@@ -1,12 +1,13 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "personnel_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:training_management' %}">培训管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ training.training_number }}</li>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .info-card {
         background: #fff;
@@ -51,7 +52,7 @@
 
 {% block personnel_content %}
 <div class="container-fluid py-4">
-    <!-- 操作按钮 -->
+    
     <div class="text-end mb-4">
         <a href="{% url 'personnel_pages:training_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
@@ -61,7 +62,6 @@
         </a>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <h5>基本信息</h5>
         <div class="info-row">
@@ -110,7 +110,6 @@
         </div>
     </div>
 
-    <!-- 培训描述 -->
     {% if training.description %}
     <div class="info-card">
         <h5>培训描述</h5>
@@ -118,7 +117,6 @@
     </div>
     {% endif %}
 
-    <!-- 参与人员 -->
     {% if training.participants.all %}
     <div class="info-card">
         <h5>参与人员 ({{ training.participants.count }} 人)</h5>
@@ -167,7 +165,6 @@
     </div>
     {% endif %}
 
-    <!-- 其他信息 -->
     <div class="info-card">
         <h5>其他信息</h5>
         <div class="info-row">
@@ -183,4 +180,3 @@
     </div>
 </div>
 {% endblock %}
-

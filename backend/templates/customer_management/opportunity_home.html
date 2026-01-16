@@ -1,0 +1,687 @@
+{% extends "customer_management/_base.html" %}
+{% load static %}
+
+{% block pm_title %}商机管理{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">数据展示中心 - 集中展示商机、报价、投标等关键指标和动态</span>{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.css" rel="stylesheet">
+<style>
+  .pm-home-wrap { 
+    padding: 0;
+  }
+
+  /* 第一行：顶部操作栏 */
+  .pm-top-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+  }
+
+  .pm-top-action-btn {
+    padding: 8px 16px;
+    background: #333333;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .pm-top-action-btn:hover {
+    background: #1A1A1A;
+    color: #FFFFFF;
+    text-decoration: none;
+  }
+
+  /* 第二行：核心指标卡片 */
+  .pm-core-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 1200px) {
+    .pm-core-cards {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .pm-core-cards {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .pm-core-card {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+
+  .pm-core-card:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .pm-core-card-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #F5F5F5;
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+
+  .pm-core-card-label {
+    font-size: 14px;
+    color: #666666;
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+
+  .pm-core-card-value {
+    font-size: 32px;
+    font-weight: 600;
+    color: #1A1A1A;
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+
+  .pm-core-card-subvalue {
+    font-size: 12px;
+    color: #666666;
+    line-height: 1.5;
+  }
+
+  /* 第三行：状态分布统计（左右分栏） */
+  .pm-stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 768px) {
+    .pm-stats-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .pm-stats-card {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .pm-stats-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A1A1A;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #E0E0E0;
+  }
+
+  .pm-chart-container {
+    position: relative;
+    height: 300px;
+  }
+
+  /* 第四行：风险预警与待办（左右分栏） */
+  .pm-warning-card, .pm-todo-card {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .pm-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A1A1A;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #E0E0E0;
+  }
+
+  .pm-warning-list, .pm-todo-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .pm-warning-item, .pm-todo-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    border-left: 3px solid #666666;
+    background: #F5F5F5;
+    border-radius: 4px;
+  }
+
+  .pm-warning-item.overdue {
+    border-left-color: #333333;
+    background: #F5F5F5;
+  }
+
+  .pm-todo-item {
+    border-left-color: #333333;
+    background: #F5F5F5;
+  }
+
+  .pm-item-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1A1A1A;
+    margin-bottom: 4px;
+  }
+
+  .pm-item-meta {
+    font-size: 12px;
+    color: #666666;
+  }
+
+  .pm-item-link {
+    color: #333333;
+    text-decoration: none;
+  }
+
+  .pm-item-link:hover {
+    text-decoration: underline;
+  }
+
+  /* 第五行：快速访问与最近活动（左右分栏） */
+  .pm-my-work-card, .pm-activities-card {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .pm-work-section {
+    margin-bottom: 24px;
+  }
+
+  .pm-work-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .pm-work-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1A1A1A;
+    margin-bottom: 12px;
+  }
+
+  .pm-work-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .pm-work-item {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #F5F5F5;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .pm-work-item-title {
+    font-size: 14px;
+    color: #1A1A1A;
+    flex: 1;
+  }
+
+  .pm-work-item-meta {
+    font-size: 12px;
+    color: #666666;
+    margin-left: 12px;
+  }
+
+  .pm-activity-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .pm-activity-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #E5E5E5;
+  }
+
+  .pm-activity-item:last-child {
+    border-bottom: none;
+  }
+
+  .pm-activity-title {
+    font-size: 14px;
+    color: #1A1A1A;
+    margin-bottom: 4px;
+  }
+
+  .pm-activity-meta {
+    font-size: 12px;
+    color: #666666;
+  }
+
+  .pm-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #999999;
+    font-size: 14px;
+    background: #FAFAFA;
+    border: 1px dashed #E0E0E0;
+    border-radius: 4px;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  {# // 计划状态分布饼图 #}
+  {#   {% if plan_status_dist %} #}
+  {#   const planCtx = document.getElementById('planStatusChart'); #}
+  {#   if (planCtx) { #}
+  {#     const planData = { #}
+  {#       labels: [ #}
+  {#         {% for status_code, status_data in plan_status_dist.items %} #}
+  {#         '{{ status_data.label }}'{% if not forloop.last %},{% endif %} #}
+  {#         {% endfor %} #}
+  {#       ], #}
+  {#       datasets: [{ #}
+  {#         data: [ #}
+  {#           {% for status_code, status_data in plan_status_dist.items %} #}
+  {#           {{ status_data.count }}{% if not forloop.last %},{% endif %} #}
+  {#           {% endfor %} #}
+  {#         ], #}
+  {#         backgroundColor: [ #}
+  {#           '#666666', '#999999', '#CCCCCC', '#333333', '#1A1A1A' #}
+  {#         ] #}
+  {#       }] #}
+  {#     }; #}
+  {#     new Chart(planCtx, { #}
+  {#       type: 'pie', #}
+  {#       data: planData, #}
+  {#       options: { #}
+  {#         responsive: true, #}
+  {#         maintainAspectRatio: false, #}
+  {#         plugins: { #}
+  {#           legend: { #}
+  {#             position: 'bottom' #}
+  {#           }, #}
+  {#           tooltip: { #}
+  {#             callbacks: { #}
+  {#               label: function(context) { #}
+  {#                 const label = context.label || ''; #}
+  {#                 const value = context.parsed || 0; #}
+  {#                 const total = context.dataset.data.reduce((a, b) => a + b, 0); #}
+  {#                 const percentage = ((value / total) * 100).toFixed(1); #}
+  {#                 return label + ': ' + value + ' (' + percentage + '%)'; #}
+  {#               } #}
+  {#             } #}
+  {#           } #}
+  {#         } #}
+  {#       } #}
+  {#     }); #}
+  {#   } #}
+  {#   {% endif %} #}
+
+  {# // 目标状态分布饼图 #}
+  {#   {% if goal_status_dist %} #}
+  {#   const goalCtx = document.getElementById('goalStatusChart'); #}
+  {#   if (goalCtx) { #}
+  {#     const goalData = { #}
+  {#       labels: [ #}
+  {#         {% for status_code, status_data in goal_status_dist.items %} #}
+  {#         '{{ status_data.label }}'{% if not forloop.last %},{% endif %} #}
+  {#         {% endfor %} #}
+  {#       ], #}
+  {#       datasets: [{ #}
+  {#         data: [ #}
+  {#           {% for status_code, status_data in goal_status_dist.items %} #}
+  {#           {{ status_data.count }}{% if not forloop.last %},{% endif %} #}
+  {#           {% endfor %} #}
+  {#         ], #}
+  {#         backgroundColor: [ #}
+  {#           '#666666', '#999999', '#CCCCCC', '#333333', '#1A1A1A' #}
+  {#         ] #}
+  {#       }] #}
+  {#     }; #}
+  {#     new Chart(goalCtx, { #}
+  {#       type: 'pie', #}
+  {#       data: goalData, #}
+  {#       options: { #}
+  {#         responsive: true, #}
+  {#         maintainAspectRatio: false, #}
+  {#         plugins: { #}
+  {#           legend: { #}
+  {#             position: 'bottom' #}
+  {#           }, #}
+  {#           tooltip: { #}
+  {#             callbacks: { #}
+  {#               label: function(context) { #}
+  {#                 const label = context.label || ''; #}
+  {#                 const value = context.parsed || 0; #}
+  {#                 const total = context.dataset.data.reduce((a, b) => a + b, 0); #}
+  {#                 const percentage = ((value / total) * 100).toFixed(1); #}
+  {#                 return label + ': ' + value + ' (' + percentage + '%)'; #}
+  {#               } #}
+  {#             } #}
+  {#           } #}
+  {#         } #}
+  {#       } #}
+  {#     }); #}
+  {#   } #}
+  {#   {% endif %} #}
+});
+</script>
+{% endblock %}
+
+{% block pm_content %}
+<div class="pm-home-wrap">
+  <!-- 第一行：顶部操作栏 -->
+  {% if top_actions %}
+  <div class="pm-top-actions">
+    {% for action in top_actions %}
+    <a href="{{ action.url }}" class="pm-top-action-btn">
+      {{ action.icon }} {{ action.label }}
+    </a>
+    {% endfor %}
+  </div>
+  {#   {% endif %} #}
+  {% endif %}
+  <!-- 第二行：核心指标卡片（6个） -->
+  {% if core_cards %}
+  <div class="pm-core-cards">
+    {% for card in core_cards %}
+    <a href="{{ card.url }}" class="pm-core-card">
+      <div class="pm-core-card-icon">{{ card.icon }}</div>
+      <div class="pm-core-card-label">{{ card.label }}</div>
+      <div class="pm-core-card-value">{{ card.value }}</div>
+      {% if card.subvalue %}
+      <div class="pm-core-card-subvalue">{{ card.subvalue }}</div>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# <!-- 第三行：状态分布统计（左右分栏） --> #}
+  {#   <div class="pm-stats-row"> #}
+  {#     <!-- 左侧：计划状态分布 --> #}
+  {#     <div class="pm-stats-card"> #}
+  {#       <div class="pm-stats-card-title">计划状态分布</div> #}
+  {#       {% if plan_status_dist %} #}
+  {#       <div class="pm-chart-container"> #}
+  {#         <canvas id="planStatusChart"></canvas> #}
+  {#       </div> #}
+  {#       {% else %} #}
+  {#       <div class="pm-empty">暂无数据</div> #}
+  {#       {% endif %} #}
+  {#     </div> #}
+
+  {#     <!-- 右侧：目标状态分布 --> #}
+  {#     <div class="pm-stats-card"> #}
+  {#       <div class="pm-stats-card-title">目标状态分布</div> #}
+  {#       {% if goal_status_dist %} #}
+  {#       <div class="pm-chart-container"> #}
+  {#         <canvas id="goalStatusChart"></canvas> #}
+  {#       </div> #}
+  {#       {% else %} #}
+  {#       <div class="pm-empty">暂无数据</div> #}
+  {#       {% endif %} #}
+  {#     </div> #}
+  {#   </div> #}
+
+  <!-- 第四行：风险预警与待办（左右分栏） -->
+  <div class="pm-stats-row">
+    <!-- 左侧：风险预警 -->
+    <div class="pm-warning-card">
+      <div class="pm-card-title">
+        风险预警
+        {% if overdue_opportunities_count or stale_opportunities_count %}
+        <span style="font-size: 12px; color: #333333; margin-left: 8px;">
+          (逾期 {{ overdue_opportunities_count|default:0 }} | 未更新 {{ stale_opportunities_count|default:0 }})
+        </span>
+        {% endif %}
+      </div>
+      {% if risk_warnings %}
+      <ul class="pm-warning-list">
+        {% for warning in risk_warnings %}
+        <li class="pm-warning-item {{ warning.type }}">
+          <div class="pm-item-title">
+            <a href="{{ warning.url }}" class="pm-item-link">{{ warning.title }}</a>
+          </div>
+          <div class="pm-item-meta">
+            {% if warning.type == 'overdue' %}
+            负责人：{{ warning.responsible }} | 逾期 {{ warning.days }} 天
+            {% elif warning.type == 'stale' %}
+            负责人：{{ warning.responsible }} | {{ warning.days }} 天未更新
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="pm-empty">暂无风险预警</div>
+      {% endif %}
+    </div>
+
+    <!-- 右侧：待办事项 -->
+    <div class="pm-todo-card">
+      <div class="pm-card-title">
+        {% if todo_summary_url %}
+          <a href="{{ todo_summary_url }}" style="color: inherit; text-decoration: none;">待办事项</a>
+        {% else %}
+          待办事项
+        {% endif %}
+        {% if pending_approval_count or upcoming_deadline_count or stale_contracts_count %}
+        <span style="font-size: 12px; color: #333333; margin-left: 8px;">
+          (待审批 {{ pending_approval_count|default:0 }} | 即将到期 {{ upcoming_deadline_count|default:0 }} | 需更新 {{ stale_contracts_count|default:0 }})
+        </span>
+        {% endif %}
+      </div>
+      {% if todo_items %}
+      <ul class="pm-todo-list">
+        {% for item in todo_items %}
+        <li class="pm-todo-item">
+          <div class="pm-item-title">
+            <a href="{{ item.url }}" class="pm-item-link">{{ item.title }}</a>
+            {% if item.plan_number or item.goal_number %}
+            <span style="font-size: 11px; color: #999; margin-left: 8px;">
+              ({% if item.plan_number %}{{ item.plan_number }}{% elif item.goal_number %}{{ item.goal_number }}{% endif %})
+            </span>
+            {% endif %}
+          </div>
+          <div class="pm-item-meta">
+            {% if item.type == 'approval' %}
+            <div style="margin-bottom: 4px;">
+              <strong>{{ item.request_type }}</strong> | 
+              {% if item.plan_type %}{{ item.plan_type }} | {% endif %}
+              申请人：{{ item.requested_by }} | {{ item.time|date:"Y-m-d H:i" }}
+            </div>
+            <div style="font-size: 12px; color: #666;">
+              负责人：{{ item.responsible }}{% if item.department %} | 部门：{{ item.department }}{% endif %}
+              {% if item.related_goal %} | 关联目标：{{ item.related_goal }}{% endif %}
+            </div>
+            {% elif item.type == 'deadline' %}
+            <div style="margin-bottom: 4px;">
+              <strong>{{ item.deadline }} 到期</strong>（剩余 {{ item.days_left }} 天）
+              {% if item.progress is not None %} | 进度：{{ item.progress }}%{% endif %}
+            </div>
+            <div style="font-size: 12px; color: #666;">
+              负责人：{{ item.responsible }}{% if item.department %} | 部门：{{ item.department }}{% endif %}
+              {% if item.plan_type %} | {{ item.plan_type }}{% endif %}
+              {% if item.related_goal %} | 关联目标：{{ item.related_goal }}{% endif %}
+            </div>
+            {% elif item.type == 'goal_update' %}
+            <div style="margin-bottom: 4px;">
+              <strong>{{ item.days }} 天未更新</strong>
+              {% if item.status %} | 状态：{{ item.status }}{% endif %}
+              {% if item.completion_rate is not None %} | 完成率：{{ item.completion_rate }}%{% endif %}
+            </div>
+            <div style="font-size: 12px; color: #666;">
+              负责人：{{ item.responsible }}{% if item.department %} | 部门：{{ item.department }}{% endif %}
+              {% if item.goal_type %} | {{ item.goal_type }}{% endif %}
+            </div>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="pm-empty">暂无待办事项</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 第五行：快速访问与最近活动（左右分栏） -->
+  <div class="pm-stats-row">
+    <!-- 左侧：我的工作 -->
+    <div class="pm-my-work-card">
+      <div class="pm-card-title">
+        {% if my_work.summary_url %}
+          <a href="{{ my_work.summary_url }}" style="color: inherit; text-decoration: none;">我的工作</a>
+        {% else %}
+          我的工作
+        {% endif %}
+      </div>
+      
+      {% if my_work %}
+      <!-- 我负责的商机 -->
+      <div class="pm-work-section">
+        <div class="pm-work-section-title">
+          我负责的商机 ({{ my_work.my_opportunities_count|default:0 }})
+        </div>
+        {% if my_work.my_opportunities %}
+        <ul class="pm-work-list">
+          {% for opportunity in my_work.my_opportunities %}
+          <li class="pm-work-item">
+            <a href="{{ opportunity.url }}" class="pm-work-item-title">{{ opportunity.title }}</a>
+            <span class="pm-work-item-meta">{{ opportunity.status }} | {{ opportunity.status }}%</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="pm-empty" style="padding: 20px;">暂无数据</div>
+        {% endif %}
+      </div>
+
+      <!-- 我负责的合同 -->
+      <div class="pm-work-section">
+        <div class="pm-work-section-title">
+          我负责的合同 ({{ my_work.my_contracts_count|default:0 }})
+        </div>
+        {% if my_work.my_contracts %}
+        <ul class="pm-work-list">
+          {% for contract in my_work.my_contracts %}
+          <li class="pm-work-item">
+            <a href="{{ contract.url }}" class="pm-work-item-title">{{ contract.title }}</a>
+            <span class="pm-work-item-meta">{{ contract.status }} | {{ contract.status }}%</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="pm-empty" style="padding: 20px;">暂无数据</div>
+        {% endif %}
+      </div>
+
+      <!-- 我参与的合同 -->
+      <div class="pm-work-section">
+        <div class="pm-work-section-title">
+          我参与的合同 ({{ my_work.participating_contracts_count|default:0 }})
+        </div>
+        {% if my_work.participating_contracts %}
+        <ul class="pm-work-list">
+          {% for contract in my_work.participating_contracts %}
+          <li class="pm-work-item">
+            <a href="{{ opportunity.url }}" class="pm-work-item-title">{{ opportunity.title }}</a>
+            <span class="pm-work-item-meta">{{ contract.role }} | {{ opportunity.status }}%</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="pm-empty" style="padding: 20px;">暂无数据</div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="pm-empty">暂无数据</div>
+      {% endif %}
+    </div>
+
+    <!-- 右侧：最近活动 -->
+    <div class="pm-activities-card">
+      <div class="pm-card-title">最近活动</div>
+      
+      {% if recent_activities %}
+      <ul class="pm-activity-list">
+        <!-- 最近创建的商机 -->
+        {% for opportunity in recent_activities.recent_opportunities %}
+        <li class="pm-activity-item">
+          <div class="pm-activity-title">
+            <a href="{{ opportunity.url }}" class="pm-item-link">📋 {{ opportunity.title }}</a>
+          </div>
+          <div class="pm-activity-meta">
+            {{ opportunity.creator }} 创建于 {{ opportunity.time|date:"Y-m-d H:i" }}
+          </div>
+        </li>
+        {% endfor %}
+
+        <!-- 最近创建的合同 -->
+        {% for contract in recent_activities.recent_contracts %}
+        <li class="pm-activity-item">
+          <div class="pm-activity-title">
+            <a href="{{ contract.url }}" class="pm-item-link">🎯 {{ contract.title }}</a>
+          </div>
+          <div class="pm-activity-meta">
+            {{ contract.creator }} 更新于 {{ contract.time|date:"Y-m-d H:i" }} | 完成率 {{ contract.status }}%
+          </div>
+        </li>
+        {% endfor %}
+
+        <!-- 最近创建的报价 -->
+        {% for quotation in recent_activities.recent_quotations %}
+        <li class="pm-activity-item">
+          <div class="pm-activity-title">
+            <a href="{{ quotation.url }}" class="pm-item-link">✅ {{ quotation.title }}</a>
+          </div>
+          <div class="pm-activity-meta">
+            {{ quotation.creator }} {{ quotation.status }} | {{ quotation.time|date:"Y-m-d H:i" }}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="pm-empty">暂无活动记录</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

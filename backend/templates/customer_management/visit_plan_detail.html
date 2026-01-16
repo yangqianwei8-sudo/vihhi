@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
@@ -66,12 +66,15 @@
 </style>
 {% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_visit' %}">创建联系人拜访</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ visit_plan.plan_title }}</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="workspace-content">
     <div class="container-fluid py-4">
-        <!-- 操作按钮 -->
+        
         <div class="d-flex justify-content-end gap-2 mb-3">
             {% if can_edit %}
                 {% if current_step == 1 %}
@@ -83,7 +86,6 @@
             <a href="{% url 'business_pages:customer_visit' %}" class="btn btn-outline-secondary">返回列表</a>
         </div>
 
-        <!-- 步骤指示器 -->
         <div class="step-indicator">
             <div class="step-item {% if current_step >= 1 %}completed{% endif %} {% if current_step == 1 %}active{% endif %}">
                 <div class="step-number">1</div>
@@ -99,7 +101,6 @@
             </div>
         </div>
 
-        <!-- 第一步：创建计划 -->
         <div class="info-card mb-3">
             <div class="info-card-header">
                 <h5 class="info-card-title">
@@ -147,7 +148,7 @@
                     <div class="info-item">
                         <span class="info-label">关联商机</span>
                         <span class="info-value">
-                            <a href="{% url 'business_pages:opportunity_detail' visit_plan.related_opportunity.id %}" class="text-decoration-none">
+                            <a href="{% url 'opportunity_pages:opportunity_detail' visit_plan.related_opportunity.id %}" class="text-decoration-none">
                                 {{ visit_plan.related_opportunity.name }}
                             </a>
                         </span>
@@ -169,7 +170,6 @@
             </div>
         </div>
 
-        <!-- 第二步：拜访定位打卡 -->
         <div class="info-card mb-3">
             <div class="info-card-header">
                 <h5 class="info-card-title">
@@ -217,7 +217,6 @@
             </div>
         </div>
 
-        <!-- 第四步：拜访结果复盘 -->
         <div class="info-card mb-3">
             <div class="info-card-header">
                 <h5 class="info-card-title">

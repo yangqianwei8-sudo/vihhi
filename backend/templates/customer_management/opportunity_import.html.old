@@ -1,0 +1,340 @@
+{% extends "customer_management/_base.html" %}
+{% load static %}
+
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .import-section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .import-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #f3f4f6;
+    }
+    .import-section-header h5 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .upload-area {
+        border: 2px dashed #d1d5db;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        background: #f9fafb;
+        transition: all 0.3s;
+    }
+    .upload-area:hover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+    }
+    .upload-area.dragover {
+        border-color: #3b82f6;
+        background: #dbeafe;
+    }
+    .file-input-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+    .file-input-wrapper input[type="file"] {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+    .btn-upload {
+        display: inline-block;
+        padding: 12px 24px;
+        background: #3b82f6;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: background 0.3s;
+    }
+    .btn-upload:hover {
+        background: #2563eb;
+    }
+    .file-name {
+        margin-top: 12px;
+        color: #6b7280;
+        font-size: 14px;
+    }
+    .import-results {
+        margin-top: 24px;
+    }
+    .result-summary {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .result-card {
+        flex: 1;
+        padding: 16px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    .result-card.total {
+        background: #f3f4f6;
+        color: #374151;
+    }
+    .result-card.success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    .result-card.failed {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    .result-card h3 {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+        font-weight: 700;
+    }
+    .result-card p {
+        margin: 0;
+        font-size: 14px;
+    }
+    .result-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .result-table th,
+    .result-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .result-table th {
+        background: #f9fafb;
+        font-weight: 600;
+        color: #374151;
+    }
+    .result-table tr:hover {
+        background: #f9fafb;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .status-badge.success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    .status-badge.failed {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    .help-text {
+        background: #f0f9ff;
+        border: 1px solid #0ea5e9;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 24px;
+    }
+    .help-text h6 {
+        margin: 0 0 12px 0;
+        color: #0369a1;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .help-text ul {
+        margin: 0;
+        padding-left: 20px;
+        color: #075985;
+        font-size: 13px;
+    }
+    .help-text li {
+        margin-bottom: 6px;
+    }
+</style>
+{% endblock %}
+
+{% block cm_title %}导入商机{% endblock %}
+
+{% block cm_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ page_description }}</p>
+        </div>
+    </div>
+
+    <div class="help-text">
+        <h6>📋 导入说明</h6>
+        <ul>
+            <li>支持 CSV 和 Excel 格式（.csv, .xlsx, .xls）</li>
+            <li>文件大小限制：10MB</li>
+            <li>必填字段：商机名称、客户名称、负责商务手机号</li>
+            <li>如果客户不存在，系统会自动创建（需要系统已配置客户类型）</li>
+            <li>商机编号留空将自动生成</li>
+            <li>成功概率必须是 10、30、50、70 或 90</li>
+            <li>日期格式：YYYY-MM-DD（如：2025-12-31）</li>
+            <li>建议先下载模板文件，按照模板格式填写数据</li>
+        </ul>
+    </div>
+
+    <div class="import-section">
+        <div class="import-section-header">
+            <h5>📤 上传文件</h5>
+            <a href="?download=template" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-download"></i> 下载模板
+            </a>
+        </div>
+        
+        <form method="post" enctype="multipart/form-data" id="import-form">
+            {% csrf_token %}
+            
+            <div class="upload-area" id="upload-area">
+                <div class="file-input-wrapper">
+                    <input type="file" name="import_file" id="import_file" 
+                           accept=".csv,.xlsx,.xls" required>
+                    <label for="import_file" class="btn-upload">
+                        <i class="bi bi-cloud-upload"></i> 选择文件
+                    </label>
+                </div>
+                <div class="file-name" id="file-name" style="display: none;">
+                    <i class="bi bi-file-earmark"></i> <span id="file-name-text"></span>
+                </div>
+                <p style="margin-top: 16px; color: #6b7280; font-size: 14px;">
+                    支持 CSV 和 Excel 格式，最大 10MB
+                </p>
+            </div>
+            
+            <div style="margin-top: 20px; text-align: center;">
+                <button type="submit" class="btn btn-primary btn-lg" id="submit-btn" disabled>
+                    <i class="bi bi-upload"></i> 开始导入
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% if import_results %}
+    <div class="import-section import-results">
+        <div class="import-section-header">
+            <h5>📊 导入结果</h5>
+        </div>
+        
+        <div class="result-summary">
+            <div class="result-card total">
+                <h3>{{ import_results.total }}</h3>
+                <p>总计</p>
+            </div>
+            <div class="result-card success">
+                <h3>{{ import_results.success }}</h3>
+                <p>成功</p>
+            </div>
+            <div class="result-card failed">
+                <h3>{{ import_results.failed }}</h3>
+                <p>失败</p>
+            </div>
+        </div>
+        
+        {% if import_results.rows %}
+        <div style="max-height: 600px; overflow-y: auto;">
+            <table class="result-table">
+                <thead>
+                    <tr>
+                        <th>行号</th>
+                        <th>状态</th>
+                        <th>消息</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in import_results.rows %}
+                    <tr>
+                        <td>{{ row.row }}</td>
+                        <td>
+                            <span class="status-badge {{ row.status }}">
+                                {% if row.status == 'success' %}成功{% else %}失败{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ row.message }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('import_file');
+    const fileName = document.getElementById('file-name');
+    const fileNameText = document.getElementById('file-name-text');
+    const submitBtn = document.getElementById('submit-btn');
+    const uploadArea = document.getElementById('upload-area');
+    
+    // 文件选择事件
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            fileNameText.textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(2) + ' MB)';
+            fileName.style.display = 'block';
+            submitBtn.disabled = false;
+        } else {
+            fileName.style.display = 'none';
+            submitBtn.disabled = true;
+        }
+    });
+    
+    // 拖拽上传
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            fileInput.dispatchEvent(new Event('change'));
+        }
+    });
+    
+    // 表单提交
+    document.getElementById('import-form').addEventListener('submit', function(e) {
+        const file = fileInput.files[0];
+        if (!file) {
+            e.preventDefault();
+            alert('请选择要上传的文件');
+            return false;
+        }
+        
+        // 显示加载状态
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> 导入中...';
+    });
+});
+</script>
+{% endblock %}

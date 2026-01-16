@@ -1,0 +1,62 @@
+<div class="list-filters">
+  <form method="get" class="list-filters-form" id="filterForm">
+    <div class="list-filter-group">
+      <label class="list-filter-label">搜索</label>
+      <input type="text" name="search" class="list-filter-input" 
+             value="{{ search }}" placeholder="客户名称">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">客户</label>
+      <select name="client" class="list-filter-input" id="clientSelect">
+        <option value="">全部客户</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}" {% if client_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="client" id="filter_client" value="{{ client_id }}">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">申请类型</label>
+      <select name="task_type" class="list-filter-input" id="taskTypeSelect">
+        <option value="">全部类型</option>
+        {% for value, label in task_type_choices %}
+        <option value="{{ value }}" {% if task_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="task_type" id="filter_task_type" value="{{ task_type }}">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">申请状态</label>
+      <select name="status" class="list-filter-input">
+        <option value="">全部状态</option>
+        {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">优先级</label>
+      <select name="priority" class="list-filter-input">
+        <option value="">全部优先级</option>
+        {% for value, label in priority_choices %}
+        <option value="{{ value }}" {% if priority == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">负责人</label>
+      <select name="responsible_user" class="list-filter-input">
+        <option value="">全部负责人</option>
+        {% for user in responsible_users %}
+        <option value="{{ user.id }}" {% if responsible_user_id == user.id|stringformat:"s" %}selected{% endif %}>
+          {{ user.get_full_name|default:user.username }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'business_pages:customer_relationship_collaboration' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,41 @@
+{% extends "customer_management/_base.html" %}
+{% load static %}
+
+{% block cm_title %}商机列表{% endblock %}
+{% block cm_subtitle %}<span class="pm-subtitle">查看和管理所有商机</span>{% endblock %}
+
+{% block cm_actions %}
+{% if can_create %}
+<a href="{% url 'business_pages:opportunity_create' %}" class="list-btn list-btn-primary">
+  创建商机
+</a>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+<style>
+    .list-page-container {
+        padding: 12px !important;
+        gap: 8px !important;
+    }
+</style>
+{% endblock %}
+
+{% block cm_content %}
+<div class="list-page-container">
+    <div class="list-page-header">
+        <h2 class="mb-0">商机列表</h2>
+        <p class="text-muted mb-0 mt-1">查看和管理所有商机</p>
+    </div>
+    
+    {% include "customer_management/_partials/_opportunity_stats.html" %}
+    
+    {% include "customer_management/_partials/_opportunity_filters.html" %}
+    
+    {% include "shared/_partials/_list_action_bar.html" with total_count=page_obj.paginator.count|default:0 %}
+    
+    {% include "customer_management/_partials/_opportunity_table.html" %}
+</div>
+{% endblock %}

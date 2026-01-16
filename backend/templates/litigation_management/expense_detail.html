@@ -1,17 +1,18 @@
-{% extends "shared/module_base.html" %}
+{% extends "litigation_management/base.html" %}
 {% load static %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-{% endblock %}
 
 {% block title %}费用详情 - {{ expense.expense_name }}{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'litigation_pages:litigation_home' %}">诉讼管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'litigation_pages:case_detail' case.id %}">案件详情</a></li>
+<li class="breadcrumb-item"><a href="{% url 'litigation_pages:expense_list' case.id %}">诉讼费用</a></li>
+<li class="breadcrumb-item active" aria-current="page">费用详情</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">{{ page_title }}</h2>
@@ -36,7 +37,6 @@
         </div>
     </div>
 
-    <!-- 审批状态 -->
     {% if approval_instance %}
     <div class="info-card mb-4">
         <div class="info-card-header">
@@ -79,7 +79,6 @@
     </div>
     {% endif %}
 
-    <!-- 基本信息 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">基本信息</h5>
@@ -144,7 +143,6 @@
         </div>
     </div>
 
-    <!-- 发票信息 -->
     {% if expense.invoice_file %}
     <div class="info-card mb-4">
         <div class="info-card-header">
@@ -166,4 +164,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

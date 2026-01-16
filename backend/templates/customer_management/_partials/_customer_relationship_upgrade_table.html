@@ -1,0 +1,86 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>客户名称</th>
+        <th>原等级</th>
+        <th>目标等级</th>
+        <th>升级原因</th>
+        <th>审批状态</th>
+        <th>创建人</th>
+        <th>创建时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for upgrade in page_obj %}
+      <tr>
+        <td>
+          <a href="{% url 'business_pages:customer_detail' upgrade.client.id %}">
+            {{ upgrade.client.name }}
+          </a>
+        </td>
+        <td>
+          <span class="list-badge">{{ upgrade.get_from_level_display }}</span>
+        </td>
+        <td>
+          <span class="list-badge">{{ upgrade.get_to_level_display }}</span>
+        </td>
+        <td>{{ upgrade.upgrade_reason|truncatewords:10 }}</td>
+        <td>
+          <span class="list-badge list-badge-{{ upgrade.approval_status }}">
+            {{ upgrade.get_approval_status_display }}
+          </span>
+        </td>
+        <td>{{ upgrade.created_by.get_full_name|default:upgrade.created_by.username }}</td>
+        <td>{{ upgrade.created_time|date:"Y-m-d" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'business_pages:customer_relationship_upgrade_detail' upgrade.id %}" class="list-btn" title="查看">查看</a>
+            {% if upgrade.can_edit %}
+            <a href="{% url 'business_pages:customer_relationship_upgrade_edit' upgrade.id %}" class="list-btn" title="编辑">编辑</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无关系升级记录</div>
+          <div class="list-empty-hint">请创建第一个关系升级记录开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}{% if to_level %}&to_level={{ to_level }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}{% if to_level %}&to_level={{ to_level }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}{% if to_level %}&to_level={{ to_level }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

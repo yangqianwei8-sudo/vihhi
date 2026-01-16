@@ -1,9 +1,12 @@
-{% extends "shared/module_base.html" %}
+{% extends "administrative_management/base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:affair_list' %}">行政事务</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ affair.affair_number }}</li>
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
@@ -55,9 +58,9 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="page-title">{{ page_title }}</h1>
@@ -67,30 +70,32 @@
             <a href="{% url 'admin_pages:affair_list' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> 返回列表
             </a>
-            {% if can_start %}
+            {% if affair.status == 'pending' and affair.responsible_user == request.user %}
             <a href="{% url 'admin_pages:affair_start' affair_id=affair.id %}" class="btn btn-success" onclick="return confirm('确认开始处理此事务？');">
                 <i class="bi bi-play-circle"></i> 开始处理
             </a>
             {% endif %}
-            {% if can_complete %}
-            <a href="{% url 'admin_pages:affair_complete' affair_id=affair.id %}" class="btn btn-success" onclick="return confirm('确认完成此事务？');">
+            {% if affair.status == 'in_progress' and affair.responsible_user == request.user %}
+            <a href="{% url 'admin_pages:affair_add_progress' affair_id=affair.id %}" class="btn btn-info">
+                <i class="bi bi-graph-up"></i> 更新进度
+            </a>
+            <a href="{% url 'admin_pages:affair_complete' affair_id=affair.id %}" class="btn btn-success">
                 <i class="bi bi-check-circle"></i> 完成
             </a>
             {% endif %}
-            {% if can_edit %}
+            {% if affair.status not in 'completed,cancelled' and affair.created_by == request.user %}
             <a href="{% url 'admin_pages:affair_update' affair_id=affair.id %}" class="btn btn-primary">
                 <i class="bi bi-pencil"></i> 编辑
             </a>
             {% endif %}
-            {% if can_cancel %}
-            <a href="{% url 'admin_pages:affair_cancel' affair_id=affair.id %}" class="btn btn-danger" onclick="return confirm('确认取消此事务？');">
+            {% if affair.status not in 'completed,cancelled' %}
+            <a href="{% url 'admin_pages:affair_cancel' affair_id=affair.id %}" class="btn btn-danger">
                 <i class="bi bi-x-circle"></i> 取消
             </a>
             {% endif %}
         </div>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">基本信息</h5>
@@ -120,20 +125,9 @@
                 <div class="info-item">
                     <span class="info-label">状态</span>
                     <span class="info-value">
-                        {% if affair.status == 'pending' %}
-                            <span class="badge bg-warning">待处理</span>
-                        {% elif affair.status == 'in_progress' %}
-                            <span class="badge bg-info">处理中</span>
-                        {% elif affair.status == 'completed' %}
-                            <span class="badge bg-success">已完成</span>
-                        {% elif affair.status == 'cancelled' %}
-                            <span class="badge bg-secondary">已取消</span>
-                        {% else %}
-                            <span class="badge bg-secondary">{{ affair.get_status_display }}</span>
-                        {% endif %}
-                        {% if affair.is_overdue %}
-                            <span class="badge bg-danger ms-2">已逾期</span>
-                        {% endif %}
+                    <span class="status-badge {{ affair.status }}">
+                        {{ affair.get_status_display }}
+                    </span>
                     </span>
                 </div>
                 <div class="info-item">
@@ -168,7 +162,6 @@
         </div>
     </div>
 
-    <!-- 事务内容 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">事务内容</h5>
@@ -190,7 +183,6 @@
         </div>
     </div>
 
-    <!-- 参与人员 -->
     {% if affair.participants.exists %}
     <div class="info-card">
         <div class="info-card-header">
@@ -208,7 +200,6 @@
     </div>
     {% endif %}
 
-    <!-- 时间安排 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">时间安排</h5>
@@ -239,7 +230,6 @@
         </div>
     </div>
 
-    <!-- 处理说明 -->
     {% if affair.processing_notes %}
     <div class="info-card">
         <div class="info-card-header">
@@ -253,7 +243,6 @@
     </div>
     {% endif %}
 
-    <!-- 完成说明 -->
     {% if affair.completion_notes %}
     <div class="info-card">
         <div class="info-card-header">
@@ -267,7 +256,6 @@
     </div>
     {% endif %}
 
-    <!-- 进度记录 -->
     {% if progress_records %}
     <div class="info-card">
         <div class="info-card-header">
@@ -301,7 +289,6 @@
     </div>
     {% endif %}
 
-    <!-- 状态历史 -->
     {% if status_history %}
     <div class="info-card">
         <div class="info-card-header">
@@ -347,4 +334,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

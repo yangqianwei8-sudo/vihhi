@@ -1,12 +1,13 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "administrative_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:reception_management' %}">接待管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ reception.record_number }}</li>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .center-hero {
         background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
@@ -75,15 +76,14 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="center-hero">
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
     </div>
 
-    <!-- 操作按钮 -->
     <div class="text-end mb-4">
         <a href="{% url 'admin_pages:reception_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
@@ -93,7 +93,6 @@
         </a>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <h5>基本信息</h5>
         <div class="info-row">
@@ -132,7 +131,6 @@
         </div>
     </div>
 
-    <!-- 访客信息 -->
     <div class="info-card">
         <h5>访客信息</h5>
         <div class="info-row">
@@ -159,7 +157,6 @@
         </div>
     </div>
 
-    <!-- 接待信息 -->
     <div class="info-card">
         <h5>接待信息</h5>
         <div class="info-row">
@@ -190,7 +187,6 @@
         </div>
     </div>
 
-    <!-- 安排信息 -->
     <div class="info-card">
         <h5>安排信息</h5>
         <div class="info-row">
@@ -217,7 +213,6 @@
         {% endif %}
     </div>
 
-    <!-- 接待费用 -->
     {% if expenses %}
     <div class="info-card">
         <h5>接待费用 <span class="badge bg-primary ms-2">总计：¥{{ total_expense|floatformat:2 }}</span></h5>
@@ -240,7 +235,7 @@
                     </p>
                     {% endif %}
                 </div>
-                <a href="{% url 'admin_pages:reception_detail' reception.id %}" class="btn btn-sm btn-outline-secondary ms-2">
+                <a href="/admin/administrative_management/receptionexpense/{{ expense.id }}/change/" class="btn btn-sm btn-outline-secondary ms-2">
                     <i class="bi bi-pencil"></i>
                 </a>
             </div>
@@ -249,7 +244,6 @@
     </div>
     {% endif %}
 
-    <!-- 接待结果 -->
     {% if reception.outcome %}
     <div class="info-card">
         <h5>接待结果/成果</h5>
@@ -257,7 +251,6 @@
     </div>
     {% endif %}
 
-    <!-- 备注信息 -->
     {% if reception.notes %}
     <div class="info-card">
         <h5>备注信息</h5>
@@ -265,7 +258,6 @@
     </div>
     {% endif %}
 
-    <!-- 其他信息 -->
     <div class="info-card">
         <h5>其他信息</h5>
         <div class="info-row">
@@ -281,4 +273,3 @@
     </div>
 </div>
 {% endblock %}
-

@@ -1,0 +1,79 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>客户名称</th>
+        <th>拜访类型</th>
+        <th>跟进方式</th>
+        <th>拜访日期</th>
+        <th>跟进人</th>
+        <th>创建时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for relationship in page_obj %}
+      <tr>
+        <td>
+          <a href="{% url 'business_pages:customer_detail' relationship.client.id %}">
+            {{ relationship.client.name }}
+          </a>
+        </td>
+        <td>
+          {% if relationship.visit_type %}
+          <span class="list-badge">{{ relationship.get_visit_type_display }}</span>
+          {% else %}
+          <span style="color: #999999;">—</span>
+          {% endif %}
+        </td>
+        <td>{{ relationship.get_followup_method_display }}</td>
+        <td>{{ relationship.followup_time|date:"Y-m-d" }}</td>
+        <td>{{ relationship.followup_person.get_full_name|default:relationship.followup_person.username }}</td>
+        <td style="color: #666666;">{{ relationship.created_time|date:"Y-m-d" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="#" class="list-btn" title="查看">查看</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无拜访记录</div>
+          <div class="list-empty-hint">请创建第一个拜访记录开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if visit_type %}&visit_type={{ visit_type }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if visit_type %}&visit_type={{ visit_type }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if visit_type %}&visit_type={{ visit_type }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

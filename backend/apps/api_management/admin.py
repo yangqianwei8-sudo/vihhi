@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from backend.apps.api_management.models import (
-    ExternalSystem, ApiInterface, ApiCallLog, ApiTestRecord, ApiIpWhitelist
+    ExternalSystem, ApiInterface, ApiCallLog, ApiTestRecord
 )
 from backend.apps.api_management.forms import ApiInterfaceForm, ApiTestRecordForm
 from backend.core.admin_base import BaseModelAdmin, AuditAdminMixin, LinkAdminMixin, ReadOnlyAdminMixin, StatusBadgeMixin
@@ -19,25 +19,16 @@ class ExternalSystemAdmin(StatusBadgeMixin, LinkAdminMixin, AuditAdminMixin, Bas
     readonly_fields = ('code', 'api_count', 'created_time', 'updated_time')
     fieldsets = (
         ('基本信息', {
-            'fields': (
-                ('code', 'name', 'status', 'is_active'),
-                ('description',),
-            )
+            'fields': ('code', 'name', 'description', 'status', 'is_active')
         }),
         ('系统配置', {
-            'fields': (
-                ('base_url',),
-            )
+            'fields': ('base_url',)
         }),
         ('联系信息', {
-            'fields': (
-                ('contact_person', 'contact_phone', 'contact_email'),
-            )
+            'fields': ('contact_person', 'contact_phone', 'contact_email')
         }),
         ('统计信息', {
-            'fields': (
-                ('api_count', 'created_by'),
-            )
+            'fields': ('api_count', 'created_by')
         }),
         # 时间信息会自动添加
     )
@@ -90,39 +81,25 @@ class ApiInterfaceAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
     readonly_fields = ('code', 'full_url', 'created_time', 'updated_time')
     fieldsets = (
         ('基本信息', {
-            'fields': (
-                ('code', 'name', 'external_system', 'status'),
-                ('is_active', 'version', 'description'),
-            )
+            'fields': ('code', 'name', 'external_system', 'description', 'status', 'is_active', 'version')
         }),
         ('接口配置', {
-            'fields': (
-                ('url', 'method', 'timeout', 'retry_count'),
-                ('full_url',),
-            )
+            'fields': ('url', 'full_url', 'method', 'timeout', 'retry_count')
         }),
         ('认证配置', {
-            'fields': (
-                ('auth_type', 'auth_config'),
-            ),
+            'fields': ('auth_type', 'auth_config'),
             'description': '对于DeepSeek API，如果环境变量中配置了DEEPSEEK_API_KEY，保存时会自动同步到认证配置中'
         }),
         ('请求配置', {
-            'fields': (
-                ('request_headers', 'request_params', 'request_body_schema'),
-            ),
+            'fields': ('request_headers', 'request_params', 'request_body_schema'),
             'classes': ('collapse',)
         }),
         ('响应配置', {
-            'fields': (
-                ('response_schema',),
-            ),
+            'fields': ('response_schema',),
             'classes': ('collapse',)
         }),
         ('其他信息', {
-            'fields': (
-                ('created_by',),
-            )
+            'fields': ('created_by',)
         }),
         # 时间信息会自动添加
     )
@@ -184,28 +161,18 @@ class ApiCallLogAdmin(StatusBadgeMixin, ReadOnlyAdminMixin, BaseModelAdmin):
     date_hierarchy = 'called_time'
     fieldsets = (
         ('基本信息', {
-            'fields': (
-                ('api_interface', 'called_by', 'called_time', 'status'),
-                ('duration',),
-            )
+            'fields': ('api_interface', 'called_by', 'called_time', 'status', 'duration')
         }),
         ('请求信息', {
-            'fields': (
-                ('request_url', 'request_method', 'request_headers', 'request_params'),
-                ('request_body',),
-            ),
+            'fields': ('request_url', 'request_method', 'request_headers', 'request_params', 'request_body'),
             'classes': ('collapse',)
         }),
         ('响应信息', {
-            'fields': (
-                ('response_status', 'response_headers', 'response_body'),
-            ),
+            'fields': ('response_status', 'response_headers', 'response_body'),
             'classes': ('collapse',)
         }),
         ('错误信息', {
-            'fields': (
-                ('error_message',),
-            ),
+            'fields': ('error_message',),
             'classes': ('collapse',)
         }),
     )
@@ -236,20 +203,13 @@ class ApiTestRecordAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
     date_hierarchy = 'tested_time'
     fieldsets = (
         ('基本信息', {
-            'fields': (
-                ('api_interface', 'test_name', 'status', 'tested_by'),
-                ('tested_time', 'test_duration'),
-            )
+            'fields': ('api_interface', 'test_name', 'status', 'tested_by', 'tested_time', 'test_duration')
         }),
         ('测试配置', {
-            'fields': (
-                ('test_params', 'test_body', 'expected_status', 'expected_response'),
-            )
+            'fields': ('test_params', 'test_body', 'expected_status', 'expected_response')
         }),
         ('测试结果', {
-            'fields': (
-                ('actual_status', 'actual_response', 'error_message'),
-            )
+            'fields': ('actual_status', 'actual_response', 'error_message')
         }),
     )
     
@@ -262,69 +222,3 @@ class ApiTestRecordAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
         )
     status_badge.short_description = '状态'
     status_badge.admin_order_field = 'status'
-
-
-@admin.register(ApiIpWhitelist)
-class ApiIpWhitelistAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
-    """API IP白名单管理"""
-    list_display = ('external_system', 'ip_address', 'description', 'status_badge', 'is_active', 'created_by', 'created_time')
-    list_filter = ('external_system', 'status', 'is_active', 'created_time')
-    search_fields = ('external_system__name', 'external_system__code', 'ip_address', 'description', 'created_by__username')
-    ordering = ('-created_time',)
-    raw_id_fields = ('external_system', 'created_by')
-    readonly_fields = ('created_time', 'updated_time', 'current_server_ip')
-    fieldsets = (
-        ('基本信息', {
-            'fields': (
-                ('external_system', 'ip_address', 'status', 'is_active'),
-                ('description',),
-            )
-        }),
-        ('服务器信息', {
-            'fields': (
-                ('current_server_ip',),
-            ),
-            'description': '当前服务器的公网IP地址，可以直接复制添加到白名单中'
-        }),
-        ('其他信息', {
-            'fields': (
-                ('created_by',),
-            )
-        }),
-        # 时间信息会自动添加
-    )
-    
-    def status_badge(self, obj):
-        """状态标签"""
-        return self.format_status_badge(
-            obj.status,
-            obj.get_status_display(),
-            color_map={'active': '#28a745', 'inactive': '#dc3545'}
-        )
-    status_badge.short_description = '状态'
-    status_badge.admin_order_field = 'status'
-    
-    def current_server_ip(self, obj):
-        """显示当前服务器的公网IP"""
-        from backend.apps.api_management.models import ApiIpWhitelist
-        ip = ApiIpWhitelist.get_current_server_ip()
-        
-        if ip:
-            return format_html(
-                '<div style="padding: 8px; background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 4px;">'
-                '<strong>当前服务器IP：</strong><code style="background: white; padding: 2px 6px; border-radius: 3px; margin-left: 8px; font-size: 14px;">{}</code>'
-                '<br><small style="color: #666; margin-top: 4px; display: block;">💡 提示：可以直接复制此IP地址，在创建新记录时粘贴到IP地址字段中</small>'
-                '</div>',
-                ip
-            )
-        else:
-            return format_html(
-                '<div style="padding: 8px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404;">'
-                '⚠️ 无法获取当前服务器IP，请手动查询后添加'
-                '</div>'
-            )
-    current_server_ip.short_description = '当前服务器IP'
-    
-    def get_queryset(self, request):
-        """优化查询"""
-        return super().get_queryset(request).select_related('external_system', 'created_by')

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}计划管理 - 维海科技信息化管理平台{% endblock %}</title>
+    {% load static %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+    <style>
+        body {
+            padding-top: 56px; /* 为固定导航栏留出空间 */
+        }
+        /* 下拉菜单样式已在 navigation.css 中定义，无需重复 */
+        
+        /* 计划管理页面布局 */
+        .plan-management-layout {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+        }
+        
+        .plan-sidebar {
+            background: var(--vh-card-bg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--vh-border);
+            height: fit-content;
+            position: sticky;
+            top: calc(56px + var(--spacing-md));
+        }
+        
+        .plan-nav-links {
+            display: flex;
+            flex-direction: column;
+            padding: var(--spacing-sm);
+        }
+        
+        .plan-nav-link {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-sm);
+            color: var(--vh-text);
+            text-decoration: none;
+            transition: all var(--transition-base);
+            font-size: var(--font-size-base);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .plan-nav-link:hover {
+            background-color: var(--vh-surface);
+            color: var(--vh-primary);
+            transform: translateX(4px);
+        }
+        
+        .plan-nav-link.active {
+            background-color: rgba(31, 42, 87, 0.1);
+            color: var(--vh-primary);
+            font-weight: 500;
+            border-left: 3px solid var(--vh-primary);
+        }
+        
+        .plan-nav-link .nav-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        .plan-nav-link .nav-label {
+            flex: 1;
+        }
+        
+        /* 分组菜单样式 */
+        .plan-nav-group {
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .plan-nav-group-header {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-sm);
+            color: var(--vh-text-secondary);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            user-select: none;
+            transition: all var(--transition-base);
+        }
+        
+        .plan-nav-group-header:hover {
+            background-color: var(--vh-surface);
+            color: var(--vh-text);
+        }
+        
+        .plan-nav-group-items {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-xs);
+            margin-left: var(--spacing-md);
+            padding-left: var(--spacing-md);
+            border-left: 2px solid rgba(31, 42, 87, 0.1);
+        }
+        
+        .plan-nav-group-items.collapsed {
+            display: none;
+        }
+        
+        .plan-content {
+            background: var(--vh-card-bg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--vh-border);
+            padding: var(--spacing-lg);
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    {% include "shared/_top_nav.html" %}
+    
+    <div class="container-fluid py-3">
+        {% if messages %}
+        <div class="alert-container">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="plan-management-layout">
+            <!-- 左侧菜单 -->
+            <div class="plan-sidebar">
+                <div class="plan-nav-links">
+                            {% if plan_menu %}
+        {# 计划管理布局 - 使用统一样式模板，带左侧菜单 #}
+        <div class="workspace workspace-two-column plan-management-layout">
+            <!-- 左侧导航菜单 -->
+            <aside class="workspace-nav">
+                <nav class="sidenav">
+                    <div class="sidenav-section">
+                        <div class="sidenav-links">
+                            {% for menu_group in plan_menu %}
+                            <div class="sidenav-item {% if menu_group.active or menu_group.expanded %}expanded{% endif %}">
+                                <a class="sidenav-link" 
+                                   href="{% if menu_group.url %}{{ menu_group.url }}{% else %}#{% endif %}" 
+                                   {% if menu_group.active %}data-active="true"{% endif %}>
+                                    {% if menu_group.icon %}<span>{{ menu_group.icon }}</span>{% endif %}
+                                    <span>{{ menu_group.label }}</span>
+                                    {% if menu_group.children %}<span class="menu-arrow">▶</span>{% endif %}
+                                </a>
+                                {% if menu_group.children %}
+                                <div class="submenu">
+                                    {% for child in menu_group.children %}
+                                    <a class="sidenav-link sidenav-sub-link" 
+                                       href="{{ child.url }}" 
+                                       {% if child.active %}data-active="true"{% endif %}>
+                                        {% if child.icon %}<span>{{ child.icon }}</span>{% endif %}
+                                        <span>{{ child.label }}</span>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </nav>
+            </aside>
+            
+            <!-- 主内容区域 -->
+            <main class="workspace-main plan-content">
+        {% else %}
+        <div class="workspace-content">
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+        
+                </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleGroup(header) {
+            const items = header.nextElementSibling;
+            const icon = header.querySelector('.bi-chevron-down');
+            if (items.classList.contains('collapsed')) {
+                items.classList.remove('collapsed');
+                icon.classList.remove('bi-chevron-down');
+                icon.classList.add('bi-chevron-up');
+            } else {
+                items.classList.add('collapsed');
+                icon.classList.remove('bi-chevron-up');
+                icon.classList.add('bi-chevron-down');
+            }
+        }
+    </script>
+    <script src="{% static 'js/sidebar.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+

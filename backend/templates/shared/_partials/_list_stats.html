@@ -1,0 +1,30 @@
+{# 通用统计卡片组件
+   
+   注意：使用此模板需要引入以下CSS文件：
+   - css/components/list_layout.css (list-stats, list-stat-card 样式)
+   
+   如果使用 _base_list_page.html，这些CSS文件会自动引入。
+   
+   使用方式：
+   {% include "shared/_partials/_list_stats.html" %}
+   
+   需要在视图函数中传递 stats 变量，格式：
+   stats = [
+       {'title': '标题', 'value': 值, 'cols': 2},  # cols 可选，已不使用
+       ...
+   ]
+   
+   或者直接 include 具体的内容文件，例如：
+   {% include "customer_management/_partials/_opportunity_stats.html" %}
+#}
+{# 默认实现：使用 stats 变量 #}
+{% if stats %}
+<div class="list-stats">
+  {% for stat in stats %}
+  <div class="list-stat-card">
+    <div class="list-stat-label">{{ stat.title }}</div>
+    <div class="list-stat-value">{{ stat.value|default:0 }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

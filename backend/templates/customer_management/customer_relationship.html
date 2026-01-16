@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
@@ -49,11 +49,14 @@
 </style>
 {% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_list' %}">客户管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 筛选栏 -->
+    
     <div class="relationship-filters">
         <form method="get" class="row g-3">
             <div class="col-md-3">
@@ -95,14 +98,12 @@
         </form>
     </div>
     
-    <!-- 操作栏 -->
     <div class="d-flex justify-content-end mb-3">
         {% if can_create %}
         <a href="{% url 'business_pages:customer_relationship_create' %}" class="btn btn-primary">+ 新建关系记录</a>
         {% endif %}
     </div>
     
-    <!-- 关系记录列表 -->
     {% if page_obj %}
     <div class="relationship-table">
         <div class="table-responsive">
@@ -142,7 +143,6 @@
             </table>
         </div>
         
-        <!-- 分页 -->
         {% if page_obj.has_other_pages %}
         <div class="pagination-wrapper p-3">
             <nav aria-label="客户关系分页">

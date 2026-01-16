@@ -1,12 +1,13 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "personnel_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:performance_management' %}">绩效考核</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ performance.performance_number }}</li>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .info-card {
         background: #fff;
@@ -51,7 +52,7 @@
 
 {% block personnel_content %}
 <div class="container-fluid py-4">
-    <!-- 操作按钮 -->
+    
     <div class="text-end mb-4">
         <a href="{% url 'personnel_pages:performance_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
@@ -61,7 +62,6 @@
         </a>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <h5>基本信息</h5>
         <div class="info-row">
@@ -124,7 +124,6 @@
         </div>
     </div>
 
-    <!-- 自评 -->
     {% if performance.self_assessment %}
     <div class="info-card">
         <h5>自评</h5>
@@ -132,7 +131,6 @@
     </div>
     {% endif %}
 
-    <!-- 上级评价 -->
     {% if performance.manager_comment %}
     <div class="info-card">
         <h5>上级评价</h5>
@@ -140,7 +138,6 @@
     </div>
     {% endif %}
 
-    <!-- HR评价 -->
     {% if performance.hr_comment %}
     <div class="info-card">
         <h5>HR评价</h5>
@@ -148,7 +145,6 @@
     </div>
     {% endif %}
 
-    <!-- 审批信息 -->
     <div class="info-card">
         <h5>审批信息</h5>
         <div class="info-row">
@@ -176,4 +172,3 @@
     </div>
 </div>
 {% endblock %}
-

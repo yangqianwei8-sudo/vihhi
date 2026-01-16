@@ -192,7 +192,7 @@ class UserAdmin(DjangoUserAdmin):
         }),
         ('组织信息', {
             'classes': ('wide',),
-            'fields': ('department', 'position', 'user_type', 'is_staff', 'is_superuser'),
+            'fields': ('department', 'position', 'is_staff', 'is_superuser'),
         }),
     )
     

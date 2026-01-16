@@ -95,12 +95,11 @@
    ============================================ */
 .filter-row {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 0;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+
     text-align: left;
-    min-width: 180px;
-    flex: 0 1 auto;
 }
 
 .filter-row:last-child {
@@ -115,46 +114,15 @@
    筛选标签（Filter Label）
    ============================================ */
 .filter-label {
-    min-width: 80px;
+    min-width: 70px;
     font-size: 13px;
-    color: #374151;
-    padding-top: 0;
+    color: #666;
+    padding-top: 4px;
     flex-shrink: 0;
     font-weight: 500;
     white-space: nowrap;
+
     text-align: left;
-    line-height: 1.4;
-}
-
-/* ============================================
-   筛选控件（Filter Control）
-   ============================================ */
-.filter-control {
-    flex: 1;
-    min-width: 0;
-}
-
-.filter-control select,
-.filter-control input {
-    width: 100%;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    padding: 6px 10px;
-    font-size: 14px;
-    transition: all 0.2s ease;
-    background-color: #ffffff;
-}
-
-.filter-control select:hover,
-.filter-control input:hover {
-    border-color: #9ca3af;
-}
-
-.filter-control select:focus,
-.filter-control input:focus {
-    border-color: #3b82f6;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 /* ============================================
@@ -280,7 +248,7 @@
 
 /* 设置筛选字段按钮 - 固定在筛选容器右上角 */
 #settingsFilterFieldsBtn {
-    color: #000000 !important; /* 黑色 */
+    color: #ffc107 !important; /* 黄色 */
     transition: all var(--transition-base);
     padding: 4px 8px !important;
     position: absolute !important;
@@ -303,67 +271,38 @@
 /* 设置筛选字段按钮内的图标和文字颜色 */
 #settingsFilterFieldsBtn,
 #settingsFilterFieldsBtn * {
-    color: #000000 !important; /* 黑色 */
+    color: #ffc107 !important; /* 黄色 */
 }
 
 #settingsFilterFieldsBtn:hover {
-    color: #000000 !important; /* 黑色 */
-    background: rgba(0, 0, 0, 0.08) !important; /* 浅灰色背景 */
+    color: #ffb300 !important; /* 深一点的黄色 */
+    background: rgba(255, 193, 7, 0.15) !important; /* 黄色背景 */
     border-radius: var(--radius-sm) !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3) !important;
     transform: translateY(-1px) !important;
 }
 
 /* hover 时图标和文字颜色 */
 #settingsFilterFieldsBtn:hover,
 #settingsFilterFieldsBtn:hover * {
-    color: #000000 !important; /* 黑色 */
+    color: #ffb300 !important; /* 深一点的黄色 */
 }
 
 /* 筛选字段设置模态框容器 */
 /* 弹窗位置：使用 Bootstrap 默认定位，不固定位置 */
-
-/* 模态框backdrop（遮罩层）- 应该在模态框下方 */
-/* 使用更通用的选择器，确保backdrop在模态框下方 */
-.modal-backdrop {
-    z-index: 1040 !important; /* Bootstrap默认值 */
-    pointer-events: auto !important; /* 允许点击，但会被模态框覆盖 */
-}
-
-/* 当筛选字段设置模态框显示时，其backdrop应该在模态框下方 */
-#filterFieldsSettingsModal.show ~ .modal-backdrop,
-body:has(#filterFieldsSettingsModal.show) .modal-backdrop {
-    z-index: 10049 !important; /* 在模态框容器下方 */
-    pointer-events: auto !important; /* 允许点击backdrop关闭模态框 */
-}
-
-/* 兼容不支持:has()的浏览器，使用JavaScript动态设置 */
 #filterFieldsSettingsModal {
-    position: fixed !important; /* 确保模态框是fixed定位 */
-    z-index: 10050 !important; /* 确保模态框在操作栏(z-index:100)和backdrop(z-index:10049)之上 */
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    pointer-events: none !important; /* 允许点击穿透到子元素 */
+    z-index: 10050 !important; /* 确保模态框在操作栏(z-index:100)之上 */
 }
 
-/* 模态框内容区域应该可以交互 */
 #filterFieldsSettingsModal .modal-dialog {
-    margin: auto !important; /* 上下左右居中 - 覆盖之前的自定义margin */
-    max-width: fit-content !important; /* 宽度自适应内容 */
+    margin: calc(56px + 2rem) auto 2rem auto; /* 上边距：导航栏高度(56px) + 额外间距(2rem)，下边距2rem，左右居中 */
+    max-width: fit-content; /* 宽度自适应内容 */
     width: auto;
-    position: relative !important; /* 确保dialog有定位上下文 */
     z-index: 10051 !important; /* 确保对话框在模态框容器之上 */
-    pointer-events: auto !important; /* 对话框可以交互 */
+    pointer-events: auto !important; /* 确保可交互 */
 }
 
 #filterFieldsSettingsModal .modal-content {
-    pointer-events: auto !important; /* 内容可以交互 */
-}
-
-#filterFieldsSettingsModal .modal-content {
-    position: relative !important; /* 确保content有定位上下文 */
     z-index: 10052 !important; /* 确保内容在最上层 */
     pointer-events: auto !important; /* 确保可交互 */
 }

@@ -1,13 +1,18 @@
-{% extends "shared/module_base.html" %}
+{% extends "litigation_management/base.html" %}
 {% load static %}
 
 {% block title %}确认通知 - 诉讼管理{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'litigation_pages:litigation_home' %}">诉讼管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'litigation_pages:notification_list' %}">通知列表</a></li>
+<li class="breadcrumb-item"><a href="{% url 'litigation_pages:notification_detail' notification.id %}">通知详情</a></li>
+<li class="breadcrumb-item active" aria-current="page">确认通知</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid">
-    <!-- 页面标题 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">{{ page_title }}</h2>
@@ -20,7 +25,6 @@
         </div>
     </div>
 
-    <!-- 确认提示 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">确认通知</h5>
@@ -31,7 +35,6 @@
                 <p>您即将确认收到以下通知。确认后，系统将记录您的确认时间和确认人信息。</p>
             </div>
 
-            <!-- 通知信息 -->
             <div class="info-grid info-grid-2 mb-4">
                 <div class="info-item">
                     <span class="info-label">通知标题</span>
@@ -57,7 +60,6 @@
                 </div>
             </div>
 
-            <!-- 通知内容 -->
             <div class="mb-4">
                 <label class="form-label fw-bold">通知内容</label>
                 <div class="alert alert-info">
@@ -65,7 +67,6 @@
                 </div>
             </div>
 
-            <!-- 确认表单 -->
             <form method="post">
                 {% csrf_token %}
                 <div class="d-flex justify-content-end gap-2">
@@ -81,4 +82,3 @@
     </div>
 </div>
 {% endblock %}
-

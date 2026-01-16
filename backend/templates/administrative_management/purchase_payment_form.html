@@ -1,12 +1,22 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "administrative_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+{% if is_create %}
+{% if contract %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:purchase_contract_detail' contract.id %}">采购合同</a></li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:purchase_payment_list' %}">采购付款</a></li>
+{% endif %}
+<li class="breadcrumb-item active" aria-current="page">创建</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:purchase_payment_list' %}">采购付款</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endif %}
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .form-card {
         background: var(--vh-card-bg);
@@ -30,7 +40,7 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
     <div class="center-hero">
         <h1 class="hero-title">{{ page_title }}</h1>
@@ -139,4 +149,3 @@
     </form>
 </div>
 {% endblock %}
-

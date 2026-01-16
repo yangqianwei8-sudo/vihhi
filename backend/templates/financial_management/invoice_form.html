@@ -1,12 +1,19 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "financial_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:invoice_management' %}">发票管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:invoice_management' %}">发票管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:invoice_detail' invoice.id %}">{{ invoice.invoice_number }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endif %}
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .form-card {
         background: #fff;
@@ -44,17 +51,15 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
             <h1>{{ page_title }}</h1>
         <p>{{ description }}</p>
     </div>
 
-    <!-- 表单 -->
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         
-        <!-- 基本信息 -->
         <div class="form-card">
             <h5>发票信息</h5>
             <div class="row g-3">
@@ -105,7 +110,6 @@
             </div>
         </div>
 
-        <!-- 金额信息 -->
         <div class="form-card">
             <h5>金额信息</h5>
             <div class="row g-3">
@@ -169,14 +173,12 @@
             </div>
         </div>
 
-        <!-- 表单错误 -->
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
             {{ form.non_field_errors }}
         </div>
         {% endif %}
 
-        <!-- 操作按钮 -->
         <div class="d-flex justify-content-between align-items-center mt-4">
             <a href="{% if is_create %}{% url 'finance_pages:invoice_management' %}{% else %}{% url 'finance_pages:invoice_detail' invoice.id %}{% endif %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> 取消
@@ -385,4 +387,3 @@
 })();
 </script>
 {% endblock %}
-

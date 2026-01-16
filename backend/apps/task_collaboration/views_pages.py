@@ -7,12 +7,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 
-from backend.apps.production_management.models import Project, ProjectMilestone, ProjectTask
-from backend.apps.system_management.services import get_user_permission_codes
-from backend.core.views import _permission_granted, _build_full_top_nav, _build_unified_sidebar_nav
-from django.contrib import messages
-from django.shortcuts import redirect
-from django.urls import reverse, NoReverseMatch
+from backend.apps.production_management.models import Project, ProjectMilestone
 MILESTONE_PRESETS = {
     "result_optimization": [
         "优化前图纸",
@@ -80,208 +75,7 @@ def _ensure_project_milestones(project: Project) -> None:
             ProjectMilestone.objects.bulk_create(new_objects)
 
 
-# 任务协作菜单结构定义
-TASK_COLLABORATION_MENU_STRUCTURE = [
-    {'id': 'task_collaboration_home', 'label': '任务协作首页', 'icon': '🏠', 'url_name': 'task_collaboration:task_collaboration_home', 'permission': None},
-    {'id': 'task_board', 'label': '任务看板', 'icon': '🗂', 'url_name': 'task_collaboration:task_board', 'permission': None},
-    {'id': 'workspace', 'label': '协作空间', 'icon': '🤝', 'url_name': 'task_collaboration:workspace', 'permission': None},
-    {'id': 'process_engine', 'label': '流程引擎', 'icon': '⚙️', 'url_name': 'task_collaboration:process_engine', 'permission': None},
-    {'id': 'timesheet', 'label': '工时记录', 'icon': '⏰', 'url_name': 'task_collaboration:timesheet', 'permission': None},
-    {'id': 'message_center', 'label': '消息中心', 'icon': '💬', 'url_name': 'task_collaboration:message_center', 'permission': None},
-]
-
-
-def _build_task_collaboration_sidebar_nav(permission_set, request_path=None, active_id=None):
-    """生成任务协作模块左侧菜单（统一格式）"""
-    # 使用统一的菜单构建函数
-    return _build_unified_sidebar_nav(TASK_COLLABORATION_MENU_STRUCTURE, permission_set, active_id=active_id)
-
-
-def _build_context(page_title: str, page_icon: str, description: str, summary_cards=None, sections=None, request=None, active_menu_id=None):
-    """构建页面上下文"""
-    context = {
-        "page_title": page_title,
-        "page_icon": page_icon,
-        "description": description,
-        "summary_cards": summary_cards or [],
-        "sections": sections or [],
-    }
-    
-    if request and request.user.is_authenticated:
-        permission_set = get_user_permission_codes(request.user)
-        context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        # 添加左侧菜单
-        request_path = request.path
-        context['module_sidebar_nav'] = _build_task_collaboration_sidebar_nav(permission_set, request_path, active_id=active_menu_id)
-    else:
-        context['full_top_nav'] = []
-        context['module_sidebar_nav'] = []
-    
-    return context
-
-
-@login_required
-def task_collaboration_home(request):
-    """任务协作首页"""
-    permission_codes = get_user_permission_codes(request.user)
-    today = timezone.now().date()
-    
-    # 权限检查
-    if not _permission_granted('task_collaboration.view', permission_codes):
-        messages.error(request, '您没有权限访问任务协作')
-        return redirect('admin:index')
-    
-    # 收集统计数据
-    summary_cards = []
-    
-    try:
-        # 任务统计
-        user = request.user
-        accessible_projects = Project.objects.filter(
-            Q(project_manager=user)
-            | Q(team_members__user=user)
-            | Q(business_manager=user)
-            | Q(created_by=user)
-        ).distinct()
-        
-        # 我的任务统计
-        my_tasks = ProjectTask.objects.filter(
-            assignee=user,
-            status__in=['pending', 'in_progress']
-        ).count()
-        
-        overdue_tasks = ProjectTask.objects.filter(
-            assignee=user,
-            status__in=['pending', 'in_progress'],
-            due_time__lt=timezone.now()
-        ).count()
-        
-        # 里程碑任务统计
-        milestones = ProjectMilestone.objects.filter(
-            project__in=accessible_projects
-        )
-        
-        overdue_milestones = milestones.filter(
-            planned_date__lt=today,
-            is_completed=False
-        ).count()
-        
-        due_today_milestones = milestones.filter(
-            planned_date=today,
-            is_completed=False
-        ).count()
-        
-        summary_cards.append({
-            'label': '我的任务',
-            'icon': '📝',
-            'value': str(my_tasks),
-            'subvalue': f'逾期 {overdue_tasks} 个',
-            'url': reverse('task_collaboration:task_board'),
-            'variant': 'danger' if overdue_tasks > 0 else 'warning' if my_tasks > 0 else 'success'
-        })
-        
-        summary_cards.append({
-            'label': '里程碑任务',
-            'icon': '🎯',
-            'value': str(overdue_milestones + due_today_milestones),
-            'subvalue': f'逾期 {overdue_milestones} 个 · 今日 {due_today_milestones} 个',
-            'url': reverse('task_collaboration:task_board'),
-            'variant': 'danger' if overdue_milestones > 0 else 'warning' if due_today_milestones > 0 else 'info'
-        })
-        
-        summary_cards.append({
-            'label': '参与项目',
-            'icon': '🏗️',
-            'value': str(accessible_projects.count()),
-            'subvalue': '我参与的项目',
-            'url': reverse('production_pages:project_list'),
-            'variant': 'info'
-        })
-        
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('获取统计数据失败: %s', str(e))
-    
-    # 快捷操作
-    quick_actions = []
-    
-    if _permission_granted('task_collaboration.assign', permission_codes):
-        try:
-            quick_actions.append({
-                'label': '查看任务看板',
-                'icon': '📋',
-                'description': '查看所有任务和里程碑',
-                'url': reverse('task_collaboration:task_board'),
-                'link_label': '查看看板 →'
-            })
-        except Exception:
-            pass
-    
-    # 功能模块入口
-    module_entries = []
-    
-    if _permission_granted('task_collaboration.view', permission_codes):
-        try:
-            module_entries.append({
-                'label': '任务看板',
-                'icon': '📋',
-                'description': '查看和管理所有任务',
-                'url': reverse('task_collaboration:task_board'),
-                'link_label': '进入模块 →'
-            })
-            
-            module_entries.append({
-                'label': '协作空间',
-                'icon': '🤝',
-                'description': '跨部门协作讨论和会议',
-                'url': reverse('task_collaboration:workspace'),
-                'link_label': '进入模块 →'
-            })
-            
-            module_entries.append({
-                'label': '流程引擎',
-                'icon': '🔄',
-                'description': '管理协作流程',
-                'url': reverse('task_collaboration:process_engine'),
-                'link_label': '进入模块 →'
-            })
-        except Exception:
-            pass
-    
-    # 构建区域
-    sections = []
-    
-    if quick_actions:
-        sections.append({
-            'title': '快捷操作',
-            'description': '常用的快速操作入口',
-            'items': quick_actions,
-            'layout': 'grid'
-        })
-    
-    if module_entries:
-        sections.append({
-            'title': '功能模块',
-            'description': '任务协作的各个功能模块入口',
-            'items': module_entries,
-            'layout': 'grid'
-        })
-    
-    # 构建上下文
-    context = _build_context(
-        page_title="任务协作",
-        page_icon="🤝",
-        description="管理团队任务和协作流程",
-        summary_cards=summary_cards,
-        sections=sections,
-        request=request,
-    )
-    
-    return render(request, "task_collaboration/home.html", context)
-
-
-def _build_context_old(page_title: str, page_icon: str, description: str, summary_cards=None, sections=None):
+def _build_context(page_title: str, page_icon: str, description: str, summary_cards=None, sections=None):
     return {
         "page_title": page_title,
         "page_icon": page_icon,
@@ -428,10 +222,8 @@ def task_board(request):
         "集中查看个人与团队任务，聚焦逾期、当日与即将到期的项目里程碑。",
         summary_cards=summary_cards,
         sections=sections,
-        request=request,
-        active_menu_id='task_board',
     )
-    return render(request, "task_collaboration/home.html", context)
+    return render(request, "shared/center_dashboard.html", context)
 
 
 @login_required
@@ -472,10 +264,8 @@ def collaboration_workspace(request):
                 ],
             }
         ],
-        request=request,
-        active_menu_id='workspace',
     )
-    return render(request, "task_collaboration/home.html", context)
+    return render(request, "shared/center_dashboard.html", context)
 
 
 @login_required
@@ -516,10 +306,8 @@ def process_engine(request):
                 ],
             }
         ],
-        request=request,
-        active_menu_id='process_engine',
     )
-    return render(request, "task_collaboration/home.html", context)
+    return render(request, "shared/center_dashboard.html", context)
 
 
 @login_required
@@ -560,10 +348,8 @@ def timesheet(request):
                 ],
             }
         ],
-        request=request,
-        active_menu_id='timesheet',
     )
-    return render(request, "task_collaboration/home.html", context)
+    return render(request, "shared/center_dashboard.html", context)
 
 
 @login_required
@@ -604,8 +390,6 @@ def message_center(request):
                 ],
             }
         ],
-        request=request,
-        active_menu_id='message_center',
     )
-    return render(request, "task_collaboration/home.html", context)
+    return render(request, "shared/center_dashboard.html", context)
 

@@ -1,16 +1,9 @@
-{% extends "shared/form_page_base.html" %}
+{% extends "customer_management/_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
 {% load static %}
-
-{% block form_page_title_text %}创建联系人信息{% endblock %}
-{% block form_page_description %}创建新联系人信息{% endblock %}
-
-{% block form_id %}contact-form{% endblock %}
-
-{% block form_has_files %}True{% endblock %}
-
-{% block cancel_url %}{% if contact %}{% url 'business_pages:contact_detail' contact.id %}{% else %}{% url 'business_pages:contact_list' %}{% endif %}{% endblock %}
-
-{% block form_page_extra_css %}
+{% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
 <link rel="stylesheet" href="{% static 'css/qixinbao-autofill.css' %}">
 <style>
@@ -190,10 +183,22 @@
 </style>
 {% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:contact_list' %}">创建联系人信息</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if contact %}编辑{% else %}创建{% endif %}</li>
+{% endblock %}
 
-
-{% block form_content %}
-                    <!-- 错误提示 -->
+{% block content %}
+<div class="workspace-content">
+    <div class="container-fluid py-4">
+        <div class="info-card info-card-compact">
+            <div class="info-card-header">
+                <h5 class="info-card-title">{{ page_title }}</h5>
+            </div>
+            <div class="info-card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
                     {% if form.errors %}
                     <div class="alert alert-danger">
                         <strong>表单验证失败，请检查以下错误：</strong>
@@ -207,41 +212,9 @@
                     </div>
                     {% endif %}
                     
-                    
-                    <!-- 基础信息卡片 -->
-                    <div class="form-section">
-                        <div class="form-section-header">
-                            <h5>基础信息</h5>
-                        </div>
-                        <div class="info-grid info-grid-2">
-                            <div class="info-item">
-                                <label class="info-label">{{ form.responsible_department.label }}</label>
-                                {{ form.responsible_department }}
-                                {% if form.responsible_department.errors %}
-                                <div class="text-danger small mt-1">{{ form.responsible_department.errors }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="info-item">
-                                <label class="info-label">{{ form.responsible_user.label }}</label>
-                                {{ form.responsible_user }}
-                                {% if form.responsible_user.errors %}
-                                <div class="text-danger small mt-1">{{ form.responsible_user.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-section">
-                        <div class="form-section-header">
-                            <h5>联系人</h5>
-                        </div>
+                    <div class="info-section">
+                        <h6 class="info-section-title">基本信息</h6>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label class="info-label">{{ form.contact_number.label }}</label>
-                                {{ form.contact_number }}
-                                {% if form.contact_number.errors %}
-                                <div class="text-danger small mt-1">{{ form.contact_number.errors }}</div>
-                                {% endif %}
-                            </div>
                             <div class="col-md-4">
                                 <label class="info-label info-label-required">{{ form.client.label }}</label>
                                 {{ form.client }}
@@ -267,7 +240,24 @@
                         <div class="info-grid info-grid-2">
                             <div class="info-item" style="grid-column: span 2;">
                                 <label class="info-label info-label-required">{{ form.birthplace.label }}</label>
-                                {% include "shared/district_selector_snippet.html" with prefix="birthplace" province_label="省份" city_label="城市" district_label="区县" address_field_id="birthplaceField" address_field_name="birthplace" show_detail_input=False required=True initial_address_value=contact.birthplace|default:form.birthplace.value|default:"" %}
+                                <input type="hidden" name="birthplace" id="birthplaceField" value="{% if contact %}{{ contact.birthplace|default:'' }}{% elif form.birthplace.value %}{{ form.birthplace.value }}{% else %}{% endif %}">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-4">
+                                        <select id="birthplaceProvinceSelect" class="form-select">
+                                            <option value="">选择省份</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select id="birthplaceCitySelect" class="form-select">
+                                            <option value="">选择城市</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select id="birthplaceDistrictSelect" class="form-select">
+                                            <option value="">选择区县</option>
+                                        </select>
+                                    </div>
+                                </div>
                                 {% if form.birthplace.errors %}
                                 <div class="text-danger small mt-1">{{ form.birthplace.errors }}</div>
                                 {% endif %}
@@ -275,10 +265,9 @@
                         </div>
                     </div>
                     
-                    <!-- 职业信息（支持多个） -->
-                    <div class="form-section">
-                        <div class="form-section-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">职业信息</h5>
+                    <div class="info-section">
+                        <div class="d-flex justify-content-between align-items-center info-section-title">
+                            <h6 class="mb-0">职业信息</h6>
                             <button type="button" class="btn btn-sm btn-outline-primary" id="add-career-btn">
                                 <i class="bi bi-plus-circle"></i> 添加职业信息
                             </button>
@@ -299,36 +288,16 @@
                                 </div>
                                 {% endif %}
                                 <div class="info-grid info-grid-2">
-                                    <div class="info-item" data-career-index="{{ forloop.counter0 }}">
-                                        {# 使用共享模板：启信宝企业名称搜索下拉 #}
-                                        {% with career_idx=forloop.counter0 %}
-                                        <div class="form-group" style="position: relative;">
-                                            <label class="info-label info-label-required">{{ form.company.label }}</label>
+                                    <div class="info-item">
+                                        <label class="info-label info-label-required">{{ form.company.label }}</label>
+                                        <div class="position-relative">
                                             {{ form.company }}
-                                            <div id="companyDropdown_career_{{ career_idx }}" class="autocomplete-dropdown" style="display: none;"></div>
-                                            {% if form.company.errors %}
-                                            <div class="text-danger small mt-1">{{ form.company.errors }}</div>
-                                            {% endif %}
+                                            <div id="companyDropdown_career_{{ forloop.counter0 }}" class="autocomplete-dropdown" style="display: none;"></div>
                                         </div>
-                                        <script>
-                                        (function() {
-                                            var careerIdx = {{ career_idx }};
-                                            if (!window.qixinbaoCompanyNameConfigs) {
-                                                window.qixinbaoCompanyNameConfigs = [];
-                                            }
-                                            window.qixinbaoCompanyNameConfigs.push({
-                                                nameInputSelector: '[name="careers-' + careerIdx + '-company"]',
-                                                creditCodeInputSelector: '[name="careers-' + careerIdx + '-unified_credit_code"]',
-                                                dropdownId: 'companyDropdown_career_' + careerIdx,
-                                                autoFillDetails: false,
-                                                autoQueryExecution: false,
-                                                showSuccessAlert: false,
-                                                debug: true  // 启用调试模式
-                                            });
-                                        })();
-                                        </script>
-                                        {% endwith %}
                                         <small class="text-muted d-block mt-1">输入企业名称（至少2个字符）后自动搜索启信宝，选择匹配的企业将自动填充信息</small>
+                                        {% if form.company.errors %}
+                                        <div class="text-danger small mt-1">{{ form.company.errors }}</div>
+                                        {% endif %}
                                     </div>
                                     <div class="info-item">
                                         <label class="info-label">{{ form.unified_credit_code.label }}</label>
@@ -367,7 +336,6 @@
                                     </div>
                                 </div>
                                 
-                                <!-- 同事关系人员 -->
                                 <div class="mt-3 pt-3 border-top">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <h6 class="mb-0 small text-muted">同事关系人员</h6>
@@ -418,10 +386,9 @@
                         </div>
                     </div>
                     
-                    <!-- 教育信息（支持多个） -->
-                    <div class="form-section">
-                        <div class="form-section-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">教育信息</h5>
+                    <div class="info-section">
+                        <div class="d-flex justify-content-between align-items-center info-section-title">
+                            <h6 class="mb-0">教育信息</h6>
                             <button type="button" class="btn btn-sm btn-outline-primary" id="add-education-btn">
                                 <i class="bi bi-plus-circle"></i> 添加教育信息
                             </button>
@@ -506,11 +473,8 @@
                         </div>
                     </div>
                     
-                    <!-- 联系方式 -->
-                    <div class="form-section">
-                        <div class="form-section-header">
-                            <h5>联系方式</h5>
-                        </div>
+                    <div class="info-section">
+                        <h6 class="info-section-title">联系方式</h6>
                         <div class="info-grid info-grid-2">
                             <div class="info-item">
                                 <label class="info-label">{{ form.phone.label }}</label>
@@ -536,7 +500,32 @@
                             </div>
                             <div class="info-item" style="grid-column: span 2;">
                                 <label class="info-label">{{ form.office_address.label }}</label>
-                                {% include "shared/district_selector_snippet.html" with prefix="office" province_label="省份" city_label="城市" district_label="区县" address_field_id="officeAddressField" address_field_name="office_address" detail_input_id="officeAddressDetailInput" show_detail_input=True initial_address_value=contact.office_address|default:form.office_address.value|default:"" %}
+                                <input type="hidden" name="office_address" id="officeAddressField" value="{% if contact %}{{ contact.office_address|default:'' }}{% elif form.office_address.value %}{{ form.office_address.value }}{% else %}{% endif %}">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-4">
+                                        <select id="officeProvinceSelect" class="form-select">
+                                            <option value="">选择省份</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select id="officeCitySelect" class="form-select">
+                                            <option value="">选择城市</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select id="officeDistrictSelect" class="form-select">
+                                            <option value="">选择区县</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <input type="text" id="officeAddressDetailInput" class="form-control" 
+                                               placeholder="街道、楼栋、门牌等详细地址" 
+                                               value="">
+                                        <small class="text-muted">完整地址会在保存前自动组合，选择客户后将自动填充</small>
+                                    </div>
+                                </div>
                                 {% if form.office_address.errors %}
                                 <div class="text-danger small mt-1">{{ form.office_address.errors }}</div>
                                 {% endif %}
@@ -544,11 +533,8 @@
                         </div>
                     </div>
                     
-                    <!-- 角色与关系 -->
-                    <div class="form-section">
-                        <div class="form-section-header">
-                            <h5>角色与关系</h5>
-                        </div>
+                    <div class="info-section">
+                        <h6 class="info-section-title">角色与关系</h6>
                         <div class="info-grid info-grid-2">
                             <div class="info-item">
                                 <label class="info-label info-label-required">{{ form.role.label }}</label>
@@ -586,11 +572,8 @@
                         </div>
                     </div>
                     
-                    <!-- 简历信息 -->
-                    <div class="form-section">
-                        <div class="form-section-header">
-                            <h5>简历信息（可选）</h5>
-                        </div>
+                    <div class="info-section">
+                        <h6 class="info-section-title">简历信息（可选）</h6>
                         <p class="text-muted small mb-3">上传简历可用于验证联系人信息的客观性，非必须项</p>
                         <div class="info-grid info-grid-2">
                             <div class="info-item">
@@ -611,267 +594,21 @@
                         </div>
                     </div>
                     
-{% endblock form_content %}
-
-{% block form_action_buttons %}
-            <div class="form-actions-left">
-                <button type="submit" name="action" value="save_draft" class="btn btn-outline-secondary">
-                    <i class="bi bi-save me-1"></i>
-                    保存草稿
-                </button>
-                <button type="submit" name="action" value="submit" class="btn btn-primary">
-                    <i class="bi bi-check-circle me-1"></i>
-                    提交申请
-                </button>
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="submit" name="action" value="save_draft" class="btn btn-outline-secondary">保存草稿</button>
+                        <button type="submit" name="action" value="submit" class="btn btn-primary">提交申请</button>
+                        <a href="{% if contact %}{% url 'business_pages:contact_detail' contact.id %}{% else %}{% url 'business_pages:contact_list' %}{% endif %}" class="btn btn-secondary">取消</a>
+                    </div>
+                </form>
             </div>
-            <div class="form-actions-right">
-                {# 联系人表单不需要右侧按钮 #}
-            </div>
-{% endblock form_action_buttons %}
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-{% block form_page_extra_js %}
+{% block extra_js %}
 {% load static %}
-<script src="{% static 'js/amap-district-selector.js' %}"></script>
-<script>
-/**
- * 初始化行政区域选择器（从共享模板移入，确保在调用前定义）
- * @param {Object} options 配置选项
- * @param {string} options.prefix - ID前缀（必需）
- * @param {string} options.addressFieldId - 地址隐藏字段ID（可选）
- * @param {string} options.detailInputId - 详细地址输入框ID（可选）
- * @param {string} options.apiBaseUrl - API基础URL（可选，默认：'/api/customer/districts/'）
- * @param {boolean} options.autoUpdateAddress - 是否自动更新地址字段（可选，默认：true）
- * @param {boolean} options.enableLogging - 是否启用日志（可选，默认：false）
- * @param {string} options.addressFormat - 地址格式：'name'（名称，默认）、'code'（编码）、'both'（编码|名称）
- */
-function initDistrictSelector(options) {
-    // 参数验证
-    if (!options || typeof options !== 'object') {
-        console.error('initDistrictSelector: 参数必须是对象');
-        return null;
-    }
-    
-    if (!options.prefix || typeof options.prefix !== 'string') {
-        console.error('initDistrictSelector: 缺少必需的prefix参数或prefix不是字符串');
-        return null;
-    }
-    
-    // 验证prefix格式（只允许字母、数字、下划线、连字符）
-    const prefix = options.prefix.trim();
-    if (!/^[a-zA-Z0-9_-]+$/.test(prefix)) {
-        console.error('initDistrictSelector: prefix只能包含字母、数字、下划线和连字符');
-        return null;
-    }
-    
-    // 检查是否已经初始化过
-    if (window.districtSelectors && window.districtSelectors[prefix]) {
-        console.warn(`initDistrictSelector: 选择器 ${prefix} 已经初始化过，返回现有实例`);
-        return window.districtSelectors[prefix];
-    }
-    
-    const addressFieldId = options.addressFieldId || prefix + 'AddressField';
-    const detailInputId = options.detailInputId || prefix + 'AddressDetail';
-    let apiBaseUrl = options.apiBaseUrl || '/api/customer/districts/';
-    const autoUpdateAddress = options.autoUpdateAddress !== false;
-    const enableLogging = options.enableLogging || false;
-    
-    // 验证addressFormat参数
-    const validFormats = ['name', 'code', 'both'];
-    const addressFormat = validFormats.includes(options.addressFormat) ? options.addressFormat : 'name';
-    
-    // 验证apiBaseUrl格式
-    if (typeof apiBaseUrl !== 'string' || !apiBaseUrl.startsWith('/')) {
-        console.warn('initDistrictSelector: apiBaseUrl格式不正确，使用默认值');
-        apiBaseUrl = '/api/customer/districts/';
-    }
-    
-    // 检查AmapDistrictSelector类是否已加载
-    if (typeof AmapDistrictSelector === 'undefined') {
-        console.error('initDistrictSelector: AmapDistrictSelector类未加载，请确保已引入amap-district-selector.js');
-        return null;
-    }
-    
-    // 检查必需的DOM元素是否存在
-    const provinceSelectId = prefix + 'ProvinceSelect';
-    const citySelectId = prefix + 'CitySelect';
-    const districtSelectId = prefix + 'DistrictSelect';
-    
-    const provinceSelect = document.getElementById(provinceSelectId);
-    const citySelect = document.getElementById(citySelectId);
-    const districtSelect = document.getElementById(districtSelectId);
-    
-    if (!provinceSelect || !citySelect || !districtSelect) {
-        console.error('initDistrictSelector: 必需的DOM元素不存在', {
-            provinceSelect: !!provinceSelect,
-            citySelect: !!citySelect,
-            districtSelect: !!districtSelect,
-            provinceSelectId: provinceSelectId,
-            citySelectId: citySelectId,
-            districtSelectId: districtSelectId
-        });
-        return null;
-    }
-    
-    try {
-        // 创建选择器实例
-        const selector = new AmapDistrictSelector({
-            provinceSelectId: provinceSelectId,
-            citySelectId: citySelectId,
-            districtSelectId: districtSelectId,
-            addressFieldId: addressFieldId,
-            detailInputId: detailInputId,
-            apiBaseUrl: apiBaseUrl,
-            autoUpdateAddress: autoUpdateAddress,
-            enableLogging: enableLogging,
-            addressFormat: addressFormat
-        });
-        
-        // 初始化选择器
-        selector.init();
-        
-        // 将选择器实例存储到全局对象中，方便后续访问
-        if (!window.districtSelectors) {
-            window.districtSelectors = {};
-        }
-        window.districtSelectors[prefix] = selector;
-        
-        if (enableLogging) {
-            console.log(`行政区域选择器已初始化: ${prefix}`);
-        }
-        
-        return selector;
-    } catch (error) {
-        console.error(`initDistrictSelector: 初始化失败 (${prefix})`, error);
-        return null;
-    }
-}
-
-// 如果页面中已经有districtSelectors对象，确保不覆盖
-if (!window.districtSelectors) {
-    window.districtSelectors = {};
-}
-
-console.log('[联系人表单] amap-district-selector.js 加载后');
-console.log('[联系人表单] AmapDistrictSelector 类:', typeof AmapDistrictSelector);
-console.log('[联系人表单] initDistrictSelector 函数:', typeof initDistrictSelector);
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('[联系人表单] DOMContentLoaded 事件触发');
-    
-    // 初始化籍贯省市区选择器
-    function initBirthplaceSelector() {
-        console.log('[联系人表单] 检查 initDistrictSelector 函数...');
-        console.log('[联系人表单] initDistrictSelector 类型:', typeof initDistrictSelector);
-        console.log('[联系人表单] AmapDistrictSelector 类型:', typeof AmapDistrictSelector);
-        
-        if (typeof initDistrictSelector === 'undefined') {
-            console.warn('[联系人表单] initDistrictSelector 函数未定义，等待中...');
-            setTimeout(initBirthplaceSelector, 100);
-            return;
-        }
-        
-        if (typeof AmapDistrictSelector === 'undefined') {
-            console.error('[联系人表单] AmapDistrictSelector 类未加载，请检查 amap-district-selector.js 文件');
-            return;
-        }
-        
-        // 检查DOM元素是否存在
-        const provinceSelect = document.getElementById('birthplaceProvinceSelect');
-        if (!provinceSelect) {
-            console.warn('[联系人表单] DOM元素未找到，延迟初始化...');
-            setTimeout(initBirthplaceSelector, 100);
-            return;
-        }
-        
-        console.log('[联系人表单] 开始初始化籍贯选择器...');
-        
-        // 检查元素是否存在
-        console.log('[联系人表单] 检查DOM元素:', {
-            birthplaceField: !!document.getElementById('birthplaceField'),
-            birthplaceProvinceSelect: !!provinceSelect,
-            birthplaceCitySelect: !!document.getElementById('birthplaceCitySelect'),
-            birthplaceDistrictSelect: !!document.getElementById('birthplaceDistrictSelect')
-        });
-        
-        const birthplaceSelector = initDistrictSelector({
-            prefix: 'birthplace',
-            addressFieldId: 'birthplaceField',
-            detailInputId: null,
-            apiBaseUrl: '/api/customer/districts/',
-            addressFormat: 'name',
-            enableLogging: true
-        });
-        
-        console.log('[联系人表单] 籍贯选择器初始化结果:', birthplaceSelector);
-        
-        if (birthplaceSelector) {
-            console.log('[联系人表单] 籍贯选择器初始化成功');
-            window.birthplaceSelector = birthplaceSelector;
-        } else {
-            console.error('[联系人表单] 籍贯选择器初始化失败');
-        }
-    }
-    
-    // 初始化办公地址选择器
-    function initOfficeAddressSelector() {
-        console.log('[联系人表单] 检查 initDistrictSelector 函数...');
-        console.log('[联系人表单] initDistrictSelector 类型:', typeof initDistrictSelector);
-        console.log('[联系人表单] AmapDistrictSelector 类型:', typeof AmapDistrictSelector);
-        
-        if (typeof initDistrictSelector === 'undefined') {
-            console.warn('[联系人表单] initDistrictSelector 函数未定义，等待中...');
-            setTimeout(initOfficeAddressSelector, 100);
-            return;
-        }
-        
-        if (typeof AmapDistrictSelector === 'undefined') {
-            console.error('[联系人表单] AmapDistrictSelector 类未加载，请检查 amap-district-selector.js 文件');
-            return;
-        }
-        
-        // 检查DOM元素是否存在
-        const provinceSelect = document.getElementById('officeProvinceSelect');
-        if (!provinceSelect) {
-            console.warn('[联系人表单] DOM元素未找到，延迟初始化...');
-            setTimeout(initOfficeAddressSelector, 100);
-            return;
-        }
-        
-        console.log('[联系人表单] 开始初始化办公地址选择器...');
-        
-        // 检查元素是否存在
-        console.log('[联系人表单] 检查DOM元素:', {
-            officeAddressField: !!document.getElementById('officeAddressField'),
-            officeProvinceSelect: !!provinceSelect,
-            officeCitySelect: !!document.getElementById('officeCitySelect'),
-            officeDistrictSelect: !!document.getElementById('officeDistrictSelect'),
-            officeAddressDetailInput: !!document.getElementById('officeAddressDetailInput')
-        });
-        
-        const officeAddressSelector = initDistrictSelector({
-            prefix: 'office',
-            addressFieldId: 'officeAddressField',
-            detailInputId: 'officeAddressDetailInput',
-            apiBaseUrl: '/api/customer/districts/',
-            addressFormat: 'name',
-            enableLogging: true
-        });
-        
-        console.log('[联系人表单] 办公地址选择器初始化结果:', officeAddressSelector);
-        
-        if (officeAddressSelector) {
-            console.log('[联系人表单] 办公地址选择器初始化成功');
-            window.officeAddressSelector = officeAddressSelector;
-        } else {
-            console.error('[联系人表单] 办公地址选择器初始化失败');
-        }
-    }
-    
-    // 开始初始化
-    initBirthplaceSelector();
-    initOfficeAddressSelector();
-});
-
+<script src="{% static 'js/amap-district-selector.js' %}">
     // 安全的HTML设置函数
     function setSafeHTML(element, html) {
         if (!element) return;
@@ -892,292 +629,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 </script>
-{# 引入启信宝API配置模板 #}
-{% include "shared/qixinbao_api_config_snippet.html" %}
 <script src="{% static 'js/qixinbao-autofill.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-
-    // 客户搜索功能
-    (function() {
-        const clientSelect = document.querySelector('[name="client"].client-search-select');
-        
-        if (clientSelect) {
-            // 将普通select转换为可搜索的select
-            // 创建一个输入框和下拉列表
-            const wrapper = document.createElement('div');
-            wrapper.className = 'client-search-wrapper position-relative';
-            
-            const searchInput = document.createElement('input');
-            searchInput.type = 'text';
-            searchInput.className = 'form-control client-search-input';
-            searchInput.placeholder = '输入客户名称或统一信用代码搜索...';
-            searchInput.autocomplete = 'off';
-            
-            const dropdown = document.createElement('div');
-            dropdown.className = 'client-search-dropdown list-group position-absolute w-100';
-            dropdown.style.display = 'none';
-            dropdown.style.maxHeight = '300px';
-            dropdown.style.overflowY = 'auto';
-            dropdown.style.zIndex = '1000';
-            dropdown.style.backgroundColor = 'white';
-            dropdown.style.border = '1px solid #ced4da';
-            dropdown.style.borderRadius = '0.375rem';
-            dropdown.style.boxShadow = '0 0.5rem 1rem rgba(0, 0, 0, 0.15)';
-            
-            // 隐藏原始select
-            clientSelect.style.display = 'none';
-            
-            // 插入新元素
-            clientSelect.parentNode.insertBefore(wrapper, clientSelect);
-            wrapper.appendChild(searchInput);
-            wrapper.appendChild(dropdown);
-            
-            let searchTimeout;
-            let selectedClientId = clientSelect.value;
-            let selectedClientName = '';
-            
-            // 如果已有选中值，显示客户名称
-            if (selectedClientId) {
-                const selectedOption = clientSelect.options[clientSelect.selectedIndex];
-                if (selectedOption) {
-                    selectedClientName = selectedOption.text;
-                    searchInput.value = selectedClientName;
-                }
-            }
-            
-            // 搜索函数
-            function searchClients(keyword) {
-                if (keyword.length < 2) {
-                    dropdown.style.display = 'none';
-                    return;
-                }
-                
-                fetch(`/api/customer/clients/?search=${encodeURIComponent(keyword)}&page_size=20`, {
-                    method: 'GET',
-                    credentials: 'same-origin',
-                    headers: {
-                        'Accept': 'application/json',
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        return response.json();
-                    }
-                    throw new Error('搜索失败');
-                })
-                .then(data => {
-                    dropdown.innerHTML = '';
-                    
-                    if (data.results && data.results.length > 0) {
-                        data.results.forEach(client => {
-                            const item = document.createElement('a');
-                            item.href = '#';
-                            item.className = 'list-group-item list-group-item-action';
-                            item.innerHTML = `
-                                <div class="fw-bold">${client.name || ''}</div>
-                                <small class="text-muted">${client.unified_credit_code || ''}</small>
-                            `;
-                            
-                            item.addEventListener('click', function(e) {
-                                e.preventDefault();
-                                selectedClientId = client.id;
-                                selectedClientName = client.name;
-                                searchInput.value = selectedClientName;
-                                clientSelect.value = selectedClientId;
-                                dropdown.style.display = 'none';
-                                
-                                // 触发change事件
-                                clientSelect.dispatchEvent(new Event('change'));
-                            });
-                            
-                            dropdown.appendChild(item);
-                        });
-                        dropdown.style.display = 'block';
-                    } else {
-                        const item = document.createElement('div');
-                        item.className = 'list-group-item text-muted';
-                        item.textContent = '未找到匹配的客户';
-                        dropdown.appendChild(item);
-                        dropdown.style.display = 'block';
-                    }
-                })
-                .catch(error => {
-                    console.error('搜索客户失败:', error);
-                    dropdown.innerHTML = '<div class="list-group-item text-danger">搜索失败，请稍后重试</div>';
-                    dropdown.style.display = 'block';
-                });
-            }
-            
-            // 输入事件
-            searchInput.addEventListener('input', function() {
-                clearTimeout(searchTimeout);
-                const keyword = this.value.trim();
-                
-                if (keyword === selectedClientName) {
-                    dropdown.style.display = 'none';
-                    return;
-                }
-                
-                searchTimeout = setTimeout(() => {
-                    searchClients(keyword);
-                }, 300);
-            });
-            
-            // 点击外部关闭下拉框
-            document.addEventListener('click', function(e) {
-                if (!wrapper.contains(e.target)) {
-                    dropdown.style.display = 'none';
-                }
-            });
-            
-            // 失去焦点时，如果输入框为空或值不匹配，恢复显示
-            searchInput.addEventListener('blur', function() {
-                setTimeout(() => {
-                    if (this.value !== selectedClientName) {
-                        if (selectedClientId) {
-                            this.value = selectedClientName;
-                        } else {
-                            this.value = '';
-                        }
-                    }
-                }, 200);
-            });
-        }
-    })();
-    
-
-    // 客户选择后自动填充负责人信息
-    (function() {
-        const clientSelect = document.querySelector('[name="client"]');
-        const responsibleUserSelect = document.getElementById('id_responsible_user');
-        const responsibleDepartmentInput = document.querySelector('[name="responsible_department"]');
-        
-        if (clientSelect && responsibleUserSelect && responsibleDepartmentInput) {
-            clientSelect.addEventListener('change', function() {
-                const clientId = this.value;
-                if (clientId) {
-                    // 通过AJAX获取客户的负责人信息
-                    fetch(`/api/customer/clients/${clientId}/responsible_user/`, {
-                        method: 'GET',
-                        credentials: 'same-origin',
-                        headers: {
-                            'Accept': 'application/json',
-                        }
-                    })
-                    .then(response => {
-                        if (response.ok) {
-                            return response.json();
-                        }
-                        throw new Error('获取客户负责人信息失败');
-                    })
-                    .then(data => {
-                        if (data && data.responsible_user_id) {
-                            // 设置负责人
-                            responsibleUserSelect.value = data.responsible_user_id;
-                            // 触发change事件以更新部门
-                            responsibleUserSelect.dispatchEvent(new Event('change'));
-                        }
-                    })
-                    .catch(error => {
-                        console.error('获取客户负责人信息失败:', error);
-                    });
-                }
-            });
-        }
-    })();
-    
-
-    // 负责人选择后自动显示负责部门
-    (function() {
-        const responsibleUserSelect = document.getElementById('id_responsible_user');
-        const responsibleDepartmentInput = document.querySelector('[name="responsible_department"]');
-        
-        if (responsibleUserSelect && responsibleDepartmentInput) {
-            // 从选项的data属性或文本中获取部门信息
-            // 首先尝试从选项的data-department属性获取
-            responsibleUserSelect.addEventListener('change', function() {
-                const selectedOption = this.options[this.selectedIndex];
-                if (selectedOption) {
-                    // 尝试从data-department属性获取
-                    const department = selectedOption.getAttribute('data-department');
-                    if (department) {
-                        responsibleDepartmentInput.value = department;
-                    } else {
-                        // 如果没有data属性，尝试通过AJAX获取
-                        const userId = this.value;
-                        if (userId) {
-                            // 使用一个简单的API端点获取用户部门
-                            fetch(`/api/system/users/${userId}/department/`, {
-                                method: 'GET',
-                                credentials: 'same-origin',
-                                headers: {
-                                    'Accept': 'application/json',
-                                }
-                            })
-                            .then(response => {
-                                if (response.ok) {
-                                    return response.json();
-                                }
-                                throw new Error('获取部门信息失败');
-                            })
-                            .then(data => {
-                                if (data && data.department) {
-                                    responsibleDepartmentInput.value = data.department;
-                                } else {
-                                    responsibleDepartmentInput.value = '';
-                                }
-                            })
-                            .catch(error => {
-                                console.error('获取部门信息失败:', error);
-                                responsibleDepartmentInput.value = '';
-                            });
-                        } else {
-                            responsibleDepartmentInput.value = '';
-                        }
-                    }
-                } else {
-                    responsibleDepartmentInput.value = '';
-                }
-            });
-            
-            // 页面加载时，如果有选中的负责人，也自动填充部门
-            if (responsibleUserSelect.value) {
-                const selectedOption = responsibleUserSelect.options[responsibleUserSelect.selectedIndex];
-                if (selectedOption) {
-                    const department = selectedOption.getAttribute('data-department');
-                    if (department) {
-                        responsibleDepartmentInput.value = department;
-                    } else if (responsibleUserSelect.value) {
-                        // 通过AJAX获取
-                        const userId = responsibleUserSelect.value;
-                        fetch(`/api/system/users/${userId}/department/`, {
-                            method: 'GET',
-                            credentials: 'same-origin',
-                            headers: {
-                                'Accept': 'application/json',
-                            }
-                        })
-                        .then(response => {
-                            if (response.ok) {
-                                return response.json();
-                            }
-                            throw new Error('获取部门信息失败');
-                        })
-                        .then(data => {
-                            if (data && data.department) {
-                                responsibleDepartmentInput.value = data.department;
-                            }
-                        })
-                        .catch(error => {
-                            console.error('获取部门信息失败:', error);
-                        });
-                    }
-                }
-            }
-        }
-    })();
-    
     // 学校搜索API地址
     const SCHOOL_SEARCH_API = '/api/customer/schools/search/';
     
@@ -1194,7 +648,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Accept': 'application/json',
                 }
             });
-            
             
             if (!response.ok) {
                 const errorText = await response.text();
@@ -1242,7 +695,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!select) {
             return;
         }
-        
         
         // 标记为已初始化
         searchInput.dataset.initialized = 'true';
@@ -1501,6 +953,49 @@ document.addEventListener('DOMContentLoaded', function() {
         initSchoolSearch();
     }, 100);
     
+    // 初始化籍贯省市区选择器
+    const birthplaceSelector = new AmapDistrictSelector({
+        provinceSelectId: 'birthplaceProvinceSelect',
+        citySelectId: 'birthplaceCitySelect',
+        districtSelectId: 'birthplaceDistrictSelect',
+        addressFieldId: 'birthplaceField',
+        detailInputId: null,  // 不使用详细地址输入框
+        apiBaseUrl: '/api/customer/districts/',
+        autoUpdateAddress: true,
+        enableLogging: false
+    });
+    birthplaceSelector.init();
+    
+    // 如果已有籍贯数据，尝试解析并填充到选择器
+    const birthplaceField = document.getElementById('birthplaceField');
+    if (birthplaceField && birthplaceField.value) {
+        // 解析已有地址（格式：省 市 区/县 详细地址）
+        const address = birthplaceField.value.trim();
+        if (address) {
+            // 简单的地址解析逻辑（可以根据实际情况调整）
+            // 这里假设地址格式为：省 市 区/县 详细地址
+            const parts = address.split(/\s+/);
+            if (parts.length >= 3) {
+                // 尝试匹配省份
+                const provinceSelect = document.getElementById('birthplaceProvinceSelect');
+                if (provinceSelect) {
+                    // 等待省份列表加载完成后再设置
+                    setTimeout(() => {
+                        const provinceName = parts[0];
+                        for (let i = 0; i < provinceSelect.options.length; i++) {
+                            if (provinceSelect.options[i].textContent.includes(provinceName) || 
+                                provinceSelect.options[i].dataset.name === provinceName) {
+                                provinceSelect.value = provinceSelect.options[i].value;
+                                provinceSelect.dispatchEvent(new Event('change'));
+                                break;
+                            }
+                        }
+                    }, 500);
+                }
+            }
+        }
+    }
+    
     // 职业信息表单集管理
     const formsetContainer = document.getElementById('career-formset-container');
     const addBtn = document.getElementById('add-career-btn');
@@ -1634,15 +1129,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 label.setAttribute('for', forAttr.replace(new RegExp('^id_' + prefix + '\\d+'), 'id_' + prefix + formIndex));
             }
         });
-        // 更新下拉框ID和script中的索引
+        // 更新下拉框ID
         newForm.querySelectorAll('[id^="companyDropdown_career_"]').forEach(function(dropdown) {
             dropdown.id = `companyDropdown_career_${formIndex}`;
-        });
-        // 更新script标签中的索引（如果存在）
-        newForm.querySelectorAll('script').forEach(function(script) {
-            if (script.textContent && script.textContent.includes('careerIdx')) {
-                script.textContent = script.textContent.replace(/var careerIdx = \d+;/, 'var careerIdx = ' + formIndex + ';');
-            }
         });
         
         // 清空值
@@ -1694,25 +1183,9 @@ document.addEventListener('DOMContentLoaded', function() {
         managementForm.value = formCount;
         
         // 为新添加的职业信息表单初始化启信宝自动填充
-        // 使用共享模板的初始化方式
         setTimeout(function() {
-            if (!window.qixinbaoCompanyNameConfigs) {
-                window.qixinbaoCompanyNameConfigs = [];
-            }
-            window.qixinbaoCompanyNameConfigs.push({
-                nameInputSelector: '[name="careers-' + formIndex + '-company"]',
-                creditCodeInputSelector: '[name="careers-' + formIndex + '-unified_credit_code"]',
-                dropdownId: 'companyDropdown_career_' + formIndex,
-                autoFillDetails: false,
-                autoQueryExecution: false,
-                showSuccessAlert: false,
-                debug: false
-            });
-            // 调用初始化函数
-            if (typeof initQixinbaoCompanyName === 'function') {
-                initQixinbaoCompanyName();
-            }
-        }, 200);
+            initCareerQixinbaoAutofill(formIndex);
+        }, 100);
     });
     
     // 同事关系人员管理
@@ -2061,6 +1534,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // 初始化办公地址选择器
+    const officeAddressSelector = new AmapDistrictSelector({
+        provinceSelectId: 'officeProvinceSelect',
+        citySelectId: 'officeCitySelect',
+        districtSelectId: 'officeDistrictSelect',
+        addressFieldId: 'officeAddressField',
+        detailInputId: 'officeAddressDetailInput',
+        apiBaseUrl: '/api/customer/districts/',
+        autoUpdateAddress: true,
+        enableLogging: false
+    });
+    officeAddressSelector.init();
+    
     // 自动导入客户信息（就职公司、统一信用代码、办公地址）
     function autoFillClientInfo(clientId) {
         if (!clientId) {
@@ -2142,9 +1628,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             if (!currentValue.trim() && clientInfo.address) {
                                 // 使用地址选择器的setAddress方法，会自动解析地址
-                                const officeSelector = window.officeAddressSelector || window.districtSelectors?.office;
-                                if (officeSelector && typeof officeSelector.setAddress === 'function') {
-                                    officeSelector.setAddress(clientInfo.address);
+                                if (typeof officeAddressSelector !== 'undefined' && officeAddressSelector) {
+                                    officeAddressSelector.setAddress(clientInfo.address);
                                 } else {
                                     // 如果地址选择器还未初始化，直接设置隐藏字段的值
                                     officeAddressField.value = clientInfo.address;
@@ -2179,235 +1664,72 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
     }
     
-    // 初始化启信宝自动填充功能（使用共享模板的初始化逻辑）
-    function initQixinbaoCompanyName() {
-        if (!window.qixinbaoCompanyNameConfigs || window.qixinbaoCompanyNameConfigs.length === 0) {
-            return;
+    // 初始化职业信息的启信宝自动填充功能
+    function initCareerQixinbaoAutofill(formIndex) {
+        const companyInput = document.querySelector(`[name="careers-${formIndex}-company"]`);
+        const creditCodeInput = document.querySelector(`[name="careers-${formIndex}-unified_credit_code"]`);
+        const dropdown = document.getElementById(`companyDropdown_career_${formIndex}`);
+        
+        if (!companyInput || !creditCodeInput || !dropdown) {
+            return null;
         }
         
-        // 检查依赖是否已加载
-        if (typeof initQixinbaoAutofill === 'undefined') {
-            console.warn('initQixinbaoAutofill 函数未定义，等待中...');
-            setTimeout(initQixinbaoCompanyName, 100);
-            return;
-        }
-        
+        // 检查是否加载了QixinbaoAutofill类
         if (typeof QixinbaoAutofill === 'undefined') {
-            console.error('QixinbaoAutofill 类未加载，请确保已引入qixinbao-autofill.js 文件');
-            setTimeout(initQixinbaoCompanyName, 100);
-            return;
+            return null;
         }
         
-        // 初始化所有配置
-        var initializedConfigs = [];
-        window.qixinbaoCompanyNameConfigs.forEach(function(config, index) {
-            try {
-                console.log('[启信宝初始化] 开始初始化配置:', config);
-                
-                // 检查元素是否存在
-                var nameInput = document.querySelector(config.nameInputSelector);
-                var creditCodeInput = document.querySelector(config.creditCodeInputSelector);
-                var dropdown = document.getElementById(config.dropdownId);
-                
-                console.log('[启信宝初始化] 元素查找结果:', {
-                    nameInput: nameInput ? '✓ 找到' : '✗ 未找到',
-                    creditCodeInput: creditCodeInput ? '✓ 找到' : '✗ 未找到',
-                    dropdown: dropdown ? '✓ 找到' : '✗ 未找到'
-                });
-                
-                if (!nameInput) {
-                    console.error('[启信宝初始化] 名称输入框未找到:', config.nameInputSelector);
-                    return;
-                }
-                if (!dropdown) {
-                    console.error('[启信宝初始化] 下拉框未找到:', config.dropdownId);
-                    return;
-                }
-                
-                // 初始化启信宝自动填充组件
-                const autofill = initQixinbaoAutofill({
-                    nameInputSelector: config.nameInputSelector,
-                    creditCodeInputSelector: config.creditCodeInputSelector,
-                    dropdownId: config.dropdownId,
-                    autoFillDetails: config.autoFillDetails,
-                    autoQueryExecution: config.autoQueryExecution,
-                    showSuccessAlert: config.showSuccessAlert,
-                    debug: true  // 强制启用调试模式，查看详细日志
-                });
-                
-                if (autofill) {
-                    console.log('[启信宝初始化] ✅ 初始化成功:', config.dropdownId);
-                    initializedConfigs.push(index);
-                } else {
-                    console.error('[启信宝初始化] ❌ 初始化失败:', config.dropdownId);
-                }
-            } catch (error) {
-                console.error('[启信宝初始化] ❌ 初始化异常:', error, config);
-            }
-        });
-        
-        // 移除已成功初始化的配置
-        if (initializedConfigs.length > 0) {
-            initializedConfigs.reverse().forEach(function(index) {
-                window.qixinbaoCompanyNameConfigs.splice(index, 1);
-            });
-        }
-    }
-    
-    // 延迟初始化，确保所有依赖已加载
-    // 等待配置被推送到数组后再初始化
-    function waitAndInit() {
-        if (window.qixinbaoCompanyNameConfigs && window.qixinbaoCompanyNameConfigs.length > 0) {
-            initQixinbaoCompanyName();
-        } else {
-            setTimeout(waitAndInit, 100);
-        }
-    }
-    
-    // 如果DOM已经加载完成，延迟初始化确保依赖已加载
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(waitAndInit, 300);
-        });
-    } else {
-        // DOM已经加载完成，延迟初始化确保依赖已加载
-        setTimeout(waitAndInit, 300);
-    }
-});
-    
-
-    // 客户选择后自动填充负责人信息
-    (function() {
-        const clientSelect = document.querySelector('[name="client"]');
-        const responsibleUserSelect = document.getElementById('id_responsible_user');
-        const responsibleDepartmentInput = document.querySelector('[name="responsible_department"]');
-        
-        if (clientSelect && responsibleUserSelect && responsibleDepartmentInput) {
-            clientSelect.addEventListener('change', function() {
-                const clientId = this.value;
-                if (clientId) {
-                    // 通过AJAX获取客户的负责人信息
-                    fetch(`/api/customer/clients/${clientId}/responsible_user/`, {
-                        method: 'GET',
-                        credentials: 'same-origin',
-                        headers: {
-                            'Accept': 'application/json',
-                        }
-                    })
-                    .then(response => {
-                        if (response.ok) {
-                            return response.json();
-                        }
-                        throw new Error('获取客户负责人信息失败');
-                    })
-                    .then(data => {
-                        if (data && data.responsible_user_id) {
-                            // 设置负责人
-                            responsibleUserSelect.value = data.responsible_user_id;
-                            // 触发change事件以更新部门
-                            responsibleUserSelect.dispatchEvent(new Event('change'));
-                        }
-                    })
-                    .catch(error => {
-                        console.error('获取客户负责人信息失败:', error);
-                    });
-                }
-            });
-        }
-    })();
-    
-
-    // 负责人选择后自动显示负责部门
-    (function() {
-        const responsibleUserSelect = document.getElementById('id_responsible_user');
-        const responsibleDepartmentInput = document.querySelector('[name="responsible_department"]');
-        
-        if (responsibleUserSelect && responsibleDepartmentInput) {
-            // 从选项的data属性或文本中获取部门信息
-            // 首先尝试从选项的data-department属性获取
-            responsibleUserSelect.addEventListener('change', function() {
-                const selectedOption = this.options[this.selectedIndex];
-                if (selectedOption) {
-                    // 尝试从data-department属性获取
-                    const department = selectedOption.getAttribute('data-department');
-                    if (department) {
-                        responsibleDepartmentInput.value = department;
-                    } else {
-                        // 如果没有data属性，尝试通过AJAX获取
-                        const userId = this.value;
-                        if (userId) {
-                            // 使用一个简单的API端点获取用户部门
-                            fetch(`/api/system/users/${userId}/department/`, {
-                                method: 'GET',
-                                credentials: 'same-origin',
-                                headers: {
-                                    'Accept': 'application/json',
-                                }
-                            })
-                            .then(response => {
-                                if (response.ok) {
-                                    return response.json();
-                                }
-                                throw new Error('获取部门信息失败');
-                            })
-                            .then(data => {
-                                if (data && data.department) {
-                                    responsibleDepartmentInput.value = data.department;
-                                } else {
-                                    responsibleDepartmentInput.value = '';
-                                }
-                            })
-                            .catch(error => {
-                                console.error('获取部门信息失败:', error);
-                                responsibleDepartmentInput.value = '';
-                            });
-                        } else {
-                            responsibleDepartmentInput.value = '';
-                        }
-                    }
-                } else {
-                    responsibleDepartmentInput.value = '';
-                }
-            });
+        // 初始化启信宝自动填充组件（只填充公司名称和统一信用代码）
+        const qixinbaoAutofill = new QixinbaoAutofill({
+            // 输入框选择器
+            nameInputSelector: `[name="careers-${formIndex}-company"]`,
+            creditCodeInputSelector: `[name="careers-${formIndex}-unified_credit_code"]`,
             
-            // 页面加载时，如果有选中的负责人，也自动填充部门
-            if (responsibleUserSelect.value) {
-                const selectedOption = responsibleUserSelect.options[responsibleUserSelect.selectedIndex];
-                if (selectedOption) {
-                    const department = selectedOption.getAttribute('data-department');
-                    if (department) {
-                        responsibleDepartmentInput.value = department;
-                    } else if (responsibleUserSelect.value) {
-                        // 通过AJAX获取
-                        const userId = responsibleUserSelect.value;
-                        fetch(`/api/system/users/${userId}/department/`, {
-                            method: 'GET',
-                            credentials: 'same-origin',
-                            headers: {
-                                'Accept': 'application/json',
-                            }
-                        })
-                        .then(response => {
-                            if (response.ok) {
-                                return response.json();
-                            }
-                            throw new Error('获取部门信息失败');
-                        })
-                        .then(data => {
-                            if (data && data.department) {
-                                responsibleDepartmentInput.value = data.department;
-                            }
-                        })
-                        .catch(error => {
-                            console.error('获取部门信息失败:', error);
-                        });
-                    }
-                }
-            }
+            // 下拉框ID
+            dropdownId: `companyDropdown_career_${formIndex}`,
+            
+            // API端点
+            searchApiUrl: '/api/customer/search-company/',
+            detailApiUrl: '/api/customer/get-company-detail/',
+            
+            // 其他字段选择器（不填充，只填充公司名称和统一信用代码）
+            fieldSelectors: {},
+            
+            // 功能开关
+            autoFillDetails: false,  // 不自动填充详细信息
+            autoQueryExecution: false,  // 不查询被执行信息
+            showSuccessAlert: false,  // 不显示成功提示
+            
+            // 调试模式
+            debug: false
+        });
+        
+        // 初始化组件
+        if (qixinbaoAutofill.init()) {
+            return qixinbaoAutofill;
+        } else {
+            return null;
         }
-    })();
+    }
     
-    {# 诊断脚本已移除 #}
+    // 为所有现有的职业信息表单初始化启信宝自动填充
+    document.querySelectorAll('.career-form-item').forEach(function(formItem) {
+        const formIndex = formItem.getAttribute('data-form-index');
+        if (formIndex !== null && formItem.style.display !== 'none') {
+            initCareerQixinbaoAutofill(parseInt(formIndex));
+        }
+    });
+});
+
+    // 事件处理器: handle_onchange_0
+    document.addEventListener('DOMContentLoaded', function() {
+        const element = document.querySelector('#use_custom_school_{{ forloop.counter0 }}');
+        if (element) {
+            element.addEventListener('change', function(e) {
+                toggleCustomSchool({{ forloop.counter0 }}, this.checked)
+            });
+        }
+    });
 
 </script>
 {% endblock %}

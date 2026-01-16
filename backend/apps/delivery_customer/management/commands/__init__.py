@@ -1,1 +1,3 @@
-# Management commands
+# Management commands for delivery_customer app
+
+

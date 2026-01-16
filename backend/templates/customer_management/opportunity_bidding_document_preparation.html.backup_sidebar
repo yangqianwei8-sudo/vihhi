@@ -1,0 +1,106 @@
+{% extends "customer_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:opportunity_management' %}">商机管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">编制投标文件</li>
+{% endblock %}
+
+{% block content %}
+<div class="workspace-content">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-file-earmark-doc me-2"></i>编制投标文件
+        </h2>
+    </div>
+    
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">功能说明</h5>
+        </div>
+        <div class="info-card-body">
+            <p class="text-muted">
+                编制投标文件是投标流程的第二步，用于记录投标文件的编制进度和相关信息。
+            </p>
+        </div>
+    </div>
+    
+    <form method="post" enctype="multipart/form-data" id="biddingDocumentPreparationForm">
+        {% csrf_token %}
+        
+        <div class="info-card info-card-fade-in">
+            <div class="info-card-header">
+                <h5 class="info-card-title">基本信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <label class="info-label info-label-required">关联商机</label>
+                        <select name="opportunity_id" class="form-select" required>
+                            <option value="">请选择商机</option>
+                            {% for opp in opportunities %}
+                            <option value="{{ opp.id }}">{{ opp.name }} - {{ opp.client.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">开始编制日期</label>
+                        <input type="date" name="preparation_start_date" class="form-control" value="{% now 'Y-m-d' %}">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-card info-card-fade-in">
+            <div class="info-card-header">
+                <h5 class="info-card-title">编制信息</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <label class="info-label">编制负责人</label>
+                        <input type="text" name="preparation_leader" class="form-control" placeholder="请输入编制负责人">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">预计完成时间</label>
+                        <input type="datetime-local" name="expected_completion_time" class="form-control">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">编制进度</label>
+                        <select name="preparation_progress" class="form-select">
+                            <option value="">请选择进度</option>
+                            <option value="not_started">未开始</option>
+                            <option value="in_progress">进行中</option>
+                            <option value="completed">已完成</option>
+                        </select>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">完成百分比</label>
+                        <input type="number" name="completion_percentage" class="form-control" min="0" max="100" placeholder="0-100">
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">编制说明</label>
+                        <textarea name="preparation_notes" class="form-control" rows="4" placeholder="请输入编制说明"></textarea>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">投标文件</label>
+                        <input type="file" name="bidding_documents" class="form-control" multiple>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <a href="{% url 'business_pages:opportunity_management' %}" class="btn btn-outline-secondary">取消</a>
+            <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

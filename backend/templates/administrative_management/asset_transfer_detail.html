@@ -1,9 +1,12 @@
-{% extends "shared/module_base.html" %}
+{% extends "administrative_management/base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:asset_transfer_list' %}">资产转移</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ transfer.transfer_number }}</li>
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
@@ -29,9 +32,9 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="page-title">{{ page_title }}</h1>
@@ -57,7 +60,6 @@
         </div>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">基本信息</h5>
@@ -92,7 +94,6 @@
         </div>
     </div>
 
-    <!-- 转移信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">转移信息</h5>
@@ -123,7 +124,6 @@
         </div>
     </div>
 
-    <!-- 审批信息 -->
     {% if transfer.approver %}
     <div class="info-card">
         <div class="info-card-header">
@@ -144,7 +144,6 @@
     </div>
     {% endif %}
 
-    <!-- 完成信息 -->
     {% if transfer.completed_by %}
     <div class="info-card">
         <div class="info-card-header">
@@ -165,7 +164,6 @@
     </div>
     {% endif %}
 
-    <!-- 备注 -->
     {% if transfer.notes %}
     <div class="info-card">
         <div class="info-card-header">
@@ -180,4 +178,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

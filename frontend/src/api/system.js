@@ -53,23 +53,3 @@ export const changePassword = (oldPassword, newPassword, confirmPassword) => {
   })
 }
 
-// 发送短信验证码（用于注册）
-export const sendVerificationCode = (phone) => {
-  return api.post('/system/users/send-verification-code/', {
-    phone
-  })
-}
-
-// 验证短信验证码
-export const verifyCode = (phone, code) => {
-  return api.post('/system/users/verify-code/', {
-    phone,
-    code
-  })
-}
-
-// 用户注册
-export const register = (data) => {
-  return api.post('/register/', data)
-}
-

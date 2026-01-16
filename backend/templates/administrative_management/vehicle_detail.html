@@ -1,12 +1,13 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "administrative_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:vehicle_management' %}">用车管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ vehicle.plate_number }}</li>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .center-hero {
         background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
@@ -75,20 +76,19 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="center-hero">
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
     </div>
 
-    <!-- 操作按钮 -->
     <div class="text-end mb-4">
         <a href="{% url 'admin_pages:vehicle_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
         </a>
-        <a href="{% url 'admin_pages:vehicle_booking_create' %}?vehicle={{ vehicle.id }}" class="btn btn-outline-primary me-2">
+        <a href="/admin/administrative_management/vehiclebooking/add/?vehicle={{ vehicle.id }}" class="btn btn-outline-primary me-2">
             <i class="bi bi-calendar-plus"></i> 申请用车
         </a>
         <a href="{% url 'admin_pages:vehicle_update' vehicle.id %}" class="btn btn-primary">
@@ -96,7 +96,6 @@
         </a>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <h5>基本信息</h5>
         <div class="info-row">
@@ -127,7 +126,6 @@
         </div>
     </div>
 
-    <!-- 使用信息 -->
     <div class="info-card">
         <h5>使用信息</h5>
         <div class="info-row">
@@ -162,7 +160,6 @@
         </div>
     </div>
 
-    <!-- 购买信息 -->
     {% if vehicle.purchase_date or vehicle.purchase_price %}
     <div class="info-card">
         <h5>购买信息</h5>
@@ -183,7 +180,6 @@
     </div>
     {% endif %}
 
-    <!-- 证件信息 -->
     {% if vehicle.insurance_expiry or vehicle.annual_inspection_date %}
     <div class="info-card">
         <h5>证件信息</h5>
@@ -211,7 +207,6 @@
     </div>
     {% endif %}
 
-    <!-- 今日用车 -->
     {% if today_bookings %}
     <div class="info-card">
         <h5>今日用车 ({{ today|date:"Y-m-d" }})</h5>
@@ -232,7 +227,7 @@
                     </p>
                     {% endif %}
                 </div>
-                <a href="{% url 'admin_pages:vehicle_booking_detail' booking.id %}" class="btn btn-sm btn-outline-info ms-2">
+                <a href="/admin/administrative_management/vehiclebooking/{{ booking.id }}/" class="btn btn-sm btn-outline-info ms-2">
                     <i class="bi bi-eye"></i>
                 </a>
             </div>
@@ -241,7 +236,6 @@
     </div>
     {% endif %}
 
-    <!-- 最近用车记录 -->
     {% if recent_bookings %}
     <div class="info-card">
         <h5>最近用车记录 (最近10条)</h5>
@@ -262,7 +256,7 @@
                     </p>
                     {% endif %}
                 </div>
-                <a href="{% url 'admin_pages:vehicle_booking_detail' booking.id %}" class="btn btn-sm btn-outline-info ms-2">
+                <a href="/admin/administrative_management/vehiclebooking/{{ booking.id }}/" class="btn btn-sm btn-outline-info ms-2">
                     <i class="bi bi-eye"></i>
                 </a>
             </div>
@@ -271,7 +265,6 @@
     </div>
     {% endif %}
 
-    <!-- 描述信息 -->
     {% if vehicle.description %}
     <div class="info-card">
         <h5>描述说明</h5>
@@ -280,4 +273,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

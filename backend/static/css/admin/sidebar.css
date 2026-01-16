@@ -3,12 +3,6 @@
 @import url('./variables.css');
 
 /* ========== 侧边栏基础样式 ========== */
-#nav-sidebar {
-    margin-left: 0 !important;
-    padding-left: 0 !important;
-    left: 0 !important;
-}
-
 #nav-sidebar * {
     box-sizing: border-box;
 }
@@ -17,7 +11,7 @@
 #nav-sidebar .module {
     margin: 0 0 8px 0 !important;
     padding: 0 !important;
-    border-radius: 0 !important;
+    border-radius: 8px !important;
     transition: all var(--admin-transition-base);
     overflow: hidden;
     background: rgba(255, 255, 255, 0.6);
@@ -66,57 +60,71 @@
 #nav-sidebar .module a {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    min-height: 44px;
-    color: var(--vh-text, #1F2937);
+    gap: 10px;
+    padding: 10px 12px;
+    color: #4B5563;
     text-decoration: none;
-    font-size: 15px;
-    font-weight: 500;
-    transition: background var(--admin-transition-base), color var(--admin-transition-base);
+    font-size: 13px;
+    font-weight: var(--admin-font-weight-normal);
+    transition: all var(--admin-transition-base);
+    border-left: 3px solid transparent;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-height: 40px;
     position: relative;
-    border-radius: 0;
-    margin: 0;
-    cursor: pointer;
+    border-radius: 6px;
+    margin: 2px 4px;
 }
 
 /* 菜单项hover效果 */
 #nav-sidebar .module a:hover {
-    background: rgba(31, 42, 87, 0.08);
-    color: var(--vh-primary, #1F2A57);
-    text-decoration: none;
+    background: linear-gradient(90deg, rgba(23, 162, 184, 0.08) 0%, rgba(23, 162, 184, 0.04) 100%);
+    color: #17a2b8;
+    border-left-color: rgba(23, 162, 184, 0.5);
+    transform: translateX(2px);
 }
 
 /* 激活状态 */
 #nav-sidebar .module a.selected,
 #nav-sidebar .module a.active {
-    background: rgba(31, 42, 87, 0.12) !important;
-    color: var(--vh-primary, #1F2A57) !important;
-    font-weight: 600 !important;
+    background: linear-gradient(90deg, rgba(23, 162, 184, 0.15) 0%, rgba(23, 162, 184, 0.08) 100%) !important;
+    color: #17a2b8 !important;
+    border-left-color: #17a2b8 !important;
+    font-weight: var(--admin-font-weight-medium) !important;
+    box-shadow: 0 2px 4px rgba(23, 162, 184, 0.15);
 }
 
-/* 激活状态指示器 - 移除，使用统一背景色 */
+/* 激活状态指示器 */
+#nav-sidebar .module a.selected::before,
+#nav-sidebar .module a.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 60%;
+    background: #17a2b8;
+    border-radius: 0 2px 2px 0;
+    box-shadow: 0 0 8px rgba(23, 162, 184, 0.5);
+}
 
 /* ========== 菜单图标 ========== */
 #nav-sidebar .module a i {
-    font-size: 18px;
-    width: 20px;
+    font-size: 16px;
+    width: 18px;
     flex-shrink: 0;
     text-align: center;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--vh-text-muted, #6B7280);
-    transition: color var(--admin-transition-base);
+    color: #6B7280;
+    transition: all var(--admin-transition-base);
 }
 
 #nav-sidebar .module a:hover i,
 #nav-sidebar .module a.selected i,
 #nav-sidebar .module a.active i {
-    color: var(--vh-primary, #1F2A57);
+    color: #17a2b8;
+    transform: scale(1.1);
 }
 
 /* ========== 菜单标题/分组标题 ========== */
@@ -134,7 +142,7 @@
     background: rgba(249, 250, 251, 0.8);
     border-bottom: 1px solid rgba(229, 231, 235, 0.6);
     margin: 0;
-    border-radius: 0;
+    border-radius: 8px 8px 0 0;
 }
 
 #nav-sidebar .module th[scope="row"] a:hover {
@@ -145,35 +153,16 @@
 /* 折叠/展开图标 */
 #nav-sidebar .module th[scope="row"] .menu-toggle,
 #nav-sidebar .module th[scope="row"] .toggle {
-    width: 6px;
-    height: 6px;
-    position: relative;
     margin-left: auto;
-    font-size: 0;
-    line-height: 0;
-    color: transparent;
-    flex-shrink: 0;
+    font-size: 12px;
+    transition: transform var(--admin-transition-base);
+    color: #9CA3AF;
 }
 
-#nav-sidebar .module th[scope="row"] .menu-toggle::before,
-#nav-sidebar .module th[scope="row"] .toggle::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    border-left: 4px solid #9CA3AF;
-    border-top: 3px solid transparent;
-    border-bottom: 3px solid transparent;
-    transition: transform var(--admin-transition-base), border-left-color var(--admin-transition-base);
-}
-
-#nav-sidebar .module.expanded th[scope="row"] .menu-toggle::before,
-#nav-sidebar .module.expanded th[scope="row"] .toggle::before {
-    transform: translateY(-50%) rotate(90deg);
-    border-left-color: #17a2b8;
+#nav-sidebar .module.expanded th[scope="row"] .menu-toggle,
+#nav-sidebar .module.expanded th[scope="row"] .toggle {
+    transform: rotate(90deg);
+    color: #17a2b8;
 }
 
 /* ========== 子菜单样式 ========== */
@@ -217,33 +206,30 @@
 }
 
 #nav-sidebar .module ul a {
-    padding: 10px 16px;
-    padding-left: 44px;
-    min-height: 40px;
-    font-size: 14px;
-    font-weight: 400;
-    color: var(--vh-text-muted, #6B7280);
+    padding-left: 32px;
+    font-size: 12px;
+    min-height: 36px;
+    color: #6B7280;
     position: relative;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    transition: background var(--admin-transition-base), color var(--admin-transition-base);
 }
 
 #nav-sidebar .module ul a::before {
-    display: none;
+    content: '└';
+    position: absolute;
+    left: 20px;
+    color: #D1D5DB;
+    font-size: 14px;
 }
 
 #nav-sidebar .module ul a:hover {
-    background: rgba(31, 42, 87, 0.06);
-    color: var(--vh-primary, #1F2A57);
+    color: #17a2b8;
+    background: linear-gradient(90deg, rgba(23, 162, 184, 0.06) 0%, rgba(23, 162, 184, 0.02) 100%);
 }
 
 #nav-sidebar .module ul a.selected,
 #nav-sidebar .module ul a.active {
-    background: rgba(31, 42, 87, 0.10) !important;
-    color: var(--vh-primary, #1F2A57) !important;
-    font-weight: 500 !important;
+    color: #17a2b8 !important;
+    font-weight: var(--admin-font-weight-medium) !important;
 }
 
 /* ========== 搜索框样式 ========== */
@@ -252,7 +238,7 @@
     padding: 10px 12px;
     margin: 0 0 12px 0;
     border: 1px solid rgba(229, 231, 235, 0.8);
-    border-radius: 0;
+    border-radius: 8px;
     font-size: 13px;
     background: rgba(255, 255, 255, 0.9);
     color: #4B5563;

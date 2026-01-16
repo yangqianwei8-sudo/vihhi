@@ -1,150 +1,55 @@
-{% extends "shared/list_page_base.html" %}
+{% extends "customer_management/_base.html" %}
 {% load static %}
 
-{% block list_page_title %}人员关系管理{% endblock %}
+{% block cm_title %}人员关系管理{% endblock %}
+{% block cm_subtitle %}<span class="pm-subtitle">查看和管理所有联系人</span>{% endblock %}
 
-{% block list_page_actions %}
+{% block cm_actions %}
 {% if can_create %}
-<a href="{% url 'business_pages:contact_create' %}" class="btn btn-primary">
-    <i class="bi bi-plus-circle me-1"></i> 新增联系人
+<a href="{% url 'business_pages:contact_create' %}" class="list-btn list-btn-primary">
+  新增联系人
 </a>
 {% endif %}
 {% endblock %}
 
-{% block list_page_filter_fields %}
-<!-- 客户 -->
-<div class="filter-row mb-3" data-filter-key="client">
-    <label class="filter-label">客户:</label>
-    <div class="filter-buttons">
-        <button type="button" class="filter-btn {% if not client_id %}active{% endif %}" 
-                data-filter="client" data-value="">
-            全部客户
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+{% endblock %}
+
+{% block cm_content %}
+  {% include "customer_management/_partials/_contact_filters.html" %}
+  
+  {% if page_obj %}
+  <div class="list-page-action-bar mb-3 d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center gap-3">
+      <span class="text-muted small">已选 <strong id="selectedCount">0</strong> 个</span>
+      <div class="btn-group btn-group-sm">
+        <button type="button" class="btn btn-outline-secondary" id="batchEditBtn" disabled>编辑</button>
+        <button type="button" class="btn btn-outline-secondary" id="batchExportBtn" disabled>导出</button>
+        <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" disabled>
+          <span class="visually-hidden">更多操作</span>
         </button>
-        <div class="d-inline-flex align-items-center ms-2">
-            <select name="client" class="form-select form-select-sm" style="width: 200px;" id="clientSelect">
-                <option value="">请选择客户</option>
-                {% for c in clients %}
-                <option value="{{ c.id }}" {% if client_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <input type="hidden" name="client" id="filter_client" value="{{ client_id }}">
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="#" id="batchDeleteBtn">删除</a></li>
+        </ul>
+      </div>
     </div>
-</div>
-
-<!-- 人员角色 -->
-<div class="filter-row mb-3" data-filter-key="role">
-    <label class="filter-label">人员角色:</label>
-    <div class="filter-buttons">
-        <button type="button" class="filter-btn {% if not role %}active{% endif %}" 
-                data-filter="role" data-value="">
-            全部
-        </button>
-        <div class="d-inline-flex align-items-center ms-2">
-            <select name="role" class="form-select form-select-sm" style="width: 150px;" id="roleSelect">
-                <option value="">请选择角色</option>
-                {% for value, label in role_choices %}
-                <option value="{{ value }}" {% if role == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <input type="hidden" name="role" id="filter_role" value="{{ role }}">
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary btn-sm">导入</button>
     </div>
-</div>
-
-<!-- 关系等级 -->
-<div class="filter-row mb-3" data-filter-key="relationship_level">
-    <label class="filter-label">关系等级:</label>
-    <div class="filter-buttons">
-        <button type="button" class="filter-btn {% if not relationship_level %}active{% endif %}" 
-                data-filter="relationship_level" data-value="">
-            全部
-        </button>
-        <div class="d-inline-flex align-items-center ms-2">
-            <select name="relationship_level" class="form-select form-select-sm" style="width: 150px;" id="relationshipLevelSelect">
-                <option value="">请选择等级</option>
-                {% for value, label in relationship_level_choices %}
-                <option value="{{ value }}" {% if relationship_level == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <input type="hidden" name="relationship_level" id="filter_relationship_level" value="{{ relationship_level }}">
-    </div>
-</div>
+  </div>
+  
+  {% include "customer_management/_partials/_contact_table.html" %}
+  {% else %}
+  <div class="list-empty">
+    <div class="list-empty-icon">▢</div>
+    <div class="list-empty-text">暂无联系人数据</div>
+  </div>
+  {% endif %}
 {% endblock %}
 
-{% block search_placeholder %}姓名、电话、邮箱、客户名称{% endblock %}
-
-{% block list_page_table_checkbox_header %}
-<th width="40">
-    <input type="checkbox" id="selectAll" class="form-check-input">
-</th>
-{% endblock %}
-
-{% block list_page_table_headers %}
-<th>客户名称</th>
-<th>联系人姓名</th>
-<th>人员角色</th>
-<th>关系等级</th>
-<th>职务</th>
-<th>电话</th>
-<th>邮箱</th>
-<th>创建时间</th>
-{% endblock %}
-
-{% block list_page_table_checkbox_cell %}
-<td>
-    <input type="checkbox" name="contact_ids" value="{{ item.id }}" class="form-check-input row-checkbox">
-</td>
-{% endblock %}
-
-{% block list_page_table_row_content %}
-<td>
-    <a href="{% url 'business_pages:customer_detail' item.client.id %}" class="text-decoration-none">
-        {{ item.client.name }}
-    </a>
-</td>
-<td>
-    <a href="{% url 'business_pages:contact_detail' item.id %}" class="text-decoration-none">
-        {{ item.name }}
-    </a>
-</td>
-<td>
-    {% if item.role %}
-    <span class="badge bg-secondary">{{ item.get_role_display }}</span>
-    {% else %}
-    <span class="text-muted small">未设置</span>
-    {% endif %}
-</td>
-<td>
-    <span class="badge bg-info">{{ item.get_relationship_level_display }}</span>
-</td>
-<td class="small">{{ item.position|default:"未填写" }}</td>
-<td class="small">{{ item.phone|default:"未填写" }}</td>
-<td class="small text-muted">{{ item.email|default:"未填写" }}</td>
-<td class="small text-muted">{{ item.created_time|date:"Y-m-d" }}</td>
-<td>
-    <div class="list-page-table-actions">
-        <a href="{% url 'business_pages:contact_detail' item.id %}" class="action-view" title="查看">
-            <i class="bi bi-eye"></i>
-        </a>
-        {% if can_create %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'business_pages:contact_edit' item.id %}" class="action-edit" title="编辑">
-            <i class="bi bi-pencil"></i>
-        </a>
-        {% endif %}
-    </div>
-</td>
-{% endblock %}
-
-{% block empty_colspan %}10{% endblock %}
-
-{% block empty_table_message %}暂无联系人数据{% endblock %}
-
-{% block empty_create_url %}{% url 'business_pages:contact_create' %}{% endblock %}
-
-{% block list_page_custom_js %}
+{% block extra_js %}
+<script>
 // 全选/取消全选
 document.getElementById('selectAll')?.addEventListener('change', function() {
     const checkboxes = document.querySelectorAll('.row-checkbox');
@@ -163,10 +68,16 @@ document.querySelectorAll('.row-checkbox').forEach(checkbox => {
 // 更新选中数量
 function updateSelectedCount() {
     const selected = document.querySelectorAll('.row-checkbox:checked').length;
-    const selectedCountEl = document.querySelector('#selectedCount');
-    if (selectedCountEl) {
-        selectedCountEl.textContent = selected;
+    const countEl = document.getElementById('selectedCount');
+    if (countEl) {
+        countEl.textContent = selected;
     }
+    
+    // 启用/禁用批量操作按钮
+    const batchButtons = document.querySelectorAll('#batchEditBtn, #batchExportBtn, .dropdown-toggle');
+    batchButtons.forEach(btn => {
+        btn.disabled = selected === 0;
+    });
 }
 
 // 更新全选状态
@@ -183,18 +94,5 @@ function updateSelectAllState() {
 
 // 初始化
 updateSelectedCount();
-
-// 筛选字段设置配置
-window.listFiltersConfig = {
-    enableFieldsSettings: true,
-    fieldsSettingsStorageKey: 'contact_list_filter_fields',
-    fieldsSettingsContainerId: 'filterFieldsContainer',
-    fieldsSettingsModalId: 'filterFieldsSettingsModal',
-    fieldsSettingsListId: 'filterFieldsList',
-    fieldsSettingsBtnId: 'settingsFilterFieldsBtn',
-    fieldsSettingsSaveBtnId: 'saveFilterFieldsSettings',
-    fieldsSettingsResetBtnId: 'resetFilterFieldsSettings',
-    maxEnabledFields: 10,
-    defaultEnabledFields: ['client', 'role', 'relationship_level']
-};
+</script>
 {% endblock %}

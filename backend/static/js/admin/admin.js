@@ -349,18 +349,16 @@
         const menuUrlMap = {
             '首页': '/admin/',
             '客户管理': '/admin/customer_management/',
-            // '合同管理': '/admin/production_management/businesscontract/',  // 已从后台管理中移除，请使用前端管理页面
+            '合同管理': '/admin/production_management/businesscontract/',
             '商机管理': '/admin/customer_success/',
             '生产管理': '/admin/production_management/',
             '结算管理': '/admin/settlement_center/',
-            '收文管理': '/admin/delivery_customer/incomingdocument/',
-            '发文管理': '/admin/delivery_customer/outgoingdocument/',
             '收发管理': '/admin/delivery_customer/',
             '档案管理': '/admin/archive_management/',
             '财务管理': '/admin/financial_management/',
             '人事管理': '/admin/personnel_management/',
-            // '行政管理': '/admin/administrative_management/',  // 已从后台管理中移除，使用前端管理页面 /administrative/
-            // '计划管理': '/admin/plan_management/',  // 已从后台管理中移除，使用前端管理页面 /plan/
+            '行政管理': '/admin/administrative_management/',
+            '计划管理': '/admin/plan_management/',
             '诉讼管理': '/admin/litigation_management/',
             '风险管理': '/admin/risk_management/',
             '资源管理': '/admin/resource_standard/',
@@ -391,67 +389,14 @@
      * 初始化一级菜单
      */
     function initPrimaryMenu() {
-        // 定义菜单顺序（首页固定在最前面，系统设置在API管理之前）
-        const menuOrder = ['首页', '客户管理', '合同管理', '商机管理', '生产管理', '结算管理', '收文管理', '发文管理', '收发管理', '档案管理', '财务管理', '人事管理', '行政管理', '计划管理', '诉讼管理', '风险管理', '资源管理', '报表管理', '权限设置', '流程设置', '系统设置', 'API管理', '团队管理'];
-        
-        // 尝试找到菜单容器（Django admin的菜单通常在#nav-sidebar中，主菜单项是th[scope=row]）
-        const sidebar = document.getElementById('nav-sidebar');
-        if (sidebar) {
-            // 查找所有主菜单项（th[scope=row]包含a标签的元素）
-            const mainMenuRows = Array.from(sidebar.querySelectorAll('th[scope=row]'));
-            
-            if (mainMenuRows.length > 0) {
-                // 按照定义的顺序对菜单行进行排序
-                mainMenuRows.sort(function(a, b) {
-                    const linkA = a.querySelector('a');
-                    const linkB = b.querySelector('a');
-                    if (!linkA || !linkB) return 0;
-                    
-                    const textA = (linkA.textContent || linkA.innerText || '').trim();
-                    const textB = (linkB.textContent || linkB.innerText || '').trim();
-                    
-                    const indexA = menuOrder.findIndex(function(label) {
-                        return textA === label || textA.indexOf(label) !== -1;
-                    });
-                    const indexB = menuOrder.findIndex(function(label) {
-                        return textB === label || textB.indexOf(label) !== -1;
-                    });
-                    
-                    // 如果找不到匹配的标签，放在最后
-                    if (indexA === -1) return 1;
-                    if (indexB === -1) return -1;
-                    
-                    return indexA - indexB;
-                });
-                
-                // 重新排序DOM：找到所有菜单行的父容器（通常是tr）
-                const table = sidebar.querySelector('table');
-                if (table && mainMenuRows.length > 0) {
-                    const firstRow = mainMenuRows[0].closest('tr');
-                    if (firstRow) {
-                        const tbody = table.querySelector('tbody') || table;
-                        // 为每个菜单行找到其完整的tr容器
-                        const menuContainers = mainMenuRows.map(function(row) {
-                            return row.closest('tr');
-                        }).filter(function(tr) {
-                            return tr && tr.parentElement === tbody;
-                        });
-                        
-                        // 按照新顺序重新插入
-                        menuContainers.forEach(function(container) {
-                            tbody.appendChild(container);
-                        });
-                    }
-                }
-            }
-        }
-        
-        // 直接查找所有包含菜单文本的链接元素（用于添加事件监听器）
+        // 直接查找所有包含菜单文本的链接元素
         const allLinks = document.querySelectorAll('a');
+        const menuLabels = ['首页', '客户管理', '合同管理', '商机管理', '生产管理', '结算管理', '收发管理', '档案管理', '财务管理', '人事管理', '行政管理', '计划管理', '诉讼管理', '风险管理', '资源管理', '报表管理', '系统设置', '权限设置', '流程设置', 'API管理', '团队管理'];
+        
         const menuItems = Array.from(allLinks).filter(function(link) {
             const text = (link.textContent || link.innerText || '').trim();
             // 精确匹配或包含匹配
-            return menuOrder.some(function(label) {
+            return menuLabels.some(function(label) {
                 return text === label || text.indexOf(label) !== -1;
             });
         });

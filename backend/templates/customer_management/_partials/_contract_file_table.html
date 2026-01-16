@@ -1,0 +1,90 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>合同编号</th>
+        <th>合同名称</th>
+        <th>文件名称</th>
+        <th>文件类型</th>
+        <th>版本号</th>
+        <th>文件大小</th>
+        <th>上传人</th>
+        <th>上传时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for file in page_obj %}
+      <tr>
+        <td><code>{{ file.contract.contract_number|default:"未编号" }}</code></td>
+        <td>{{ file.contract.contract_name|default:file.contract.contract_number }}</td>
+        <td>{{ file.file_name }}</td>
+        <td>
+          <span class="list-badge">{{ file.get_file_type_display }}</span>
+        </td>
+        <td>{{ file.version }}</td>
+        <td>
+          {% if file.file_size %}
+            {% if file.file_size < 1024 %}
+              {{ file.file_size }} B
+            {% elif file.file_size < 1048576 %}
+              {% widthratio file.file_size 1024 1 as kb_size %}
+              {{ kb_size|floatformat:1 }} KB
+            {% else %}
+              {% widthratio file.file_size 1048576 1 as mb_size %}
+              {{ mb_size|floatformat:1 }} MB
+            {% endif %}
+          {% else %}
+            --
+          {% endif %}
+        </td>
+        <td>{{ file.uploaded_by.get_full_name|default:file.uploaded_by.username }}</td>
+        <td>{{ file.uploaded_time|date:"Y-m-d H:i" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'contract_pages:contract_file_download' file.id %}" class="list-btn" title="下载">下载</a>
+            <a href="{% url 'contract_pages:contract_detail' file.contract.id %}" class="list-btn" title="查看合同">查看合同</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无合同文件</div>
+          <div class="list-empty-hint">请上传第一个合同文件开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_file_type %}&file_type={{ selected_file_type }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if selected_file_type %}&file_type={{ selected_file_type }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_file_type %}&file_type={{ selected_file_type }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

@@ -1,12 +1,19 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "administrative_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:supply_purchase_list' %}">采购管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">创建</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:supply_purchase_list' %}">采购管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:supply_purchase_detail' purchase.id %}">{{ purchase.purchase_number }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endif %}
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .form-card {
         background: var(--vh-card-bg);
@@ -37,9 +44,9 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="page-title">{{ page_title }}</h1>
@@ -47,11 +54,9 @@
         </div>
     </div>
 
-    <!-- 表单 -->
     <form method="post" id="purchaseForm">
         {% csrf_token %}
         
-        <!-- 基本信息 -->
         <div class="form-card">
             <h5>基本信息</h5>
             <div class="row g-3">
@@ -79,7 +84,6 @@
             </div>
         </div>
 
-        <!-- 采购明细 -->
         <div class="form-card">
             <h5>采购明细</h5>
             {{ formset.management_form }}
@@ -134,7 +138,6 @@
             </button>
         </div>
 
-        <!-- 表单错误 -->
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
             {{ form.non_field_errors }}
@@ -146,7 +149,6 @@
         </div>
         {% endif %}
 
-        <!-- 操作按钮 -->
         <div class="d-flex justify-content-between align-items-center mt-4">
             <a href="{% if is_create %}{% url 'admin_pages:supply_purchase_list' %}{% else %}{% url 'admin_pages:supply_purchase_detail' purchase.id %}{% endif %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> 取消
@@ -168,4 +170,3 @@ function addFormsetItem() {
 }
 </script>
 {% endblock %}
-

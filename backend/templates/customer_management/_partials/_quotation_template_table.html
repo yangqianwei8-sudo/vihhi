@@ -1,0 +1,97 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>规则名称</th>
+        <th>规则类型</th>
+        <th>项目业态</th>
+        <th>服务类型</th>
+        <th>适用范围</th>
+        <th>调整系数</th>
+        <th>状态</th>
+        <th>创建人</th>
+        <th>创建时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rule in page_obj %}
+      <tr>
+        <td><strong>{{ rule.name }}</strong></td>
+        <td>
+          <span class="list-badge">{{ rule.get_rule_type_display }}</span>
+        </td>
+        <td>{{ rule.project_type|default:"-" }}</td>
+        <td>{{ rule.service_type|default:"-" }}</td>
+        <td>
+          {% if rule.min_area or rule.max_area %}
+            {% if rule.min_area %}{{ rule.min_area }}㎡{% endif %}
+            {% if rule.min_area and rule.max_area %} - {% endif %}
+            {% if rule.max_area %}{{ rule.max_area }}㎡{% endif %}
+          {% else %}
+            全部
+          {% endif %}
+        </td>
+        <td>{{ rule.adjustment_factor }}</td>
+        <td>
+          <span class="list-badge {% if rule.is_active %}list-badge-active{% else %}list-badge-inactive{% endif %}">
+            {% if rule.is_active %}启用{% else %}禁用{% endif %}
+          </span>
+        </td>
+        <td>{{ rule.created_by.get_full_name|default:rule.created_by.username }}</td>
+        <td>{{ rule.created_time|date:"Y-m-d H:i" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'business_pages:quotation_template_edit' rule.id %}" class="list-btn" title="编辑">编辑</a>
+            <a href="{% url 'business_pages:quotation_template_delete' rule.id %}" class="list-btn" title="删除">删除</a>
+          </div>
+        </td>
+      </tr>
+      {% if rule.description %}
+      <tr>
+        <td colspan="10" style="padding-left: 40px; color: #666666; font-size: 12px;">
+          <i class="bi bi-info-circle"></i> {{ rule.description|truncatewords:30 }}
+        </td>
+      </tr>
+      {% endif %}
+      {% empty %}
+      <tr>
+        <td colspan="10" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无报价模板</div>
+          <div class="list-empty-hint">请创建第一个模板开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if rule_type %}&rule_type={{ rule_type }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if rule_type %}&rule_type={{ rule_type }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if rule_type %}&rule_type={{ rule_type }}{% endif %}{% if is_active %}&is_active={{ is_active }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

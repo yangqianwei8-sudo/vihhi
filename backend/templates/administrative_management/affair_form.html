@@ -1,12 +1,19 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "administrative_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:affair_list' %}">行政事务</a></li>
+<li class="breadcrumb-item active" aria-current="page">创建</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:affair_list' %}">行政事务</a></li>
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:affair_detail' affair.id %}">{{ affair.affair_number }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endif %}
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .form-card {
         background: var(--vh-card-bg);
@@ -35,9 +42,9 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="page-title">{{ page_title }}</h1>
@@ -45,11 +52,9 @@
         </div>
     </div>
 
-    <!-- 表单 -->
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         
-        <!-- 基本信息 -->
         <div class="form-card">
             <h5>基本信息</h5>
             <div class="row g-3">
@@ -91,7 +96,6 @@
             </div>
         </div>
 
-        <!-- 参与人员 -->
         <div class="form-card">
             <h5>参与人员</h5>
             <div class="row g-3">
@@ -101,12 +105,11 @@
                     {% if form.participants.errors %}
                     <div class="text-danger small mt-1">{{ form.participants.errors }}</div>
                     {% endif %}
-                    <small class="text-muted">按住Ctrl键（Mac上为Cmd键）可多选，参与人将收到事务通知</small>
+                    <small class="text-muted">按住Ctrl键可多选</small>
                 </div>
             </div>
         </div>
 
-        <!-- 时间安排 -->
         <div class="form-card">
             <h5>时间安排</h5>
             <div class="row g-3">
@@ -116,7 +119,6 @@
                     {% if form.planned_start_time.errors %}
                     <div class="text-danger small mt-1">{{ form.planned_start_time.errors }}</div>
                     {% endif %}
-                    <small class="text-muted">选择事务计划开始的时间</small>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label required">计划完成时间</label>
@@ -124,12 +126,10 @@
                     {% if form.planned_end_time.errors %}
                     <div class="text-danger small mt-1">{{ form.planned_end_time.errors }}</div>
                     {% endif %}
-                    <small class="text-muted">选择事务计划完成的时间，必须晚于开始时间</small>
                 </div>
             </div>
         </div>
 
-        <!-- 附件 -->
         <div class="form-card">
             <h5>附件</h5>
             <div class="row g-3">
@@ -152,14 +152,12 @@
             </div>
         </div>
 
-        <!-- 表单错误 -->
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
             {{ form.non_field_errors }}
         </div>
         {% endif %}
 
-        <!-- 操作按钮 -->
         <div class="d-flex justify-content-between align-items-center mt-4">
             <a href="{% if is_create %}{% url 'admin_pages:affair_list' %}{% else %}{% url 'admin_pages:affair_detail' affair.id %}{% endif %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> 取消
@@ -173,4 +171,3 @@
     </form>
 </div>
 {% endblock %}
-

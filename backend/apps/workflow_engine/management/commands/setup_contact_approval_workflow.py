@@ -53,19 +53,18 @@ class Command(BaseCommand):
                 self.stdout.write('  已清除旧节点配置')
         
         # 创建审批节点：部门经理审批
-        # 使用 creator_manager 类型，系统会自动找到创建人的上级进行审批
         node1 = ApprovalNode.objects.create(
             workflow=workflow,
-            name='多级上级审批',
+            name='部门经理审批',
             node_type='approval',
             sequence=1,
-            approver_type='creator_manager',  # 使用创建人上级类型，更灵活
+            approver_type='department_manager',  # 使用部门经理类型
             approval_mode='single',  # 单人审批
             is_required=True,
             can_reject=True,
             can_transfer=False,
             timeout_hours=24,
-            description='创建人的直接上级审批，系统会自动查找部门负责人或高级角色'
+            description='申请人所在部门的经理审批联系人管理操作'
         )
         
         self.stdout.write(self.style.SUCCESS(f'✓ 创建节点：{node1.name}'))

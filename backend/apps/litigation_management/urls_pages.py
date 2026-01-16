@@ -4,9 +4,8 @@ from . import views_pages, views_export, views_notification, views_approval
 app_name = "litigation_pages"
 
 urlpatterns = [
-    # ==================== 诉讼管理首页 ====================
-    path("home/", views_pages.litigation_home, name="litigation_home"),
-    path("", views_pages.litigation_home, name="litigation_home_alt"),
+    # 诉讼管理首页
+    path("", views_pages.litigation_home, name="litigation_home"),
     
     # 案件管理
     path("cases/", views_pages.case_list, name="case_list"),

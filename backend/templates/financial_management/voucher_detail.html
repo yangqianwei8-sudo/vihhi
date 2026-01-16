@@ -1,17 +1,20 @@
-{% extends "shared/module_base.html" %}
+{% extends "financial_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:voucher_management' %}">凭证管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ voucher.voucher_number }}</li>
+{% endblock %}
 
 {% block extra_css %}
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-        <!-- 操作按钮 -->
+        
     <div class="text-end mb-4">
         <a href="{% url 'finance_pages:voucher_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
@@ -33,7 +36,6 @@
         {% endif %}
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <h5>基本信息</h5>
         <div class="info-row">
@@ -94,7 +96,6 @@
         </div>
     </div>
 
-    <!-- 金额信息 -->
     <div class="info-card">
         <h5>金额信息</h5>
         <div class="info-row">
@@ -119,7 +120,6 @@
         </div>
     </div>
 
-    <!-- 凭证分录 -->
     {% if entries %}
     <div class="info-card">
         <h5>凭证分录 ({{ entries|length }} 行)</h5>
@@ -169,7 +169,6 @@
     </div>
     {% endif %}
 
-    <!-- 备注信息 -->
     {% if voucher.notes %}
     <div class="info-card">
         <h5>备注信息</h5>
@@ -177,7 +176,6 @@
     </div>
     {% endif %}
 
-    <!-- 其他信息 -->
     <div class="info-card">
         <h5>其他信息</h5>
         <div class="info-row">
@@ -193,4 +191,3 @@
     </div>
 </div>
 {% endblock %}
-

@@ -1,0 +1,202 @@
+{% extends "customer_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:opportunity_management' %}">商机管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="workspace-content">
+    <div class="list-page-container">
+        <div class="list-page-header">
+            <h1 class="list-page-title">
+                {{ page_title }}
+            </h1>
+        </div>
+        
+        {% if forecast_data %}
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <h5 class="info-card-title">乐观预测</h5>
+                    </div>
+                    <div class="info-card-body">
+                        <div class="info-item">
+                            <span class="info-label">预测金额（万元）</span>
+                            <span class="info-value info-value-numeric info-value-bold">
+                                {{ forecast_data.optimistic|default:0|floatformat:2 }}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">概率</span>
+                            <span class="info-value">65%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <h5 class="info-card-title">中性预测</h5>
+                    </div>
+                    <div class="info-card-body">
+                        <div class="info-item">
+                            <span class="info-label">预测金额（万元）</span>
+                            <span class="info-value info-value-numeric info-value-bold">
+                                {{ forecast_data.neutral|default:0|floatformat:2 }}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">概率</span>
+                            <span class="info-value">50%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <h5 class="info-card-title">保守预测</h5>
+                    </div>
+                    <div class="info-card-body">
+                        <div class="info-item">
+                            <span class="info-label">预测金额（万元）</span>
+                            <span class="info-value info-value-numeric info-value-bold">
+                                {{ forecast_data.conservative|default:0|floatformat:2 }}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">概率</span>
+                            <span class="info-value">35%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if forecast_data.monthly_forecast %}
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5 class="info-card-title">月度预测趋势</h5>
+            </div>
+            <div class="info-card-body">
+                <canvas id="forecastChart" style="max-height: 400px;"></canvas>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if forecast_data.target_gap %}
+        <div class="info-card mt-4">
+            <div class="info-card-header">
+                <h5 class="info-card-title">目标差距分析</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="info-grid info-grid-2">
+                    <div class="info-item">
+                        <span class="info-label">月度目标（万元）</span>
+                        <span class="info-value info-value-numeric">
+                            {{ forecast_data.target_gap.monthly_target|default:0|floatformat:2 }}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">预测缺口（万元）</span>
+                        <span class="info-value info-value-numeric {% if forecast_data.target_gap.gap < 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ forecast_data.target_gap.gap|default:0|floatformat:2 }}
+                        </span>
+                    </div>
+                    {% if forecast_data.target_gap.suggestions %}
+                    <div class="info-item" style="grid-column: 1 / -1;">
+                        <span class="info-label">改进建议</span>
+                        <span class="info-value">{{ forecast_data.target_gap.suggestions|linebreaks }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="info-card">
+            <div class="info-card-body">
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="bi bi-graph-up" style="font-size: 64px; color: #6c757d;"></i>
+                    </div>
+                    <h4 class="mb-3">暂无预测数据</h4>
+                    <p class="text-muted mb-4">当前没有可用的商机预测数据，请先创建商机。</p>
+                    <a href="{% url 'business_pages:opportunity_management' %}" class="btn btn-primary">
+                        <i class="bi bi-arrow-left"></i> 返回商机列表
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if forecast_data.monthly_forecast %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('forecastChart');
+    if (ctx) {
+        const monthlyData = {{ forecast_data.monthly_forecast|safe|default:"[]" }};
+        const labels = monthlyData.map(item => item.month || item.label);
+        const optimisticData = monthlyData.map(item => item.optimistic || 0);
+        const neutralData = monthlyData.map(item => item.neutral || 0);
+        const conservativeData = monthlyData.map(item => item.conservative || 0);
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '乐观预测',
+                        data: optimisticData,
+                        borderColor: 'rgb(40, 167, 69)',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.1
+                    },
+                    {
+                        label: '中性预测',
+                        data: neutralData,
+                        borderColor: 'rgb(0, 123, 255)',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        tension: 0.1
+                    },
+                    {
+                        label: '保守预测',
+                        data: conservativeData,
+                        borderColor: 'rgb(255, 193, 7)',
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        tension: 0.1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '金额（万元）'
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

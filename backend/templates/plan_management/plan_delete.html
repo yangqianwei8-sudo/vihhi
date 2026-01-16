@@ -1,0 +1,230 @@
+{% extends "plan_management/_base.html" %}
+{% load static %}
+
+{% block pm_title %}删除计划{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">{{ plan.name }}</span>{% endblock %}
+
+{% block pm_actions %}
+<a href="{% url 'plan_pages:plan_detail' plan.id %}" class="list-btn">返回详情</a>
+{% if can_delete %}
+<button type="submit" form="delete-form" class="list-btn" style="background: #dc3545; color: white; border-color: #dc3545;">确认删除</button>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+<style>
+  .detail-card {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .detail-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A1A1A;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #E0E0E0;
+  }
+  
+  .detail-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+  }
+  
+  .detail-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .detail-info-label {
+    font-size: 12px;
+    color: #666666;
+    font-weight: 400;
+  }
+  
+  .detail-info-value {
+    font-size: 14px;
+    color: #1A1A1A;
+    font-weight: 500;
+  }
+  
+  .list-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid;
+  }
+  
+  .list-badge-draft { 
+    background: #F5F5F5; 
+    color: #666666; 
+    border-color: #E0E0E0; 
+  }
+  .list-badge-pending_approval { 
+    background: #E8E8E8; 
+    color: #333333; 
+    border-color: #CCCCCC; 
+  }
+  .list-badge-approving { 
+    background: #E8E8E8; 
+    color: #333333; 
+    border-color: #CCCCCC; 
+  }
+  .list-badge-approved { 
+    background: #E8E8E8; 
+    color: #1A1A1A; 
+    border-color: #CCCCCC; 
+  }
+  .list-badge-in_progress { 
+    background: #E8E8E8; 
+    color: #333333; 
+    border-color: #CCCCCC; 
+  }
+  .list-badge-completed { 
+    background: #E8E8E8; 
+    color: #1A1A1A; 
+    border-color: #CCCCCC; 
+  }
+  .list-badge-cancelled { 
+    background: #F5F5F5; 
+    color: #999999; 
+    border-color: #E0E0E0; 
+  }
+  
+  .warning-box {
+    background: #FFF3CD;
+    border: 1px solid #FFC107;
+    border-radius: 0;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .warning-box.error {
+    background: #F8D7DA;
+    border-color: #DC3545;
+  }
+  
+  .warning-box-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #856404;
+    margin-bottom: 8px;
+  }
+  
+  .warning-box.error .warning-box-title {
+    color: #721C24;
+  }
+  
+  .warning-box-list {
+    margin: 0;
+    padding-left: 20px;
+    color: #856404;
+  }
+  
+  .warning-box.error .warning-box-list {
+    color: #721C24;
+  }
+  
+  .delete-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #E0E0E0;
+  }
+</style>
+{% endblock %}
+
+{% block pm_content %}
+{% if not can_delete %}
+<div class="warning-box error">
+  <div class="warning-box-title">⚠️ 无法删除</div>
+  <ul class="warning-box-list">
+    {% for warning in delete_warnings %}
+    <li>{{ warning }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% else %}
+<div class="warning-box">
+  <div class="warning-box-title">⚠️ 警告</div>
+  <div style="color: #856404; font-size: 14px;">删除操作不可恢复，请确认您要删除以下计划：</div>
+</div>
+{% endif %}
+
+<div class="detail-card">
+  <div class="detail-card-title">📋 计划信息</div>
+  <div class="detail-info-grid">
+    <div class="detail-info-item">
+      <div class="detail-info-label">计划编号</div>
+      <div class="detail-info-value"><code>{{ plan.plan_number }}</code></div>
+    </div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">计划名称</div>
+      <div class="detail-info-value"><strong>{{ plan.name }}</strong></div>
+    </div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">计划类型</div>
+      <div class="detail-info-value">{{ plan.get_plan_type_display }}</div>
+    </div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">计划周期</div>
+      <div class="detail-info-value">{{ plan.get_plan_period_display }}</div>
+    </div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">计划状态</div>
+      <div class="detail-info-value">
+        <span class="list-badge list-badge-{{ plan.status }}">
+          {{ plan.get_status_display }}
+        </span>
+      </div>
+    </div>
+    
+    <div class="detail-info-item">
+      <div class="detail-info-label">负责人</div>
+      <div class="detail-info-value">{{ plan.responsible_person.get_full_name|default:plan.responsible_person.username }}</div>
+    </div>
+    
+    {% if plan.start_time %}
+    <div class="detail-info-item">
+      <div class="detail-info-label">开始时间</div>
+      <div class="detail-info-value">{{ plan.start_time|date:"Y-m-d" }}</div>
+    </div>
+    {% endif %}
+    
+    {% if plan.end_time %}
+    <div class="detail-info-item">
+      <div class="detail-info-label">结束时间</div>
+      <div class="detail-info-value">{{ plan.end_time|date:"Y-m-d" }}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<form id="delete-form" method="post">
+  {% csrf_token %}
+  <div class="delete-form-actions">
+    <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="list-btn">取消</a>
+    {% if can_delete %}
+    <button type="submit" class="list-btn" style="background: #dc3545; color: white; border-color: #dc3545;">确认删除</button>
+    {% else %}
+    <button type="button" class="list-btn" disabled style="background: #CCCCCC; color: #999999; border-color: #CCCCCC; cursor: not-allowed;">无法删除</button>
+    {% endif %}
+  </div>
+</form>
+{% endblock %}

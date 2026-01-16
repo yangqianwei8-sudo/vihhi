@@ -1,0 +1,119 @@
+<div class="list-page-table card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th>投标编号</th>
+                        <th>关联商机</th>
+                        <th>关联客户</th>
+                        <th>投标日期</th>
+                        <th>提交截止日期</th>
+                        <th>状态</th>
+                        <th>创建人</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bidding in page_obj %}
+                    <tr>
+                        <td><code>{{ bidding.bidding_number|default:'未编号' }}</code></td>
+                        <td>
+                            <a href="{% url 'opportunity_pages:opportunity_detail' bidding.opportunity.id %}" class="text-decoration-none">
+                                {{ bidding.opportunity.name }}
+                            </a>
+                            <br><small class="text-muted">{{ bidding.opportunity.opportunity_number|default:'未编号' }}</small>
+                        </td>
+                        <td>{{ bidding.opportunity.client.name|default:'-' }}</td>
+                        <td>{{ bidding.bidding_date|date:'Y-m-d' }}</td>
+                        <td>
+                            {{ bidding.submission_deadline|date:'Y-m-d' }}
+                            {% if bidding.submission_deadline < today %}
+                            <span class="badge bg-danger">已过期</span>
+                            {% elif bidding.submission_deadline == today %}
+                            <span class="badge bg-warning">今日截止</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if bidding.status == 'draft' %}
+                            <span class="badge bg-secondary">{{ bidding.get_status_display }}</span>
+                            {% elif bidding.status == 'preparing' %}
+                            <span class="badge bg-info">{{ bidding.get_status_display }}</span>
+                            {% elif bidding.status == 'submitted' %}
+                            <span class="badge bg-primary">{{ bidding.get_status_display }}</span>
+                            {% elif bidding.status == 'won' %}
+                            <span class="badge bg-success">{{ bidding.get_status_display }}</span>
+                            {% elif bidding.status == 'lost' %}
+                            <span class="badge bg-danger">{{ bidding.get_status_display }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ bidding.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ bidding.created_by.get_full_name|default:bidding.created_by.username }}</td>
+                        <td>{{ bidding.created_time|date:'Y-m-d H:i' }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'business_pages:bidding_quotation_detail' bidding.id %}" class="btn btn-outline-primary" title="查看">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if bidding.status in 'draft,preparing' %}
+                                <a href="{% url 'business_pages:bidding_quotation_edit' bidding.id %}" class="btn btn-outline-secondary" title="编辑">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox" style="font-size: 48px; opacity: 0.3;"></i>
+                            <p class="mt-3 mb-0">暂无投标报价数据</p>
+                            <p class="text-muted small">请创建第一个投标报价开始使用</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="投标报价列表分页" class="mt-3">
+            <ul class="pagination pagination-sm justify-content-end mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}{% if status %}&status={{ status }}{% endif %}">上一页</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">上一页</a>
+                </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <a class="page-link" href="#">{{ num }}</a>
+                </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}{% if status %}&status={{ status }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if opportunity_id %}&opportunity_id={{ opportunity_id }}{% endif %}{% if status %}&status={{ status }}{% endif %}">下一页</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">下一页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>

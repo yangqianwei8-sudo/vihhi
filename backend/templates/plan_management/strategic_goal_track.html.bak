@@ -1,0 +1,337 @@
+{% extends "plan_management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .progress-timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    .progress-timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #dee2e6;
+    }
+    .progress-timeline-item {
+        position: relative;
+        margin-bottom: 24px;
+    }
+    .progress-timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -24px;
+        top: 6px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #0d6efd;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #0d6efd;
+    }
+    .progress-card {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    .status-draft { background: #e9ecef; color: #495057; }
+    .status-published { background: #cfe2ff; color: #084298; }
+    .status-in_progress { background: #fff3cd; color: #856404; }
+    .status-completed { background: #d1e7dd; color: #0f5132; }
+    .status-cancelled { background: #f8d7da; color: #842029; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">
+                {{ goal.name }}
+            </h2>
+            <p class="text-muted mb-0 mt-1">{{ goal.goal_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>返回详情
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- 左侧：目标信息和进度更新 -->
+        <div class="col-md-8">
+            <!-- 目标概览 -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">目标概览</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <div class="mb-2">
+                                <strong>目标值</strong>
+                            </div>
+                            <h4 class="text-primary">{{ goal.target_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</h4>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="mb-2">
+                                <strong>当前值</strong>
+                            </div>
+                            <h4 class="text-info">{{ goal.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</h4>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="mb-2">
+                                <strong>完成率</strong>
+                            </div>
+                            <h4 class="text-success">{{ goal.completion_rate }}%</h4>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="mb-2">
+                                <strong>状态</strong>
+                            </div>
+                            <span class="status-badge status-{{ goal.status }}">
+                                {{ goal.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="progress" style="height: 24px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ goal.completion_rate }}%">
+                                {{ goal.completion_rate }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 进度更新 -->
+            {% if can_update_progress %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">更新进度</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="update_progress" value="1">
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label required">当前值</label>
+                                {{ progress_form.current_value }}
+                                {% if progress_form.current_value.errors %}
+                                <div class="text-danger small mt-1">{{ progress_form.current_value.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">预计完成率</label>
+                                <input type="text" class="form-control" id="predictedRate" readonly>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label required">进度说明</label>
+                                {{ progress_form.progress_description }}
+                                {% if progress_form.progress_description.errors %}
+                                <div class="text-danger small mt-1">{{ progress_form.progress_description.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">备注</label>
+                                {{ progress_form.notes }}
+                            </div>
+                            <div class="col-md-12">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-circle me-1"></i>更新进度
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 状态转换 -->
+            {% if valid_transitions %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">状态转换</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">当前状态：<strong>{{ goal.get_status_display }}</strong></p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="transition_status" value="1">
+                        <div class="mb-3">
+                            <label class="form-label">转换到</label>
+                            <select name="new_status" class="form-select">
+                                {% for status in valid_transitions %}
+                                <option value="{{ status }}">
+                                    {% if status == 'published' %}已发布
+                                    {% elif status == 'in_progress' %}执行中
+                                    {% elif status == 'completed' %}已完成
+                                    {% elif status == 'cancelled' %}已取消
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-arrow-repeat me-1"></i>转换状态
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 完成确认 -->
+            {% if can_complete %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">完成确认</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">确认目标已完成？</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="complete_goal" value="1">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle me-1"></i>确认完成
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 进度时间线 -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">进度时间线</h5>
+                </div>
+                <div class="card-body">
+                    {% if progress_records %}
+                    <div class="progress-timeline">
+                        {% for record in progress_records %}
+                        <div class="progress-timeline-item">
+                            <div class="progress-card">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <strong>{{ record.recorded_time|date:"Y-m-d H:i" }}</strong>
+                                        <span class="text-muted ms-2">by {{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-primary">{{ record.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</span>
+                                        <span class="badge bg-success ms-1">{{ record.completion_rate }}%</span>
+                                    </div>
+                                </div>
+                                <p class="mb-0">{{ record.progress_description }}</p>
+                                {% if record.notes %}
+                                <p class="text-muted small mt-2 mb-0">{{ record.notes }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">暂无进度记录</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧：状态日志和调整申请 -->
+        <div class="col-md-4">
+            <!-- 状态日志 -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">状态日志</h5>
+                </div>
+                <div class="card-body">
+                    {% if status_logs %}
+                    <div class="list-group list-group-flush">
+                        {% for log in status_logs %}
+                        <div class="list-group-item px-0">
+                            <div class="small text-muted">{{ log.changed_time|date:"Y-m-d H:i" }}</div>
+                            <div class="mt-1">
+                                <span class="badge bg-secondary">{{ log.old_status }}</span>
+                                <i class="bi bi-arrow-right mx-1"></i>
+                                <span class="badge bg-primary">{{ log.new_status }}</span>
+                            </div>
+                            {% if log.changed_by %}
+                            <div class="small text-muted mt-1">by {{ log.changed_by.get_full_name|default:log.changed_by.username }}</div>
+                            {% endif %}
+                            {% if log.change_reason %}
+                            <div class="small mt-1">{{ log.change_reason }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4 small">暂无状态日志</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- 调整申请 -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">调整申请</h5>
+                </div>
+                <div class="card-body">
+                    {% if adjustments %}
+                    <div class="list-group list-group-flush">
+                        {% for adjustment in adjustments %}
+                        <div class="list-group-item px-0">
+                            <div class="small text-muted">{{ adjustment.created_time|date:"Y-m-d H:i" }}</div>
+                            <div class="mt-1">
+                                <span class="badge bg-{% if adjustment.status == 'approved' %}success{% elif adjustment.status == 'rejected' %}danger{% else %}warning{% endif %}">
+                                    {{ adjustment.get_status_display }}
+                                </span>
+                            </div>
+                            <div class="small mt-1">{{ adjustment.adjustment_reason|truncatewords:15 }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4 small">暂无调整申请</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const currentValueInput = document.querySelector('#id_current_value');
+    const predictedRateInput = document.getElementById('predictedRate');
+    const targetValue = {{ goal.target_value }};
+    
+    if (currentValueInput && predictedRateInput) {
+        currentValueInput.addEventListener('input', function() {
+            const currentValue = parseFloat(this.value) || 0;
+            if (targetValue > 0) {
+                const rate = (currentValue / targetValue) * 100;
+                predictedRateInput.value = Math.min(rate, 100).toFixed(2) + '%';
+            } else {
+                predictedRateInput.value = '0.00%';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,11 +1,15 @@
-{% extends "shared/module_base.html" %}
+{% extends "archive_management/base.html" %}
 {% load static %}
 
 {% block title %}创建图纸归档 - 档案管理{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'archive_management:project_archive_list' %}">项目归档</a></li>
+<li class="breadcrumb-item"><a href="{% url 'archive_management:project_drawing_archive_list' %}">图纸归档</a></li>
+<li class="breadcrumb-item active" aria-current="page">创建图纸归档</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-10 offset-md-1">
@@ -26,7 +30,6 @@
                     <form method="post" id="drawingArchiveForm">
                         {% csrf_token %}
                         
-                        <!-- 基本信息 -->
                         <h5 class="mb-3">基本信息</h5>
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -71,11 +74,9 @@
                             <textarea name="archive_description" id="archive_description" class="form-control" rows="3" placeholder="请详细说明归档内容"></textarea>
                         </div>
 
-                        <!-- 图纸选择 -->
                         {% if drawing_files_available %}
                         <h5 class="mb-3 mt-4">图纸选择</h5>
                         
-                        <!-- 图纸文件选择 -->
                         <div class="mb-3">
                             <label class="form-label">图纸文件 <span class="text-danger">*</span></label>
                             <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
@@ -104,7 +105,6 @@
                             <div class="form-text">请至少选择一个图纸文件</div>
                         </div>
 
-                        <!-- 图纸提交选择 -->
                         <div class="mb-3">
                             <label class="form-label">图纸提交（可选）</label>
                             <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">

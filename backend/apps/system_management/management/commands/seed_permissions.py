@@ -11,6 +11,7 @@ PERMISSION_DEFINITIONS = [
     {"code": "production_management.view_assigned", "module": "生产管理", "action": "view_assigned", "name": "生产管理-查看负责项目", "description": "查看本人相关项目数据"},
     {"code": "production_management.create", "module": "生产管理", "action": "create", "name": "生产管理-创建项目", "description": "创建新项目、录入基础信息"},
     {"code": "production_management.configure_team", "module": "生产管理", "action": "configure_team", "name": "生产管理-团队配置", "description": "配置项目团队成员及角色"},
+    {"code": "production_management.monitor", "module": "生产管理", "action": "monitor", "name": "生产管理-项目监控", "description": "监控项目进度、风险、里程碑"},
     {"code": "production_management.archive", "module": "生产管理", "action": "archive", "name": "生产管理-项目归档", "description": "归档项目资料、导出报表"},
     {"code": "production_management.delete", "module": "生产管理", "action": "delete", "name": "生产管理-项目删除终止", "description": "删除或终止项目，需要审批"},
     {"code": "production_management.export", "module": "生产管理", "action": "export", "name": "生产管理-数据导出", "description": "导出项目数据并记录审计"},
@@ -172,8 +173,11 @@ PERMISSION_DEFINITIONS = [
     {"code": "plan_management.plan.view", "module": "计划管理", "action": "plan.view", "name": "计划管理-查看计划", "description": "查看计划列表和详情"},
     {"code": "plan_management.plan.create", "module": "计划管理", "action": "plan.create", "name": "计划管理-创建计划", "description": "创建计划"},
     {"code": "plan_management.plan.manage", "module": "计划管理", "action": "plan.manage", "name": "计划管理-管理计划", "description": "编辑和删除计划"},
+    {"code": "plan_management.approve_plan", "module": "计划管理", "action": "approve_plan", "name": "计划管理-审批计划", "description": "审批计划的启动/取消请求"},
+    {"code": "plan_management.approve", "module": "计划管理", "action": "approve", "name": "计划管理-审批", "description": "审批计划（兼容别名）"},
     {"code": "plan_management.goal.view", "module": "计划管理", "action": "goal.view", "name": "计划管理-查看目标", "description": "查看战略目标"},
     {"code": "plan_management.goal.create", "module": "计划管理", "action": "goal.create", "name": "计划管理-创建目标", "description": "创建战略目标"},
+    {"code": "plan_management.manage_goal", "module": "计划管理", "action": "manage_goal", "name": "计划管理-管理目标", "description": "管理战略目标（创建、编辑、删除、分解）"},
     
     # 诉讼管理
     {"code": "litigation_management.view", "module": "诉讼管理", "action": "view", "name": "诉讼管理-查看", "description": "查看诉讼管理模块"},

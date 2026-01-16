@@ -34,12 +34,10 @@
 @import url('components/cards.css');
 @import url('components/forms.css');
 @import url('components/tables.css');
-@import url('components/dynamic-table.css');
 @import url('components/navigation.css');
 @import url('components/badges.css');
 @import url('components/alerts.css');
 @import url('components/pages.css');
-@import url('components/detail-pages.css');
 @import url('components/notifications.css');
 @import url('components/datepicker.css');
 @import url('components/tag-input.css');
@@ -68,13 +66,14 @@
 /* @import url('modules/project.css'); */
 /* @import url('modules/personnel.css'); */
 
-/* 
- * 注意：.workspace-content、.customer-content 和 .workspace-main 相关的样式
- * 已合并到 layouts/workspace.css
- * 请查看 layouts/workspace.css 获取最新的样式定义
- * 
- * 此文件仅保留通用组件样式，不包含工作台布局相关的样式
- */
+/* 确保表单容器可以正常交互 */
+.workspace-content,
+.customer-content,
+.workspace-main {
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
+}
 
 /* 确保表单区域可以正常交互 */
 .form-section,
@@ -84,204 +83,19 @@ form {
     pointer-events: auto;
 }
 
-/* ============================================
-   Bootstrap 5 模态框修复
-   ============================================ */
-/* 
- * 问题根源：
- * 1. DOM结构错误：模态框放在了div内部而不是body下
- * 2. CSS覆盖冲突：workspace相关CSS使用!important覆盖了Bootstrap样式
- * 3. z-index异常：自定义样式设置了异常的z-index值
- * 
- * 解决方案：
- * 1. 使用JavaScript将模态框移动到body下（modal-quick-fix.js）
- * 2. 移除workspace CSS中对容器的z-index设置（已修复）
- * 3. 使用Bootstrap标准z-index值，避免异常值
- * 
- * Bootstrap 5 标准值：
- * - .modal: z-index: 1055
- * - .modal-backdrop: z-index: 1050
- */
 
-/* ============================================
-   全局模态框修复（使用Bootstrap标准值）
-   ============================================ */
-/* 所有模态框：使用Bootstrap标准z-index值 */
-.modal {
-    z-index: 1055 !important; /* Bootstrap 5 标准值 */
-    position: fixed !important; /* 确保使用 fixed 定位 */
-    /* 确保模态框上下左右居中 */
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    display: none !important; /* 默认隐藏，Bootstrap标准行为 */
-    align-items: center !important; /* 垂直居中 */
-    justify-content: center !important; /* 水平居中 */
-    padding: 1rem !important; /* 添加内边距，避免贴边 */
-}
-
-.modal.show {
-    display: flex !important; /* 只有在show类时才显示为flex */
-    z-index: 1055 !important;
-}
-
-/* 模态框对话框：确保居中显示 */
-.modal-dialog {
-    margin: auto !important; /* 确保居中 - 覆盖所有自定义margin */
-    max-width: 500px !important; /* 默认最大宽度 */
-    width: 100% !important;
-    position: relative !important;
-}
-
-/* 覆盖特定模态框的自定义margin，确保所有模态框都居中 */
-#filterFieldsSettingsModal .modal-dialog,
-#fieldsSettingsModal .modal-dialog,
-    margin: auto !important; /* 强制居中，覆盖自定义margin */
-}
-
-/* 响应式：大屏幕时增加最大宽度 */
-@media (min-width: 576px) {
-    .modal-dialog {
-        max-width: 500px !important;
-    }
-}
-
-@media (min-width: 768px) {
-    .modal-dialog {
-        max-width: 600px !important;
-    }
-}
-
-@media (min-width: 992px) {
-    .modal-dialog {
-        max-width: 800px !important;
-    }
-}
-
-@media (min-width: 1200px) {
-    .modal-dialog {
-        max-width: 1000px !important;
-    }
-}
-
-/* 大尺寸模态框 */
-.modal-dialog.modal-lg {
-    max-width: 800px !important;
-}
-
-@media (min-width: 992px) {
-    .modal-dialog.modal-lg {
-        max-width: 1000px !important;
-    }
-}
-
-/* 超大尺寸模态框 */
-.modal-dialog.modal-xl {
-    max-width: 1000px !important;
-}
-
-@media (min-width: 1200px) {
-    .modal-dialog.modal-xl {
-        max-width: 1200px !important;
-    }
-}
-
-/* 小尺寸模态框 */
-.modal-dialog.modal-sm {
-    max-width: 300px !important;
-}
-
-/* 遮罩层：使用Bootstrap标准z-index值 */
-.modal-backdrop {
-    z-index: 1050 !important; /* Bootstrap 5 标准值，低于模态框 */
-}
-
-/* 确保模态框可以交互 */
-.modal.show {
-    pointer-events: none !important; /* 容器设置为 none */
-}
-
-.modal.show .modal-dialog {
-    pointer-events: auto !important; /* 对话框设置为 auto */
-}
-
-.modal.show .modal-content {
-    pointer-events: auto !important; /* 内容设置为 auto */
-}
-
-/* 确保模态框内的所有交互元素都可以点击 */
-.modal.show .modal-header,
-.modal.show .modal-body,
-.modal.show .modal-footer {
-    pointer-events: auto !important; /* 确保头部、主体、底部都可以交互 */
-}
-
-.modal.show .modal-header *,
-.modal.show .modal-body *,
-.modal.show .modal-footer * {
-    pointer-events: auto !important; /* 确保所有子元素都可以交互 */
-}
-
-.modal.show button,
-.modal.show a,
-.modal.show input,
-.modal.show select,
-.modal.show textarea {
-    pointer-events: auto !important; /* 确保所有交互元素都可以点击 */
-}
-
-/* 确保模态框不受父容器影响 */
-.modal {
-    /* 重置可能被继承的属性 */
-    transform: none !important;
-    opacity: 1 !important;
-    filter: none !important;
-}
-
-/* 发文详情页面的模态框修复（特定 ID） */
-#approveModal,
-#sendModal,
-#completeModal,
-#archiveModal {
-    z-index: 10050 !important; /* 使用更高的 z-index 值 */
-    position: fixed !important;
-}
-
-/* 确保模态框可以交互 */
-#approveModal.show,
-#sendModal.show,
-#completeModal.show,
-#archiveModal.show {
-    pointer-events: none !important; /* 容器设置为 none */
-}
-
-#approveModal.show .modal-dialog,
-#sendModal.show .modal-dialog,
-#completeModal.show .modal-dialog,
-#archiveModal.show .modal-dialog {
-    pointer-events: auto !important; /* 对话框设置为 auto */
-}
-
-#approveModal.show .modal-content,
-#sendModal.show .modal-content,
-#completeModal.show .modal-content,
-#archiveModal.show .modal-content {
-    pointer-events: auto !important; /* 内容设置为 auto */
-}
-
-/* 确保遮罩层在模态框下方（使用 :has() 选择器，兼容现代浏览器） */
-body:has(#approveModal.show) .modal-backdrop:last-child,
-body:has(#sendModal.show) .modal-backdrop:last-child,
-body:has(#completeModal.show) .modal-backdrop:last-child,
-body:has(#archiveModal.show) .modal-backdrop:last-child {
-    z-index: 1050 !important;
-}
-
-/* 兼容不支持 :has() 的浏览器，使用相邻兄弟选择器 */
-#approveModal.show ~ .modal-backdrop,
-#sendModal.show ~ .modal-backdrop,
-#completeModal.show ~ .modal-backdrop,
-#archiveModal.show ~ .modal-backdrop {
-    z-index: 1050 !important;
+/* 强制颜色模式支持 - 替代已弃用的-ms-high-contrast-adjust */
+@media (forced-colors: active) {
+  /* 确保在强制颜色模式下元素可见 */
+  * {
+    forced-color-adjust: auto;
+  }
+  
+  /* 对于需要保持自定义颜色的元素，使用preserve-parent */
+  .welcome-card-top,
+  .navbar,
+  button,
+  a {
+    forced-color-adjust: preserve-parent;
+  }
 }

@@ -1,12 +1,19 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "personnel_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:employee_movement_management' %}">员工异动管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:employee_movement_management' %}">员工异动管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:employee_movement_detail' movement.id %}">{{ movement.movement_number }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endif %}
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .form-card {
         background: #fff;
@@ -53,7 +60,6 @@
         <form method="post">
         {% csrf_token %}
         
-        <!-- 基本信息 -->
         <div class="form-card">
             <h5>基本信息</h5>
             <div class="row g-3">
@@ -81,7 +87,6 @@
             </div>
         </div>
 
-        <!-- 异动前信息 -->
         <div class="form-card">
             <h5>异动前信息</h5>
             <div class="row g-3">
@@ -109,7 +114,6 @@
             </div>
         </div>
 
-        <!-- 异动后信息 -->
         <div class="form-card">
             <h5>异动后信息</h5>
             <div class="row g-3">
@@ -137,7 +141,6 @@
             </div>
         </div>
 
-        <!-- 异动原因 -->
         <div class="form-card">
             <h5>异动原因</h5>
             <div class="row g-3">
@@ -151,7 +154,6 @@
             </div>
         </div>
 
-        <!-- 提交按钮 -->
         <div class="d-flex justify-content-end gap-3 mt-4">
             <a href="{% url 'personnel_pages:employee_movement_management' %}" class="btn btn-outline-secondary btn-submit">
                 <i class="bi bi-x-circle"></i> 取消
@@ -164,4 +166,3 @@
     </div>
 </div>
 {% endblock %}
-

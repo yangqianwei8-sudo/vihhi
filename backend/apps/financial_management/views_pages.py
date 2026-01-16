@@ -25,7 +25,7 @@ except ImportError:
     REPORTLAB_AVAILABLE = False
 
 from backend.apps.system_management.services import get_user_permission_codes
-from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted as core_permission_granted, _build_full_top_nav, _build_unified_sidebar_nav
+from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted as core_permission_granted, _build_full_top_nav
 from backend.apps.financial_management.models import (
     AccountSubject, Voucher, VoucherEntry,
     Ledger, Budget, Invoice, FundFlow,
@@ -154,13 +154,8 @@ def _update_budget_from_fund_flow(fund_flow, is_create=True, old_amount=None):
 from backend.core.views import _build_full_top_nav
 
 
-def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None, use_financial_nav=False, active_menu_id=None):
-    """构建页面上下文
-    
-    Args:
-        use_financial_nav: 是否添加财务管理左侧菜单（统一使用module_sidebar_nav变量名）
-        active_menu_id: 当前激活的菜单项ID
-    """
+def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None, use_financial_nav=False):
+    """构建页面上下文"""
     context = {
         "page_title": page_title,
         "page_icon": page_icon,
@@ -175,24 +170,15 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
             # 统一使用全局系统主菜单（与客户管理模块保持一致）
             context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
             if use_financial_nav:
-                # 统一使用module_sidebar_nav变量名，与其他模块保持一致
-                request_path = request.path
-                context['module_sidebar_nav'] = _build_financial_sidebar_nav(permission_set, request_path, active_id=active_menu_id)
-                # 保留financial_menu以兼容旧模板（逐步迁移）
-                context['financial_menu'] = context['module_sidebar_nav']
-            else:
-                context['module_sidebar_nav'] = []
-                context['financial_menu'] = []
+                context['financial_menu'] = _build_financial_sidebar_nav(permission_set, request.path)
         else:
             context['full_top_nav'] = []
-            context['module_sidebar_nav'] = []
             context['financial_menu'] = []
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f'构建页面上下文错误: {str(e)}', exc_info=True)
         context['full_top_nav'] = []
-        context['module_sidebar_nav'] = []
         context['financial_menu'] = []
     
     return context
@@ -280,37 +266,53 @@ def _build_financial_top_nav(permission_set):
     return nav_items
 
 
-# 财务管理菜单结构定义
-FINANCIAL_MENU_STRUCTURE = [
-    {
-        'id': 'financial_home',
-        'label': '财务管理首页',
-        'icon': '🏠',
-        'url_name': 'finance_pages:financial_home',
-        'permission': None,
-    },
-    {
-        'id': 'financial_basic',
-        'label': '基础管理',
-        'icon': '📊',
-        'permission': 'financial_management.account.view',
-        'children': [
-            {
-                'id': 'account_subject',
-                'label': '会计科目',
-                'icon': '📊',
-                'url_name': 'finance_pages:account_subject_management',
-                'permission': 'financial_management.account.view',
-            },
-            {
-                'id': 'voucher',
-                'label': '凭证管理',
-                'icon': '📝',
-                'url_name': 'finance_pages:voucher_management',
-                'permission': 'financial_management.voucher.view',
-            },
-        ]
-    },
+def _build_financial_sidebar_nav(permission_set, request_path=None, active_id=None):
+    """生成财务管理模块的左侧菜单导航（使用计划管理格式）
+    
+    Args:
+        permission_set: 用户权限集合
+        request_path: 当前请求路径，用于判断激活状态
+        active_id: 当前激活的菜单项ID（可选）
+    
+    Returns:
+        list: 分组菜单项列表，格式与计划管理一致
+    """
+    from django.urls import reverse, NoReverseMatch
+    
+    # 定义财务管理菜单结构（分组格式，与计划管理一致）
+    FINANCIAL_MENU_STRUCTURE = [
+        {
+            'id': 'financial_basic',
+            'label': '基础管理',
+            'icon': '📊',
+            'permission': 'financial_management.account.view',
+            'children': [
+                {
+                    'id': 'financial_home',
+                    'label': '财务管理首页',
+                    'icon': '💵',
+                    'url_name': 'finance_pages:financial_home',
+                    'permission': None,
+                    'path_keywords': ['financial_home', 'financial'],
+                },
+                {
+                    'id': 'account_subject',
+                    'label': '会计科目',
+                    'icon': '📊',
+                    'url_name': 'finance_pages:account_subject_management',
+                    'permission': 'financial_management.account.view',
+                    'path_keywords': ['account', 'accounts'],
+                },
+                {
+                    'id': 'voucher',
+                    'label': '凭证管理',
+                    'icon': '📝',
+                    'url_name': 'finance_pages:voucher_management',
+                    'permission': 'financial_management.voucher.view',
+                    'path_keywords': ['voucher', 'vouchers'],
+                },
+            ]
+        },
         {
             'id': 'financial_ledger',
             'label': '账簿管理',
@@ -323,6 +325,7 @@ FINANCIAL_MENU_STRUCTURE = [
                     'icon': '📖',
                     'url_name': 'finance_pages:ledger_management',
                     'permission': 'financial_management.ledger.view',
+                    'path_keywords': ['ledger', 'ledgers'],
                 },
                 {
                     'id': 'subsidiary_ledger',
@@ -330,6 +333,7 @@ FINANCIAL_MENU_STRUCTURE = [
                     'icon': '📋',
                     'url_name': 'finance_pages:subsidiary_ledger',
                     'permission': 'financial_management.ledger.view',
+                    'path_keywords': ['subsidiary'],
                 },
                 {
                     'id': 'balance_sheet',
@@ -337,6 +341,7 @@ FINANCIAL_MENU_STRUCTURE = [
                     'icon': '📊',
                     'url_name': 'finance_pages:account_balance_sheet',
                     'permission': 'financial_management.ledger.view',
+                    'path_keywords': ['balance-sheet'],
                 },
                 {
                     'id': 'trial_balance',
@@ -344,6 +349,7 @@ FINANCIAL_MENU_STRUCTURE = [
                     'icon': '⚖️',
                     'url_name': 'finance_pages:trial_balance',
                     'permission': 'financial_management.ledger.view',
+                    'path_keywords': ['trial-balance'],
                 },
             ]
         },
@@ -359,6 +365,7 @@ FINANCIAL_MENU_STRUCTURE = [
                     'icon': '💰',
                     'url_name': 'finance_pages:budget_management',
                     'permission': 'financial_management.budget.view',
+                    'path_keywords': ['budget', 'budgets'],
                 },
                 {
                     'id': 'fund_flow',
@@ -366,6 +373,7 @@ FINANCIAL_MENU_STRUCTURE = [
                     'icon': '💳',
                     'url_name': 'finance_pages:fund_flow_management',
                     'permission': 'financial_management.fund_flow.view',
+                    'path_keywords': ['fund-flow', 'fund_flow'],
                 },
             ]
         },
@@ -381,6 +389,7 @@ FINANCIAL_MENU_STRUCTURE = [
                     'icon': '🧾',
                     'url_name': 'finance_pages:invoice_management',
                     'permission': 'financial_management.invoice.view',
+                    'path_keywords': ['invoice', 'invoices'],
                 },
                 {
                     'id': 'receivable',
@@ -388,6 +397,7 @@ FINANCIAL_MENU_STRUCTURE = [
                     'icon': '💰',
                     'url_name': 'finance_pages:receivable_management',
                     'permission': 'financial_management.receivable.view',
+                    'path_keywords': ['receivable', 'receivables'],
                 },
                 {
                     'id': 'payable',
@@ -395,6 +405,7 @@ FINANCIAL_MENU_STRUCTURE = [
                     'icon': '💸',
                     'url_name': 'finance_pages:payable_management',
                     'permission': 'financial_management.payable.view',
+                    'path_keywords': ['payable', 'payables'],
                 },
             ]
         },
@@ -410,16 +421,72 @@ FINANCIAL_MENU_STRUCTURE = [
                     'icon': '📊',
                     'url_name': 'finance_pages:report_management',
                     'permission': 'financial_management.report.view',
+                    'path_keywords': ['report', 'reports', 'balance-sheet', 'income-statement', 'cash-flow'],
                 },
             ]
         },
     ]
-
-
-def _build_financial_sidebar_nav(permission_set, request_path=None, active_id=None):
-    """生成财务管理模块左侧菜单（统一格式）"""
-    # 使用统一的菜单构建函数
-    return _build_unified_sidebar_nav(FINANCIAL_MENU_STRUCTURE, permission_set, active_id=active_id)
+    
+    menu = []
+    
+    for menu_group in FINANCIAL_MENU_STRUCTURE:
+        # 检查父菜单权限
+        permission = menu_group.get('permission')
+        if permission and not _permission_granted(permission, permission_set):
+            continue
+        
+        # 处理子菜单
+        children = []
+        for child in menu_group.get('children', []):
+            # 检查子菜单权限
+            child_permission = child.get('permission')
+            if child_permission and not _permission_granted(child_permission, permission_set):
+                continue
+            
+            # 获取URL
+            url_name = child.get('url_name')
+            url = '#'
+            if url_name:
+                try:
+                    url = reverse(url_name)
+                except NoReverseMatch:
+                    url = '#'
+            
+            # 判断是否激活
+            is_active = False
+            if active_id:
+                is_active = child.get('id') == active_id
+            elif request_path:
+                for keyword in child.get('path_keywords', []):
+                    if keyword in request_path:
+                        is_active = True
+                        break
+            
+            children.append({
+                'id': child.get('id'),
+                'label': child.get('label'),
+                'icon': child.get('icon'),
+                'url': url,
+                'active': is_active,
+            })
+        
+        # 如果父菜单没有可见的子菜单，跳过
+        if not children:
+            continue
+        
+        # 判断父菜单是否激活（任意子菜单激活则父菜单激活）
+        has_active_child = any(child.get('active') for child in children)
+        
+        menu.append({
+            'id': menu_group.get('id'),
+            'label': menu_group.get('label'),
+            'icon': menu_group.get('icon'),
+            'active': has_active_child,
+            'expanded': has_active_child,  # 如果有激活项，默认展开
+            'children': children,
+        })
+    
+    return menu
 
 
 @login_required
@@ -625,8 +692,7 @@ def financial_home(request):
         summary_cards=summary_cards,
         sections=sections,
         request=request,
-        use_financial_nav=True,
-        active_menu_id='financial_home'
+        use_financial_nav=True
     )
     return render(request, "financial_management/home.html", context)
 

@@ -97,8 +97,6 @@ class ProjectSerializer(serializers.ModelSerializer):
     client_name = serializers.CharField(source='client.name', read_only=True)
     service_type_name = serializers.CharField(source='service_type.name', read_only=True)
     business_type_name = serializers.CharField(source='business_type.name', read_only=True)
-    responsible_department_name = serializers.CharField(source='responsible_department.name', read_only=True)
-    responsible_person_name = serializers.CharField(source='responsible_person.get_full_name', read_only=True)
     service_profession_names = serializers.SerializerMethodField()
     
     # 嵌套序列化器
@@ -134,9 +132,11 @@ class ProjectCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = [
-            'name',
+            'name', 'alias', 'description',
+            'service_type', 'business_type', 'design_stage', 'service_professions',
+            'client_company_name', 'client_contact_person', 'client_phone',
+            'client_email', 'client_address',
             'design_company', 'design_contact_person', 'design_phone', 'design_email',
-            'responsible_department', 'responsible_person',
         ]
     
     def create(self, validated_data):

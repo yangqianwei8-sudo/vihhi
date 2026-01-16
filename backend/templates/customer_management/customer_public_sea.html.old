@@ -1,0 +1,415 @@
+{% extends "customer_management/_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+/* 压缩空白区域，使排版更紧凑 */
+.list-page-container {
+    padding: 12px !important;
+    gap: 8px !important; /* 压缩卡片间距 */
+}
+
+.list-page-header {
+    margin-bottom: 8px !important;
+    padding: 6px 0 !important;
+}
+
+.list-page-filters {
+    margin-bottom: 8px !important;
+    padding: 10px !important;
+}
+
+.list-page-action-bar {
+    margin-bottom: 8px !important;
+    padding: 6px 12px !important;
+    font-size: 13px;
+}
+
+.list-page-table-container {
+    margin-bottom: 8px !important;
+}
+
+/* 筛选按钮组样式 */
+.filter-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.filter-label {
+    min-width: 70px;
+    font-size: 13px;
+    color: #666;
+    padding-top: 4px;
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    flex: 1;
+}
+
+.filter-btn {
+    padding: 3px 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #333;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+.filter-btn:hover {
+    border-color: #ff6b35;
+    color: #ff6b35;
+    background: rgba(255, 107, 53, 0.05);
+}
+
+.filter-btn.active {
+    background: #ff6b35;
+    border-color: #ff6b35;
+    color: #fff;
+    font-weight: 500;
+}
+
+/* 分页样式优化 */
+.pagination {
+    margin: 0;
+    gap: 2px;
+}
+
+.pagination .page-link {
+    padding: 4px 8px;
+    font-size: 12px;
+    min-width: 28px;
+    text-align: center;
+    line-height: 1.4;
+    border: 1px solid #dee2e6;
+    color: #333;
+}
+
+.pagination .page-link:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #333;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #ff6b35;
+    border-color: #ff6b35;
+    color: #fff;
+    z-index: 1;
+}
+
+.pagination .page-item.disabled .page-link {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #fff;
+}
+</style>
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_list' %}">客户列表</a></li>
+<li class="breadcrumb-item active" aria-current="page">客户公海</li>
+{% endblock %}
+
+{% block content %}
+<div class="workspace-content">
+    <div class="list-page-container">
+        <div class="list-page-header">
+            <h1 class="list-page-title">
+                {{ page_title }}
+            </h1>
+        </div>
+
+        <div class="list-page-filters mb-1" style="margin-bottom: 8px !important;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 small fw-semibold">筛选条件</h6>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="settingsFilterFieldsBtn">
+                        ⚙️ 设置筛选字段
+                    </button>
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="toggleFilterCollapse" style="display: none;">
+                        <span id="filterCollapseText">展开</span>
+                        <span id="filterCollapseIcon">▼</span>
+                    </button>
+                </div>
+            </div>
+            <form method="get" id="filterForm">
+                <div id="basicFilters">
+                    
+                    <div class="filter-row mb-3" data-filter-key="search">
+                        <label class="filter-label">搜索:</label>
+                        <div class="filter-buttons">
+                            <input type="text" name="search" class="form-control form-control-sm" 
+                                   value="{{ search }}" placeholder="客户名称、统一信用代码" id="searchInput">
+                        </div>
+                    </div>
+                    
+                    <div class="filter-row mb-3" data-filter-key="public_sea_reason">
+                        <label class="filter-label">进入原因:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not public_sea_reason %}active{% endif %}" data-filter="public_sea_reason" data-value="">
+                                全部
+                            </button>
+                            {% for value, label in public_sea_reason_choices %}
+                            <button type="button" class="filter-btn {% if public_sea_reason == value %}active{% endif %}" data-filter="public_sea_reason" data-value="{{ value }}">
+                                {{ label }}
+                            </button>
+                            {% endfor %}
+                            <input type="hidden" name="public_sea_reason" id="filter_public_sea_reason" value="{{ public_sea_reason }}">
+                        </div>
+                    </div>
+                    
+                    <div class="filter-row mb-3" data-filter-key="client_level">
+                        <label class="filter-label">客户等级:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not client_level %}active{% endif %}" data-filter="client_level" data-value="">
+                                全部
+                            </button>
+                            {% for value, label in client_level_choices %}
+                            <button type="button" class="filter-btn {% if client_level == value %}active{% endif %}" data-filter="client_level" data-value="{{ value }}">
+                                {{ label }}
+                            </button>
+                            {% endfor %}
+                            <input type="hidden" name="client_level" id="filter_client_level" value="{{ client_level }}">
+                        </div>
+                    </div>
+                    
+                    <div class="filter-row mb-3" data-filter-key="region">
+                        <label class="filter-label">地区:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not region %}active{% endif %}" data-filter="region" data-value="">
+                                全部
+                            </button>
+                            <div class="d-inline-flex align-items-center gap-2 ms-2">
+                                <input type="text" name="region" class="form-control form-control-sm" 
+                                       value="{{ region }}" placeholder="请输入地区" style="width: 200px;" id="regionInput">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-row mb-3" data-filter-key="industry">
+                        <label class="filter-label">行业:</label>
+                        <div class="filter-buttons">
+                            <button type="button" class="filter-btn {% if not industry %}active{% endif %}" data-filter="industry" data-value="">
+                                全部
+                            </button>
+                            <div class="d-inline-flex align-items-center ms-2">
+                                <input type="text" name="industry" class="form-control form-control-sm" 
+                                       value="{{ industry }}" placeholder="请输入行业" style="width: 200px;" id="industryInput">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="list-page-table-container">
+            <div class="list-page-table-wrapper">
+                {% if page_obj %}
+                <div class="table-responsive">
+                <table class="list-page-table">
+                    <thead>
+                        <tr>
+                            <th width="40" class="column-checkbox">
+                                <input type="checkbox" id="selectAll" class="form-check-input">
+                            </th>
+                            <th>客户名称</th>
+                            <th>统一信用代码</th>
+                            <th>客户等级</th>
+                            <th>进入原因</th>
+                            <th>进入时间</th>
+                            <th width="100">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for client in page_obj %}
+                        <tr>
+                            <td><input type="checkbox" name="client_ids" value="{{ client.id }}" class="row-checkbox form-check-input"></td>
+                            <td>
+                                <a href="{% url 'business_pages:customer_detail' client.id %}">{{ client.name }}</a>
+                            </td>
+                            <td>{{ client.unified_credit_code|default:"未填写" }}</td>
+                            <td>
+                                <span class="badge bg-primary">{{ client.get_client_level_display }}</span>
+                            </td>
+                            <td>
+                                {% if client.public_sea_reason %}
+                                <span class="badge bg-info">{{ client.get_public_sea_reason_display }}</span>
+                                {% else %}
+                                <span class="text-muted">未设置</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ client.public_sea_entry_time|date:"Y-m-d H:i"|default:"未知" }}</td>
+                            <td>
+                                {% if can_claim %}
+                                <a href="{% url 'business_pages:customer_public_sea_claim' client.id %}" class="btn btn-sm btn-primary">认领</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">暂无公海客户</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info" style="margin: 20px;">暂无公海客户</div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if page_obj and page_obj.has_other_pages %}
+        <nav aria-label="分页导航" class="list-page-pagination">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if public_sea_reason %}&public_sea_reason={{ public_sea_reason }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if industry %}&industry={{ industry }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if public_sea_reason %}&public_sea_reason={{ public_sea_reason }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if industry %}&industry={{ industry }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if public_sea_reason %}&public_sea_reason={{ public_sea_reason }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if industry %}&industry={{ industry }}{% endif %}">下一页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// 全选/取消全选功能
+document.getElementById('selectAll')?.addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = this.checked;
+        const row = cb.closest('tr');
+        if (row) {
+            if (this.checked) {
+                row.classList.add('selected');
+            } else {
+                row.classList.remove('selected');
+            }
+        }
+    });
+    updateSelectedCount();
+});
+
+// 单个复选框变化
+document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const row = this.closest('tr');
+        if (row) {
+            if (this.checked) {
+                row.classList.add('selected');
+            } else {
+                row.classList.remove('selected');
+            }
+        }
+        updateSelectAllState();
+        updateSelectedCount();
+    });
+});
+
+// 更新全选状态
+function updateSelectAllState() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
+    
+    if (selectAll && checkboxes.length > 0) {
+        if (checkedCount === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        } else if (checkedCount === checkboxes.length) {
+            selectAll.checked = true;
+            selectAll.indeterminate = false;
+        } else {
+            selectAll.checked = false;
+            selectAll.indeterminate = true;
+        }
+    }
+}
+
+// 更新选中数量
+function updateSelectedCount() {
+    const count = document.querySelectorAll('.row-checkbox:checked').length;
+    const countElement = document.getElementById('selectedCount');
+    const clearBtn = document.getElementById('clearSelection');
+    
+    if (countElement) {
+        countElement.textContent = count;
+    }
+    
+    if (clearBtn) {
+        clearBtn.style.display = count > 0 ? 'inline' : 'none';
+    }
+}
+
+// 清除所选
+document.getElementById('clearSelection')?.addEventListener('click', function() {
+    document.querySelectorAll('.row-checkbox:checked').forEach(cb => {
+        cb.checked = false;
+        const row = cb.closest('tr');
+        if (row) row.classList.remove('selected');
+    });
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+    }
+    updateSelectedCount();
+    this.style.display = 'none';
+});
+
+// 快速搜索表单提交
+</script>
+        
+        {% include "customer_management/includes/filter_fields_settings_modal.html" %}
+    
+    <script src="{% static 'js/filter-fields-settings.js' %}"></script>
+    
+    <script>
+    window.listFiltersConfig = {
+        enableFieldsSettings: true,
+        fieldsSettingsStorageKey: 'customer_public_sea_filter_fields',
+        fieldsSettingsContainerId: 'basicFilters',
+        fieldsSettingsModalId: 'filterFieldsSettingsModal',
+        fieldsSettingsListId: 'filterFieldsList',
+        fieldsSettingsBtnId: 'settingsFilterFieldsBtn',
+        fieldsSettingsSaveBtnId: 'saveFilterFieldsSettings',
+        fieldsSettingsResetBtnId: 'resetFilterFieldsSettings',
+        maxEnabledFields: 10,
+        defaultEnabledFields: ['public_sea_reason', 'client_level', 'region']
+    };
+    </script>
+    <script src="{% static 'js/list-filters.js' %}"></script>
+{% endblock %}

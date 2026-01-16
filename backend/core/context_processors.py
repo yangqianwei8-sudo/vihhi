@@ -15,24 +15,15 @@ def sidebar_menu(request):
     """
     # 如果请求对象不存在或用户未登录，直接返回空菜单
     if not request:
-        return {
-            'module_sidebar_nav': [],  # 统一使用module_sidebar_nav变量名
-            'sidebar_menu': []  # 保留兼容性
-        }
+        return {'sidebar_menu': []}
     
     try:
         # 检查用户是否已认证
         if not hasattr(request, 'user') or not request.user.is_authenticated:
-            return {
-                'module_sidebar_nav': [],  # 统一使用module_sidebar_nav变量名
-                'sidebar_menu': []  # 保留兼容性
-            }
+            return {'sidebar_menu': []}
     except Exception:
         # 如果检查用户认证状态时出错，返回空菜单
-        return {
-            'module_sidebar_nav': [],  # 统一使用module_sidebar_nav变量名
-            'sidebar_menu': []  # 保留兼容性
-        }
+        return {'sidebar_menu': []}
     
     try:
         # 如果导入的函数不存在，直接返回空菜单
@@ -41,17 +32,11 @@ def sidebar_menu(request):
             from backend.core.views import _get_current_module_from_path, _get_sidebar_menu_for_module
         except (ImportError, AttributeError):
             # 如果函数不存在，返回空菜单
-            return {
-                'module_sidebar_nav': [],  # 统一使用module_sidebar_nav变量名
-                'sidebar_menu': []  # 保留兼容性
-            }
+            return {'sidebar_menu': []}
         
         # 检查函数是否存在
         if not hasattr(_get_current_module_from_path, '__call__') or not hasattr(_get_sidebar_menu_for_module, '__call__'):
-            return {
-                'module_sidebar_nav': [],  # 统一使用module_sidebar_nav变量名
-                'sidebar_menu': []  # 保留兼容性
-            }
+            return {'sidebar_menu': []}
         
         # 获取当前路径
         request_path = getattr(request, 'path', '')
@@ -61,27 +46,18 @@ def sidebar_menu(request):
             current_module = _get_current_module_from_path(request_path)
         except Exception:
             # 如果获取模块失败，返回空菜单
-            return {
-                'module_sidebar_nav': [],  # 统一使用module_sidebar_nav变量名
-                'sidebar_menu': []  # 保留兼容性
-            }
+            return {'sidebar_menu': []}
         
         # 如果无法判断模块，返回空菜单
         if not current_module:
-            return {
-                'module_sidebar_nav': [],  # 统一使用module_sidebar_nav变量名
-                'sidebar_menu': []  # 保留兼容性
-            }
+            return {'sidebar_menu': []}
         
         # 获取用户权限（可能因为数据库连接失败而抛出异常）
         try:
             permission_set = get_user_permission_codes(request.user)
         except Exception:
             # 如果获取权限失败（可能是数据库连接问题），返回空菜单
-            return {
-                'module_sidebar_nav': [],  # 统一使用module_sidebar_nav变量名
-                'sidebar_menu': []  # 保留兼容性
-            }
+            return {'sidebar_menu': []}
         
         # 获取当前模块的左侧菜单
         try:
@@ -93,22 +69,32 @@ def sidebar_menu(request):
             )
         except Exception:
             # 如果获取菜单失败，返回空菜单
-            return {
-                'module_sidebar_nav': [],  # 统一使用module_sidebar_nav变量名
-                'sidebar_menu': []  # 保留兼容性
-            }
+            return {'sidebar_menu': []}
         
-        return {
-            'module_sidebar_nav': sidebar_menu_items,  # 统一使用module_sidebar_nav变量名
-            'sidebar_menu': sidebar_menu_items  # 保留兼容性
-        }
+        return {'sidebar_menu': sidebar_menu_items}
     
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
         # 只记录警告，不抛出异常，避免导致 503 错误
         logger.warning(f'获取左侧菜单失败: {e}', exc_info=True)
-        return {
-            'module_sidebar_nav': [],  # 统一使用module_sidebar_nav变量名
-            'sidebar_menu': []  # 保留兼容性
-        }
+        return {'sidebar_menu': []}
+
+
+def notification_widget(request):
+    """
+    上下文处理器：为所有模板提供通知组件脚本引用
+    
+    使用方式：
+    1. 在 settings.py 的 TEMPLATES['OPTIONS']['context_processors'] 中添加：
+       'backend.core.context_processors.notification_widget',
+    2. 在基础模板的 </body> 标签前添加：
+       {% if notification_widget_enabled %}
+       <script src="{% static 'js/notification_widget.js' %}"></script>
+       {% endif %}
+    """
+    # 如果用户未登录，不启用通知组件
+    if not request or not hasattr(request, 'user') or not request.user.is_authenticated:
+        return {'notification_widget_enabled': False}
+    
+    return {'notification_widget_enabled': True}

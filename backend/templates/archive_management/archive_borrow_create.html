@@ -1,13 +1,16 @@
-{% extends "shared/module_base.html" %}
+{% extends "archive_management/base.html" %}
 {% load static %}
 
 {% block title %}新建档案借阅 - 档案管理{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'archive_management:archive_borrow_list' %}">档案借阅</a></li>
+<li class="breadcrumb-item active" aria-current="page">新建借阅</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid">
-    <!-- 页面标题 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">📖 新建档案借阅</h2>
@@ -20,7 +23,6 @@
         </div>
     </div>
 
-    <!-- 表单卡片 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">借阅信息</h5>
@@ -43,14 +45,13 @@
                 {% csrf_token %}
                 
                 <div class="row g-3">
-                    <!-- 档案类型选择 -->
+                    
                     <div class="col-md-12">
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle"></i> 请选择要借阅的项目文档或行政档案（二选一）
                         </div>
                     </div>
 
-                    <!-- 项目文档 -->
                     <div class="col-md-6">
                         <label for="{{ form.project_document.id_for_label }}" class="form-label">
                             {{ form.project_document.label }}
@@ -61,7 +62,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 行政档案 -->
                     <div class="col-md-6">
                         <label for="{{ form.administrative_archive.id_for_label }}" class="form-label">
                             {{ form.administrative_archive.label }}
@@ -72,7 +72,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 借阅事由 -->
                     <div class="col-md-12">
                         <label for="{{ form.borrow_reason.id_for_label }}" class="form-label">
                             {{ form.borrow_reason.label }} <span class="text-danger">*</span>
@@ -83,7 +82,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 借阅日期 -->
                     <div class="col-md-4">
                         <label for="{{ form.borrow_date.id_for_label }}" class="form-label">
                             {{ form.borrow_date.label }}
@@ -94,7 +92,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 归还日期 -->
                     <div class="col-md-4">
                         <label for="{{ form.return_date.id_for_label }}" class="form-label">
                             {{ form.return_date.label }} <span class="text-danger">*</span>
@@ -105,7 +102,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 借阅方式 -->
                     <div class="col-md-4">
                         <label for="{{ form.borrow_method.id_for_label }}" class="form-label">
                             {{ form.borrow_method.label }}
@@ -116,7 +112,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 借阅部门 -->
                     <div class="col-md-6">
                         <label for="{{ form.borrower_department.id_for_label }}" class="form-label">
                             {{ form.borrower_department.label }}
@@ -127,7 +122,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 借阅用途 -->
                     <div class="col-md-6">
                         <label for="{{ form.borrow_purpose.id_for_label }}" class="form-label">
                             {{ form.borrow_purpose.label }}
@@ -139,7 +133,6 @@
                     </div>
                 </div>
 
-                <!-- 提交按钮 -->
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="d-flex justify-content-end gap-2">
@@ -156,9 +149,8 @@
         </div>
     </div>
 
-    <!-- 可借阅档案列表 -->
     <div class="row">
-        <!-- 项目文档列表 -->
+        
         {% if project_documents %}
         <div class="col-md-6">
             <div class="info-card mb-4">
@@ -199,7 +191,6 @@
         </div>
         {% endif %}
 
-        <!-- 行政档案列表 -->
         {% if administrative_archives %}
         <div class="col-md-6">
             <div class="info-card mb-4">
@@ -241,7 +232,6 @@
         {% endif %}
     </div>
 
-    <!-- 借阅说明 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">借阅说明</h5>

@@ -159,13 +159,6 @@ class RegistrationRequestForm(forms.ModelForm):
         min_length=6,
         max_length=128,
     )
-    verification_code = forms.CharField(
-        label='验证码',
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '请输入6位验证码', 'maxlength': '6'}),
-        required=True,
-        min_length=6,
-        max_length=6,
-    )
 
     class Meta:
         model = RegistrationRequest
@@ -191,19 +184,8 @@ class RegistrationRequestForm(forms.ModelForm):
         cleaned_data = super().clean()
         password = cleaned_data.get('password')
         confirm = cleaned_data.get('confirm_password')
-        phone = cleaned_data.get('phone')
-        verification_code = cleaned_data.get('verification_code')
-        
         if password and confirm and password != confirm:
             self.add_error('confirm_password', '两次输入的密码不一致')
-        
-        # 验证短信验证码
-        if phone and verification_code:
-            from .sms_service import SmsVerificationService
-            success, message = SmsVerificationService.verify_code(phone, verification_code)
-            if not success:
-                self.add_error('verification_code', message)
-        
         return cleaned_data
 
     def save(self, commit=True):

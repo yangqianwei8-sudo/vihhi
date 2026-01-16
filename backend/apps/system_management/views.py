@@ -16,7 +16,6 @@ from .serializers import (
     AccountNotificationSerializer,
     AccountPasswordChangeSerializer,
 )
-from .sms_service import SmsVerificationService
 
 
 class CsrfExemptSessionAuthentication(SessionAuthentication):
@@ -126,81 +125,6 @@ class UserViewSet(viewsets.ModelViewSet):
             'success': True,
             'message': '密码更新成功，请重新登录。',
         })
-    
-    @action(detail=True, methods=['get'], url_path='department')
-    def department(self, request, pk=None):
-        """获取用户的部门信息"""
-        try:
-            user = self.get_object()
-            if user.department:
-                return Response({
-                    'success': True,
-                    'department': user.department.name,
-                    'department_id': user.department.id
-                })
-            else:
-                return Response({
-                    'success': False,
-                    'department': None,
-                    'message': '用户没有关联部门'
-                })
-        except Exception as e:
-            return Response({
-                'success': False,
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny], authentication_classes=[CsrfExemptSessionAuthentication], url_path='send-verification-code')
-    def send_verification_code(self, request):
-        """发送短信验证码（用于注册）"""
-        phone = request.data.get('phone', '').strip()
-        if not phone:
-            return Response({
-                'success': False,
-                'message': '请提供手机号'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        success, message = SmsVerificationService.send_verification_code(phone)
-        if success:
-            return Response({
-                'success': True,
-                'message': message
-            })
-        else:
-            return Response({
-                'success': False,
-                'message': message
-            }, status=status.HTTP_400_BAD_REQUEST)
-    
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny], authentication_classes=[CsrfExemptSessionAuthentication], url_path='verify-code')
-    def verify_code(self, request):
-        """验证短信验证码"""
-        phone = request.data.get('phone', '').strip()
-        code = request.data.get('code', '').strip()
-        
-        if not phone:
-            return Response({
-                'success': False,
-                'message': '请提供手机号'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        if not code:
-            return Response({
-                'success': False,
-                'message': '请提供验证码'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        success, message = SmsVerificationService.verify_code(phone, code)
-        if success:
-            return Response({
-                'success': True,
-                'message': message
-            })
-        else:
-            return Response({
-                'success': False,
-                'message': message
-            }, status=status.HTTP_400_BAD_REQUEST)
 
 class DepartmentViewSet(viewsets.ModelViewSet):
     queryset = Department.objects.all()

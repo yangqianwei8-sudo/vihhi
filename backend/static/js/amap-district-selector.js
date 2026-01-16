@@ -1,9 +1,7 @@
 /**
  * 高德地图行政区划选择器组件
  * 维海科技信息化管理平台
- * 版本: 2.0
- * 
- * 基于高德地图API实现省市区三级联动选择
+ * 版本: 1.0
  * 
  * 使用方法：
  * const selector = new AmapDistrictSelector({
@@ -29,7 +27,6 @@ class AmapDistrictSelector {
      * @param {string} options.apiBaseUrl - API基础URL（默认：'/api/customer/districts/'）
      * @param {boolean} options.autoUpdateAddress - 是否自动更新地址字段（默认：true）
      * @param {boolean} options.enableLogging - 是否启用日志（默认：false）
-     * @param {string} options.addressFormat - 地址格式：'name'（名称，默认）、'code'（编码）、'both'（编码|名称）
      */
     constructor(options = {}) {
         // 默认配置
@@ -41,8 +38,7 @@ class AmapDistrictSelector {
             detailInputId: options.detailInputId || 'addressDetailInput',
             apiBaseUrl: options.apiBaseUrl || '/api/customer/districts/',
             autoUpdateAddress: options.autoUpdateAddress !== false,
-            enableLogging: options.enableLogging || false,
-            addressFormat: options.addressFormat || 'name' // 'name', 'code', 'both'
+            enableLogging: options.enableLogging || false
         };
         
         // DOM元素引用
@@ -52,16 +48,10 @@ class AmapDistrictSelector {
         this.addressField = null;
         this.detailInput = null;
         
-        // 选中的值（存储编码和名称）
+        // 选中的值
         this.selectedProvince = null;
-        this.selectedProvinceCode = null;
         this.selectedCity = null;
-        this.selectedCityCode = null;
         this.selectedDistrict = null;
-        this.selectedDistrictCode = null;
-        
-        // 地址格式配置
-        this.addressFormat = this.config.addressFormat;
         
         // 省份排序配置（直辖市和特别行政区排在前面）
         this.specialProvinces = ['北京市', '天津市', '上海市', '重庆市', '香港特别行政区', '澳门特别行政区'];
@@ -78,45 +68,10 @@ class AmapDistrictSelector {
         this.addressField = document.getElementById(this.config.addressFieldId);
         this.detailInput = this.config.detailInputId ? document.getElementById(this.config.detailInputId) : null;
         
-        if (this.config.enableLogging) {
-            console.log('AmapDistrictSelector init - 元素检查:', {
-                provinceSelect: !!this.provinceSelect,
-                citySelect: !!this.citySelect,
-                districtSelect: !!this.districtSelect,
-                addressField: !!this.addressField,
-                detailInput: !!this.detailInput,
-                addressFieldId: this.config.addressFieldId,
-                provinceSelectId: this.config.provinceSelectId
-            });
-        }
-        
         // 检查必需元素
-        if (!this.provinceSelect || !this.citySelect || !this.districtSelect) {
-            console.error('AmapDistrictSelector: 缺少必需的选择框元素', {
-                provinceSelect: !!this.provinceSelect,
-                citySelect: !!this.citySelect,
-                districtSelect: !!this.districtSelect,
-                provinceSelectId: this.config.provinceSelectId,
-                citySelectId: this.config.citySelectId,
-                districtSelectId: this.config.districtSelectId
-            });
+        if (!this.provinceSelect || !this.citySelect || !this.districtSelect || !this.addressField) {
+            console.error('AmapDistrictSelector: 缺少必需的DOM元素');
             return;
-        }
-        
-        // 地址字段是可选的（如果不存在，会在updateAddressField中处理）
-        if (!this.addressField) {
-            console.warn('AmapDistrictSelector: 地址隐藏字段未找到，将创建临时字段', {
-                addressFieldId: this.config.addressFieldId
-            });
-            // 创建一个隐藏字段
-            this.addressField = document.createElement('input');
-            this.addressField.type = 'hidden';
-            this.addressField.id = this.config.addressFieldId;
-            this.addressField.name = this.config.addressFieldId;
-            // 插入到省份选择框的父元素中
-            if (this.provinceSelect.parentElement) {
-                this.provinceSelect.parentElement.insertBefore(this.addressField, this.provinceSelect);
-            }
         }
         
         // 绑定事件
@@ -134,11 +89,8 @@ class AmapDistrictSelector {
         this.provinceSelect.addEventListener('change', () => {
             const selectedOption = this.provinceSelect.options[this.provinceSelect.selectedIndex];
             this.selectedProvince = selectedOption.dataset.name || '';
-            this.selectedProvinceCode = this.provinceSelect.value || null;
             this.selectedCity = null;
-            this.selectedCityCode = null;
             this.selectedDistrict = null;
-            this.selectedDistrictCode = null;
             this.loadCities(this.provinceSelect.value, this.selectedProvince);
             if (this.config.autoUpdateAddress) {
                 this.updateAddressField();
@@ -149,9 +101,7 @@ class AmapDistrictSelector {
         this.citySelect.addEventListener('change', () => {
             const selectedOption = this.citySelect.options[this.citySelect.selectedIndex];
             this.selectedCity = selectedOption.dataset.name || '';
-            this.selectedCityCode = this.citySelect.value || null;
             this.selectedDistrict = null;
-            this.selectedDistrictCode = null;
             this.loadDistricts(this.citySelect.value, this.selectedCity);
             if (this.config.autoUpdateAddress) {
                 this.updateAddressField();
@@ -162,7 +112,6 @@ class AmapDistrictSelector {
         this.districtSelect.addEventListener('change', () => {
             const selectedOption = this.districtSelect.options[this.districtSelect.selectedIndex];
             this.selectedDistrict = selectedOption.dataset.name || '';
-            this.selectedDistrictCode = this.districtSelect.value || null;
             if (this.config.autoUpdateAddress) {
                 this.updateAddressField();
             }
@@ -184,16 +133,6 @@ class AmapDistrictSelector {
     async loadProvinces() {
         try {
             const response = await fetch(`${this.config.apiBaseUrl}?keywords=&level=province&subdistrict=0`);
-            
-            // 检查HTTP响应状态
-            if (!response.ok) {
-                const errorMsg = `API请求失败 (${response.status} ${response.statusText})`;
-                console.error('加载省份数据失败:', errorMsg);
-                this.provinceSelect.innerHTML = `<option value="">地址选择器暂时不可用</option>`;
-                this.showApiErrorTip(`高德地图API服务暂时不可用（${response.status}错误），请联系管理员检查配置`);
-                return;
-            }
-            
             const data = await response.json();
             
             if (this.config.enableLogging) {
@@ -209,16 +148,14 @@ class AmapDistrictSelector {
                     }
                     try {
                         const countryResponse = await fetch(`${this.config.apiBaseUrl}?keywords=中国&level=country&subdistrict=1`);
-                        if (countryResponse.ok) {
-                            const countryData = await countryResponse.json();
-                            if (countryData.success && countryData.districts && countryData.districts.length > 0) {
-                                const country = countryData.districts[0];
-                                if (country.districts && country.districts.length > data.districts.length) {
-                                    if (this.config.enableLogging) {
-                                        console.log(`使用国家级别查询成功，获取${country.districts.length}个省份`);
-                                    }
-                                    data.districts = country.districts;
+                        const countryData = await countryResponse.json();
+                        if (countryData.success && countryData.districts && countryData.districts.length > 0) {
+                            const country = countryData.districts[0];
+                            if (country.districts && country.districts.length > data.districts.length) {
+                                if (this.config.enableLogging) {
+                                    console.log(`使用国家级别查询成功，获取${country.districts.length}个省份`);
                                 }
+                                data.districts = country.districts;
                             }
                         }
                     } catch (e) {
@@ -247,16 +184,12 @@ class AmapDistrictSelector {
                 // 初始化地址解析（如果有现有地址）
                 this.initializeAddress();
             } else {
-                const errorMsg = data.message || '未知错误';
-                console.error('加载省份数据失败:', errorMsg);
-                this.provinceSelect.innerHTML = `<option value="">地址选择器暂时不可用（${errorMsg}）</option>`;
-                // 显示提示信息
-                this.showApiErrorTip(errorMsg);
+                console.error('加载省份数据失败:', data.message || '未知错误');
+                this.provinceSelect.innerHTML = '<option value="">加载失败，请刷新页面</option>';
             }
         } catch (error) {
             console.error('加载省份数据异常:', error);
-            this.provinceSelect.innerHTML = '<option value="">地址选择器暂时不可用（网络错误）</option>';
-            this.showApiErrorTip('网络连接失败，请检查网络或稍后重试');
+            this.provinceSelect.innerHTML = '<option value="">加载失败，请刷新页面</option>';
         }
     }
     
@@ -273,14 +206,6 @@ class AmapDistrictSelector {
         
         try {
             const response = await fetch(`${this.config.apiBaseUrl}?keywords=${provinceAdcode}&subdistrict=1`);
-            
-            // 检查HTTP响应状态
-            if (!response.ok) {
-                console.error(`加载城市数据失败: API请求失败 (${response.status} ${response.statusText})`);
-                this.citySelect.innerHTML = '<option value="">加载失败</option>';
-                return;
-            }
-            
             const data = await response.json();
             
             if (this.config.enableLogging) {
@@ -317,14 +242,6 @@ class AmapDistrictSelector {
         
         try {
             const response = await fetch(`${this.config.apiBaseUrl}?keywords=${cityAdcode}&subdistrict=1`);
-            
-            // 检查HTTP响应状态
-            if (!response.ok) {
-                console.error(`加载区县数据失败: API请求失败 (${response.status} ${response.statusText})`);
-                this.districtSelect.innerHTML = '<option value="">加载失败</option>';
-                return;
-            }
-            
             const data = await response.json();
             
             if (this.config.enableLogging) {
@@ -354,30 +271,9 @@ class AmapDistrictSelector {
      */
     updateAddressField() {
         const parts = [];
-        
-        // 根据配置的格式组合地址
-        if (this.addressFormat === 'code') {
-            // 使用编码格式
-            if (this.selectedProvinceCode) parts.push(this.selectedProvinceCode);
-            if (this.selectedCityCode) parts.push(this.selectedCityCode);
-            if (this.selectedDistrictCode) parts.push(this.selectedDistrictCode);
-        } else if (this.addressFormat === 'both') {
-            // 同时存储编码和名称：编码|名称
-            if (this.selectedProvinceCode && this.selectedProvince) {
-                parts.push(`${this.selectedProvinceCode}|${this.selectedProvince}`);
-            }
-            if (this.selectedCityCode && this.selectedCity) {
-                parts.push(`${this.selectedCityCode}|${this.selectedCity}`);
-            }
-            if (this.selectedDistrictCode && this.selectedDistrict) {
-                parts.push(`${this.selectedDistrictCode}|${this.selectedDistrict}`);
-            }
-        } else {
-            // 默认使用名称格式
-            if (this.selectedProvince) parts.push(this.selectedProvince);
-            if (this.selectedCity) parts.push(this.selectedCity);
-            if (this.selectedDistrict) parts.push(this.selectedDistrict);
-        }
+        if (this.selectedProvince) parts.push(this.selectedProvince);
+        if (this.selectedCity) parts.push(this.selectedCity);
+        if (this.selectedDistrict) parts.push(this.selectedDistrict);
         
         const detail = this.detailInput ? this.detailInput.value.trim() : '';
         if (detail) parts.push(detail);
@@ -408,7 +304,6 @@ class AmapDistrictSelector {
             if (matchedProvince) {
                 this.provinceSelect.value = matchedProvince.value;
                 this.selectedProvince = matchedProvince.dataset.name;
-                this.selectedProvinceCode = matchedProvince.value;
                 
                 this.loadCities(matchedProvince.value, matchedProvince.dataset.name).then(() => {
                     // 尝试匹配城市
@@ -421,7 +316,6 @@ class AmapDistrictSelector {
                         if (matchedCity) {
                             this.citySelect.value = matchedCity.value;
                             this.selectedCity = matchedCity.dataset.name;
-                            this.selectedCityCode = matchedCity.value;
                             
                             this.loadDistricts(matchedCity.value, matchedCity.dataset.name).then(() => {
                                 // 尝试匹配区县
@@ -434,7 +328,6 @@ class AmapDistrictSelector {
                                     if (matchedDistrict) {
                                         this.districtSelect.value = matchedDistrict.value;
                                         this.selectedDistrict = matchedDistrict.dataset.name;
-                                        this.selectedDistrictCode = matchedDistrict.value;
                                     }
                                     
                                     // 剩余部分作为详细地址
@@ -469,44 +362,6 @@ class AmapDistrictSelector {
     }
     
     /**
-     * 显示API错误提示
-     * @param {string} message - 错误消息
-     */
-    showApiErrorTip(message) {
-        // 查找地址选择器所在的容器
-        const provinceSelectParent = this.provinceSelect ? this.provinceSelect.closest('.row, .mb-3, .form-group, .mb-2') : null;
-        if (!provinceSelectParent) return;
-        
-        // 检查是否已经存在错误提示
-        let errorTip = provinceSelectParent.querySelector('.amap-api-error-tip');
-        if (!errorTip) {
-            errorTip = document.createElement('div');
-            errorTip.className = 'alert alert-warning alert-dismissible fade show amap-api-error-tip';
-            errorTip.setAttribute('role', 'alert');
-            errorTip.style.marginTop = '0.5rem';
-            errorTip.style.fontSize = '0.875rem';
-            
-            const closeBtn = document.createElement('button');
-            closeBtn.type = 'button';
-            closeBtn.className = 'btn-close';
-            closeBtn.setAttribute('data-bs-dismiss', 'alert');
-            closeBtn.setAttribute('aria-label', 'Close');
-            
-            errorTip.appendChild(closeBtn);
-            provinceSelectParent.appendChild(errorTip);
-        }
-        
-        // 更新或创建消息文本
-        let messageText = errorTip.querySelector('.error-message-text');
-        if (!messageText) {
-            messageText = document.createElement('span');
-            messageText.className = 'error-message-text';
-            errorTip.insertBefore(messageText, errorTip.firstChild.nextSibling);
-        }
-        messageText.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ${message}。您可以直接在详细地址框中手动输入完整地址。`;
-    }
-    
-    /**
      * 获取当前选中的完整地址
      * @returns {string} 完整地址
      */
@@ -533,75 +388,13 @@ class AmapDistrictSelector {
         this.citySelect.innerHTML = '<option value="">选择城市</option>';
         this.districtSelect.innerHTML = '<option value="">选择区县</option>';
         this.selectedProvince = null;
-        this.selectedProvinceCode = null;
         this.selectedCity = null;
-        this.selectedCityCode = null;
         this.selectedDistrict = null;
-        this.selectedDistrictCode = null;
         if (this.detailInput) {
             this.detailInput.value = '';
         }
         if (this.addressField) {
             this.addressField.value = '';
-        }
-    }
-    
-    /**
-     * 获取选中的编码信息
-     * @returns {Object} 包含省市区编码的对象
-     */
-    getCodes() {
-        return {
-            provinceCode: this.selectedProvinceCode,
-            provinceName: this.selectedProvince,
-            cityCode: this.selectedCityCode,
-            cityName: this.selectedCity,
-            districtCode: this.selectedDistrictCode,
-            districtName: this.selectedDistrict
-        };
-    }
-    
-    /**
-     * 设置选中的编码（用于编辑场景）
-     * @param {Object} codes - 包含省市区编码的对象
-     */
-    async setCodes(codes) {
-        if (codes.provinceCode) {
-            // 先加载省份列表
-            await this.loadProvinces();
-            // 设置省份
-            this.provinceSelect.value = codes.provinceCode;
-            const provinceOption = this.provinceSelect.options[this.provinceSelect.selectedIndex];
-            if (provinceOption) {
-                this.selectedProvince = provinceOption.dataset.name || codes.provinceName;
-                this.selectedProvinceCode = codes.provinceCode;
-                
-                // 加载城市
-                if (codes.cityCode) {
-                    await this.loadCities(codes.provinceCode, this.selectedProvince);
-                    this.citySelect.value = codes.cityCode;
-                    const cityOption = this.citySelect.options[this.citySelect.selectedIndex];
-                    if (cityOption) {
-                        this.selectedCity = cityOption.dataset.name || codes.cityName;
-                        this.selectedCityCode = codes.cityCode;
-                        
-                        // 加载区县
-                        if (codes.districtCode) {
-                            await this.loadDistricts(codes.cityCode, this.selectedCity);
-                            this.districtSelect.value = codes.districtCode;
-                            const districtOption = this.districtSelect.options[this.districtSelect.selectedIndex];
-                            if (districtOption) {
-                                this.selectedDistrict = districtOption.dataset.name || codes.districtName;
-                                this.selectedDistrictCode = codes.districtCode;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        if (this.config.autoUpdateAddress) {
-            this.updateAddressField();
         }
     }
 }

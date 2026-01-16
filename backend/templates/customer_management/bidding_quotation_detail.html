@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
@@ -54,11 +54,15 @@
 </style>
 {% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'opportunity_pages:opportunity_management' %}">商机管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}">投标报价</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="workspace-content">
-    <!-- 页面标题 -->
+    
     <div class="center-hero mb-4">
         <div style="position: relative; z-index: 1;">
             <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
@@ -66,7 +70,6 @@
         </div>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <div class="info-section">
             <h6>基本信息</h6>
@@ -77,7 +80,7 @@
             <div class="info-row">
                 <span class="info-label">关联商机：</span>
                 <span class="info-value">
-                    <a href="{% url 'business_pages:opportunity_detail' bidding_quotation.opportunity.id %}">
+                    <a href="{% url 'opportunity_pages:opportunity_detail' bidding_quotation.opportunity.id %}">
                         {{ bidding_quotation.opportunity.name }}
                     </a>
                     <small class="text-muted">({{ bidding_quotation.opportunity.opportunity_number|default:'未编号' }})</small>
@@ -248,9 +251,8 @@
         {% endif %}
     </div>
 
-    <!-- 操作按钮 -->
     <div class="d-flex justify-content-between align-items-center mt-4">
-        <a href="{% url 'business_pages:opportunity_bidding_quotation' %}" class="btn btn-outline-secondary">
+        <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> 返回列表
         </a>
         <div>
@@ -261,4 +263,3 @@
     </div>
 </div>
 {% endblock %}
-

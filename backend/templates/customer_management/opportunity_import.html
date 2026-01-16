@@ -1,18 +1,27 @@
-{% extends "shared/module_base.html" %}
+{% extends "customer_management/_base.html" %}
 {% load static %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+{% block cm_title %}导入商机{% endblock %}
+{% block cm_subtitle %}<span class="pm-subtitle">批量导入商机数据</span>{% endblock %}
+
+{% block cm_actions %}
+<a href="{% url 'opportunity_pages:opportunity_management' %}" class="list-btn">
+  返回列表
+</a>
+<a href="?download=template" class="list-btn list-btn-primary">
+  下载模板
+</a>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
 <style>
     .import-section {
         background: #fff;
-        border-radius: 12px;
+        border-radius: 8px;
         padding: 24px;
         margin-bottom: 24px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        border: 1px solid #e5e7eb;
+        border: 1px solid #E0E0E0;
     }
     .import-section-header {
         display: flex;
@@ -20,29 +29,29 @@
         align-items: center;
         margin-bottom: 20px;
         padding-bottom: 12px;
-        border-bottom: 2px solid #f3f4f6;
+        border-bottom: 1px solid #E0E0E0;
     }
     .import-section-header h5 {
         margin: 0;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 600;
-        color: #1f2937;
+        color: #1A1A1A;
     }
     .upload-area {
-        border: 2px dashed #d1d5db;
+        border: 2px dashed #D1D5DB;
         border-radius: 8px;
         padding: 40px;
         text-align: center;
-        background: #f9fafb;
+        background: #F9FAFB;
         transition: all 0.3s;
     }
     .upload-area:hover {
-        border-color: #3b82f6;
-        background: #eff6ff;
+        border-color: #2563EB;
+        background: #EFF6FF;
     }
     .upload-area.dragover {
-        border-color: #3b82f6;
-        background: #dbeafe;
+        border-color: #2563EB;
+        background: #DBEAFE;
     }
     .file-input-wrapper {
         position: relative;
@@ -55,22 +64,9 @@
         height: 100%;
         cursor: pointer;
     }
-    .btn-upload {
-        display: inline-block;
-        padding: 12px 24px;
-        background: #3b82f6;
-        color: white;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: 500;
-        transition: background 0.3s;
-    }
-    .btn-upload:hover {
-        background: #2563eb;
-    }
     .file-name {
         margin-top: 12px;
-        color: #6b7280;
+        color: #666666;
         font-size: 14px;
     }
     .import-results {
@@ -86,18 +82,21 @@
         padding: 16px;
         border-radius: 8px;
         text-align: center;
+        border: 1px solid #E0E0E0;
     }
     .result-card.total {
-        background: #f3f4f6;
-        color: #374151;
+        background: #F5F5F5;
+        color: #333333;
     }
     .result-card.success {
-        background: #d1fae5;
-        color: #065f46;
+        background: #D1FAE5;
+        color: #065F46;
+        border-color: #10B981;
     }
     .result-card.failed {
-        background: #fee2e2;
-        color: #991b1b;
+        background: #FEE2E2;
+        color: #991B1B;
+        border-color: #EF4444;
     }
     .result-card h3 {
         margin: 0 0 8px 0;
@@ -108,52 +107,16 @@
         margin: 0;
         font-size: 14px;
     }
-    .result-table {
-        width: 100%;
-        border-collapse: collapse;
-        background: white;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    .result-table th,
-    .result-table td {
-        padding: 12px;
-        text-align: left;
-        border-bottom: 1px solid #e5e7eb;
-    }
-    .result-table th {
-        background: #f9fafb;
-        font-weight: 600;
-        color: #374151;
-    }
-    .result-table tr:hover {
-        background: #f9fafb;
-    }
-    .status-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-    .status-badge.success {
-        background: #d1fae5;
-        color: #065f46;
-    }
-    .status-badge.failed {
-        background: #fee2e2;
-        color: #991b1b;
-    }
     .help-text {
-        background: #f0f9ff;
-        border: 1px solid #0ea5e9;
+        background: #F0F9FF;
+        border: 1px solid #0EA5E9;
         border-radius: 8px;
         padding: 16px;
         margin-bottom: 24px;
     }
     .help-text h6 {
         margin: 0 0 12px 0;
-        color: #0369a1;
+        color: #0369A1;
         font-size: 14px;
         font-weight: 600;
     }
@@ -161,7 +124,7 @@
         margin: 0;
         padding-left: 20px;
         color: #075985;
-        font-size: 13px;
+        font-size: 14px;
     }
     .help-text li {
         margin-bottom: 6px;
@@ -169,117 +132,102 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
-<div class="container-fluid py-4">
-    <div class="center-hero mb-4">
-        <div style="position: relative; z-index: 1;">
-            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
-            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ page_description }}</p>
-        </div>
-    </div>
+{% block cm_content %}
+<div class="help-text">
+    <h6>📋 导入说明</h6>
+    <ul>
+        <li>支持 CSV 和 Excel 格式（.csv, .xlsx, .xls）</li>
+        <li>文件大小限制：10MB</li>
+        <li>必填字段：商机名称、客户名称、负责商务手机号</li>
+        <li>如果客户不存在，系统会自动创建（需要系统已配置客户类型）</li>
+        <li>商机编号留空将自动生成</li>
+        <li>成功概率必须是 10、30、50、70 或 90</li>
+        <li>日期格式：YYYY-MM-DD（如：2025-12-31）</li>
+        <li>建议先下载模板文件，按照模板格式填写数据</li>
+    </ul>
+</div>
 
-    <!-- 帮助说明 -->
-    <div class="help-text">
-        <h6>📋 导入说明</h6>
-        <ul>
-            <li>支持 CSV 和 Excel 格式（.csv, .xlsx, .xls）</li>
-            <li>文件大小限制：10MB</li>
-            <li>必填字段：商机名称、客户名称、负责商务手机号</li>
-            <li>如果客户不存在，系统会自动创建（需要系统已配置客户类型）</li>
-            <li>商机编号留空将自动生成</li>
-            <li>成功概率必须是 10、30、50、70 或 90</li>
-            <li>日期格式：YYYY-MM-DD（如：2025-12-31）</li>
-            <li>建议先下载模板文件，按照模板格式填写数据</li>
-        </ul>
+<div class="import-section">
+    <div class="import-section-header">
+        <h5>📤 上传文件</h5>
     </div>
-
-    <!-- 上传区域 -->
-    <div class="import-section">
-        <div class="import-section-header">
-            <h5>📤 上传文件</h5>
-            <a href="?download=template" class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-download"></i> 下载模板
-            </a>
+    
+    <form method="post" enctype="multipart/form-data" id="import-form">
+        {% csrf_token %}
+        
+        <div class="upload-area" id="upload-area">
+            <div class="file-input-wrapper">
+                <input type="file" name="import_file" id="import_file" 
+                       accept=".csv,.xlsx,.xls" required>
+                <label for="import_file" class="list-btn list-btn-primary">
+                    <i class="bi bi-cloud-upload"></i> 选择文件
+                </label>
+            </div>
+            <div class="file-name" id="file-name" style="display: none;">
+                <i class="bi bi-file-earmark"></i> <span id="file-name-text"></span>
+            </div>
+            <p style="margin-top: 16px; color: #666666; font-size: 14px;">
+                支持 CSV 和 Excel 格式，最大 10MB
+            </p>
         </div>
         
-        <form method="post" enctype="multipart/form-data" id="import-form">
-            {% csrf_token %}
-            
-            <div class="upload-area" id="upload-area">
-                <div class="file-input-wrapper">
-                    <input type="file" name="import_file" id="import_file" 
-                           accept=".csv,.xlsx,.xls" required>
-                    <label for="import_file" class="btn-upload">
-                        <i class="bi bi-cloud-upload"></i> 选择文件
-                    </label>
-                </div>
-                <div class="file-name" id="file-name" style="display: none;">
-                    <i class="bi bi-file-earmark"></i> <span id="file-name-text"></span>
-                </div>
-                <p style="margin-top: 16px; color: #6b7280; font-size: 14px;">
-                    支持 CSV 和 Excel 格式，最大 10MB
-                </p>
-            </div>
-            
-            <div style="margin-top: 20px; text-align: center;">
-                <button type="submit" class="btn btn-primary btn-lg" id="submit-btn" disabled>
-                    <i class="bi bi-upload"></i> 开始导入
-                </button>
-            </div>
-        </form>
-    </div>
+        <div style="margin-top: 20px; text-align: center;">
+            <button type="submit" class="list-btn list-btn-primary" id="submit-btn" disabled style="font-size: 16px; padding: 12px 24px;">
+                <i class="bi bi-upload"></i> 开始导入
+            </button>
+        </div>
+    </form>
+</div>
 
-    <!-- 导入结果 -->
-    {% if import_results %}
-    <div class="import-section import-results">
-        <div class="import-section-header">
-            <h5>📊 导入结果</h5>
+{% if import_results %}
+<div class="import-section import-results">
+    <div class="import-section-header">
+        <h5>📊 导入结果</h5>
+    </div>
+    
+    <div class="result-summary">
+        <div class="result-card total">
+            <h3>{{ import_results.total }}</h3>
+            <p>总计</p>
         </div>
-        
-        <div class="result-summary">
-            <div class="result-card total">
-                <h3>{{ import_results.total }}</h3>
-                <p>总计</p>
-            </div>
-            <div class="result-card success">
-                <h3>{{ import_results.success }}</h3>
-                <p>成功</p>
-            </div>
-            <div class="result-card failed">
-                <h3>{{ import_results.failed }}</h3>
-                <p>失败</p>
-            </div>
+        <div class="result-card success">
+            <h3>{{ import_results.success }}</h3>
+            <p>成功</p>
         </div>
-        
-        {% if import_results.rows %}
-        <div style="max-height: 600px; overflow-y: auto;">
-            <table class="result-table">
-                <thead>
-                    <tr>
-                        <th>行号</th>
-                        <th>状态</th>
-                        <th>消息</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in import_results.rows %}
-                    <tr>
-                        <td>{{ row.row }}</td>
-                        <td>
-                            <span class="status-badge {{ row.status }}">
-                                {% if row.status == 'success' %}成功{% else %}失败{% endif %}
-                            </span>
-                        </td>
-                        <td>{{ row.message }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="result-card failed">
+            <h3>{{ import_results.failed }}</h3>
+            <p>失败</p>
         </div>
-        {% endif %}
+    </div>
+    
+    {% if import_results.rows %}
+    <div class="list-table-container" style="max-height: 600px; overflow-y: auto;">
+        <table class="list-table">
+            <thead>
+                <tr>
+                    <th>行号</th>
+                    <th>状态</th>
+                    <th>消息</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in import_results.rows %}
+                <tr>
+                    <td>{{ row.row }}</td>
+                    <td>
+                        <span class="list-badge {% if row.status == 'success' %}list-badge-success{% else %}list-badge-failed{% endif %}">
+                            {% if row.status == 'success' %}成功{% else %}失败{% endif %}
+                        </span>
+                    </td>
+                    <td>{{ row.message }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
     {% endif %}
 </div>
+{% endif %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -338,4 +286,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<style>
+    .list-badge-success {
+        background: #D1FAE5;
+        color: #065F46;
+        border-color: #10B981;
+    }
+    .list-badge-failed {
+        background: #FEE2E2;
+        color: #991B1B;
+        border-color: #EF4444;
+    }
+</style>
 {% endblock %}

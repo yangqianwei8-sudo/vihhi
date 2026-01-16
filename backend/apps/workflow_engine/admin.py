@@ -2,10 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.db import models
-from backend.apps.workflow_engine.models import (
-    WorkflowTemplate, ApprovalNode, ApprovalInstance, ApprovalRecord,
-    AgentConversation, AgentMessage
-)
+from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalNode, ApprovalInstance, ApprovalRecord
 from backend.core.admin_base import BaseModelAdmin, AuditAdminMixin
 
 
@@ -162,20 +159,19 @@ class ApprovalInstanceAdmin(BaseModelAdmin):
                 # 尝试生成链接（根据不同的模型类型）
                 admin_url = None
                 
-                # businesscontract已从后台管理中移除
-                # if model_name == 'businesscontract':
-                #     try:
-                #         admin_url = reverse('admin:customer_success_businesscontract_change', args=[obj.object_id])
-                #     except:
-                #         pass
-                if model_name == 'businessopportunity':
+                if model_name == 'businesscontract':
+                    try:
+                        admin_url = reverse('admin:customer_success_businesscontract_change', args=[obj.object_id])
+                    except:
+                        pass
+                elif model_name == 'businessopportunity':
                     try:
                         admin_url = reverse('admin:customer_success_businessopportunity_change', args=[obj.object_id])
                     except:
                         pass
                 elif model_name == 'project':
                     try:
-                        admin_url = reverse('admin:production_management_project_change', args=[obj.object_id])
+                        admin_url = reverse('admin:project_center_project_change', args=[obj.object_id])
                     except:
                         pass
                 
@@ -224,20 +220,19 @@ class ApprovalInstanceAdmin(BaseModelAdmin):
                 # 尝试生成链接
                 admin_url = None
                 
-                # businesscontract已从后台管理中移除
-                # if model_name == 'businesscontract':
-                #     try:
-                #         admin_url = reverse('admin:customer_success_businesscontract_change', args=[obj.object_id])
-                #     except:
-                #         pass
-                if model_name == 'businessopportunity':
+                if model_name == 'businesscontract':
+                    try:
+                        admin_url = reverse('admin:customer_success_businesscontract_change', args=[obj.object_id])
+                    except:
+                        pass
+                elif model_name == 'businessopportunity':
                     try:
                         admin_url = reverse('admin:customer_success_businessopportunity_change', args=[obj.object_id])
                     except:
                         pass
                 elif model_name == 'project':
                     try:
-                        admin_url = reverse('admin:production_management_project_change', args=[obj.object_id])
+                        admin_url = reverse('admin:project_center_project_change', args=[obj.object_id])
                     except:
                         pass
                 
@@ -421,76 +416,6 @@ class ApprovalInstanceAdmin(BaseModelAdmin):
         
         messages.success(request, f'成功驳回 {count} 条记录')
     reject_selected.short_description = '批量审批驳回'
-
-
-@admin.register(AgentConversation)
-class AgentConversationAdmin(BaseModelAdmin):
-    """Agent对话会话管理"""
-    list_display = ('title', 'user', 'message_count_display', 'is_active', 'is_archived', 'created_time', 'last_message_time')
-    list_filter = ('is_active', 'is_archived', 'created_time')
-    search_fields = ('title', 'description', 'user__username')
-    readonly_fields = ('created_time', 'updated_time', 'last_message_time')
-    raw_id_fields = ['user']
-    fieldsets = (
-        ('基本信息', {
-            'fields': ('title', 'description', 'user')
-        }),
-        ('状态', {
-            'fields': ('is_active', 'is_archived')
-        }),
-        ('元数据', {
-            'fields': ('metadata',),
-            'classes': ('collapse',)
-        }),
-        # 时间信息会自动添加
-    )
-    
-    def message_count_display(self, obj):
-        """显示消息数量"""
-        count = obj.messages.count()
-        return format_html(
-            '<a href="{}?conversation__id__exact={}" style="color: #1976d2;">{} 条消息</a>',
-            reverse('admin:workflow_engine_agentmessage_changelist'),
-            obj.id,
-            count
-        )
-    message_count_display.short_description = '消息数量'
-    
-    def get_queryset(self, request):
-        """优化查询，预加载消息数量"""
-        qs = super().get_queryset(request)
-        return qs.prefetch_related('messages')
-
-
-@admin.register(AgentMessage)
-class AgentMessageAdmin(BaseModelAdmin):
-    """Agent对话消息管理"""
-    list_display = ('conversation', 'role', 'content_preview', 'sequence', 'created_time')
-    list_filter = ('role', 'created_time', 'conversation')
-    search_fields = ('content', 'conversation__title')
-    readonly_fields = ('created_time',)
-    raw_id_fields = ['conversation']
-    fieldsets = (
-        ('基本信息', {
-            'fields': ('conversation', 'role', 'sequence')
-        }),
-        ('消息内容', {
-            'fields': ('content',)
-        }),
-        ('元数据', {
-            'fields': ('metadata',),
-            'classes': ('collapse',)
-        }),
-        # 时间信息会自动添加
-    )
-    
-    def content_preview(self, obj):
-        """显示消息内容预览"""
-        preview = obj.content[:100] if len(obj.content) > 100 else obj.content
-        if len(obj.content) > 100:
-            preview += '...'
-        return format_html('<span title="{}">{}</span>', obj.content, preview)
-    content_preview.short_description = '消息内容'
 
 
 @admin.register(ApprovalRecord)

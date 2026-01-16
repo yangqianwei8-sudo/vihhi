@@ -1,5 +1,4 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "customer_management/_base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
@@ -88,11 +87,14 @@
 </style>
 {% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'opportunity_pages:opportunity_management' %}">商机管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid">
-    <!-- 页面标题区域 -->
+    
     <div class="center-hero mb-4">
         <div style="position: relative; z-index: 1;">
             <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
@@ -100,7 +102,6 @@
         </div>
     </div>
 
-    <!-- 筛选和操作栏 -->
     <div class="card mb-4">
         <div class="card-body">
             <form method="get" class="row g-3">
@@ -138,7 +139,7 @@
 
     <div class="row">
         <div class="col-lg-8">
-            <!-- 活动列表 -->
+            
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">活动列表</h5>
@@ -175,7 +176,7 @@
                                             {% if activity.related_client %}
                                                 <a href="{% url 'business_pages:customer_detail' activity.related_client.id %}">{{ activity.related_client.name }}</a>
                                             {% elif activity.related_opportunity %}
-                                                <a href="{% url 'business_pages:opportunity_detail' activity.related_opportunity.id %}">{{ activity.related_opportunity.name }}</a>
+                                                <a href="{% url 'opportunity_pages:opportunity_detail' activity.related_opportunity.id %}">{{ activity.related_opportunity.name }}</a>
                                             {% else %}
                                                 -
                                             {% endif %}
@@ -193,7 +194,6 @@
                             </table>
                         </div>
                         
-                        <!-- 分页 -->
                         {% if page_obj.has_other_pages %}
                         <nav aria-label="Page navigation">
                             <ul class="pagination justify-content-center">
@@ -228,7 +228,7 @@
         </div>
 
         <div class="col-lg-4">
-            <!-- 统计卡片 -->
+            
             {% if summary_cards %}
             <div class="card mb-4">
                 <div class="card-header">
@@ -251,4 +251,3 @@
 </div>
 
 {% endblock %}
-

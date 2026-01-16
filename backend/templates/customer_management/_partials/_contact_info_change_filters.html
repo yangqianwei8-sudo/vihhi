@@ -1,0 +1,40 @@
+<div class="list-filters">
+  <form method="get" class="list-filters-form" id="filterForm">
+    <div class="list-filter-group">
+      <label class="list-filter-label">搜索</label>
+      <input type="text" name="search" class="list-filter-input" 
+             value="{{ search }}" placeholder="联系人姓名、客户名称">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">联系人</label>
+      <select name="contact" class="list-filter-input">
+        <option value="">全部联系人</option>
+        {% for c in contacts %}
+        <option value="{{ c.id }}" {% if contact_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }} ({{ c.client.name }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">变更类型</label>
+      <select name="change_type" class="list-filter-input">
+        <option value="">全部类型</option>
+        {% for value, label in change_type_choices %}
+        <option value="{{ value }}" {% if change_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">审批状态</label>
+      <select name="approval_status" class="list-filter-input">
+        <option value="">全部</option>
+        {% for value, label in approval_status_choices %}
+        <option value="{{ value }}" {% if approval_status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'business_pages:contact_info_change_list' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>

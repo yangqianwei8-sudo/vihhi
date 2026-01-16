@@ -1,0 +1,88 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>客户名称</th>
+        <th>统一信用代码</th>
+        <th>客户等级</th>
+        <th>客户类型</th>
+        <th>信用等级</th>
+        <th>负责人</th>
+        <th>创建时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for client in page_obj %}
+      <tr>
+        <td>
+          <a href="{% url 'business_pages:customer_detail' client.id %}">
+            {{ client.name }}
+          </a>
+        </td>
+        <td><code>{{ client.unified_credit_code|default:"未填写" }}</code></td>
+        <td>
+          <span class="list-badge">{{ client.get_client_level_display }}</span>
+        </td>
+        <td>{{ client.get_client_type_display|default:"未填写" }}</td>
+        <td>
+          <span class="list-badge">{{ client.get_credit_level_display }}</span>
+        </td>
+        <td>
+          {% if client.responsible_user %}
+          {{ client.responsible_user.get_full_name|default:client.responsible_user.username }}
+          {% else %}
+          <span style="color: #999999;">公海</span>
+          {% endif %}
+        </td>
+        <td>{{ client.created_time|date:"Y-m-d" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'business_pages:customer_detail' client.id %}" class="list-btn" title="查看">查看</a>
+            {% if client.can_edit %}
+            <a href="{% url 'business_pages:customer_edit' client.id %}" class="list-btn" title="编辑">编辑</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无客户数据</div>
+          <div class="list-empty-hint">请创建第一个客户开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if client_type %}&client_type={{ client_type }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if client_type %}&client_type={{ client_type }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if client_type %}&client_type={{ client_type }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

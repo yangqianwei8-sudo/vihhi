@@ -1,0 +1,33 @@
+<div class="list-filters">
+  <form method="get" class="list-filters-form" id="filterForm">
+    <div class="list-filter-group">
+      <label class="list-filter-label">搜索</label>
+      <input type="text" name="search" class="list-filter-input" 
+             value="{{ search }}" placeholder="入库申请编号、商机名称">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">关联商机</label>
+      <select name="opportunity_id" class="list-filter-input" id="opportunitySelect">
+        <option value="">全部商机</option>
+        {% for opp in opportunities %}
+        <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>{{ opp.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="opportunity_id" id="filter_opportunity" value="{{ opportunity_id }}">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">状态</label>
+      <select name="status" class="list-filter-input" id="statusSelect">
+        <option value="">全部状态</option>
+        <option value="pending" {% if status == 'pending' %}selected{% endif %}>待审批</option>
+        <option value="approved" {% if status == 'approved' %}selected{% endif %}>已审批</option>
+        <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>已拒绝</option>
+      </select>
+      <input type="hidden" name="status" id="filter_status" value="{{ status }}">
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'opportunity_pages:opportunity_warehouse_list' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>

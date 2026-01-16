@@ -1,0 +1,82 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>客户名称</th>
+        <th>统一信用代码</th>
+        <th>客户等级</th>
+        <th>进入原因</th>
+        <th>进入时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for client in page_obj %}
+      <tr>
+        <td>
+          <a href="{% url 'business_pages:customer_detail' client.id %}">
+            {{ client.name }}
+          </a>
+        </td>
+        <td><code>{{ client.unified_credit_code|default:"未填写" }}</code></td>
+        <td>
+          <span class="list-badge">{{ client.get_client_level_display }}</span>
+        </td>
+        <td>
+          {% if client.public_sea_reason %}
+          <span class="list-badge">{{ client.get_public_sea_reason_display }}</span>
+          {% else %}
+          <span style="color: #999999;">未设置</span>
+          {% endif %}
+        </td>
+        <td>{{ client.public_sea_entry_time|date:"Y-m-d H:i"|default:"未知" }}</td>
+        <td>
+          <div class="list-actions">
+            {% if can_claim %}
+            <a href="{% url 'business_pages:customer_public_sea_claim' client.id %}" class="list-btn list-btn-primary" title="认领">认领</a>
+            {% endif %}
+            <a href="{% url 'business_pages:customer_detail' client.id %}" class="list-btn" title="查看">查看</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无公海客户</div>
+          <div class="list-empty-hint">公海客户将显示在这里</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if public_sea_reason %}&public_sea_reason={{ public_sea_reason }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if industry %}&industry={{ industry }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if public_sea_reason %}&public_sea_reason={{ public_sea_reason }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if industry %}&industry={{ industry }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if public_sea_reason %}&public_sea_reason={{ public_sea_reason }}{% endif %}{% if client_level %}&client_level={{ client_level }}{% endif %}{% if region %}&region={{ region }}{% endif %}{% if industry %}&industry={{ industry }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

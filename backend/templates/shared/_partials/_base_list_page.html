@@ -1,0 +1,63 @@
+{# 基础列表页面模板
+  使用方式：
+  {% extends "shared/_partials/_base_list_page.html" %}
+  
+  需要覆盖的block：
+  - list_page_title: 页面标题
+  - list_page_description: 页面描述
+  - list_stats: 统计卡片内容
+  - list_filters: 筛选区域内容
+  - list_action_bar: 操作栏（可选）
+  - list_table: 表格内容
+  - list_pagination: 分页（可选）
+#}
+{% load static %}
+
+{% block list_page_container %}
+<div class="list-page-container">
+    <div class="list-page-header">
+        <h2 class="mb-0">{% block list_page_title %}列表页面{% endblock %}</h2>
+        <p class="text-muted mb-0 mt-1">{% block list_page_description %}{% endblock %}</p>
+    </div>
+    
+    {% block list_stats %}
+    {# 子模板需要覆盖此 block #}
+    {% endblock %}
+    
+    {% block list_filters %}
+    {# 子模板需要覆盖此 block #}
+    {% endblock %}
+    
+    {% block list_action_bar %}
+    <div class="list-page-action-bar card mb-3">
+        <div class="card-body py-2">
+            <div class="d-flex justify-content-end align-items-center">
+                <div>
+                    <span class="text-muted small">共 {{ page_obj.paginator.count|default:0 }} 条记录</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+    
+    {% block list_table %}
+    {# 子模板需要覆盖此 block #}
+    {% endblock %}
+    
+    {% block list_pagination %}
+    {# 子模板可以覆盖此 block 添加分页 #}
+    {% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/cards.css' %}">
+<style>
+    .list-page-container {
+        padding: 12px !important;
+        gap: 8px !important;
+    }
+</style>
+{% endblock %}

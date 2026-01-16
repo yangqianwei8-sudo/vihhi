@@ -1,12 +1,13 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "administrative_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:announcement_management' %}">公告通知</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ announcement.title|truncatewords:5 }}</li>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .center-hero {
         background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
@@ -86,15 +87,14 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="center-hero">
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
     </div>
 
-    <!-- 操作按钮 -->
     <div class="text-end mb-4">
         <a href="{% url 'admin_pages:announcement_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
@@ -104,7 +104,6 @@
         </a>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <div class="d-flex justify-content-between align-items-start mb-3">
             <h3 style="margin: 0; color: #1f2937;">
@@ -167,7 +166,6 @@
         </div>
     </div>
 
-    <!-- 公告内容 -->
     <div class="info-card">
         <h5>公告内容</h5>
         <div class="announcement-content">
@@ -185,7 +183,6 @@
         {% endif %}
     </div>
 
-    <!-- 阅读记录 -->
     {% if read_records %}
     <div class="info-card">
         <h5>阅读记录 (最近20条)</h5>
@@ -200,7 +197,6 @@
     </div>
     {% endif %}
 
-    <!-- 其他信息 -->
     <div class="info-card">
         <h5>其他信息</h5>
         <div class="info-row">
@@ -216,4 +212,3 @@
     </div>
 </div>
 {% endblock %}
-

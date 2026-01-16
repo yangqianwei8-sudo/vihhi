@@ -7,13 +7,13 @@ from backend.apps.archive_management.models import (
     ArchiveCategory,
     ArchiveProjectArchive,
     ProjectArchiveDocument,
-    # ArchivePushRecord,  # 已从后台管理中移除
+    ArchivePushRecord,
     AdministrativeArchive,
     ArchiveBorrow,
     ArchiveDestroy,
     ArchiveStorageRoom,
     ArchiveLocation,
-    # ArchiveShelf,  # 已从后台管理中移除
+    ArchiveShelf,
     ArchiveInventory,
 )
 from backend.core.admin_base import BaseModelAdmin, AuditAdminMixin, ReadOnlyAdminMixin
@@ -49,14 +49,13 @@ class ProjectArchiveDocumentAdmin(AuditAdminMixin, BaseModelAdmin):
     date_hierarchy = 'uploaded_time'
 
 
-# 交付推送记录已从后台管理中移除，请使用前端管理页面
-# @admin.register(ArchivePushRecord)
-# class ArchivePushRecordAdmin(BaseModelAdmin):
-#     """档案推送记录管理"""
-#     list_display = ('delivery_record', 'project', 'push_status', 'push_time', 'receive_time', 'retry_count')
-#     list_filter = ('push_status', 'push_time')
-#     search_fields = ('delivery_record__delivery_number', 'project__project_name')
-#     readonly_fields = ('created_time', 'updated_time')
+@admin.register(ArchivePushRecord)
+class ArchivePushRecordAdmin(BaseModelAdmin):
+    """档案推送记录管理"""
+    list_display = ('delivery_record', 'project', 'push_status', 'push_time', 'receive_time', 'retry_count')
+    list_filter = ('push_status', 'push_time')
+    search_fields = ('delivery_record__delivery_number', 'project__project_name')
+    readonly_fields = ('created_time', 'updated_time')
 
 
 @admin.register(AdministrativeArchive)
@@ -123,14 +122,13 @@ class ArchiveLocationAdmin(BaseModelAdmin):
     readonly_fields = ('created_time', 'updated_time')
 
 
-# 档案上架记录已从后台管理中移除，请使用前端管理页面
-# @admin.register(ArchiveShelf)
-# class ArchiveShelfAdmin(AuditAdminMixin, BaseModelAdmin):
-#     """档案上架管理"""
-#     list_display = ('archive', 'location', 'shelf_time', 'shelf_by')
-#     list_filter = ('shelf_time', 'location__storage_room')
-#     search_fields = ('archive__archive_number', 'location__location_number')
-#     readonly_fields = ('shelf_time',)
+@admin.register(ArchiveShelf)
+class ArchiveShelfAdmin(AuditAdminMixin, BaseModelAdmin):
+    """档案上架管理"""
+    list_display = ('archive', 'location', 'shelf_time', 'shelf_by')
+    list_filter = ('shelf_time', 'location__storage_room')
+    search_fields = ('archive__archive_number', 'location__location_number')
+    readonly_fields = ('shelf_time',)
 
 
 @admin.register(ArchiveInventory)
@@ -157,20 +155,19 @@ class ArchiveInventoryAdmin(AuditAdminMixin, BaseModelAdmin):
 #     drawing_count.short_description = '图纸数量'
 
 
-# 交付归档（手动）已从后台管理中移除，请使用前端管理页面
-# try:
-#     from backend.apps.archive_management.models import ProjectDeliveryArchive
-#     
-#     @admin.register(ProjectDeliveryArchive)
-#     class ProjectDeliveryArchiveAdmin(AuditAdminMixin, BaseModelAdmin):
-#         """项目交付档案管理"""
-#         list_display = ('archive_number', 'delivery_record', 'project', 'status', 'applicant', 'applied_time')
-#         list_filter = ('status', 'applied_time')
-#         search_fields = ('archive_number', 'delivery_record__delivery_number', 'delivery_record__title', 'project__name')
-#         readonly_fields = ('archive_number', 'created_time', 'updated_time')
-#         date_hierarchy = 'applied_time'
-# except ImportError:
-#     pass
+try:
+    from backend.apps.archive_management.models import ProjectDeliveryArchive
+    
+    @admin.register(ProjectDeliveryArchive)
+    class ProjectDeliveryArchiveAdmin(AuditAdminMixin, BaseModelAdmin):
+        """项目交付档案管理"""
+        list_display = ('archive_number', 'delivery_record', 'project', 'status', 'applicant', 'applied_time')
+        list_filter = ('status', 'applied_time')
+        search_fields = ('archive_number', 'delivery_record__delivery_number', 'delivery_record__title', 'project__name')
+        readonly_fields = ('archive_number', 'created_time', 'updated_time')
+        date_hierarchy = 'applied_time'
+except ImportError:
+    pass
 
 try:
     from backend.apps.archive_management.models import ArchiveCategoryRule

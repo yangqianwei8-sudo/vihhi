@@ -1,0 +1,87 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>申请单号</th>
+        <th>客户名称</th>
+        <th>费用类型</th>
+        <th>费用金额</th>
+        <th>费用日期</th>
+        <th>审批状态</th>
+        <th>申请人</th>
+        <th>创建时间</th>
+        <th width="100">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for expense in page_obj %}
+      <tr>
+        <td><code>{{ expense.application_number }}</code></td>
+        <td>
+          {% if expense.client %}
+          <a href="{% url 'business_pages:customer_detail' expense.client.id %}">
+            {{ expense.client.name }}
+          </a>
+          {% else %}
+          <span style="color: #999999;">未指定</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="list-badge">{{ expense.get_expense_type_display }}</span>
+        </td>
+        <td style="text-align: right; font-weight: 600;">¥{{ expense.amount|floatformat:2 }}</td>
+        <td style="color: #666666;">{{ expense.expense_date|date:"Y-m-d" }}</td>
+        <td>
+          <span class="list-badge list-badge-{{ expense.approval_status }}">
+            {{ expense.get_approval_status_display }}
+          </span>
+        </td>
+        <td>{{ expense.created_by.get_full_name|default:expense.created_by.username }}</td>
+        <td style="color: #666666;">{{ expense.created_time|date:"Y-m-d" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="#" class="list-btn" title="查看">查看</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无业务费申请记录</div>
+          <div class="list-empty-hint">请创建第一个业务费申请开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if expense_type %}&expense_type={{ expense_type }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if expense_type %}&expense_type={{ expense_type }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}{% if expense_type %}&expense_type={{ expense_type }}{% endif %}{% if approval_status %}&approval_status={{ approval_status }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

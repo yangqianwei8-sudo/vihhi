@@ -11,7 +11,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('production_management', '0001_initial'),
         ('customer_management', '0001_initial_squashed_0015_remove_client_blacklist_details_remove_client_code_and_more'),
         ('production_management', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),

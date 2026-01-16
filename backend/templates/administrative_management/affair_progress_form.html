@@ -1,12 +1,14 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "administrative_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:affair_list' %}">行政事务</a></li>
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:affair_detail' affair.id %}">{{ affair.affair_number }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">更新进度</li>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .form-card {
         background: var(--vh-card-bg);
@@ -30,9 +32,9 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="page-title">{{ page_title }}</h1>
@@ -40,7 +42,6 @@
         </div>
     </div>
 
-    <!-- 事务信息 -->
     <div class="form-card mb-4">
         <h5>事务信息</h5>
         <div class="row g-3">
@@ -65,7 +66,6 @@
         </div>
     </div>
 
-    <!-- 进度表单 -->
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="form-card">
@@ -98,14 +98,12 @@
             </div>
         </div>
 
-        <!-- 表单错误 -->
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
             {{ form.non_field_errors }}
         </div>
         {% endif %}
 
-        <!-- 操作按钮 -->
         <div class="d-flex justify-content-between align-items-center mt-4">
             <a href="{% url 'admin_pages:affair_detail' affair.id %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> 取消
@@ -119,4 +117,3 @@
     </form>
 </div>
 {% endblock %}
-

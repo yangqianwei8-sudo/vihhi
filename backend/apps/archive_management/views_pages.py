@@ -9,7 +9,7 @@ from django.db.models import Q, Count
 from django.utils import timezone
 
 from backend.apps.system_management.services import get_user_permission_codes
-from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav, _build_unified_sidebar_nav
+from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav
 from django.urls import reverse, NoReverseMatch
 from backend.apps.archive_management.models import (
     ArchiveCategory,
@@ -31,283 +31,538 @@ from .services import ArchiveOperationLogService
 from backend.core.views import _build_full_top_nav
 
 
-# 档案管理菜单结构定义
-ARCHIVE_MANAGEMENT_MENU_STRUCTURE = [
-    {
-        'id': 'archive_management_home',
-        'label': '档案管理首页',
-        'icon': '🏠',
-        'url_name': 'archive_management:archive_management_home',
-        'permission': 'archive_management.view',
-    },
-    {
-        'id': 'project_archive',
-        'label': '项目档案',
-        'icon': '📄',
-        'permission': 'archive_management.view',
-        'children': [
-            {
-                'id': 'project_archive_list',
-                'label': '项目归档',
-                'icon': '📁',
-                'url_name': 'archive_management:project_archive_list',
-                'permission': 'archive_management.view',
-            },
-            {
-                'id': 'project_document_upload',
+def _build_archive_sidebar_nav(permission_set, request_path=None):
+    """生成档案管理左侧菜单"""
+    nav_items = []
+    
+    # 档案管理首页（项目归档列表）
+    try:
+        project_archive_url = reverse('archive_management:project_archive_list')
+        nav_items.append({
+            'label': '项目归档',
+            'icon': '📁',
+            'url': project_archive_url,
+            'active': request_path == project_archive_url,
+            'is_home': True,
+        })
+    except NoReverseMatch:
+        pass
+    
+    # 项目档案分组
+    project_archive_items = []
+    
+    if _permission_granted('archive_management.view', permission_set):
+        try:
+            document_upload_url = reverse('archive_management:project_document_upload')
+            project_archive_items.append({
                 'label': '文档上传',
                 'icon': '➕',
-                'url_name': 'archive_management:project_document_upload',
-                'permission': 'archive_management.view',
-            },
-            {
-                'id': 'project_document_list',
+                'url': document_upload_url,
+                'active': request_path == document_upload_url,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            document_list_url = reverse('archive_management:project_document_list')
+            project_archive_items.append({
                 'label': '项目文档',
                 'icon': '📄',
-                'url_name': 'archive_management:project_document_list',
-                'permission': 'archive_management.view',
-            },
-        ]
-    },
-    {
-        'id': 'administrative_archive',
-        'label': '行政档案',
-        'icon': '📋',
-        'permission': 'archive_management.view',
-        'children': [
-            {
-                'id': 'administrative_archive_list',
-                'label': '行政档案',
-                'icon': '📋',
-                'url_name': 'archive_management:administrative_archive_list',
-                'permission': 'archive_management.view',
-            },
-            {
-                'id': 'archive_borrow_list',
-                'label': '档案借阅',
-                'icon': '📖',
-                'url_name': 'archive_management:archive_borrow_list',
-                'permission': 'archive_management.view',
-            },
-            {
-                'id': 'archive_destroy_list',
-                'label': '档案销毁',
-                'icon': '🗑️',
-                'url_name': 'archive_management:archive_destroy_list',
-                'permission': 'archive_management.view',
-            },
-        ]
-    },
-    {
-        'id': 'archive_storage',
-        'label': '档案库管理',
-        'icon': '🏢',
-        'permission': 'archive_management.view',
-        'children': [
-            {
-                'id': 'archive_storage_room_list',
-                'label': '库房管理',
-                'icon': '🏢',
-                'url_name': 'archive_management:archive_storage_room_list',
-                'permission': 'archive_management.view',
-            },
-            {
-                'id': 'archive_location_list',
-                'label': '位置管理',
-                'icon': '📍',
-                'url_name': 'archive_management:archive_location_list',
-                'permission': 'archive_management.view',
-            },
-            {
-                'id': 'archive_shelf_list',
-                'label': '架位管理',
-                'icon': '📚',
-                'url_name': 'archive_management:archive_shelf_list',
-                'permission': 'archive_management.view',
-            },
-            {
-                'id': 'archive_inventory_list',
-                'label': '库存盘点',
-                'icon': '📊',
-                'url_name': 'archive_management:archive_inventory_list',
-                'permission': 'archive_management.view',
-            },
-        ]
-    },
-]
-
-
-def _build_archive_sidebar_nav(permission_set, request_path=None, active_id=None):
-    """生成档案管理左侧菜单（统一格式）"""
-    # 使用统一的菜单构建函数
-    return _build_unified_sidebar_nav(ARCHIVE_MANAGEMENT_MENU_STRUCTURE, permission_set, active_id=active_id)
-
-
-
-@login_required
-def archive_management_home(request):
-    """档案管理首页"""
-    permission_codes = get_user_permission_codes(request.user)
-    today = timezone.now().date()
-    this_month_start = today.replace(day=1)
-    
-    # 权限检查
-    if not _permission_granted('archive_management.view', permission_codes):
-        messages.error(request, '您没有权限访问档案管理')
-        return redirect('admin:index')
-    
-    # 收集统计数据
-    summary_cards = []
-    
-    try:
-        # 项目归档统计
-        if _permission_granted('archive_management.project_archive.view', permission_codes):
-            try:
-                total_archives = ArchiveProjectArchive.objects.count()
-                pending_archives = ArchiveProjectArchive.objects.filter(
-                    status__in=['pending', 'approving']
-                ).count()
-                this_month_archives = ArchiveProjectArchive.objects.filter(
-                    applied_time__gte=this_month_start
-                ).count()
-                
-                summary_cards.append({
-                    'label': '项目归档',
-                    'icon': '📁',
-                    'value': str(total_archives),
-                    'subvalue': f'待处理 {pending_archives} 个 · 本月 {this_month_archives} 个',
-                    'url': reverse('archive_management:project_archive_list'),
-                    'variant': 'warning' if pending_archives > 0 else 'info'
-                })
-            except Exception:
-                pass
-        
-        # 行政档案统计
-        if _permission_granted('archive_management.administrative_archive.view', permission_codes):
-            try:
-                total_admin_archives = AdministrativeArchive.objects.count()
-                this_month_admin_archives = AdministrativeArchive.objects.filter(
-                    archive_date__gte=this_month_start
-                ).count()
-                
-                summary_cards.append({
-                    'label': '行政档案',
-                    'icon': '📋',
-                    'value': str(total_admin_archives),
-                    'subvalue': f'本月新增 {this_month_admin_archives} 件',
-                    'url': reverse('archive_management:administrative_archive_list'),
-                    'variant': 'info'
-                })
-            except Exception:
-                pass
-        
-        # 档案借阅统计
-        if _permission_granted('archive_management.borrow.view', permission_codes):
-            try:
-                pending_borrows = ArchiveBorrow.objects.filter(
-                    status='pending'
-                ).count()
-                active_borrows = ArchiveBorrow.objects.filter(
-                    status='borrowed'
-                ).count()
-                
-                summary_cards.append({
-                    'label': '档案借阅',
-                    'icon': '📖',
-                    'value': str(pending_borrows + active_borrows),
-                    'subvalue': f'待审批 {pending_borrows} 个 · 借出中 {active_borrows} 个',
-                    'url': reverse('archive_management:archive_borrow_list'),
-                    'variant': 'warning' if pending_borrows > 0 else 'info'
-                })
-            except Exception:
-                pass
-        
-        # 档案分类统计
-        if _permission_granted('archive_management.category.view', permission_codes):
-            try:
-                total_categories = ArchiveCategory.objects.count()
-                
-                summary_cards.append({
-                    'label': '档案分类',
-                    'icon': '🗂️',
-                    'value': str(total_categories),
-                    'subvalue': '档案分类数量',
-                    'url': reverse('archive_management:archive_category_list'),
-                    'variant': 'info'
-                })
-            except Exception:
-                pass
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('获取统计数据失败: %s', str(e))
-    
-    # 功能模块入口
-    module_entries = []
-    
-    if _permission_granted('archive_management.project_archive.view', permission_codes):
-        try:
-            module_entries.append({
-                'label': '项目归档',
-                'icon': '📁',
-                'description': '管理项目归档',
-                'url': reverse('archive_management:project_archive_list'),
-                'link_label': '进入模块 →'
+                'url': document_list_url,
+                'active': request_path == document_list_url,
             })
-        except Exception:
+        except NoReverseMatch:
+            pass
+        
+        # 图纸归档（待实现）
+        try:
+            drawing_archive_url = reverse('archive_management:project_drawing_archive_list')
+            project_archive_items.append({
+                'label': '图纸归档',
+                'icon': '📐',
+                'url': drawing_archive_url,
+                'active': request_path == drawing_archive_url,
+            })
+        except NoReverseMatch:
+            # 如果路由不存在，添加占位菜单项（待实现）
+            project_archive_items.append({
+                'label': '图纸归档',
+                'icon': '📐',
+                'url': '#',
+                'active': False,
+            })
+        
+        # 交付归档（手动归档，待实现）
+        try:
+            delivery_archive_url = reverse('archive_management:project_delivery_archive_list')
+            project_archive_items.append({
+                'label': '交付归档',
+                'icon': '📦',
+                'url': delivery_archive_url,
+                'active': request_path == delivery_archive_url,
+            })
+        except NoReverseMatch:
+            # 如果路由不存在，添加占位菜单项（待实现）
+            project_archive_items.append({
+                'label': '交付归档',
+                'icon': '📦',
+                'url': '#',
+                'active': False,
+            })
+        
+        try:
+            search_url = reverse('archive_management:archive_search') + '?type=project'
+            project_archive_items.append({
+                'label': '项目档案查询',
+                'icon': '🔍',
+                'url': search_url,
+                'active': request_path and 'archive/search' in request_path and 'type=project' in request_path,
+            })
+        except NoReverseMatch:
             pass
     
-    if _permission_granted('archive_management.administrative_archive.view', permission_codes):
-        try:
-            module_entries.append({
-                'label': '行政档案',
-                'icon': '📋',
-                'description': '管理行政档案',
-                'url': reverse('archive_management:administrative_archive_list'),
-                'link_label': '进入模块 →'
-            })
-        except Exception:
-            pass
-    
-    if _permission_granted('archive_management.borrow.view', permission_codes):
-        try:
-            module_entries.append({
-                'label': '档案借阅',
-                'icon': '📖',
-                'description': '管理档案借阅',
-                'url': reverse('archive_management:archive_borrow_list'),
-                'link_label': '进入模块 →'
-            })
-        except Exception:
-            pass
-    
-    # 构建区域
-    sections = []
-    
-    if module_entries:
-        sections.append({
-            'title': '功能模块',
-            'description': '档案管理的各个功能模块入口',
-            'items': module_entries,
-            'layout': 'grid'
+    if project_archive_items:
+        nav_items.append({
+            'label': '项目档案',
+            'icon': '📄',
+            'items': project_archive_items,
+            'collapsed': not any(item.get('active') for item in project_archive_items),
         })
     
-    # 构建上下文
-    context = _context(
-        page_title="档案管理",
-        page_icon="📁",
-        description="管理项目档案、行政档案和档案借阅",
-        summary_cards=summary_cards,
-        sections=sections,
-        request=request,
-        active_menu_id='archive_management_home',  # 设置当前激活的菜单项
-    )
+    # 行政档案分组
+    administrative_archive_items = []
     
-    return render(request, "archive_management/home.html", context)
+    if _permission_granted('archive_management.view', permission_set):
+        try:
+            admin_archive_url = reverse('archive_management:administrative_archive_list')
+            administrative_archive_items.append({
+                'label': '行政档案',
+                'icon': '📋',
+                'url': admin_archive_url,
+                'active': request_path == admin_archive_url,
+            })
+        except NoReverseMatch:
+            pass
+        
+        # 注意：档案分类已移到独立分组，这里不再重复添加
+        
+        try:
+            borrow_url = reverse('archive_management:archive_borrow_list')
+            administrative_archive_items.append({
+                'label': '档案借阅',
+                'icon': '📖',
+                'url': borrow_url,
+                'active': request_path == borrow_url,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            destroy_url = reverse('archive_management:archive_destroy_list')
+            administrative_archive_items.append({
+                'label': '档案销毁',
+                'icon': '🗑️',
+                'url': destroy_url,
+                'active': request_path == destroy_url,
+            })
+        except NoReverseMatch:
+            pass
+        
+        # 档案归还（待实现）
+        try:
+            return_url = reverse('archive_management:archive_borrow_return_list')
+            administrative_archive_items.append({
+                'label': '档案归还',
+                'icon': '📥',
+                'url': return_url,
+                'active': request_path == return_url,
+            })
+        except NoReverseMatch:
+            # 如果路由不存在，添加占位菜单项（待实现）
+            administrative_archive_items.append({
+                'label': '档案归还',
+                'icon': '📥',
+                'url': '#',
+                'active': False,
+            })
+    
+    if administrative_archive_items:
+        nav_items.append({
+            'label': '行政档案',
+            'icon': '📋',
+            'items': administrative_archive_items,
+            'collapsed': not any(item.get('active') for item in administrative_archive_items),
+        })
+    
+    # 档案库管理分组
+    storage_items = []
+    
+    if _permission_granted('archive_management.view', permission_set):
+        try:
+            storage_list_url = reverse('archive_management:archive_storage_list')
+            storage_items.append({
+                'label': '库房管理',
+                'icon': '🏢',
+                'url': reverse('archive_management:archive_storage_room_list'),
+                'active': request_path and 'archive/storage/room' in request_path,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            storage_items.append({
+                'label': '位置管理',
+                'icon': '📍',
+                'url': reverse('archive_management:archive_location_list'),
+                'active': request_path and 'archive/storage/location' in request_path,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            storage_items.append({
+                'label': '档案上架',
+                'icon': '📚',
+                'url': reverse('archive_management:archive_shelf_list'),
+                'active': request_path and 'archive/storage/shelf' in request_path,
+            })
+        except NoReverseMatch:
+            pass
+        
+        try:
+            storage_items.append({
+                'label': '档案盘点',
+                'icon': '📊',
+                'url': reverse('archive_management:archive_inventory_list'),
+                'active': request_path and 'archive/storage/inventory' in request_path,
+            })
+        except NoReverseMatch:
+            pass
+    
+    if storage_items:
+        nav_items.append({
+            'label': '档案库管理',
+            'icon': '📚',
+            'items': storage_items,
+            'collapsed': not any(item.get('active') for item in storage_items),
+        })
+    
+    # 档案分类（独立分组）
+    category_items = []
+    if _permission_granted('archive_management.view', permission_set):
+        try:
+            category_url = reverse('archive_management:archive_category_list')
+            category_items.append({
+                'label': '分类管理',
+                'icon': '🗂️',
+                'url': category_url,
+                'active': request_path == category_url,
+            })
+        except NoReverseMatch:
+            pass
+        
+        # 分类规则（待实现）
+        try:
+            category_rule_url = reverse('archive_management:archive_category_rule')
+            category_items.append({
+                'label': '分类规则',
+                'icon': '⚙️',
+                'url': category_rule_url,
+                'active': request_path == category_rule_url,
+            })
+        except NoReverseMatch:
+            # 如果路由不存在，添加占位菜单项（待实现）
+            category_items.append({
+                'label': '分类规则',
+                'icon': '⚙️',
+                'url': '#',
+                'active': False,
+            })
+    
+    if category_items:
+        nav_items.append({
+            'label': '档案分类',
+            'icon': '🗂️',
+            'items': category_items,
+            'collapsed': not any(item.get('active') for item in category_items),
+        })
+    
+    # 档案安全分组（待实现）
+    security_items = []
+    if _permission_granted('archive_management.view', permission_set):
+        # 权限管理（待实现）
+        try:
+            permission_url = reverse('archive_management:archive_security_permission')
+            security_items.append({
+                'label': '权限管理',
+                'icon': '🔐',
+                'url': permission_url,
+                'active': request_path == permission_url,
+            })
+        except NoReverseMatch:
+            security_items.append({
+                'label': '权限管理',
+                'icon': '🔐',
+                'url': '#',
+                'active': False,
+            })
+        
+        # 访问控制（待实现）
+        try:
+            access_url = reverse('archive_management:archive_security_access')
+            security_items.append({
+                'label': '访问控制',
+                'icon': '🛡️',
+                'url': access_url,
+                'active': request_path == access_url,
+            })
+        except NoReverseMatch:
+            security_items.append({
+                'label': '访问控制',
+                'icon': '🛡️',
+                'url': '#',
+                'active': False,
+            })
+        
+        # 操作日志（待实现）
+        try:
+            log_url = reverse('archive_management:archive_security_log')
+            security_items.append({
+                'label': '操作日志',
+                'icon': '📝',
+                'url': log_url,
+                'active': request_path == log_url,
+            })
+        except NoReverseMatch:
+            security_items.append({
+                'label': '操作日志',
+                'icon': '📝',
+                'url': '#',
+                'active': False,
+            })
+        
+        # 安全审计（待实现）
+        try:
+            audit_url = reverse('archive_management:archive_security_audit')
+            security_items.append({
+                'label': '安全审计',
+                'icon': '🔍',
+                'url': audit_url,
+                'active': request_path == audit_url,
+            })
+        except NoReverseMatch:
+            security_items.append({
+                'label': '安全审计',
+                'icon': '🔍',
+                'url': '#',
+                'active': False,
+            })
+    
+    if security_items:
+        nav_items.append({
+            'label': '档案安全',
+            'icon': '🔐',
+            'items': security_items,
+            'collapsed': not any(item.get('active') for item in security_items),
+        })
+    
+    # 档案检索分组（增强功能）
+    search_items = []
+    if _permission_granted('archive_management.view', permission_set):
+        # 全文检索（待实现）
+        try:
+            fulltext_url = reverse('archive_management:archive_search_fulltext')
+            search_items.append({
+                'label': '全文检索',
+                'icon': '🔍',
+                'url': fulltext_url,
+                'active': request_path == fulltext_url,
+            })
+        except NoReverseMatch:
+            search_items.append({
+                'label': '全文检索',
+                'icon': '🔍',
+                'url': '#',
+                'active': False,
+            })
+        
+        # 高级检索（待实现）
+        try:
+            advanced_url = reverse('archive_management:archive_search_advanced')
+            search_items.append({
+                'label': '高级检索',
+                'icon': '🔎',
+                'url': advanced_url,
+                'active': request_path == advanced_url,
+            })
+        except NoReverseMatch:
+            search_items.append({
+                'label': '高级检索',
+                'icon': '🔎',
+                'url': '#',
+                'active': False,
+            })
+        
+        # 检索历史（待实现）
+        try:
+            history_url = reverse('archive_management:archive_search_history')
+            search_items.append({
+                'label': '检索历史',
+                'icon': '📜',
+                'url': history_url,
+                'active': request_path == history_url,
+            })
+        except NoReverseMatch:
+            search_items.append({
+                'label': '检索历史',
+                'icon': '📜',
+                'url': '#',
+                'active': False,
+            })
+        
+        # 档案查询（基础查询，已实现）
+        try:
+            search_url = reverse('archive_management:archive_search')
+            search_items.append({
+                'label': '档案查询',
+                'icon': '🔍',
+                'url': search_url,
+                'active': request_path == search_url,
+            })
+        except NoReverseMatch:
+            pass
+    
+    if search_items:
+        nav_items.append({
+            'label': '档案检索',
+            'icon': '🔍',
+            'items': search_items,
+            'collapsed': not any(item.get('active') for item in search_items),
+        })
+    
+    # 档案数字化分组（待实现）
+    digitization_items = []
+    if _permission_granted('archive_management.view', permission_set):
+        # 数字化申请（待实现）
+        try:
+            apply_url = reverse('archive_management:archive_digitization_apply_list')
+            digitization_items.append({
+                'label': '数字化申请',
+                'icon': '📋',
+                'url': apply_url,
+                'active': request_path == apply_url,
+            })
+        except NoReverseMatch:
+            digitization_items.append({
+                'label': '数字化申请',
+                'icon': '📋',
+                'url': '#',
+                'active': False,
+            })
+        
+        # 数字化处理（待实现）
+        try:
+            process_url = reverse('archive_management:archive_digitization_process_list')
+            digitization_items.append({
+                'label': '数字化处理',
+                'icon': '⚙️',
+                'url': process_url,
+                'active': request_path == process_url,
+            })
+        except NoReverseMatch:
+            digitization_items.append({
+                'label': '数字化处理',
+                'icon': '⚙️',
+                'url': '#',
+                'active': False,
+            })
+        
+        # 数字化成果（待实现）
+        try:
+            result_url = reverse('archive_management:archive_digitization_result_list')
+            digitization_items.append({
+                'label': '数字化成果',
+                'icon': '📦',
+                'url': result_url,
+                'active': request_path == result_url,
+            })
+        except NoReverseMatch:
+            digitization_items.append({
+                'label': '数字化成果',
+                'icon': '📦',
+                'url': '#',
+                'active': False,
+            })
+    
+    if digitization_items:
+        nav_items.append({
+            'label': '档案数字化',
+            'icon': '💾',
+            'items': digitization_items,
+            'collapsed': not any(item.get('active') for item in digitization_items),
+        })
+    
+    # 档案统计（完善功能）
+    statistics_items = []
+    if _permission_granted('archive_management.view', permission_set):
+        # 档案统计（基础统计，已实现）
+        try:
+            statistics_url = reverse('archive_management:archive_statistics')
+            statistics_items.append({
+                'label': '档案统计',
+                'icon': '📊',
+                'url': statistics_url,
+                'active': request_path == statistics_url,
+            })
+        except NoReverseMatch:
+            pass
+        
+        # 利用统计（待实现）
+        try:
+            usage_url = reverse('archive_management:archive_statistics_usage')
+            statistics_items.append({
+                'label': '利用统计',
+                'icon': '📈',
+                'url': usage_url,
+                'active': request_path == usage_url,
+            })
+        except NoReverseMatch:
+            statistics_items.append({
+                'label': '利用统计',
+                'icon': '📈',
+                'url': '#',
+                'active': False,
+            })
+        
+        # 保管统计（待实现）
+        try:
+            storage_stat_url = reverse('archive_management:archive_statistics_storage')
+            statistics_items.append({
+                'label': '保管统计',
+                'icon': '📦',
+                'url': storage_stat_url,
+                'active': request_path == storage_stat_url,
+            })
+        except NoReverseMatch:
+            statistics_items.append({
+                'label': '保管统计',
+                'icon': '📦',
+                'url': '#',
+                'active': False,
+            })
+    
+    if statistics_items:
+        nav_items.append({
+            'label': '档案统计',
+            'icon': '📊',
+            'items': statistics_items,
+            'collapsed': not any(item.get('active') for item in statistics_items),
+        })
+    
+    return nav_items
 
 
-def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None, active_menu_id=None):
-    """构建页面上下文"""
+def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None):
     context = {
         "page_title": page_title,
         "page_icon": page_icon,
@@ -318,13 +573,9 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        # 统一使用module_sidebar_nav变量名，与其他模块保持一致
-        context['module_sidebar_nav'] = _build_archive_sidebar_nav(permission_set, request.path, active_id=active_menu_id)
-        # 保留archive_sidebar_nav以兼容旧模板（逐步迁移）
-        context['archive_sidebar_nav'] = context['module_sidebar_nav']
+        context['archive_sidebar_nav'] = _build_archive_sidebar_nav(permission_set, request.path)
     else:
         context['full_top_nav'] = []
-        context['module_sidebar_nav'] = []
         context['archive_sidebar_nav'] = []
     return context
 

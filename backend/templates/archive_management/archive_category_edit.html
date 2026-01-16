@@ -1,13 +1,16 @@
-{% extends "shared/module_base.html" %}
+{% extends "archive_management/base.html" %}
 {% load static %}
 
 {% block title %}编辑档案分类 - 档案管理{% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'archive_management:archive_category_list' %}">档案分类</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑分类</li>
+{% endblock %}
 
-
-{% block module_content %}
+{% block content %}
 <div class="container-fluid">
-    <!-- 页面标题 -->
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">✏️ 编辑档案分类</h2>
@@ -20,7 +23,6 @@
         </div>
     </div>
 
-    <!-- 分类基本信息 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">分类基本信息</h5>
@@ -62,7 +64,6 @@
         </div>
     </div>
 
-    <!-- 表单卡片 -->
     <div class="info-card mb-4">
         <div class="info-card-header">
             <h5 class="info-card-title">编辑分类信息</h5>
@@ -85,7 +86,7 @@
                 {% csrf_token %}
                 
                 <div class="row g-3">
-                    <!-- 分类名称 -->
+                    
                     <div class="col-md-6">
                         <label for="{{ form.name.id_for_label }}" class="form-label">
                             {{ form.name.label }} <span class="text-danger">*</span>
@@ -96,21 +97,18 @@
                         {% endif %}
                     </div>
 
-                    <!-- 分类代码（只读） -->
                     <div class="col-md-6">
                         <label class="form-label">分类代码</label>
                         <input type="text" class="form-control" value="{{ category.code }}" readonly>
                         <small class="form-text text-muted">分类代码创建后无法修改</small>
                     </div>
 
-                    <!-- 分类类型（只读） -->
                     <div class="col-md-6">
                         <label class="form-label">分类类型</label>
                         <input type="text" class="form-control" value="{{ category.get_category_type_display }}" readonly>
                         <small class="form-text text-muted">分类类型创建后无法修改</small>
                     </div>
 
-                    <!-- 上级分类 -->
                     <div class="col-md-6">
                         <label for="{{ form.parent.id_for_label }}" class="form-label">
                             {{ form.parent.label }}
@@ -122,7 +120,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 分类描述 -->
                     <div class="col-md-12">
                         <label for="{{ form.description.id_for_label }}" class="form-label">
                             {{ form.description.label }}
@@ -133,7 +130,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 排序 -->
                     <div class="col-md-3">
                         <label for="{{ form.order.id_for_label }}" class="form-label">
                             {{ form.order.label }}
@@ -144,7 +140,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 图标 -->
                     <div class="col-md-3">
                         <label for="{{ form.icon.id_for_label }}" class="form-label">
                             {{ form.icon.label }}
@@ -155,7 +150,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 保管期限 -->
                     <div class="col-md-3">
                         <label for="{{ form.storage_period.id_for_label }}" class="form-label">
                             {{ form.storage_period.label }}
@@ -167,7 +161,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 密级 -->
                     <div class="col-md-3">
                         <label for="{{ form.security_level.id_for_label }}" class="form-label">
                             {{ form.security_level.label }}
@@ -178,7 +171,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- 是否启用 -->
                     <div class="col-md-12">
                         <div class="form-check">
                             {{ form.is_active }}
@@ -192,7 +184,6 @@
                     </div>
                 </div>
 
-                <!-- 提交按钮 -->
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="d-flex justify-content-end gap-2">

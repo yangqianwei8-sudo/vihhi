@@ -1,12 +1,13 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "administrative_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:asset_management' %}">固定资产</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ asset.asset_name }}</li>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .center-hero {
         background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
@@ -75,15 +76,14 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="center-hero">
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
     </div>
 
-    <!-- 操作按钮 -->
     <div class="text-end mb-4">
         <a href="{% url 'admin_pages:asset_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
@@ -103,7 +103,6 @@
         </a>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <h5>基本信息</h5>
         <div class="info-row">
@@ -146,7 +145,6 @@
         </div>
     </div>
 
-    <!-- 规格信息 -->
     <div class="info-card">
         <h5>规格信息</h5>
         <div class="info-row">
@@ -165,7 +163,6 @@
         </div>
     </div>
 
-    <!-- 购买信息 -->
     <div class="info-card">
         <h5>购买信息</h5>
         <div class="info-row">
@@ -205,7 +202,6 @@
         </div>
     </div>
 
-    <!-- 使用信息 -->
     <div class="info-card">
         <h5>使用信息</h5>
         <div class="info-row">
@@ -224,7 +220,6 @@
         </div>
     </div>
 
-    <!-- 折旧信息 -->
     <div class="info-card">
         <h5>折旧信息</h5>
         <div class="info-row">
@@ -247,7 +242,6 @@
         </div>
     </div>
 
-    <!-- 资产转移记录 -->
     {% if transfers %}
     <div class="info-card">
         <h5>资产转移记录 (最近10条)</h5>
@@ -277,7 +271,6 @@
     </div>
     {% endif %}
 
-    <!-- 维护记录 -->
     {% if maintenances %}
     <div class="info-card">
         <h5>维护记录 (最近10条)</h5>
@@ -317,7 +310,6 @@
     </div>
     {% endif %}
 
-    <!-- 描述信息 -->
     {% if asset.description %}
     <div class="info-card">
         <h5>描述说明</h5>
@@ -325,7 +317,6 @@
     </div>
     {% endif %}
 
-    <!-- 其他信息 -->
     <div class="info-card">
         <h5>其他信息</h5>
         <div class="info-row">
@@ -337,4 +328,3 @@
     </div>
 </div>
 {% endblock %}
-

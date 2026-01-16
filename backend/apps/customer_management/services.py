@@ -1247,37 +1247,20 @@ class AmapAPIService:
             ).first()
             
             if amap_system:
-                # 查找所有激活的API接口，优先选择有有效API Key的接口
-                api_interfaces = ApiInterface.objects.filter(
+                # 查找任意一个激活的API接口（所有接口使用相同的API Key）
+                api_interface = ApiInterface.objects.filter(
                     external_system=amap_system,
                     is_active=True
-                )
-                
-                # 优先查找有有效API Key的接口（排除占位符）
-                api_interface = None
-                for interface in api_interfaces:
-                    if interface.auth_config:
-                        api_key = interface.auth_config.get('api_key', '').strip()
-                        # 排除占位符文本
-                        if api_key and api_key != '请在后台配置AMAP_API_KEY' and len(api_key) > 20:
-                            api_interface = interface
-                            break
-                
-                # 如果没找到有效的，使用第一个接口（向后兼容）
-                if not api_interface:
-                    api_interface = api_interfaces.first()
+                ).first()
                 
                 if api_interface and api_interface.auth_config:
                     auth_config = api_interface.auth_config
-                    api_key = auth_config.get('api_key', '').strip()
-                    # 如果API Key是占位符，跳过
-                    if api_key and api_key != '请在后台配置AMAP_API_KEY' and len(api_key) > 20:
-                        self.api_key = api_key
-                        self.api_base_url = amap_system.base_url
-                        self.timeout = api_interface.timeout or 10
-                        self._config_source = "api_management"
-                        logger.info(f'从后台API管理系统加载高德地图配置成功（接口：{api_interface.name}）')
-                        return
+                    self.api_key = auth_config.get('api_key', '')
+                    self.api_base_url = amap_system.base_url
+                    self.timeout = api_interface.timeout or 10
+                    self._config_source = "api_management"
+                    logger.info('从后台API管理系统加载高德地图配置成功')
+                    return
             
             # 如果未找到配置，初始化默认值
             self.api_key = ''

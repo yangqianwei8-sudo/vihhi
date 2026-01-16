@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('production_management', '0001_initial'),
+        ('production_management', '0001_initial'),  # 修复：project_center 已迁移到 production_management
         ('litigation_management', '0001_initial'),
     ]
 
@@ -307,7 +307,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='litigationexpense',
             name='project',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='litigation_expenses', to='production_management.project', verbose_name='关联项目'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='litigation_expenses', to='project_center.project', verbose_name='关联项目'),
         ),
         migrations.AddField(
             model_name='litigationdocument',

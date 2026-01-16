@@ -1,1236 +1,236 @@
-{% extends "shared/workflow_detail_page_base.html" %}
+{% extends 'base.html' %}
+{% block title %}审批详情 - {{ instance.instance_number }}{% endblock %}
+
+{% block extra_css %}
 {% load static %}
-{% load customer_tags %}
-{% load tz %}
-
-{% block workflow_hero_icon %}📋{% endblock %}
-{% block workflow_hero_title %}审批详情 - {{ instance.instance_number }}{% endblock %}
-{% block workflow_hero_subtitle %}流程：{{ instance.workflow.name }}{% endblock %}
-
-{% block workflow_detail_extra_css %}
-<style>
-    .workflow-hero {
-        display: none !important;
-    }
-    
-    .content-object-card {
-        background: white;
-        border: 1px solid #e0e0e0;
-        padding: 20px;
-        margin-bottom: 24px;
-    }
-    .info-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-    }
-    .info-item {
-        display: flex;
-        flex-direction: column;
-    }
-    .info-label {
-        font-size: 0.85rem;
-        color: #666;
-        margin-bottom: 4px;
-    }
-    .info-value {
-        font-size: 1rem;
-        color: #333;
-        font-weight: 500;
-    }
-    .info-section {
-        margin-bottom: 24px;
-    }
-    .info-section:last-child {
-        margin-bottom: 0;
-    }
-    .info-section-title {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 16px;
-    }
-    .timeline {
-        position: relative;
-        padding-left: 30px;
-    }
-    .timeline-record-item {
-        border-left: 2px solid #e0e0e0;
-    }
-    .timeline-record-item.record-completed {
-        background-color: #e0e0e0 !important;
-    }
-    .timeline-record-item.record-current {
-        background-color: #e3f2fd !important;
-    }
-    .timeline-record-item.record-not-started {
-        background-color: #ffebee !important;
-    }
-    .timeline-item {
-        position: relative;
-        padding-bottom: 24px;
-    }
-    .timeline-item:last-child {
-        padding-bottom: 0;
-    }
-    .timeline-marker {
-        position: absolute;
-        left: -22px;
-        top: 4px;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #ddd;
-        border: 1px solid #fff;
-    }
-    .timeline-item.timeline-approved .timeline-marker {
-        background: #28a745;
-        border-color: #28a745;
-    }
-    .timeline-item.timeline-rejected .timeline-marker {
-        background: #dc3545;
-        border-color: #dc3545;
-    }
-    .timeline-item.timeline-pending .timeline-marker {
-        background: #ffc107;
-        border-color: #ffc107;
-    }
-    .timeline-item:not(:last-child)::before {
-        content: '';
-        position: absolute;
-        left: -16px;
-        top: 16px;
-        width: 2px;
-        height: calc(100% - 4px);
-        background: #e0e0e0;
-    }
-    .timeline-content {
-        background: #f9fafb;
-        padding: 16px;
-        border-left: 2px solid #e0e0e0;
-    }
-    .timeline-item.timeline-approved .timeline-content {
-        border-left-color: #28a745;
-    }
-    .timeline-item.timeline-rejected .timeline-content {
-        border-left-color: #dc3545;
-    }
-    .timeline-item.timeline-pending .timeline-content {
-        border-left-color: #ffc107;
-    }
-</style>
-{% endblock workflow_detail_extra_css %}
-
-{% block workflow_actions %}
-{% if instance.current_node and current_node_approvers %}
-<div class="alert alert-info mb-3">
-    <div class="d-flex align-items-center">
-        <i class="bi bi-info-circle me-2"></i>
-        <div>
-            <strong>当前节点：{{ instance.current_node.name }}</strong>
-            <div class="mt-1">
-                应由以下人员处理：
-                {% for approver in current_node_approvers %}
-                    <span class="badge bg-primary me-1">{{ approver.get_full_name|default:approver.username }}</span>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
 {% endblock %}
 
-{% block workflow_content %}
-{% if content_object %}
-<div class="content-object-card">
-    <h5 class="mb-3">待审批内容 - {{ content_object_type_name|default:"业务对象" }}</h5>
-    
-    {# 根据不同的对象类型，展示对应的详细内容 #}
-    {% if instance.content_type.model == 'client' %}
-        {# 客户对象 #}
-        {% with client=content_object %}
-            {% include 'workflow_engine/partials/client_content.html' %}
-        {% endwith %}
-    {% elif instance.content_type.model == 'businesscontract' %}
-        {# 合同对象 - 展示基本信息 #}
-        <div class="info-section">
-            <h6 class="info-section-title">基本信息</h6>
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">合同名称</span>
-                    <span class="info-value"><strong>{{ content_object.name|default:content_object }}</strong></span>
-                </div>
-                {% if content_object.contract_number %}
-                <div class="info-item">
-                    <span class="info-label">合同编号</span>
-                    <span class="info-value">{{ content_object.contract_number }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.client %}
-                <div class="info-item">
-                    <span class="info-label">客户</span>
-                    <span class="info-value">{{ content_object.client }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.amount %}
-                <div class="info-item">
-                    <span class="info-label">合同金额</span>
-                    <span class="info-value">¥{{ content_object.amount|floatformat:2 }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.status %}
-                <div class="info-item">
-                    <span class="info-label">合同状态</span>
-                    <span class="info-value">{{ content_object.get_status_display|default:content_object.status }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.sign_date %}
-                <div class="info-item">
-                    <span class="info-label">签约日期</span>
-                    <span class="info-value">{{ content_object.sign_date|date:"Y-m-d" }}</span>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% if content_object.description %}
-        <div class="info-section mt-3">
-            <h6 class="info-section-title">合同描述</h6>
-            <div class="info-item">
-                <span class="info-value" style="white-space: pre-wrap;">{{ content_object.description }}</span>
-            </div>
-        </div>
-        {% endif %}
-    {% elif instance.content_type.model == 'businessopportunity' %}
-        {# 商机对象 - 展示基本信息 #}
-        <div class="info-section">
-            <h6 class="info-section-title">基本信息</h6>
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">商机名称</span>
-                    <span class="info-value"><strong>{{ content_object.name|default:content_object }}</strong></span>
-                </div>
-                {% if content_object.client %}
-                <div class="info-item">
-                    <span class="info-label">客户</span>
-                    <span class="info-value">{{ content_object.client }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.expected_amount %}
-                <div class="info-item">
-                    <span class="info-label">预计金额</span>
-                    <span class="info-value">¥{{ content_object.expected_amount|floatformat:2 }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.stage %}
-                <div class="info-item">
-                    <span class="info-label">商机阶段</span>
-                    <span class="info-value">{{ content_object.get_stage_display|default:content_object.stage }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.probability %}
-                <div class="info-item">
-                    <span class="info-label">成交概率</span>
-                    <span class="info-value">{{ content_object.probability }}%</span>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% if content_object.description %}
-        <div class="info-section mt-3">
-            <h6 class="info-section-title">商机描述</h6>
-            <div class="info-item">
-                <span class="info-value" style="white-space: pre-wrap;">{{ content_object.description }}</span>
-            </div>
-        </div>
-        {% endif %}
-    {% elif instance.content_type.model == 'project' %}
-        {# 项目对象 - 展示基本信息 #}
-        <div class="info-section">
-            <h6 class="info-section-title">基本信息</h6>
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">项目名称</span>
-                    <span class="info-value"><strong>{{ content_object.name|default:content_object }}</strong></span>
-                </div>
-                {% if content_object.project_number %}
-                <div class="info-item">
-                    <span class="info-label">项目编号</span>
-                    <span class="info-value">{{ content_object.project_number }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.status %}
-                <div class="info-item">
-                    <span class="info-label">项目状态</span>
-                    <span class="info-value">{{ content_object.get_status_display|default:content_object.status }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.start_date %}
-                <div class="info-item">
-                    <span class="info-label">开始日期</span>
-                    <span class="info-value">{{ content_object.start_date|date:"Y-m-d" }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.end_date %}
-                <div class="info-item">
-                    <span class="info-label">结束日期</span>
-                    <span class="info-value">{{ content_object.end_date|date:"Y-m-d" }}</span>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% if content_object.description %}
-        <div class="info-section mt-3">
-            <h6 class="info-section-title">项目描述</h6>
-            <div class="info-item">
-                <span class="info-value" style="white-space: pre-wrap;">{{ content_object.description }}</span>
-            </div>
-        </div>
-        {% endif %}
-    {% elif instance.content_type.model == 'outgoingdocument' %}
-        <div class="info-section">
-            <h6 class="info-section-title">基础信息</h6>
-            <div class="info-grid">
-                {% if content_object.created_by %}
-                <div class="info-item">
-                    <span class="info-label">创建人</span>
-                    <span class="info-value">{{ content_object.created_by.get_full_name|default:content_object.created_by.username }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.responsible_person %}
-                <div class="info-item">
-                    <span class="info-label">负责人</span>
-                    <span class="info-value">{{ content_object.responsible_person.get_full_name|default:content_object.responsible_person.username }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.created_by.department %}
-                <div class="info-item">
-                    <span class="info-label">负责部门</span>
-                    <span class="info-value">{{ content_object.created_by.department.name|default:"未设置部门" }}</span>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        
-        {% if content_object.project %}
-        <div class="info-section">
-            <h6 class="info-section-title">项目信息</h6>
-            <div class="info-grid">
-                {% if content_object.project.project_number %}
-                <div class="info-item">
-                    <span class="info-label">项目编号</span>
-                    <span class="info-value"><strong>{{ content_object.project.project_number }}</strong></span>
-                </div>
-                {% endif %}
-                {% if content_object.project.name %}
-                <div class="info-item">
-                    <span class="info-label">项目名称</span>
-                    <span class="info-value"><strong>{{ content_object.project.name }}</strong></span>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-        
-        {% if content_object.client %}
-        <div class="info-section">
-            <h6 class="info-section-title">客户信息</h6>
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">客户编号</span>
-                    <span class="info-value">{{ content_object.client.customer_number|default:"-" }}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">客户名称</span>
-                    <span class="info-value"><strong>{{ content_object.client.name }}</strong></span>
-                </div>
-                {% if content_object.client_contact %}
-                <div class="info-item">
-                    <span class="info-label">签约主体代表</span>
-                    <span class="info-value">{{ content_object.client_contact.name }}</span>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-        
-        <div class="info-section">
-            <h6 class="info-section-title">文件基本信息</h6>
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">文件标题</span>
-                    <span class="info-value"><strong>{{ content_object.title|default:content_object }}</strong></span>
-                </div>
-                {% if content_object.document_number %}
-                <div class="info-item">
-                    <span class="info-label">发文编号</span>
-                    <span class="info-value">{{ content_object.document_number }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.stage %}
-                <div class="info-item">
-                    <span class="info-label">阶段</span>
-                    <span class="info-value">{{ content_object.get_stage_display|default:content_object.stage }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.file_category %}
-                <div class="info-item">
-                    <span class="info-label">文件分类</span>
-                    <span class="info-value">{{ content_object.file_category.name }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.document_type %}
-                <div class="info-item">
-                    <span class="info-label">文件类型</span>
-                    <span class="info-value">{{ content_object.document_type }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.status %}
-                <div class="info-item">
-                    <span class="info-label">发文状态</span>
-                    <span class="info-value">
-                        <span class="badge bg-{% if content_object.status == 'approved' %}success{% elif content_object.status == 'rejected' %}danger{% elif content_object.status == 'reviewing' %}warning{% else %}secondary{% endif %}">
-                            {{ content_object.get_status_display|default:content_object.status }}
-                        </span>
-                    </span>
-                </div>
-                {% endif %}
-                {% if content_object.priority %}
-                <div class="info-item">
-                    <span class="info-label">优先级</span>
-                    <span class="info-value">{{ content_object.get_priority_display|default:content_object.priority }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.attachment %}
-                <div class="info-item">
-                    <span class="info-label">附件</span>
-                    <span class="info-value">
-                        <a href="{{ content_object.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-paperclip"></i> {{ content_object.attachment.name|default:"下载附件" }}
-                        </a>
-                    </span>
-                </div>
-                {% endif %}
-                {% if content_object.content %}
-                <div class="info-item" style="grid-column: 1 / -1;">
-                    <span class="info-label">文件内容</span>
-                    <div class="mt-2 p-3 bg-light rounded" style="white-space: pre-wrap;">{{ content_object.content }}</div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        
-        {% if delivery_methods_list or tracking_records %}
-        <div class="info-section">
-            <h6 class="info-section-title">报送配置</h6>
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">审批详情</h2>
+        <a href="{% url 'workflow_engine:approval_list' %}" class="btn btn-outline-secondary">返回列表</a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
             
-            {# 显示每种报送方式的详细配置 #}
-            {% if tracking_records %}
-                {% for tracking in tracking_records %}
-                    <div class="card mb-3" style="border: 1px solid #e0e0e0;">
-                        <div class="card-body">
-                            {# 显示报送方式名称 #}
+            {% if content_object %}
+            <div class="info-card mb-3">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">待审批内容 - {{ content_object_type_name|default:"业务对象" }}</h5>
+                    {% if content_object_detail_url %}
+                    <div class="info-card-actions">
+                        <a href="{{ content_object_detail_url }}" class="btn btn-sm btn-outline-primary" target="_blank">查看详情</a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="info-card-body">
+                    {% if instance.content_type.model == 'client' %}
+                        
+                        {% include 'workflow_engine/partials/client_content.html' with client=content_object %}
+                    {% elif instance.content_type.model == 'businesscontract' %}
+                        
+                        {% include 'workflow_engine/partials/contract_content.html' with contract=content_object %}
+                    {% elif instance.content_type.model == 'businessopportunity' %}
+                        
+                        {% include 'workflow_engine/partials/opportunity_content.html' with opportunity=content_object %}
+                    {% else %}
+                        
+                        <dl class="row mb-0">
+                            <dt class="col-sm-3">对象类型：</dt>
+                            <dd class="col-sm-9">{{ content_object_type_name|default:instance.content_type.model }}</dd>
+                            <dt class="col-sm-3">对象名称：</dt>
+                            <dd class="col-sm-9">{{ content_object }}</dd>
+                            {% if content_object_detail_url %}
+                            <dt class="col-sm-3">操作：</dt>
+                            <dd class="col-sm-9"><a href="{{ content_object_detail_url }}" target="_blank">查看完整信息</a></dd>
+                            {% endif %}
+                        </dl>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="info-card mb-3">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">审批信息</h5>
+                </div>
+                <div class="info-card-body">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">实例编号</span>
+                            <span class="info-value"><code>{{ instance.instance_number }}</code></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">流程名称</span>
+                            <span class="info-value">{{ instance.workflow.name }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">审批状态</span>
+                            <span class="info-value">
+                                {% if instance.status == 'pending' %}
+                                <span class="status-badge pending">审批中</span>
+                                {% elif instance.status == 'approved' %}
+                                <span class="status-badge approved">已通过</span>
+                                {% elif instance.status == 'rejected' %}
+                                <span class="status-badge rejected">已驳回</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ instance.get_status_display }}</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">当前节点</span>
+                            <span class="info-value">{{ instance.current_node.name|default:"-" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">申请人</span>
+                            <span class="info-value">{{ instance.applicant.username }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">申请时间</span>
+                            <span class="info-value">{{ instance.apply_time|date:"Y-m-d H:i" }}</span>
+                        </div>
+                        {% if instance.apply_comment %}
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <span class="info-label">申请说明</span>
+                            <span class="info-value">{{ instance.apply_comment }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">审批记录</h5>
+                    {% if instance.status == 'approved' %}
+                    <div class="alert alert-success mb-0 py-2 px-3" style="font-size: 0.875rem;">
+                        <i class="bi bi-check-circle"></i> 审批流程已完成
+                    </div>
+                    {% elif instance.status == 'rejected' %}
+                    <div class="alert alert-danger mb-0 py-2 px-3" style="font-size: 0.875rem;">
+                        <i class="bi bi-x-circle"></i> 审批流程已驳回
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="info-card-body">
+                    {% if records %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>节点</th>
+                                    <th>审批人</th>
+                                    <th>结果</th>
+                                    <th>意见</th>
+                                    <th>时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in records %}
+                                <tr {% if record.is_obsolete %}class="table-secondary opacity-75" title="此节点已由他人处理完成，此记录无需再处理"{% endif %}>
+                                    <td>
+                                        {{ record.node.name }}
+                                        {% if record.is_obsolete %}
+                                        <small class="text-muted d-block" style="font-size: 0.75rem;">（已由他人处理）</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ record.approver.username }}</td>
+                                    <td>
+                                        {% if record.result == 'approved' %}
+                                        <span class="badge bg-success">通过</span>
+                                        {% elif record.result == 'rejected' %}
+                                        <span class="badge bg-danger">驳回</span>
+                                        {% elif record.result == 'transferred' %}
+                                        <span class="badge bg-info">转交</span>
+                                        {% elif record.result == 'withdrawn' %}
+                                        <span class="badge bg-secondary">撤回</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">待审批</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ record.comment|default:"-" }}</td>
+                                    <td>{{ record.approval_time|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if instance.status != 'pending' %}
+                    <div class="alert alert-info mt-3 mb-0" style="font-size: 0.875rem;">
+                        <i class="bi bi-info-circle"></i> 
+                        <strong>说明：</strong>
+                        审批流程已{{ instance.get_status_display }}。表格中灰色显示的"待审批"记录表示该节点已由其他审批人处理完成，这些记录无需再处理。
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-muted text-center py-4">暂无审批记录</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if can_approve %}
+        <div class="col-md-4">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="info-card-title">审批操作</h5>
+                </div>
+                <div class="info-card-body">
+                    <form method="post" action="{% url 'workflow_engine:approval_action' instance.id %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">审批意见</label>
+                            <textarea name="comment" class="form-control" rows="4" placeholder="请输入审批意见..."></textarea>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="action" value="approve" class="btn btn-success">通过</button>
+                            <button type="submit" name="action" value="reject" class="btn btn-danger">驳回</button>
+                            {% if instance.workflow.allow_transfer %}
+                            <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#transferModal">转交</button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {% if instance.workflow.allow_transfer %}
+        <div class="modal fade" id="transferModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">转交审批</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="post" action="{% url 'workflow_engine:approval_action' instance.id %}">
+                        {% csrf_token %}
+                        <div class="modal-body">
                             <div class="mb-3">
-                                <span class="info-label fw-bold">报送方式：</span>
-                                <span class="badge bg-primary">{{ tracking.delivery_method.name|default:tracking.delivery_method.code }}</span>
+                                <label class="form-label">转交给</label>
+                                <select name="transferred_to" class="form-select" required>
+                                    <option value="">请选择用户</option>
+                                    
+                                </select>
                             </div>
-                            
-                            {# 邮件报送配置 - 按照创建表单的顺序显示 #}
-                            {% if tracking.delivery_method.code == 'email' %}
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">收文单位</label>
-                                    <div class="mt-1">{{ tracking.document.recipient|default:"-" }}</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">收件人信息</label>
-                                    {% if tracking.email_recipients_list %}
-                                        <div class="table-responsive mt-2">
-                                            <table class="table table-sm table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th style="width: 25%;">姓名</th>
-                                                        <th style="width: 30%;">联系电话</th>
-                                                        <th style="width: 45%;">邮箱地址</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for recipient in tracking.email_recipients_list %}
-                                                        <tr>
-                                                            <td>{{ recipient.name|default:"-" }}</td>
-                                                            <td>{{ recipient.phone|default:"-" }}</td>
-                                                            <td>{{ recipient.email|default:"-" }}</td>
-                                                        </tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    {% else %}
-                                        <div class="text-muted mt-2">暂无收件人信息</div>
-                                    {% endif %}
-                                </div>
-
-                                {% if tracking.email_subject %}
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">邮件主题</label>
-                                    <div class="mt-1">{{ tracking.email_subject }}</div>
-                                </div>
-                                {% endif %}
-
-                                {% if tracking.document.content %}
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">邮件正文</label>
-                                    <div class="mt-1" style="white-space: pre-wrap;">{{ tracking.document.content }}</div>
-                                </div>
-                                {% endif %}
-                            {% endif %}
-
-                            {# 快递报送配置 - 按照创建表单的顺序显示 #}
-                            {% if tracking.delivery_method.code == 'express' %}
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">收文单位</label>
-                                    <div class="mt-1">{{ tracking.document.recipient|default:"-" }}</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">收件人信息</label>
-                                    {% if tracking.express_recipients_list %}
-                                        <div class="table-responsive mt-2">
-                                            <table class="table table-sm table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th style="width: 25%;">姓名</th>
-                                                        <th style="width: 25%;">联系电话</th>
-                                                        <th style="width: 50%;">收件地址</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for recipient in tracking.express_recipients_list %}
-                                                        <tr>
-                                                            <td>{{ recipient.name|default:"-" }}</td>
-                                                            <td>{{ recipient.phone|default:"-" }}</td>
-                                                            <td>{{ recipient.address|default:"-" }}</td>
-                                                        </tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    {% else %}
-                                        <div class="text-muted mt-2">暂无收件人信息</div>
-                                    {% endif %}
-                                </div>
-
-                                <div class="row mb-3">
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">快递公司</label>
-                                        <div class="mt-1">
-                                            {% if tracking.express_company %}
-                                                {{ tracking.express_company }}
-                                            {% elif tracking.document.express_company %}
-                                                {{ tracking.document.express_company }}
-                                            {% else %}
-                                                <span class="text-muted">待填写</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">快递单号</label>
-                                        <div class="mt-1">
-                                            {% if tracking.express_number %}
-                                                <strong>{{ tracking.express_number }}</strong>
-                                            {% elif tracking.document.express_number %}
-                                                <strong>{{ tracking.document.express_number }}</strong>
-                                            {% else %}
-                                                <span class="text-muted">待填写</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">快递费用</label>
-                                        <div class="mt-1">
-                                            {% if tracking.express_fee %}
-                                                ¥{{ tracking.express_fee|floatformat:2 }}
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endif %}
-
-                            {# 短信报送配置 - 按照创建表单的顺序显示 #}
-                            {% if tracking.delivery_method.code == 'sms' %}
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">收文单位</label>
-                                    <div class="mt-1">{{ tracking.document.recipient|default:"-" }}</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">收件人信息</label>
-                                    {% if tracking.sms_recipients_list %}
-                                        <div class="table-responsive mt-2">
-                                            <table class="table table-sm table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th style="width: 30%;">姓名</th>
-                                                        <th style="width: 35%;">联系电话</th>
-                                                        <th style="width: 35%;">手机号</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for recipient in tracking.sms_recipients_list %}
-                                                        <tr>
-                                                            <td>{{ recipient.name|default:"-" }}</td>
-                                                            <td>{{ recipient.phone|default:"-" }}</td>
-                                                            <td>{{ recipient.mobile|default:recipient.phone|default:"-" }}</td>
-                                                        </tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    {% else %}
-                                        <div class="text-muted mt-2">暂无收件人信息</div>
-                                    {% endif %}
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">收件手机号</label>
-                                    <div class="mt-1">
-                                        {% if tracking.sms_phone %}
-                                            <strong>{{ tracking.sms_phone }}</strong>
-                                        {% else %}
-                                            <span class="text-muted">待填写</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">短信内容</label>
-                                    <div class="mt-1" style="white-space: pre-wrap; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">
-                                        {% if tracking.sms_content %}
-                                            {{ tracking.sms_content }}
-                                        {% else %}
-                                            <span class="text-muted">待填写</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            {% endif %}
-                            
-                            {# 跟踪状态信息 #}
-                            <div class="info-grid mt-4">
-                                {# 邮件特定的时间信息 #}
-                                {% if tracking.delivery_method.code == 'email' %}
-                                    {% if tracking.email_sent_at %}
-                                    <div class="info-item">
-                                        <span class="info-label">发送时间</span>
-                                        <span class="info-value">{{ tracking.email_sent_at|date:"Y-m-d H:i:s" }}</span>
-                                    </div>
-                                    {% endif %}
-                                    {% if tracking.email_read_at %}
-                                    <div class="info-item">
-                                        <span class="info-label">阅读时间</span>
-                                        <span class="info-value">{{ tracking.email_read_at|date:"Y-m-d H:i:s" }}</span>
-                                    </div>
-                                    {% endif %}
-                                    {% if tracking.email_tracking_id %}
-                                    <div class="info-item">
-                                        <span class="info-label">追踪ID</span>
-                                        <span class="info-value">{{ tracking.email_tracking_id }}</span>
-                                    </div>
-                                    {% endif %}
-                                {% endif %}
-                                
-                                {# 快递特定的时间信息 #}
-                                {% if tracking.delivery_method.code == 'express' %}
-                                    {% if tracking.sent_at %}
-                                    <div class="info-item">
-                                        <span class="info-label">寄出时间</span>
-                                        <span class="info-value">{{ tracking.sent_at|date:"Y-m-d H:i:s" }}</span>
-                                    </div>
-                                    {% endif %}
-                                    {% if tracking.express_status %}
-                                    <div class="info-item">
-                                        <span class="info-label">快递状态</span>
-                                        <span class="info-value">{{ tracking.express_status }}</span>
-                                    </div>
-                                    {% endif %}
-                                    {% if tracking.express_last_update %}
-                                    <div class="info-item">
-                                        <span class="info-label">状态更新时间</span>
-                                        <span class="info-value">{{ tracking.express_last_update|date:"Y-m-d H:i:s" }}</span>
-                                    </div>
-                                    {% endif %}
-                                    {% if tracking.received_at %}
-                                    <div class="info-item">
-                                        <span class="info-label">接收时间</span>
-                                        <span class="info-value">{{ tracking.received_at|date:"Y-m-d H:i:s" }}</span>
-                                    </div>
-                                    {% endif %}
-                                    {% if tracking.confirmed_at %}
-                                    <div class="info-item">
-                                        <span class="info-label">确认时间</span>
-                                        <span class="info-value">{{ tracking.confirmed_at|date:"Y-m-d H:i:s" }}</span>
-                                    </div>
-                                    {% endif %}
-                                {% endif %}
-                                
-                                {# 短信特定的时间信息 #}
-                                {% if tracking.delivery_method.code == 'sms' %}
-                                    {% if tracking.sms_sent_at %}
-                                    <div class="info-item">
-                                        <span class="info-label">发送时间</span>
-                                        <span class="info-value">{{ tracking.sms_sent_at|date:"Y-m-d H:i:s" }}</span>
-                                    </div>
-                                    {% endif %}
-                                    {% if tracking.sms_status %}
-                                    <div class="info-item">
-                                        <span class="info-label">短信状态</span>
-                                        <span class="info-value">{{ tracking.sms_status }}</span>
-                                    </div>
-                                    {% endif %}
-                                    {% if tracking.sms_message_id %}
-                                    <div class="info-item">
-                                        <span class="info-label">消息ID</span>
-                                        <span class="info-value">{{ tracking.sms_message_id }}</span>
-                                    </div>
-                                    {% endif %}
-                                    {% if tracking.received_at %}
-                                    <div class="info-item">
-                                        <span class="info-label">接收时间</span>
-                                        <span class="info-value">{{ tracking.received_at|date:"Y-m-d H:i:s" }}</span>
-                                    </div>
-                                    {% endif %}
-                                    {% if tracking.confirmed_at %}
-                                    <div class="info-item">
-                                        <span class="info-label">确认时间</span>
-                                        <span class="info-value">{{ tracking.confirmed_at|date:"Y-m-d H:i:s" }}</span>
-                                    </div>
-                                    {% endif %}
-                                {% endif %}
-                                
-                                {# 通用时间信息 #}
-                                {% if tracking.completed_at %}
-                                <div class="info-item">
-                                    <span class="info-label">完成时间</span>
-                                    <span class="info-value">{{ tracking.completed_at|date:"Y-m-d H:i:s" }}</span>
-                                </div>
-                                {% endif %}
-                                
-                                {# 异常信息和备注 #}
-                                {% if tracking.error_message %}
-                                <div class="info-item" style="grid-column: 1 / -1;">
-                                    <span class="info-label">错误信息</span>
-                                    <span class="info-value text-danger">{{ tracking.error_message }}</span>
-                                </div>
-                                {% endif %}
-                                {% if tracking.notes_display %}
-                                <div class="info-item" style="grid-column: 1 / -1;">
-                                    <span class="info-label">备注</span>
-                                    <span class="info-value" style="white-space: pre-wrap;">{{ tracking.notes_display }}</span>
-                                </div>
-                                {% endif %}
+                            <div class="mb-3">
+                                <label class="form-label">转交说明</label>
+                                <textarea name="comment" class="form-control" rows="3"></textarea>
                             </div>
                         </div>
-                    </div>
-                {% endfor %}
-            {% endif %}
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                            <button type="submit" name="action" value="transfer" class="btn btn-primary">确认转交</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
         {% endif %}
-        
-        {% if content_object.summary or content_object.notes %}
-        <div class="info-section">
-            <h6 class="info-section-title">其他信息</h6>
-            <div class="info-grid">
-                {% if content_object.summary %}
-                <div class="info-item" style="grid-column: 1 / -1;">
-                    <span class="info-label">摘要</span>
-                    <span class="info-value" style="white-space: pre-wrap;">{{ content_object.summary }}</span>
-                </div>
-                {% endif %}
-                {% if content_object.notes %}
-                <div class="info-item" style="grid-column: 1 / -1;">
-                    <span class="info-label">备注</span>
-                    <span class="info-value" style="white-space: pre-wrap;">{{ content_object.notes }}</span>
-                </div>
-                {% endif %}
-            </div>
-    </div>
         {% endif %}
-    {% else %}
-        <div class="info-section">
-            <h6 class="info-section-title">基本信息</h6>
-    <div class="info-grid">
-        <div class="info-item">
-            <span class="info-label">对象类型</span>
-            <span class="info-value">{{ content_object_type_name|default:instance.content_type.model }}</span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">对象名称</span>
-            <span class="info-value">{{ content_object }}</span>
-        </div>
     </div>
 </div>
-{% endif %}
-    </div>
-    {% endif %}
-
-{% if instance.status == 'pending' and instance.applicant == request.user and instance.workflow.allow_withdraw %}
-<div class="content-object-card">
-    <div class="alert alert-warning d-flex justify-content-between align-items-center">
-        <div>
-            <i class="bi bi-exclamation-triangle"></i> 
-            您可以撤回此申请（仅在没有审批前可以撤回）
-        </div>
-        <form method="post" action="{% url 'workflow_engine:approval_action' instance.id %}" style="display: inline;" onsubmit="return confirm('确定要撤回此申请吗？撤回后无法恢复。');">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="withdraw">
-            <input type="hidden" name="redirect_to" value="{% url 'workflow_engine:approval_list' %}">
-            <button type="submit" class="btn btn-warning">
-                <i class="bi bi-arrow-counterclockwise"></i> 撤回申请
-            </button>
-        </form>
-    </div>
-</div>
-{% endif %}
-
-{% if can_approve %}
-<div class="content-object-card">
-    <h5 class="mb-3">审批操作</h5>
-    <div class="row g-3">
-        <div class="col-md-4">
-            <button type="button" class="btn btn-success btn-lg w-100" data-bs-toggle="modal" data-bs-target="#approveModal">
-                <i class="bi bi-check-circle"></i> 同意审批
-            </button>
-        </div>
-        <div class="col-md-4">
-            <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#rejectModal">
-                <i class="bi bi-x-circle"></i> 拒绝
-            </button>
-        </div>
-            {% if instance.workflow.allow_transfer %}
-        <div class="col-md-4">
-            <button type="button" class="btn btn-outline-primary btn-lg w-100" data-bs-toggle="modal" data-bs-target="#transferModal">
-                <i class="bi bi-arrow-right-circle"></i> 转审他人
-            </button>
-                </div>
-                {% endif %}
-    </div>
-</div>
-{% endif %}
-
-{% endblock %}
-
-{% block workflow_nodes_sidebar_title_text %}流程节点{% endblock %}
-
-{% block workflow_nodes_sidebar %}
-<div class="timeline">
-    {% if instance.workflow.nodes.exists %}
-        {% for node in instance.workflow.nodes.all|dictsort:"sequence" %}
-        {% with node_id=node.id|stringformat:"s" %}
-        {% with node_records=records_by_node|get_item:node_id %}
-            {% if node_records or node.node_type == 'start' or node.node_type == 'approval' %}
-            {% if node_records %}
-                {% with first_record=node_records|first %}
-                    {% if first_record.result == 'approved' %}
-                        <div class="timeline-item timeline-detailed timeline-success">
-                    {% elif first_record.result == 'rejected' %}
-                        <div class="timeline-item timeline-detailed timeline-danger">
-                    {% elif first_record.result == 'pending' or instance.current_node and instance.current_node.id == node.id %}
-                        <div class="timeline-item timeline-detailed timeline-warning">
-                    {% else %}
-                        <div class="timeline-item timeline-detailed timeline-info">
-                    {% endif %}
-                {% endwith %}
-            {% else %}
-                {% if instance.current_node and instance.current_node.id == node.id %}
-                    <div class="timeline-item timeline-detailed timeline-warning">
-                {% else %}
-                    <div class="timeline-item timeline-detailed timeline-info">
-                {% endif %}
-            {% endif %}
-                <div class="timeline-marker"></div>
-                <div class="timeline-content">
-                    {% if node_records %}
-                        {% for record in node_records %}
-                        {# 判断卡片颜色：已完成=灰色，当前节点=浅蓝色，未开始=浅红色 #}
-                        {% if record.result == 'approved' or record.result == 'rejected' %}
-                            <div class="timeline-record-item mb-3 p-3 rounded record-completed">
-                        {% elif record.result == 'pending' and instance.current_node and instance.current_node.id == node.id %}
-                            <div class="timeline-record-item mb-3 p-3 rounded record-current">
-                        {% elif record.result == 'pending' %}
-                            {# pending 但不是当前节点，可能是已过时的记录，显示为已完成 #}
-                            {% if instance.status != 'pending' %}
-                                <div class="timeline-record-item mb-3 p-3 rounded record-completed">
-                            {% else %}
-                                <div class="timeline-record-item mb-3 p-3 rounded record-not-started">
-                            {% endif %}
-                        {% else %}
-                            <div class="timeline-record-item mb-3 p-3 rounded">
-                        {% endif %}
-                            <div class="mb-2 d-flex justify-content-between align-items-center">
-                                <strong>
-                                    <i class="bi bi-person"></i> 
-                                    {% if node.node_type == 'start' %}
-                                        申请人：{{ instance.applicant.get_full_name|default:instance.applicant.username }}
-                                    {% else %}
-                                        审批人：{{ record.approver.get_full_name|default:record.approver.username }}
-                                    {% endif %}
-                        {% if instance.current_node and instance.current_node.id == node.id %}
-                        <span class="badge bg-warning ms-2">当前节点</span>
-                        {% endif %}
-                                </strong>
-                                <div class="small text-muted">
-                                    <i class="bi bi-clock"></i> 
-                                    {% if record.result == 'pending' %}
-                                        <span class="text-warning">待处理</span>
-                                    {% elif record.approval_time %}
-                                        {% timezone "Asia/Shanghai" %}
-                                            {{ record.approval_time|localtime|date:"Y-m-d H:i:s" }}
-                                        {% endtimezone %}
-                                    {% else %}
-                                        <span class="text-warning">待处理</span>
-                                    {% endif %}
-                                </div>
-                    </div>
-                    
-                            <div class="mb-2">
-                                {% if record.result == 'approved' %}
-                                    <span class="badge bg-success">
-                                        <i class="bi bi-check-circle"></i> 同意审批
-                                    </span>
-                                {% elif record.result == 'rejected' %}
-                                    <span class="badge bg-danger">
-                                        <i class="bi bi-x-circle"></i> 拒绝
-                                    </span>
-                                {% elif record.result == 'transferred' %}
-                                    <span class="badge bg-info">
-                                        <i class="bi bi-arrow-right-circle"></i> 转审他人
-                                    </span>
-                                    {% if record.transferred_to %}
-                                        <span class="badge bg-info ms-1">
-                                            <i class="bi bi-person-plus"></i> 转给：{{ record.transferred_to.get_full_name|default:record.transferred_to.username }}
-                                        </span>
-                                    {% endif %}
-                                {% elif record.result == 'pending' %}
-                                    <span class="badge bg-warning">
-                                        <i class="bi bi-inbox"></i> 接收
-                                    </span>
-                                    <span class="badge bg-secondary ms-1">
-                                        <i class="bi bi-clock"></i> 待处理
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-secondary">
-                                        {{ record.get_result_display }}
-                                    </span>
-                                {% endif %}
-                    </div>
-                            
-                            {# 审批意见 #}
-                            <div class="mb-2">
-                                <div class="small text-muted mb-1">意见：</div>
-                                {% if record.comment %}
-                                    <div class="p-2 bg-white rounded border">{{ record.comment }}</div>
-                                {% elif record.result == 'pending' %}
-                                    <div class="p-2 bg-white rounded border text-muted">
-                                        <em>待处理</em>
-                                    </div>
-                            {% else %}
-                                    <div class="p-2 bg-white rounded border text-muted">
-                                        <em>无</em>
-                                    </div>
-                            {% endif %}
-                        </div>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        {# 未开始的节点，根据节点类型显示不同内容 #}
-                        {% if node.node_type == 'start' %}
-                            {# 开始节点：显示申请人提交信息 #}
-                            <div class="timeline-record-item mb-3 p-3 rounded {% if instance.status != 'pending' %}record-completed{% endif %}">
-                                <div class="mb-2 d-flex justify-content-between align-items-center">
-                                    <strong>
-                                        <i class="bi bi-person"></i> 申请人：{{ instance.applicant.get_full_name|default:instance.applicant.username }}
-                                    </strong>
-                                    <div class="small text-muted">
-                                        <i class="bi bi-clock"></i> 
-                                        {% if instance.apply_time %}
-                                            {% timezone "Asia/Shanghai" %}
-                                                {{ instance.apply_time|localtime|date:"Y-m-d H:i:s" }}
-                                            {% endtimezone %}
-                                        {% else %}
-                                            待提交
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="mb-2">
-                                    <span class="badge bg-primary">
-                                        <i class="bi bi-send"></i> 提交
-                                    </span>
-                                </div>
-                                {% if instance.apply_comment %}
-                                <div class="mb-2">
-                                    <div class="small text-muted mb-1">意见：</div>
-                                    <div class="p-2 bg-white rounded border">{{ instance.apply_comment }}</div>
-                                </div>
-                                {% else %}
-                                <div class="mb-2">
-                                    <div class="small text-muted">意见：<span class="text-muted">无</span></div>
-                        </div>
-                                {% endif %}
-                            </div>
-                        {% elif node.node_type == 'approval' %}
-                            {# 审批节点：显示审批人信息 #}
-                            {# 检查节点是否有已完成的记录 #}
-                            {% with node_final_status=node_status|get_item:node_id %}
-                                {# 判断节点状态：优先检查节点最终状态，然后检查流程状态 #}
-                                {% if node_final_status == 'approved' or node_final_status == 'rejected' %}
-                                    {# 节点已完成，显示为已完成（灰色） #}
-                                    <div class="timeline-record-item mb-3 p-3 rounded border-dashed record-completed">
-                                {% elif instance.status != 'pending' and instance.current_node and instance.current_node.id != node.id %}
-                                    {# 流程已完成，但节点不是当前节点，显示为已完成（灰色） #}
-                                    <div class="timeline-record-item mb-3 p-3 rounded border-dashed record-completed">
-                                {% elif instance.current_node and instance.current_node.id == node.id %}
-                                    {# 当前节点，显示为当前（浅蓝色） #}
-                                    <div class="timeline-record-item mb-3 p-3 rounded border-dashed record-current">
-                                {% else %}
-                                    {# 未开始节点，显示为未开始（浅红色） #}
-                                    <div class="timeline-record-item mb-3 p-3 rounded border-dashed record-not-started">
-                                {% endif %}
-                                    <div class="mb-2 d-flex justify-content-between align-items-center">
-                                        <strong>
-                                            <i class="bi bi-person"></i> 审批人：
-                                            {# 显示审批人姓名 #}
-                                            {% with node_approvers=approvers_by_node|get_item:node_id %}
-                                                {% if node_approvers %}
-                                                    {% for approver in node_approvers %}
-                                                        {{ approver.get_full_name|default:approver.username }}{% if not forloop.last %}、{% endif %}
-                                                    {% endfor %}
-                                                {% else %}
-                                                    {# 如果 _get_approvers 返回空，尝试直接从节点配置获取 #}
-                                                    {% if node.approver_type == 'user' and node.approver_users.exists %}
-                                                        {% for approver in node.approver_users.all %}
-                                                            {{ approver.get_full_name|default:approver.username }}{% if not forloop.last %}、{% endif %}
-                                                        {% endfor %}
-                                                    {% elif node.approver_type == 'creator' %}
-                                                        {{ instance.applicant.get_full_name|default:instance.applicant.username }}
-                                                    {% else %}
-                                                        待分配（节点类型：{{ node.get_approver_type_display|default:node.approver_type }}）
-                                                    {% endif %}
-                        {% endif %}
-                        {% endwith %}
-                                            {% if instance.current_node and instance.current_node.id == node.id %}
-                                                <span class="badge bg-warning ms-2">当前节点</span>
-                                            {% endif %}
-                                        </strong>
-                                        <div class="small text-muted">
-                                            <i class="bi bi-clock"></i> 
-                                            {# 如果节点已完成，查找已完成记录的时间 #}
-                                            {% if node_final_status == 'approved' or node_final_status == 'rejected' %}
-                                                {# 查找已完成的记录，只显示第一个匹配的记录 #}
-                                                {% for record in node_records %}
-                                                    {% if record.result == 'approved' or record.result == 'rejected' %}
-                                                        {% if record.approval_time %}
-                                                            {% timezone "Asia/Shanghai" %}
-                                                                {{ record.approval_time|localtime|date:"Y-m-d H:i:s" }}
-                                                            {% endtimezone %}
-                                                        {% else %}
-                                                            <span class="text-warning">待处理</span>
-                                                        {% endif %}
-                                                        {% if forloop.first %}{% endif %}
-                                                    {% endif %}
-                                                {% empty %}
-                                                    <span class="text-warning">待处理</span>
-                                                {% endfor %}
-                                            {% else %}
-                                                <span class="text-warning">待处理</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="mb-2">
-                                        {% if node_final_status == 'approved' %}
-                                            <span class="badge bg-success">
-                                                <i class="bi bi-check-circle"></i> 已通过
-                                            </span>
-                                        {% elif node_final_status == 'rejected' %}
-                                            <span class="badge bg-danger">
-                                                <i class="bi bi-x-circle"></i> 已拒绝
-                                            </span>
-                    {% else %}
-                                            <span class="badge bg-secondary">
-                            <i class="bi bi-clock"></i> 未开始
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                    <div class="mb-2">
-                                        <div class="small text-muted mb-1">意见：</div>
-                                        {% if node_final_status == 'approved' or node_final_status == 'rejected' %}
-                                            {# 查找已完成的记录 #}
-                                            {% for record in node_records %}
-                                                {% if record.result == 'approved' or record.result == 'rejected' %}
-                                                    {% if record.comment %}
-                                                        <div class="p-2 bg-white rounded border">{{ record.comment }}</div>
-                                                    {% else %}
-                                                        <div class="p-2 bg-white rounded border text-muted">
-                                                            <em>无</em>
-                                                        </div>
-                                                    {% endif %}
-                                                {% endif %}
-                                            {% empty %}
-                                                <div class="p-2 bg-white rounded border text-muted">
-                                                    <em>待处理</em>
-                                                </div>
-                                            {% endfor %}
-                                        {% else %}
-                                            <div class="p-2 bg-white rounded border text-muted">
-                                                <em>待处理</em>
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                        </div>
-                            {% endwith %}
-                        {% endif %}
-                        {# 对于其他类型的节点（如 end），如果没有记录则不显示内容 #}
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-            {# 结束：只显示有记录的节点或 start/approval 类型的节点 #}
-        {% endwith %}
-        {% endwith %}
-        {% endfor %}
-        
-        <!-- 审批状态概览 -->
-        <div class="timeline-item timeline-detailed {% if instance.status == 'approved' %}timeline-success{% elif instance.status == 'rejected' %}timeline-danger{% else %}timeline-warning{% endif %}">
-            <div class="timeline-marker"></div>
-            <div class="timeline-content">
-                <div class="timeline-title">
-                    <span class="badge bg-secondary me-2">状态</span>
-                    审批状态
-                    <span class="badge bg-{% if instance.status == 'pending' %}warning{% elif instance.status == 'approved' %}success{% elif instance.status == 'rejected' %}danger{% else %}secondary{% endif %} ms-2">
-                        {{ instance.get_status_display }}
-                    </span>
-                </div>
-                {% if instance.completed_time %}
-                <div class="timeline-time {% if instance.status == 'approved' %}timeline-time-success{% elif instance.status == 'rejected' %}timeline-time-danger{% else %}timeline-time-warning{% endif %}">
-                    <i class="bi bi-clock"></i> {{ instance.completed_time|date:"Y-m-d H:i:s" }}
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    {% else %}
-        <div class="workflow-empty-state">
-            <i class="bi bi-diagram-3 workflow-empty-state-icon" aria-hidden="true"></i>
-            <p class="workflow-empty-state-text">流程暂无节点配置</p>
-        </div>
-    {% endif %}
-</div>
-{% endblock %}
-
-{% block workflow_modals %}
-{% if can_approve %}
-<!-- 同意审批模态框 -->
-<div class="modal fade" id="approveModal" tabindex="-1" aria-labelledby="approveModalLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true" data-bs-focus="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-check-circle"></i> 同意审批
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" action="{% url 'workflow_engine:approval_action' instance.id %}">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">审批意见 <span class="text-muted">(可选)</span></label>
-                        <textarea name="comment" class="form-control" rows="4" placeholder="请输入审批意见..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="submit" name="action" value="approve" class="btn btn-success">
-                        <i class="bi bi-check-circle"></i> 确认同意
-                    </button>
-                </div>
-                <input type="hidden" name="redirect_to" value="{% url 'workflow_engine:approval_detail' instance.id %}">
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- 拒绝审批模态框 -->
-<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true" data-bs-focus="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-x-circle"></i> 拒绝审批
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" action="{% url 'workflow_engine:approval_action' instance.id %}">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i> 确定要拒绝此审批吗？拒绝后流程将终止。
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">拒绝原因 <span class="text-danger">*</span></label>
-                        <textarea name="comment" class="form-control" rows="4" placeholder="请输入拒绝原因..." required></textarea>
-                        <small class="form-text text-muted">请详细说明拒绝的原因，以便申请人了解</small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="submit" name="action" value="reject" class="btn btn-danger">
-                        <i class="bi bi-x-circle"></i> 确认拒绝
-                    </button>
-                </div>
-                <input type="hidden" name="redirect_to" value="{% url 'workflow_engine:approval_detail' instance.id %}">
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- 转审他人模态框 -->
-{% if instance.workflow.allow_transfer %}
-<div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true" data-bs-focus="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-arrow-right-circle"></i> 转审他人
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" action="{% url 'workflow_engine:approval_action' instance.id %}">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">转交给 <span class="text-danger">*</span></label>
-                        <select name="transferred_to" class="form-select" required>
-                            <option value="">请选择用户</option>
-                            {% for user in transfer_users %}
-                            <option value="{{ user.id }}">{{ user.username }} ({{ user.get_full_name|default:user.username }})</option>
-                            {% endfor %}
-                        </select>
-                        <small class="form-text text-muted">选择要将此审批转交给的用户</small>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">转审说明 <span class="text-muted">(可选)</span></label>
-                        <textarea name="comment" class="form-control" rows="3" placeholder="请输入转审说明..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="submit" name="action" value="transfer" class="btn btn-primary">
-                        <i class="bi bi-arrow-right-circle"></i> 确认转审
-                    </button>
-                </div>
-                <input type="hidden" name="redirect_to" value="{% url 'workflow_engine:approval_detail' instance.id %}">
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endif %}
 {% endblock %}

@@ -11,7 +11,6 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('production_management', '0001_initial'),
-        ('production_management', '0001_initial'),
         ('settlement_center', '0002_rename_settlement__project_c8d1e8_idx_settlement__project_3ae14d_idx_and_more'),
     ]
 

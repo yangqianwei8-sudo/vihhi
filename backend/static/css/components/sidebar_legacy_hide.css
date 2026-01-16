@@ -1,0 +1,74 @@
+/**
+ * 旧侧边栏屏蔽 CSS（Stage 1：软禁用）
+ * 目的：立即隐藏旧侧边栏，不影响新侧边栏 .vh-sb
+ * 风险：零风险（只隐藏，不删除）
+ * 
+ * 旧侧边栏标志性 class：
+ * - .workspace-nav（根容器）
+ * - .sidenav（导航容器）
+ * - .sidenav-section, .sidenav-links, .sidenav-item, .sidenav-link 等
+ * 
+ * 新侧边栏标志性 class：
+ * - .vh-sb（根容器，唯一标识）
+ */
+
+/* === 方案1：精准屏蔽（使用 :has() 选择器，现代浏览器） === */
+
+/* 隐藏不包含新侧边栏的旧侧边栏容器 */
+aside.workspace-nav:not(:has(.vh-sb)) {
+  display: none !important;
+}
+
+/* 隐藏旧侧边栏的所有子元素（双重保险） */
+.workspace-nav:not(:has(.vh-sb)) .sidenav,
+.workspace-nav:not(:has(.vh-sb)) .sidenav-section,
+.workspace-nav:not(:has(.vh-sb)) .sidenav-links,
+.workspace-nav:not(:has(.vh-sb)) .sidenav-item,
+.workspace-nav:not(:has(.vh-sb)) .sidenav-link,
+.workspace-nav:not(:has(.vh-sb)) .sidenav-sub-link,
+.workspace-nav:not(:has(.vh-sb)) .submenu,
+.workspace-nav:not(:has(.vh-sb)) .menu-arrow,
+.workspace-nav:not(:has(.vh-sb)) .sidenav-title {
+  display: none !important;
+}
+
+/* === 方案2：兼容性屏蔽（不支持 :has() 的浏览器） === */
+
+@supports not selector(:has(*)) {
+  /* 直接隐藏所有 .sidenav 体系（确保新侧边栏不使用这些 class） */
+  .sidenav,
+  .sidenav *,
+  .workspace-nav .sidenav,
+  .workspace-nav .sidenav * {
+    display: none !important;
+  }
+  
+  /* 但保留包含 .vh-sb 的容器 */
+  aside:has(.vh-sb),
+  .plan-sidebar-wrapper {
+    display: flex !important;
+  }
+}
+
+/* === 防止布局挤压 === */
+
+/* 如果使用 workspace-two-column 布局，调整为只显示新侧栏宽度 */
+.workspace.workspace-two-column {
+  grid-template-columns: 232px 1fr !important; /* 新侧栏宽度 232px */
+}
+
+/* === 确保新侧边栏不受影响（三重保险） === */
+
+/* 强制显示新侧边栏及其所有子元素 */
+.vh-sb,
+.vh-sb *,
+.plan-sidebar-wrapper .vh-sb,
+.plan-sidebar-wrapper .vh-sb * {
+  display: revert !important;
+}
+
+/* 确保新侧边栏容器可见 */
+.plan-sidebar-wrapper {
+  display: flex !important;
+  flex: 0 0 232px !important;
+}

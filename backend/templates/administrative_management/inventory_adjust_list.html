@@ -1,84 +1,189 @@
-{% extends "shared/list_page_base.html" %}
-{% comment %}
-库存调整列表页面模板 (Inventory Adjust List Template)
+{% extends "administrative_management/base.html" %}
 
-功能说明：
-- 展示库存调整记录的列表页面
-- 支持按状态、调整日期等多维度筛选
-- 支持库存调整的查看、编辑操作
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-主要功能：
-1. 筛选功能：
-   - 状态筛选：草稿、待审批、已批准、已拒绝、已执行、已取消
-   - 调整日期筛选：按日期筛选
-2. 表格展示：调整单号、调整日期、调整原因、创建人、状态、操作
-3. 操作功能：查看详情、编辑（仅草稿/待审批状态）
-{% endcomment %}
-{% load static %}
-
-{% block list_page_title %}库存调整管理{% endblock %}
-
-{% block list_page_actions %}
-{% if can_create %}
-<a href="{% url 'admin_pages:inventory_adjust_create' %}" class="btn btn-primary">
-    <i class="bi bi-plus-circle"></i> 创建调整
-</a>
-{% endif %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:supplies_management' %}">办公用品</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
 {% endblock %}
 
-{% block search_placeholder %}搜索调整单号、调整原因...{% endblock %}
-
-{% block reset_url %}{% url 'admin_pages:inventory_adjust_list' %}{% endblock %}
-
-{% block list_page_table_headers %}
-<th style="width: 12%;">调整单号</th>
-<th style="width: 10%;">调整日期</th>
-<th style="width: 20%;">调整原因</th>
-<th style="width: 10%;">创建人</th>
-<th style="width: 10%;">状态</th>
+{% block extra_css %}
+<style>
+    .center-hero {
+        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
+        border-radius: 24px;
+        padding: 32px 36px;
+        color: #fff;
+        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
+        margin-bottom: 24px;
+    }
+    .hero-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.18);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        margin-bottom: 12px;
+    }
+    .content-card {
+        background: var(--vh-card-bg);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(20, 47, 91, 0.08);
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+    }
+    .status-draft { background: #f3f4f6; color: #374151; }
+    .status-pending_approval { background: #fff3cd; color: #856404; }
+    .status-approved { background: #cfe2ff; color: #084298; }
+    .status-rejected { background: #f8d7da; color: #842029; }
+    .status-executed { background: #d1e7dd; color: #0f5132; }
+</style>
 {% endblock %}
 
-{% block list_page_table_row_content %}
-<td><code>{{ item.adjust_number }}</code></td>
-<td>{{ item.adjust_date|date:"Y-m-d" }}</td>
-<td>{{ item.reason|truncatewords:10|default:"-" }}</td>
-<td>{{ item.created_by.get_full_name|default:item.created_by.username }}</td>
-<td>
-    {% if item.status == 'draft' %}
-        <span class="badge bg-secondary">草稿</span>
-    {% elif item.status == 'pending_approval' %}
-        <span class="badge bg-warning">待审批</span>
-    {% elif item.status == 'approved' %}
-        <span class="badge bg-info">已批准</span>
-    {% elif item.status == 'rejected' %}
-        <span class="badge bg-danger">已拒绝</span>
-    {% elif item.status == 'executed' %}
-        <span class="badge bg-success">已执行</span>
-    {% elif item.status == 'cancelled' %}
-        <span class="badge bg-secondary">已取消</span>
-    {% else %}
-        <span class="badge bg-secondary">{{ item.get_status_display }}</span>
-    {% endif %}
-</td>
-<td>
-    <div class="list-page-table-actions">
-        <a href="{% url 'admin_pages:inventory_adjust_detail' adjust_id=item.id %}" class="action-view" title="查看">
-            <i class="bi bi-eye"></i>
-        </a>
-        {% if item.status in 'draft,pending_approval' %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'admin_pages:inventory_adjust_update' adjust_id=item.id %}" class="action-edit" title="编辑">
-            <i class="bi bi-pencil"></i>
-        </a>
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero">
+        <h1 class="hero-title">{{ page_title }}</h1>
+        <p class="hero-subtitle">{{ description }}</p>
+    </div>
+
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0">库存调整列表</h3>
+            <a href="{% url 'admin_pages:inventory_adjust_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> 创建调整
+            </a>
+        </div>
+
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" placeholder="搜索调整单号、原因..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="">全部状态</option>
+                        <option value="draft" {% if status == 'draft' %}selected{% endif %}>草稿</option>
+                        <option value="pending_approval" {% if status == 'pending_approval' %}selected{% endif %}>待审批</option>
+                        <option value="approved" {% if status == 'approved' %}selected{% endif %}>已批准</option>
+                        <option value="executed" {% if status == 'executed' %}selected{% endif %}>已执行</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="adjust_date" class="form-control" value="{{ adjust_date }}" placeholder="调整日期">
+                </div>
+                <div class="col-md-5">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a href="{% url 'admin_pages:inventory_adjust_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> 重置
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>调整单号</th>
+                        <th>调整日期</th>
+                        <th>调整原因</th>
+                        <th>创建人</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for adjust in page_obj %}
+                    <tr>
+                        <td><code>{{ adjust.adjust_number }}</code></td>
+                        <td>{{ adjust.adjust_date|date:"Y-m-d" }}</td>
+                        <td>{{ adjust.reason|truncatewords:10 }}</td>
+                        <td>{{ adjust.created_by.get_full_name|default:adjust.created_by.username }}</td>
+                        <td>
+                            <span class="status-badge status-{{ adjust.status }}">
+                                {{ adjust.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_pages:inventory_adjust_detail' adjust.id %}" class="btn btn-sm btn-outline-primary" title="查看详情">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if adjust.status == 'draft' and adjust.created_by == user %}
+                            <a href="{% url 'admin_pages:inventory_adjust_update' adjust.id %}" class="btn btn-sm btn-outline-secondary" title="编辑">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🔄</div>
+                                <div class="empty-state-title">暂无数据</div>
+                                <div class="empty-state-text">
+                                    当前筛选条件下没有找到库存调整记录，请调整筛选条件或创建新调整。
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="分页导航">
+            <ul class="pagination justify-content-center mt-4">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">首页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">上一页</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">下一页</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">末页</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🔄</div>
+            <div class="empty-state-title">暂无数据</div>
+            <div class="empty-state-text">
+                当前没有库存调整记录，请先创建调整。
+            </div>
+            <a href="{% url 'admin_pages:inventory_adjust_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> 创建第一个调整
+            </a>
+        </div>
         {% endif %}
     </div>
-</td>
+</div>
 {% endblock %}
-
-{% block empty_colspan %}6{% endblock %}
-
-{% block empty_table_message %}暂无数据{% endblock %}
-
-{% block empty_message %}暂无数据{% endblock %}
-
-{% block empty_create_url %}{% url 'admin_pages:inventory_adjust_create' %}{% endblock %}

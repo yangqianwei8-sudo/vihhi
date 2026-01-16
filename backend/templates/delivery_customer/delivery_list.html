@@ -1,12 +1,14 @@
-{% extends "shared/module_base.html" %}
+{% extends "delivery_customer/base.html" %}
 {% load static %}
 
 {% block title %}交付记录 - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:report_delivery' %}">收发管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">交付记录</li>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
 <style>
 /* 压缩空白区域，使排版更紧凑 */
@@ -129,10 +131,10 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
-    <!-- 使用列表页面布局模板 -->
+{% block content %}
+    
     <div class="list-page-container">
-        <!-- 标签页 -->
+        
         <ul class="nav nav-tabs mb-1 border-bottom" role="tablist" style="margin-bottom: 8px !important;">
             <li class="nav-item" role="presentation">
                 <a class="nav-link {% if tab == 'all' or not tab %}active{% endif %} border-0" href="?tab=all{% if status_filter %}&status={{ status_filter }}{% endif %}{% if method_filter %}&delivery_method={{ method_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if project_filter %}&project_id={{ project_filter }}{% endif %}{% if client_filter %}&client_id={{ client_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
@@ -161,7 +163,6 @@
             </li>
         </ul>
 
-        <!-- 筛选栏区域 -->
         <div class="list-page-filters mb-1" style="margin-bottom: 8px !important;">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h6 class="mb-0 small fw-semibold">筛选条件</h6>
@@ -173,11 +174,11 @@
                 </div>
             </div>
             <form method="get" id="filterForm">
-                <!-- 保留标签页和搜索参数 -->
+                
                 {% if tab %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
                 {% if search_query %}<input type="hidden" name="search" value="{{ search_query }}">{% endif %}
                 <div id="basicFilters" style="display: none;">
-                    <!-- 交付状态 -->
+                    
                     <div class="filter-row mb-3" data-filter-key="status">
                         <label class="filter-label">交付状态:</label>
                         <div class="filter-buttons">
@@ -193,7 +194,6 @@
                         </div>
                     </div>
 
-                    <!-- 交付方式 -->
                     <div class="filter-row mb-3" data-filter-key="delivery_method">
                         <label class="filter-label">交付方式:</label>
                         <div class="filter-buttons">
@@ -213,7 +213,6 @@
                         </div>
                     </div>
 
-                    <!-- 优先级 -->
                     <div class="filter-row mb-3" data-filter-key="priority">
                         <label class="filter-label">优先级:</label>
                         <div class="filter-buttons">
@@ -229,7 +228,6 @@
                         </div>
                     </div>
 
-                    <!-- 关联项目 -->
                     <div class="filter-row mb-3" data-filter-key="project_id">
                         <label class="filter-label">关联项目:</label>
                         <div class="filter-buttons">
@@ -250,7 +248,6 @@
                         </div>
                     </div>
 
-                    <!-- 关联客户 -->
                     <div class="filter-row mb-3" data-filter-key="client_id">
                         <label class="filter-label">关联客户:</label>
                         <div class="filter-buttons">
@@ -271,7 +268,6 @@
                         </div>
                     </div>
 
-                    <!-- 创建时间 -->
                     <div class="filter-row mb-3" data-filter-key="created_date">
                         <label class="filter-label">创建时间:</label>
                         <div class="filter-buttons">
@@ -285,7 +281,6 @@
                         </div>
                     </div>
 
-                    <!-- 计划交付时间 -->
                     <div class="filter-row mb-3" data-filter-key="scheduled_date">
                         <label class="filter-label">计划交付时间:</label>
                         <div class="filter-buttons">
@@ -302,9 +297,8 @@
             </form>
         </div>
     
-        <!-- 操作栏 -->
         <div class="list-page-action-bar mb-1 d-flex justify-content-between align-items-center" style="margin-bottom: 8px !important;">
-            <!-- 左侧：批量操作 -->
+            
             <div class="d-flex align-items-center gap-3">
                 <span class="text-muted small">已选 <strong id="selectedCount" style="color: #ff6b35;">0</strong> 个</span>
                 <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="clearSelection" style="display: none;">
@@ -316,9 +310,8 @@
                 </div>
             </div>
             
-            <!-- 右侧：搜索/筛选控件 -->
             <div class="d-flex align-items-center gap-2">
-                <!-- 搜索控件 -->
+                
                 <div class="input-group input-group-sm" style="width: auto;">
                     <input type="text" class="form-control form-control-sm" id="searchInput" name="search" placeholder="交付单号、标题、收件人..." value="{{ search_query }}" style="width: 250px; font-size: 12px;" onkeypress="if(event.key==='Enter') document.getElementById('searchForm').submit();">
                     <button class="btn btn-outline-secondary btn-sm" type="submit" form="searchForm" style="font-size: 12px;">
@@ -328,14 +321,13 @@
                         <i class="bi bi-arrow-clockwise"></i> C
                     </button>
                 </div>
-                <!-- 创建按钮 -->
+                
                 <a href="{% url 'delivery_pages:delivery_create' %}" class="btn btn-primary btn-sm">
                     <i class="bi bi-plus-circle"></i> 创建交付单
                 </a>
             </div>
         </div>
         
-        <!-- 隐藏的搜索表单 -->
         <form method="get" id="searchForm" style="display: none;">
             {% if tab %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
             {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
@@ -360,7 +352,6 @@
             </div>
         </div>
     
-        <!-- 数据表格 -->
         <div class="list-page-table">
             {% if deliveries %}
             <div class="table-responsive">
@@ -471,7 +462,6 @@
                 </table>
             </div>
         
-            <!-- 分页 -->
             {% if deliveries.has_other_pages %}
             <div class="d-flex justify-content-between align-items-center" style="padding: 8px 12px; background: #fff; border-radius: 4px; margin-top: 8px;">
                 <div class="text-muted small">

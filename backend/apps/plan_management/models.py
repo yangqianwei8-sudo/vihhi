@@ -541,13 +541,11 @@ class Plan(models.Model):
     )
     
     # 关联信息
-    related_project = models.ForeignKey(
-        'production_management.Project',
-        on_delete=models.SET_NULL,
-        null=True,
+    related_project = models.CharField(
+        max_length=200,
         blank=True,
-        related_name='related_plans',
-        verbose_name='关联项目'
+        verbose_name='关联项目',
+        help_text='项目信息来源于商机管理'
     )
     parent_plan = models.ForeignKey(
         'self',

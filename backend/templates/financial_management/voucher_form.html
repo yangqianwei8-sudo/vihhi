@@ -1,8 +1,17 @@
-{% extends "shared/module_base.html" %}
+{% extends "financial_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+{% if is_create %}
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:voucher_management' %}">记账凭证</a></li>
+<li class="breadcrumb-item active" aria-current="page">新增</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:voucher_management' %}">记账凭证</a></li>
+<li class="breadcrumb-item"><a href="{% url 'finance_pages:voucher_detail' voucher.id %}">{{ voucher.voucher_number }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% endif %}
+{% endblock %}
 
 {% block extra_css %}
 {% load static %}
@@ -69,15 +78,12 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
-
-    <!-- 表单 -->
+    
     <form method="post" id="voucherForm">
         {% csrf_token %}
         
-        <!-- 基本信息 -->
         <div class="form-card">
             <h5>基本信息</h5>
             <div class="row g-3">
@@ -126,7 +132,6 @@
             </div>
         </div>
 
-        <!-- 凭证分录 -->
         <div class="form-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0">凭证分录</h5>
@@ -196,7 +201,6 @@
                 {% endfor %}
             </div>
 
-            <!-- 合计行 -->
             <div class="totals-row">
                 <div class="row">
                     <div class="col-md-6 text-end">
@@ -218,7 +222,6 @@
             </div>
         </div>
 
-        <!-- 表单错误 -->
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
             {{ form.non_field_errors }}
@@ -230,7 +233,6 @@
         </div>
         {% endif %}
 
-        <!-- 操作按钮 -->
         <div class="d-flex justify-content-between align-items-center mt-4">
             <a href="{% if is_create %}{% url 'finance_pages:voucher_management' %}{% else %}{% url 'finance_pages:voucher_detail' voucher.id %}{% endif %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> 取消
@@ -367,4 +369,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

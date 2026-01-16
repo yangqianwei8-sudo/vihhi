@@ -1,8 +1,11 @@
-{% extends "shared/module_base.html" %}
+{% extends "personnel_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:employee_management' %}">员工档案</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if employee %}{{ employee.name }}{% else %}员工详情{% endif %}</li>
+{% endblock %}
 
 {% block extra_css %}
 {% load static %}
@@ -166,7 +169,7 @@
 {% block personnel_content %}
 {% if employee %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="center-hero">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
             <div class="d-flex align-items-start gap-3 flex-grow-1">
@@ -196,7 +199,6 @@
         </div>
     </div>
     
-    <!-- 统计卡片 -->
     {% if summary_cards %}
     <div class="stats-grid">
         {% for card in summary_cards %}
@@ -215,7 +217,6 @@
     </div>
     {% endif %}
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">👤 基本信息</h5>
@@ -264,7 +265,6 @@
         </div>
     </div>
 
-    <!-- 工作信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">💼 工作信息</h5>
@@ -303,7 +303,6 @@
         </div>
     </div>
 
-    <!-- 联系信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">📞 联系信息</h5>
@@ -326,7 +325,6 @@
         </div>
     </div>
 
-    <!-- 备注信息 -->
     {% if employee.notes %}
     <div class="info-card">
         <div class="info-card-header">
@@ -338,7 +336,6 @@
     </div>
     {% endif %}
 
-    <!-- 最近项目参与 -->
     {% if recent_projects %}
     <div class="info-card">
         <div class="info-card-header">
@@ -385,7 +382,6 @@
     </div>
     {% endif %}
     
-    <!-- 最近考勤记录 -->
     {% if recent_attendances %}
     <div class="info-card">
         <div class="info-card-header">
@@ -430,7 +426,6 @@
     </div>
     {% endif %}
     
-    <!-- 最近请假记录 -->
     {% if recent_leaves %}
     <div class="info-card">
         <div class="info-card-header">
@@ -471,7 +466,6 @@
     </div>
     {% endif %}
     
-    <!-- 最近培训记录 -->
     {% if recent_trainings %}
     <div class="info-card">
         <div class="info-card-header">
@@ -510,7 +504,6 @@
     </div>
     {% endif %}
 
-    <!-- 其他信息 -->
     <div class="info-card">
         <div class="info-card-header">
             <h5 class="info-card-title">ℹ️ 其他信息</h5>
@@ -549,4 +542,3 @@
 </div>
 {% endif %}
 {% endblock %}
-

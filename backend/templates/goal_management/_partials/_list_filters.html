@@ -1,0 +1,54 @@
+<div class="list-filters">
+  <form method="get" class="list-filters-form">
+    <div class="list-filter-group">
+      <label class="list-filter-label">搜索</label>
+      <input type="text" name="search" class="list-filter-input" 
+             value="{{ search }}" placeholder="目标编号、名称、负责人">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">状态</label>
+      <select name="status" class="list-filter-input">
+        <option value="">全部状态</option>
+        {% for value, label in status_options %}
+        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">目标类型</label>
+      <select name="goal_type" class="list-filter-input">
+        <option value="">全部类型</option>
+        <option value="personal" {% if goal_type_filter == 'personal' %}selected{% endif %}>个人目标</option>
+        <option value="department" {% if goal_type_filter == 'department' %}selected{% endif %}>部门目标</option>
+        <option value="company" {% if goal_type_filter == 'company' %}selected{% endif %}>公司目标</option>
+        <option value="project" {% if goal_type_filter == 'project' %}selected{% endif %}>项目目标</option>
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">目标周期</label>
+      <select name="goal_period" class="list-filter-input">
+        <option value="">全部周期</option>
+        <option value="daily" {% if goal_period_filter == 'daily' %}selected{% endif %}>日目标</option>
+        <option value="weekly" {% if goal_period_filter == 'weekly' %}selected{% endif %}>周目标</option>
+        <option value="monthly" {% if goal_period_filter == 'monthly' %}selected{% endif %}>月目标</option>
+        <option value="quarterly" {% if goal_period_filter == 'quarterly' %}selected{% endif %}>季度目标</option>
+        <option value="yearly" {% if goal_period_filter == 'yearly' %}selected{% endif %}>年目标</option>
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">负责人</label>
+      <select name="responsible" class="list-filter-input">
+        <option value="">全部负责人</option>
+        {% for u in all_users %}
+        <option value="{{ u.id }}" {% if responsible_filter|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>
+          {{ u.get_full_name|default:u.username }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'plan_pages:strategic_goal_list' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>

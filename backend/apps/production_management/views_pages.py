@@ -2,7 +2,6 @@ import csv
 import io
 import json
 import datetime
-import os
 from decimal import Decimal, InvalidOperation
 from datetime import timedelta
 import logging
@@ -23,7 +22,6 @@ from django.forms import inlineformset_factory
 from django.conf import settings
 from openpyxl import Workbook
 from django.utils.html import format_html, format_html_join
-from django.core.paginator import Paginator
 
 from .models import (
     Project,
@@ -44,13 +42,12 @@ from .models import (
     ServiceType,
     ServiceProfession,
     BusinessType,
-    PreOptimizationMaterial,
 )
 from .serializers import ProjectSerializer, ProjectCreateSerializer
 
 from backend.apps.system_management.models import User, Department
 from backend.apps.system_management.services import get_user_permission_codes
-from backend.core.views import _build_full_top_nav, _build_unified_sidebar_nav
+from backend.core.views import _build_full_top_nav
 # calculate_output_value 改为延迟导入，避免在数据库表不存在时导致模块加载失败
 
 
@@ -96,157 +93,147 @@ PROFESSION_KEYWORDS = {
 # 生产管理左侧导航菜单结构（分组格式）
 PRODUCTION_MANAGEMENT_SIDEBAR_MENU = [
     {
-        'id': 'production_home',
-        'label': '生产管理首页',
-        'icon': '🏠',
-        'url_name': 'production_pages:production_management_home',
-        'permission': 'production_management.view_all',
-    },
-    {
-        'id': 'project_management',
-        'label': '生产启动',
-        'icon': '🏗️',
-        'permission': 'production_management.view_all',
-        'children': [
-            {
-                'id': 'project_list',
-                'label': '项目启动列表',
-                'icon': '📋',
-                'url_name': 'production_pages:project_list',
-                'permission': 'production_management.view_all',
-            },
-            {
-                'id': 'project_create',
-                'label': '新建生产启动',
-                'icon': '➕',
-                'url_name': 'production_pages:project_create',
-                'permission': 'production_management.create',
-            },
-        ],
-    },
-    {
         'id': 'consultation_opinion',
-        'label': '咨询意见书',
+        'label': '编制咨询意见书',
         'icon': '📋',
         'permission': 'production_management.view_all',
+        'expanded': True,
         'children': [
+            {
+                'id': 'create_consultation_opinion',
+                'label': '创建咨询意见',
+                'url_name': 'production_pages:consultation_opinion_create',
+                'permission': 'production_management.create',
+                'path_keywords': ['consultation_opinion/create', 'opinion/create'],
+            },
             {
                 'id': 'get_preliminary_reply',
                 'label': '获取初步回复',
                 'url_name': 'production_pages:preliminary_reply_list',
                 'permission': 'production_management.view_all',
-            },
-            {
-                'id': 'ai_advisor',
-                'label': 'AI设计优化顾问',
-                'url_name': 'production_pages:ai_advisor',
-                'permission': 'production_management.view_all',
+                'path_keywords': ['preliminary_reply', 'reply'],
             },
         ],
     },
     {
         'id': 'tripartite_communication',
-        'label': '三方沟通成果',
+        'label': '编制三方沟通成果',
         'icon': '🤝',
         'permission': 'production_management.view_all',
+        'expanded': False,
         'children': [
             {
                 'id': 'tripartite_meeting_minutes',
                 'label': '三方会议纪要',
                 'url_name': 'production_pages:tripartite_meeting_minutes',
                 'permission': 'production_management.view_all',
+                'path_keywords': ['meeting/minutes', 'tripartite/meeting'],
             },
             {
                 'id': 'create_tripartite_communication',
                 'label': '创建三方沟通成果',
                 'url_name': 'production_pages:tripartite_communication_create',
                 'permission': 'production_management.create',
+                'path_keywords': ['tripartite/communication/create', 'communication/create'],
             },
         ],
     },
     {
         'id': 'drawing_review_opinion',
-        'label': '核图意见书',
+        'label': '编制核图意见书',
         'icon': '✅',
         'permission': 'production_management.view_all',
+        'expanded': False,
         'children': [
             {
                 'id': 'on_site_tracking_revision',
                 'label': '驻场跟踪改图',
                 'url_name': 'production_pages:on_site_tracking_revision',
                 'permission': 'production_management.view_all',
+                'path_keywords': ['on_site/tracking', 'tracking/revision'],
             },
             {
                 'id': 'get_revision_drawings',
                 'label': '获取返图',
                 'url_name': 'production_pages:revision_drawings_list',
                 'permission': 'production_management.view_all',
+                'path_keywords': ['revision/drawings', 'get/revision'],
             },
             {
                 'id': 'create_drawing_review_opinion',
                 'label': '创建核图意见书',
                 'url_name': 'production_pages:drawing_review_opinion_create',
                 'permission': 'production_management.create',
+                'path_keywords': ['drawing_review_opinion/create', 'review_opinion/create'],
             },
         ],
     },
     {
         'id': 'weekly_report',
-        'label': '每周快报',
+        'label': '编制每周快报',
         'icon': '📊',
         'permission': 'production_management.view_all',
+        'expanded': False,
         'children': [
             {
                 'id': 'get_stage_drawings',
                 'label': '获取阶段图纸',
                 'url_name': 'production_pages:stage_drawings_list',
                 'permission': 'production_management.view_all',
+                'path_keywords': ['stage/drawings', 'get/stage'],
             },
             {
                 'id': 'create_weekly_report',
                 'label': '创建每周快报',
                 'url_name': 'production_pages:weekly_report_create',
                 'permission': 'production_management.create',
+                'path_keywords': ['weekly_report/create', 'report/create'],
             },
         ],
     },
     {
         'id': 'process_optimization_report',
-        'label': '过程优化报告',
+        'label': '编制过程优化报告',
         'icon': '📈',
         'permission': 'production_management.view_all',
+        'expanded': False,
         'children': [
             {
                 'id': 'get_process_drawings',
                 'label': '获取过程图纸',
                 'url_name': 'production_pages:process_drawings_list',
                 'permission': 'production_management.view_all',
+                'path_keywords': ['process/drawings', 'get/process'],
             },
             {
                 'id': 'create_process_optimization_report',
                 'label': '创建过程优化报告',
                 'url_name': 'production_pages:process_optimization_report_create',
                 'permission': 'production_management.create',
+                'path_keywords': ['process_optimization_report/create', 'optimization_report/create'],
             },
         ],
     },
     {
         'id': 'reporting_files',
-        'label': '汇报文件',
+        'label': '编制汇报文件',
         'icon': '📄',
         'permission': 'production_management.view_all',
+        'expanded': False,
         'children': [
             {
                 'id': 'create_interim_report',
                 'label': '创建中间汇报文件',
                 'url_name': 'production_pages:interim_report_create',
                 'permission': 'production_management.create',
+                'path_keywords': ['interim/report/create', 'interim_report'],
             },
             {
                 'id': 'create_final_report',
                 'label': '创建最终汇报文件',
                 'url_name': 'production_pages:final_report_create',
                 'permission': 'production_management.create',
+                'path_keywords': ['final/report/create', 'final_report'],
             },
         ],
     },
@@ -254,31 +241,36 @@ PRODUCTION_MANAGEMENT_SIDEBAR_MENU = [
         'id': 'optimization_materials',
         'label': '优化前后资料',
         'icon': '📦',
-        'permission': 'production_management.view_assigned',  # 使用view_assigned，有view_all的用户也能看到（_permission_granted会自动处理）
+        'permission': 'production_management.view_all',
+        'expanded': False,
         'children': [
             {
                 'id': 'pre_optimization_disc_application',
                 'label': '优化前刻盘申请',
                 'url_name': 'production_pages:pre_optimization_disc_application',
                 'permission': 'production_management.create',
+                'path_keywords': ['pre_optimization/disc', 'pre/disc/application'],
             },
             {
                 'id': 'pre_optimization_materials',
                 'label': '优化前资料',
                 'url_name': 'production_pages:pre_optimization_materials',
-                'permission': 'production_management.view_assigned',  # 使用view_assigned，有view_all的用户也能看到
+                'permission': 'production_management.view_all',
+                'path_keywords': ['pre_optimization/materials', 'pre/materials'],
             },
             {
                 'id': 'post_optimization_disc_application',
                 'label': '优化后刻盘申请',
                 'url_name': 'production_pages:post_optimization_disc_application',
                 'permission': 'production_management.create',
+                'path_keywords': ['post_optimization/disc', 'post/disc/application'],
             },
             {
                 'id': 'post_optimization_materials',
                 'label': '优化后资料',
                 'url_name': 'production_pages:post_optimization_materials',
-                'permission': 'production_management.view_assigned',  # 使用view_assigned，有view_all的用户也能看到
+                'permission': 'production_management.view_all',
+                'path_keywords': ['post_optimization/materials', 'post/materials'],
             },
         ],
     },
@@ -287,12 +279,14 @@ PRODUCTION_MANAGEMENT_SIDEBAR_MENU = [
         'label': '服务成果确认',
         'icon': '✔️',
         'permission': 'production_management.view_all',
+        'expanded': False,
         'children': [
             {
                 'id': 'create_result_confirmation',
                 'label': '创建成果确认函',
                 'url_name': 'production_pages:result_confirmation_create',
                 'permission': 'production_management.create',
+                'path_keywords': ['result_confirmation/create', 'confirmation/create'],
             },
         ],
     },
@@ -314,9 +308,15 @@ PRODUCTION_MANAGEMENT_NAV_ITEMS = [
     },
     {
         'id': 'project_create',
-        'label': '新建生产启动',
+        'label': '新建项目',
         'url_name': 'production_pages:project_create',
         'permissions': ('production_management.create',),
+    },
+    {
+        'id': 'project_monitor',
+        'label': '项目监控',
+        'url_name': 'production_pages:project_monitor',
+        'permissions': ('production_management.monitor',),
     },
     {
         'id': 'project_import_admin',
@@ -584,7 +584,23 @@ SERVICE_TIMELINE_TEMPLATES = {
 }
 
 
-def build_project_create_context(form_data=None):
+def build_project_create_context(form_data=None, selected_profession_ids=None):
+    service_types = ServiceType.objects.prefetch_related('professions').order_by('order', 'id')
+    for st in service_types:
+        st.description = SERVICE_TYPE_DESCRIPTIONS.get(st.code, '支撑项目交付的核心服务类型')
+
+    profession_map = {
+        str(service_type.id): [
+            {
+                'id': profession.id,
+                'name': profession.name,
+                'description': f'{profession.name} 专项服务',
+            }
+            for profession in service_type.professions.order_by('order', 'id')
+        ]
+        for service_type in service_types
+    }
+
     form_dict = {}
     if form_data:
         # QueryDict -> dict
@@ -593,16 +609,51 @@ def build_project_create_context(form_data=None):
         except AttributeError:
             form_dict = dict(form_data)
 
+    if selected_profession_ids is None:
+        if form_data is not None and hasattr(form_data, 'getlist'):
+            selected_profession_ids = form_data.getlist('service_profession_ids[]')
+        else:
+            selected_profession_ids = []
+
+    selected_ids_serialized = []
+    for sid in selected_profession_ids:
+        try:
+            selected_ids_serialized.append(int(sid))
+        except (TypeError, ValueError):
+            continue
+
+    selected_service_type_id = form_dict.get('service_type', '') if form_dict else ''
+
     return {
+        'service_types': service_types,
+        'business_types': BusinessType.objects.filter(is_active=True).order_by('order', 'id'),
+        'design_stages': Project.DESIGN_STAGES,
+        'service_professions_map_json': mark_safe(json.dumps(profession_map, ensure_ascii=False)),
+        'selected_profession_ids_json': mark_safe(json.dumps(selected_ids_serialized, ensure_ascii=False)),
         'current_year': datetime.datetime.now().year,
         'today': datetime.date.today().isoformat(),
         'form_data': form_dict,
-        'departments': Department.objects.filter(is_active=True).order_by('order', 'id'),
-        'users': User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username'),
+        'selected_service_type_id': str(selected_service_type_id),
     }
 
 
 def build_project_edit_context(project, permission_set, form_data=None, user=None):
+    service_types = ServiceType.objects.prefetch_related('professions').order_by('order', 'id')
+    for st in service_types:
+        st.description = SERVICE_TYPE_DESCRIPTIONS.get(st.code, '支撑项目交付的核心服务类型')
+
+    profession_map = {
+        str(service_type.id): [
+            {
+                'id': profession.id,
+                'name': profession.name,
+                'description': f'{profession.name} 专项服务',
+            }
+            for profession in service_type.professions.order_by('order', 'id')
+        ]
+        for service_type in service_types
+    }
+
     if form_data is not None and hasattr(form_data, 'dict'):
         try:
             form_dict = form_data.dict()
@@ -616,16 +667,64 @@ def build_project_edit_context(project, permission_set, form_data=None, user=Non
             return form_dict.get(key, default) if form_dict.get(key, default) is not None else default
         return default
 
+    def _get_list(data, key):
+        if data is None:
+            return []
+        if hasattr(data, 'getlist'):
+            return data.getlist(key)
+        value = data.get(key)
+        if value is None:
+            return []
+        if isinstance(value, (list, tuple)):
+            return list(value)
+        return [value]
+
+    if form_data is not None:
+        selected_profession_ids = []
+        for raw in _get_list(form_data, 'service_profession_ids[]'):
+            try:
+                selected_profession_ids.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+    else:
+        selected_profession_ids = list(
+            project.service_professions.values_list('id', flat=True)
+        )
+
+    # 安全获取 business_type 的值（兼容外键和字符串类型）
+    business_type_value = ''
+    if project.business_type:
+        # 如果是外键对象，获取其ID；否则直接使用值
+        if hasattr(project.business_type, 'id'):
+            business_type_value = project.business_type.id
+        else:
+            business_type_value = project.business_type
+    
+    # 安全获取 service_type 的值
+    service_type_value = ''
+    if hasattr(project, 'service_type_id'):
+        service_type_value = project.service_type_id or ''
+    elif project.service_type:
+        service_type_value = project.service_type.id if hasattr(project.service_type, 'id') else ''
+    
     initial_values = {
         'name': _get_value('name', project.name),
+        'alias': _get_value('alias', project.alias or ''),
+        'description': _get_value('description', project.description or ''),
+        'service_type': _get_value('service_type', service_type_value),
+        'business_type': _get_value('business_type', business_type_value),
+        'design_stage': _get_value('design_stage', project.design_stage or ''),
     }
 
     context = {
         'project': project,
+        'service_types': service_types,
+        'business_types': BusinessType.objects.filter(is_active=True).order_by('order', 'id'),
+        'design_stages': Project.DESIGN_STAGES,
+        'service_professions_map_json': mark_safe(json.dumps(profession_map, ensure_ascii=False)),
+        'selected_profession_ids_json': mark_safe(json.dumps(selected_profession_ids, ensure_ascii=False)),
         'initial_values': initial_values,
         'read_only': _is_project_readonly(permission_set),
-        'departments': Department.objects.filter(is_active=True).order_by('order', 'id'),
-        'users': User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username'),
     }
     return _with_nav(context, permission_set, 'project_list', user)
 
@@ -684,7 +783,7 @@ def _filter_projects_for_user(projects, user, permission_set):
     if (
         getattr(user, 'user_type', 'internal') == 'internal'
         and user.department_id
-        and _has_permission(permission_set, 'production_management.view_all')
+        and _has_permission(permission_set, 'task_collaboration.view_all')
     ):
         department_users = User.objects.filter(department_id=user.department_id, is_active=True)
         department_scope = (
@@ -951,18 +1050,17 @@ def _sync_project_team_member(project, user, role):
         team_member.save(update_fields=updates)
 
 
-def _build_production_management_nav(permission_set, active_id=None, user=None):
+def _build_project_center_nav(permission_set, active_id=None, user=None):
     nav = []
     for item in PRODUCTION_MANAGEMENT_NAV_ITEMS:
         if item.get('require_admin') and not _is_system_admin(user):
             continue
         
-        # 新建项目仅对商务经理可见（系统管理员除外）
+        # 新建项目仅对商务经理可见
         if item.get('id') == 'project_create':
-            if not _is_system_admin(user):
-                has_business_manager_role = user and user.roles.filter(code='business_manager').exists()
-                if not has_business_manager_role:
-                    continue
+            has_business_manager_role = user and user.roles.filter(code='business_manager').exists()
+            if not has_business_manager_role:
+                continue
         
         if item.get('permissions') and _has_permission(permission_set, *item['permissions']):
             nav.append({
@@ -989,226 +1087,83 @@ def _build_production_management_nav(permission_set, active_id=None, user=None):
 # 使用统一的顶部导航菜单生成函数（已在文件顶部导入）
 
 
-def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None, active_menu_id=None):
-    """构建页面上下文"""
-    context = {
-        "page_title": page_title,
-        "page_icon": page_icon,
-        "description": description,
-        "summary_cards": summary_cards or [],
-        "sections": sections or [],
-    }
+def _build_production_management_sidebar_nav(permission_set, request_path=None, user=None):
+    """生成生产管理模块的左侧菜单导航（分组格式）
     
-    if request and request.user.is_authenticated:
-        permission_set = get_user_permission_codes(request.user)
-        context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        # 添加生产管理左侧导航菜单
-        context['module_sidebar_nav'] = _build_production_management_sidebar_nav(permission_set, request.path, request.user, active_id=active_menu_id)
-    else:
-        context['full_top_nav'] = []
-        context['module_sidebar_nav'] = []
+    Args:
+        permission_set: 用户权限集合
+        request_path: 当前请求路径，用于判断激活状态
+        user: 当前用户
     
-    return context
-
-
-@login_required
-def production_management_home(request):
-    """生产管理首页"""
-    permission_codes = get_user_permission_codes(request.user)
-    today = timezone.now().date()
-    this_month_start = today.replace(day=1)
-    
-    # 权限检查
+    Returns:
+        list: 分组菜单项列表，格式与行政管理模块一致
+    """
+    from django.urls import reverse, NoReverseMatch
     from backend.core.views import _permission_granted
-    if not _permission_granted('production_management.view_all', permission_codes) and \
-       not _permission_granted('production_management.view_assigned', permission_codes):
-        messages.error(request, '您没有权限访问生产管理')
-        return redirect('home')  # 重定向到首页，避免无限重定向
+    import logging
     
-    # 收集统计数据
-    summary_cards = []
+    logger = logging.getLogger(__name__)
     
+    # 构建分组菜单
+    menu_groups = []
     try:
-        # 项目统计
-        accessible_ids = _project_ids_user_can_access(request.user)
-        projects = Project.objects.filter(id__in=accessible_ids)
-        
-        total_projects = projects.count()
-        active_projects = projects.filter(
-            status__in=['in_progress', 'planning', 'waiting_start']
-        ).count()
-        this_month_projects = projects.filter(
-            created_time__gte=this_month_start
-        ).count()
-        completed_projects = projects.filter(
-            status='completed',
-            updated_time__gte=this_month_start
-        ).count()
-        
-        summary_cards.append({
-            'label': '项目总数',
-            'icon': '🏗️',
-            'value': str(total_projects),
-            'subvalue': f'进行中 {active_projects} 个 · 本月新增 {this_month_projects} 个',
-            'url': reverse('production_pages:project_list'),
-            'variant': 'info'
-        })
-        
-        summary_cards.append({
-            'label': '本月完成',
-            'icon': '✅',
-            'value': str(completed_projects),
-            'subvalue': '本月完成项目',
-            'url': reverse('production_pages:project_list'),
-            'variant': 'success'
-        })
-        
-        # 任务统计
-        try:
-            my_tasks = ProjectTask.objects.filter(
-                assignee=request.user,
-                status__in=['pending', 'in_progress']
-            ).count()
-            overdue_tasks = ProjectTask.objects.filter(
-                assignee=request.user,
-                status__in=['pending', 'in_progress'],
-                due_time__lt=timezone.now()
-            ).count()
+        for group in PRODUCTION_MANAGEMENT_SIDEBAR_MENU:
+            # 检查分组权限
+            if group.get('permission') and not _permission_granted(group['permission'], permission_set):
+                continue
             
-            if my_tasks > 0:
-                summary_cards.append({
-                    'label': '我的任务',
-                    'icon': '📝',
-                    'value': str(my_tasks),
-                    'subvalue': f'逾期 {overdue_tasks} 个',
-                    'url': reverse('production_pages:project_task_dashboard'),
-                    'variant': 'danger' if overdue_tasks > 0 else 'warning'
+            # 构建子菜单项
+            children = []
+            for child in group.get('children', []):
+                try:
+                    # 检查子项权限
+                    if child.get('permission') and not _permission_granted(child['permission'], permission_set):
+                        continue
+                    
+                    # 获取URL
+                    try:
+                        url = reverse(child['url_name'])
+                    except NoReverseMatch:
+                        url = '#'
+                    
+                    # 判断是否激活
+                    active = False
+                    if request_path:
+                        for keyword in child.get('path_keywords', []):
+                            if keyword in request_path:
+                                active = True
+                                break
+                    
+                    children.append({
+                        'label': child['label'],
+                        'url': url,
+                        'active': active,
+                    })
+                except Exception as e:
+                    logger.warning('构建子菜单项失败: %s, 错误: %s', child.get('label', 'unknown'), str(e))
+                    continue
+            
+            # 只有当分组有可见的子项时才添加分组
+            if children:
+                # 判断分组是否应该展开（如果有激活的子项，则展开）
+                expanded = group.get('expanded', False)
+                if not expanded and request_path:
+                    for child in children:
+                        if child.get('active'):
+                            expanded = True
+                            break
+                
+                menu_groups.append({
+                    'label': group['label'],
+                    'icon': group.get('icon', ''),
+                    'expanded': expanded,
+                    'children': children,
                 })
-        except Exception:
-            pass
-        
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('获取统计数据失败: %s', str(e))
+        logger.exception('构建生产管理左侧菜单导航失败: %s', str(e))
+        return []
     
-    # 快捷操作
-    quick_actions = []
-    
-    # 新建项目需要权限和商务经理角色（系统管理员除外）
-    if _permission_granted('production_management.create', permission_codes):
-        is_admin = _is_system_admin(request.user)
-        has_business_manager_role = request.user.roles.filter(code='business_manager').exists()
-        if is_admin or has_business_manager_role:
-            try:
-                quick_actions.append({
-                    'label': '新建生产启动',
-                    'icon': '➕',
-                    'description': '创建新的生产项目',
-                    'url': reverse('production_pages:project_create'),
-                    'link_label': '创建项目 →'
-                })
-            except Exception:
-                pass
-    
-    # 功能模块入口
-    module_entries = []
-    
-    try:
-        module_entries.append({
-            'label': '项目列表',
-            'icon': '📋',
-            'description': '查看和管理所有项目',
-            'url': reverse('production_pages:project_list'),
-            'link_label': '进入模块 →'
-        })
-        
-        if _permission_granted('production_management.view_all', permission_codes) or \
-           _permission_granted('production_management.view_assigned', permission_codes):
-            try:
-                module_entries.append({
-                    'label': '任务看板',
-                    'icon': '📊',
-                    'description': '查看项目任务看板',
-                    'url': reverse('production_pages:project_task_dashboard'),
-                    'link_label': '进入模块 →'
-                })
-            except Exception:
-                pass
-    except Exception:
-        pass
-    
-    # 构建区域
-    sections = []
-    
-    if quick_actions:
-        sections.append({
-            'title': '快捷操作',
-            'description': '常用的快速操作入口',
-            'items': quick_actions,
-            'layout': 'grid'
-        })
-    
-    if module_entries:
-        sections.append({
-            'title': '功能模块',
-            'description': '生产管理的各个功能模块入口',
-            'items': module_entries,
-            'layout': 'grid'
-        })
-    
-    # 构建上下文
-    context = _context(
-        page_title="生产管理",
-        page_icon="🏗️",
-        description="从项目创建到交付完成的全流程数字化管理",
-        summary_cards=summary_cards,
-        sections=sections,
-        request=request,
-        active_menu_id='production_home',
-    )
-    
-    return render(request, "production_management/home.html", context)
-
-
-def _build_production_management_sidebar_nav(permission_set, request_path=None, user=None, active_id=None):
-    """生成生产管理模块的左侧菜单导航（统一格式）"""
-    from backend.core.views import _permission_granted
-    
-    def _check_production_permission(permission, permission_set):
-        """生产管理模块的自定义权限检查函数（简化版，仅处理基础权限）"""
-        if not permission:
-            return True
-        return _permission_granted(permission, permission_set)
-    
-    # 使用统一的菜单构建函数
-    menu = _build_unified_sidebar_nav(
-        PRODUCTION_MANAGEMENT_SIDEBAR_MENU, 
-        permission_set, 
-        active_id=active_id,
-        permission_check_func=_check_production_permission
-    )
-    
-    # 后处理：移除project_create（如果用户不是系统管理员且不是商务经理）
-    if user:
-        for group in menu:
-            if group.get('children'):
-                children = group.get('children', [])
-                # 过滤掉project_create（如果用户没有权限）
-                filtered_children = []
-                for child in children:
-                    if child.get('id') == 'project_create':
-                        # 检查是否是系统管理员或商务经理
-                        if _is_system_admin(user) or (user.roles.filter(code='business_manager').exists()):
-                            filtered_children.append(child)
-                    else:
-                        filtered_children.append(child)
-                group['children'] = filtered_children
-                # 如果分组没有子项了，从菜单中移除
-                if not filtered_children:
-                    menu.remove(group)
-    
-    return menu
+    return menu_groups
 
 
 def _with_nav(context, permission_set, active_id=None, user=None, request_path=None, request=None):
@@ -1223,22 +1178,14 @@ def _with_nav(context, permission_set, active_id=None, user=None, request_path=N
         request: 当前请求对象（可选，用于自动获取request_path）
     """
     context = context or {}
-    context['production_management_nav'] = _build_production_management_nav(permission_set, active_id, user)
+    context['project_center_nav'] = _build_project_center_nav(permission_set, active_id, user)
     # 添加完整导航菜单（包含所有模块的菜单项）
     context['full_top_nav'] = _build_full_top_nav(permission_set, user)
     # 添加生产管理左侧导航菜单
     # 如果提供了request对象但没有提供request_path，则从request中获取
     if request and not request_path:
         request_path = request.path
-    sidebar_nav = _build_production_management_sidebar_nav(permission_set, request_path, user, active_id=active_id)
-    context['production_management_menu'] = sidebar_nav
-    context['module_sidebar_nav'] = sidebar_nav  # 统一使用 module_sidebar_nav
-    
-    # 调试日志：记录上下文设置
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.debug('_with_nav - 设置 module_sidebar_nav: %d 个菜单项', len(sidebar_nav) if sidebar_nav else 0)
-    
+    context['production_management_menu'] = _build_production_management_sidebar_nav(permission_set, request_path, user)
     return context
 
 
@@ -1526,14 +1473,10 @@ def _compute_project_metric(project):
 
 def build_project_dashboard_payload(user, permission_set, query_params):
     projects = Project.objects.select_related(
+        'service_type',
+        'business_type',
         'project_manager',
-        'business_manager',
-        'client',
-        'client_leader',
-        'design_leader',
-        'responsible_department',
-        'responsible_person',
-        'created_by'
+        'business_manager'
     ).prefetch_related(
         'service_professions',
         'milestones',
@@ -1712,17 +1655,16 @@ def build_project_dashboard_payload(user, permission_set, query_params):
 
 @login_required
 def project_create(request):
-    """新建生产启动页面（仅商务经理可访问）"""
+    """新建项目页面（仅商务经理可访问）"""
     permission_set = get_user_permission_codes(request.user)
     if not _require_permission(request, permission_set, '您没有创建项目的权限。', 'production_management.create'):
-        return redirect('production_pages:production_management_home')
+        return redirect('admin:index')
     
-    # 检查用户是否有商务经理角色（系统管理员除外）
-    if not _is_system_admin(request.user):
-        has_business_manager_role = request.user.roles.filter(code='business_manager').exists()
-        if not has_business_manager_role:
-            messages.error(request, '只有商务经理可以创建项目。')
-            return redirect('production_pages:production_management_home')
+    # 检查用户是否有商务经理角色
+    has_business_manager_role = request.user.roles.filter(code='business_manager').exists()
+    if not has_business_manager_role:
+        messages.error(request, '只有商务经理可以创建项目。')
+        return redirect('admin:index')
 
     if request.method == 'POST':
         try:
@@ -1756,60 +1698,88 @@ def project_create(request):
                 is_draft = action == 'draft'
                 
                 # 如果是草稿，允许某些字段为空；否则验证必填字段
+                service_type_id = request.POST.get('service_type') or None
+                business_type_id = request.POST.get('business_type') or None
+                design_stage = request.POST.get('design_stage') or None
+                client_company_name = (request.POST.get('client_company_name') or '').strip()
+                client_contact_person = (request.POST.get('client_contact_person') or '').strip()
+                client_phone = (request.POST.get('client_phone') or '').strip()
+                client_email = (request.POST.get('client_email') or '').strip()
+                client_address = (request.POST.get('client_address') or '').strip()
                 design_company = (request.POST.get('design_company') or '').strip()
                 design_contact_person = (request.POST.get('design_contact_person') or '').strip()
                 design_phone = (request.POST.get('design_phone') or '').strip()
                 design_email = (request.POST.get('design_email') or '').strip()
+                service_type_obj = None
+                if service_type_id:
+                    service_type_obj = ServiceType.objects.filter(id=service_type_id).first()
+                business_type_obj = None
+                if business_type_id:
+                    business_type_obj = BusinessType.objects.filter(id=business_type_id, is_active=True).first()
                 
                 if not is_draft:
                     # 提交时验证必填字段
+                    if not service_type_obj:
+                        messages.error(request, '请选择服务类型')
+                        context = build_project_create_context(request.POST, request.POST.getlist('service_profession_ids[]'))
+                        return render(request, 'production_management/project_create.html', _with_nav(context, permission_set, 'project_create', request.user))
+                    if not business_type_obj:
+                        messages.error(request, '请选择项目业态')
+                        context = build_project_create_context(request.POST, request.POST.getlist('service_profession_ids[]'))
+                        return render(request, 'production_management/project_create.html', _with_nav(context, permission_set, 'project_create', request.user))
+                    if not design_stage:
+                        messages.error(request, '请选择图纸阶段')
+                        context = build_project_create_context(request.POST, request.POST.getlist('service_profession_ids[]'))
+                        return render(request, 'production_management/project_create.html', _with_nav(context, permission_set, 'project_create', request.user))
                     required_pairs = [
+                        (client_company_name, '请填写甲方公司名称'),
+                        (client_phone, '请填写甲方联系电话'),
                         (design_company, '请填写设计单位名称'),
                         (design_phone, '请填写设计方联系电话'),
                     ]
                     for value, error_msg in required_pairs:
                         if not value:
                             messages.error(request, error_msg)
-                            context = build_project_create_context(request.POST)
-                            return render(request, 'production_management/project_create.html', _with_nav(context, permission_set, 'project_create', request.user, request=request))
+                            context = build_project_create_context(request.POST, request.POST.getlist('service_profession_ids[]'))
+                            return render(request, 'production_management/project_create.html', _with_nav(context, permission_set, 'project_create', request.user))
                 
-                # 处理负责部门和负责人
-                responsible_department_id = request.POST.get('responsible_department') or None
-                responsible_department_obj = None
-                if responsible_department_id:
-                    try:
-                        responsible_department_obj = Department.objects.filter(id=int(responsible_department_id), is_active=True).first()
-                    except (ValueError, TypeError):
-                        pass
-                
-                responsible_person_id = request.POST.get('responsible_person') or None
-                responsible_person_obj = None
-                if responsible_person_id:
-                    try:
-                        responsible_person_obj = User.objects.filter(id=int(responsible_person_id), is_active=True).first()
-                    except (ValueError, TypeError):
-                        pass
+                selected_profession_ids = request.POST.getlist('service_profession_ids[]')
+                if not is_draft and not selected_profession_ids:
+                    messages.error(request, '请选择至少一个服务专业')
+                    context = build_project_create_context(request.POST, selected_profession_ids)
+                    return render(request, 'production_management/project_create.html', _with_nav(context, permission_set, 'project_create', request.user))
                 
                 # 处理合同金额（转换为 Decimal 类型）
                 project = Project.objects.create(
                     project_number=project_number,
                     name=request.POST.get('name') or '未命名项目',
+                    alias=request.POST.get('alias', ''),
+                    service_type=service_type_obj,
+                    business_type=business_type_obj,
+                    design_stage=design_stage,
+                    client_company_name=client_company_name,
+                    client_contact_person=client_contact_person,
+                    client_phone=client_phone,
+                    client_email=client_email,
+                    client_address=client_address,
                     design_company=design_company,
                     design_contact_person=design_contact_person,
                     design_phone=design_phone,
                     design_email=design_email,
-                    responsible_department=responsible_department_obj,
-                    responsible_person=responsible_person_obj,
                     created_by=request.user,
                     business_manager=request.user,
                     status='draft' if is_draft else 'waiting_receive'
                 )
 
-                _sync_external_members(project, None, design_phone)
+                _sync_external_members(project, client_phone, design_phone)
                 project.save(update_fields=['client_leader', 'design_leader'])
 
                 if not is_draft:
                     _ensure_project_task(project, 'client_upload_pre_docs', created_by=request.user)
+
+                if selected_profession_ids:
+                    professions = ServiceProfession.objects.filter(id__in=selected_profession_ids)
+                    project.service_professions.set(professions)
                 
                 # 触发产值计算：创建新项目
                 if not is_draft and project.contract_amount and project.contract_amount > 0:
@@ -1840,12 +1810,12 @@ def project_create(request):
                 return redirect('production_pages:project_list')
         except Exception as e:
             messages.error(request, f'项目创建失败：{str(e)}')
-            context = build_project_create_context(request.POST)
-            context['production_management_nav'] = _build_production_management_nav(permission_set, 'project_create')
-            return render(request, 'production_management/project_create.html', _with_nav(context, permission_set, 'project_create', request.user, request=request))
+            context = build_project_create_context(request.POST, request.POST.getlist('service_profession_ids[]'))
+            context['project_center_nav'] = _build_project_center_nav(permission_set, 'project_create')
+            return render(request, 'production_management/project_create.html', _with_nav(context, permission_set, 'project_create', request.user))
 
     context = build_project_create_context()
-    return render(request, 'production_management/project_create.html', _with_nav(context, permission_set, 'project_create', request.user, request=request))
+    return render(request, 'production_management/project_create.html', _with_nav(context, permission_set, 'project_create', request.user))
 
 
 @login_required
@@ -1872,27 +1842,39 @@ def project_edit(request, project_id):
             with transaction.atomic():
                 action = request.POST.get('action', 'draft')
                 is_draft = action == 'draft'
+                service_type_id = request.POST.get('service_type') or None
+                service_type_obj = ServiceType.objects.filter(id=service_type_id).first() if service_type_id else None
+                business_type_id = request.POST.get('business_type') or None
+                business_type_obj = BusinessType.objects.filter(id=business_type_id, is_active=True).first() if business_type_id else None
+                design_stage = request.POST.get('design_stage') or None
+                selected_profession_ids = request.POST.getlist('service_profession_ids[]')
+
+                if not is_draft:
+                    if not service_type_obj:
+                        messages.error(request, '请选择服务类型')
+                        return render(request, 'production_management/project_edit.html', build_project_edit_context(project, permission_set, request.POST, request.user))
+                    if not business_type_obj:
+                        messages.error(request, '请选择项目业态')
+                        return render(request, 'production_management/project_edit.html', build_project_edit_context(project, permission_set, request.POST, request.user))
+                    if not design_stage:
+                        messages.error(request, '请选择图纸阶段')
+                        return render(request, 'production_management/project_edit.html', build_project_edit_context(project, permission_set, request.POST, request.user))
+                    if not selected_profession_ids:
+                        messages.error(request, '请选择至少一个服务专业')
+                        return render(request, 'production_management/project_edit.html', build_project_edit_context(project, permission_set, request.POST, request.user))
 
                 project.name = request.POST.get('name') or project.name
+                project.alias = request.POST.get('alias', '')
+                project.description = request.POST.get('description', project.description)
+                project.service_type = service_type_obj
+                project.business_type = business_type_obj
+                project.design_stage = design_stage
 
-                # 处理负责部门和负责人
-                responsible_department_id = request.POST.get('responsible_department') or None
-                responsible_department_obj = None
-                if responsible_department_id:
-                    try:
-                        responsible_department_obj = Department.objects.filter(id=int(responsible_department_id), is_active=True).first()
-                    except (ValueError, TypeError):
-                        pass
-                project.responsible_department = responsible_department_obj
-
-                responsible_person_id = request.POST.get('responsible_person') or None
-                responsible_person_obj = None
-                if responsible_person_id:
-                    try:
-                        responsible_person_obj = User.objects.filter(id=int(responsible_person_id), is_active=True).first()
-                    except (ValueError, TypeError):
-                        pass
-                project.responsible_person = responsible_person_obj
+                project.client_company_name = request.POST.get('client_company_name', project.client_company_name)
+                project.client_contact_person = request.POST.get('client_contact_person', project.client_contact_person)
+                project.client_phone = request.POST.get('client_phone', project.client_phone)
+                project.client_email = request.POST.get('client_email', project.client_email)
+                project.client_address = request.POST.get('client_address', project.client_address)
 
                 project.design_company = request.POST.get('design_company', project.design_company)
                 project.design_contact_person = request.POST.get('design_contact_person', project.design_contact_person)
@@ -1906,6 +1888,10 @@ def project_edit(request, project_id):
 
                 if not is_draft:
                     _ensure_project_task(project, 'client_upload_pre_docs', created_by=request.user)
+
+                if selected_profession_ids:
+                    professions = ServiceProfession.objects.filter(id__in=selected_profession_ids)
+                    project.service_professions.set(professions)
 
                 messages.success(request, '项目信息已更新')
                 if is_draft:
@@ -2475,6 +2461,87 @@ def project_team(request, project_id):
     return render(request, 'production_management/project_team.html', context)
 
 @login_required
+def project_monitor(request):
+    """项目监控驾驶舱"""
+    permission_set = get_user_permission_codes(request.user)
+    if not _require_permission(
+        request,
+        permission_set,
+        '您没有访问项目监控的权限。',
+        'production_management.monitor',
+        'production_management.view_all',
+        'production_management.view_assigned',
+    ):
+        return redirect('admin:index')
+
+    dashboard_data = build_project_dashboard_payload(
+        request.user,
+        permission_set,
+        request.GET
+    )
+
+    summary_cards = []
+
+    trend_items = []
+    for metric in dashboard_data['project_metrics'][:6]:
+        trend_items.append(
+            {
+                'label': f"{metric['project_number']} · {metric['project_name']}",
+                'description': f"进度 {metric['progress_percent']}% · 健康 {metric['health_score']}",
+                'url': reverse('production_pages:project_detail', args=[metric['project_id']]),
+                'icon': '📊',
+            }
+        )
+
+    context_payload = {
+        'page_title': '项目监控驾驶舱',
+        'page_icon': '📈',
+        'description': '实时掌握项目状态、进度与风险指标，为开工和交付提供数据支撑。',
+        'summary_cards': summary_cards,
+        'sections': [
+            {
+                'title': '关键趋势',
+                'description': '最新项目进展与风险趋势提醒。',
+                'items': trend_items or [
+                    {
+                        'label': '暂无项目趋势',
+                        'description': '未检测到需要关注的项目。',
+                        'url': reverse('production_pages:project_list'),
+                        'icon': 'ℹ️',
+                    }
+                ],
+            },
+            {
+                'title': '常用操作',
+                'description': '在监控看板与详情间快速切换。',
+                'items': [
+                    {
+                        'label': '项目总览看板',
+                        'description': '查看全局概览和数据趋势。',
+                        'url': reverse('production_pages:project_list'),
+                        'icon': '🧭',
+                    },
+                    {
+                        'label': '项目归档查询',
+                        'description': '访问历史项目资料与归档记录。',
+                        'url': reverse('production_pages:project_list'),
+                        'icon': '🗂',
+                    },
+                    {
+                        'label': '导出监控数据',
+                        'description': '生成 Excel 报表共享项目状态。',
+                        'url': reverse('production_pages:project_list_export'),
+                        'icon': '⬇️',
+                    },
+                ],
+            },
+        ],
+    }
+    context = _with_nav(context_payload, permission_set, 'project_monitor', request.user, request=request)
+    return render(request, 'shared/center_dashboard.html', context)
+
+
+@login_required
 def project_list(request):
     """项目总览页面（原项目查询）"""
     permission_set = get_user_permission_codes(request.user)
@@ -2483,7 +2550,7 @@ def project_list(request):
 
     # 过滤用户可访问的项目
     accessible_ids = _project_ids_user_can_access(request.user)
-    projects = Project.objects.filter(id__in=accessible_ids).select_related('project_manager', 'business_manager', 'client', 'client_leader', 'design_leader', 'responsible_department', 'responsible_person', 'created_by')
+    projects = Project.objects.filter(id__in=accessible_ids).select_related('service_type', 'business_type', 'project_manager')
     
     # 查询条件
     project_number = request.GET.get('project_number')
@@ -2581,7 +2648,7 @@ def project_list_export(request):
 def project_detail(request, project_id):
     project = get_object_or_404(
         Project.objects.select_related(
-            'project_manager', 'business_manager', 'created_by', 'client', 'client_leader', 'design_leader', 'responsible_department', 'responsible_person'
+            'service_type', 'business_type', 'project_manager', 'business_manager', 'created_by'
         ).prefetch_related('service_professions', 'milestones', 'team_members__user'),
         id=project_id
     )
@@ -3232,7 +3299,7 @@ def project_task_action(request, project_id, task_id):
 @login_required
 def project_task_dashboard(request):
     permission_set = get_user_permission_codes(request.user)
-    projects_queryset = Project.objects.select_related('project_manager', 'business_manager', 'client', 'client_leader', 'design_leader', 'responsible_department', 'responsible_person', 'created_by')
+    projects_queryset = Project.objects.select_related('service_type', 'business_type', 'project_manager', 'business_manager')
     projects = _filter_projects_for_user(projects_queryset, request.user, permission_set)
 
     tasks_queryset = ProjectTask.objects.select_related(
@@ -4107,6 +4174,7 @@ def project_import_admin(request):
         columns = [
             '项目编号（可留空自动生成）',
             '项目名称',
+            '项目别名',
             '服务类型（可填编码或名称）',
             '项目业态',
             '图纸阶段（可填编码或名称）',
@@ -4121,6 +4189,7 @@ def project_import_admin(request):
         writer.writerow([
             '',
             '锦城天府综合体一期',
+            '天府一期',
             service_type_sample_obj.name if service_type_sample_obj else '',
             '住宅',
             design_stage_sample_label,
@@ -4171,6 +4240,7 @@ def project_import_admin(request):
                     field_aliases = {
                         'project_number': {'项目编号（可留空自动生成）', '项目编号', 'project_number'},
                         'name': {'项目名称', 'name'},
+                        'alias': {'项目别名', 'alias'},
                         'service_type': {'服务类型（可填编码或名称）', '服务类型编码', 'service_type_code'},
                         'business_type': {'项目业态', 'business_type'},
                         'design_stage': {'图纸阶段（可填编码或名称）', '图纸阶段编码', 'design_stage'},
@@ -4281,6 +4351,7 @@ def project_import_admin(request):
                                     project = Project(
                                         project_number=project_number or None,
                                         name=project_name,
+                                        alias=get_value(row, 'alias'),
                                         service_type=service_type,
                                         business_type=business_type,
                                         design_stage=design_stage,
@@ -4387,7 +4458,7 @@ def production_management(request):
     # 获取用户可访问的项目
     accessible_ids = _project_ids_user_can_access(request.user)
     projects = Project.objects.filter(id__in=accessible_ids).select_related(
-        'project_manager', 'business_manager', 'client', 'client_leader', 'design_leader', 'responsible_department', 'responsible_person', 'created_by'
+        'service_type', 'project_manager', 'business_manager'
     ).prefetch_related('service_professions', 'team_members__user')
     
     # 查询条件
@@ -4479,548 +4550,4 @@ def production_management(request):
     }, permission_set, 'production_management', request.user)
     
     return render(request, 'production_management/production_management.html', context)
-
-
-@login_required
-def ai_advisor(request):
-    """设计优化AI顾问系统"""
-    permission_set = get_user_permission_codes(request.user)
-    if not _require_permission(request, permission_set, '您没有访问AI顾问系统的权限。', 'production_management.view_all', 'production_management.view_assigned'):
-        return redirect('production_pages:production_management_home')
-    
-    # 获取统计信息（可以从数据库查询）
-    # 这里先用模拟数据，后续可以改为从数据库查询
-    stats = {
-        'total_cases': 1247,
-        'total_savings': 12473.0,  # 万元
-    }
-    
-    # 获取所有服务类型
-    service_types = ServiceType.objects.order_by('order', 'id')
-    
-    # 获取所有专业类型，按服务类型和专业排序
-    professions = ServiceProfession.objects.select_related('service_type').order_by('service_type__order', 'order', 'id')
-    
-    # 构建服务类型与专业的映射关系（用于前端联动）
-    import json
-    profession_map = {}
-    for profession in professions:
-        service_type_id = str(profession.service_type.id)
-        if service_type_id not in profession_map:
-            profession_map[service_type_id] = []
-        profession_map[service_type_id].append({
-            'code': profession.code,
-            'name': profession.name,
-            'id': profession.id
-        })
-    
-    # 将profession_map转换为JSON字符串，供前端使用
-    profession_map_json = json.dumps(profession_map, ensure_ascii=False)
-    
-    context = _with_nav({
-        'stats': stats,
-        'service_types': service_types,
-        'professions': professions,
-        'profession_map_json': profession_map_json,
-    }, permission_set, 'ai_advisor', request.user, request=request)
-    
-    return render(request, 'production_management/ai_advisor.html', context)
-
-
-@login_required
-def pre_optimization_materials_list(request):
-    """优化前资料列表"""
-    permission_set = get_user_permission_codes(request.user)
-    if not _require_permission(request, permission_set, '您没有访问优化前资料列表的权限。', 'production_management.view_all', 'production_management.view_assigned'):
-        return redirect('production_pages:production_management_home')
-    
-    # 获取查询参数
-    project_id = request.GET.get('project_id')
-    parse_status = request.GET.get('parse_status')
-    search = request.GET.get('search', '').strip()
-    
-    # 构建查询
-    queryset = PreOptimizationMaterial.objects.select_related('project', 'uploaded_by').all()
-    
-    # 权限过滤
-    if not _has_permission(permission_set, 'production_management.view_all'):
-        # 只能查看自己参与的项目
-        user_projects = Project.objects.filter(
-            Q(team_members__user=request.user) | Q(project_manager=request.user)
-        ).distinct()
-        queryset = queryset.filter(project__in=user_projects)
-    
-    # 项目过滤
-    if project_id:
-        try:
-            queryset = queryset.filter(project_id=int(project_id))
-        except ValueError:
-            pass
-    
-    # 解析状态过滤
-    if parse_status:
-        queryset = queryset.filter(parse_status=parse_status)
-    
-    # 搜索过滤
-    if search:
-        queryset = queryset.filter(
-            Q(file_name__icontains=search) |
-            Q(project__project_number__icontains=search) |
-            Q(project__name__icontains=search) |
-            Q(design_unit__icontains=search)
-        )
-    
-    # 分页
-    paginator = Paginator(queryset, 20)
-    page_number = request.GET.get('page', 1)
-    try:
-        page_obj = paginator.page(page_number)
-    except:
-        page_obj = paginator.page(1)
-    
-    # 获取所有项目（用于筛选）
-    if _has_permission(permission_set, 'production_management.view_all'):
-        all_projects = Project.objects.all().order_by('-created_time')[:100]
-    else:
-        all_projects = Project.objects.filter(
-            Q(team_members__user=request.user) | Q(project_manager=request.user)
-        ).distinct().order_by('-created_time')[:100]
-    
-    context = _with_nav({
-        'page_title': '优化前资料',
-        'page_description': '管理优化前资料，支持CAD文件自动解析',
-        'materials': page_obj,
-        'all_projects': all_projects,
-        'selected_project_id': project_id,
-        'selected_parse_status': parse_status,
-        'search': search,
-        'parse_status_choices': PreOptimizationMaterial.PARSE_STATUS_CHOICES,
-    }, permission_set, 'pre_optimization_materials', request.user, request=request)
-    
-    return render(request, 'production_management/pre_optimization_materials_list.html', context)
-
-
-def _update_parse_progress(material_id, progress, message=''):
-    """更新解析进度的辅助函数（支持后台线程）"""
-    try:
-        from .models import PreOptimizationMaterial
-        # 重新从数据库获取对象，避免后台线程中的连接问题
-        material = PreOptimizationMaterial.objects.get(id=material_id)
-        material.parse_progress = progress
-        material.parse_progress_message = message
-        material.save(update_fields=['parse_progress', 'parse_progress_message'])
-        print(f"[CAD解析进度更新] Material ID: {material_id}, Progress: {progress}%, Message: {message}", flush=True)
-    except PreOptimizationMaterial.DoesNotExist:
-        print(f"[CAD解析进度更新] 警告: Material ID {material_id} 不存在，无法更新进度。", flush=True)
-    except Exception as e:
-        print(f"[CAD解析进度更新] 更新进度时发生错误: {e}", flush=True)
-        logger.error(f"更新解析进度失败: {str(e)}", exc_info=True)
-
-
-@login_required
-def pre_optimization_materials_create(request):
-    """创建优化前资料"""
-    permission_set = get_user_permission_codes(request.user)
-    if not _require_permission(request, permission_set, '您没有创建优化前资料的权限。', 'production_management.create', 'production_management.view_all'):
-        return redirect('production_pages:pre_optimization_materials')
-    
-    # 获取可选项目列表（排除已归档和已取消的项目）
-    if _has_permission(permission_set, 'production_management.view_all'):
-        available_projects = Project.objects.exclude(
-            status__in=['archived', 'cancelled', 'completed']
-        ).order_by('-created_time')
-    else:
-        available_projects = Project.objects.filter(
-            Q(team_members__user=request.user) | Q(project_manager=request.user)
-        ).exclude(
-            status__in=['archived', 'cancelled', 'completed']
-        ).distinct().order_by('-created_time')
-    
-    if request.method == 'POST':
-        project_id = request.POST.get('project_id')
-        cad_file = request.FILES.get('cad_file')
-        description = request.POST.get('description', '').strip()
-        
-        # 验证
-        if not project_id:
-            messages.error(request, '请选择项目。')
-            return redirect('production_pages:pre_optimization_materials_create')
-        
-        if not cad_file:
-            messages.error(request, '请上传CAD文件。')
-            return redirect('production_pages:pre_optimization_materials_create')
-        
-        # 验证文件类型
-        file_ext = os.path.splitext(cad_file.name)[1].lower()
-        if file_ext not in ['.dwg', '.dxf', '.pdf']:
-            messages.error(request, '不支持的文件格式，仅支持DWG、DXF、PDF格式。')
-            return redirect('production_pages:pre_optimization_materials_create')
-        
-        # 验证文件大小（限制100MB）
-        max_size = 100 * 1024 * 1024  # 100MB
-        if cad_file.size > max_size:
-            messages.error(request, f'文件大小不能超过100MB，当前文件大小: {cad_file.size / 1024 / 1024:.2f}MB')
-            return redirect('production_pages:pre_optimization_materials_create')
-        
-        try:
-            project = Project.objects.get(id=project_id)
-            
-            # 创建记录
-            material = PreOptimizationMaterial.objects.create(
-                project=project,
-                cad_file=cad_file,
-                file_name=cad_file.name,
-                file_size=cad_file.size,
-                file_type=file_ext[1:],  # 去掉点号
-                description=description,
-                uploaded_by=request.user,
-                parse_status='pending',
-            )
-            
-            # 异步解析CAD文件
-            try:
-                from .services.cad_parser_service import CADParserService
-                import threading
-                
-                def parse_cad():
-                    import sys
-                    import os
-                    import django
-                    from django.db import connection
-                    from django.core.wsgi import get_wsgi_application
-                    import logging
-                    thread_logger = logging.getLogger(__name__)
-                    
-                    material_id = material.id  # 保存 ID，避免在后台线程中使用对象
-                    
-                    try:
-                        # 在后台线程中初始化 Django（如果需要）
-                        if not django.apps.apps.ready:
-                            os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.config.settings')
-                            django.setup()
-                        
-                        thread_logger.info(f"[CAD解析任务] 线程已启动，文件ID: {material_id}")
-                        
-                        # 关闭当前线程的数据库连接，创建新连接
-                        connection.close()
-                        
-                        thread_logger.info(f"[CAD解析任务] 开始解析任务，文件ID: {material_id}")
-                        
-                        # 重新获取 material 对象（在后台线程中）
-                        from .models import PreOptimizationMaterial
-                        material = PreOptimizationMaterial.objects.get(id=material_id)
-                        
-                        thread_logger.info(f"[CAD解析任务] 文件路径: {material.cad_file.path}")
-                        
-                        material.parse_status = 'processing'
-                        material.parse_progress = 0
-                        material.parse_progress_message = '准备开始解析...'
-                        material.save()
-                        thread_logger.info(f"[CAD解析任务] 状态已更新为 processing")
-                        
-                        thread_logger.info(f"[CAD解析任务] 创建 CADParserService 实例")
-                        _update_parse_progress(material_id, 10, '初始化解析服务...')
-                        parser = CADParserService()
-                        thread_logger.info(f"[CAD解析任务] CADParserService 创建成功，cad2image_available: {parser.cad2image_available}")
-                        
-                        thread_logger.info(f"[CAD解析任务] 调用 parse_for_pre_optimization")
-                        _update_parse_progress(material_id, 20, '开始解析CAD文件...')
-                        
-                        def progress_callback(progress, message):
-                            _update_parse_progress(material_id, progress, message)
-                        
-                        result = parser.parse_for_pre_optimization(material.cad_file.path, progress_callback=progress_callback)
-                        thread_logger.info(f"[CAD解析任务] 解析完成，结果: success={result.get('success')}")
-                        
-                        # 重新获取 material 对象（可能已被其他进程修改）
-                        material = PreOptimizationMaterial.objects.get(id=material_id)
-                        
-                        if result.get('success'):
-                            # 提取基本信息
-                            basic_info = result.get('basic_info', {})
-                            material.design_unit = basic_info.get('design_unit', '')
-                            material.drawing_version = basic_info.get('drawing_version', '')
-                            material.general_description = basic_info.get('general_description', '')
-                            
-                            # 提取技术经济指标
-                            material.technical_economic_indicators = result.get('technical_economic_indicators', {})
-                            
-                            # 提取图纸目录
-                            material.drawing_catalog = result.get('drawing_catalog', {})
-                            
-                            # 保存完整解析结果
-                            material.cad_parse_result = result
-                            
-                            material.parse_status = 'success'
-                            material.parse_progress = 100
-                            material.parse_progress_message = '解析完成！'
-                            material.parsed_time = timezone.now()
-                            material.parse_error = ''
-                            thread_logger.info(f"[CAD解析任务] 解析成功，保存结果")
-                        else:
-                            material.parse_status = 'failed'
-                            material.parse_error = result.get('error', '解析失败')
-                            material.parse_progress_message = '解析失败！'
-                            thread_logger.error(f"[CAD解析任务] 解析失败: {result.get('error', '未知错误')}")
-                        
-                        material.save()
-                        thread_logger.info(f"[CAD解析任务] 最终状态已保存")
-                    except Exception as e:
-                        import traceback
-                        error_msg = f"CAD解析失败: {str(e)}"
-                        thread_logger.error(f"[CAD解析任务] 异常: {error_msg}")
-                        thread_logger.error(f"[CAD解析任务] 异常堆栈: {traceback.format_exc()}")
-                        thread_logger.error(f"CAD解析失败: {str(e)}", exc_info=True)
-                        
-                        # 尝试更新状态
-                        try:
-                            from .models import PreOptimizationMaterial
-                            material = PreOptimizationMaterial.objects.get(id=material_id)
-                            material.parse_status = 'failed'
-                            material.parse_error = str(e)
-                            material.parse_progress_message = '解析过程中发生错误！'
-                            material.save()
-                            thread_logger.info(f"[CAD解析任务] 错误状态已保存")
-                        except Exception as save_error:
-                            thread_logger.error(f"[CAD解析任务] 保存错误状态失败: {save_error}")
-                
-                # 在后台线程中执行解析
-                logger.info(f"[CAD解析] 准备启动后台线程，Material ID: {material.id}")
-                
-                # 立即更新状态为 processing（在主线程中，确保用户立即看到状态变化）
-                try:
-                    material.parse_status = 'processing'
-                    material.parse_progress = 0
-                    material.parse_progress_message = '准备开始解析...'
-                    material.save(update_fields=['parse_status', 'parse_progress', 'parse_progress_message'])
-                    logger.info(f"[CAD解析] 主线程中状态已更新为 processing")
-                except Exception as e:
-                    logger.error(f"[CAD解析] 主线程中更新状态失败: {e}", exc_info=True)
-                
-                # 启动后台线程
-                thread = threading.Thread(target=parse_cad, name=f"CADParse-{material.id}")
-                thread.daemon = True
-                thread.start()
-                logger.info(f"[CAD解析] 后台线程已启动，线程名: {thread.name}, 是否存活: {thread.is_alive()}, 线程ID: {thread.ident}")
-                
-                # 等待一小段时间，确保线程开始执行
-                import time
-                time.sleep(0.1)
-                logger.info(f"[CAD解析] 线程启动后检查，是否存活: {thread.is_alive()}")
-                
-                messages.success(request, '优化前资料创建成功，CAD文件正在后台解析中，请稍后查看详情。')
-            except Exception as e:
-                logger.error(f"启动CAD解析失败: {str(e)}", exc_info=True)
-                messages.warning(request, '优化前资料创建成功，但CAD解析启动失败，您可以稍后手动重新解析。')
-            
-            return redirect('production_pages:pre_optimization_materials_detail', material_id=material.id)
-            
-        except Project.DoesNotExist:
-            messages.error(request, '项目不存在。')
-            return redirect('production_pages:pre_optimization_materials_create')
-        except Exception as e:
-            logger.error(f"创建优化前资料失败: {str(e)}", exc_info=True)
-            messages.error(request, f'创建失败: {str(e)}')
-            return redirect('production_pages:pre_optimization_materials_create')
-    
-    context = _with_nav({
-        'page_title': '创建优化前资料',
-        'page_description': '上传CAD文件，系统将自动解析提取设计信息',
-        'available_projects': available_projects,
-    }, permission_set, 'pre_optimization_materials', request.user, request=request)
-    
-    return render(request, 'production_management/pre_optimization_materials_create.html', context)
-
-
-@login_required
-def pre_optimization_materials_detail(request, material_id):
-    """优化前资料详情"""
-    permission_set = get_user_permission_codes(request.user)
-    if not _require_permission(request, permission_set, '您没有查看优化前资料详情的权限。', 'production_management.view_all', 'production_management.view_assigned'):
-        return redirect('production_pages:pre_optimization_materials')
-    
-    material = get_object_or_404(
-        PreOptimizationMaterial.objects.select_related('project', 'uploaded_by'),
-        id=material_id
-    )
-    
-    # 权限检查
-    if not _has_permission(permission_set, 'production_management.view_all'):
-        if not _user_is_project_member(request.user, material.project):
-            messages.error(request, '您无权访问该资料。')
-            return redirect('production_pages:pre_optimization_materials')
-    
-    context = _with_nav({
-        'page_title': f'优化前资料详情 - {material.file_name}',
-        'page_description': '查看CAD解析结果和详细信息',
-        'material': material,
-    }, permission_set, 'pre_optimization_materials', request.user, request=request)
-    
-    return render(request, 'production_management/pre_optimization_materials_detail.html', context)
-
-
-@login_required
-def pre_optimization_materials_progress(request, material_id):
-    """获取优化前资料解析进度（API）"""
-    from django.http import JsonResponse
-    permission_set = get_user_permission_codes(request.user)
-    if not _has_permission(permission_set, 'production_management.view_all'):
-        material = get_object_or_404(PreOptimizationMaterial, id=material_id)
-        if not _user_is_project_member(request.user, material.project):
-            return JsonResponse({'error': '无权访问'}, status=403)
-    
-    material = get_object_or_404(PreOptimizationMaterial, id=material_id)
-    
-    return JsonResponse({
-        'status': material.parse_status,
-        'progress': material.parse_progress,
-        'message': material.parse_progress_message or '',
-        'error': material.parse_error or '',
-        'is_finished': material.parse_status in ['success', 'failed'],
-    })
-
-
-@login_required
-def pre_optimization_materials_reparse(request, material_id):
-    """重新解析优化前资料"""
-    permission_set = get_user_permission_codes(request.user)
-    if not _require_permission(request, permission_set, '您没有重新解析优化前资料的权限。', 'production_management.create', 'production_management.view_all'):
-        return redirect('production_pages:pre_optimization_materials')
-    
-    material = get_object_or_404(PreOptimizationMaterial, id=material_id)
-    
-    # 权限检查
-    if not _has_permission(permission_set, 'production_management.view_all'):
-        if not _user_is_project_member(request.user, material.project):
-            messages.error(request, '您无权操作该资料。')
-            return redirect('production_pages:pre_optimization_materials')
-    
-    if request.method == 'POST':
-        try:
-            from .services.cad_parser_service import CADParserService
-            import threading
-            
-            def parse_cad():
-                import sys
-                import os
-                import django
-                from django.db import connection
-                from django.core.wsgi import get_wsgi_application
-                
-                material_id = material.id  # 保存 ID，避免在后台线程中使用对象
-                
-                try:
-                    # 在后台线程中初始化 Django（如果需要）
-                    if not django.apps.apps.ready:
-                        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.config.settings')
-                        django.setup()
-                    
-                    print(f"[CAD解析任务] 重新解析线程已启动，文件ID: {material_id}", flush=True)
-                    sys.stdout.flush()
-                    
-                    # 关闭当前线程的数据库连接，创建新连接
-                    connection.close()
-                    
-                    print(f"[CAD解析任务] 开始重新解析任务，文件ID: {material_id}", flush=True)
-                    sys.stdout.flush()
-                    
-                    # 重新获取 material 对象（在后台线程中）
-                    from .models import PreOptimizationMaterial
-                    material = PreOptimizationMaterial.objects.get(id=material_id)
-                    
-                    print(f"[CAD解析任务] 文件路径: {material.cad_file.path}", flush=True)
-                    sys.stdout.flush()
-                    
-                    material.parse_status = 'processing'
-                    material.parse_progress = 0
-                    material.parse_progress_message = '准备开始解析...'
-                    material.save()
-                    print(f"[CAD解析任务] 状态已更新为 processing", flush=True)
-                    sys.stdout.flush()
-                    
-                    print(f"[CAD解析任务] 创建 CADParserService 实例", flush=True)
-                    sys.stdout.flush()
-                    _update_parse_progress(material_id, 10, '初始化解析服务...')
-                    parser = CADParserService()
-                    print(f"[CAD解析任务] CADParserService 创建成功，cad2image_available: {parser.cad2image_available}", flush=True)
-                    sys.stdout.flush()
-                    
-                    print(f"[CAD解析任务] 调用 parse_for_pre_optimization", flush=True)
-                    sys.stdout.flush()
-                    _update_parse_progress(material_id, 20, '开始解析CAD文件...')
-                    
-                    def progress_callback(progress, message):
-                        _update_parse_progress(material_id, progress, message)
-                    
-                    result = parser.parse_for_pre_optimization(material.cad_file.path, progress_callback=progress_callback)
-                    print(f"[CAD解析任务] 解析完成，结果: success={result.get('success')}", flush=True)
-                    sys.stdout.flush()
-                    
-                    if result.get('success'):
-                        # 提取基本信息
-                        basic_info = result.get('basic_info', {})
-                        material.design_unit = basic_info.get('design_unit', '')
-                        material.drawing_version = basic_info.get('drawing_version', '')
-                        material.general_description = basic_info.get('general_description', '')
-                        
-                        # 提取技术经济指标
-                        material.technical_economic_indicators = result.get('technical_economic_indicators', {})
-                        
-                        # 提取图纸目录
-                        material.drawing_catalog = result.get('drawing_catalog', {})
-                        
-                        # 保存完整解析结果
-                        material.cad_parse_result = result
-                        
-                        material.parse_status = 'success'
-                        material.parse_progress = 100
-                        material.parse_progress_message = '解析完成！'
-                        material.parsed_time = timezone.now()
-                        material.parse_error = ''
-                    else:
-                        material.parse_status = 'failed'
-                        material.parse_error = result.get('error', '解析失败')
-                    
-                    material.save()
-                except Exception as e:
-                    import traceback
-                    error_msg = f"CAD重新解析失败: {str(e)}"
-                    print(f"[CAD解析任务] 异常: {error_msg}", flush=True)
-                    print(f"[CAD解析任务] 异常堆栈: {traceback.format_exc()}", flush=True)
-                    sys.stdout.flush()
-                    logger.error(f"CAD重新解析失败: {str(e)}", exc_info=True)
-                    material.parse_status = 'failed'
-                    material.parse_error = str(e)
-                    material.save()
-            
-            # 在后台线程中执行解析
-            logger.info(f"[CAD解析] 准备启动重新解析后台线程，Material ID: {material.id}")
-            
-            # 立即更新状态为 processing（在主线程中，确保用户立即看到状态变化）
-            try:
-                material.parse_status = 'processing'
-                material.parse_progress = 0
-                material.parse_progress_message = '准备开始解析...'
-                material.save(update_fields=['parse_status', 'parse_progress', 'parse_progress_message'])
-                logger.info(f"[CAD解析] 主线程中重新解析状态已更新为 processing")
-            except Exception as e:
-                logger.error(f"[CAD解析] 主线程中更新重新解析状态失败: {e}", exc_info=True)
-            
-            # 启动后台线程
-            thread = threading.Thread(target=parse_cad, name=f"CADReparse-{material.id}")
-            thread.daemon = True
-            thread.start()
-            logger.info(f"[CAD解析] 重新解析后台线程已启动，线程名: {thread.name}, 是否存活: {thread.is_alive()}, 线程ID: {thread.ident}")
-            
-            # 等待一小段时间，确保线程开始执行
-            import time
-            time.sleep(0.1)
-            logger.info(f"[CAD解析] 重新解析线程启动后检查，是否存活: {thread.is_alive()}")
-            
-            messages.success(request, '已开始重新解析CAD文件，请稍后刷新页面查看结果。')
-        except Exception as e:
-            logger.error(f"启动CAD重新解析失败: {str(e)}", exc_info=True)
-            messages.error(request, f'重新解析失败: {str(e)}')
-    
-    return redirect('production_pages:pre_optimization_materials_detail', material_id=material.id)
 

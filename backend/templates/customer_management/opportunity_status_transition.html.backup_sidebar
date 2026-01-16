@@ -1,0 +1,127 @@
+{% extends "customer_management/base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .transition-form {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .status-log-item {
+        padding: 12px;
+        border-bottom: 2px solid var(--vh-primary);
+    }
+    .status-log-item:last-child {
+        border-bottom: none;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        margin: 0 4px;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:opportunity_management' %}">商机管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'business_pages:opportunity_detail' opportunity.id %}">商机详情</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="workspace-content">
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">当前状态</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">商机名称</span>
+                    <span class="info-value">{{ opportunity.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">当前状态</span>
+                    <span class="info-value">
+                        <span class="badge bg-primary">{{ opportunity.get_status_display }}</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if transition_choices %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">状态流转</h5>
+        </div>
+        <div class="info-card-body">
+            <form method="post" class="transition-form">
+                {% csrf_token %}
+                <div class="form-group mb-3">
+                    <label for="target_status" class="form-label">目标状态 <span class="text-danger">*</span></label>
+                    <select name="target_status" id="target_status" class="form-control" required>
+                        <option value="">请选择目标状态</option>
+                        {% for value, label in transition_choices %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="comment" class="form-label">流转说明</label>
+                    <textarea name="comment" id="comment" class="form-control" rows="4" 
+                              placeholder="请输入状态流转的说明（可选）"></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">确认流转</button>
+                    <a href="{% url 'business_pages:opportunity_detail' opportunity.id %}" class="btn btn-outline-secondary">取消</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> 当前状态无法进行流转（已结束或已取消）
+    </div>
+    {% endif %}
+    
+    {% if status_logs %}
+    <div class="info-card">
+        <div class="info-card-header">
+            <h5 class="info-card-title">状态流转历史</h5>
+        </div>
+        <div class="info-card-body">
+            {% for log in status_logs %}
+            <div class="status-log-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="status-badge bg-secondary">
+                            {{ log.get_from_status_display|default:log.from_status }}
+                        </span>
+                        <i class="bi bi-arrow-right"></i>
+                        <span class="status-badge bg-primary">
+                            {{ log.get_to_status_display|default:log.to_status }}
+                        </span>
+                        {% if log.comment %}
+                        <div class="mt-2 text-muted small">{{ log.comment }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="text-end">
+                        <div class="small text-muted">
+                            {% if log.actor %}{{ log.actor.get_full_name|default:log.actor.username }}{% else %}系统{% endif %}
+                        </div>
+                        <div class="small text-muted">{{ log.created_time|date:'Y-m-d H:i' }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

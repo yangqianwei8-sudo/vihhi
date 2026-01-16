@@ -1,9 +1,13 @@
-{% extends "shared/module_base.html" %}
+{% extends "delivery_customer/base.html" %}
 {% load static %}
 
 {% block title %}创建文件分类 - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'delivery_pages:report_delivery' %}">收发管理</a></li>
+<li class="breadcrumb-item"><a href="#">文件维护</a></li>
+<li class="breadcrumb-item active" aria-current="page">创建文件分类</li>
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
@@ -84,9 +88,9 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="list-page-container">
-    <!-- 页面标题 -->
+    
     <div class="list-page-header d-flex justify-content-between align-items-center">
         <div>
             <h4 class="mb-0">➕ 创建文件分类</h4>
@@ -94,7 +98,6 @@
         </div>
     </div>
 
-    <!-- 阶段选择器 -->
     <div class="card mb-3">
         <div class="card-body">
             <form method="get" class="d-flex gap-2 align-items-center">
@@ -111,7 +114,6 @@
         </div>
     </div>
 
-    <!-- 新增按钮 -->
     {% if can_create %}
     <div class="mb-3">
         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
@@ -120,7 +122,6 @@
     </div>
     {% endif %}
 
-    <!-- 搜索和筛选栏 -->
     <div class="list-page-filters mb-2">
             <form method="get" class="d-flex gap-2 align-items-end">
             <input type="hidden" name="stage" value="{% if show_all %}all{% else %}{{ stage_code }}{% endif %}">
@@ -149,7 +150,6 @@
         </form>
     </div>
 
-    <!-- 数据表格 -->
     <div class="list-page-table">
         <div class="table-responsive">
             <table class="table table-hover table-bordered">
@@ -224,7 +224,6 @@
         </div>
     </div>
 
-    <!-- 分页 -->
     {% if categories.has_other_pages %}
     <div class="d-flex justify-content-center">
         <nav>
@@ -258,7 +257,6 @@
     {% endif %}
 </div>
 
-<!-- 新增分类弹窗 -->
 {% if can_create %}
 <div class="modal fade" id="createCategoryModal" tabindex="-1" aria-labelledby="createCategoryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -362,4 +360,3 @@ document.getElementById('createCategoryModal').addEventListener('show.bs.modal',
 </script>
 {% endif %}
 {% endblock %}
-

@@ -1,12 +1,18 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "personnel_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+{% if salary %}
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:salary_management' %}">薪资管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">编辑</li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'personnel_pages:salary_management' %}">薪资管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">新增</li>
+{% endif %}
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .form-card {
         background: #fff;
@@ -53,7 +59,6 @@
         <form method="post">
         {% csrf_token %}
         
-        <!-- 基本信息 -->
         <div class="form-card">
             <h5>薪资信息</h5>
             <div class="row g-3">
@@ -74,7 +79,6 @@
             </div>
         </div>
 
-        <!-- 收入明细 -->
         <div class="form-card">
             <h5>收入明细</h5>
             <div class="row g-3">
@@ -109,7 +113,6 @@
             </div>
         </div>
 
-        <!-- 扣除明细 -->
         <div class="form-card">
             <h5>扣除明细</h5>
             <div class="row g-3">
@@ -151,14 +154,12 @@
             </div>
         </div>
 
-        <!-- 表单错误 -->
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
             {{ form.non_field_errors }}
         </div>
         {% endif %}
 
-        <!-- 操作按钮 -->
         <div class="d-flex justify-content-between align-items-center mt-4">
             <a href="{% url 'personnel_pages:salary_management' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> 取消
@@ -173,4 +174,3 @@
     </div>
 </div>
 {% endblock %}
-

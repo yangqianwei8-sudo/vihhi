@@ -1,12 +1,13 @@
-{% extends "shared/module_base.html" %}
-{% load static %}
+{% extends "administrative_management/base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
-
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'admin_pages:meeting_room_management' %}">会议室管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ room.name }}</li>
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .center-hero {
         background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
@@ -79,20 +80,19 @@
 </style>
 {% endblock %}
 
-{% block module_content %}
+{% block content %}
 <div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
+    
     <div class="center-hero">
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
     </div>
 
-    <!-- 操作按钮 -->
     <div class="text-end mb-4">
         <a href="{% url 'admin_pages:meeting_room_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
         </a>
-        <a href="{% url 'admin_pages:meeting_room_booking_create' %}?room={{ room.id }}" class="btn btn-outline-primary me-2">
+        <a href="/admin/administrative_management/meetingroombooking/add/?room={{ room.id }}" class="btn btn-outline-primary me-2">
             <i class="bi bi-calendar-plus"></i> 预订会议室
         </a>
         <a href="{% url 'admin_pages:meeting_room_update' room.id %}" class="btn btn-primary">
@@ -100,7 +100,6 @@
         </a>
     </div>
 
-    <!-- 基本信息 -->
     <div class="info-card">
         <h5>基本信息</h5>
         <div class="info-row">
@@ -145,7 +144,6 @@
         </div>
     </div>
 
-    <!-- 设备设施 -->
     <div class="info-card">
         <h5>设备设施</h5>
         {% if room.equipment %}
@@ -169,7 +167,6 @@
         {% endif %}
     </div>
 
-    <!-- 费用信息 -->
     {% if room.hourly_rate > 0 %}
     <div class="info-card">
         <h5>费用信息</h5>
@@ -182,7 +179,6 @@
     </div>
     {% endif %}
 
-    <!-- 今日预订 -->
     {% if today_bookings %}
     <div class="info-card">
         <h5>今日预订 ({{ today|date:"Y-m-d" }})</h5>
@@ -203,7 +199,7 @@
                     </p>
                     {% endif %}
                 </div>
-                <a href="{% url 'admin_pages:meeting_room_booking_detail' booking.id %}" class="btn btn-sm btn-outline-info ms-2">
+                <a href="/admin/administrative_management/meetingroombooking/{{ booking.id }}/" class="btn btn-sm btn-outline-info ms-2">
                     <i class="bi bi-eye"></i>
                 </a>
             </div>
@@ -212,7 +208,6 @@
     </div>
     {% endif %}
 
-    <!-- 最近预订记录 -->
     {% if recent_bookings %}
     <div class="info-card">
         <h5>最近预订记录 (最近10条)</h5>
@@ -228,7 +223,7 @@
                         预订人：{{ booking.booker.get_full_name|default:booking.booker.username }}
                     </p>
                 </div>
-                <a href="{% url 'admin_pages:meeting_room_booking_detail' booking.id %}" class="btn btn-sm btn-outline-info ms-2">
+                <a href="/admin/administrative_management/meetingroombooking/{{ booking.id }}/" class="btn btn-sm btn-outline-info ms-2">
                     <i class="bi bi-eye"></i>
                 </a>
             </div>
@@ -237,7 +232,6 @@
     </div>
     {% endif %}
 
-    <!-- 描述信息 -->
     {% if room.description %}
     <div class="info-card">
         <h5>描述说明</h5>
@@ -245,7 +239,6 @@
     </div>
     {% endif %}
 
-    <!-- 其他信息 -->
     <div class="info-card">
         <h5>其他信息</h5>
         <div class="info-row">
@@ -257,4 +250,3 @@
     </div>
 </div>
 {% endblock %}
-

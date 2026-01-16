@@ -1,1 +1,3 @@
-# Management commands package
+# Management package for delivery_customer app
+
+

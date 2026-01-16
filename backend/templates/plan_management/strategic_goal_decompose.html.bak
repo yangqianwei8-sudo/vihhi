@@ -1,0 +1,344 @@
+{#
+本页面职责：
+仅用于 StrategicGoal 的结构化拆解与层级编辑，
+不包含计划、审批、执行、统计等功能。
+#}
+
+{% extends "plan_management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .goal-tree {
+        margin-left: 0;
+        padding-left: 0;
+    }
+    .goal-tree-item {
+        list-style: none;
+        margin: 12px 0;
+        padding-left: 30px;
+        position: relative;
+    }
+    .goal-tree-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 20px;
+        width: 20px;
+        height: 2px;
+        background: #dee2e6;
+    }
+    .goal-tree-item::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 2px;
+        height: 20px;
+        background: #dee2e6;
+    }
+    .goal-tree-item:first-child::after {
+        height: 20px;
+    }
+    .goal-tree-item:last-child::after {
+        height: 20px;
+    }
+    .goal-card {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .goal-card.level-0 { border-left: 4px solid #142F5B; }
+    .goal-card.level-1 { border-left: 4px solid #0d6efd; }
+    .goal-card.level-2 { border-left: 4px solid #198754; }
+    .goal-card.level-3 { border-left: 4px solid #ffc107; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">
+                {{ goal.name }}
+            </h2>
+            <p class="text-muted mb-0 mt-1">目标分解：将战略目标分解为部门、团队、个人目标</p>
+        </div>
+        <div>
+            <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>返回详情
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- 左侧：目标树 -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">目标分解树</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="goal-tree">
+                        {% for goal_item, level in goal_tree %}
+                        <li class="goal-tree-item">
+                            <div class="goal-card level-{{ level }}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-2">
+                                            <a href="{% url 'plan_pages:strategic_goal_detail' goal_item.id %}" class="text-decoration-none">
+                                                {{ goal_item.name }}
+                                            </a>
+                                        </h6>
+                                        <div class="small text-muted mb-2">
+                                            <span class="me-3"><code>{{ goal_item.goal_number }}</code></span>
+                                            <span class="me-3">{{ goal_item.get_goal_type_display }}</span>
+                                            <span class="badge bg-{% if goal_item.status == 'completed' %}success{% elif goal_item.status == 'in_progress' %}warning{% elif goal_item.status == 'cancelled' %}danger{% else %}secondary{% endif %}">
+                                                {{ goal_item.get_status_display }}
+                                            </span>
+                                        </div>
+                                        <div class="small">
+                                            <span class="me-3">
+                                                <strong>目标值：</strong>{{ goal_item.target_value }}{% if goal_item.indicator_unit %} {{ goal_item.indicator_unit }}{% endif %}
+                                            </span>
+                                            <span class="me-3">
+                                                <strong>当前值：</strong>{{ goal_item.current_value }}{% if goal_item.indicator_unit %} {{ goal_item.indicator_unit }}{% endif %}
+                                            </span>
+                                            <span>
+                                                <strong>完成率：</strong>{{ goal_item.completion_rate }}%
+                                            </span>
+                                        </div>
+                                        <div class="small mt-2">
+                                            <strong>负责人：</strong>{{ goal_item.responsible_person.get_full_name|default:goal_item.responsible_person.username }}
+                                            {% if goal_item.responsible_department %}
+                                            <span class="ms-3">
+                                                <strong>部门：</strong>{{ goal_item.responsible_department.name }}
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'plan_pages:strategic_goal_detail' goal_item.id %}" class="btn btn-outline-primary" title="查看">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{% url 'plan_pages:strategic_goal_track' goal_item.id %}" class="btn btn-outline-info" title="跟踪">
+                                            <i class="bi bi-graph-up"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧：创建下级目标 -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">创建下级目标</h5>
+                </div>
+                <div class="card-body">
+                    <form id="createChildGoalForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="parent_goal_id" value="{{ goal.id }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label required">分解方式</label>
+                            <select name="goal_type" class="form-select" id="goalTypeSelect" required>
+                                <option value="">请选择</option>
+                                <option value="department">按部门分解</option>
+                                <option value="personal">按个人分解</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3" id="departmentSelectDiv" style="display: none;">
+                            <label class="form-label required">选择部门</label>
+                            <select name="department_id" class="form-select" id="departmentSelect">
+                                <option value="">请选择部门</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3" id="userSelectDiv" style="display: none;">
+                            <label class="form-label required">选择负责人</label>
+                            <select name="responsible_id" class="form-select" id="userSelect" required>
+                                <option value="">请选择负责人</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label required">目标名称</label>
+                            <input type="text" name="name" class="form-control" required placeholder="请输入目标名称">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label required">目标值</label>
+                            <input type="number" name="target_value" class="form-control" step="0.01" required placeholder="0.00">
+                            <small class="form-text text-muted">继承上级目标的指标类型：{{ goal.indicator_name }}</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">目标描述</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="请输入目标描述（可选）"></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-plus-circle me-1"></i>创建下级目标
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 统计信息 -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">分解统计</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong>下级目标数量：</strong>{{ goal.child_goals.count }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>总层级数：</strong>{{ goal_tree|length }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const goalTypeSelect = document.getElementById('goalTypeSelect');
+    const departmentSelectDiv = document.getElementById('departmentSelectDiv');
+    const userSelectDiv = document.getElementById('userSelectDiv');
+    const departmentSelect = document.getElementById('departmentSelect');
+    const userSelect = document.getElementById('userSelect');
+    
+    goalTypeSelect.addEventListener('change', function() {
+        if (this.value === 'department') {
+            departmentSelectDiv.style.display = 'block';
+            userSelectDiv.style.display = 'block';
+            departmentSelect.required = true;
+            userSelect.required = true;
+        } else if (this.value === 'personal') {
+            departmentSelectDiv.style.display = 'none';
+            userSelectDiv.style.display = 'block';
+            departmentSelect.required = false;
+            userSelect.required = true;
+        } else {
+            departmentSelectDiv.style.display = 'none';
+            userSelectDiv.style.display = 'none';
+            departmentSelect.required = false;
+            userSelect.required = false;
+        }
+    });
+    
+    const form = document.getElementById('createChildGoalForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 验证表单
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            // 验证分解方式是否已选择
+            if (!goalTypeSelect.value) {
+                alert('请选择分解方式');
+                goalTypeSelect.focus();
+                return;
+            }
+            
+            // 验证负责人是否已选择
+            if (!userSelect.value) {
+                alert('请选择负责人');
+                userSelect.focus();
+                return;
+            }
+            
+            // 如果是按部门分解，验证部门是否已选择
+            if (goalTypeSelect.value === 'department' && !departmentSelect.value) {
+                alert('请选择部门');
+                departmentSelect.focus();
+                return;
+            }
+            
+            const formData = new FormData(form);
+            // 如果是按个人分解，清除部门ID
+            if (goalTypeSelect.value === 'personal') {
+                formData.delete('department_id');
+            }
+            
+            const url = '{% url "plan_pages:create_child_goal" goal.id %}';
+            console.log('提交表单到:', url);
+            console.log('表单数据:', Object.fromEntries(formData));
+            
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                console.log('响应状态:', response.status);
+                console.log('响应Content-Type:', response.headers.get('Content-Type'));
+                
+                // 检查响应类型
+                const contentType = response.headers.get('Content-Type') || '';
+                if (!contentType.includes('application/json')) {
+                    // 如果不是JSON响应，可能是重定向或HTML错误页面
+                    return response.text().then(text => {
+                        console.error('非JSON响应:', text.substring(0, 200));
+                        throw new Error('服务器返回了非JSON响应，可能是权限问题或服务器错误');
+                    });
+                }
+                
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || '请求失败');
+                    }).catch(err => {
+                        // 如果JSON解析失败，使用原始错误
+                        if (err.message) throw err;
+                        throw new Error('请求失败，状态码: ' + response.status);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('响应数据:', data);
+                if (data.success) {
+                    // 使用当前URL重新加载，而不是location.reload()
+                    const currentUrl = window.location.href;
+                    window.location.href = currentUrl;
+                } else {
+                    alert('创建失败：' + (data.message || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('创建失败：' + error.message);
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
