@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}维海科技信息化管理平台 - 工作台{% endblock %}</title>
+    <title>维海科技信息化管理平台 - 工作台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -37,18 +37,24 @@
         
         /* 顶部导航栏 */
         .top-nav {
-            background-color: var(--white);
+            right: 0;
+            left: 0;
+            top: 0;
+            position: fixed;
+            color: #ffffff !important;
+            background-color: #000000 !important;
             padding: 0 20px;
-            height: 60px;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid var(--border-gray);
+            border-bottom: 1px solid #333333;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            z-index: 100;
+            z-index: 1000;
         }
         
         .logo-area {
+            color: #ffffff !important;
             display: flex;
             align-items: center;
             gap: 12px;
@@ -57,22 +63,23 @@
         .logo {
             width: 36px;
             height: 36px;
-            background-color: var(--primary-black);
+            background-color: #000000 !important;
             border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
+            color: #000000 !important;
             font-weight: bold;
         }
         
         .system-name {
             font-size: 20px;
             font-weight: 600;
-            color: var(--primary-black);
+            color: #ffffff !important;
         }
         
         .nav-controls {
+            color: #ffffff !important;
             display: flex;
             align-items: center;
             gap: 20px;
@@ -80,7 +87,7 @@
         
         .nav-controls i {
             font-size: 18px;
-            color: var(--dark-gray);
+            color: #ffffff !important;
             cursor: pointer;
             transition: color 0.2s;
         }
@@ -90,6 +97,7 @@
         }
         
         .user-profile {
+            color: #ffffff !important;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -109,19 +117,29 @@
         
         /* 主要内容区域 */
         .main-container {
+            background-color: transparent;
+            margin-top: 56px;
             display: flex;
             flex: 1;
             overflow: hidden;
+            margin-left: 232px;
+            width: calc(100% - 232px);
         }
         
         /* 侧边导航 */
         .sidebar {
-            width: 240px;
+            width: 232px;
             background-color: var(--white);
             border-right: 1px solid var(--border-gray);
             padding: 20px 0;
             overflow-y: auto;
+            overflow-x: visible;
             transition: width 0.3s;
+            position: fixed;
+            left: 0;
+            top: 56px;
+            bottom: 0;
+            z-index: 90;
         }
         
         .menu-section {
@@ -130,7 +148,7 @@
         
         .menu-title {
             color: var(--medium-gray);
-            font-size: 14px;
+            font-size: 12px;
             padding: 0 20px 10px;
             border-bottom: 1px solid var(--border-gray);
             margin-bottom: 10px;
@@ -139,6 +157,7 @@
         }
         
         .menu-item {
+            font-size: 12px;
             padding: 12px 20px;
             display: flex;
             align-items: center;
@@ -148,6 +167,13 @@
             transition: all 0.2s;
             border-left: 3px solid transparent;
             text-decoration: none;
+        }
+        .menu-item span {
+            font-size: 12px;
+            display: inline-block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            width: auto !important;
         }
         
         .menu-item:hover {
@@ -168,13 +194,197 @@
             font-size: 16px;
             color: var(--dark-gray);
         }
+
+            padding: 6px 0;
+            font-size: 13px;
+            color: var(--medium-gray);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
         
-        /* 主内容区 */
+        .scenario-features .feature-item i {
+            color: var(--primary-black);
+            font-size: 11px;
+        }
+
+        .sub-menu-item:hover {
+            background-color: rgba(0, 0, 0, 0.03);
+            border-left-color: var(--primary-black);
+            color: var(--primary-black);
+        }
+        
+        .sub-menu-item i {
+            width: 18px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+            position: relative;
+        }
+        
+        .scenario-header {
+            position: relative;
+        }
+        
+        .scenario-toggle {
+            margin-left: auto;
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+        
+        .scenario-menu-item.active .scenario-toggle {
+            transform: rotate(180deg);
+        }
+        
+        .scenario-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+            background-color: rgba(0, 0, 0, 0.01);
+        }
+        
+        .scenario-menu-item.active .scenario-content {
+            max-height: 800px;
+        }
+        
+        .scenario-modules-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            padding: 0;
+        }
+        
+        .module-card {
+            background-color: #000000;
+            border: 1px solid var(--border-gray);
+            border-radius: 6px;
+            padding: 12px;
+            text-decoration: none;
+            color: var(--dark-gray);
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        
+        .module-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary-black);
+            color: var(--dark-gray);
+            text-decoration: none;
+        }
+        
+        .module-card-icon {
+            width: 36px;
+            height: 36px;
+            background-color: var(--background-light);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            font-size: 16px;
+            color: var(--primary-black);
+        }
+        
+        .module-card-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary-black);
+            margin-bottom: 4px;
+        }
+        
+        .module-card-desc {
+            font-size: 11px;
+            color: var(--medium-gray);
+            line-height: 1.4;
+        }
+
+        /* 场景模块卡片容器 */
+        .scenario-modules-container {
+            margin-top: 30px;
+        }
+        
+        .scenario-modules-header {
+            margin-bottom: 25px;
+        }
+        
+        .scenario-modules-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--primary-black);
+            margin-bottom: 8px;
+        }
+        
+        .scenario-modules-subtitle {
+            font-size: 14px;
+            color: var(--medium-gray);
+        }
+        
+        .scenario-modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .scenario-module-card {
+            background-color: var(--dark-gray);
+            border: 1px solid var(--border-gray);
+            border-radius: 8px;
+            padding: 24px;
+            text-decoration: none;
+            color: var(--dark-gray);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .scenario-module-card:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary-black);
+            color: var(--dark-gray);
+            text-decoration: none;
+        }
+        
+        .scenario-module-card-icon {
+            width: 64px;
+            height: 64px;
+            background-color: var(--background-light);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            font-size: 28px;
+            color: var(--primary-black);
+        }
+        
+        .scenario-module-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-black);
+            margin-bottom: 8px;
+        }
+        
+        .scenario-module-card-desc {
+            font-size: 14px;
+            color: var(--medium-gray);
+            line-height: 1.5;
+        }
+        
+/* 主内容区 */
         .content-area {
             flex: 1;
             padding: 30px;
             overflow-y: auto;
             background-color: var(--background-light);
+            width: 100%;
         }
         
         .welcome-section {
@@ -304,7 +514,7 @@
         
         /* 快速访问模块 */
         .quick-access {
-            background-color: var(--white);
+            background-color: #000000;
             border-radius: 10px;
             padding: 25px;
             box-shadow: var(--card-shadow);
@@ -333,7 +543,7 @@
         }
         
         .module-item {
-            background-color: var(--white);
+            background-color: #000000;
             border-radius: 8px;
             padding: 20px 15px;
             display: flex;
@@ -376,7 +586,7 @@
         
         /* 系统状态 */
         .system-status {
-            background-color: var(--white);
+            background-color: #000000;
             border-radius: 10px;
             padding: 25px;
             box-shadow: var(--card-shadow);
@@ -445,32 +655,33 @@
         
         @media (max-width: 992px) {
             .sidebar {
-                width: 70px;
+                width: 232px;
+                transform: translateX(0);
+                transition: transform 0.3s;
             }
             
-            .menu-title, .menu-item span {
-                display: none;
+            .sidebar.open {
+                transform: translateX(0);
             }
             
-            .menu-item {
-                justify-content: center;
-                padding: 15px 0;
+            .sidebar.open {
+                transform: translateX(0);
             }
             
-            .menu-item i {
-                font-size: 18px;
+            .main-container {
+                width: 100%;
+                margin-left: 0;
             }
             
-            .system-name {
-                display: none;
+            .content-area {
+                margin-left: 0;
             }
             
-            .work-scenarios {
-                grid-template-columns: 1fr;
-            }
+            .menu-title, 
         }
-        
-        @media (max-width: 768px) {
+            
+            .menu-title, 
+@media (max-width: 768px) {
             .module-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
@@ -483,7 +694,9 @@
                 grid-template-columns: repeat(2, 1fr);
             }
         }
-        
+            .scenario-modules-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
         @media (max-width: 576px) {
             .module-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -511,7 +724,10 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #aaa;
         }
-    </style>
+            .scenario-modules-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        </style>
 </head>
 <body>
     <!-- 顶部导航栏 -->
@@ -535,7 +751,7 @@
                         <i class="fas fa-user"></i>
                     {% endif %}
                 </div>
-                <span style="color: var(--primary-black);">
+                <span style="color: #ffffff !important;">
                     {% if user.is_authenticated %}
                         {{ user.get_full_name|default:user.username }}
                     {% else %}
@@ -549,76 +765,42 @@
     <!-- 主要内容区域 -->
     <div class="main-container">
         <!-- 侧边导航 -->
-        <nav class="sidebar">
+                                        <nav class="sidebar">
             <div class="menu-section">
-                <div class="menu-title">功能模块</div>
-                <a href="{% url 'dashboard' %}" class="menu-item active">
+                <div class="menu-title">工作场景</div>
+                <a href="#" class="menu-item active" data-scenario="dashboard">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>系统工作台</span>
                 </a>
-                <a href="{% url 'customer_pages:customer_management_home' %}" class="menu-item">
-                    <i class="fas fa-users"></i>
-                    <span>客户管理</span>
+                
+                <a href="#" class="menu-item" data-scenario="customer">
+                    <i class="fas fa-handshake"></i>
+                    <span>客户协同</span>
                 </a>
-                <a href="{% url 'opportunity_pages:opportunity_management_home' %}" class="menu-item">
-                    <i class="fas fa-bullseye"></i>
-                    <span>商机管理</span>
-                </a>
-                <a href="{% url 'contract_pages:contract_management_home' %}" class="menu-item">
-                    <i class="fas fa-file-contract"></i>
-                    <span>合同管理</span>
-                </a>
-                <a href="#" class="menu-item">
-                    <i class="fas fa-money-check-alt"></i>
-                    <span>回款管理</span>
-                </a>
-                <a href="{% url 'production_pages:project_list' %}" class="menu-item">
+                
+                <a href="#" class="menu-item" data-scenario="production">
                     <i class="fas fa-industry"></i>
-                    <span>生产管理</span>
+                    <span>生产执行</span>
                 </a>
-                <a href="{% url 'resource_standard_pages:standard_list' %}" class="menu-item">
+                
+                <a href="#" class="menu-item" data-scenario="resource">
                     <i class="fas fa-boxes"></i>
-                    <span>资源管理</span>
+                    <span>资源调度</span>
                 </a>
-                <a href="#" class="menu-item">
-                    <i class="fas fa-tasks"></i>
-                    <span>任务协作</span>
-                </a>
-                <a href="{% url 'delivery_pages:delivery_list' %}" class="menu-item">
-                    <i class="fas fa-truck-loading"></i>
-                    <span>收发货管理</span>
-                </a>
-                <a href="#" class="menu-item">
-                    <i class="fas fa-archive"></i>
-                    <span>档案管理</span>
-                </a>
-                <a href="{% url 'plan_pages:plan_management_home' %}" class="menu-item">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>计划管理</span>
-                </a>
-                <a href="{% url 'litigation_pages:litigation_home' %}" class="menu-item">
-                    <i class="fas fa-gavel"></i>
-                    <span>诉讼管理</span>
-                </a>
-                <a href="#" class="menu-item">
+                
+                <a href="#" class="menu-item" data-scenario="risk">
                     <i class="fas fa-shield-alt"></i>
-                    <span>风险管理</span>
+                    <span>风险控制</span>
                 </a>
-                <a href="#" class="menu-item">
+                
+                <a href="#" class="menu-item" data-scenario="finance">
                     <i class="fas fa-chart-line"></i>
-                    <span>财务管理</span>
+                    <span>财务分析</span>
                 </a>
-                <a href="{% url 'personnel_pages:personnel_home' %}" class="menu-item">
-                    <i class="fas fa-user-tie"></i>
-                    <span>人事管理</span>
-                </a>
-                <a href="{% url 'admin_pages:administrative_home' %}" class="menu-item">
+                
+                <a href="#" class="menu-item" data-scenario="admin">
                     <i class="fas fa-building"></i>
-                    <span>行政管理</span>
-                </a>
-                <a href="{% url 'system_pages:system_settings' %}" class="menu-item">
-                    <i class="fas fa-cogs"></i>
-                    <span>系统管理</span>
+                    <span>行政办公</span>
                 </a>
             </div>
         </nav>
@@ -638,8 +820,19 @@
                     {% endif %}
                 </p>
             </div>
-            
-            <!-- 六大工作场景 -->
+
+                   <!-- 场景模块卡片显示区域 -->
+                   <div id="scenario-modules-container" class="scenario-modules-container" style="display: none;">
+                       <div class="scenario-modules-header">
+                           <h2 class="scenario-modules-title" id="scenario-modules-title">场景模块</h2>
+                           <p class="scenario-modules-subtitle" id="scenario-modules-subtitle">选择左侧场景查看对应功能模块</p>
+                       </div>
+                       <div class="scenario-modules-grid" id="scenario-modules-grid">
+                           <!-- 动态加载的场景模块卡片 -->
+                       </div>
+                   </div>
+                   
+<!-- 六大工作场景 -->
             <div class="work-scenarios">
                 <!-- 客户协同场景 -->
                 <div class="scenario-card">
@@ -951,6 +1144,127 @@
                 }
             });
         });
-    </script>
-</body>
-</html>
+
+        // 场景切换功能
+        const scenarioModules = {
+            'customer': {
+                name: '客户协同',
+                modules: [
+                    {name: '客户管理', url: '{% url "customer_pages:customer_management_home" %}', icon: 'fas fa-users', desc: '客户信息管理与关系维护'},
+                    {name: '商机管理', url: '{% url "opportunity_pages:opportunity_management_home" %}', icon: 'fas fa-bullseye', desc: '商机跟进与销售预测'},
+                    {name: '合同管理', url: '{% url "contract_pages:contract_management_home" %}', icon: 'fas fa-file-contract', desc: '合同签订与执行管理'},
+                ]
+            },
+            'production': {
+                name: '生产执行',
+                modules: [
+                    {name: '生产管理', url: '{% url "production_pages:project_list" %}', icon: 'fas fa-industry', desc: '生产计划与任务管理'},
+                ]
+            },
+            'resource': {
+                name: '资源调度',
+                modules: [
+                    {name: '资源管理', url: '{% url "resource_standard_pages:standard_list" %}', icon: 'fas fa-boxes', desc: '资源统一调度与管理'},
+                ]
+            },
+            'risk': {
+                name: '风险控制',
+                modules: [
+                    {name: '诉讼管理', url: '{% url "litigation_pages:litigation_home" %}', icon: 'fas fa-gavel', desc: '诉讼案件跟踪与管理'},
+                ]
+            },
+            'finance': {
+                name: '财务分析',
+                modules: [
+                    {name: '财务管理', url: '#', icon: 'fas fa-chart-line', desc: '财务报表与分析'},
+                ]
+            },
+            'admin': {
+                name: '行政办公',
+                modules: [
+                    {name: '人事管理', url: '{% url "personnel_pages:personnel_home" %}', icon: 'fas fa-user-tie', desc: '人事档案与考勤管理'},
+                    {name: '行政管理', url: '{% url "admin_pages:administrative_home" %}', icon: 'fas fa-building', desc: '行政事务与办公管理'},
+                ]
+            },
+        };
+        
+        // 场景切换函数
+        function switchScenario(scenarioId) {
+            // 更新侧边栏激活状态
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            const activeItem = document.querySelector(`[data-scenario="${scenarioId}"]`);
+            if (activeItem) {
+                activeItem.classList.add('active');
+            }
+            
+            // 获取内容区域元素
+            const welcomeSection = document.querySelector('.welcome-section');
+            const workScenarios = document.querySelector('.work-scenarios');
+            const quickAccess = document.querySelector('.quick-access');
+            const systemStatus = document.querySelector('.system-status');
+            const scenarioContainer = document.getElementById('scenario-modules-container');
+            
+            if (scenarioId === 'dashboard') {
+                // 显示默认内容
+                if (welcomeSection) welcomeSection.style.display = 'block';
+                if (workScenarios) workScenarios.style.display = 'block';
+                if (quickAccess) quickAccess.style.display = 'block';
+                if (systemStatus) systemStatus.style.display = 'block';
+                if (scenarioContainer) scenarioContainer.style.display = 'none';
+            } else {
+                // 隐藏默认内容
+                if (welcomeSection) welcomeSection.style.display = 'none';
+                if (workScenarios) workScenarios.style.display = 'none';
+                if (quickAccess) quickAccess.style.display = 'none';
+                if (systemStatus) systemStatus.style.display = 'none';
+                
+                // 显示场景模块
+                if (scenarioContainer) {
+                    const title = document.getElementById('scenario-modules-title');
+                    const subtitle = document.getElementById('scenario-modules-subtitle');
+                    const grid = document.getElementById('scenario-modules-grid');
+                    
+                    const scenario = scenarioModules[scenarioId];
+                    if (scenario && title && subtitle && grid) {
+                        title.textContent = scenario.name;
+                        subtitle.textContent = '选择功能模块进入对应管理页面';
+                        grid.innerHTML = '';
+                        
+                        scenario.modules.forEach(module => {
+                            const card = document.createElement('a');
+                            card.href = module.url;
+                            card.className = 'scenario-module-card';
+                            card.innerHTML = `
+                                <div class="scenario-module-card-icon">
+                                    <i class="${module.icon}"></i>
+                                </div>
+                                <div class="scenario-module-card-title">${module.name}</div>
+                                <div class="scenario-module-card-desc">${module.desc}</div>
+                            `;
+                            grid.appendChild(card);
+                        });
+                        
+                        scenarioContainer.style.display = 'block';
+                    }
+                }
+            }
+        }
+        
+        // 绑定场景点击事件
+        document.addEventListener('DOMContentLoaded', function() {
+            // 绑定场景菜单项点击事件
+            document.querySelectorAll('.menu-item[data-scenario]').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const scenarioId = this.getAttribute('data-scenario');
+                    if (scenarioId) {
+                        switchScenario(scenarioId);
+                    }
+                });
+            });
+        });
+</script>
+        
+        
