@@ -357,13 +357,23 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
 
 @login_required
 def plan_management_home(request):
-    """计划管理首页 - 数据展示中心"""
+    """
+    P2-5: 计划管理首页 - 数据展示中心（定版）
+    
+    首页结构（强制）：
+    1. 第一行：目标中心（个人优先）
+    2. 第二行：我的计划执行
+    3. 第三行：待办 & 风险
+    4. 第四行：管理视角（仅有权限者可见）
+    
+    原则：
+    - 首页不做编辑，只做"看"
+    - 首页不堆数据，只给"结论 + 入口"
+    - 目标优先于计划
+    - 风险高于统计
+    - 所有数据来自 service，禁止直接 ORM
+    """
     permission_codes = get_user_permission_codes(request.user)
-    now = timezone.now()
-    today = now.date()
-    this_month_start = today.replace(day=1)
-    seven_days_ago = today - timedelta(days=7)
-    three_days_ago = today - timedelta(days=3)
     
     # 权限检查
     if not _permission_granted('plan_management.view', permission_codes):
@@ -373,209 +383,78 @@ def plan_management_home(request):
     context = {}
     
     try:
-        # ========== 第二行：核心指标卡片（6个） ==========
-        core_cards = []
+        # ========== P2-5: 导入所有 service ==========
+        from backend.apps.plan_management.services.goal_stats_service import get_user_goal_stats, get_company_goal_stats
+        from backend.apps.plan_management.services.plan_stats_service import get_user_plan_stats, get_company_plan_stats
+        from backend.apps.plan_management.services.todo_service import get_user_todos
+        from backend.apps.plan_management.services.risk_query_service import get_user_risk_items
         
-        # 计划统计
-        total_plans = Plan.objects.count()
-        draft_plans = Plan.objects.filter(status='draft').count()
-        published_plans = Plan.objects.filter(status='published').count()  # P2-3
-        accepted_plans = Plan.objects.filter(status='accepted').count()  # P2-3
-        in_progress_plans = Plan.objects.filter(status='in_progress').count()
-        completed_plans = Plan.objects.filter(status='completed').count()
-        cancelled_plans = Plan.objects.filter(status='cancelled').count()
-        this_month_plans = Plan.objects.filter(created_time__gte=this_month_start).count()
-        this_month_completed_plans = Plan.objects.filter(
-            status='completed',
-            updated_time__gte=this_month_start
-        ).count()
+        # ========== 第一行：目标中心（个人优先）==========
+        goal_stats = get_user_goal_stats(request.user)
         
-        # P2-3: 我的计划统计（个人计划）
-        my_plans = Plan.objects.filter(level='personal', owner=request.user)
-        my_plans_total = my_plans.count()
-        my_plans_in_progress = my_plans.filter(status='in_progress').count()
-        # P2-3: 逾期计划（风险计算）
-        my_plans_overdue = my_plans.filter(
-            status__in=['draft', 'published', 'accepted', 'in_progress'],
-            end_time__lt=now  # 逾期
-        ).count()
-        # P2-3: 本周计划
-        week_start = today - timedelta(days=today.weekday())
-        week_end = week_start + timedelta(days=6)
-        my_plans_this_week = my_plans.filter(
-            end_time__date__gte=week_start,
-            end_time__date__lte=week_end
-        ).count()
-        
-        # 计划平均完成率
-        plan_avg_progress = Plan.objects.filter(status='in_progress').aggregate(
-            avg_progress=Avg('progress')
-        )['avg_progress'] or 0
-        
-        # P2-3: 逾期计划统计（风险计算）
-        overdue_plans = Plan.objects.filter(
-            status__in=['draft', 'published', 'accepted', 'in_progress'],
-            end_time__lt=now
-        ).count()
-        
-        # 目标统计
-        total_goals = StrategicGoal.objects.count()
-        draft_goals = StrategicGoal.objects.filter(status='draft').count()
-        published_goals = StrategicGoal.objects.filter(status='published').count()
-        accepted_goals = StrategicGoal.objects.filter(status='accepted').count()  # P2-2
-        in_progress_goals = StrategicGoal.objects.filter(status='in_progress').count()
-        completed_goals = StrategicGoal.objects.filter(status='completed').count()
-        cancelled_goals = StrategicGoal.objects.filter(status='cancelled').count()
-        this_month_goals = StrategicGoal.objects.filter(created_time__gte=this_month_start).count()
-        
-        # P2-2: 我的目标统计（个人目标）
-        my_goals = StrategicGoal.objects.filter(level='personal', owner=request.user)
-        my_goals_total = my_goals.count()
-        my_goals_in_progress = my_goals.filter(status='in_progress').count()
-        my_goals_high_risk = my_goals.filter(
-            status__in=['published', 'accepted', 'in_progress'],
-            end_date__lt=today  # 逾期
-        ).count()
-        my_goals_this_month = my_goals.filter(
-            end_date__year=today.year,
-            end_date__month=today.month
-        ).count()
-        
-        # 审批统计
-        pending_decisions = PlanDecision.objects.filter(decision__isnull=True)
-        pending_total = pending_decisions.count()
-        pending_start = pending_decisions.filter(request_type='start').count()
-        pending_cancel = pending_decisions.filter(request_type='cancel').count()
-        
-        # P2-3: 我的计划（第二行，计划执行）
-        core_cards.append({
-            'label': '我的计划',
-            'icon': '📋',
-            'value': str(my_plans_total),
-            'subvalue': f'执行中 {my_plans_in_progress} | 逾期 {my_plans_overdue} | 本周 {my_plans_this_week}',
-            'url': reverse('plan_pages:plan_list') + '?level=personal',
-            'variant': 'primary' if my_plans_total > 0 else 'secondary'
-        })
-        
-        # 卡片1：计划总数（P2-3：更新统计）
-        core_cards.append({
-            'label': '计划总数',
-            'icon': '📋',
-            'value': str(total_plans),
-            'subvalue': f'草稿 {draft_plans} | 已发布 {published_plans} | 已接收 {accepted_plans} | 执行中 {in_progress_plans} | 已完成 {completed_plans}',
-            'url': reverse('plan_pages:plan_list'),
-            'variant': 'secondary'
-        })
-        
-        # 卡片2：目标总数（P2-2：更新统计）
-        core_cards.append({
-            'label': '目标总数',
-            'icon': '🎯',
-            'value': str(total_goals),
-            'subvalue': f'制定中 {draft_goals} | 已发布 {published_goals} | 已接收 {accepted_goals} | 执行中 {in_progress_goals} | 已完成 {completed_goals}',
-            'url': reverse('plan_pages:strategic_goal_list'),
-            'variant': 'secondary'
-        })
-        
-        # P2-2: 我的目标（第一行，目标优先）
-        core_cards.insert(0, {
+        goal_cards = [{
             'label': '我的目标',
             'icon': '🎯',
-            'value': str(my_goals_total),
-            'subvalue': f'执行中 {my_goals_in_progress} | 高风险 {my_goals_high_risk} | 本月应完成 {my_goals_this_month}',
+            'value': str(goal_stats['total']),
+            'subvalue': f'执行中 {goal_stats["in_progress"]} | 逾期 {goal_stats["overdue"]} | 本月需完成 {goal_stats["this_month"]}',
             'url': reverse('plan_pages:strategic_goal_list') + '?level=personal',
-            'variant': 'primary' if my_goals_total > 0 else 'secondary'
-        })
+            'variant': 'primary' if goal_stats['total'] > 0 else 'secondary'
+        }]
         
-        # 卡片3：执行中计划
-        core_cards.append({
-            'label': '执行中计划',
-            'icon': '⚡',
-            'value': str(in_progress_plans),
-            'subvalue': f'平均完成率 {float(plan_avg_progress):.1f}%',
-            'url': reverse('plan_pages:plan_list') + '?status=in_progress',
-            'variant': 'dark'
-        })
+        context['goal_cards'] = goal_cards
+        context['goal_stats'] = goal_stats
         
-        # P2-3: 逾期计划（风险展示）
-        core_cards.append({
-            'label': '逾期计划',
-            'icon': '⚠️',
-            'value': str(overdue_plans),
-            'subvalue': f'需要关注的风险计划',
-            'url': reverse('plan_pages:plan_list') + '?status=in_progress',
-            'variant': 'danger' if overdue_plans > 0 else 'secondary'
-        })
+        # ========== 第二行：我的计划执行 ==========
+        plan_stats = get_user_plan_stats(request.user)
         
-        # 卡片4：已完成计划
-        core_cards.append({
-            'label': '已完成计划',
-            'icon': '✅',
-            'value': str(completed_plans),
-            'subvalue': f'本月完成 {this_month_completed_plans} 个',
-            'url': reverse('plan_pages:plan_list') + '?status=completed',
-            'variant': 'secondary'
-        })
+        plan_cards = [{
+            'label': '我的计划',
+            'icon': '📋',
+            'value': str(plan_stats['total']),
+            'subvalue': f'执行中 {plan_stats["in_progress"]} | 今日应执行 {plan_stats["today"]} | 逾期 {plan_stats["overdue"]}',
+            'url': reverse('plan_pages:plan_list') + '?level=personal',
+            'variant': 'primary' if plan_stats['total'] > 0 else 'secondary'
+        }]
         
-        # 卡片5：待审批请求
-        core_cards.append({
-            'label': '待审批请求',
-            'icon': '📝',
-            'value': str(pending_total),
-            'subvalue': f'启动请求 {pending_start} | 取消请求 {pending_cancel}',
-            'url': reverse('plan_pages:plan_approval_list'),
-            'variant': 'dark' if pending_total > 0 else 'secondary'
-        })
+        context['plan_cards'] = plan_cards
+        context['plan_stats'] = plan_stats
         
-        # 卡片6：本月新增
-        core_cards.append({
-            'label': '本月新增',
-            'icon': '📈',
-            'value': str(this_month_plans),
-            'subvalue': f'计划 {this_month_plans} | 目标 {this_month_goals}',
-            'url': reverse('plan_pages:plan_list'),
-            'variant': 'secondary'
-        })
-        
-        context['core_cards'] = core_cards
-        
-        # ========== 第三行：状态分布统计 ==========
-        # 计划状态分布
-        plan_status_dist = {}
-        for status_code, status_label in Plan.STATUS_CHOICES:
-            count = Plan.objects.filter(status=status_code).count()
-            if count > 0:
-                plan_status_dist[status_code] = {
-                    'label': status_label,
-                    'count': count,
-                    'percentage': round(count / total_plans * 100, 1) if total_plans > 0 else 0
-                }
-        
-        # 目标状态分布
-        goal_status_dist = {}
-        for status_code, status_label in StrategicGoal.STATUS_CHOICES:
-            count = StrategicGoal.objects.filter(status=status_code).count()
-            if count > 0:
-                goal_status_dist[status_code] = {
-                    'label': status_label,
-                    'count': count,
-                    'percentage': round(count / total_goals * 100, 1) if total_goals > 0 else 0
-                }
-        
-        context['plan_status_dist'] = plan_status_dist
-        context['goal_status_dist'] = goal_status_dist
-        
-        # ========== P2-4: 我的待办和风险提醒 ==========
-        from backend.apps.plan_management.services.todo_service import get_user_todos
-        
+        # ========== 第三行：待办 & 风险 ==========
+        # 我的待办（左）
         user_todos = get_user_todos(request.user)
         context['user_todos'] = user_todos[:5]  # 首页显示前5条
         context['user_todos_count'] = len(user_todos)
         
-        # 风险项（高优先级）
-        risk_todos = [t for t in user_todos if t['priority'] == 'high' and t['type'] in ['plan_risk', 'goal_risk']]
-        context['risk_todos'] = risk_todos[:5]  # 首页显示前5条风险项
-        context['risk_todos_count'] = len(risk_todos)
+        # 风险提醒（右）
+        risk_items = get_user_risk_items(request.user, limit=5)
+        context['risk_items'] = risk_items
+        context['risk_items_count'] = len(risk_items)
+        
+        # ========== 第四行：管理视角（仅有权限者可见）==========
+        can_view_management = _permission_granted('plan_management.manage_goal', permission_codes) or _permission_granted('plan_management.plan.manage', permission_codes)
+        
+        if can_view_management:
+            # 公司目标统计
+            company_goal_stats = get_company_goal_stats(request.user)
+            context['company_goal_stats'] = company_goal_stats
+            
+            # 公司计划统计
+            company_plan_stats = get_company_plan_stats(request.user)
+            context['company_plan_stats'] = company_plan_stats
+            
+            # 审批统计（仅管理视角）
+            pending_decisions = PlanDecision.objects.filter(decision__isnull=True)
+            pending_total = pending_decisions.count()
+            pending_start = pending_decisions.filter(request_type='start').count()
+            pending_cancel = pending_decisions.filter(request_type='cancel').count()
+            
+            context['management_view'] = {
+                'pending_total': pending_total,
+                'pending_start': pending_start,
+                'pending_cancel': pending_cancel,
+            }
+        
+        context['can_view_management'] = can_view_management
         
         # ========== 第四行：风险预警与待办 ==========
         # 风险预警（只显示与当前用户相关的）
@@ -870,14 +749,14 @@ def plan_management_home(request):
         import logging
         logger = logging.getLogger(__name__)
         logger.exception('获取统计数据失败: %s', str(e))
-        # 设置默认值避免模板错误
-        context.setdefault('core_cards', [])
-        context.setdefault('plan_status_dist', {})
-        context.setdefault('goal_status_dist', {})
-        context.setdefault('risk_warnings', [])
-        context.setdefault('todo_items', [])
-        context.setdefault('my_work', {})
-        context.setdefault('recent_activities', {})
+        # P2-5: 设置默认值避免模板错误
+        context.setdefault('goal_cards', [])
+        context.setdefault('plan_cards', [])
+        context.setdefault('user_todos', [])
+        context.setdefault('risk_items', [])
+        context.setdefault('goal_stats', {'total': 0, 'in_progress': 0, 'overdue': 0, 'this_month': 0})
+        context.setdefault('plan_stats', {'total': 0, 'in_progress': 0, 'today': 0, 'overdue': 0})
+        context.setdefault('can_view_management', False)
     
     # 顶部操作栏
     top_actions = []
