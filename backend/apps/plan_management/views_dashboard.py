@@ -9,7 +9,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Max, Q, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 
-from .models import Plan, PlanStatusLog, PlanProgressRecord
+from .models import Plan, PlanStatusLog, PlanProgressRecord, PlanDecision
 
 # 兼容导入：你们在 B1 做过 require_perm helper，但位置可能不同
 try:
@@ -87,12 +87,27 @@ def plan_dashboard(request):
     # ===== 顶部统计卡（最小：4个数字）=====
     total_count = base_qs.count()
     in_progress_count = base_qs.filter(status="in_progress").count()
-    overdue_count = base_qs.filter(status="overdue").count()
-    pending_count = base_qs.filter(status="pending_approval").count()
+    
+    # 修复：overdue 不是状态，而是计算出来的（end_time < now 且未完成）
+    overdue_count = base_qs.filter(
+        end_time__lt=now,
+        status__in=['draft', 'published', 'accepted', 'in_progress']
+    ).count()
+    
+    # 修复：pending_approval 不是状态，应该基于 PlanDecision（待审批的计划）
+    pending_count = PlanDecision.objects.filter(
+        plan__in=base_qs,
+        request_type='start',
+        decided_at__isnull=True  # 待处理
+    ).count()
 
     # ===== 风险列表（最多10条）=====
+    # 修复：overdue 计划 = 已逾期且未完成的计划
     overdue_plans = (
-        base_qs.filter(status="overdue")
+        base_qs.filter(
+            end_time__lt=now,
+            status__in=['draft', 'published', 'accepted', 'in_progress']
+        )
         .order_by("end_time")[:10]
     )
 
@@ -113,25 +128,20 @@ def plan_dashboard(request):
     )
 
     # 待审批超3天
-    # 坑1修复：用 PlanStatusLog 中进入 pending_approval 的时间，而不是 Plan.created_time
-    # 兜底：如果 PlanStatusLog 没有记录，用 created_time 作为基准
+    # 修复：pending_approval 不是状态，应该基于 PlanDecision（待审批的计划）
+    # 使用 PlanDecision.requested_at 作为申请时间
     three_days_ago = now - timedelta(days=3)
-    # 子查询：获取每个 plan 最近一次进入 pending_approval 的时间
-    pending_approval_time_subquery = PlanStatusLog.objects.filter(
-        plan=OuterRef("pk"),
-        new_status="pending_approval"
-    ).order_by("-changed_time").values("changed_time")[:1]
-    
     pending_long = (
-        base_qs.filter(status="pending_approval")
-        .annotate(
-            pending_since=Subquery(pending_approval_time_subquery)
+        base_qs.filter(
+            decisions__request_type='start',
+            decisions__decided_at__isnull=True  # 待处理
         )
         .annotate(
-            pending_since_safe=Coalesce("pending_since", "created_time")
+            requested_at_safe=Coalesce('decisions__requested_at', 'created_time')
         )
-        .filter(pending_since_safe__lt=three_days_ago)
-        .order_by("pending_since_safe")[:10]  # 按进入 pending_approval 时间最早的在前
+        .filter(requested_at_safe__lt=three_days_ago)
+        .order_by("requested_at_safe")[:10]
+        .distinct()  # 避免重复（一个计划可能有多个决策记录）
     )
 
     # 构建上下文（如果可用，添加菜单支持）

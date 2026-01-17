@@ -379,6 +379,8 @@ def plan_management_home(request):
         # 计划统计
         total_plans = Plan.objects.count()
         draft_plans = Plan.objects.filter(status='draft').count()
+        published_plans = Plan.objects.filter(status='published').count()  # P2-3
+        accepted_plans = Plan.objects.filter(status='accepted').count()  # P2-3
         in_progress_plans = Plan.objects.filter(status='in_progress').count()
         completed_plans = Plan.objects.filter(status='completed').count()
         cancelled_plans = Plan.objects.filter(status='cancelled').count()
@@ -388,19 +390,56 @@ def plan_management_home(request):
             updated_time__gte=this_month_start
         ).count()
         
+        # P2-3: 我的计划统计（个人计划）
+        my_plans = Plan.objects.filter(level='personal', owner=request.user)
+        my_plans_total = my_plans.count()
+        my_plans_in_progress = my_plans.filter(status='in_progress').count()
+        # P2-3: 逾期计划（风险计算）
+        my_plans_overdue = my_plans.filter(
+            status__in=['draft', 'published', 'accepted', 'in_progress'],
+            end_time__lt=now  # 逾期
+        ).count()
+        # P2-3: 本周计划
+        week_start = today - timedelta(days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+        my_plans_this_week = my_plans.filter(
+            end_time__date__gte=week_start,
+            end_time__date__lte=week_end
+        ).count()
+        
         # 计划平均完成率
         plan_avg_progress = Plan.objects.filter(status='in_progress').aggregate(
             avg_progress=Avg('progress')
         )['avg_progress'] or 0
         
+        # P2-3: 逾期计划统计（风险计算）
+        overdue_plans = Plan.objects.filter(
+            status__in=['draft', 'published', 'accepted', 'in_progress'],
+            end_time__lt=now
+        ).count()
+        
         # 目标统计
         total_goals = StrategicGoal.objects.count()
         draft_goals = StrategicGoal.objects.filter(status='draft').count()
         published_goals = StrategicGoal.objects.filter(status='published').count()
+        accepted_goals = StrategicGoal.objects.filter(status='accepted').count()  # P2-2
         in_progress_goals = StrategicGoal.objects.filter(status='in_progress').count()
         completed_goals = StrategicGoal.objects.filter(status='completed').count()
         cancelled_goals = StrategicGoal.objects.filter(status='cancelled').count()
         this_month_goals = StrategicGoal.objects.filter(created_time__gte=this_month_start).count()
+        
+        # P2-2: 我的目标统计（个人目标）
+        my_goals = StrategicGoal.objects.filter(level='personal', owner=request.user)
+        my_goals_total = my_goals.count()
+        my_goals_in_progress = my_goals.filter(status='in_progress').count()
+        my_goals_high_risk = my_goals.filter(
+            status__in=['published', 'accepted', 'in_progress'],
+            end_date__lt=today  # 逾期
+        ).count()
+        my_goals_this_month = my_goals.filter(
+            end_date__year=today.year,
+            end_date__month=today.month
+        ).count()
         
         # 审批统计
         pending_decisions = PlanDecision.objects.filter(decision__isnull=True)
@@ -408,24 +447,44 @@ def plan_management_home(request):
         pending_start = pending_decisions.filter(request_type='start').count()
         pending_cancel = pending_decisions.filter(request_type='cancel').count()
         
-        # 卡片1：计划总数
+        # P2-3: 我的计划（第二行，计划执行）
+        core_cards.append({
+            'label': '我的计划',
+            'icon': '📋',
+            'value': str(my_plans_total),
+            'subvalue': f'执行中 {my_plans_in_progress} | 逾期 {my_plans_overdue} | 本周 {my_plans_this_week}',
+            'url': reverse('plan_pages:plan_list') + '?level=personal',
+            'variant': 'primary' if my_plans_total > 0 else 'secondary'
+        })
+        
+        # 卡片1：计划总数（P2-3：更新统计）
         core_cards.append({
             'label': '计划总数',
             'icon': '📋',
             'value': str(total_plans),
-            'subvalue': f'草稿 {draft_plans} | 执行中 {in_progress_plans} | 已完成 {completed_plans} | 已取消 {cancelled_plans}',
+            'subvalue': f'草稿 {draft_plans} | 已发布 {published_plans} | 已接收 {accepted_plans} | 执行中 {in_progress_plans} | 已完成 {completed_plans}',
             'url': reverse('plan_pages:plan_list'),
             'variant': 'secondary'
         })
         
-        # 卡片2：目标总数
+        # 卡片2：目标总数（P2-2：更新统计）
         core_cards.append({
             'label': '目标总数',
             'icon': '🎯',
             'value': str(total_goals),
-            'subvalue': f'制定中 {draft_goals} | 已发布 {published_goals} | 执行中 {in_progress_goals} | 已完成 {completed_goals} | 已取消 {cancelled_goals}',
+            'subvalue': f'制定中 {draft_goals} | 已发布 {published_goals} | 已接收 {accepted_goals} | 执行中 {in_progress_goals} | 已完成 {completed_goals}',
             'url': reverse('plan_pages:strategic_goal_list'),
             'variant': 'secondary'
+        })
+        
+        # P2-2: 我的目标（第一行，目标优先）
+        core_cards.insert(0, {
+            'label': '我的目标',
+            'icon': '🎯',
+            'value': str(my_goals_total),
+            'subvalue': f'执行中 {my_goals_in_progress} | 高风险 {my_goals_high_risk} | 本月应完成 {my_goals_this_month}',
+            'url': reverse('plan_pages:strategic_goal_list') + '?level=personal',
+            'variant': 'primary' if my_goals_total > 0 else 'secondary'
         })
         
         # 卡片3：执行中计划
@@ -436,6 +495,16 @@ def plan_management_home(request):
             'subvalue': f'平均完成率 {float(plan_avg_progress):.1f}%',
             'url': reverse('plan_pages:plan_list') + '?status=in_progress',
             'variant': 'dark'
+        })
+        
+        # P2-3: 逾期计划（风险展示）
+        core_cards.append({
+            'label': '逾期计划',
+            'icon': '⚠️',
+            'value': str(overdue_plans),
+            'subvalue': f'需要关注的风险计划',
+            'url': reverse('plan_pages:plan_list') + '?status=in_progress',
+            'variant': 'danger' if overdue_plans > 0 else 'secondary'
         })
         
         # 卡片4：已完成计划
@@ -495,6 +564,18 @@ def plan_management_home(request):
         
         context['plan_status_dist'] = plan_status_dist
         context['goal_status_dist'] = goal_status_dist
+        
+        # ========== P2-4: 我的待办和风险提醒 ==========
+        from backend.apps.plan_management.services.todo_service import get_user_todos
+        
+        user_todos = get_user_todos(request.user)
+        context['user_todos'] = user_todos[:5]  # 首页显示前5条
+        context['user_todos_count'] = len(user_todos)
+        
+        # 风险项（高优先级）
+        risk_todos = [t for t in user_todos if t['priority'] == 'high' and t['type'] in ['plan_risk', 'goal_risk']]
+        context['risk_todos'] = risk_todos[:5]  # 首页显示前5条风险项
+        context['risk_todos_count'] = len(risk_todos)
         
         # ========== 第四行：风险预警与待办 ==========
         # 风险预警（只显示与当前用户相关的）
@@ -883,6 +964,10 @@ def plan_list(request):
     if status_filter:
         plans = plans.filter(status=status_filter)
     
+    # P2-3: level 过滤
+    if level_filter:
+        plans = plans.filter(level=level_filter)
+    
     if plan_type_filter:
         plans = plans.filter(plan_type=plan_type_filter)
     
@@ -1007,6 +1092,7 @@ def strategic_goal_list(request):
     # 获取筛选参数
     search = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
+    level_filter = request.GET.get('level', '')  # P2-2: 添加 level 过滤
     goal_type_filter = request.GET.get('goal_type', '')
     goal_period_filter = request.GET.get('goal_period', '')
     responsible_filter = request.GET.get('responsible', '')
@@ -1029,6 +1115,10 @@ def strategic_goal_list(request):
     
     if status_filter:
         goals = goals.filter(status=status_filter)
+    
+    # P2-2: level 过滤
+    if level_filter:
+        goals = goals.filter(level=level_filter)
     
     if goal_type_filter:
         goals = goals.filter(goal_type=goal_type_filter)
@@ -1088,6 +1178,7 @@ def strategic_goal_list(request):
         'all_users': all_users,
         'search': search,
         'status_filter': status_filter,
+        'level_filter': level_filter,  # P2-2
         'goal_type_filter': goal_type_filter,
         'goal_period_filter': goal_period_filter,
         'responsible_filter': responsible_filter,
@@ -1115,6 +1206,17 @@ def plan_create(request):
         if form.is_valid():
             plan = form.save(commit=False)
             plan.created_by = request.user
+            
+            # P2-3: 确保 level 正确设置
+            if not plan.level:
+                if plan.parent_plan:
+                    plan.level = 'personal'
+                    # 个人计划的 owner = responsible_person
+                    if plan.responsible_person and not plan.owner:
+                        plan.owner = plan.responsible_person
+                else:
+                    plan.level = 'company'
+            
             plan.save()
             
             # 保存多对多关系
@@ -1250,6 +1352,57 @@ def plan_detail(request, plan_id):
     can_request_adjustment = (can_manage or is_responsible) and plan.status == 'in_progress'
     has_pending_adjustment = PlanAdjustment.objects.filter(plan=plan, status='pending').exists()
     
+    # P2-3: 接收计划（published → accepted）
+    if request.method == 'POST' and 'accept_plan' in request.POST:
+        if plan.status == 'published':
+            # 检查权限：只有 owner 可以接收个人计划
+            if plan.level == 'personal':
+                if plan.owner != request.user:
+                    messages.error(request, '只有计划所有者可以接收此计划')
+                    return redirect('plan_pages:plan_detail', plan_id=plan_id)
+            
+            try:
+                plan.transition_to('accepted', user=request.user)
+                
+                # P2-4: 通知计划被接收
+                from .notifications import notify_plan_accepted
+                notify_plan_accepted(plan, request.user)
+                
+                messages.success(request, '计划已接收')
+                return redirect('plan_pages:plan_detail', plan_id=plan_id)
+            except ValueError as e:
+                messages.error(request, str(e))
+        else:
+            messages.error(request, '只有已发布状态的计划可以接收')
+    
+    # P2-3: 开始执行（accepted → in_progress）
+    if request.method == 'POST' and 'start_execution' in request.POST:
+        # P2-3 补强：禁止未接收计划的开始执行
+        if plan.level == 'personal' and plan.status == 'published':
+            messages.error(request, '计划尚未接收，不能开始执行。请先接收计划。')
+            return redirect('plan_pages:plan_detail', plan_id=plan_id)
+        
+        if plan.status == 'accepted':
+            try:
+                plan.transition_to('in_progress', user=request.user)
+                messages.success(request, '计划已开始执行')
+                return redirect('plan_pages:plan_detail', plan_id=plan_id)
+            except ValueError as e:
+                messages.error(request, str(e))
+        else:
+            messages.error(request, '只有已接收状态的计划可以开始执行')
+    
+    # P2-3: 检查操作权限
+    can_accept = False
+    if plan.status == 'published':
+        if plan.level == 'personal':
+            can_accept = plan.owner == request.user
+        else:
+            # 公司计划：所有用户都可以接收（简化版）
+            can_accept = True
+    
+    can_start_execution = plan.status == 'accepted'
+    
     context.update({
         'plan': plan,
         'progress_records': progress_records,
@@ -1272,6 +1425,9 @@ def plan_detail(request, plan_id):
         'can_approve': can_approve,
         # 计划调整申请权限
         'can_request_adjustment': can_request_adjustment and not has_pending_adjustment,
+        # P2-3: 接收和开始执行权限
+        'can_accept': can_accept,
+        'can_start_execution': can_start_execution,
     })
     return render(request, "plan_management/plan_detail.html", context)
 
@@ -1653,6 +1809,18 @@ def plan_execution_track(request, plan_id):
     
     # 处理进度更新
     if request.method == 'POST' and 'update_progress' in request.POST:
+        # P2-3 补强：禁止未接收计划的进度更新
+        if plan.level == 'personal' and plan.status == 'published':
+            messages.error(request, '计划尚未接收，不能更新进度。请先接收计划。')
+            return redirect('plan_pages:plan_execution_track', plan_id=plan_id)
+        
+        # P2-3: 如果计划是 accepted 状态，首次更新进度时自动进入 in_progress
+        if plan.status == 'accepted':
+            try:
+                plan.transition_to('in_progress', user=request.user)
+            except ValueError:
+                pass  # 如果转换失败，继续更新进度
+        
         progress_form = PlanProgressUpdateForm(request.POST, plan=plan)
         if progress_form.is_valid():
             record = progress_form.save(commit=False)
@@ -1660,6 +1828,23 @@ def plan_execution_track(request, plan_id):
             record.save()
             messages.success(request, '进度更新成功')
             return redirect('plan_pages:plan_execution_track', plan_id=plan_id)
+    
+    # P2-3: 开始执行（accepted → in_progress）
+    if request.method == 'POST' and 'start_execution' in request.POST:
+        # P2-3 补强：禁止未接收计划的开始执行
+        if plan.level == 'personal' and plan.status == 'published':
+            messages.error(request, '计划尚未接收，不能开始执行。请先接收计划。')
+            return redirect('plan_pages:plan_execution_track', plan_id=plan_id)
+        
+        if plan.status == 'accepted':
+            try:
+                plan.transition_to('in_progress', user=request.user)
+                messages.success(request, '计划已开始执行')
+                return redirect('plan_pages:plan_execution_track', plan_id=plan_id)
+            except ValueError as e:
+                messages.error(request, str(e))
+        else:
+            messages.error(request, '只有已接收状态的计划可以开始执行')
     
     # 处理问题创建
     if request.method == 'POST' and 'create_issue' in request.POST:
@@ -1712,7 +1897,12 @@ def plan_execution_track(request, plan_id):
         'progress_trend': progress_trend,
         'progress_form': progress_form,
         'issue_form': issue_form,
-        'can_update_progress': plan.status == 'in_progress',
+        # P2-3 补强：个人计划必须接收后才能更新进度
+        'can_update_progress': (
+            plan.status in ['accepted', 'in_progress'] if plan.level == 'personal' 
+            else plan.status in ['published', 'accepted', 'in_progress']
+        ),
+        'can_start_execution': plan.status == 'accepted',  # P2-3
         'can_complete': plan.status == 'in_progress',
         'valid_transitions': plan.get_valid_transitions(),
     })
@@ -1918,6 +2108,17 @@ def strategic_goal_create(request):
         if form.is_valid():
             goal = form.save(commit=False)
             goal.created_by = request.user
+            
+            # P2-2: 确保 level 正确设置
+            if not goal.level:
+                if goal.parent_goal:
+                    goal.level = 'personal'
+                    # 个人目标的 owner = responsible_person
+                    if goal.responsible_person and not goal.owner:
+                        goal.owner = goal.responsible_person
+                else:
+                    goal.level = 'company'
+            
             goal.save()
             
             # 保存多对多关系
@@ -1997,11 +2198,17 @@ def strategic_goal_detail(request, goal_id):
     # 获取关联计划数量
     related_plans_count = Plan.objects.filter(related_goal=goal).count()
     
-    # 处理状态转换（发布目标）
+    # 处理状态转换（发布目标）- P2-2
     if request.method == 'POST' and 'publish_goal' in request.POST:
         if goal.status == 'draft':
             try:
                 goal.transition_to('published', user=request.user)
+                
+                # P2-2: 公司目标发布后，通知员工创建个人目标
+                if goal.level == 'company':
+                    from .notifications import notify_company_goal_published
+                    notify_company_goal_published(goal)
+                
                 messages.success(request, '目标已发布')
                 return redirect('plan_pages:strategic_goal_detail', goal_id=goal_id)
             except ValueError as e:
@@ -2009,9 +2216,61 @@ def strategic_goal_detail(request, goal_id):
         else:
             messages.error(request, '只有制定中状态的目标可以发布')
     
-    # 检查是否可以发布
+    # P2-2: 接收目标（published → accepted）
+    if request.method == 'POST' and 'accept_goal' in request.POST:
+        if goal.status == 'published':
+            # 检查权限：只有 owner 可以接收个人目标
+            if goal.level == 'personal':
+                if goal.owner != request.user:
+                    messages.error(request, '只有目标所有者可以接收此目标')
+                    return redirect('plan_pages:strategic_goal_detail', goal_id=goal_id)
+            
+            try:
+                goal.transition_to('accepted', user=request.user)
+                
+                # P2-4: 通知目标被接收
+                from .notifications import notify_goal_accepted
+                notify_goal_accepted(goal, request.user)
+                
+                messages.success(request, '目标已接收')
+                return redirect('plan_pages:strategic_goal_detail', goal_id=goal_id)
+            except ValueError as e:
+                messages.error(request, str(e))
+        else:
+            messages.error(request, '只有已发布状态的目标可以接收')
+    
+    # P2-2: 开始执行（accepted → in_progress）
+    if request.method == 'POST' and 'start_execution' in request.POST:
+        # P2-2 补强：禁止未接收目标的开始执行
+        if goal.level == 'personal' and goal.status == 'published':
+            messages.error(request, '目标尚未接收，不能开始执行。请先接收目标。')
+            return redirect('plan_pages:strategic_goal_detail', goal_id=goal_id)
+        
+        if goal.status == 'accepted':
+            try:
+                goal.transition_to('in_progress', user=request.user)
+                messages.success(request, '目标已开始执行')
+                return redirect('plan_pages:strategic_goal_detail', goal_id=goal_id)
+            except ValueError as e:
+                messages.error(request, str(e))
+        else:
+            messages.error(request, '只有已接收状态的目标可以开始执行')
+    
+    # P2-2: 检查操作权限
     can_publish = (_permission_granted('plan_management.manage_goal', permission_set) 
                    and goal.status == 'draft')
+    
+    # P2-2: 检查是否可以接收（只有 owner 可以接收个人目标）
+    can_accept = False
+    if goal.status == 'published':
+        if goal.level == 'personal':
+            can_accept = goal.owner == request.user
+        else:
+            # 公司目标：所有用户都可以接收（后续可优化为按部门/角色）
+            can_accept = True
+    
+    # P2-2: 检查是否可以开始执行
+    can_start_execution = goal.status == 'accepted'
     
     context = _context(
         f"战略目标详情 - {goal.name}",
@@ -2030,6 +2289,8 @@ def strategic_goal_detail(request, goal_id):
         'can_edit': _permission_granted('plan_management.manage_goal', permission_set) and goal.status in ['draft', 'published'],
         'can_delete': _permission_granted('plan_management.manage_goal', permission_set) and goal.status == 'draft' and not goal.has_related_plans(),
         'can_publish': can_publish,
+        'can_accept': can_accept,  # P2-2
+        'can_start_execution': can_start_execution,  # P2-2
         'valid_transitions': goal.get_valid_transitions(),
     })
     return render(request, "goal_management/goal_detail.html", context)
@@ -2187,8 +2448,8 @@ def strategic_goal_track_entry(request):
         messages.info(request, '暂无战略目标，请先创建目标')
         return redirect('plan_pages:strategic_goal_list')
     
-    # 筛选可跟踪的目标（已发布或执行中的目标）
-    trackable_goals = all_goals.filter(status__in=['published', 'in_progress'])
+    # P2-2: 筛选可跟踪的目标（已发布、已接收或执行中的目标）
+    trackable_goals = all_goals.filter(status__in=['published', 'accepted', 'in_progress'])
     
     # 统计信息（所有状态）
     total_count = all_goals.count()
@@ -2274,6 +2535,18 @@ def strategic_goal_track(request, goal_id):
     
     # 处理进度更新
     if request.method == 'POST' and 'update_progress' in request.POST:
+        # P2-2 补强：禁止未接收目标的进度更新
+        if goal.level == 'personal' and goal.status == 'published':
+            messages.error(request, '目标尚未接收，不能更新进度。请先接收目标。')
+            return redirect('plan_pages:strategic_goal_track', goal_id=goal_id)
+        
+        # P2-2: 如果目标是 accepted 状态，首次更新进度时自动进入 in_progress
+        if goal.status == 'accepted':
+            try:
+                goal.transition_to('in_progress', user=request.user)
+            except ValueError:
+                pass  # 如果转换失败，继续更新进度
+        
         progress_form = GoalProgressUpdateForm(request.POST, goal=goal)
         if progress_form.is_valid():
             record = progress_form.save(commit=False)
@@ -2293,8 +2566,30 @@ def strategic_goal_track(request, goal_id):
         except ValueError as e:
             messages.error(request, str(e))
     
+    # P2-2: 开始执行（accepted → in_progress）
+    if request.method == 'POST' and 'start_execution' in request.POST:
+        # P2-2 补强：禁止未接收目标的开始执行
+        if goal.level == 'personal' and goal.status == 'published':
+            messages.error(request, '目标尚未接收，不能开始执行。请先接收目标。')
+            return redirect('plan_pages:strategic_goal_track', goal_id=goal_id)
+        
+        if goal.status == 'accepted':
+            try:
+                goal.transition_to('in_progress', user=request.user)
+                messages.success(request, '目标已开始执行')
+                return redirect('plan_pages:strategic_goal_track', goal_id=goal_id)
+            except ValueError as e:
+                messages.error(request, str(e))
+        else:
+            messages.error(request, '只有已接收状态的目标可以开始执行')
+    
     # 处理目标完成确认
     if request.method == 'POST' and 'complete_goal' in request.POST:
+        # P2-2 补强：禁止未接收目标的完成操作
+        if goal.level == 'personal' and goal.status == 'published':
+            messages.error(request, '目标尚未接收，不能完成。请先接收目标。')
+            return redirect('plan_pages:strategic_goal_track', goal_id=goal_id)
+        
         if goal.status == 'in_progress':
             goal.transition_to('completed', user=request.user)
             messages.success(request, '目标已完成')
@@ -2317,7 +2612,15 @@ def strategic_goal_track(request, goal_id):
         'progress_trend': progress_trend,
         'progress_form': progress_form,
         'adjustment_form': adjustment_form,
-        'can_update_progress': goal.status in ['published', 'in_progress'],
+        # P2-2 补强：个人目标必须接收后才能更新进度
+        can_update_progress = False
+        if goal.level == 'personal':
+            can_update_progress = goal.status in ['accepted', 'in_progress']
+        else:
+            can_update_progress = goal.status in ['published', 'accepted', 'in_progress']
+        
+        'can_update_progress': can_update_progress,  # P2-2 补强
+        'can_start_execution': goal.status == 'accepted',  # P2-2
         'can_complete': goal.status == 'in_progress',
         'valid_transitions': goal.get_valid_transitions(),
     })
@@ -2497,8 +2800,10 @@ def create_child_goal(request, parent_goal_id):
             department_id = None
     
     try:
+        # P2-2: 创建个人目标，设置 level=personal, owner=responsible_person
         child_goal = StrategicGoal.objects.create(
             name=name,
+            level='personal',  # P2-2: 个人目标
             goal_type=parent_goal.goal_type,
             goal_period=parent_goal.goal_period,
             status='draft',
@@ -2507,6 +2812,7 @@ def create_child_goal(request, parent_goal_id):
             indicator_unit=parent_goal.indicator_unit,
             target_value=target_value,
             current_value=Decimal('0'),
+            owner_id=responsible_id,  # P2-2: owner = responsible_person
             responsible_person_id=responsible_id,
             responsible_department_id=department_id,
             description=request.POST.get('description', ''),

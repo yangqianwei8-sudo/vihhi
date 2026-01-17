@@ -149,18 +149,14 @@ def decide(decision_id: int, user, approve: bool, reason: str | None = None) -> 
         old_status = plan.status  # 保存旧状态用于日志
         if decision.request_type == "start":
             _ensure_plan_status(plan, {"draft"}, "start_approve")
-            plan.status = "in_progress"
-            plan.save(update_fields=["status"])
             
-            # 创建状态变更日志
-            from backend.apps.plan_management.models import PlanStatusLog
-            PlanStatusLog.objects.create(
-                plan=plan,
-                old_status=old_status,
-                new_status="in_progress",
-                changed_by=user,
-                change_reason=f"审批通过启动请求：{reason or '无说明'}"
-            )
+            # P2-3: 审批通过后，状态改为 published（不是直接 in_progress）
+            plan.transition_to("published", user=user)
+            
+            # P2-3: 公司计划发布后，通知员工创建个人计划
+            if plan.level == 'company':
+                from backend.apps.plan_management.notifications import notify_company_plan_published
+                notify_company_plan_published(plan)
         elif decision.request_type == "cancel":
             _ensure_plan_status(plan, {"draft", "in_progress"}, "cancel_approve")
             plan.status = "cancelled"

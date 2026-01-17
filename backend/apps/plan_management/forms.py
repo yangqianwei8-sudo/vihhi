@@ -39,7 +39,7 @@ class StrategicGoalForm(forms.ModelForm):
         model = StrategicGoal
         fields = [
             # 基本信息
-            'goal_number', 'name', 'goal_type', 'goal_period', 'status',
+            'goal_number', 'name', 'level', 'goal_type', 'goal_period', 'status',  # P2-2: 添加 level
             # 目标指标
             'indicator_name', 'indicator_type', 'indicator_unit', 'target_value', 'current_value',
             # 责任人信息
@@ -190,12 +190,22 @@ class StrategicGoalForm(forms.ModelForm):
             # 新建时：显示提示信息，系统会自动生成
             self.fields['goal_number'].widget.attrs['placeholder'] = '系统将自动生成'
         
-        # 如果是编辑，设置初始值
+        # P2-2: 设置 level 字段的初始值和逻辑
         if self.instance and self.instance.pk:
+            # 编辑时：使用现有值
             self.fields['participants'].initial = self.instance.participants.all()
             self.fields['related_projects'].initial = self.instance.related_projects.all()
         else:
-            # 新建时，设置开始日期默认为当天
+            # 新建时：根据是否有 parent_goal 设置 level
+            parent_goal_id = self.data.get('parent_goal') or self.initial.get('parent_goal')
+            if parent_goal_id:
+                # 有父目标，说明是个人目标
+                self.fields['level'].initial = 'personal'
+            else:
+                # 没有父目标，说明是公司目标
+                self.fields['level'].initial = 'company'
+            
+            # 设置开始日期默认为当天
             today = date.today()
             self.fields['start_date'].initial = today
             
@@ -454,7 +464,7 @@ class PlanForm(forms.ModelForm):
         model = Plan
         fields = [
             # 基本信息
-            'plan_number', 'name', 'plan_type', 'plan_period',
+            'plan_number', 'name', 'level', 'plan_period',
             # 关联信息
             'related_goal', 'parent_plan', 'related_project',
             # 计划内容
@@ -481,7 +491,7 @@ class PlanForm(forms.ModelForm):
                 'placeholder': '请输入计划名称',
                 'maxlength': '200'
             }),
-            'plan_type': forms.Select(attrs={'class': 'form-select'}),
+            'level': forms.Select(attrs={'class': 'form-select'}),
             'plan_period': forms.Select(attrs={'class': 'form-select'}),
             'related_goal': forms.Select(attrs={
                 'class': 'form-select',

@@ -27,9 +27,15 @@ class StrategicGoal(models.Model):
         ('quarterly', '季度目标'),
     ]
     
+    LEVEL_CHOICES = [
+        ('company', '公司目标'),
+        ('personal', '个人目标'),
+    ]
+    
     STATUS_CHOICES = [
         ('draft', '制定中'),
         ('published', '已发布'),
+        ('accepted', '已接收'),
         ('in_progress', '执行中'),
         ('completed', '已完成'),
         ('cancelled', '已取消'),
@@ -45,6 +51,7 @@ class StrategicGoal(models.Model):
     # 基本信息
     goal_number = models.CharField(max_length=50, unique=True, verbose_name='目标编号', help_text='格式：GOAL-{YYYYMMDD}-{序列号}')
     name = models.CharField(max_length=200, verbose_name='目标名称')
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='company', verbose_name='目标层级', help_text='company=公司目标, personal=个人目标')
     goal_type = models.CharField(max_length=20, choices=GOAL_TYPE_CHOICES, verbose_name='目标类型')
     goal_period = models.CharField(max_length=20, choices=GOAL_PERIOD_CHOICES, verbose_name='目标周期')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='目标状态')
@@ -58,6 +65,15 @@ class StrategicGoal(models.Model):
     completion_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='完成率', help_text='百分比，自动计算')
     
     # 责任人信息
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='owned_goals',
+        null=True,
+        blank=True,
+        verbose_name='目标所有者',
+        help_text='个人目标必填，公司目标可为空'
+    )
     responsible_person = models.ForeignKey(
         User, 
         on_delete=models.PROTECT, 
@@ -99,6 +115,11 @@ class StrategicGoal(models.Model):
     end_date = models.DateField(verbose_name='结束日期')
     duration_days = models.IntegerField(default=0, verbose_name='目标周期（天）', help_text='自动计算')
     
+    # 状态时间戳（P2-1：统一状态机）
+    published_at = models.DateTimeField(null=True, blank=True, verbose_name='发布时间', help_text='状态变为 published 时自动记录')
+    accepted_at = models.DateTimeField(null=True, blank=True, verbose_name='接收时间', help_text='状态变为 accepted 时自动记录')
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name='完成时间', help_text='状态变为 completed 时自动记录')
+    
     # 关联信息
     parent_goal = models.ForeignKey(
         'self',
@@ -138,6 +159,8 @@ class StrategicGoal(models.Model):
         indexes = [
             models.Index(fields=['goal_number']),
             models.Index(fields=['status']),
+            models.Index(fields=['level']),
+            models.Index(fields=['owner']),
             models.Index(fields=['goal_type']),
             models.Index(fields=['goal_period']),
             models.Index(fields=['responsible_person']),
@@ -199,10 +222,24 @@ class StrategicGoal(models.Model):
         super().save(*args, **kwargs)
     
     def get_valid_transitions(self):
-        """获取有效的状态转换"""
+        """
+        获取有效的状态转换（P2-1：统一状态机规则）
+        
+        状态机规则：
+        draft → published → accepted → in_progress → completed
+                      ↘ cancelled
+        
+        - draft: 制定中
+        - published: 已发布（已下达）
+        - accepted: 已接收（员工确认）
+        - in_progress: 执行中（自动/人工进入）
+        - completed: 已完成（满足完成条件）
+        - cancelled: 已取消（可从 draft 或 published 取消）
+        """
         transitions = {
             'draft': ['published', 'cancelled'],
-            'published': ['in_progress', 'cancelled'],
+            'published': ['accepted', 'cancelled'],
+            'accepted': ['in_progress', 'cancelled'],
             'in_progress': ['completed', 'cancelled'],
             'completed': [],
             'cancelled': [],
@@ -214,11 +251,23 @@ class StrategicGoal(models.Model):
         return new_status in self.get_valid_transitions()
     
     def transition_to(self, new_status, user=None):
-        """转换状态"""
+        """
+        转换状态（P2-1：统一状态机，自动记录时间戳）
+        """
         if not self.can_transition_to(new_status):
             raise ValueError(f"无法从 {self.get_status_display()} 转换到 {new_status}")
         
         old_status = self.status
+        now = timezone.now()
+        
+        # 自动记录状态时间戳
+        if new_status == 'published' and not self.published_at:
+            self.published_at = now
+        elif new_status == 'accepted' and not self.accepted_at:
+            self.accepted_at = now
+        elif new_status == 'completed' and not self.completed_at:
+            self.completed_at = now
+        
         self.status = new_status
         self.save()
         
@@ -424,13 +473,11 @@ class GoalAlignmentRecord(models.Model):
 # ==================== 计划管理模型 ====================
 
 class Plan(models.Model):
-    """计划模型"""
+    """计划模型（P2-1：统一模型与状态机）"""
     
-    PLAN_TYPE_CHOICES = [
-        ('personal', '个人计划'),
-        ('department', '部门计划'),
+    LEVEL_CHOICES = [
         ('company', '公司计划'),
-        ('project', '项目计划'),
+        ('personal', '个人计划'),
     ]
     
     PLAN_PERIOD_CHOICES = [
@@ -443,6 +490,8 @@ class Plan(models.Model):
     
     STATUS_CHOICES = [
         ('draft', '草稿'),
+        ('published', '已发布'),
+        ('accepted', '已接收'),
         ('in_progress', '执行中'),
         ('completed', '已完成'),
         ('cancelled', '已取消'),
@@ -457,7 +506,7 @@ class Plan(models.Model):
     # 基本信息
     plan_number = models.CharField(max_length=50, unique=True, verbose_name='计划编号', help_text='格式：PLAN-{YYYYMMDD}-{序列号}')
     name = models.CharField(max_length=200, verbose_name='计划名称')
-    plan_type = models.CharField(max_length=20, choices=PLAN_TYPE_CHOICES, verbose_name='计划类型')
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='company', verbose_name='计划层级', help_text='company=公司计划, personal=个人计划')
     plan_period = models.CharField(max_length=20, choices=PLAN_PERIOD_CHOICES, verbose_name='计划周期')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='计划状态')
     
@@ -502,7 +551,21 @@ class Plan(models.Model):
     end_time = models.DateTimeField(verbose_name='计划结束时间')
     duration_days = models.IntegerField(default=0, verbose_name='计划周期（天）', help_text='自动计算')
     
+    # 状态时间戳（P2-1：统一状态机）
+    published_at = models.DateTimeField(null=True, blank=True, verbose_name='发布时间', help_text='状态变为 published 时自动记录')
+    accepted_at = models.DateTimeField(null=True, blank=True, verbose_name='接收时间', help_text='状态变为 accepted 时自动记录')
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name='完成时间', help_text='状态变为 completed 时自动记录')
+    
     # 责任人信息
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='owned_plans',
+        null=True,
+        blank=True,
+        verbose_name='计划所有者',
+        help_text='个人计划必填，公司计划可为空'
+    )
     responsible_person = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
@@ -606,7 +669,8 @@ class Plan(models.Model):
         indexes = [
             models.Index(fields=['plan_number']),
             models.Index(fields=['status']),
-            models.Index(fields=['plan_type']),
+            models.Index(fields=['level']),
+            models.Index(fields=['owner']),
             models.Index(fields=['plan_period']),
             models.Index(fields=['responsible_person']),
             models.Index(fields=['related_goal']),
@@ -712,12 +776,25 @@ class Plan(models.Model):
     
     def get_valid_transitions(self):
         """
-        获取有效的状态转换（P1：只支持 4 状态）
+        获取有效的状态转换（P2-1：统一状态机规则）
         
-        注意：draft -> in_progress 必须通过审批流程（PlanDecision），不能直接转换
+        状态机规则：
+        draft → published → accepted → in_progress → completed
+                      ↘ cancelled
+        
+        - draft: 草稿
+        - published: 已发布（已下达，审批通过后）
+        - accepted: 已接收（员工确认）
+        - in_progress: 执行中（自动/人工进入）
+        - completed: 已完成（满足完成条件）
+        - cancelled: 已取消（可从 draft 或 published 取消）
+        
+        注意：draft -> published 必须通过审批流程（PlanDecision）
         """
         transitions = {
-            'draft': ['cancelled'],  # 移除 'in_progress'，必须通过审批
+            'draft': ['published', 'cancelled'],
+            'published': ['accepted', 'cancelled'],
+            'accepted': ['in_progress', 'cancelled'],
             'in_progress': ['completed', 'cancelled'],
             'completed': [],
             'cancelled': [],
@@ -729,11 +806,23 @@ class Plan(models.Model):
         return new_status in self.get_valid_transitions()
     
     def transition_to(self, new_status, user=None):
-        """转换状态"""
+        """
+        转换状态（P2-1：统一状态机，自动记录时间戳）
+        """
         if not self.can_transition_to(new_status):
             raise ValueError(f"无法从 {self.get_status_display()} 转换到 {new_status}")
         
         old_status = self.status
+        now = timezone.now()
+        
+        # 自动记录状态时间戳
+        if new_status == 'published' and not self.published_at:
+            self.published_at = now
+        elif new_status == 'accepted' and not self.accepted_at:
+            self.accepted_at = now
+        elif new_status == 'completed' and not self.completed_at:
+            self.completed_at = now
+        
         self.status = new_status
         self.save()
         
@@ -794,9 +883,11 @@ class PlanStatusLog(models.Model):
         return f"{self.plan.plan_number} - {self.old_status} → {self.new_status}"
     
     def get_old_status_display(self):
-        """获取原状态的中文显示"""
+        """获取原状态的中文显示（P2-1：统一状态机）"""
         STATUS_CHOICES = [
             ('draft', '草稿'),
+            ('published', '已发布'),
+            ('accepted', '已接收'),
             ('in_progress', '执行中'),
             ('completed', '已完成'),
             ('cancelled', '已取消'),
@@ -805,9 +896,11 @@ class PlanStatusLog(models.Model):
         return status_dict.get(self.old_status, self.old_status)
     
     def get_new_status_display(self):
-        """获取新状态的中文显示"""
+        """获取新状态的中文显示（P2-1：统一状态机）"""
         STATUS_CHOICES = [
             ('draft', '草稿'),
+            ('published', '已发布'),
+            ('accepted', '已接收'),
             ('in_progress', '执行中'),
             ('completed', '已完成'),
             ('cancelled', '已取消'),
