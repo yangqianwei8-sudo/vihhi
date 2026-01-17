@@ -1,0 +1,87 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>项目编号</th>
+        <th>项目名称</th>
+        <th>客户名称</th>
+        <th>服务类型</th>
+        <th>项目负责人</th>
+        <th>状态</th>
+        <th>创建时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for project in projects %}
+      <tr>
+        <td><code>{{ project.project_number|default:"-" }}</code></td>
+        <td>
+          <a href="{% url 'production_pages:project_detail' project.id %}">
+            {{ project.name }}
+          </a>
+        </td>
+        <td>{{ project.client_company_name|default:"-" }}</td>
+        <td>{% if project.service_type %}{{ project.service_type.name }}{% else %}-{% endif %}</td>
+        <td>{% if project.project_manager %}{{ project.project_manager.get_full_name|default:project.project_manager.username }}{% else %}-{% endif %}</td>
+        <td>
+          {% if project.status == 'draft' %}
+            <span class="list-badge list-badge-draft">草稿</span>
+          {% elif project.status == 'in_progress' %}
+            <span class="list-badge list-badge-in_progress">进行中</span>
+          {% elif project.status == 'completed' %}
+            <span class="list-badge list-badge-completed">已完成</span>
+          {% elif project.status == 'archived' %}
+            <span class="list-badge list-badge-archived">已归档</span>
+          {% else %}
+            <span class="list-badge">{{ project.get_status_display }}</span>
+          {% endif %}
+        </td>
+        <td>{{ project.created_time|date:"Y-m-d" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'production_pages:project_detail' project.id %}" class="list-btn" title="查看">查看</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无项目数据</div>
+          <div class="list-empty-hint">请创建第一个项目开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if projects.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ projects.start_index }} - {{ projects.end_index }} 条，共 {{ projects.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if projects.has_previous %}
+    <a href="?page={{ projects.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.service_type %}&service_type={{ request.GET.service_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in projects.paginator.page_range %}
+    {% if projects.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > projects.number|add:'-3' and num < projects.number|add:'3' %}
+    <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.service_type %}&service_type={{ request.GET.service_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if projects.has_next %}
+    <a href="?page={{ projects.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.service_type %}&service_type={{ request.GET.service_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

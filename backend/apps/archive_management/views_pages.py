@@ -5,8 +5,9 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q, Count, F
 from django.utils import timezone
+from datetime import timedelta
 
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav
@@ -31,22 +32,38 @@ from .services import ArchiveOperationLogService
 from backend.core.views import _build_full_top_nav
 
 
-def _build_archive_sidebar_nav(permission_set, request_path=None):
-    """生成档案管理左侧菜单"""
+def _build_archive_sidebar_nav(permission_set, request_path=None, active_id=None):
+    """生成档案管理左侧菜单（兼容侧边栏模板格式）"""
     nav_items = []
     
-    # 档案管理首页（项目归档列表）
+    # 档案管理首页
     try:
-        project_archive_url = reverse('archive_management:project_archive_list')
+        home_url = reverse('archive_management:archive_management_home')
+        is_home_active = (
+            request_path == home_url or 
+            request_path == reverse('archive_management:archive_home') or
+            active_id == 'archive_home'
+        )
         nav_items.append({
             'label': '项目归档',
             'icon': '📁',
-            'url': project_archive_url,
-            'active': request_path == project_archive_url,
+            'url': home_url,
+            'active': is_home_active,
             'is_home': True,
         })
     except NoReverseMatch:
         pass
+    
+    # 项目归档列表（保留作为子菜单项）
+    try:
+        project_archive_url = reverse('archive_management:project_archive_list')
+        is_project_archive_active = (
+            request_path == project_archive_url or
+            active_id == 'project_archive_list'
+        )
+    except NoReverseMatch:
+        project_archive_url = None
+        is_project_archive_active = False
     
     # 项目档案分组
     project_archive_items = []
@@ -122,11 +139,13 @@ def _build_archive_sidebar_nav(permission_set, request_path=None):
             pass
     
     if project_archive_items:
+        has_active = any(item.get('active') for item in project_archive_items)
         nav_items.append({
             'label': '项目档案',
             'icon': '📄',
-            'items': project_archive_items,
-            'collapsed': not any(item.get('active') for item in project_archive_items),
+            'children': project_archive_items,  # 使用 children 而不是 items
+            'expanded': has_active,  # 如果有激活项，默认展开
+            'active': has_active,
         })
     
     # 行政档案分组
@@ -187,11 +206,13 @@ def _build_archive_sidebar_nav(permission_set, request_path=None):
             })
     
     if administrative_archive_items:
+        has_active = any(item.get('active') for item in administrative_archive_items)
         nav_items.append({
             'label': '行政档案',
             'icon': '📋',
-            'items': administrative_archive_items,
-            'collapsed': not any(item.get('active') for item in administrative_archive_items),
+            'children': administrative_archive_items,  # 使用 children 而不是 items
+            'expanded': has_active,  # 如果有激活项，默认展开
+            'active': has_active,
         })
     
     # 档案库管理分组
@@ -240,11 +261,13 @@ def _build_archive_sidebar_nav(permission_set, request_path=None):
             pass
     
     if storage_items:
+        has_active = any(item.get('active') for item in storage_items)
         nav_items.append({
             'label': '档案库管理',
             'icon': '📚',
-            'items': storage_items,
-            'collapsed': not any(item.get('active') for item in storage_items),
+            'children': storage_items,  # 使用 children 而不是 items
+            'expanded': has_active,  # 如果有激活项，默认展开
+            'active': has_active,
         })
     
     # 档案分类（独立分组）
@@ -280,11 +303,13 @@ def _build_archive_sidebar_nav(permission_set, request_path=None):
             })
     
     if category_items:
+        has_active = any(item.get('active') for item in category_items)
         nav_items.append({
             'label': '档案分类',
             'icon': '🗂️',
-            'items': category_items,
-            'collapsed': not any(item.get('active') for item in category_items),
+            'children': category_items,  # 使用 children 而不是 items
+            'expanded': has_active,  # 如果有激活项，默认展开
+            'active': has_active,
         })
     
     # 档案安全分组（待实现）
@@ -359,11 +384,13 @@ def _build_archive_sidebar_nav(permission_set, request_path=None):
             })
     
     if security_items:
+        has_active = any(item.get('active') for item in security_items)
         nav_items.append({
             'label': '档案安全',
             'icon': '🔐',
-            'items': security_items,
-            'collapsed': not any(item.get('active') for item in security_items),
+            'children': security_items,  # 使用 children 而不是 items
+            'expanded': has_active,  # 如果有激活项，默认展开
+            'active': has_active,
         })
     
     # 档案检索分组（增强功能）
@@ -436,8 +463,9 @@ def _build_archive_sidebar_nav(permission_set, request_path=None):
         nav_items.append({
             'label': '档案检索',
             'icon': '🔍',
-            'items': search_items,
-            'collapsed': not any(item.get('active') for item in search_items),
+            'children': search_items,  # 使用 children 而不是 items
+            'expanded': any(item.get('active') for item in search_items),  # 如果有激活项，默认展开
+            'active': any(item.get('active') for item in search_items),
         })
     
     # 档案数字化分组（待实现）
@@ -498,8 +526,9 @@ def _build_archive_sidebar_nav(permission_set, request_path=None):
         nav_items.append({
             'label': '档案数字化',
             'icon': '💾',
-            'items': digitization_items,
-            'collapsed': not any(item.get('active') for item in digitization_items),
+            'children': digitization_items,  # 使用 children 而不是 items
+            'expanded': any(item.get('active') for item in digitization_items),  # 如果有激活项，默认展开
+            'active': any(item.get('active') for item in digitization_items),
         })
     
     # 档案统计（完善功能）
@@ -555,8 +584,9 @@ def _build_archive_sidebar_nav(permission_set, request_path=None):
         nav_items.append({
             'label': '档案统计',
             'icon': '📊',
-            'items': statistics_items,
-            'collapsed': not any(item.get('active') for item in statistics_items),
+            'children': statistics_items,  # 使用 children 而不是 items
+            'expanded': any(item.get('active') for item in statistics_items),  # 如果有激活项，默认展开
+            'active': any(item.get('active') for item in statistics_items),
         })
     
     return nav_items
@@ -577,7 +607,309 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
     else:
         context['full_top_nav'] = []
         context['archive_sidebar_nav'] = []
+    
+    # 为所有可能的侧边栏变量设置默认值，避免模板错误
+    # 这些变量可能在其他模块的模板中被引用
+    context.setdefault('plan_menu', [])
+    context.setdefault('module_sidebar_nav', [])
+    context.setdefault('delivery_sidebar_nav', [])
+    context.setdefault('customer_menu', [])
+    context.setdefault('production_sidebar_nav', [])
+    context.setdefault('personnel_sidebar_nav', [])
+    context.setdefault('sidebar_menu', [])
+    context.setdefault('financial_menu', [])
+    context.setdefault('litigation_sidebar_nav', [])
+    context.setdefault('production_management_menu', [])
+    
     return context
+
+
+@login_required
+def archive_management_home(request):
+    """档案管理首页 - 数据展示中心"""
+    from django.db.models import Avg, Count
+    from datetime import datetime
+    from backend.apps.archive_management.models import (
+        ArchiveProjectArchive,
+        AdministrativeArchive,
+        ArchiveBorrow,
+        ProjectArchiveDocument,
+    )
+    
+    permission_set = get_user_permission_codes(request.user)
+    if not _permission_granted('archive_management.view', permission_set):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("无权限访问档案管理")
+    
+    now = timezone.now()
+    today = now.date()
+    this_month_start = today.replace(day=1)
+    seven_days_ago = today - timedelta(days=7)
+    
+    context = {}
+    
+    try:
+        # ========== 核心指标卡片 ==========
+        core_cards = []
+        
+        # 项目归档统计
+        all_project_archives = ArchiveProjectArchive.objects.all()
+        total_project_archives = all_project_archives.count()
+        pending_project_archives = all_project_archives.filter(status='pending').count()
+        approving_project_archives = all_project_archives.filter(status='approving').count()
+        archived_project_archives = all_project_archives.filter(status='archived').count()
+        rejected_project_archives = all_project_archives.filter(status='rejected').count()
+        this_month_project_archives = all_project_archives.filter(created_time__gte=this_month_start).count()
+        
+        # 行政档案统计
+        all_administrative_archives = AdministrativeArchive.objects.all()
+        total_administrative_archives = all_administrative_archives.count()
+        archived_administrative_archives = all_administrative_archives.filter(status='archived').count()
+        borrowed_administrative_archives = all_administrative_archives.filter(status='borrowed').count()
+        
+        # 档案借阅统计
+        all_borrows = ArchiveBorrow.objects.all()
+        total_borrows = all_borrows.count()
+        pending_borrows = all_borrows.filter(status='pending').count()
+        out_borrows = all_borrows.filter(status='out').count()
+        overdue_borrows = all_borrows.filter(status='overdue').count()
+        
+        # 项目文档统计
+        all_project_documents = ProjectArchiveDocument.objects.all()
+        total_project_documents = all_project_documents.count()
+        
+        # 卡片1：项目归档总数
+        core_cards.append({
+            'label': '项目归档',
+            'icon': '📁',
+            'value': str(total_project_archives),
+            'subvalue': f'待归档 {pending_project_archives} | 审批中 {approving_project_archives} | 已归档 {archived_project_archives}',
+            'url': reverse('archive_management:project_archive_list'),
+            'variant': 'secondary'
+        })
+        
+        # 卡片2：待归档项目
+        core_cards.append({
+            'label': '待归档项目',
+            'icon': '📋',
+            'value': str(pending_project_archives),
+            'subvalue': f'等待归档审批',
+            'url': reverse('archive_management:project_archive_list') + '?status=pending',
+            'variant': 'dark' if pending_project_archives > 0 else 'secondary'
+        })
+        
+        # 卡片3：已归档项目
+        core_cards.append({
+            'label': '已归档项目',
+            'icon': '✅',
+            'value': str(archived_project_archives),
+            'subvalue': f'本月归档 {this_month_project_archives} 个',
+            'url': reverse('archive_management:project_archive_list') + '?status=archived',
+            'variant': 'secondary'
+        })
+        
+        # 卡片4：行政档案
+        core_cards.append({
+            'label': '行政档案',
+            'icon': '📄',
+            'value': str(total_administrative_archives),
+            'subvalue': f'已归档 {archived_administrative_archives} | 已借出 {borrowed_administrative_archives}',
+            'url': reverse('archive_management:administrative_archive_list'),
+            'variant': 'secondary'
+        })
+        
+        # 卡片5：档案借阅
+        core_cards.append({
+            'label': '档案借阅',
+            'icon': '📖',
+            'value': str(total_borrows),
+            'subvalue': f'待审批 {pending_borrows} | 已借出 {out_borrows} | 已逾期 {overdue_borrows}',
+            'url': reverse('archive_management:archive_borrow_list'),
+            'variant': 'dark' if overdue_borrows > 0 else 'secondary'
+        })
+        
+        # 卡片6：项目文档
+        core_cards.append({
+            'label': '项目文档',
+            'icon': '📚',
+            'value': str(total_project_documents),
+            'subvalue': f'项目文档总数',
+            'url': reverse('archive_management:project_document_list'),
+            'variant': 'secondary'
+        })
+        
+        context['core_cards'] = core_cards
+        
+        # ========== 风险预警 ==========
+        risk_warnings = []
+        
+        # 逾期借阅
+        overdue_borrow_list = all_borrows.filter(status='overdue').select_related('borrower')[:5]
+        for borrow in overdue_borrow_list:
+            borrower_name = _format_user_display(borrow.borrower) if borrow.borrower else '未知'
+            risk_warnings.append({
+                'type': 'overdue',
+                'title': f'借阅单号：{borrow.borrow_number}',
+                'responsible': borrower_name,
+                'days': 0,  # 可以计算逾期天数
+                'url': reverse('archive_management:archive_borrow_detail', args=[borrow.id])
+            })
+        
+        # 待归档项目（超过7天）
+        stale_project_archives = all_project_archives.filter(
+            status__in=['pending', 'approving'],
+            created_time__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()))
+        ).select_related('applicant')[:5]
+        
+        for archive in stale_project_archives:
+            days_since_create = (today - archive.created_time.date()).days
+            applicant_name = _format_user_display(archive.applicant) if archive.applicant else '未知'
+            risk_warnings.append({
+                'type': 'stale',
+                'title': archive.archive_number,
+                'responsible': applicant_name,
+                'days': days_since_create,
+                'url': reverse('archive_management:project_archive_detail', args=[archive.id])
+            })
+        
+        context['risk_warnings'] = risk_warnings[:5]
+        context['stale_archives_count'] = all_project_archives.filter(
+            status__in=['pending', 'approving'],
+            created_time__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()))
+        ).count()
+        context['overdue_borrows_count'] = overdue_borrows
+        
+        # ========== 待办事项 ==========
+        todo_items = []
+        
+        # 待归档项目
+        pending_archive_list = all_project_archives.filter(status='pending').select_related('applicant')[:5]
+        for archive in pending_archive_list:
+            applicant_name = _format_user_display(archive.applicant) if archive.applicant else '未知'
+            todo_items.append({
+                'type': 'archive',
+                'title': archive.archive_number,
+                'archive_number': archive.archive_number,
+                'responsible': applicant_name,
+                'url': reverse('archive_management:project_archive_detail', args=[archive.id])
+            })
+        
+        # 待审批借阅
+        pending_borrow_list = all_borrows.filter(status='pending').select_related('borrower')[:5]
+        for borrow in pending_borrow_list:
+            borrower_name = _format_user_display(borrow.borrower) if borrow.borrower else '未知'
+            todo_items.append({
+                'type': 'borrow',
+                'title': f'借阅单号：{borrow.borrow_number}',
+                'archive_number': borrow.borrow_number,
+                'responsible': borrower_name,
+                'url': reverse('archive_management:archive_borrow_detail', args=[borrow.id])
+            })
+        
+        context['todo_items'] = todo_items[:10]
+        context['pending_approval_count'] = pending_project_archives + pending_borrows
+        context['todo_summary_url'] = reverse('archive_management:project_archive_list') + '?status=pending'
+        
+        # ========== 我的工作 ==========
+        my_work = {}
+        
+        # 我申请的项目归档
+        my_applied_archives = all_project_archives.filter(applicant=request.user).order_by('-created_time')[:3]
+        my_work['my_archives'] = [{
+            'title': archive.archive_number,
+            'status': archive.get_status_display(),
+            'url': reverse('archive_management:project_archive_detail', args=[archive.id])
+        } for archive in my_applied_archives]
+        my_work['my_archives_count'] = all_project_archives.filter(applicant=request.user).count()
+        
+        # 我借阅的档案
+        my_borrows = all_borrows.filter(borrower=request.user).order_by('-created_time')[:3]
+        my_work['my_borrows'] = [{
+            'title': f'借阅单号：{borrow.borrow_number}',
+            'status': borrow.get_status_display(),
+            'url': reverse('archive_management:archive_borrow_detail', args=[borrow.id])
+        } for borrow in my_borrows]
+        my_work['my_borrows_count'] = all_borrows.filter(borrower=request.user).count()
+        
+        my_work['summary_url'] = reverse('archive_management:project_archive_list')
+        
+        context['my_work'] = my_work
+        
+        # ========== 最近活动 ==========
+        recent_activities = {}
+        
+        # 最近创建的项目归档
+        recent_project_archives = all_project_archives.select_related('applicant').order_by('-created_time')[:5]
+        recent_activities['recent_archives'] = [{
+            'title': archive.archive_number,
+            'creator': _format_user_display(archive.applicant),
+            'time': archive.created_time,
+            'url': reverse('archive_management:project_archive_detail', args=[archive.id])
+        } for archive in recent_project_archives]
+        
+        # 最近创建的借阅
+        recent_borrows = all_borrows.select_related('borrower').order_by('-created_time')[:5]
+        recent_activities['recent_borrows'] = [{
+            'title': f'借阅单号：{borrow.borrow_number}',
+            'creator': _format_user_display(borrow.borrower),
+            'time': borrow.created_time,
+            'url': reverse('archive_management:archive_borrow_detail', args=[borrow.id])
+        } for borrow in recent_borrows]
+        
+        context['recent_activities'] = recent_activities
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception('获取档案管理统计数据失败: %s', str(e))
+        context.setdefault('core_cards', [])
+        context.setdefault('risk_warnings', [])
+        context.setdefault('todo_items', [])
+        context.setdefault('my_work', {})
+        context.setdefault('recent_activities', {})
+    
+    # 顶部操作栏
+    top_actions = []
+    if _permission_granted('archive_management.create', permission_set):
+        try:
+            top_actions.append({
+                'label': '创建项目归档',
+                'url': reverse('archive_management:project_archive_create'),
+                'icon': '➕'
+            })
+        except Exception:
+            pass
+    
+    context['top_actions'] = top_actions
+    
+    # 构建上下文
+    page_context = _context(
+        "档案管理",
+        "📁",
+        "数据展示中心 - 集中展示档案关键指标、状态与风险",
+        request=request,
+    )
+    
+    # 设置侧边栏导航
+    archive_sidebar_nav = _build_archive_sidebar_nav(permission_set, request.path, active_id='archive_home')
+    page_context['archive_sidebar_nav'] = archive_sidebar_nav
+    page_context['module_sidebar_nav'] = archive_sidebar_nav
+    page_context['sidebar_title'] = '档案管理'
+    page_context['sidebar_subtitle'] = 'Archive Management'
+    
+    # 合并所有数据
+    page_context.update(context)
+    
+    return render(request, "archive_management/home.html", page_context)
+
+
+def _format_user_display(user, default='—'):
+    """格式化用户显示名称"""
+    if not user:
+        return default
+    if hasattr(user, 'get_full_name') and user.get_full_name():
+        return user.get_full_name()
+    return user.username if hasattr(user, 'username') else str(user)
 
 
 @login_required
@@ -675,17 +1007,16 @@ def project_archive_list(request):
             Q(project__project_number__icontains=search)
         )
     
-    # 分页
-    page_size = request.GET.get('page_size', '10')
+    # 排序
+    queryset = queryset.order_by('-created_time')
+    
+    # 分页（每页20条）
+    paginator = Paginator(queryset, 20)
+    page_number = request.GET.get('page', 1)
     try:
-        per_page = int(page_size)
-        if per_page not in [10, 20, 50]:
-            per_page = 10
-    except (ValueError, TypeError):
-        per_page = 10
-    paginator = Paginator(queryset, per_page)
-    page_num = request.GET.get('page', 1)
-    page = paginator.get_page(page_num)
+        page = paginator.get_page(page_number)
+    except:
+        page = paginator.get_page(1)
     
     # 统计数据（用于统计卡片）
     base_queryset = ArchiveProjectArchive.objects.all()
@@ -699,18 +1030,33 @@ def project_archive_list(request):
     archived_count = base_queryset.filter(status='archived').count()
     rejected_count = base_queryset.filter(status='rejected').count()
     
-    context = {
+    # 生成左侧菜单
+    archive_sidebar_nav = _build_archive_sidebar_nav(permission_set, request.path)
+    
+    # 使用 _context 函数获取基础上下文（包含所有侧边栏变量的默认值）
+    context = _context(
+        "项目归档",
+        "📁",
+        "管理项目归档记录，支持筛选和搜索",
+        request=request,
+    )
+    
+    # 更新上下文变量
+    context.update({
         'page': page,
         'status': status,
+        'status_filter': status,  # 兼容模板中的变量名
         'search': search,
         'total_count': total_count,
         'pending_count': pending_count,
         'approving_count': approving_count,
         'archived_count': archived_count,
         'rejected_count': rejected_count,
-        'full_top_nav': _build_full_top_nav(permission_set, request.user),
-        'archive_sidebar_nav': _build_archive_sidebar_nav(permission_set, request.path),
-    }
+        'archive_sidebar_nav': archive_sidebar_nav,
+        'module_sidebar_nav': archive_sidebar_nav,  # 兼容模板中的变量名
+        'sidebar_title': '档案管理',  # 侧边栏标题
+        'sidebar_subtitle': 'Archive Management',  # 侧边栏副标题
+    })
     return render(request, "archive_management/project_archive_list.html", context)
 
 

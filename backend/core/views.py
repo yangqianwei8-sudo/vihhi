@@ -91,18 +91,19 @@ HOME_NAV_STRUCTURE = [
     {'label': '客户管理', 'icon': '👥', 'url_name': 'customer_pages:customer_management_home_alt', 'permission': 'customer_management.client.view'},
     {'label': '商机管理', 'icon': '💼', 'url_name': 'opportunity_pages:opportunity_management_home_alt', 'permission': 'customer_success.opportunity.view'},
     {'label': '合同管理', 'icon': '📄', 'url_name': 'contract_pages:contract_management_home_alt', 'permission': 'customer_management.contract.view'},
-    {'label': '回款管理', 'icon': '💰', 'url_name': 'settlement_pages:payment_plan_list', 'permission': 'payment_management.payment_plan.view'},  # 回款管理独立模块
-    {'label': '生产管理', 'icon': '🏗️', 'url_name': 'production_pages:project_list', 'permission': 'production_management.view_assigned'},
+    {'label': '回款管理', 'icon': '💰', 'url_name': 'settlement_pages:settlement_home', 'permission': 'payment_management.payment_plan.view'},  # 回款管理独立模块
+    {'label': '生产管理', 'icon': '🏗️', 'url_name': 'production_pages:production_management_home', 'permission': 'production_management.view_assigned'},
     {'label': '资源管理', 'icon': '🗂️', 'url_name': 'resource_standard_pages:standard_list', 'permission': 'resource_center.view'},
     {'label': '任务协作', 'icon': '🤝', 'url_name': 'collaboration_pages:task_board', 'permission': 'task_collaboration.view'},
-    {'label': '收发管理', 'icon': '📦', 'url_name': 'delivery_pages:report_delivery', 'permission': 'delivery_center.view'},
-    {'label': '档案管理', 'icon': '📁', 'url_name': 'archive_management:archive_list', 'permission': 'archive_management.view'},
+    {'label': '收文管理', 'icon': '📥', 'url_name': 'delivery_pages:incoming_document_home', 'permission': 'delivery_center.view'},
+    {'label': '发文管理', 'icon': '📤', 'url_name': 'delivery_pages:outgoing_document_home', 'permission': 'delivery_center.view'},
+    {'label': '档案管理', 'icon': '📁', 'url_name': 'archive_management:archive_management_home', 'permission': 'archive_management.view'},
     {'label': '计划管理', 'icon': '📅', 'url_name': 'plan_pages:plan_management_home', 'permission': 'plan_management.view'},
-    {'label': '诉讼管理', 'icon': '⚖️', 'url_name': 'litigation_pages:litigation_home', 'permission': 'litigation_management.view'},
+    {'label': '诉讼管理', 'icon': '⚖️', 'url_name': 'litigation_pages:litigation_management_home', 'permission': 'litigation_management.view'},
     {'label': '风险管理', 'icon': '⚠️', 'url_name': '#', 'permission': 'risk_management.view'},  # 占位，待实现
-    {'label': '财务管理', 'icon': '💵', 'url_name': 'finance_pages:financial_home', 'permission': 'financial_management.view'},
-    {'label': '人事管理', 'icon': '👤', 'url_name': 'personnel_pages:personnel_home', 'permission': 'personnel_management.view'},
-    {'label': '行政管理', 'icon': '🏢', 'url_name': 'admin_pages:administrative_home', 'permission': 'administrative_management.view'},
+    {'label': '财务管理', 'icon': '💵', 'url_name': 'finance_pages:financial_management_home', 'permission': 'financial_management.view'},
+    {'label': '人事管理', 'icon': '👤', 'url_name': 'personnel_pages:personnel_management_home', 'permission': 'personnel_management.view'},
+    {'label': '行政管理', 'icon': '🏢', 'url_name': 'admin_pages:administrative_management_home', 'permission': 'administrative_management.view'},
     {'label': '系统管理', 'icon': '⚙️', 'url_name': 'system_pages:system_settings', 'permission': 'system_management.view'},
     # 注意：权限管理仅保留在Django Admin后台管理中，不添加到前端导航栏
 ]
@@ -153,14 +154,14 @@ SCENE_GROUPS = [
             {'label': '客户管理', 'icon': 'fa-users', 'url_name': 'customer_pages:customer_management_home_alt', 'permission': 'customer_management.client.view'},
             {'label': '商机管理', 'icon': 'fa-briefcase', 'url_name': 'opportunity_pages:opportunity_management_home_alt', 'permission': 'customer_success.opportunity.view'},
             {'label': '合同管理', 'icon': 'fa-file-contract', 'url_name': 'contract_pages:contract_management_home_alt', 'permission': 'customer_management.contract.view'},
-            {'label': '回款管理', 'icon': 'fa-money-bill-wave', 'url_name': 'settlement_pages:payment_plan_list', 'permission': 'payment_management.payment_plan.view'},
+            {'label': '回款管理', 'icon': 'fa-money-bill-wave', 'url_name': 'settlement_pages:settlement_home', 'permission': 'payment_management.payment_plan.view'},
         ]
     },
     {
         'title': '生产与运营',
         'icon': 'fa-industry',
         'items': [
-            {'label': '生产管理', 'icon': 'fa-industry', 'url_name': 'production_pages:project_list', 'permission': 'production_management.view_assigned'},
+            {'label': '生产管理', 'icon': 'fa-industry', 'url_name': 'production_pages:production_management_home', 'permission': 'production_management.view_assigned'},
             {'label': '资源管理', 'icon': 'fa-tools', 'url_name': 'resource_standard_pages:standard_list', 'permission': 'resource_center.view'},
             {'label': '收发货管理', 'icon': 'fa-truck', 'url_name': 'delivery_pages:report_delivery', 'permission': 'delivery_center.view'},
             {'label': '任务协作', 'icon': 'fa-tasks', 'url_name': 'collaboration_pages:task_board', 'permission': 'task_collaboration.view'},
@@ -171,24 +172,24 @@ SCENE_GROUPS = [
         'title': '财务与人事',
         'icon': 'fa-chart-bar',
         'items': [
-            {'label': '财务管理', 'icon': 'fa-chart-line', 'url_name': 'finance_pages:financial_home', 'permission': 'financial_management.view'},
-            {'label': '人事管理', 'icon': 'fa-user-tie', 'url_name': 'personnel_pages:personnel_home', 'permission': 'personnel_management.view'},
+            {'label': '财务管理', 'icon': 'fa-chart-line', 'url_name': 'finance_pages:financial_management_home', 'permission': 'financial_management.view'},
+            {'label': '人事管理', 'icon': 'fa-user-tie', 'url_name': 'personnel_pages:personnel_management_home', 'permission': 'personnel_management.view'},
         ]
     },
     {
         'title': '风控与合规',
         'icon': 'fa-shield-alt',
         'items': [
-            {'label': '诉讼管理', 'icon': 'fa-gavel', 'url_name': 'litigation_pages:litigation_home', 'permission': 'litigation_management.view'},
+            {'label': '诉讼管理', 'icon': 'fa-gavel', 'url_name': 'litigation_pages:litigation_management_home', 'permission': 'litigation_management.view'},
             {'label': '风险管理', 'icon': 'fa-exclamation-triangle', 'url_name': '#', 'permission': 'risk_management.view'},
-            {'label': '档案管理', 'icon': 'fa-archive', 'url_name': 'archive_management:archive_list', 'permission': 'archive_management.view'},
+            {'label': '档案管理', 'icon': 'fa-archive', 'url_name': 'archive_management:archive_management_home', 'permission': 'archive_management.view'},
         ]
     },
     {
         'title': '行政与支持',
         'icon': 'fa-cogs',
         'items': [
-            {'label': '行政管理', 'icon': 'fa-building', 'url_name': 'admin_pages:administrative_home', 'permission': 'administrative_management.view'},
+            {'label': '行政管理', 'icon': 'fa-building', 'url_name': 'admin_pages:administrative_management_home', 'permission': 'administrative_management.view'},
             {'label': '系统管理', 'icon': 'fa-server', 'url_name': 'system_pages:system_settings', 'permission': 'system_management.view'},
         ]
     },

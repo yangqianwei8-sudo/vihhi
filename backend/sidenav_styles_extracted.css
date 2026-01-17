@@ -1,0 +1,421 @@
+/**
+ * 工作台布局样式
+ * 参考总工作台设计风格
+ * 维海科技信息化管理平台
+ * 版本: 3.0
+ */
+
+/* ============================================
+   工作台容器布局
+   ============================================ */
+.workspace {
+    flex: 1;
+    padding: 0 28px 28px;
+    display: grid;
+    grid-template-columns: 240px 1fr 320px;
+    gap: 24px;
+    margin-top: 0;
+}
+
+/* 两列布局变体（无右侧边栏） */
+.workspace-two-column {
+    grid-template-columns: 240px 1fr;
+}
+
+/* 单列布局变体（无侧边栏） */
+.workspace-single-column {
+    grid-template-columns: 1fr;
+}
+
+/* ============================================
+   侧边栏导航样式 - 经典导航栏设计方案
+   ============================================ */
+
+/* 导航栏容器 */
+.workspace-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 12px;
+    width: 240px; /* 展开状态宽度：240-280px */
+    min-width: 240px;
+    transition: width var(--transition-base);
+}
+
+/* 折叠状态 */
+.workspace-nav.collapsed {
+    width: 80px; /* 折叠状态宽度：60-80px */
+    min-width: 80px;
+}
+
+/* 导航栏主体 */
+.sidenav {
+    background: var(--vh-card-bg);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow);
+    padding: 0;
+    position: sticky;
+    top: 88px;
+    height: fit-content;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 导航栏分区 */
+.sidenav-section {
+    padding: 12px 0;
+}
+
+.sidenav-section + .sidenav-section {
+    border-top: 1px solid var(--vh-border);
+    margin-top: 0;
+    padding-top: 12px;
+}
+
+/* 分区标题 */
+.sidenav-title {
+    font-size: 12px;
+    color: var(--vh-text-muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    padding: 0 20px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.workspace-nav.collapsed .sidenav-title {
+    display: none;
+}
+
+/* 链接容器 */
+.sidenav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 4px; /* 菜单项垂直间距：4-8px */
+    padding: 0 12px;
+}
+
+.workspace-nav.collapsed .sidenav-links {
+    padding: 0 8px;
+}
+
+/* 一级菜单项（有子菜单） */
+.sidenav-item {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 侧边栏导航链接 - 一级菜单 */
+.sidenav-link {
+    padding: 12px 16px; /* 菜单项高度：44-52px，左侧内边距：16-20px */
+    min-height: 44px;
+    border-radius: var(--radius-sm);
+    font-size: 15px; /* 一级菜单：14-16px */
+    font-weight: 500; /* 中等字重 */
+    display: flex;
+    align-items: center;
+    gap: 12px; /* 文字与图标间距：8-12px */
+    color: var(--vh-text);
+    text-decoration: none;
+    transition: background var(--transition-base), color var(--transition-base);
+    position: relative;
+    cursor: pointer;
+}
+
+.workspace-nav.collapsed .sidenav-link {
+    padding: 12px;
+    justify-content: center;
+}
+
+/* 链接图标 */
+.sidenav-link > span:first-child,
+.sidenav-link .nav-icon {
+    font-size: 18px; /* 图标尺寸：18-20px */
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 链接文字 */
+.sidenav-link > span:last-child,
+.sidenav-link .nav-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.workspace-nav.collapsed .sidenav-link > span:last-child,
+.workspace-nav.collapsed .sidenav-link .nav-label {
+    display: none;
+}
+
+/* 展开/折叠指示器 */
+.sidenav-link .menu-arrow {
+    font-size: 12px;
+    transition: transform var(--transition-base);
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.sidenav-item.expanded .sidenav-link .menu-arrow {
+    transform: rotate(90deg);
+}
+
+.workspace-nav.collapsed .sidenav-link .menu-arrow {
+    display: none;
+}
+
+/* 悬停状态 */
+.sidenav-link:hover {
+    background: rgba(31, 42, 87, 0.08); /* 浅灰色背景 */
+    color: var(--vh-primary);
+    text-decoration: none;
+}
+
+/* 激活状态：背景色 + 主色文字 */
+.sidenav-link[data-active="true"],
+.sidenav-link.active {
+    background: rgba(31, 42, 87, 0.12);
+    color: var(--vh-primary);
+    font-weight: 600;
+}
+
+/* 二级子菜单容器 */
+.sidenav-item .submenu {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    padding-left: 20px; /* 二级菜单缩进：20-24px */
+    margin-top: 4px;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height var(--transition-base), padding-top var(--transition-base), padding-bottom var(--transition-base);
+}
+
+/* 展开状态的子菜单 */
+.sidenav-item.expanded .submenu {
+    display: flex;
+    max-height: 1000px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.workspace-nav.collapsed .submenu {
+    display: none !important;
+}
+
+/* 二级子菜单链接 */
+.sidenav-sub-link {
+    padding: 10px 16px;
+    padding-left: 44px; /* 二级菜单左侧内边距（一级20px + 二级缩进24px） */
+    min-height: 40px;
+    border-radius: var(--radius-sm);
+    font-size: 14px; /* 二级菜单：13-15px */
+    font-weight: 400; /* 常规字重 */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--vh-text-muted);
+    text-decoration: none;
+    transition: background var(--transition-base), color var(--transition-base);
+    position: relative;
+    cursor: pointer;
+}
+
+.workspace-nav.collapsed .sidenav-sub-link {
+    display: none;
+}
+
+/* 二级菜单图标 */
+.sidenav-sub-link > span:first-child,
+.sidenav-sub-link .nav-icon {
+    font-size: 16px;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* 二级菜单悬停状态 */
+.sidenav-sub-link:hover {
+    background: rgba(31, 42, 87, 0.06);
+    color: var(--vh-primary);
+    text-decoration: none;
+}
+
+/* 二级菜单激活状态 */
+.sidenav-sub-link[data-active="true"],
+.sidenav-sub-link.active {
+    background: rgba(31, 42, 87, 0.10);
+    color: var(--vh-primary);
+    font-weight: 500;
+}
+
+/* 确保链接可点击 */
+.sidenav-link,
+.sidenav-sub-link {
+    pointer-events: auto;
+    position: relative;
+    z-index: 2;
+}
+
+/* ============================================
+   主内容区域样式
+   ============================================ */
+.workspace-main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding-top: 0;
+    margin-top: 12px;
+    min-width: 0;
+}
+
+/* 确保信息卡片之间有足够间距 */
+.workspace-main > .info-card {
+    margin-bottom: 0;
+}
+
+.workspace-main > .info-card + .info-card {
+    margin-top: 0;
+}
+
+/* 信息网格布局优化，防止内容重叠 */
+.info-grid .info-item {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.info-grid .info-item > div {
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* 信息项文本溢出处理 */
+.info-item .info-label,
+.info-item .info-value {
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+/* ============================================
+   右侧边栏样式
+   ============================================ */
+.workspace-side {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-top: 12px;
+}
+
+/* ============================================
+   卡片样式（工作台专用）
+   ============================================ */
+.workspace-main > .card:first-child {
+    margin-top: 0;
+}
+
+.workspace-main .card {
+    padding: 20px 24px;
+}
+
+.workspace-main .card:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+/* ============================================
+   动画效果
+   ============================================ */
+.info-card-slide-up {
+    animation: infoCardSlideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+}
+
+@keyframes infoCardSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================
+   响应式设计
+   ============================================ */
+@media (max-width: 1200px) {
+    .workspace {
+        grid-template-columns: 240px 1fr;
+    }
+    
+    .workspace-side {
+        display: none;
+    }
+}
+
+@media (max-width: 992px) {
+    .workspace {
+        grid-template-columns: 1fr;
+        padding: 0 16px 16px;
+        gap: 16px;
+    }
+    
+    .workspace-nav {
+        margin-top: 0;
+    }
+    
+    .sidenav {
+        position: relative;
+        top: 0;
+    }
+    
+    .workspace-main {
+        margin-top: 0;
+    }
+    
+    .workspace-side {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .workspace {
+        padding: 0 12px 12px;
+        gap: 12px;
+    }
+    
+    .sidenav {
+        padding: 14px 12px;
+        border-radius: 0;
+    }
+    
+    .workspace-main .card {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 576px) {
+    .workspace {
+        padding: 0 8px 8px;
+    }
+    
+    .sidenav {
+        padding: 12px;
+    }
+    
+    .sidenav-link {
+        padding: 6px 8px;
+        font-size: 13px;
+    }
+    
+    .workspace-main .card {
+        padding: 12px;
+    }
+}

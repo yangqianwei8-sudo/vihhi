@@ -338,6 +338,18 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
         context['full_top_nav'] = []
         context['module_sidebar_nav'] = []
     
+    # 为所有可能的侧边栏变量设置默认值，避免模板错误
+    # 这些变量可能在其他模块的模板中被引用
+    context.setdefault('delivery_sidebar_nav', [])
+    context.setdefault('customer_menu', [])
+    context.setdefault('production_sidebar_nav', [])
+    context.setdefault('personnel_sidebar_nav', [])
+    context.setdefault('sidebar_menu', [])
+    context.setdefault('financial_menu', [])
+    context.setdefault('litigation_sidebar_nav', [])
+    context.setdefault('archive_sidebar_nav', [])
+    context.setdefault('production_management_menu', [])
+    
     return context
 
 

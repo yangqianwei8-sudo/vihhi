@@ -1,209 +1,126 @@
-{% extends "financial_management/base.html" %}
+{% extends "financial_management/_base.html" %}
 {% load static %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
-
-{% block breadcrumb_items %}
-<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
-{% endblock %}
+{% block pm_title %}财务管理{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">数据展示中心 - 集中展示财务关键指标、状态与风险</span>{% endblock %}
 
 {% block extra_css %}
-{% load static %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.css" rel="stylesheet">
 <style>
-    :root {
-        --brand-primary: #142F5B;
-        --brand-accent: #1F3E7C;
-        --brand-soft: #F3F6FB;
-        --brand-light: #E7EEF8;
-    }
-    .center-hero {
-        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
-        border-radius: 24px;
-        padding: 32px 36px;
-        color: #fff;
-        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
-        position: relative;
-        overflow: hidden;
-        margin-bottom: 24px;
-    }
-    .center-hero::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(circle at top right, rgba(255,255,255,0.25), transparent 60%);
-        pointer-events: none;
-    }
-    .center-hero h1 {
-        font-size: 28px;
-        font-weight: 700;
-        margin-bottom: 8px;
-        color: #fff;
-    }
-    .center-hero p {
-        color: rgba(255,255,255,0.9);
-        margin: 0;
-        font-size: 15px;
-    }
-    .summary-card {
-        border-radius: 18px;
-        background: var(--vh-card-bg);
-        padding: 20px 22px;
-        border: 1px solid rgba(20, 47, 91, 0.08);
-        height: 100%;
-        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .summary-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 16px 40px rgba(20, 47, 91, 0.12);
-    }
-    .summary-card h3 {
-        font-size: 13px;
-        letter-spacing: 0.5px;
-        color: rgba(20, 47, 91, 0.6);
-        text-transform: uppercase;
-        margin-bottom: 10px;
-        font-weight: 600;
-    }
-    .summary-card .value {
-        font-size: 30px;
-        font-weight: 700;
-        color: var(--brand-primary);
-        margin-bottom: 6px;
-        line-height: 1.2;
-    }
-    .summary-card .hint {
-        font-size: 12px;
-        color: rgba(20, 47, 91, 0.55);
-        margin: 0;
-    }
-    .section-block {
-        background: var(--vh-card-bg);
-        border-radius: 20px;
-        padding: 24px 26px;
-        border: 1px solid rgba(20, 47, 91, 0.08);
-        box-shadow: 0 16px 40px rgba(20, 47, 91, 0.08);
-        margin-bottom: 24px;
-    }
-    .section-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: var(--brand-primary);
-        margin-bottom: 6px;
-    }
-    .section-desc {
-        font-size: 13px;
-        color: rgba(20, 47, 91, 0.55);
-        margin-bottom: 18px;
-    }
-    .section-item {
-        background: var(--brand-soft);
-        border-radius: 16px;
-        padding: 16px 18px;
-        height: 100%;
-        border: 1px solid rgba(20,47,91,0.08);
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .section-item:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(20, 47, 91, 0.1);
-    }
-    .section-item h4 {
-        font-size: 15px;
-        font-weight: 600;
-        color: var(--brand-primary);
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .section-item p {
-        font-size: 13px;
-        color: rgba(20, 47, 91, 0.6);
-        flex: 1;
-        margin: 0;
-    }
-    .section-item a {
-        align-self: flex-start;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--brand-accent);
-        text-decoration: none;
-    }
-    .section-item a:hover {
-        text-decoration: underline;
-    }
+  .pm-home-wrap { padding: 0; }
+  .pm-top-actions { display: flex; gap: 12px; margin-bottom: 24px; padding: 16px; background: #FFFFFF; border: 1px solid #E0E0E0; }
+  .pm-top-action-btn { padding: 8px 16px; background: #333333; color: #FFFFFF; border: none; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+  .pm-top-action-btn:hover { background: #1A1A1A; color: #FFFFFF; text-decoration: none; }
+  .pm-core-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  @media (max-width: 1200px) { .pm-core-cards { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 768px) { .pm-core-cards { grid-template-columns: 1fr; } }
+  .pm-core-card { background: #FFFFFF; border: 1px solid #E0E0E0; border-radius: 4px; padding: 20px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); transition: box-shadow 0.2s ease; text-decoration: none; color: inherit; display: block; }
+  .pm-core-card:hover { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15); text-decoration: none; color: inherit; }
+  .pm-core-card-icon { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: #F5F5F5; border: 1px solid #E0E0E0; border-radius: 4px; font-size: 24px; margin-bottom: 12px; }
+  .pm-core-card-label { font-size: 14px; color: #666666; font-weight: 400; margin-bottom: 8px; }
+  .pm-core-card-value { font-size: 32px; font-weight: 600; color: #1A1A1A; margin-bottom: 8px; line-height: 1.2; }
+  .pm-core-card-subvalue { font-size: 12px; color: #666666; line-height: 1.5; }
+  .pm-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  @media (max-width: 768px) { .pm-stats-row { grid-template-columns: 1fr; } }
+  .pm-warning-card, .pm-todo-card { background: #FFFFFF; border: 1px solid #E0E0E0; border-radius: 4px; padding: 20px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+  .pm-card-title { font-size: 16px; font-weight: 600; color: #1A1A1A; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #E0E0E0; }
+  .pm-warning-list, .pm-todo-list { list-style: none; padding: 0; margin: 0; }
+  .pm-warning-item, .pm-todo-item { padding: 12px; margin-bottom: 8px; border-left: 3px solid #666666; background: #F5F5F5; border-radius: 4px; }
+  .pm-item-title { font-size: 14px; font-weight: 500; color: #1A1A1A; margin-bottom: 4px; }
+  .pm-item-meta { font-size: 12px; color: #666666; }
+  .pm-item-link { color: #333333; text-decoration: none; }
+  .pm-item-link:hover { text-decoration: underline; }
+  .pm-my-work-card, .pm-activities-card { background: #FFFFFF; border: 1px solid #E0E0E0; border-radius: 4px; padding: 20px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+  .pm-work-section { margin-bottom: 24px; }
+  .pm-work-section:last-child { margin-bottom: 0; }
+  .pm-work-section-title { font-size: 14px; font-weight: 600; color: #1A1A1A; margin-bottom: 12px; }
+  .pm-work-list { list-style: none; padding: 0; margin: 0; }
+  .pm-work-item { padding: 10px; margin-bottom: 8px; background: #F5F5F5; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+  .pm-work-item-title { font-size: 14px; color: #1A1A1A; flex: 1; }
+  .pm-work-item-meta { font-size: 12px; color: #666666; margin-left: 12px; }
+  .pm-activity-list { list-style: none; padding: 0; margin: 0; }
+  .pm-activity-item { padding: 12px 0; border-bottom: 1px solid #E5E5E5; }
+  .pm-activity-item:last-child { border-bottom: none; }
+  .pm-activity-title { font-size: 14px; color: #1A1A1A; margin-bottom: 4px; }
+  .pm-activity-meta { font-size: 12px; color: #666666; }
+  .pm-empty { padding: 40px 20px; text-align: center; color: #999999; font-size: 14px; background: #FAFAFA; border: 1px dashed #E0E0E0; border-radius: 4px; }
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="container-fluid py-4">
-    
-    <div class="center-hero">
-        <h1>{{ page_title }}</h1>
-        <p>{{ description|default:"" }}</p>
-    </div>
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
 
-    {% if summary_cards %}
-    <div class="row g-3 mb-4">
-        {% for card in summary_cards %}
-        <div class="col-lg-3 col-md-6 col-sm-6">
-            <div class="summary-card">
-                <h3>{{ card.label }}</h3>
-                <div class="value">{{ card.value }}</div>
-                {% if card.hint %}
-                <div class="hint">{{ card.hint }}</div>
-                {% elif card.subvalue %}
-                <div class="hint">{{ card.subvalue }}</div>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {% for section in sections %}
-    <div class="section-block">
-        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-            <div>
-                <div class="section-title">{{ section.title }}</div>
-                {% if section.description %}
-                <div class="section-desc">{{ section.description }}</div>
-                {% endif %}
-            </div>
-            {% if section.action %}
-            <a class="btn btn-sm btn-outline-primary" href="{{ section.action.url }}">{{ section.action.label }}</a>
-            {% endif %}
-        </div>
-        <div class="row g-3">
-            {% for item in section.items %}
-            <div class="col-xl-3 col-lg-4 col-md-6">
-                <div class="section-item h-100">
-                    <h4>
-                        {% if item.icon %}{{ item.icon }} {% endif %}{{ item.label }}
-                    </h4>
-                    {% if item.description %}
-                    <p>{{ item.description }}</p>
-                    {% endif %}
-                    {% if item.url %}
-                    <a href="{{ item.url }}">{{ item.link_label|default:"进入模块 →" }}</a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
+{% block pm_content %}
+<div class="pm-home-wrap">
+  {% if top_actions %}
+  <div class="pm-top-actions">
+    {% for action in top_actions %}
+    <a href="{{ action.url }}" class="pm-top-action-btn">{{ action.icon }} {{ action.label }}</a>
     {% endfor %}
-    
-    {% if not summary_cards and not sections %}
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle me-2"></i>
-        您当前没有访问任何财务管理模块的权限，请联系管理员。
+  </div>
+  {% endif %}
+
+  {% if core_cards %}
+  <div class="pm-core-cards">
+    {% for card in core_cards %}
+    <a href="{{ card.url }}" class="pm-core-card">
+      <div class="pm-core-card-icon">{{ card.icon }}</div>
+      <div class="pm-core-card-label">{{ card.label }}</div>
+      <div class="pm-core-card-value">{{ card.value }}</div>
+      {% if card.subvalue %}<div class="pm-core-card-subvalue">{{ card.subvalue }}</div>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="pm-stats-row">
+    <div class="pm-warning-card">
+      <div class="pm-card-title">风险预警{% if stale_vouchers_count or over_budget_count %}<span style="font-size: 12px; color: #333333; margin-left: 8px;">(待审核凭证 {{ stale_vouchers_count|default:0 }} | 预算超支 {{ over_budget_count|default:0 }})</span>{% endif %}</div>
+      {% if risk_warnings %}
+      <ul class="pm-warning-list">
+        {% for warning in risk_warnings %}
+        <li class="pm-warning-item">
+          <div class="pm-item-title"><a href="{{ warning.url }}" class="pm-item-link">{{ warning.title }}</a></div>
+          <div class="pm-item-meta">负责人：{{ warning.responsible }}{% if warning.days is not None %} | {{ warning.days }} 天未处理{% endif %}</div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<div class="pm-empty">暂无风险预警</div>{% endif %}
     </div>
-    {% endif %}
+    <div class="pm-todo-card">
+      <div class="pm-card-title">待办事项{% if pending_approval_count %}<span style="font-size: 12px; color: #333333; margin-left: 8px;">(待处理 {{ pending_approval_count|default:0 }})</span>{% endif %}</div>
+      {% if todo_items %}
+      <ul class="pm-todo-list">
+        {% for item in todo_items %}
+        <li class="pm-todo-item">
+          <div class="pm-item-title"><a href="{{ item.url }}" class="pm-item-link">{{ item.title }}</a>{% if item.voucher_number %}<span style="font-size: 11px; color: #999; margin-left: 8px;">({{ item.voucher_number }})</span>{% elif item.invoice_number %}<span style="font-size: 11px; color: #999; margin-left: 8px;">({{ item.invoice_number }})</span>{% endif %}</div>
+          <div class="pm-item-meta">{% if item.type == 'voucher' %}<strong>待审核凭证</strong> | 制单人：{{ item.responsible }}{% elif item.type == 'invoice' %}<strong>待认证发票</strong> | 创建人：{{ item.responsible }}{% endif %}</div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<div class="pm-empty">暂无待办事项</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="pm-stats-row">
+    <div class="pm-my-work-card">
+      <div class="pm-card-title">{% if my_work.summary_url %}<a href="{{ my_work.summary_url }}" style="color: inherit; text-decoration: none;">我的工作</a>{% else %}我的工作{% endif %}</div>
+      {% if my_work %}
+      <div class="pm-work-section">
+        <div class="pm-work-section-title">我创建的凭证 ({{ my_work.my_vouchers_count|default:0 }})</div>
+        {% if my_work.my_vouchers %}<ul class="pm-work-list">{% for voucher in my_work.my_vouchers %}<li class="pm-work-item"><a href="{{ voucher.url }}" class="pm-work-item-title">{{ voucher.title }}</a><span class="pm-work-item-meta">{{ voucher.status }}</span></li>{% endfor %}</ul>{% else %}<div class="pm-empty" style="padding: 20px;">暂无数据</div>{% endif %}
+      </div>
+      <div class="pm-work-section">
+        <div class="pm-work-section-title">我创建的发票 ({{ my_work.my_invoices_count|default:0 }})</div>
+        {% if my_work.my_invoices %}<ul class="pm-work-list">{% for invoice in my_work.my_invoices %}<li class="pm-work-item"><a href="{{ invoice.url }}" class="pm-work-item-title">{{ invoice.title }}</a><span class="pm-work-item-meta">{{ invoice.status }}</span></li>{% endfor %}</ul>{% else %}<div class="pm-empty" style="padding: 20px;">暂无数据</div>{% endif %}
+      </div>
+      {% else %}<div class="pm-empty">暂无数据</div>{% endif %}
+    </div>
+    <div class="pm-activities-card">
+      <div class="pm-card-title">最近活动</div>
+      {% if recent_activities %}<ul class="pm-activity-list">{% for voucher in recent_activities.recent_vouchers %}<li class="pm-activity-item"><div class="pm-activity-title"><a href="{{ voucher.url }}" class="pm-item-link">📝 {{ voucher.title }}</a></div><div class="pm-activity-meta">{{ voucher.creator }} 创建于 {{ voucher.time|date:"Y-m-d H:i" }}</div></li>{% endfor %}{% for flow in recent_activities.recent_fund_flows %}<li class="pm-activity-item"><div class="pm-activity-title"><a href="{{ flow.url }}" class="pm-item-link">💳 {{ flow.title }}</a></div><div class="pm-activity-meta">{{ flow.creator }} 创建于 {{ flow.time|date:"Y-m-d H:i" }}</div></li>{% endfor %}</ul>{% else %}<div class="pm-empty">暂无活动记录</div>{% endif %}
+    </div>
+  </div>
 </div>
 {% endblock %}

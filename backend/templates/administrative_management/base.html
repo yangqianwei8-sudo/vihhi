@@ -30,11 +30,6 @@
             padding: var(--spacing-lg);
             min-width: 0;
         }
-        
-        /* 分组菜单标题样式 */
-        
-        /* 分组子菜单容器 */
-        
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -53,117 +48,27 @@
         </div>
         {% endif %}
 
-        {% block breadcrumb %}
-        <nav aria-label="breadcrumb" class="breadcrumb-nav">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">
-                    <a href="{% url 'home' %}">首页</a>
-                </li>
-                <li class="breadcrumb-item">
-                    <a href="{% url 'admin_pages:administrative_home' %}">行政管理</a>
-                </li>
-                {% block breadcrumb_items %}{% endblock %}
-            </ol>
-        </nav>
-        {% endblock %}
-
-        {% comment %}行政管理模块左侧菜单布局 - 使用样式文件设计规范{% endcomment %}
-        <div class="administrative-layout">
-                        <aside class="workspace-nav">
-                <nav class="sidenav">
-                    <div class="sidenav-section">
-                        <div class="sidenav-links">
-                                {% if sidebar_menu %}
-        
         <div class="workspace workspace-two-column administrative-management-layout">
-            
-            <aside class="workspace-nav">
-                <nav class="sidenav">
-                    <div class="sidenav-section">
-                        <div class="sidenav-links">
-                            {% for menu_group in sidebar_menu %}
-                            <div class="sidenav-item {% if menu_group.active or menu_group.expanded %}expanded{% endif %}">
-                                <a class="sidenav-link" 
-                                   href="{% if menu_group.url %}{{ menu_group.url }}{% else %}#{% endif %}" 
-                                   {% if menu_group.active %}data-active="true"{% endif %}>
-                                    {% if menu_group.icon %}<span>{{ menu_group.icon }}</span>{% endif %}
-                                    <span>{{ menu_group.label }}</span>
-                                    {% if menu_group.children %}<span class="menu-arrow">▶</span>{% endif %}
-                                </a>
-                                {% if menu_group.children %}
-                                <div class="submenu">
-                                    {% for child in menu_group.children %}
-                                    <a class="sidenav-link sidenav-sub-link" 
-                                       href="{{ child.url }}" 
-                                       {% if child.active %}data-active="true"{% endif %}>
-                                        {% if child.icon %}<span>{{ child.icon }}</span>{% endif %}
-                                        <span>{{ child.label }}</span>
-                                    </a>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </nav>
-            </aside>
-            
+            {% with sidebar_title="行政管理" sidebar_subtitle="Administrative Management" %}
+                {% include "shared/sidebar_v2_wireframe_fixed.html" %}
+            {% endwith %}
             <main class="workspace-main administrative-content">
-        {% else %}
-        <div class="workspace-content">
-        {% endif %}
-        
-        {% block content %}{% endblock %}
-        
-        {% if sidebar_menu %}
-            </main>
-        </div>
-        {% else %}
-        </div>
-        {% endif %}">
-                                <a class="sidenav-link" 
-                                   href="{% if menu_group.url %}{{ menu_group.url }}{% else %}#{% endif %}" 
-                                   {% if menu_group.active %}data-active="true"{% endif %}>
-                                    {% if menu_group.icon %}<span>{{ menu_group.icon }}</span>{% endif %}
-                                    <span>{{ menu_group.label }}</span>
-                                    {% if menu_group.children %}<span class="menu-arrow">▶</span>{% endif %}
-                                </a>
-                                {% if menu_group.children %}
-                                <div class="submenu">
-                                    {% for child in menu_group.children %}
-                                    <a class="sidenav-link sidenav-sub-link" 
-                                       href="{{ child.url }}" 
-                                       {% if child.active %}data-active="true"{% endif %}>
-                                        {% if child.icon %}<span>{{ child.icon }}</span>{% endif %}
-                                        <span>{{ child.label }}</span>
-                                    </a>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        {% endif %}
-                        </div>
-                    </div>
+                {% block breadcrumb %}
+                <nav aria-label="breadcrumb" class="breadcrumb-nav">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'home' %}">首页</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'admin_pages:administrative_home' %}">行政管理</a>
+                        </li>
+                        {% block breadcrumb_items %}{% endblock %}
+                    </ol>
                 </nav>
-            </aside>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="alert alert-info m-3">
-                            <i class="bi bi-info-circle me-2"></i>
-                            暂无可用菜单
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <div class="workspace-main">
-                <div class="administrative-content">
-                    {% block content %}{% endblock %}
-                </div>
-            </div>
+                {% endblock %}
+
+                {% block content %}{% endblock %}
+            </main>
         </div>
     </div>
 
@@ -183,6 +88,5 @@
         }
     </script>
     {% block extra_js %}{% endblock %}
-    <script src="{% static 'js/sidebar.js' %}"></script>
 </body>
 </html>

@@ -1,0 +1,117 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>事务编号</th>
+        <th>事务标题</th>
+        <th>事务类型</th>
+        <th>状态</th>
+        <th>优先级</th>
+        <th>负责人</th>
+        <th>计划完成时间</th>
+        <th>处理进度</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for affair in affairs %}
+      <tr>
+        <td>
+          <a href="{% url 'admin_pages:affair_detail' affair.id %}">
+            <code>{{ affair.affair_number }}</code>
+          </a>
+        </td>
+        <td>{{ affair.title|truncatewords:10 }}</td>
+        <td>
+          <span class="list-badge">{{ affair.get_affair_type_display }}</span>
+        </td>
+        <td>
+          {% if affair.status == 'pending' %}
+            <span class="list-badge list-badge-pending">待处理</span>
+          {% elif affair.status == 'in_progress' %}
+            <span class="list-badge list-badge-in-progress">处理中</span>
+          {% elif affair.status == 'completed' %}
+            <span class="list-badge list-badge-completed">已完成</span>
+          {% elif affair.status == 'cancelled' %}
+            <span class="list-badge list-badge-cancelled">已取消</span>
+          {% else %}
+            <span class="list-badge">{{ affair.get_status_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if affair.priority == 'urgent' %}
+            <span class="list-badge list-badge-urgent">紧急</span>
+          {% elif affair.priority == 'high' %}
+            <span class="list-badge list-badge-high">高</span>
+          {% elif affair.priority == 'normal' %}
+            <span class="list-badge list-badge-normal">普通</span>
+          {% else %}
+            <span class="list-badge list-badge-low">低</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if affair.responsible_user %}
+            {{ affair.responsible_user.get_full_name|default:affair.responsible_user.username }}
+          {% else %}
+            <span style="color: #999999;">未分配</span>
+          {% endif %}
+        </td>
+        <td>{{ affair.planned_end_time|date:"Y-m-d H:i"|default:"-" }}</td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="flex: 1; height: 8px; background: #E0E0E0; border-radius: 4px; overflow: hidden;">
+              <div style="height: 100%; width: {{ affair.progress }}%; background: #1F3E7C; transition: width 0.3s;"></div>
+            </div>
+            <span style="font-size: 12px; color: #666666;">{{ affair.progress }}%</span>
+          </div>
+        </td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'admin_pages:affair_detail' affair.id %}" class="list-btn" title="查看">查看</a>
+            {% if perms.administrative_management.affair.edit %}
+            <a href="{% url 'admin_pages:affair_update' affair.id %}" class="list-btn" title="编辑">编辑</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无行政事务数据</div>
+          <div class="list-empty-hint">请创建第一个行政事务记录开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.affair_type %}&affair_type={{ request.GET.affair_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.affair_type %}&affair_type={{ request.GET.affair_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.affair_type %}&affair_type={{ request.GET.affair_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

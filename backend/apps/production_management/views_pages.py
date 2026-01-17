@@ -1185,7 +1185,46 @@ def _with_nav(context, permission_set, active_id=None, user=None, request_path=N
     # 如果提供了request对象但没有提供request_path，则从request中获取
     if request and not request_path:
         request_path = request.path
-    context['production_management_menu'] = _build_production_management_sidebar_nav(permission_set, request_path, user)
+    production_menu = _build_production_management_sidebar_nav(permission_set, request_path, user)
+    context['production_management_menu'] = production_menu
+    context['module_sidebar_nav'] = production_menu  # 兼容计划管理的变量名
+    # 转换为 scene_groups 格式以支持 base_with_sidebar.html
+    # scene_groups 格式: [{'title': str, 'icon': str, 'items': [{'label': str, 'icon': str, 'url': str}]}]
+    scene_groups = []
+    try:
+        if production_menu:
+            for group in production_menu:
+                items = []
+                for child in group.get('children', []):
+                    items.append({
+                        'label': child.get('label', ''),
+                        'icon': '',  # 子菜单项通常没有图标
+                        'url': child.get('url', '#'),
+                    })
+                if items:
+                    scene_groups.append({
+                        'title': group.get('label', ''),
+                        'icon': group.get('icon', ''),
+                        'items': items,
+                    })
+    except Exception as e:
+        logger.warning(f'构建 scene_groups 失败: {e}', exc_info=True)
+        scene_groups = []
+    context['scene_groups'] = scene_groups
+    context['user'] = user  # base_with_sidebar.html 也需要 user 变量
+    
+    # 为所有可能的侧边栏变量设置默认值，避免模板错误
+    # 这些变量可能在其他模块的模板中被引用
+    context.setdefault('delivery_sidebar_nav', [])
+    context.setdefault('customer_menu', [])
+    context.setdefault('production_sidebar_nav', [])
+    context.setdefault('personnel_sidebar_nav', [])
+    context.setdefault('sidebar_menu', [])
+    context.setdefault('financial_menu', [])
+    context.setdefault('litigation_sidebar_nav', [])
+    context.setdefault('archive_sidebar_nav', [])
+    context.setdefault('plan_menu', [])
+    
     return context
 
 
@@ -2542,36 +2581,296 @@ def project_monitor(request):
 
 
 @login_required
+def production_management_home(request):
+    """生产管理首页 - 数据展示中心"""
+    from django.db.models import Avg, Count
+    from datetime import datetime
+    
+    permission_set = get_user_permission_codes(request.user)
+    if not _require_permission(request, permission_set, '您没有查看生产管理的权限。', 'production_management.view_all', 'production_management.view_assigned'):
+        return redirect('admin:index')
+    
+    now = timezone.now()
+    today = now.date()
+    this_month_start = today.replace(day=1)
+    seven_days_ago = today - timedelta(days=7)
+    
+    # 过滤用户可访问的项目
+    accessible_ids = _project_ids_user_can_access(request.user)
+    all_projects = Project.objects.filter(id__in=accessible_ids)
+    
+    context = {}
+    
+    try:
+        # ========== 核心指标卡片 ==========
+        core_cards = []
+        
+        # 项目统计
+        total_projects = all_projects.count()
+        draft_projects = all_projects.filter(status='draft').count()
+        waiting_receive_projects = all_projects.filter(status='waiting_receive').count()
+        configuring_projects = all_projects.filter(status='configuring').count()
+        waiting_start_projects = all_projects.filter(status='waiting_start').count()
+        in_progress_projects = all_projects.filter(status='in_progress').count()
+        completed_projects = all_projects.filter(status='completed').count()
+        archived_projects = all_projects.filter(status='archived').count()
+        this_month_projects = all_projects.filter(created_time__gte=this_month_start).count()
+        this_month_completed_projects = all_projects.filter(
+            status='completed',
+            updated_time__gte=this_month_start
+        ).count()
+        
+        # 卡片1：项目总数
+        core_cards.append({
+            'label': '项目总数',
+            'icon': '📋',
+            'value': str(total_projects),
+            'subvalue': f'草稿 {draft_projects} | 进行中 {in_progress_projects} | 已完成 {completed_projects} | 已归档 {archived_projects}',
+            'url': reverse('production_pages:project_list'),
+            'variant': 'secondary'
+        })
+        
+        # 卡片2：进行中项目
+        core_cards.append({
+            'label': '进行中项目',
+            'icon': '⚡',
+            'value': str(in_progress_projects),
+            'subvalue': f'配置中 {configuring_projects} | 待开工 {waiting_start_projects}',
+            'url': reverse('production_pages:project_list') + '?status=in_progress',
+            'variant': 'dark'
+        })
+        
+        # 卡片3：已完成项目
+        core_cards.append({
+            'label': '已完成项目',
+            'icon': '✅',
+            'value': str(completed_projects),
+            'subvalue': f'本月完成 {this_month_completed_projects} 个',
+            'url': reverse('production_pages:project_list') + '?status=completed',
+            'variant': 'secondary'
+        })
+        
+        # 卡片4：待接收项目
+        core_cards.append({
+            'label': '待接收项目',
+            'icon': '📥',
+            'value': str(waiting_receive_projects),
+            'subvalue': f'等待商务移交',
+            'url': reverse('production_pages:project_list') + '?status=waiting_receive',
+            'variant': 'dark' if waiting_receive_projects > 0 else 'secondary'
+        })
+        
+        # 卡片5：配置中项目
+        core_cards.append({
+            'label': '配置中项目',
+            'icon': '⚙️',
+            'value': str(configuring_projects),
+            'subvalue': f'等待团队配置',
+            'url': reverse('production_pages:project_list') + '?status=configuring',
+            'variant': 'dark' if configuring_projects > 0 else 'secondary'
+        })
+        
+        # 卡片6：本月新增
+        core_cards.append({
+            'label': '本月新增',
+            'icon': '📈',
+            'value': str(this_month_projects),
+            'subvalue': f'新项目 {this_month_projects} 个',
+            'url': reverse('production_pages:project_list'),
+            'variant': 'secondary'
+        })
+        
+        context['core_cards'] = core_cards
+        
+        # ========== 风险预警 ==========
+        risk_warnings = []
+        
+        # 逾期项目（如果有结束时间字段）
+        # 注意：Project模型可能没有end_time字段，这里先跳过
+        
+        # 7天未更新项目
+        stale_projects = all_projects.filter(
+            status__in=['in_progress', 'configuring', 'waiting_start'],
+            updated_time__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()))
+        ).select_related('project_manager')[:5]
+        
+        for project in stale_projects:
+            days_since_update = (today - project.updated_time.date()).days
+            manager_name = _format_user_display(project.project_manager)
+            risk_warnings.append({
+                'type': 'stale',
+                'title': project.name,
+                'responsible': manager_name,
+                'days': days_since_update,
+                'url': reverse('production_pages:project_detail', args=[project.id])
+            })
+        
+        context['risk_warnings'] = risk_warnings[:5]
+        context['stale_projects_count'] = all_projects.filter(
+            status__in=['in_progress', 'configuring', 'waiting_start'],
+            updated_time__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()))
+        ).count()
+        context['overdue_plans_count'] = 0  # Project模型可能没有end_time字段
+        
+        # ========== 待办事项 ==========
+        todo_items = []
+        
+        # 待接收项目
+        waiting_receive_list = all_projects.filter(status='waiting_receive').select_related('project_manager')[:5]
+        for project in waiting_receive_list:
+            manager_name = _format_user_display(project.project_manager)
+            todo_items.append({
+                'type': 'receive',
+                'title': project.name,
+                'project_number': project.project_number,
+                'responsible': manager_name,
+                'url': reverse('production_pages:project_detail', args=[project.id])
+            })
+        
+        # 配置中项目（需要配置团队）
+        configuring_list = all_projects.filter(status='configuring').select_related('project_manager')[:5]
+        for project in configuring_list:
+            manager_name = _format_user_display(project.project_manager)
+            todo_items.append({
+                'type': 'configure',
+                'title': project.name,
+                'project_number': project.project_number,
+                'responsible': manager_name,
+                'url': reverse('production_pages:project_team', args=[project.id])
+            })
+        
+        context['todo_items'] = todo_items[:10]
+        context['pending_approval_count'] = waiting_receive_projects
+        context['upcoming_deadline_count'] = 0
+        context['stale_goals_count'] = 0
+        
+        # ========== 我的工作 ==========
+        my_work = {}
+        
+        # 我负责的项目
+        my_projects = all_projects.filter(project_manager=request.user).order_by('-updated_time')[:3]
+        my_work['my_plans'] = [{
+            'title': project.name,
+            'status': project.get_status_display(),
+            'progress': 0,  # Project模型可能没有progress字段
+            'url': reverse('production_pages:project_detail', args=[project.id])
+        } for project in my_projects]
+        my_work['my_plans_count'] = all_projects.filter(project_manager=request.user).count()
+        
+        # 我参与的项目（通过ProjectTeam）
+        my_team_projects = Project.objects.filter(
+            id__in=ProjectTeam.objects.filter(user=request.user, is_active=True).values_list('project_id', flat=True)
+        ).distinct().order_by('-updated_time')[:3]
+        my_work['participating_plans'] = [{
+            'title': project.name,
+            'role': '团队成员',
+            'progress': 0,
+            'url': reverse('production_pages:project_detail', args=[project.id])
+        } for project in my_team_projects]
+        my_work['participating_plans_count'] = Project.objects.filter(
+            id__in=ProjectTeam.objects.filter(user=request.user, is_active=True).values_list('project_id', flat=True)
+        ).distinct().count()
+        
+        my_work['my_goals'] = []
+        my_work['my_goals_count'] = 0
+        my_work['summary_url'] = reverse('production_pages:project_list')
+        
+        context['my_work'] = my_work
+        
+        # ========== 最近活动 ==========
+        recent_activities = {}
+        
+        # 最近创建的项目
+        recent_projects = all_projects.select_related('created_by').order_by('-created_time')[:5]
+        recent_activities['recent_plans'] = [{
+            'title': project.name,
+            'creator': _format_user_display(project.created_by),
+            'time': project.created_time,
+            'url': reverse('production_pages:project_detail', args=[project.id])
+        } for project in recent_projects]
+        
+        recent_activities['recent_goals'] = []
+        recent_activities['recent_approvals'] = []
+        
+        context['recent_activities'] = recent_activities
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception('获取统计数据失败: %s', str(e))
+        context.setdefault('core_cards', [])
+        context.setdefault('risk_warnings', [])
+        context.setdefault('todo_items', [])
+        context.setdefault('my_work', {})
+        context.setdefault('recent_activities', {})
+    
+    # 顶部操作栏
+    top_actions = []
+    if _has_permission(permission_set, 'production_management.create'):
+        try:
+            top_actions.append({
+                'label': '创建项目',
+                'url': reverse('production_pages:project_create'),
+                'icon': '➕'
+            })
+        except Exception:
+            pass
+    
+    context['top_actions'] = top_actions
+    
+    # 构建上下文
+    context = _with_nav(context, permission_set, 'production_home', request.user, request=request)
+    
+    return render(request, "production_management/home.html", context)
+
+
+@login_required
 def project_list(request):
     """项目总览页面（原项目查询）"""
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    
     permission_set = get_user_permission_codes(request.user)
     if not _require_permission(request, permission_set, '您没有查看项目列表的权限。', 'production_management.view_all', 'production_management.view_assigned'):
         return redirect('admin:index')
 
     # 过滤用户可访问的项目
     accessible_ids = _project_ids_user_can_access(request.user)
-    projects = Project.objects.filter(id__in=accessible_ids).select_related('service_type', 'business_type', 'project_manager')
+    # 注意：business_type 字段在数据库中可能是字符串类型，不能使用 select_related
+    projects = Project.objects.filter(id__in=accessible_ids).select_related('service_type', 'project_manager')
     
-    # 查询条件
-    project_number = request.GET.get('project_number')
-    project_name = request.GET.get('project_name')
-    client_name = request.GET.get('client_name')
+    # 查询条件 - 支持搜索参数（兼容旧参数名）
+    search = request.GET.get('search', '').strip()
+    project_number = request.GET.get('project_number', '').strip()
+    project_name = request.GET.get('project_name', '').strip()
+    client_name = request.GET.get('client_name', '').strip()
+    
+    # 如果提供了 search 参数，则使用搜索逻辑
+    if search:
+        projects = projects.filter(
+            Q(project_number__icontains=search) |
+            Q(name__icontains=search) |
+            Q(client_company_name__icontains=search)
+        )
+    else:
+        # 否则使用旧的单独字段筛选
+        if project_number:
+            projects = projects.filter(project_number__icontains=project_number)
+        if project_name:
+            projects = projects.filter(name__icontains=project_name)
+        if client_name:
+            projects = projects.filter(client_company_name__icontains=client_name)
+    
     # 服务类型：兼容单选和多选，安全处理空字符串
     raw_service_type = (request.GET.get('service_type') or '').strip()
     if raw_service_type:
         service_type_ids = [raw_service_type]
     else:
         service_type_ids = [v for v in request.GET.getlist('service_type') if (v or '').strip()]
-    status_param = (request.GET.get('status') or '').strip()
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
+    status_filter = (request.GET.get('status') or '').strip()
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
     
-    if project_number:
-        projects = projects.filter(project_number__icontains=project_number)
-    if project_name:
-        projects = projects.filter(name__icontains=project_name)
-    if client_name:
-        projects = projects.filter(client_company_name__icontains=client_name)
     if service_type_ids:
         # 过滤掉非数字，避免 ValueError
         valid_ids = []
@@ -2586,15 +2885,39 @@ def project_list(request):
         projects = projects.filter(created_time__gte=date_from)
     if date_to:
         projects = projects.filter(created_time__lte=date_to)
-    if status_param in {'draft', 'in_progress', 'completed', 'archived'}:
-        projects = projects.filter(status=status_param)
+    if status_filter in {'draft', 'in_progress', 'completed', 'archived'}:
+        projects = projects.filter(status=status_filter)
+    
+    # 排序
+    projects = projects.order_by('-created_time')
+    
+    # 分页（每页20条）
+    paginator = Paginator(projects, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # 统计信息（基于所有可访问的项目，应用筛选前）
+    all_projects = Project.objects.filter(id__in=accessible_ids)
+    total_count = all_projects.count()
+    draft_count = all_projects.filter(status='draft').count()
+    in_progress_count = all_projects.filter(status='in_progress').count()
+    completed_count = all_projects.filter(status='completed').count()
+    archived_count = all_projects.filter(status='archived').count()
     
     context = _with_nav({
-        'projects': projects,
+        'projects': page_obj,
         'service_types': ServiceType.objects.order_by('order', 'id'),
         'selected_service_type_ids': service_type_ids,
         'selected_service_type_id': raw_service_type,
-        'status_selected': status_param,
+        'status_filter': status_filter,
+        'search': search,
+        'date_from': date_from,
+        'date_to': date_to,
+        'total_count': total_count,
+        'draft_count': draft_count,
+        'in_progress_count': in_progress_count,
+        'completed_count': completed_count,
+        'archived_count': archived_count,
     }, permission_set, 'project_list', request.user, request=request)
     return render(request, 'production_management/project_list.html', context)
 
@@ -3299,7 +3622,8 @@ def project_task_action(request, project_id, task_id):
 @login_required
 def project_task_dashboard(request):
     permission_set = get_user_permission_codes(request.user)
-    projects_queryset = Project.objects.select_related('service_type', 'business_type', 'project_manager', 'business_manager')
+    # 注意：business_type 字段在数据库中可能是字符串类型，不能使用 select_related
+    projects_queryset = Project.objects.select_related('service_type', 'project_manager', 'business_manager')
     projects = _filter_projects_for_user(projects_queryset, request.user, permission_set)
 
     tasks_queryset = ProjectTask.objects.select_related(

@@ -1,0 +1,105 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>归档编号</th>
+        <th>项目名称</th>
+        <th>项目编号</th>
+        <th>状态</th>
+        <th>申请人</th>
+        <th>申请时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for archive in page %}
+      <tr>
+        <td>
+          <a href="{% url 'archive_management:project_archive_detail' archive.pk %}">
+            <code>{{ archive.archive_number }}</code>
+          </a>
+        </td>
+        <td>
+          {% if archive.project %}
+            {{ archive.project.name|default:archive.project.project_number|truncatewords:10 }}
+          {% else %}
+            <span style="color: #999999;">-</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if archive.project %}
+            {{ archive.project.project_number|default:"-" }}
+          {% else %}
+            <span style="color: #999999;">-</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if archive.status == 'pending' %}
+            <span class="list-badge list-badge-pending">待归档</span>
+          {% elif archive.status == 'approving' %}
+            <span class="list-badge list-badge-approving">审批中</span>
+          {% elif archive.status == 'archiving' %}
+            <span class="list-badge list-badge-archiving">归档中</span>
+          {% elif archive.status == 'archived' %}
+            <span class="list-badge list-badge-archived">已归档</span>
+          {% elif archive.status == 'rejected' %}
+            <span class="list-badge list-badge-rejected">已驳回</span>
+          {% else %}
+            <span class="list-badge">{{ archive.get_status_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if archive.applicant %}
+            {{ archive.applicant.get_full_name|default:archive.applicant.username }}
+          {% else %}
+            <span style="color: #999999;">-</span>
+          {% endif %}
+        </td>
+        <td>{{ archive.created_time|date:"Y-m-d"|default:"-" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'archive_management:project_archive_detail' archive.pk %}" class="list-btn" title="查看">查看</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无归档数据</div>
+          <div class="list-empty-hint">请创建第一个归档记录开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ page.start_index }} - {{ page.end_index }} 条，共 {{ page.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if page.has_previous %}
+    <a href="?page={{ page.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in page.paginator.page_range %}
+    {% if page.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > page.number|add:'-3' and num < page.number|add:'3' %}
+    <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if page.has_next %}
+    <a href="?page={{ page.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

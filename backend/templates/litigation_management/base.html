@@ -37,85 +37,43 @@
         {% endif %}
 
         <div class="litigation-management-layout">
-            
+            {% if litigation_sidebar_nav %}
             <aside class="litigation-sidebar">
                 <nav class="litigation-nav">
                     <div class="litigation-nav-links">
-                                {% if litigation_sidebar_nav %}
-        
-        <div class="workspace workspace-two-column litigation-management-layout">
-            
-            <aside class="workspace-nav">
-                <nav class="sidenav">
-                    <div class="sidenav-section">
-                        <div class="sidenav-links">
-                            {% for menu_group in litigation_sidebar_nav %}
-                            <div class="sidenav-item {% if menu_group.active or menu_group.expanded %}expanded{% endif %}">
-                                <a class="sidenav-link" 
-                                   href="{% if menu_group.url %}{{ menu_group.url }}{% else %}#{% endif %}" 
-                                   {% if menu_group.active %}data-active="true"{% endif %}>
-                                    {% if menu_group.icon %}<span>{{ menu_group.icon }}</span>{% endif %}
-                                    <span>{{ menu_group.label }}</span>
-                                    {% if menu_group.children %}<span class="menu-arrow">▶</span>{% endif %}
-                                </a>
-                                {% if menu_group.children %}
-                                <div class="submenu">
-                                    {% for child in menu_group.children %}
-                                    <a class="sidenav-link sidenav-sub-link" 
-                                       href="{{ child.url }}" 
-                                       {% if child.active %}data-active="true"{% endif %}>
-                                        {% if child.icon %}<span>{{ child.icon }}</span>{% endif %}
-                                        <span>{{ child.label }}</span>
-                                    </a>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </nav>
-            </aside>
-            
-            <main class="workspace-main litigation-content">
-        {% else %}
-        <div class="workspace-content">
-        {% endif %}
-        
-        {% block content %}{% endblock %}
-        
-        {% if litigation_sidebar_nav %}
-            </main>
-        </div>
-        {% else %}
-        </div>
-        {% endif %}" onclick="toggleLitigationNavGroup(this)">
+                        {% for nav_item in litigation_sidebar_nav %}
+                            {% if nav_item.children %}
+                            <div class="litigation-nav-group">
+                                <div class="litigation-nav-group-header {% if nav_item.expanded %}expanded{% endif %}" onclick="toggleLitigationNavGroup(this)">
                                     <span class="nav-label">{{ nav_item.label }}</span>
-                                    <span class="nav-toggle">{% if nav_item.collapsed %}▶{% else %}▼{% endif %}</span>
+                                    <span class="nav-toggle">{% if nav_item.expanded %}▼{% else %}▶{% endif %}</span>
                                 </div>
-                                <div class="litigation-nav-group-items {% if nav_item.collapsed %}collapsed{% endif %}">
-                                    {% for sub_item in nav_item.items %}
-                                    <a class="litigation-nav-link litigation-nav-sub {% if sub_item.active %}active{% endif %}" href="{{ sub_item.url }}" onclick="event.stopPropagation();">
+                                <div class="litigation-nav-group-items {% if not nav_item.expanded %}collapsed{% endif %}">
+                                    {% for sub_item in nav_item.children %}
+                                    <a class="litigation-nav-link litigation-nav-sub {% if sub_item.active %}active{% endif %}" href="{{ sub_item.url|default:'#' }}" onclick="event.stopPropagation();">
                                         <span class="nav-label">{{ sub_item.label }}</span>
                                     </a>
                                     {% endfor %}
                                 </div>
                             </div>
                             {% else %}
-                            
                             <a class="litigation-nav-link litigation-nav-single {% if nav_item.active %}active{% endif %}" href="{{ nav_item.url|default:'#' }}">
                                 <span class="nav-label">{{ nav_item.label }}</span>
                             </a>
                             {% endif %}
                         {% empty %}
-                        
-                        {% url 'litigation_pages:case_list' as case_list_url %}
-                        <a class="litigation-nav-link active" href="{{ case_list_url }}">
-                            <span class="nav-label">案件管理</span>
-                        </a>
+                            {% url 'litigation_pages:case_list' as case_list_url %}
+                            <a class="litigation-nav-link active" href="{{ case_list_url }}">
+                                <span class="nav-label">案件管理</span>
+                            </a>
                         {% endfor %}
-                        {% else %}
-                        
+                    </div>
+                </nav>
+            </aside>
+            {% else %}
+            <aside class="litigation-sidebar">
+                <nav class="litigation-nav">
+                    <div class="litigation-nav-links">
                         {% url 'litigation_pages:case_list' as case_list_url %}
                         {% url 'litigation_pages:case_create' as case_create_url %}
                         {% url 'litigation_pages:case_statistics' as case_statistics_url %}
@@ -128,10 +86,10 @@
                         <a class="litigation-nav-link {% if request.path == case_statistics_url %}active{% endif %}" href="{{ case_statistics_url }}">
                             <span class="nav-label">案件统计</span>
                         </a>
-                        {% endif %}
                     </div>
                 </nav>
             </aside>
+            {% endif %}
             
             <main class="litigation-content">
                 {% block breadcrumb %}
@@ -141,9 +99,6 @@
                             <a href="{% url 'home' %}">首页</a>
                         </li>
                         {% block breadcrumb_items %}{% endblock %}
-                    </ol>
-                </nav>
-                {% endblock %}
                     </ol>
                 </nav>
                 {% endblock %}
@@ -213,11 +168,6 @@
         .litigation-nav-link.litigation-nav-single::before {
             display: none !important;
             content: none !important;
-        }
-        
-        /* 确保单个菜单项不显示三角形 */
-        .litigation-nav-single {
-            /* 明确设置，确保没有三角形 */
         }
         
         .litigation-nav-sub {
@@ -361,7 +311,6 @@
             });
         });
     </script>
-    <script src="{% static 'js/sidebar.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

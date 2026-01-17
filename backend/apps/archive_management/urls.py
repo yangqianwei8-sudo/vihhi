@@ -8,7 +8,9 @@ app_name = 'archive_management'
 
 urlpatterns = [
     # 档案管理首页
-    path('', views_pages.archive_list, name='archive_list'),
+    path('', views_pages.archive_management_home, name='archive_home'),
+    path('home/', views_pages.archive_management_home, name='archive_management_home'),
+    path('list/', views_pages.archive_list, name='archive_list'),
     
     # 项目档案
     path('project/', views_pages.project_archive_list, name='project_archive_list'),

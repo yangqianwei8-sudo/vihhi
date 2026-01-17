@@ -353,7 +353,8 @@
             '商机管理': '/admin/customer_success/',
             '生产管理': '/admin/production_management/',
             '结算管理': '/admin/settlement_center/',
-            '收发管理': '/admin/delivery_customer/',
+            '收文管理': '/admin/delivery_customer/incomingdocument/',
+            '发文管理': '/admin/delivery_customer/outgoingdocument/',
             '档案管理': '/admin/archive_management/',
             '财务管理': '/admin/financial_management/',
             '人事管理': '/admin/personnel_management/',
@@ -391,7 +392,7 @@
     function initPrimaryMenu() {
         // 直接查找所有包含菜单文本的链接元素
         const allLinks = document.querySelectorAll('a');
-        const menuLabels = ['首页', '客户管理', '合同管理', '商机管理', '生产管理', '结算管理', '收发管理', '档案管理', '财务管理', '人事管理', '行政管理', '计划管理', '诉讼管理', '风险管理', '资源管理', '报表管理', '系统设置', '权限设置', '流程设置', 'API管理', '团队管理'];
+        const menuLabels = ['首页', '客户管理', '合同管理', '商机管理', '生产管理', '结算管理', '收文管理', '发文管理', '档案管理', '财务管理', '人事管理', '行政管理', '计划管理', '诉讼管理', '风险管理', '资源管理', '报表管理', '系统设置', '权限设置', '流程设置', 'API管理', '团队管理'];
         
         const menuItems = Array.from(allLinks).filter(function(link) {
             const text = (link.textContent || link.innerText || '').trim();

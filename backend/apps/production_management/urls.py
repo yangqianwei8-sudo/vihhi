@@ -23,6 +23,9 @@ urlpatterns = [
     path('api/', include(router.urls)),
     
     # 页面路由
+    # 根路径和home路径都指向首页
+    path('', views_pages.production_management_home, name='production_home'),
+    path('home/', views_pages.production_management_home, name='production_management_home'),
     path('create/', views_pages.project_create, name='project_create'),
     path('<int:project_id>/edit/', views_pages.project_edit, name='project_edit'),
     path('<int:project_id>/complete/', views_pages.project_complete, name='project_complete'),

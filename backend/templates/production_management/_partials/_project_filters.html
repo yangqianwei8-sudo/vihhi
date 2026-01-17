@@ -1,0 +1,40 @@
+<div class="list-filters">
+  <form method="get" class="list-filters-form">
+    <div class="list-filter-group">
+      <label class="list-filter-label">搜索</label>
+      <input type="text" name="search" class="list-filter-input" 
+             value="{{ search }}" placeholder="项目编号、名称、客户名称">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">状态</label>
+      <select name="status" class="list-filter-input">
+        <option value="">全部状态</option>
+        <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>草稿</option>
+        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>进行中</option>
+        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>已完成</option>
+        <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>已归档</option>
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">服务类型</label>
+      <select name="service_type" class="list-filter-input">
+        <option value="">全部类型</option>
+        {% for st in service_types %}
+        <option value="{{ st.id }}" {% if selected_service_type_id == st.id|stringformat:"s" %}selected{% endif %}>{{ st.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">创建时间（起）</label>
+      <input type="date" name="date_from" class="list-filter-input" value="{{ date_from }}">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">创建时间（止）</label>
+      <input type="date" name="date_to" class="list-filter-input" value="{{ date_to }}">
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'production_pages:project_list' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>

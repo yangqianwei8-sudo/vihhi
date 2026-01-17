@@ -6,6 +6,7 @@ app_name = "personnel_pages"
 urlpatterns = [
     # 人事管理主页
     path("", views_pages.personnel_home, name="personnel_home"),
+    path("home/", views_pages.personnel_home, name="personnel_management_home"),
     
     # 员工档案
     path("employees/", views_pages.employee_management, name="employee_management"),

@@ -1,245 +1,27 @@
-{% extends "production_management/base.html" %}
+{% extends "production_management/_base.html" %}
 {% load static %}
 
-{% block title %}项目总览 - 维海科技信息化管理平台{% endblock %}
+{% block pm_title %}项目列表{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">查看和管理所有项目</span>{% endblock %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item active" aria-current="page">项目总览</li>
+{% block pm_actions %}
+<a href="{% url 'production_pages:project_create' %}" class="list-btn list-btn-primary">
+  创建项目
+</a>
 {% endblock %}
 
-{% block content %}
-<div class="container-fluid py-4">
-    
-    <div class="card mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">查询条件</h5>
-        </div>
-        <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label">项目编号</label>
-                    <input type="text" name="project_number" class="form-control" value="{{ request.GET.project_number }}" placeholder="支持模糊查询">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">项目名称</label>
-                    <input type="text" name="project_name" class="form-control" value="{{ request.GET.project_name }}" placeholder="支持模糊查询">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">客户名称</label>
-                    <input type="text" name="client_name" class="form-control" value="{{ request.GET.client_name }}" placeholder="支持模糊查询">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">服务类型</label>
-                    <select name="service_type" class="form-select">
-                        <option value="">全部</option>
-                        {% for service_type in service_types %}
-                        <option value="{{ service_type.id }}"
-                                {% if selected_service_type_id and selected_service_type_id == service_type.id|stringformat:"s" %}selected{% endif %}
-                                {% if not selected_service_type_id and selected_service_type_ids and service_type.id|stringformat:"s" in selected_service_type_ids %}selected{% endif %}>
-                            {{ service_type.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">时间范围</label>
-                    <div class="input-group">
-                        <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
-                        <span class="input-group-text">至</span>
-                        <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">关键字（本页快速筛选）</label>
-                    <input type="search" class="form-control" id="keywordQuick" placeholder="项目编号/名称/客户/负责人">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">状态（本页快速筛选）</label>
-                    <select id="statusQuick" name="status" class="form-select">
-                        <option value="" {% if not status_selected %}selected{% endif %}>全部</option>
-                        <option value="draft" {% if status_selected == 'draft' %}selected{% endif %}>草稿</option>
-                        <option value="in_progress" {% if status_selected == 'in_progress' %}selected{% endif %}>进行中</option>
-                        <option value="completed" {% if status_selected == 'completed' %}selected{% endif %}>已完成</option>
-                        <option value="archived" {% if status_selected == 'archived' %}selected{% endif %}>已归档</option>
-                    </select>
-                </div>
-                <div class="col-md-3 text-end">
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> 查询</button>
-                        <a href="{% url 'production_pages:project_list' %}" class="btn btn-secondary">重置</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">查询结果</h5>
-        </div>
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                <div class="small text-muted">共 <span id="resultTotal">{{ projects|length }}</span> 条</div>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle" id="resultTable">
-                    <thead>
-                        <tr>
-                            <th data-sort="string" class="sortable">项目编号</th>
-                            <th data-sort="string" class="sortable">项目名称</th>
-                            <th data-sort="string" class="sortable">客户名称</th>
-                            <th data-sort="string" class="sortable">服务类型</th>
-                            <th data-sort="status" class="sortable">项目状态</th>
-                            <th data-sort="string" class="sortable">负责人</th>
-                            <th data-sort="date" class="sortable">创建时间</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for project in projects %}
-                        <tr data-status="{{ project.status }}">
-                            <td class="pn">{{ project.project_number }}</td>
-                            <td class="pname">{{ project.name }}</td>
-                            <td class="client">{{ project.client_company_name|default:"-" }}</td>
-                            <td class="stype">{{ project.service_type.name|default:"-" }}</td>
-                            <td class="status">
-                                <span class="status-badge {{ project.status }}">
-                                    {{ project.get_status_display }}
-                                </span>
-                            </td>
-                            <td class="pm">
-                                {% if project.project_manager %}
-                                    {{ project.project_manager.get_full_name|default:project.project_manager.username|default:"未分配" }}
-                                {% else %}
-                                    未分配
-                                {% endif %}
-                            </td>
-                            <td class="ctime" data-timestamp="{{ project.created_time|date:'c' }}">{{ project.created_time|date:"Y-m-d H:i" }}</td>
-                            <td class="d-flex gap-2 flex-wrap">
-                                <a href="{% url 'production_pages:project_detail' project.id %}" class="btn btn-sm btn-outline-primary">查看</a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center text-muted">暂无查询结果</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div class="d-flex justify-content-between align-items-center mt-3">
-                <div class="small text-muted">每页
-                    <select id="pageSize" class="form-select d-inline-block" style="width:auto">
-                        <option>10</option><option selected>20</option><option>50</option><option>100</option>
-                    </select> 条
-                </div>
-                <nav>
-                    <ul class="pagination pagination-sm mb-0" id="pager"></ul>
-                </nav>
-            </div>
-        </div>
-    </div>
-</div>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+<style>
+  .list-badge-draft { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
+  .list-badge-in_progress { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
+  .list-badge-completed { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
+  .list-badge-archived { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
+</style>
 {% endblock %}
 
-{% block extra_js %}
-
-<form style="display:none">{% csrf_token %}</form>
-<script>
-// quick keyword & status filter
-try { console.debug('[query] script loaded'); } catch(e){}
-const keywordInput = document.getElementById('keywordQuick');
-const statusSelect = document.getElementById('statusQuick');
-const table = document.getElementById('resultTable');
-const tbody = table.querySelector('tbody');
-const rows = Array.from(tbody.querySelectorAll('tr'));
-let statusFilter = statusSelect?.value || '';
-let sortState = { idx: -1, dir: 1 };
-
-function textOf(row){
-    return (row.querySelector('.pn')?.textContent || '') + ' ' +
-           (row.querySelector('.pname')?.textContent || '') + ' ' +
-           (row.querySelector('.client')?.textContent || '') + ' ' +
-           (row.querySelector('.pm')?.textContent || '');
-}
-
-function applyFilters(){
-    const kw = (keywordInput?.value || '').trim().toLowerCase();
-    try { console.debug('[query] kw=', kw, 'status=', statusFilter); } catch(e){}
-    let visible = 0;
-    rows.forEach(row=>{
-        const hitKw = kw ? textOf(row).toLowerCase().includes(kw) : true;
-        const hitStatus = !statusFilter || row.dataset.status === statusFilter;
-        const show = hitKw && hitStatus;
-        row.hidden = !show;
-        if(show) visible++;
-    });
-    document.getElementById('resultTotal').textContent = visible;
-    paginate();
-}
-keywordInput?.addEventListener('input', applyFilters);
-statusSelect?.addEventListener('change', () => {
-    statusFilter = statusSelect.value || '';
-    applyFilters();
-});
-statusSelect?.addEventListener('input', () => {
-    statusFilter = statusSelect.value || '';
-    applyFilters();
-});
-
-// sorting
-document.querySelectorAll('#resultTable thead th.sortable').forEach((th,idx)=>{
-    th.style.cursor='pointer';
-    th.addEventListener('click', ()=>{
-        const type = th.dataset.sort || 'string';
-        if(sortState.idx === idx){ sortState.dir *= -1; } else { sortState = { idx: idx, dir: 1 }; }
-        const visibleRows = rows.filter(r=>!r.hidden);
-        visibleRows.sort((a,b)=>{
-            const getVal = (row) => {
-                if(type==='date'){
-                    return Date.parse(row.querySelector('.ctime')?.dataset.timestamp || '') || 0;
-                }
-                if(type==='status'){
-                    return row.dataset.status || '';
-                }
-                return (row.cells[idx]?.textContent || '').trim();
-            };
-            const va = getVal(a), vb = getVal(b);
-            if(va===vb) return 0;
-            return va > vb ? sortState.dir : -sortState.dir;
-        });
-        visibleRows.forEach(r=>tbody.appendChild(r));
-    });
-});
-
-// simple client-side pagination
-const pager = document.getElementById('pager');
-const pageSizeSel = document.getElementById('pageSize');
-let pageSize = parseInt(pageSizeSel?.value || '20',10);
-let currentPage = 1;
-
-function paginate(){
-    pageSize = parseInt(pageSizeSel?.value || '20',10);
-    const visible = rows.filter(r=>!r.hidden);
-    const total = visible.length;
-    const pages = Math.max(1, Math.ceil(total / pageSize));
-    currentPage = Math.min(currentPage, pages);
-    visible.forEach((r,i)=>{ r.style.display = (i >= (currentPage-1)*pageSize && i < currentPage*pageSize) ? '' : 'none'; });
-    // render pager
-    pager.innerHTML = '';
-    const addItem = (p, label, active=false) => {
-        const li = document.createElement('li'); li.className = 'page-item' + (active?' active':'');
-        const a = document.createElement('a'); a.className='page-link'; a.href='#'; a.textContent=label;
-        a.addEventListener('click', (e)=>{ e.preventDefault(); currentPage = p; paginate(); });
-        li.appendChild(a); pager.appendChild(li);
-    };
-    addItem(Math.max(1, currentPage-1), '«');
-    for(let p=1;p<=pages;p++){ addItem(p, String(p), p===currentPage); }
-    addItem(Math.min(pages, currentPage+1), '»');
-}
-pageSizeSel?.addEventListener('change', ()=>{ currentPage=1; paginate(); });
-
-// init
-applyFilters();
-</script>
+{% block pm_content %}
+  {% include "production_management/_partials/_project_stats.html" %}
+  {% include "production_management/_partials/_project_filters.html" %}
+  {% include "production_management/_partials/_project_table.html" %}
 {% endblock %}

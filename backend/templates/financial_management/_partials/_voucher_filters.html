@@ -1,0 +1,32 @@
+<div class="list-filters">
+  <form method="get" class="list-filters-form">
+    <div class="list-filter-group">
+      <label class="list-filter-label">搜索</label>
+      <input type="text" name="search" class="list-filter-input" 
+             value="{{ search|default:current_search }}" placeholder="凭证号、备注">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">状态</label>
+      <select name="status" class="list-filter-input">
+        <option value="" {% if not status %}selected{% endif %}>全部状态</option>
+        {% for code, label in status_choices %}
+        <option value="{{ code }}" {% if status == code or current_status == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">开始日期</label>
+      <input type="date" name="date_from" class="list-filter-input" 
+             value="{{ date_from|default:current_date_from }}">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">结束日期</label>
+      <input type="date" name="date_to" class="list-filter-input" 
+             value="{{ date_to|default:current_date_to }}">
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'finance_pages:voucher_management' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>

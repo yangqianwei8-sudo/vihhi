@@ -1,165 +1,35 @@
-{% extends "financial_management/base.html" %}
+{% extends "financial_management/_base.html" %}
+{% load static %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+{% block pm_title %}凭证管理{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">管理记账凭证</span>{% endblock %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item active" aria-current="page">凭证管理</li>
+{% block pm_actions %}
+{% if perms.financial_management.voucher.view %}
+<a href="{% url 'finance_pages:voucher_export' %}?{{ request.GET.urlencode }}" class="list-btn" style="margin-right: 8px;">
+  导出Excel
+</a>
+{% endif %}
+{% if perms.financial_management.voucher.create %}
+<a href="{% url 'finance_pages:voucher_create' %}" class="list-btn list-btn-primary">
+  新增凭证
+</a>
+{% endif %}
 {% endblock %}
 
 {% block extra_css %}
-{% load static %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
 <style>
-    .filter-bar {
-        background: var(--vh-card-bg);
-        border-radius: var(--radius-md);
-        padding: var(--spacing-md);
-        margin-bottom: var(--spacing-md);
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--vh-border);
-    }
-    .table th {
-        background: var(--vh-surface);
-        border-bottom: 2px solid var(--vh-primary);
-        font-weight: 600;
-        color: var(--vh-text);
-        font-size: var(--font-size-sm);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
+  .list-badge-draft { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
+  .list-badge-submitted { background: #FFF4E5; color: #CC6600; border-color: #FFCC99; }
+  .list-badge-approved { background: #E8F5E9; color: #2E7D32; border-color: #A5D6A7; }
+  .list-badge-posted { background: #E3F2FD; color: #1565C0; border-color: #90CAF9; }
+  .list-badge-rejected { background: #FFE5E5; color: #CC0000; border-color: #FF9999; }
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="container-fluid py-4">
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <div class="filter-bar">
-        <form method="get" class="row g-3">
-            <div class="col-md-3">
-                <input type="text" name="search" class="form-control" placeholder="搜索凭证号、备注..." value="{{ current_search }}">
-            </div>
-            <div class="col-md-2">
-                <select name="status" class="form-select">
-                    <option value="">全部状态</option>
-                    {% for code, label in status_choices %}
-                    <option value="{{ code }}" {% if current_status == code %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="date_from" class="form-control" placeholder="开始日期" value="{{ current_date_from }}">
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="date_to" class="form-control" placeholder="结束日期" value="{{ current_date_to }}">
-            </div>
-            <div class="col-md-3">
-                <button type="submit" class="btn btn-primary me-2">
-                    <i class="bi bi-search"></i> 搜索
-                </button>
-                <a href="{% url 'finance_pages:voucher_management' %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-circle"></i> 清除
-                </a>
-            </div>
-        </form>
-    </div>
-
-    {% if page_obj %}
-    <div class="info-card">
-        <div class="info-card-header">
-            <h5 class="info-card-title">凭证列表</h5>
-            <div class="info-card-actions">
-                <a href="{% url 'finance_pages:voucher_create' %}" class="btn btn-primary btn-sm">
-                    <i class="bi bi-plus-circle"></i> 新增凭证
-                </a>
-            </div>
-        </div>
-        <div class="info-card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>凭证字号</th>
-                        <th>凭证日期</th>
-                        <th>借方合计</th>
-                        <th>贷方合计</th>
-                        <th>状态</th>
-                        <th>制单人</th>
-                        <th>审核人</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for voucher in vouchers %}
-                    <tr>
-                        <td><code>{{ voucher.voucher_number }}</code></td>
-                        <td>{{ voucher.voucher_date|date:"Y-m-d" }}</td>
-                        <td>¥{{ voucher.total_debit|floatformat:2 }}</td>
-                        <td>¥{{ voucher.total_credit|floatformat:2 }}</td>
-                        <td>
-                            {% if voucher.status == 'draft' %}
-                            <span class="badge bg-secondary">草稿</span>
-                            {% elif voucher.status == 'submitted' %}
-                            <span class="badge bg-warning">已提交</span>
-                            {% elif voucher.status == 'approved' %}
-                            <span class="badge bg-success">已审核</span>
-                            {% elif voucher.status == 'posted' %}
-                            <span class="badge bg-primary">已过账</span>
-                            {% else %}
-                            <span class="badge bg-danger">已拒绝</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ voucher.preparer.get_full_name|default:voucher.preparer.username|default:"-" }}</td>
-                        <td>{{ voucher.reviewer.get_full_name|default:voucher.reviewer.username|default:"-" }}</td>
-                        <td>
-                            <a href="{% url 'finance_pages:voucher_detail' voucher.id %}" class="btn btn-sm btn-outline-primary" title="查看详情">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a href="{% url 'finance_pages:voucher_update' voucher.id %}" class="btn btn-sm btn-outline-secondary" title="编辑">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="8" class="text-center text-muted py-4">暂无数据</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {% if page_obj.has_other_pages %}
-        <nav aria-label="分页导航">
-            <ul class="pagination justify-content-center mt-4">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}">上一页</a>
-                </li>
-                {% endif %}
-                <li class="page-item active">
-                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-                </li>
-                {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}">下一页</a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
-        {% else %}
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle me-2"></i>
-            暂无数据或加载失败
-        </div>
-        {% endif %}
-        </div>
-    </div>
-</div>
+{% block pm_content %}
+  {% include "financial_management/_partials/_voucher_stats.html" %}
+  {% include "financial_management/_partials/_voucher_filters.html" %}
+  {% include "financial_management/_partials/_voucher_table.html" %}
 {% endblock %}

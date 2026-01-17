@@ -5,6 +5,9 @@ from . import views_settlement_items
 app_name = "settlement_pages"
 
 urlpatterns = [
+    # 回款管理首页
+    path("home/", views_pages.settlement_home, name="settlement_home"),
+    
     # 产值管理
     path("output-value/template/", views_pages.output_value_template_manage, name="output_value_template_manage"),
     path("output-value/records/", views_pages.output_value_record_list, name="output_value_record_list"),

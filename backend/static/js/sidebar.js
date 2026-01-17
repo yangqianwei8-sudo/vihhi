@@ -11,8 +11,8 @@
      * 初始化导航栏交互功能
      */
     function initSidebar() {
-        // 处理有子菜单的一级菜单项点击
-        // 只选择有子菜单的项（通过检查是否有menu-arrow标记）
+        // 处理有子菜单的一级菜单项点击 - 支持两种结构
+        // 1. sidenav-item 结构（旧结构）
         document.querySelectorAll('.sidenav-item > .sidenav-link').forEach(function(link) {
             link.addEventListener('click', function(e) {
                 const item = this.closest('.sidenav-item');
@@ -31,12 +31,6 @@
                     if (isExpanded) {
                         item.classList.remove('expanded');
                     } else {
-                        // 可选：展开当前项时，收起其他项（取消注释启用）
-                        // document.querySelectorAll('.sidenav-item.expanded').forEach(function(otherItem) {
-                        //     if (otherItem !== item) {
-                        //         otherItem.classList.remove('expanded');
-                        //     }
-                        // });
                         item.classList.add('expanded');
                     }
                 }
@@ -44,19 +38,66 @@
             });
         });
 
+        // 2. vh-sb__parent 结构（新结构）
+        document.querySelectorAll('.vh-sb__parent > .vh-sb__item--parent').forEach(function(link) {
+            // 检查链接的 href 是否为 # 或空，如果是则临时修改为 javascript:void(0)
+            const originalHref = link.getAttribute('href');
+            if (originalHref === '#' || originalHref === '#!' || !originalHref) {
+                link.setAttribute('href', 'javascript:void(0)');
+            }
+            
+            link.addEventListener('click', function(e) {
+                const parent = this.closest('.vh-sb__parent');
+                const children = parent.querySelector('.vh-sb__children');
+                
+                // 检查是否有子菜单
+                const hasSubmenu = children && children.children.length > 0;
+                
+                // 只有当确实有子菜单时才阻止默认跳转
+                if (hasSubmenu) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    
+                    const isOpen = parent.classList.contains('is-open');
+                    if (isOpen) {
+                        parent.classList.remove('is-open');
+                    } else {
+                        // 可选：展开当前项时，收起其他项（取消注释启用）
+                        // document.querySelectorAll('.vh-sb__parent.is-open').forEach(function(otherParent) {
+                        //     if (otherParent !== parent) {
+                        //         otherParent.classList.remove('is-open');
+                        //     }
+                        // });
+                        parent.classList.add('is-open');
+                    }
+                    
+                    return false;
+                }
+                // 如果没有子菜单，允许默认的链接跳转行为
+            }, true); // 使用捕获阶段，确保在其他事件处理器之前执行
+        });
+
         // 处理子菜单项点击（允许正常跳转）
         document.querySelectorAll('.sidenav-sub-link').forEach(function(link) {
             link.addEventListener('click', function(e) {
                 // 允许默认的链接跳转行为
-                // 如果需要在这里添加额外逻辑，可以添加
             });
         });
 
-        // 初始化：展开包含激活项的子菜单
+        // 初始化：展开包含激活项的子菜单 - sidenav-item 结构
         document.querySelectorAll('.sidenav-item').forEach(function(item) {
             const activeSubLink = item.querySelector('.sidenav-sub-link[data-active="true"]');
             if (activeSubLink) {
                 item.classList.add('expanded');
+            }
+        });
+
+        // 初始化：展开包含激活项的子菜单 - vh-sb__parent 结构
+        document.querySelectorAll('.vh-sb__parent').forEach(function(parent) {
+            const activeChild = parent.querySelector('.vh-sb__child.is-active');
+            if (activeChild) {
+                parent.classList.add('is-open');
             }
         });
     }

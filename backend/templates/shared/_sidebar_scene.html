@@ -1,0 +1,20 @@
+{# 左侧导航栏模板片段 #}
+{# 直接引入计划管理的左侧栏模板 #}
+
+{% if delivery_sidebar_nav %}
+    {# 使用模块特定的左侧栏菜单（如交付管理模块） #}
+    {% with plan_menu=delivery_sidebar_nav sidebar_title="交付管理" sidebar_subtitle="Delivery Management" %}
+        {% include 'shared/sidebar_v2_wireframe_fixed.html' %}
+    {% endwith %}
+{% elif plan_menu or module_sidebar_nav %}
+    {# 如果已经有 plan_menu 或 module_sidebar_nav，直接引入 #}
+    {% include 'shared/sidebar_v2_wireframe_fixed.html' %}
+{% elif sidebar_menu %}
+    {# 使用通用的 sidebar_menu #}
+    {% with plan_menu=sidebar_menu sidebar_title="功能模块" sidebar_subtitle="Modules" %}
+        {% include 'shared/sidebar_v2_wireframe_fixed.html' %}
+    {% endwith %}
+{% else %}
+    {# 如果没有提供任何菜单数据，使用默认模板 #}
+    {% include 'shared/sidebar_v2_wireframe_fixed.html' %}
+{% endif %}

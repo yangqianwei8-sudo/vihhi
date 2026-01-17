@@ -1,0 +1,120 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>案件编号</th>
+        <th>案件名称</th>
+        <th>案件类型</th>
+        <th>案件性质</th>
+        <th>状态</th>
+        <th>优先级</th>
+        <th>案件负责人</th>
+        <th>登记日期</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for case in cases %}
+      <tr>
+        <td>
+          <a href="{% url 'litigation_pages:case_detail' case.id %}">
+            <code>{{ case.case_number }}</code>
+          </a>
+        </td>
+        <td>{{ case.case_name|truncatewords:10 }}</td>
+        <td>
+          <span class="list-badge">{{ case.get_case_type_display }}</span>
+        </td>
+        <td>
+          <span class="list-badge">{{ case.get_case_nature_display }}</span>
+        </td>
+        <td>
+          {% if case.status == 'pending_filing' %}
+            <span class="list-badge list-badge-pending">待立案</span>
+          {% elif case.status == 'filed' %}
+            <span class="list-badge list-badge-filed">已立案</span>
+          {% elif case.status == 'trial' %}
+            <span class="list-badge list-badge-trial">审理中</span>
+          {% elif case.status == 'judged' %}
+            <span class="list-badge list-badge-judged">已判决</span>
+          {% elif case.status == 'executing' %}
+            <span class="list-badge list-badge-executing">执行中</span>
+          {% elif case.status == 'closed' %}
+            <span class="list-badge list-badge-closed">已结案</span>
+          {% elif case.status == 'withdrawn' %}
+            <span class="list-badge list-badge-withdrawn">已撤诉</span>
+          {% elif case.status == 'settled' %}
+            <span class="list-badge list-badge-settled">已和解</span>
+          {% else %}
+            <span class="list-badge">{{ case.get_status_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if case.priority == 'urgent' %}
+            <span class="list-badge list-badge-urgent">紧急</span>
+          {% elif case.priority == 'high' %}
+            <span class="list-badge list-badge-high">高</span>
+          {% elif case.priority == 'medium' %}
+            <span class="list-badge list-badge-medium">中</span>
+          {% else %}
+            <span class="list-badge list-badge-low">低</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if case.case_manager %}
+            {{ case.case_manager.get_full_name|default:case.case_manager.username }}
+          {% else %}
+            <span style="color: #999999;">未分配</span>
+          {% endif %}
+        </td>
+        <td>{{ case.registration_date|date:"Y-m-d"|default:"-" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'litigation_pages:case_detail' case.id %}" class="list-btn" title="查看">查看</a>
+            {% if perms.litigation_management.case.edit %}
+            <a href="{% url 'litigation_pages:case_edit' case.id %}" class="list-btn" title="编辑">编辑</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无案件数据</div>
+          <div class="list-empty-hint">请创建第一个案件记录开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if cases.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ cases.start_index }} - {{ cases.end_index }} 条，共 {{ cases.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if cases.has_previous %}
+    <a href="?page={{ cases.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.case_type %}&case_type={{ request.GET.case_type }}{% endif %}{% if request.GET.case_nature %}&case_nature={{ request.GET.case_nature }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+    
+    {% for num in cases.paginator.page_range %}
+    {% if cases.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > cases.number|add:'-3' and num < cases.number|add:'3' %}
+    <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.case_type %}&case_type={{ request.GET.case_type }}{% endif %}{% if request.GET.case_nature %}&case_nature={{ request.GET.case_nature }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+    
+    {% if cases.has_next %}
+    <a href="?page={{ cases.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.case_type %}&case_type={{ request.GET.case_type }}{% endif %}{% if request.GET.case_nature %}&case_nature={{ request.GET.case_nature }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

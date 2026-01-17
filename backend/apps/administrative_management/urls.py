@@ -6,6 +6,7 @@ app_name = "admin_pages"
 urlpatterns = [
     # 行政管理主页（行政事务列表）
     path("", views_pages.administrative_home, name="administrative_home"),
+    path("home/", views_pages.administrative_home, name="administrative_management_home"),
     
     # 行政事务管理
     path("affairs/", views_pages.affair_list, name="affair_list"),

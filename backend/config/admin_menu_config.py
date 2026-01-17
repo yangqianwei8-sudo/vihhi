@@ -20,7 +20,8 @@ MENU_URL_MAPPING = {
     '商机管理': '/admin/customer_success/',
     '生产管理': '/admin/production_management/',
     '结算管理': '/admin/settlement_center/',
-    '收发管理': '/admin/delivery_customer/',
+    '收文管理': '/admin/delivery_customer/incomingdocument/',
+    '发文管理': '/admin/delivery_customer/outgoingdocument/',
     '档案管理': '/admin/archive_management/',
     '财务管理': '/admin/financial_management/',
     '人事管理': '/admin/personnel_management/',
@@ -88,9 +89,9 @@ MENU_MAPPING = {
         '*': '客户管理',
     },
     'delivery_customer': {
-        'IncomingDocument': '收发管理 > 收文管理',
-        'OutgoingDocument': '收发管理 > 发文管理',
-        '*': '收发管理',  # 其他模型放在收发管理下
+        'IncomingDocument': '收文管理',
+        'OutgoingDocument': '发文管理',
+        '*': '收文管理',  # 其他模型放在收文管理下（默认）
     },
     'financial_management': {
         '*': '财务管理',
@@ -158,7 +159,8 @@ MAIN_MENU_ITEMS = [
     {'label': '商机管理', 'icon': 'bi-briefcase', 'path': '商机管理', 'order': 3},
     {'label': '生产管理', 'icon': 'bi-gear', 'path': '生产管理', 'order': 4},
     {'label': '结算管理', 'icon': 'bi-cash-coin', 'path': '结算管理', 'order': 5},
-    {'label': '收发管理', 'icon': 'bi-box-seam', 'path': '收发管理', 'order': 7},
+    {'label': '收文管理', 'icon': 'bi-inbox', 'path': '收文管理', 'order': 6},
+    {'label': '发文管理', 'icon': 'bi-send', 'path': '发文管理', 'order': 7},
     {'label': '档案管理', 'icon': 'bi-folder', 'path': '档案管理', 'order': 8},
     {'label': '财务管理', 'icon': 'bi-wallet2', 'path': '财务管理', 'order': 9},
     {'label': '人事管理', 'icon': 'bi-person', 'path': '人事管理', 'order': 10},

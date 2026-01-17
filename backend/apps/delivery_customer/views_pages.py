@@ -1,10 +1,13 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.urls import reverse, NoReverseMatch
+from django.utils import timezone
+from django.db.models import F
+from datetime import timedelta
 import logging
 
 from backend.apps.system_management.services import get_user_permission_codes
-from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav
+from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav, _build_scene_groups
 
 logger = logging.getLogger(__name__)
 
@@ -199,15 +202,29 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
         "sections": sections or [],
     }
     
+    # 为所有可能的侧边栏变量设置默认值，避免模板错误
+    context['plan_menu'] = []
+    context['module_sidebar_nav'] = []
+    context['delivery_sidebar_nav'] = []
+    context['customer_menu'] = []
+    context['production_sidebar_nav'] = []
+    context['personnel_sidebar_nav'] = []
+    context['sidebar_menu'] = []
+    context['financial_menu'] = []
+    context['litigation_sidebar_nav'] = []
+    context['archive_sidebar_nav'] = []
+    context['production_management_menu'] = []
+    
     # 添加顶部导航菜单
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         # 添加左侧菜单
-        context['delivery_sidebar_nav'] = _build_delivery_sidebar_nav(permission_set, request.path)
+        sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path)
+        context['delivery_sidebar_nav'] = sidebar_nav
+        context['module_sidebar_nav'] = sidebar_nav  # 兼容模板中的变量名
     else:
         context['full_top_nav'] = []
-        context['delivery_sidebar_nav'] = []
     
     return context
 
@@ -446,7 +463,7 @@ def delivery_list(request):
     # 添加左侧菜单
     delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path)
     
-    return render(request, "delivery_customer/delivery_list.html", {
+    context = {
         "page_title": "交付记录",
         "page_icon": "📚",
         "tab": tab,
@@ -471,7 +488,22 @@ def delivery_list(request):
         "overdue_count": overdue_count,
         "full_top_nav": _build_full_top_nav(permission_set, request.user),
         "delivery_sidebar_nav": delivery_sidebar_nav,
-    })
+        "module_sidebar_nav": delivery_sidebar_nav,  # 添加此变量以兼容模板中的变量检查
+    }
+    
+    # 为所有可能的侧边栏变量设置默认值，避免模板错误
+    # 这些变量可能在其他模块的模板中被引用
+    context.setdefault('plan_menu', [])
+    context.setdefault('customer_menu', [])
+    context.setdefault('production_sidebar_nav', [])
+    context.setdefault('personnel_sidebar_nav', [])
+    context.setdefault('sidebar_menu', [])
+    context.setdefault('financial_menu', [])
+    context.setdefault('litigation_sidebar_nav', [])
+    context.setdefault('archive_sidebar_nav', [])
+    context.setdefault('production_management_menu', [])
+    
+    return render(request, "delivery_customer/delivery_list.html", context)
 
 
 @login_required
@@ -3874,6 +3906,257 @@ def electronic_signature(request):
 # ==================== 收文管理 ====================
 
 @login_required
+def incoming_document_home(request):
+    """收文管理首页 - 数据展示中心"""
+    from django.db.models import Avg, Count
+    from datetime import datetime
+    from backend.apps.delivery_customer.models import IncomingDocument
+    
+    permission_set = get_user_permission_codes(request.user)
+    if not _permission_granted('delivery_center.view', permission_set):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("无权限访问收文管理")
+    
+    now = timezone.now()
+    today = now.date()
+    this_month_start = today.replace(day=1)
+    seven_days_ago = today - timedelta(days=7)
+    
+    all_documents = IncomingDocument.objects.all()
+    
+    context = {}
+    
+    try:
+        # ========== 核心指标卡片 ==========
+        core_cards = []
+        
+        # 收文统计
+        total_documents = all_documents.count()
+        draft_documents = all_documents.filter(status='draft').count()
+        registered_documents = all_documents.filter(status='registered').count()
+        processing_documents = all_documents.filter(status='processing').count()
+        completed_documents = all_documents.filter(status='completed').count()
+        archived_documents = all_documents.filter(status='archived').count()
+        this_month_documents = all_documents.filter(created_at__gte=this_month_start).count()
+        this_month_completed_documents = all_documents.filter(
+            status='completed',
+            completed_at__gte=this_month_start
+        ).count()
+        
+        # 卡片1：收文总数
+        core_cards.append({
+            'label': '收文总数',
+            'icon': '📥',
+            'value': str(total_documents),
+            'subvalue': f'草稿 {draft_documents} | 处理中 {processing_documents} | 已完成 {completed_documents} | 已归档 {archived_documents}',
+            'url': reverse('delivery_pages:incoming_document_list'),
+            'variant': 'secondary'
+        })
+        
+        # 卡片2：处理中收文
+        core_cards.append({
+            'label': '处理中收文',
+            'icon': '⚡',
+            'value': str(processing_documents),
+            'subvalue': f'已登记 {registered_documents} | 处理中 {processing_documents}',
+            'url': reverse('delivery_pages:incoming_document_list') + '?status=processing',
+            'variant': 'dark'
+        })
+        
+        # 卡片3：已完成收文
+        core_cards.append({
+            'label': '已完成收文',
+            'icon': '✅',
+            'value': str(completed_documents),
+            'subvalue': f'本月完成 {this_month_completed_documents} 个',
+            'url': reverse('delivery_pages:incoming_document_list') + '?status=completed',
+            'variant': 'secondary'
+        })
+        
+        # 卡片4：待登记收文
+        core_cards.append({
+            'label': '待登记收文',
+            'icon': '📋',
+            'value': str(draft_documents),
+            'subvalue': f'等待登记',
+            'url': reverse('delivery_pages:incoming_document_list') + '?status=draft',
+            'variant': 'dark' if draft_documents > 0 else 'secondary'
+        })
+        
+        # 卡片5：已登记收文
+        core_cards.append({
+            'label': '已登记收文',
+            'icon': '📝',
+            'value': str(registered_documents),
+            'subvalue': f'等待处理',
+            'url': reverse('delivery_pages:incoming_document_list') + '?status=registered',
+            'variant': 'dark' if registered_documents > 0 else 'secondary'
+        })
+        
+        # 卡片6：本月新增
+        core_cards.append({
+            'label': '本月新增',
+            'icon': '📈',
+            'value': str(this_month_documents),
+            'subvalue': f'新收文 {this_month_documents} 个',
+            'url': reverse('delivery_pages:incoming_document_list'),
+            'variant': 'secondary'
+        })
+        
+        context['core_cards'] = core_cards
+        
+        # ========== 风险预警 ==========
+        risk_warnings = []
+        
+        # 7天未处理收文
+        stale_documents = all_documents.filter(
+            status__in=['registered', 'processing'],
+            updated_at__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()))
+        ).select_related('handler', 'created_by')[:5]
+        
+        for doc in stale_documents:
+            days_since_update = (today - doc.updated_at.date()).days
+            handler_name = _format_user_display(doc.handler) if doc.handler else '未分配'
+            risk_warnings.append({
+                'type': 'stale',
+                'title': doc.title,
+                'responsible': handler_name,
+                'days': days_since_update,
+                'url': reverse('delivery_pages:incoming_document_detail', args=[doc.id])
+            })
+        
+        context['risk_warnings'] = risk_warnings[:5]
+        context['stale_documents_count'] = all_documents.filter(
+            status__in=['registered', 'processing'],
+            updated_at__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()))
+        ).count()
+        context['overdue_documents_count'] = 0
+        
+        # ========== 待办事项 ==========
+        todo_items = []
+        
+        # 待登记收文
+        draft_list = all_documents.filter(status='draft').select_related('created_by')[:5]
+        for doc in draft_list:
+            creator_name = _format_user_display(doc.created_by) if doc.created_by else '系统'
+            todo_items.append({
+                'type': 'register',
+                'title': doc.title,
+                'document_number': doc.document_number,
+                'responsible': creator_name,
+                'url': reverse('delivery_pages:incoming_document_detail', args=[doc.id])
+            })
+        
+        # 待处理收文
+        processing_list = all_documents.filter(status='processing').select_related('handler')[:5]
+        for doc in processing_list:
+            handler_name = _format_user_display(doc.handler) if doc.handler else '未分配'
+            todo_items.append({
+                'type': 'process',
+                'title': doc.title,
+                'document_number': doc.document_number,
+                'responsible': handler_name,
+                'url': reverse('delivery_pages:incoming_document_detail', args=[doc.id])
+            })
+        
+        context['todo_items'] = todo_items[:10]
+        context['pending_approval_count'] = draft_documents + processing_documents
+        context['todo_summary_url'] = reverse('delivery_pages:incoming_document_list') + '?status=draft'
+        
+        # ========== 我的工作 ==========
+        my_work = {}
+        
+        # 我创建的收文
+        my_created_documents = all_documents.filter(created_by=request.user).order_by('-created_at')[:3]
+        my_work['my_documents'] = [{
+            'title': doc.title,
+            'status': doc.get_status_display(),
+            'url': reverse('delivery_pages:incoming_document_detail', args=[doc.id])
+        } for doc in my_created_documents]
+        my_work['my_documents_count'] = all_documents.filter(created_by=request.user).count()
+        
+        # 我处理的收文
+        my_handled_documents = all_documents.filter(handler=request.user).order_by('-updated_at')[:3]
+        my_work['handled_documents'] = [{
+            'title': doc.title,
+            'status': doc.get_status_display(),
+            'url': reverse('delivery_pages:incoming_document_detail', args=[doc.id])
+        } for doc in my_handled_documents]
+        my_work['handled_documents_count'] = all_documents.filter(handler=request.user).count()
+        
+        my_work['summary_url'] = reverse('delivery_pages:incoming_document_list') + f'?created_by={request.user.id}'
+        
+        context['my_work'] = my_work
+        
+        # ========== 最近活动 ==========
+        recent_activities = {}
+        
+        # 最近创建的收文
+        recent_documents = all_documents.select_related('created_by').order_by('-created_at')[:5]
+        recent_activities['recent_documents'] = [{
+            'title': doc.title,
+            'creator': _format_user_display(doc.created_by),
+            'time': doc.created_at,
+            'url': reverse('delivery_pages:incoming_document_detail', args=[doc.id])
+        } for doc in recent_documents]
+        
+        # 最近更新的收文（排除创建）
+        recent_updates = all_documents.exclude(
+            created_at=F('updated_at')
+        ).select_related('updated_by').order_by('-updated_at')[:5]
+        recent_activities['recent_updates'] = [{
+            'title': doc.title,
+            'updater': _format_user_display(doc.handler) if doc.handler else '系统',
+            'time': doc.updated_at,
+            'url': reverse('delivery_pages:incoming_document_detail', args=[doc.id])
+        } for doc in recent_updates]
+        
+        context['recent_activities'] = recent_activities
+        
+    except Exception as e:
+        logger.exception('获取收文管理统计数据失败: %s', str(e))
+        context.setdefault('core_cards', [])
+        context.setdefault('risk_warnings', [])
+        context.setdefault('todo_items', [])
+        context.setdefault('my_work', {})
+        context.setdefault('recent_activities', {})
+    
+    # 顶部操作栏
+    top_actions = []
+    if _permission_granted('delivery_center.create', permission_set):
+        try:
+            top_actions.append({
+                'label': '创建收文',
+                'url': reverse('delivery_pages:incoming_document_create'),
+                'icon': '➕'
+            })
+        except Exception:
+            pass
+    
+    context['top_actions'] = top_actions
+    
+    # 构建上下文
+    page_context = _context(
+        "收文管理",
+        "📥",
+        "数据展示中心 - 集中展示收文关键指标、状态与风险",
+        request=request,
+    )
+    
+    # 设置侧边栏导航
+    delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path, active_id='incoming_document_home')
+    page_context['delivery_sidebar_nav'] = delivery_sidebar_nav
+    page_context['module_sidebar_nav'] = delivery_sidebar_nav
+    page_context['sidebar_title'] = '收发管理'
+    page_context['sidebar_subtitle'] = 'Delivery Management'
+    
+    # 合并所有数据
+    page_context.update(context)
+    
+    return render(request, "delivery_customer/incoming_document_home.html", page_context)
+
+
+@login_required
 def incoming_document_list(request):
     """收文列表"""
     from django.core.paginator import Paginator
@@ -3881,26 +4164,42 @@ def incoming_document_list(request):
     from backend.apps.delivery_customer.models import IncomingDocument
     
     permission_set = get_user_permission_codes(request.user)
-    delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path)
+    delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path, active_id='incoming_document_list')
     
     # 获取查询参数
-    search_query = request.GET.get('search', '').strip()
-    status_filter = request.GET.get('status', 'all')
-    priority_filter = request.GET.get('priority', 'all')
-    stage_filter = request.GET.get('stage', 'all')
-    category_filter = request.GET.get('category', 'all')
-    page = request.GET.get('page', 1)
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    if not status_filter:
+        status_filter = 'all'
+    priority_filter = request.GET.get('priority', '').strip()
+    if not priority_filter:
+        priority_filter = 'all'
+    stage_filter = request.GET.get('stage', '').strip()
+    if not stage_filter:
+        stage_filter = 'all'
+    category_filter = request.GET.get('category', '').strip()
+    if not category_filter:
+        category_filter = 'all'
+    
+    # 统计数据（在过滤之前获取，显示全部数据统计）
+    all_documents = IncomingDocument.objects.all()
+    total_count = all_documents.count()
+    draft_count = all_documents.filter(status='draft').count()
+    registered_count = all_documents.filter(status='registered').count()
+    processing_count = all_documents.filter(status='processing').count()
+    completed_count = all_documents.filter(status='completed').count()
+    archived_count = all_documents.filter(status='archived').count()
     
     # 查询收文
     documents = IncomingDocument.objects.all()
     
     # 搜索过滤
-    if search_query:
+    if search:
         documents = documents.filter(
-            Q(document_number__icontains=search_query) |
-            Q(title__icontains=search_query) |
-            Q(sender__icontains=search_query) |
-            Q(sender_contact__icontains=search_query)
+            Q(document_number__icontains=search) |
+            Q(title__icontains=search) |
+            Q(sender__icontains=search) |
+            Q(sender_contact__icontains=search)
         )
     
     # 状态过滤
@@ -3912,24 +4211,25 @@ def incoming_document_list(request):
         documents = documents.filter(priority=priority_filter)
     
     # 阶段过滤
-    if stage_filter != 'all' and stage_filter:
+    if stage_filter != 'all':
         documents = documents.filter(stage=stage_filter)
     
     # 文件分类过滤
-    if category_filter != 'all' and category_filter:
-        documents = documents.filter(file_category_id=category_filter)
+    if category_filter != 'all':
+        try:
+            category_id = int(category_filter)
+            documents = documents.filter(file_category_id=category_id)
+        except (ValueError, TypeError):
+            pass
     
-    # 分页
-    page_size = request.GET.get('page_size', '10')
+    # 排序
+    documents = documents.order_by('-receive_date', '-created_at')
+    
+    # 分页（每页20条）
+    paginator = Paginator(documents, 20)
+    page_number = request.GET.get('page', 1)
     try:
-        per_page = int(page_size)
-        if per_page not in [10, 20, 50]:
-            per_page = 10
-    except (ValueError, TypeError):
-        per_page = 10
-    paginator = Paginator(documents, per_page)
-    try:
-        documents_page = paginator.page(page)
+        documents_page = paginator.page(page_number)
     except:
         documents_page = paginator.page(1)
     
@@ -3939,6 +4239,7 @@ def incoming_document_list(request):
         "管理收到的文件记录",
         request=request,
     )
+    
     # 获取文件分类数据（用于下拉选择）
     from backend.apps.delivery_customer.models import FileCategory
     categories = FileCategory.objects.filter(is_active=True).order_by('stage', 'sort_order', 'name')
@@ -3948,19 +4249,33 @@ def incoming_document_list(request):
             categories_by_stage[category.stage] = []
         categories_by_stage[category.stage].append(category)
     
-    context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["documents"] = documents_page
-    context["search_query"] = search_query
-    context["status_filter"] = status_filter
-    context["priority_filter"] = priority_filter
-    context["stage_filter"] = stage_filter
-    context["category_filter"] = category_filter
-    context["status_choices"] = IncomingDocument.STATUS_CHOICES
-    context["priority_choices"] = IncomingDocument.PRIORITY_CHOICES
-    context["stage_choices"] = IncomingDocument.STAGE_CHOICES
-    context["categories"] = categories
-    context["categories_by_stage"] = categories_by_stage
-    context["can_create"] = _permission_granted('delivery_center.create', permission_set)
+    # 生成左侧菜单（类似计划管理的 plan_menu）
+    context['delivery_sidebar_nav'] = delivery_sidebar_nav
+    context['module_sidebar_nav'] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context['sidebar_title'] = '收发管理'  # 侧边栏标题
+    context['sidebar_subtitle'] = 'Delivery Management'  # 侧边栏副标题
+    
+    context.update({
+        'documents': documents_page,
+        'search': search,
+        'search_query': search,  # 保持向后兼容
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+        'stage_filter': stage_filter,
+        'category_filter': category_filter,
+        'status_choices': IncomingDocument.STATUS_CHOICES,
+        'priority_choices': IncomingDocument.PRIORITY_CHOICES,
+        'stage_choices': IncomingDocument.STAGE_CHOICES,
+        'categories': categories,
+        'categories_by_stage': categories_by_stage,
+        'can_create': _permission_granted('delivery_center.create', permission_set),
+        'total_count': total_count,
+        'draft_count': draft_count,
+        'registered_count': registered_count,
+        'processing_count': processing_count,
+        'completed_count': completed_count,
+        'archived_count': archived_count,
+    })
     return render(request, "delivery_customer/incoming_document_list.html", context)
 
 
@@ -4052,6 +4367,7 @@ def incoming_document_create(request):
         categories_by_stage[category.stage].append(category)
     
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["status_choices"] = IncomingDocument.STATUS_CHOICES
     context["priority_choices"] = IncomingDocument.PRIORITY_CHOICES
     context["stage_choices"] = IncomingDocument.STAGE_CHOICES
@@ -4079,6 +4395,7 @@ def incoming_document_detail(request, document_id):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["document"] = document
     context["can_edit"] = _permission_granted('delivery_center.create', permission_set)
     return render(request, "delivery_customer/incoming_document_detail.html", context)
@@ -4156,6 +4473,7 @@ def incoming_document_edit(request, document_id):
         categories_by_stage[category.stage].append(category)
     
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["document"] = document
     context["status_choices"] = IncomingDocument.STATUS_CHOICES
     context["priority_choices"] = IncomingDocument.PRIORITY_CHOICES
@@ -4169,6 +4487,258 @@ def incoming_document_edit(request, document_id):
 # ==================== 发文管理 ====================
 
 @login_required
+def outgoing_document_home(request):
+    """发文管理首页 - 数据展示中心"""
+    from django.db.models import Avg, Count
+    from datetime import datetime
+    from backend.apps.delivery_customer.models import OutgoingDocument
+    
+    permission_set = get_user_permission_codes(request.user)
+    if not _permission_granted('delivery_center.view', permission_set):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("无权限访问发文管理")
+    
+    now = timezone.now()
+    today = now.date()
+    this_month_start = today.replace(day=1)
+    seven_days_ago = today - timedelta(days=7)
+    
+    all_documents = OutgoingDocument.objects.all()
+    
+    context = {}
+    
+    try:
+        # ========== 核心指标卡片 ==========
+        core_cards = []
+        
+        # 发文统计
+        total_documents = all_documents.count()
+        draft_documents = all_documents.filter(status='draft').count()
+        reviewing_documents = all_documents.filter(status='reviewing').count()
+        approved_documents = all_documents.filter(status='approved').count()
+        sent_documents = all_documents.filter(status='sent').count()
+        completed_documents = all_documents.filter(status='completed').count()
+        archived_documents = all_documents.filter(status='archived').count()
+        this_month_documents = all_documents.filter(created_at__gte=this_month_start).count()
+        this_month_completed_documents = all_documents.filter(
+            status='completed',
+            completed_at__gte=this_month_start
+        ).count()
+        
+        # 卡片1：发文总数
+        core_cards.append({
+            'label': '发文总数',
+            'icon': '📤',
+            'value': str(total_documents),
+            'subvalue': f'草稿 {draft_documents} | 审核中 {reviewing_documents} | 已发出 {sent_documents} | 已完成 {completed_documents}',
+            'url': reverse('delivery_pages:outgoing_document_list'),
+            'variant': 'secondary'
+        })
+        
+        # 卡片2：审核中发文
+        core_cards.append({
+            'label': '审核中发文',
+            'icon': '⚡',
+            'value': str(reviewing_documents),
+            'subvalue': f'等待审核 {reviewing_documents} 个',
+            'url': reverse('delivery_pages:outgoing_document_list') + '?status=reviewing',
+            'variant': 'dark'
+        })
+        
+        # 卡片3：已完成发文
+        core_cards.append({
+            'label': '已完成发文',
+            'icon': '✅',
+            'value': str(completed_documents),
+            'subvalue': f'本月完成 {this_month_completed_documents} 个',
+            'url': reverse('delivery_pages:outgoing_document_list') + '?status=completed',
+            'variant': 'secondary'
+        })
+        
+        # 卡片4：待审核发文
+        core_cards.append({
+            'label': '待审核发文',
+            'icon': '📋',
+            'value': str(reviewing_documents),
+            'subvalue': f'等待审核',
+            'url': reverse('delivery_pages:outgoing_document_list') + '?status=reviewing',
+            'variant': 'dark' if reviewing_documents > 0 else 'secondary'
+        })
+        
+        # 卡片5：已批准发文
+        core_cards.append({
+            'label': '已批准发文',
+            'icon': '📝',
+            'value': str(approved_documents),
+            'subvalue': f'等待发出',
+            'url': reverse('delivery_pages:outgoing_document_list') + '?status=approved',
+            'variant': 'dark' if approved_documents > 0 else 'secondary'
+        })
+        
+        # 卡片6：本月新增
+        core_cards.append({
+            'label': '本月新增',
+            'icon': '📈',
+            'value': str(this_month_documents),
+            'subvalue': f'新发文 {this_month_documents} 个',
+            'url': reverse('delivery_pages:outgoing_document_list'),
+            'variant': 'secondary'
+        })
+        
+        context['core_cards'] = core_cards
+        
+        # ========== 风险预警 ==========
+        risk_warnings = []
+        
+        # 7天未处理发文
+        stale_documents = all_documents.filter(
+            status__in=['reviewing', 'approved'],
+            updated_at__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()))
+        ).select_related('reviewer', 'created_by')[:5]
+        
+        for doc in stale_documents:
+            days_since_update = (today - doc.updated_at.date()).days
+            reviewer_name = _format_user_display(doc.reviewer) if doc.reviewer else '未分配'
+            risk_warnings.append({
+                'type': 'stale',
+                'title': doc.title,
+                'responsible': reviewer_name,
+                'days': days_since_update,
+                'url': reverse('delivery_pages:outgoing_document_detail', args=[doc.id])
+            })
+        
+        context['risk_warnings'] = risk_warnings[:5]
+        context['stale_documents_count'] = all_documents.filter(
+            status__in=['reviewing', 'approved'],
+            updated_at__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()))
+        ).count()
+        context['overdue_documents_count'] = 0
+        
+        # ========== 待办事项 ==========
+        todo_items = []
+        
+        # 待审核发文
+        reviewing_list = all_documents.filter(status='reviewing').select_related('reviewer')[:5]
+        for doc in reviewing_list:
+            reviewer_name = _format_user_display(doc.reviewer) if doc.reviewer else '未分配'
+            todo_items.append({
+                'type': 'review',
+                'title': doc.title,
+                'document_number': doc.document_number,
+                'responsible': reviewer_name,
+                'url': reverse('delivery_pages:outgoing_document_detail', args=[doc.id])
+            })
+        
+        # 已批准待发出
+        approved_list = all_documents.filter(status='approved').select_related('created_by')[:5]
+        for doc in approved_list:
+            creator_name = _format_user_display(doc.created_by) if doc.created_by else '系统'
+            todo_items.append({
+                'type': 'send',
+                'title': doc.title,
+                'document_number': doc.document_number,
+                'responsible': creator_name,
+                'url': reverse('delivery_pages:outgoing_document_detail', args=[doc.id])
+            })
+        
+        context['todo_items'] = todo_items[:10]
+        context['pending_approval_count'] = reviewing_documents + approved_documents
+        context['todo_summary_url'] = reverse('delivery_pages:outgoing_document_list') + '?status=reviewing'
+        
+        # ========== 我的工作 ==========
+        my_work = {}
+        
+        # 我创建的发文
+        my_created_documents = all_documents.filter(created_by=request.user).order_by('-created_at')[:3]
+        my_work['my_documents'] = [{
+            'title': doc.title,
+            'status': doc.get_status_display(),
+            'url': reverse('delivery_pages:outgoing_document_detail', args=[doc.id])
+        } for doc in my_created_documents]
+        my_work['my_documents_count'] = all_documents.filter(created_by=request.user).count()
+        
+        # 我审核的发文
+        my_reviewed_documents = all_documents.filter(reviewer=request.user).order_by('-updated_at')[:3]
+        my_work['reviewed_documents'] = [{
+            'title': doc.title,
+            'status': doc.get_status_display(),
+            'url': reverse('delivery_pages:outgoing_document_detail', args=[doc.id])
+        } for doc in my_reviewed_documents]
+        my_work['reviewed_documents_count'] = all_documents.filter(reviewer=request.user).count()
+        
+        my_work['summary_url'] = reverse('delivery_pages:outgoing_document_list') + f'?created_by={request.user.id}'
+        
+        context['my_work'] = my_work
+        
+        # ========== 最近活动 ==========
+        recent_activities = {}
+        
+        # 最近创建的发文
+        recent_documents = all_documents.select_related('created_by').order_by('-created_at')[:5]
+        recent_activities['recent_documents'] = [{
+            'title': doc.title,
+            'creator': _format_user_display(doc.created_by),
+            'time': doc.created_at,
+            'url': reverse('delivery_pages:outgoing_document_detail', args=[doc.id])
+        } for doc in recent_documents]
+        
+        # 最近更新的发文（排除创建）
+        recent_updates = all_documents.exclude(
+            created_at=F('updated_at')
+        ).select_related('reviewer').order_by('-updated_at')[:5]
+        recent_activities['recent_updates'] = [{
+            'title': doc.title,
+            'updater': _format_user_display(doc.reviewer) if doc.reviewer else '系统',
+            'time': doc.updated_at,
+            'url': reverse('delivery_pages:outgoing_document_detail', args=[doc.id])
+        } for doc in recent_updates]
+        
+        context['recent_activities'] = recent_activities
+        
+    except Exception as e:
+        logger.exception('获取发文管理统计数据失败: %s', str(e))
+        context.setdefault('core_cards', [])
+        context.setdefault('risk_warnings', [])
+        context.setdefault('todo_items', [])
+        context.setdefault('my_work', {})
+        context.setdefault('recent_activities', {})
+    
+    # 顶部操作栏
+    top_actions = []
+    if _permission_granted('delivery_center.create', permission_set):
+        try:
+            top_actions.append({
+                'label': '创建发文',
+                'url': reverse('delivery_pages:outgoing_document_create'),
+                'icon': '➕'
+            })
+        except Exception:
+            pass
+    
+    context['top_actions'] = top_actions
+    
+    # 构建上下文
+    page_context = _context(
+        "发文管理",
+        "📤",
+        "数据展示中心 - 集中展示发文关键指标、状态与风险",
+        request=request,
+    )
+    
+    # 设置侧边栏导航
+    delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path, active_id='outgoing_document_home')
+    page_context['delivery_sidebar_nav'] = delivery_sidebar_nav
+    page_context['module_sidebar_nav'] = delivery_sidebar_nav
+    page_context['sidebar_title'] = '收发管理'
+    page_context['sidebar_subtitle'] = 'Delivery Management'
+    
+    # 合并所有数据
+    page_context.update(context)
+    
+    return render(request, "delivery_customer/outgoing_document_home.html", page_context)
+
+
+@login_required
 def outgoing_document_list(request):
     """发文列表"""
     from django.core.paginator import Paginator
@@ -4176,26 +4746,43 @@ def outgoing_document_list(request):
     from backend.apps.delivery_customer.models import OutgoingDocument
     
     permission_set = get_user_permission_codes(request.user)
-    delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path)
+    delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path, active_id='outgoing_document_list')
     
     # 获取查询参数
-    search_query = request.GET.get('search', '').strip()
-    status_filter = request.GET.get('status', 'all')
-    priority_filter = request.GET.get('priority', 'all')
-    stage_filter = request.GET.get('stage', 'all')
-    category_filter = request.GET.get('category', 'all')
-    page = request.GET.get('page', 1)
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    if not status_filter:
+        status_filter = 'all'
+    priority_filter = request.GET.get('priority', '').strip()
+    if not priority_filter:
+        priority_filter = 'all'
+    stage_filter = request.GET.get('stage', '').strip()
+    if not stage_filter:
+        stage_filter = 'all'
+    category_filter = request.GET.get('category', '').strip()
+    if not category_filter:
+        category_filter = 'all'
+    
+    # 统计数据（在过滤之前获取，显示全部数据统计）
+    all_documents = OutgoingDocument.objects.all()
+    total_count = all_documents.count()
+    draft_count = all_documents.filter(status='draft').count()
+    reviewing_count = all_documents.filter(status='reviewing').count()
+    approved_count = all_documents.filter(status='approved').count()
+    sent_count = all_documents.filter(status='sent').count()
+    completed_count = all_documents.filter(status='completed').count()
+    archived_count = all_documents.filter(status='archived').count()
     
     # 查询发文
     documents = OutgoingDocument.objects.all()
     
     # 搜索过滤
-    if search_query:
+    if search:
         documents = documents.filter(
-            Q(document_number__icontains=search_query) |
-            Q(title__icontains=search_query) |
-            Q(recipient__icontains=search_query) |
-            Q(recipient_contact__icontains=search_query)
+            Q(document_number__icontains=search) |
+            Q(title__icontains=search) |
+            Q(recipient__icontains=search) |
+            Q(recipient_contact__icontains=search)
         )
     
     # 状态过滤
@@ -4207,24 +4794,25 @@ def outgoing_document_list(request):
         documents = documents.filter(priority=priority_filter)
     
     # 阶段过滤
-    if stage_filter != 'all' and stage_filter:
+    if stage_filter != 'all':
         documents = documents.filter(stage=stage_filter)
     
     # 文件分类过滤
-    if category_filter != 'all' and category_filter:
-        documents = documents.filter(file_category_id=category_filter)
+    if category_filter != 'all':
+        try:
+            category_id = int(category_filter)
+            documents = documents.filter(file_category_id=category_id)
+        except (ValueError, TypeError):
+            pass
     
-    # 分页
-    page_size = request.GET.get('page_size', '10')
+    # 排序
+    documents = documents.order_by('-created_at')
+    
+    # 分页（每页20条）
+    paginator = Paginator(documents, 20)
+    page_number = request.GET.get('page', 1)
     try:
-        per_page = int(page_size)
-        if per_page not in [10, 20, 50]:
-            per_page = 10
-    except (ValueError, TypeError):
-        per_page = 10
-    paginator = Paginator(documents, per_page)
-    try:
-        documents_page = paginator.page(page)
+        documents_page = paginator.page(page_number)
     except:
         documents_page = paginator.page(1)
     
@@ -4243,19 +4831,34 @@ def outgoing_document_list(request):
             categories_by_stage[category.stage] = []
         categories_by_stage[category.stage].append(category)
     
-    context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["documents"] = documents_page
-    context["search_query"] = search_query
-    context["status_filter"] = status_filter
-    context["priority_filter"] = priority_filter
-    context["stage_filter"] = stage_filter
-    context["category_filter"] = category_filter
-    context["status_choices"] = OutgoingDocument.STATUS_CHOICES
-    context["priority_choices"] = OutgoingDocument.PRIORITY_CHOICES
-    context["stage_choices"] = OutgoingDocument.STAGE_CHOICES
-    context["categories"] = categories
-    context["categories_by_stage"] = categories_by_stage
-    context["can_create"] = _permission_granted('delivery_center.create', permission_set)
+    # 生成左侧菜单（类似计划管理的 plan_menu）
+    context['delivery_sidebar_nav'] = delivery_sidebar_nav
+    context['module_sidebar_nav'] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context['sidebar_title'] = '收发管理'  # 侧边栏标题
+    context['sidebar_subtitle'] = 'Delivery Management'  # 侧边栏副标题
+    
+    context.update({
+        'documents': documents_page,
+        'search': search,
+        'search_query': search,  # 保持向后兼容
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+        'stage_filter': stage_filter,
+        'category_filter': category_filter,
+        'status_choices': OutgoingDocument.STATUS_CHOICES,
+        'priority_choices': OutgoingDocument.PRIORITY_CHOICES,
+        'stage_choices': OutgoingDocument.STAGE_CHOICES,
+        'categories': categories,
+        'categories_by_stage': categories_by_stage,
+        'can_create': _permission_granted('delivery_center.create', permission_set),
+        'total_count': total_count,
+        'draft_count': draft_count,
+        'reviewing_count': reviewing_count,
+        'approved_count': approved_count,
+        'sent_count': sent_count,
+        'completed_count': completed_count,
+        'archived_count': archived_count,
+    })
     return render(request, "delivery_customer/outgoing_document_list.html", context)
 
 
@@ -4411,6 +5014,7 @@ def outgoing_document_create(request):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["status_choices"] = OutgoingDocument.STATUS_CHOICES
     context["priority_choices"] = OutgoingDocument.PRIORITY_CHOICES
     context["stage_choices"] = OutgoingDocument.STAGE_CHOICES
@@ -4439,6 +5043,7 @@ def outgoing_document_detail(request, document_id):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["document"] = document
     context["can_edit"] = _permission_granted('delivery_center.create', permission_set)
     return render(request, "delivery_customer/outgoing_document_detail.html", context)
@@ -4591,6 +5196,7 @@ def outgoing_document_edit(request, document_id):
         delivery_methods_list = [m.strip() for m in document.delivery_methods.split(',') if m.strip()]
     
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["document"] = document
     context["document"].delivery_methods_list = delivery_methods_list  # 添加属性到document对象
     context["status_choices"] = OutgoingDocument.STATUS_CHOICES
@@ -4659,6 +5265,7 @@ def express_company_list(request):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["companies"] = companies_page
     context["search_query"] = search_query
     context["status_filter"] = status_filter
@@ -4720,6 +5327,7 @@ def express_company_create(request):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     return render(request, "delivery_customer/express_company_create.html", context)
 
 
@@ -4744,6 +5352,7 @@ def express_company_detail(request, company_id):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["company"] = company
     context["usage_count"] = usage_count
     context["can_edit"] = _permission_granted('delivery_center.create', permission_set)
@@ -4808,6 +5417,7 @@ def express_company_edit(request, company_id):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["company"] = company
     return render(request, "delivery_customer/express_company_edit.html", context)
 
@@ -4966,6 +5576,7 @@ def file_category_manage(request):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["stage_code"] = selected_stage if not show_all else 'all'
     context["stage_name"] = stage_name
     context["show_all"] = show_all
@@ -5032,6 +5643,7 @@ def file_category_list(request, stage_code):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["stage_code"] = stage_code
     context["stage_name"] = stage_name
     context["categories"] = page
@@ -5095,6 +5707,7 @@ def file_category_create(request, stage_code):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["stage_code"] = stage_code
     context["stage_name"] = stage_name
     
@@ -5239,6 +5852,7 @@ def file_template_manage(request):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
+    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["stage_code"] = selected_stage if not show_all else 'all'
     context["stage_name"] = stage_name
     context["show_all"] = show_all

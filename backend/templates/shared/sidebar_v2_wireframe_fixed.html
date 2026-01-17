@@ -4,25 +4,25 @@
   <div class="vh-sb__top">
     <div class="vh-sb__topInner">
       <div class="vh-sb__titleWrap">
-        <div class="vh-sb__title">计划管理</div>
-        <div class="vh-sb__sub">Plan Management</div>
+        <div class="vh-sb__title">{% if sidebar_title %}{{ sidebar_title }}{% else %}计划管理{% endif %}</div>
+        <div class="vh-sb__sub">{% if sidebar_subtitle %}{{ sidebar_subtitle }}{% else %}Plan Management{% endif %}</div>
       </div>
     </div>
   </div>
 
   <nav class="vh-sb__nav">
-    {% if plan_menu or module_sidebar_nav %}
-      {% with menu_items=plan_menu|default:module_sidebar_nav %}
+    {% if plan_menu or module_sidebar_nav or delivery_sidebar_nav or customer_menu or production_sidebar_nav or personnel_sidebar_nav or sidebar_menu or financial_menu or litigation_sidebar_nav or archive_sidebar_nav or production_management_menu %}
+      {% with menu_items=plan_menu|default:module_sidebar_nav|default:delivery_sidebar_nav|default:customer_menu|default:production_sidebar_nav|default:personnel_sidebar_nav|default:sidebar_menu|default:financial_menu|default:litigation_sidebar_nav|default:archive_sidebar_nav|default:production_management_menu %}
         {% for item in menu_items %}
           {% if item.children %}
             <div class="vh-sb__parent">
-              <a href="{{ item.url }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
+              <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
                 <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
                 <span class="vh-sb__label">{{ item.label }}</span>
               </a>
               <div class="vh-sb__children">
                 {% for child in item.children %}
-                  <a href="{{ child.url }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
+                  <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
                     <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
                     <span class="vh-sb__label">{{ child.label }}</span>
                   </a>
@@ -30,7 +30,7 @@
               </div>
             </div>
           {% else %}
-            <a href="{{ item.url }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
+            <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
               <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
               <span class="vh-sb__label">{{ item.label }}</span>
               {% if item.badge %}
@@ -45,7 +45,7 @@
     {% else %}
       <div class="vh-sb__item is-active">
         <span class="vh-sb__icon">▣</span>
-        <span class="vh-sb__label">计划首页</span>
+        <span class="vh-sb__label">首页</span>
       </div>
     {% endif %}
   </nav>

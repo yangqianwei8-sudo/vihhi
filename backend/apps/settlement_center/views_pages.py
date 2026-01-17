@@ -2,9 +2,10 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q, Sum, Count, F
+from django.db.models import Q, Sum, Count, F, Avg
 from django.utils import timezone
 from decimal import Decimal
+from datetime import timedelta, datetime
 
 from backend.apps.settlement_center.models import (
     OutputValueStage, OutputValueMilestone, OutputValueEvent, OutputValueRecord,
@@ -29,6 +30,22 @@ from django.db.models import Max
 
 # ==================== 回款管理模块左侧菜单结构 =====================
 SETTLEMENT_MENU = [
+    {
+        'id': 'settlement_home',
+        'label': '回款管理',
+        'icon': '💰',
+        'url_name': 'settlement_pages:settlement_home',
+        'permission': None,  # 首页不需要特殊权限
+        'children': [
+            {
+                'id': 'settlement_home',
+                'label': '回款管理首页',
+                'icon': '👥',
+                'url_name': 'settlement_pages:settlement_home',
+                'permission': None,
+            },
+        ]
+    },
     {
         'id': 'payment_plan',
         'label': '回款计划',
@@ -157,16 +174,35 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
             permission_set = get_user_permission_codes(request.user)
             context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
             # 添加左侧菜单
-            context['module_sidebar_nav'] = _build_settlement_sidebar_nav(permission_set, request.path)
+            context['settlement_menu'] = _build_settlement_sidebar_nav(permission_set, request.path)
+            context['settlement_sidebar_nav'] = context['settlement_menu']
+            context['module_sidebar_nav'] = context['settlement_menu']
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
             logger.exception('构建导航栏失败: %s', str(e))
             context['full_top_nav'] = []
+            context['settlement_menu'] = []
+            context['settlement_sidebar_nav'] = []
             context['module_sidebar_nav'] = []
     else:
         context['full_top_nav'] = []
+        context['settlement_menu'] = []
+        context['settlement_sidebar_nav'] = []
         context['module_sidebar_nav'] = []
+    
+    # 为所有可能的侧边栏变量设置默认值，避免模板错误
+    context.setdefault('plan_menu', [])
+    context.setdefault('delivery_sidebar_nav', [])
+    context.setdefault('customer_menu', [])
+    context.setdefault('production_sidebar_nav', [])
+    context.setdefault('personnel_sidebar_nav', [])
+    context.setdefault('sidebar_menu', [])
+    context.setdefault('financial_menu', [])
+    context.setdefault('litigation_sidebar_nav', [])
+    context.setdefault('archive_sidebar_nav', [])
+    context.setdefault('production_management_menu', [])
+    context.setdefault('administrative_sidebar_nav', [])
     
     return context
 
@@ -1260,3 +1296,345 @@ def payment_record_create(request, plan_type, plan_id):
         'payment_method_choices': PaymentRecord.PAYMENT_METHOD_CHOICES,
     })
     return render(request, "settlement_center/payment_record_form.html", context)
+
+
+def _format_user_display(user, default='—'):
+    """格式化用户显示名称"""
+    if not user:
+        return default
+    if hasattr(user, 'get_full_name') and user.get_full_name():
+        return user.get_full_name()
+    if hasattr(user, 'name'):
+        return user.name
+    return user.username if hasattr(user, 'username') else str(user)
+
+
+@login_required
+def settlement_home(request):
+    """回款管理首页 - 数据展示中心"""
+    permission_codes = get_user_permission_codes(request.user)
+    now = timezone.now()
+    today = now.date()
+    this_month_start = today.replace(day=1)
+    seven_days_ago = today - timedelta(days=7)
+    
+    context = {}
+    
+    try:
+        from backend.apps.production_management.models import BusinessPaymentPlan
+        
+        # ========== 核心指标卡片 ==========
+        core_cards = []
+        
+        # 回款计划统计
+        all_plans = BusinessPaymentPlan.objects.select_related('contract', 'contract__client').all()
+        total_plans = all_plans.count()
+        pending_plans = all_plans.filter(status='pending').count()
+        overdue_plans = all_plans.filter(
+            status__in=['pending', 'partial'],
+            planned_date__lt=today
+        ).count()
+        completed_plans = all_plans.filter(status='completed').count()
+        
+        total_planned_amount = all_plans.aggregate(
+            total=Sum('planned_amount')
+        )['total'] or Decimal('0')
+        total_actual_amount = all_plans.aggregate(
+            total=Sum('actual_amount')
+        )['total'] or Decimal('0')
+        this_month_plans = all_plans.filter(planned_date__gte=this_month_start).count()
+        
+        # 产值记录统计
+        all_output_records = OutputValueRecord.objects.select_related('project', 'responsible_user').all()
+        total_output_records = all_output_records.count()
+        pending_output_records = all_output_records.filter(status='pending').count()
+        confirmed_output_records = all_output_records.filter(status='confirmed').count()
+        this_month_output_records = all_output_records.filter(calculated_time__gte=this_month_start).count()
+        
+        total_output_value = all_output_records.aggregate(
+            total=Sum('calculated_value')
+        )['total'] or Decimal('0')
+        
+        # 项目结算统计
+        all_settlements = ProjectSettlement.objects.select_related('project', 'contract', 'created_by').all()
+        total_settlements = all_settlements.count()
+        pending_settlements = all_settlements.filter(
+            status__in=['submitted', 'client_review', 'client_feedback', 'reconciliation']
+        ).count()
+        confirmed_settlements = all_settlements.filter(status='confirmed').count()
+        this_month_settlements = all_settlements.filter(created_time__gte=this_month_start).count()
+        
+        total_settlement_amount = all_settlements.filter(status__in=['confirmed', 'reconciliation']).aggregate(
+            total=Sum('total_settlement_amount')
+        )['total'] or Decimal('0')
+        
+        # 回款记录统计
+        all_payment_records = PaymentRecord.objects.select_related('confirmed_by').all()
+        total_payment_records = all_payment_records.count()
+        pending_payment_records = all_payment_records.filter(status='pending').count()
+        confirmed_payment_records = all_payment_records.filter(status='confirmed').count()
+        this_month_payment_records = all_payment_records.filter(payment_date__gte=this_month_start).count()
+        
+        this_month_payment_amount = all_payment_records.filter(
+            payment_date__gte=this_month_start,
+            status='confirmed'
+        ).aggregate(total=Sum('payment_amount'))['total'] or Decimal('0')
+        
+        # 卡片1：回款计划
+        try:
+            plan_url = reverse('settlement_pages:payment_plan_list')
+        except NoReverseMatch:
+            plan_url = '#'
+        core_cards.append({
+            'label': '回款计划',
+            'icon': '💳',
+            'value': str(total_plans),
+            'subvalue': f'待回款 {pending_plans} | 逾期 {overdue_plans} | 本月 {this_month_plans}',
+            'url': plan_url,
+            'variant': 'dark' if overdue_plans > 0 else 'secondary'
+        })
+        
+        # 卡片2：计划金额
+        core_cards.append({
+            'label': '计划金额',
+            'icon': '💰',
+            'value': f'¥{total_planned_amount:,.0f}',
+            'subvalue': f'已回款 ¥{total_actual_amount:,.0f} | 回款率 {int((total_actual_amount / total_planned_amount * 100) if total_planned_amount > 0 else 0)}%',
+            'url': plan_url,
+            'variant': 'secondary'
+        })
+        
+        # 卡片3：产值记录
+        try:
+            output_url = reverse('settlement_pages:output_value_record_list')
+        except NoReverseMatch:
+            output_url = '#'
+        core_cards.append({
+            'label': '产值记录',
+            'icon': '📊',
+            'value': str(total_output_records),
+            'subvalue': f'待确认 {pending_output_records} | 已确认 {confirmed_output_records} | 本月 {this_month_output_records}',
+            'url': output_url,
+            'variant': 'dark' if pending_output_records > 0 else 'secondary'
+        })
+        
+        # 卡片4：产值总额
+        core_cards.append({
+            'label': '产值总额',
+            'icon': '📈',
+            'value': f'¥{total_output_value:,.0f}',
+            'subvalue': f'已确认产值',
+            'url': output_url,
+            'variant': 'secondary'
+        })
+        
+        # 卡片5：项目结算
+        try:
+            settlement_url = reverse('settlement_pages:project_settlement_list')
+        except NoReverseMatch:
+            settlement_url = '#'
+        core_cards.append({
+            'label': '项目结算',
+            'icon': '🧾',
+            'value': str(total_settlements),
+            'subvalue': f'待处理 {pending_settlements} | 已确认 {confirmed_settlements} | 本月 {this_month_settlements}',
+            'url': settlement_url,
+            'variant': 'dark' if pending_settlements > 0 else 'secondary'
+        })
+        
+        # 卡片6：回款记录
+        try:
+            payment_record_url = reverse('settlement_pages:payment_record_list')
+        except NoReverseMatch:
+            payment_record_url = '#'
+        core_cards.append({
+            'label': '回款记录',
+            'icon': '💵',
+            'value': str(total_payment_records),
+            'subvalue': f'待确认 {pending_payment_records} | 本月回款 ¥{this_month_payment_amount:,.0f}',
+            'url': payment_record_url,
+            'variant': 'dark' if pending_payment_records > 0 else 'secondary'
+        })
+        
+        context['core_cards'] = core_cards
+        
+        # ========== 风险预警 ==========
+        risk_warnings = []
+        
+        # 逾期回款计划
+        overdue_plan_list = all_plans.filter(
+            status__in=['pending', 'partial'],
+            planned_date__lt=today
+        ).select_related('contract', 'contract__client')[:5]
+        
+        for plan in overdue_plan_list:
+            days_overdue = (today - plan.planned_date).days
+            client_name = plan.contract.client.name if plan.contract and plan.contract.client else '未知'
+            risk_warnings.append({
+                'type': 'plan',
+                'title': f'{plan.phase_name} - {client_name}',
+                'responsible': client_name,
+                'days': days_overdue,
+                'url': reverse('settlement_pages:payment_plan_detail', args=['business', plan.id])
+            })
+        
+        # 待确认产值记录（超过7天）
+        stale_output_records = all_output_records.filter(
+            status='pending',
+            calculated_time__lt=seven_days_ago
+        ).select_related('responsible_user', 'project')[:5]
+        
+        for record in stale_output_records:
+            days_since_create = (today - record.calculated_time.date()).days
+            responsible_name = _format_user_display(record.responsible_user) if record.responsible_user else '未知'
+            project_name = record.project.project_number if record.project else '未知'
+            risk_warnings.append({
+                'type': 'output',
+                'title': f'{project_name} - 产值记录待确认',
+                'responsible': responsible_name,
+                'days': days_since_create,
+                'url': output_url
+            })
+        
+        context['risk_warnings'] = risk_warnings[:5]
+        context['overdue_plans_count'] = overdue_plan_list.count()
+        context['stale_output_records_count'] = stale_output_records.count()
+        
+        # ========== 待办事项 ==========
+        todo_items = []
+        
+        # 待确认回款记录
+        pending_payment_list = all_payment_records.filter(status='pending').select_related('confirmed_by')[:5]
+        for payment in pending_payment_list:
+            todo_items.append({
+                'type': 'payment',
+                'title': f'回款单号：{payment.payment_number}',
+                'payment_number': payment.payment_number,
+                'responsible': '待确认',
+                'url': payment_record_url
+            })
+        
+        # 待处理项目结算
+        pending_settlement_list = all_settlements.filter(
+            status__in=['submitted', 'client_review', 'client_feedback']
+        ).select_related('created_by', 'project')[:5]
+        for settlement in pending_settlement_list:
+            creator_name = _format_user_display(settlement.created_by) if settlement.created_by else '未知'
+            project_name = settlement.project.project_number if settlement.project else '未知'
+            todo_items.append({
+                'type': 'settlement',
+                'title': f'{project_name} - {settlement.settlement_number}',
+                'settlement_number': settlement.settlement_number,
+                'responsible': creator_name,
+                'url': reverse('settlement_pages:project_settlement_detail', args=[settlement.id])
+            })
+        
+        context['todo_items'] = todo_items[:10]
+        context['pending_approval_count'] = pending_payment_records + pending_settlements
+        context['todo_summary_url'] = payment_record_url + '?status=pending'
+        
+        # ========== 我的工作 ==========
+        my_work = {}
+        
+        # 我创建的产值记录
+        my_output_records = all_output_records.filter(responsible_user=request.user).order_by('-calculated_time')[:3]
+        my_work['my_output_records'] = [{
+            'title': f'{record.project.project_number if record.project else "未知"} - {record.record_number}',
+            'status': record.get_status_display(),
+            'url': output_url
+        } for record in my_output_records]
+        my_work['my_output_records_count'] = all_output_records.filter(responsible_user=request.user).count()
+        
+        # 我创建的项目结算
+        my_settlements = all_settlements.filter(created_by=request.user).order_by('-created_time')[:3]
+        my_work['my_settlements'] = [{
+            'title': f'{settlement.project.project_number if settlement.project else "未知"} - {settlement.settlement_number}',
+            'status': settlement.get_status_display(),
+            'url': reverse('settlement_pages:project_settlement_detail', args=[settlement.id])
+        } for settlement in my_settlements]
+        my_work['my_settlements_count'] = all_settlements.filter(created_by=request.user).count()
+        
+        my_work['summary_url'] = plan_url
+        
+        context['my_work'] = my_work
+        
+        # ========== 最近活动 ==========
+        recent_activities = {}
+        
+        # 最近创建的回款计划
+        recent_plans = all_plans.select_related('contract', 'contract__client').order_by('-created_time')[:5]
+        recent_activities['recent_plans'] = [{
+            'title': plan.phase_name,
+            'creator': plan.contract.client.name if plan.contract and plan.contract.client else '未知',
+            'time': plan.planned_date,
+            'url': reverse('settlement_pages:payment_plan_detail', args=['business', plan.id])
+        } for plan in recent_plans]
+        
+        # 最近创建的回款记录
+        recent_payments = all_payment_records.select_related('confirmed_by').order_by('-payment_date')[:5]
+        recent_activities['recent_payments'] = [{
+            'title': payment.payment_number,
+            'creator': _format_user_display(payment.confirmed_by) if payment.confirmed_by else '系统',
+            'time': payment.payment_date,
+            'url': payment_record_url
+        } for payment in recent_payments]
+        
+        context['recent_activities'] = recent_activities
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception('获取回款管理统计数据失败: %s', str(e))
+        context.setdefault('core_cards', [])
+        context.setdefault('risk_warnings', [])
+        context.setdefault('todo_items', [])
+        context.setdefault('my_work', {})
+        context.setdefault('recent_activities', {})
+    
+    # 顶部操作栏
+    top_actions = []
+    if _permission_granted('payment_management.payment_plan.view', permission_codes):
+        try:
+            top_actions.append({
+                'label': '查看回款计划',
+                'url': reverse('settlement_pages:payment_plan_list'),
+                'icon': '💳'
+            })
+        except Exception:
+            pass
+    
+    context['top_actions'] = top_actions
+    
+    # 构建上下文
+    page_context = _context(
+        "回款管理",
+        "💰",
+        "数据展示中心 - 集中展示回款关键指标、状态与风险",
+        request=request
+    )
+    
+    # 设置侧边栏导航
+    settlement_sidebar_nav = _build_settlement_sidebar_nav(permission_codes, request.path, active_id='settlement_home')
+    page_context['settlement_menu'] = settlement_sidebar_nav
+    page_context['settlement_sidebar_nav'] = settlement_sidebar_nav
+    page_context['module_sidebar_nav'] = settlement_sidebar_nav
+    page_context['sidebar_title'] = '回款管理'
+    page_context['sidebar_subtitle'] = 'Settlement Management'
+    
+    # 为所有可能的侧边栏变量设置默认值，避免模板错误
+    page_context.setdefault('plan_menu', [])
+    page_context.setdefault('delivery_sidebar_nav', [])
+    page_context.setdefault('customer_menu', [])
+    page_context.setdefault('production_sidebar_nav', [])
+    page_context.setdefault('personnel_sidebar_nav', [])
+    page_context.setdefault('sidebar_menu', [])
+    page_context.setdefault('financial_menu', [])
+    page_context.setdefault('litigation_sidebar_nav', [])
+    page_context.setdefault('archive_sidebar_nav', [])
+    page_context.setdefault('production_management_menu', [])
+    page_context.setdefault('administrative_sidebar_nav', [])
+    
+    # 合并所有数据
+    page_context.update(context)
+    
+    return render(request, "settlement_management/home.html", page_context)

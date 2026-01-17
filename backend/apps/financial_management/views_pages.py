@@ -7,7 +7,7 @@ from django.urls import reverse, NoReverseMatch
 from django.utils import timezone
 from django.forms import inlineformset_factory
 from django.http import HttpResponse, JsonResponse
-from datetime import timedelta
+from datetime import timedelta, datetime
 from decimal import Decimal, InvalidOperation
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill
@@ -171,15 +171,30 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
             context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
             if use_financial_nav:
                 context['financial_menu'] = _build_financial_sidebar_nav(permission_set, request.path)
+                context['module_sidebar_nav'] = context['financial_menu']  # 兼容模板中的变量名
         else:
             context['full_top_nav'] = []
             context['financial_menu'] = []
+            context['module_sidebar_nav'] = []
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f'构建页面上下文错误: {str(e)}', exc_info=True)
         context['full_top_nav'] = []
         context['financial_menu'] = []
+        context['module_sidebar_nav'] = []
+    
+    # 为所有可能的侧边栏变量设置默认值，避免模板错误
+    # 这些变量可能在其他模块的模板中被引用
+    context.setdefault('plan_menu', [])
+    context.setdefault('delivery_sidebar_nav', [])
+    context.setdefault('customer_menu', [])
+    context.setdefault('production_sidebar_nav', [])
+    context.setdefault('personnel_sidebar_nav', [])
+    context.setdefault('sidebar_menu', [])
+    context.setdefault('litigation_sidebar_nav', [])
+    context.setdefault('archive_sidebar_nav', [])
+    context.setdefault('production_management_menu', [])
     
     return context
 
@@ -457,10 +472,27 @@ def _build_financial_sidebar_nav(permission_set, request_path=None, active_id=No
             if active_id:
                 is_active = child.get('id') == active_id
             elif request_path:
-                for keyword in child.get('path_keywords', []):
-                    if keyword in request_path:
-                        is_active = True
-                        break
+                # 特殊处理首页
+                if child.get('id') == 'financial_home':
+                    try:
+                        home_url = reverse('finance_pages:financial_home')
+                        try:
+                            home_url2 = reverse('finance_pages:financial_management_home')
+                        except NoReverseMatch:
+                            home_url2 = None
+                        is_active = (
+                            request_path == home_url or
+                            (home_url2 and request_path == home_url2) or
+                            request_path == '/financial/' or
+                            request_path == '/financial/home/'
+                        )
+                    except NoReverseMatch:
+                        pass
+                if not is_active:
+                    for keyword in child.get('path_keywords', []):
+                        if keyword in request_path:
+                            is_active = True
+                            break
             
             children.append({
                 'id': child.get('id'),
@@ -489,212 +521,311 @@ def _build_financial_sidebar_nav(permission_set, request_path=None, active_id=No
     return menu
 
 
+def _format_user_display(user, default='—'):
+    """格式化用户显示名称"""
+    if not user:
+        return default
+    if hasattr(user, 'get_full_name') and user.get_full_name():
+        return user.get_full_name()
+    return user.username if hasattr(user, 'username') else str(user)
+
+
 @login_required
 def financial_home(request):
-    """财务管理主页"""
+    """财务管理首页 - 数据展示中心"""
     permission_codes = get_user_permission_codes(request.user)
-    today = timezone.now().date()
+    now = timezone.now()
+    today = now.date()
     this_month_start = today.replace(day=1)
+    seven_days_ago = today - timedelta(days=7)
     
-    # 收集统计数据
-    summary_cards = []
+    context = {}
     
     try:
+        # ========== 核心指标卡片 ==========
+        core_cards = []
+        
         # 会计科目统计
-        if _permission_granted('financial_management.account.view', permission_codes):
-            try:
-                total_accounts = AccountSubject.objects.filter(is_active=True).count()
-                accounts_by_type = AccountSubject.objects.filter(is_active=True).values('subject_type').annotate(count=Count('id'))
-                
-                summary_cards.append({
-                    'label': '会计科目',
-                    'icon': '📊',
-                    'value': f'{total_accounts}',
-                    'subvalue': f'启用科目',
-                    'url': reverse('finance_pages:account_subject_management'),
-                })
-            except Exception:
-                pass
+        total_accounts = AccountSubject.objects.filter(is_active=True).count()
+        accounts_by_type = AccountSubject.objects.filter(is_active=True).values('subject_type').annotate(count=Count('id'))
         
         # 凭证管理统计
-        if _permission_granted('financial_management.voucher.view', permission_codes):
-            try:
-                pending_vouchers = Voucher.objects.filter(status='submitted').count()
-                this_month_vouchers = Voucher.objects.filter(voucher_date__gte=this_month_start).count()
-                
-                summary_cards.append({
-                    'label': '凭证管理',
-                    'icon': '📝',
-                    'value': f'{pending_vouchers}',
-                    'subvalue': f'待审核 · 本月 {this_month_vouchers} 张',
-                    'url': reverse('finance_pages:voucher_management'),
-                })
-            except Exception:
-                pass
+        all_vouchers = Voucher.objects.all()
+        total_vouchers = all_vouchers.count()
+        pending_vouchers = all_vouchers.filter(status='submitted').count()
+        approved_vouchers = all_vouchers.filter(status='approved').count()
+        posted_vouchers = all_vouchers.filter(status='posted').count()
+        this_month_vouchers = all_vouchers.filter(voucher_date__gte=this_month_start).count()
         
         # 账簿管理统计
-        if _permission_granted('financial_management.ledger.view', permission_codes):
-            try:
-                current_year = today.year
-                current_month = today.month
-                ledger_entries = Ledger.objects.filter(
-                    period_year=current_year,
-                    period_month=current_month
-                ).count()
-                
-                summary_cards.append({
-                    'label': '账簿管理',
-                    'icon': '📖',
-                    'value': f'{ledger_entries}',
-                    'subvalue': f'本月账务记录',
-                    'url': reverse('finance_pages:ledger_management'),
-                })
-            except Exception:
-                pass
+        current_year = today.year
+        current_month = today.month
+        ledger_entries = Ledger.objects.filter(
+            period_year=current_year,
+            period_month=current_month
+        ).count()
         
         # 预算管理统计
-        if _permission_granted('financial_management.budget.view', permission_codes):
-            try:
-                executing_budgets = Budget.objects.filter(status='executing').count()
-                total_budget = Budget.objects.filter(status='executing').aggregate(
-                    total=Sum('budget_amount')
-                )['total'] or Decimal('0')
-                
-                summary_cards.append({
-                    'label': '预算管理',
-                    'icon': '💰',
-                    'value': f'{executing_budgets}',
-                    'subvalue': f'执行中预算',
-                    'extra': f'总额 ¥{total_budget:,.2f}',
-                    'url': reverse('finance_pages:budget_management'),
-                })
-            except Exception:
-                pass
+        all_budgets = Budget.objects.all()
+        executing_budgets = all_budgets.filter(status='executing').count()
+        total_budget = all_budgets.filter(status='executing').aggregate(
+            total=Sum('budget_amount')
+        )['total'] or Decimal('0')
         
         # 发票管理统计
-        if _permission_granted('financial_management.invoice.view', permission_codes):
-            try:
-                unverified_invoices = Invoice.objects.filter(status='issued').count()
-                this_month_invoices = Invoice.objects.filter(invoice_date__gte=this_month_start).count()
-                
-                summary_cards.append({
-                    'label': '发票管理',
-                    'icon': '🧾',
-                    'value': f'{unverified_invoices}',
-                    'subvalue': f'待认证 · 本月 {this_month_invoices} 张',
-                    'url': reverse('finance_pages:invoice_management'),
-                })
-            except Exception:
-                pass
+        all_invoices = Invoice.objects.all()
+        total_invoices = all_invoices.count()
+        unverified_invoices = all_invoices.filter(status='issued').count()
+        this_month_invoices = all_invoices.filter(invoice_date__gte=this_month_start).count()
         
         # 资金流水统计
-        if _permission_granted('financial_management.fund_flow.view', permission_codes):
-            try:
-                this_month_flows = FundFlow.objects.filter(flow_date__gte=this_month_start).count()
-                this_month_income = FundFlow.objects.filter(
-                    flow_date__gte=this_month_start,
-                    flow_type='income'
-                ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-                
-                summary_cards.append({
-                    'label': '资金流水',
-                    'icon': '💳',
-                    'value': f'{this_month_flows}',
-                    'subvalue': f'本月流水',
-                    'extra': f'收入 ¥{this_month_income:,.2f}',
-                    'url': reverse('finance_pages:fund_flow_management'),
-                })
-            except Exception:
-                pass
+        all_fund_flows = FundFlow.objects.all()
+        this_month_flows = all_fund_flows.filter(flow_date__gte=this_month_start).count()
+        this_month_income = all_fund_flows.filter(
+            flow_date__gte=this_month_start,
+            flow_type='income'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        this_month_expense = all_fund_flows.filter(
+            flow_date__gte=this_month_start,
+            flow_type='expense'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        
+        # 卡片1：会计科目
+        core_cards.append({
+            'label': '会计科目',
+            'icon': '📊',
+            'value': str(total_accounts),
+            'subvalue': f'启用科目总数',
+            'url': reverse('finance_pages:account_subject_management'),
+            'variant': 'secondary'
+        })
+        
+        # 卡片2：待审核凭证
+        core_cards.append({
+            'label': '待审核凭证',
+            'icon': '📝',
+            'value': str(pending_vouchers),
+            'subvalue': f'本月凭证 {this_month_vouchers} 张',
+            'url': reverse('finance_pages:voucher_management') + '?status=submitted',
+            'variant': 'dark' if pending_vouchers > 0 else 'secondary'
+        })
+        
+        # 卡片3：已过账凭证
+        core_cards.append({
+            'label': '已过账凭证',
+            'icon': '✅',
+            'value': str(posted_vouchers),
+            'subvalue': f'凭证总数 {total_vouchers}',
+            'url': reverse('finance_pages:voucher_management') + '?status=posted',
+            'variant': 'secondary'
+        })
+        
+        # 卡片4：预算管理
+        core_cards.append({
+            'label': '预算管理',
+            'icon': '💰',
+            'value': str(executing_budgets),
+            'subvalue': f'执行中预算 · 总额 ¥{total_budget:,.0f}',
+            'url': reverse('finance_pages:budget_management'),
+            'variant': 'secondary'
+        })
+        
+        # 卡片5：发票管理
+        core_cards.append({
+            'label': '发票管理',
+            'icon': '🧾',
+            'value': str(total_invoices),
+            'subvalue': f'待认证 {unverified_invoices} | 本月 {this_month_invoices} 张',
+            'url': reverse('finance_pages:invoice_management'),
+            'variant': 'dark' if unverified_invoices > 0 else 'secondary'
+        })
+        
+        # 卡片6：资金流水
+        core_cards.append({
+            'label': '资金流水',
+            'icon': '💳',
+            'value': str(this_month_flows),
+            'subvalue': f'本月收入 ¥{this_month_income:,.0f} | 支出 ¥{this_month_expense:,.0f}',
+            'url': reverse('finance_pages:fund_flow_management'),
+            'variant': 'secondary'
+        })
+        
+        context['core_cards'] = core_cards
+        
+        # ========== 风险预警 ==========
+        risk_warnings = []
+        
+        # 待审核凭证（超过3天）
+        stale_vouchers = all_vouchers.filter(
+            status='submitted',
+            created_time__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()))
+        ).select_related('preparer')[:5]
+        
+        for voucher in stale_vouchers:
+            days_since_create = (today - voucher.created_time.date()).days
+            preparer_name = _format_user_display(voucher.preparer) if voucher.preparer else '未知'
+            risk_warnings.append({
+                'type': 'voucher',
+                'title': f'凭证号：{voucher.voucher_number}',
+                'responsible': preparer_name,
+                'days': days_since_create,
+                'url': reverse('finance_pages:voucher_detail', args=[voucher.id])
+            })
+        
+        # 预算超支风险
+        over_budget = all_budgets.filter(
+            status='executing',
+            remaining_amount__lt=0
+        ).select_related('created_by')[:5]
+        
+        for budget in over_budget:
+            over_amount = abs(budget.remaining_amount)
+            creator_name = _format_user_display(budget.created_by) if budget.created_by else '未知'
+            risk_warnings.append({
+                'type': 'budget',
+                'title': f'{budget.name} - 超支 ¥{over_amount:,.2f}',
+                'responsible': creator_name,
+                'days': 0,
+                'url': reverse('finance_pages:budget_detail', args=[budget.id])
+            })
+        
+        context['risk_warnings'] = risk_warnings[:5]
+        context['stale_vouchers_count'] = stale_vouchers.count()
+        context['over_budget_count'] = over_budget.count()
+        
+        # ========== 待办事项 ==========
+        todo_items = []
+        
+        # 待审核凭证
+        pending_voucher_list = all_vouchers.filter(status='submitted').select_related('preparer')[:5]
+        for voucher in pending_voucher_list:
+            preparer_name = _format_user_display(voucher.preparer) if voucher.preparer else '未知'
+            todo_items.append({
+                'type': 'voucher',
+                'title': f'凭证号：{voucher.voucher_number}',
+                'voucher_number': voucher.voucher_number,
+                'responsible': preparer_name,
+                'url': reverse('finance_pages:voucher_detail', args=[voucher.id])
+            })
+        
+        # 待认证发票
+        unverified_invoice_list = all_invoices.filter(status='issued').select_related('created_by')[:5]
+        for invoice in unverified_invoice_list:
+            creator_name = _format_user_display(invoice.created_by) if invoice.created_by else '未知'
+            todo_items.append({
+                'type': 'invoice',
+                'title': f'发票号：{invoice.invoice_number}',
+                'invoice_number': invoice.invoice_number,
+                'responsible': creator_name,
+                'url': reverse('finance_pages:invoice_detail', args=[invoice.id])
+            })
+        
+        context['todo_items'] = todo_items[:10]
+        context['pending_approval_count'] = pending_vouchers + unverified_invoices
+        context['todo_summary_url'] = reverse('finance_pages:voucher_management') + '?status=submitted'
+        
+        # ========== 我的工作 ==========
+        my_work = {}
+        
+        # 我创建的凭证
+        my_vouchers = all_vouchers.filter(preparer=request.user).order_by('-created_time')[:3]
+        my_work['my_vouchers'] = [{
+            'title': voucher.voucher_number,
+            'status': voucher.get_status_display(),
+            'url': reverse('finance_pages:voucher_detail', args=[voucher.id])
+        } for voucher in my_vouchers]
+        my_work['my_vouchers_count'] = all_vouchers.filter(preparer=request.user).count()
+        
+        # 我创建的发票
+        my_invoices = all_invoices.filter(created_by=request.user).order_by('-created_time')[:3]
+        my_work['my_invoices'] = [{
+            'title': invoice.invoice_number,
+            'status': invoice.get_status_display(),
+            'url': reverse('finance_pages:invoice_detail', args=[invoice.id])
+        } for invoice in my_invoices]
+        my_work['my_invoices_count'] = all_invoices.filter(created_by=request.user).count()
+        
+        my_work['summary_url'] = reverse('finance_pages:voucher_management')
+        
+        context['my_work'] = my_work
+        
+        # ========== 最近活动 ==========
+        recent_activities = {}
+        
+        # 最近创建的凭证
+        recent_vouchers = all_vouchers.select_related('preparer').order_by('-created_time')[:5]
+        recent_activities['recent_vouchers'] = [{
+            'title': voucher.voucher_number,
+            'creator': _format_user_display(voucher.preparer),
+            'time': voucher.created_time,
+            'url': reverse('finance_pages:voucher_detail', args=[voucher.id])
+        } for voucher in recent_vouchers]
+        
+        # 最近创建的资金流水
+        recent_fund_flows = all_fund_flows.select_related('created_by').order_by('-flow_date')[:5]
+        recent_activities['recent_fund_flows'] = [{
+            'title': f'资金流水：{fund_flow.get_flow_type_display()} ¥{fund_flow.amount:,.2f}',
+            'creator': _format_user_display(fund_flow.created_by) if hasattr(fund_flow, 'created_by') and fund_flow.created_by else '未知',
+            'time': fund_flow.created_time if hasattr(fund_flow, 'created_time') and fund_flow.created_time else fund_flow.flow_date,
+            'url': reverse('finance_pages:fund_flow_detail', args=[fund_flow.id])
+        } for fund_flow in recent_fund_flows]
+        
+        context['recent_activities'] = recent_activities
         
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.exception('获取统计数据失败: %s', str(e))
+        logger.exception('获取财务管理统计数据失败: %s', str(e))
+        context.setdefault('core_cards', [])
+        context.setdefault('risk_warnings', [])
+        context.setdefault('todo_items', [])
+        context.setdefault('my_work', {})
+        context.setdefault('recent_activities', {})
     
-    # 功能模块区域
-    sections = []
-    
-    # 快捷操作区域
-    quick_actions = []
-    
-    from django.urls import reverse, NoReverseMatch
-    
+    # 顶部操作栏
+    top_actions = []
     if _permission_granted('financial_management.account.create', permission_codes):
         try:
-            quick_actions.append({
+            top_actions.append({
                 'label': '新增会计科目',
-                'icon': '➕',
-                'description': '添加新的会计科目',
                 'url': reverse('finance_pages:account_subject_create'),
-                'link_label': '新增科目 →'
+                'icon': '➕'
             })
-        except NoReverseMatch:
+        except Exception:
             pass
     
-    if quick_actions:
-        sections.append({
-            'title': '快捷操作',
-            'description': '常用的快速操作入口',
-            'items': quick_actions
-        })
-    
-    # 功能模块区域
-    modules = []
-    
-    if _permission_granted('financial_management.account.view', permission_codes):
+    if _permission_granted('financial_management.voucher.create', permission_codes):
         try:
-            modules.append({
-                'label': '会计科目',
-                'icon': '📊',
-                'description': '管理会计科目体系',
-                'url': reverse('finance_pages:account_subject_management'),
-                'link_label': '进入模块 →'
+            top_actions.append({
+                'label': '创建凭证',
+                'url': reverse('finance_pages:voucher_create'),
+                'icon': '📝'
             })
-        except NoReverseMatch:
+        except Exception:
             pass
     
-    if _permission_granted('financial_management.voucher.view', permission_codes):
-        try:
-            modules.append({
-                'label': '凭证管理',
-                'icon': '📝',
-                'description': '管理会计凭证',
-                'url': reverse('finance_pages:voucher_management'),
-                'link_label': '进入模块 →'
-            })
-        except NoReverseMatch:
-            pass
+    context['top_actions'] = top_actions
     
-    if _permission_granted('financial_management.ledger.view', permission_codes):
-        try:
-            modules.append({
-                'label': '账簿管理',
-                'icon': '📖',
-                'description': '管理会计账簿',
-                'url': reverse('finance_pages:ledger_management'),
-                'link_label': '进入模块 →'
-            })
-        except NoReverseMatch:
-            pass
-    
-    if modules:
-        sections.append({
-            'title': '功能模块',
-            'description': '财务管理的各个功能模块入口',
-            'items': modules
-        })
-    
-    context = _context(
+    # 构建上下文
+    page_context = _context(
         "财务管理",
         "💵",
-        "企业财务管理平台",
-        summary_cards=summary_cards,
-        sections=sections,
+        "数据展示中心 - 集中展示财务关键指标、状态与风险",
         request=request,
         use_financial_nav=True
     )
-    return render(request, "financial_management/home.html", context)
+    
+    # 设置侧边栏导航
+    financial_sidebar_nav = _build_financial_sidebar_nav(permission_codes, request.path, active_id='financial_home')
+    page_context['financial_menu'] = financial_sidebar_nav
+    page_context['module_sidebar_nav'] = financial_sidebar_nav
+    page_context['sidebar_title'] = '财务管理'
+    page_context['sidebar_subtitle'] = 'Financial Management'
+    
+    # 合并所有数据
+    page_context.update(context)
+    
+    return render(request, "financial_management/home.html", page_context)
 
 
 @login_required
@@ -1727,70 +1858,74 @@ def voucher_management(request):
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
     
-    # 获取凭证列表
-    try:
-        vouchers = Voucher.objects.select_related('preparer', 'reviewer', 'posted_by').order_by('-voucher_date', '-voucher_number')
-        
-        # 应用筛选条件
-        if search:
-            vouchers = vouchers.filter(
-                Q(voucher_number__icontains=search) |
-                Q(notes__icontains=search)
-            )
-        if status:
-            vouchers = vouchers.filter(status=status)
-        if date_from:
-            vouchers = vouchers.filter(voucher_date__gte=date_from)
-        if date_to:
-            vouchers = vouchers.filter(voucher_date__lte=date_to)
-        
-        # 分页
-        page_size = request.GET.get('page_size', '10')
-        try:
-            per_page = int(page_size)
-            if per_page not in [10, 20, 50]:
-                per_page = 10
-        except (ValueError, TypeError):
-            per_page = 10
-        paginator = Paginator(vouchers, per_page)
-        page_number = request.GET.get('page', 1)
-        page_obj = paginator.get_page(page_number)
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('获取凭证列表失败: %s', str(e))
-        page_obj = None
+    # 获取凭证列表（用于统计，在筛选之前）
+    base_vouchers = Voucher.objects.select_related('preparer', 'reviewer', 'posted_by').all()
     
-    # 统计信息
+    # 统计数据（在过滤之前获取，显示全部数据统计）
+    total_count = base_vouchers.count()
+    draft_count = base_vouchers.filter(status='draft').count()
+    submitted_count = base_vouchers.filter(status='submitted').count()
+    approved_count = base_vouchers.filter(status='approved').count()
+    posted_count = base_vouchers.filter(status='posted').count()
+    rejected_count = base_vouchers.filter(status='rejected').count()
+    
+    # 应用筛选条件
+    vouchers = base_vouchers.order_by('-voucher_date', '-voucher_number')
+    
+    if search:
+        vouchers = vouchers.filter(
+            Q(voucher_number__icontains=search) |
+            Q(notes__icontains=search)
+        )
+    if status:
+        vouchers = vouchers.filter(status=status)
+    if date_from:
+        vouchers = vouchers.filter(voucher_date__gte=date_from)
+    if date_to:
+        vouchers = vouchers.filter(voucher_date__lte=date_to)
+    
+    # 分页（每页20条）
+    paginator = Paginator(vouchers, 20)
+    page_number = request.GET.get('page', 1)
     try:
-        total_vouchers = Voucher.objects.count()
-        pending_vouchers = Voucher.objects.filter(status='submitted').count()
-        approved_vouchers = Voucher.objects.filter(status='approved').count()
-        posted_vouchers = Voucher.objects.filter(status='posted').count()
-        
-        summary_cards = []
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('获取统计信息失败: %s', str(e))
-        summary_cards = []
+        page_obj = paginator.get_page(page_number)
+    except:
+        page_obj = paginator.get_page(1)
+    
+    # 生成左侧菜单
+    financial_menu = _build_financial_sidebar_nav(permission_codes, request.path)
     
     context = _context(
         "凭证管理",
         "📝",
         "管理记账凭证",
-        summary_cards=summary_cards,
         request=request,
         use_financial_nav=True
     )
     context.update({
         'page_obj': page_obj,
+        'page': page_obj,  # 兼容模板中的变量名
         'vouchers': page_obj.object_list if page_obj else [],
         'status_choices': Voucher.STATUS_CHOICES,
-        'current_search': search,
-        'current_status': status,
-        'current_date_from': date_from,
-        'current_date_to': date_to,
+        'status_filter': status,  # 兼容模板中的变量名
+        'search': search,
+        'current_search': search,  # 兼容模板中的变量名
+        'current_status': status,  # 兼容模板中的变量名
+        'status': status,  # 兼容模板中的变量名
+        'date_from': date_from,
+        'date_to': date_to,
+        'current_date_from': date_from,  # 兼容模板中的变量名
+        'current_date_to': date_to,  # 兼容模板中的变量名
+        'total_count': total_count,
+        'draft_count': draft_count,
+        'submitted_count': submitted_count,
+        'approved_count': approved_count,
+        'posted_count': posted_count,
+        'rejected_count': rejected_count,
+        'financial_menu': financial_menu,
+        'module_sidebar_nav': financial_menu,  # 兼容模板中的变量名
+        'sidebar_title': '财务管理',  # 侧边栏标题
+        'sidebar_subtitle': 'Financial Management',  # 侧边栏副标题
     })
     return render(request, "financial_management/voucher_list.html", context)
 

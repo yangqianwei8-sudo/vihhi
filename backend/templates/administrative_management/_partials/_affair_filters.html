@@ -1,0 +1,40 @@
+<div class="list-filters">
+  <form method="get" class="list-filters-form">
+    <div class="list-filter-group">
+      <label class="list-filter-label">搜索</label>
+      <input type="text" name="search" class="list-filter-input" 
+             value="{{ search }}" placeholder="事务编号、标题、内容">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">事务类型</label>
+      <select name="affair_type" class="list-filter-input">
+        <option value="" {% if not affair_type %}selected{% endif %}>全部类型</option>
+        {% for code, label in affair_type_choices %}
+        <option value="{{ code }}" {% if affair_type == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">状态</label>
+      <select name="status" class="list-filter-input">
+        <option value="" {% if not status %}selected{% endif %}>全部状态</option>
+        {% for code, label in status_choices %}
+        <option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">优先级</label>
+      <select name="priority" class="list-filter-input">
+        <option value="" {% if not priority %}selected{% endif %}>全部优先级</option>
+        {% for code, label in priority_choices %}
+        <option value="{{ code }}" {% if priority == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'admin_pages:affair_list' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>

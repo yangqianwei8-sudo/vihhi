@@ -69,12 +69,14 @@ urlpatterns = [
     path("file-prep/upload/", views_pages.delivery_file_prep_upload, name="delivery_file_prep_upload"),
     
     # 收文管理
+    path("incoming-document/home/", views_pages.incoming_document_home, name="incoming_document_home"),
     path("incoming-document/", views_pages.incoming_document_list, name="incoming_document_list"),
     path("incoming-document/create/", views_pages.incoming_document_create, name="incoming_document_create"),
     path("incoming-document/<int:document_id>/", views_pages.incoming_document_detail, name="incoming_document_detail"),
     path("incoming-document/<int:document_id>/edit/", views_pages.incoming_document_edit, name="incoming_document_edit"),
     
     # 发文管理
+    path("outgoing-document/home/", views_pages.outgoing_document_home, name="outgoing_document_home"),
     path("outgoing-document/", views_pages.outgoing_document_list, name="outgoing_document_list"),
     path("outgoing-document/create/", views_pages.outgoing_document_create, name="outgoing_document_create"),
     path("outgoing-document/<int:document_id>/", views_pages.outgoing_document_detail, name="outgoing_document_detail"),

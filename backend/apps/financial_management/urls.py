@@ -6,6 +6,7 @@ app_name = "finance_pages"
 urlpatterns = [
     # 财务管理主页
     path("", views_pages.financial_home, name="financial_home"),
+    path("home/", views_pages.financial_home, name="financial_management_home"),
     path("statistics/", views_pages.financial_statistics, name="financial_statistics"),
     
     # 会计科目
