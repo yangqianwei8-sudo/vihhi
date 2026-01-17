@@ -2146,8 +2146,104 @@ class OpportunityStatusLog(models.Model):
         return f"{self.opportunity.opportunity_number} - {from_label} → {to_label}"
 
 
-# ==================== 客户线索管理模块（已删除）====================
-# CustomerLead 和 LeadFollowUp 模型已删除（线索管理功能已移除）
+# ==================== 客户线索管理模块 =====================
+
+class CustomerLead(models.Model):
+    """客户线索模型"""
+    
+    LEAD_SOURCE_CHOICES = [
+        ('rcc_platform', 'RCC平台信息'),
+        ('website', '官网咨询'),
+        ('phone', '电话咨询'),
+        ('exhibition', '展会'),
+        ('referral', '转介绍'),
+        ('other', '其他'),
+    ]
+    
+    FOLLOW_STATUS_CHOICES = [
+        ('unhandled', '未处理'),
+        ('contact_valid', '联系方式有效'),
+        ('contact_invalid', '联系方式无效'),
+        ('converted', '已转化'),
+        ('lost', '已流失'),
+    ]
+    
+    # 联系人信息
+    contact_name = models.CharField(max_length=100, verbose_name='联系人姓名')
+    contact_phone = models.CharField(max_length=20, blank=True, verbose_name='联系电话')
+    contact_email = models.CharField(max_length=100, blank=True, verbose_name='联系邮箱')
+    
+    # 公司信息
+    company_name = models.CharField(max_length=200, verbose_name='公司名称')
+    province = models.CharField(max_length=50, blank=True, verbose_name='省份')
+    city = models.CharField(max_length=50, blank=True, verbose_name='城市')
+    district = models.CharField(max_length=50, blank=True, verbose_name='区县')
+    
+    # 线索信息
+    lead_source = models.CharField(
+        max_length=50,
+        choices=LEAD_SOURCE_CHOICES,
+        default='other',
+        verbose_name='线索来源'
+    )
+    channel = models.CharField(max_length=50, blank=True, verbose_name='渠道')
+    
+    # 跟进信息
+    follow_status = models.CharField(
+        max_length=20,
+        choices=FOLLOW_STATUS_CHOICES,
+        default='unhandled',
+        verbose_name='跟进状态'
+    )
+    latest_followup_note = models.TextField(blank=True, verbose_name='最新跟进记录')
+    actual_followup_time = models.DateTimeField(null=True, blank=True, verbose_name='实际跟进时间')
+    days_not_followed = models.IntegerField(default=0, verbose_name='未跟进天数')
+    
+    # 其他信息
+    department = models.CharField(max_length=100, blank=True, verbose_name='所属部门')
+    is_friend_added = models.BooleanField(default=False, verbose_name='是否已加好友')
+    is_active = models.BooleanField(default=True, verbose_name='是否有效')
+    
+    # 关联信息
+    converted_client = models.ForeignKey(
+        Client,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='leads',
+        verbose_name='转化客户'
+    )
+    
+    # 审计字段
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='created_leads',
+        verbose_name='创建人'
+    )
+    responsible_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='responsible_leads',
+        verbose_name='负责人'
+    )
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'customer_lead'
+        verbose_name = '客户线索'
+        verbose_name_plural = '客户线索'
+        ordering = ['-created_time']
+        indexes = [
+            models.Index(fields=['follow_status', 'responsible_user']),
+            models.Index(fields=['lead_source', 'created_time']),
+        ]
+    
+    def __str__(self):
+        return f"{self.company_name} - {self.contact_name}"
 
 # ==================== 客户关系管理模块（已删除，将按新设计方案重构）====================
 # CustomerRelationship 模型已删除，将按新设计方案重新实现
@@ -2525,7 +2621,198 @@ class OpportunityFiling(models.Model):
                 filing_date__month=datetime.now().month,
                 filing_date__day=datetime.now().day
             ).count()
-            self.filing_number = f"FIL-{date_str}-{count + 1:04d}"
+
+
+class CustomerFiling(models.Model):
+    """客户备案记录"""
+    FILING_TYPE_CHOICES = [
+        ('initial', '初始备案'),
+        ('update', '更新备案'),
+        ('supplement', '补充备案'),
+        ('annual', '年度备案'),
+        ('other', '其他'),
+    ]
+    
+    client = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        related_name='filings',
+        verbose_name='关联客户'
+    )
+    filing_date = models.DateField(verbose_name='备案日期')
+    filing_type = models.CharField(
+        max_length=20,
+        choices=FILING_TYPE_CHOICES,
+        default='initial',
+        verbose_name='备案类型'
+    )
+    filing_number = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='备案编号',
+        help_text='系统自动生成或手动输入'
+    )
+    filing_content = models.TextField(verbose_name='备案内容')
+    filing_purpose = models.TextField(blank=True, verbose_name='备案目的')
+    filing_notes = models.TextField(blank=True, verbose_name='备注说明')
+    
+    # 关联信息
+    related_opportunity = models.ForeignKey(
+        BusinessOpportunity,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='customer_filings',
+        verbose_name='关联商机'
+    )
+    
+    # 审计字段
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='created_customer_filings',
+        verbose_name='创建人'
+    )
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'customer_filing'
+        verbose_name = '客户备案记录'
+        verbose_name_plural = verbose_name
+        ordering = ['-filing_date', '-created_time']
+        indexes = [
+            models.Index(fields=['client', '-filing_date']),
+            models.Index(fields=['filing_number']),
+            models.Index(fields=['filing_type', '-filing_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.client.name} - {self.filing_date} - {self.get_filing_type_display()}"
+    
+    def save(self, *args, **kwargs):
+        # 如果备案编号为空，自动生成
+        if not self.filing_number:
+            from datetime import datetime
+            date_str = datetime.now().strftime('%Y%m%d')
+            count = CustomerFiling.objects.filter(
+                filing_date__year=datetime.now().year,
+                filing_date__month=datetime.now().month,
+                filing_date__day=datetime.now().day
+            ).count()
+            self.filing_number = f"CFIL-{date_str}-{count + 1:04d}"
+        super().save(*args, **kwargs)
+
+
+class CustomerWarehouseApplication(models.Model):
+    """客户入库申请"""
+    STATUS_CHOICES = [
+        ('draft', '草稿'),
+        ('submitted', '已提交'),
+        ('approved', '已审批'),
+        ('rejected', '已驳回'),
+        ('cancelled', '已取消'),
+    ]
+    
+    APPLICATION_TYPE_CHOICES = [
+        ('new_customer', '新客户入库'),
+        ('customer_update', '客户信息更新'),
+        ('customer_recovery', '客户恢复'),
+        ('other', '其他'),
+    ]
+    
+    # 基本信息
+    application_number = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='申请编号',
+        help_text='系统自动生成'
+    )
+    client = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE,
+        related_name='warehouse_applications',
+        verbose_name='关联客户'
+    )
+    application_type = models.CharField(
+        max_length=30,
+        choices=APPLICATION_TYPE_CHOICES,
+        default='new_customer',
+        verbose_name='申请类型'
+    )
+    application_date = models.DateField(verbose_name='申请日期')
+    
+    # 申请内容
+    application_reason = models.TextField(verbose_name='申请原因')
+    application_content = models.TextField(verbose_name='申请内容')
+    application_notes = models.TextField(blank=True, verbose_name='备注说明')
+    
+    # 关联信息
+    related_opportunity = models.ForeignKey(
+        BusinessOpportunity,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='customer_warehouse_applications',
+        verbose_name='关联商机'
+    )
+    
+    # 状态信息
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='draft',
+        verbose_name='申请状态'
+    )
+    
+    # 审批信息
+    approver = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_customer_warehouse_applications',
+        verbose_name='审批人'
+    )
+    approved_time = models.DateTimeField(null=True, blank=True, verbose_name='审批时间')
+    approval_comment = models.TextField(blank=True, verbose_name='审批意见')
+    
+    # 审计字段
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='created_customer_warehouse_applications',
+        verbose_name='创建人'
+    )
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'customer_warehouse_application'
+        verbose_name = '客户入库申请'
+        verbose_name_plural = verbose_name
+        ordering = ['-application_date', '-created_time']
+        indexes = [
+            models.Index(fields=['client', '-application_date']),
+            models.Index(fields=['application_number']),
+            models.Index(fields=['status', '-application_date']),
+            models.Index(fields=['application_type', '-application_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.client.name} - {self.application_date} - {self.get_status_display()}"
+    
+    def save(self, *args, **kwargs):
+        # 如果申请编号为空，自动生成
+        if not self.application_number:
+            from datetime import datetime
+            date_str = datetime.now().strftime('%Y%m%d')
+            count = CustomerWarehouseApplication.objects.filter(
+                application_date__year=datetime.now().year,
+                application_date__month=datetime.now().month,
+                application_date__day=datetime.now().day
+            ).count()
+            self.application_number = f"CWHA-{date_str}-{count + 1:04d}"
         super().save(*args, **kwargs)
 
 

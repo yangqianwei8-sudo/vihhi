@@ -20,7 +20,9 @@ from backend.apps.customer_management.models import (
     BusinessOpportunity,
     OpportunityFollowUp,
     OpportunityQuotation,
-    # CustomerLead, LeadFollowUp 已删除（按《客户管理详细设计方案 v1.12》）
+    CustomerLead,
+    CustomerFiling,
+    CustomerWarehouseApplication,
     CustomerRelationship,
     CustomerRelationshipUpgrade,
     BusinessExpenseApplication,
@@ -130,6 +132,35 @@ CUSTOMER_MANAGEMENT_MENU = [
         'permission': 'customer_management.client.view',
     },
     {
+        'id': 'lead_and_public_sea',
+        'label': '线索与公海',
+        'icon': '🔍',
+        'permission': 'customer_management.client.view',
+        'children': [
+            {
+                'id': 'customer_lead_create',
+                'label': '创建客户线索',
+                'icon': '📝',
+                'url_name': 'customer_pages:customer_lead_create',
+                'permission': 'customer_management.client.create',
+            },
+            {
+                'id': 'customer_filing_create',
+                'label': '创建新客户备案',
+                'icon': '📋',
+                'url_name': 'customer_pages:customer_filing_create',
+                'permission': 'customer_management.client.create',
+            },
+            {
+                'id': 'customer_public_sea',
+                'label': '客户公海',
+                'icon': '🌊',
+                'url_name': 'customer_pages:customer_public_sea',
+                'permission': 'customer_management.public_sea.view',
+            },
+        ]
+    },
+    {
         'id': 'customer_info',
         'label': '客户信息管理',
         'icon': '👥',
@@ -150,11 +181,11 @@ CUSTOMER_MANAGEMENT_MENU = [
                 'permission': 'customer_management.client.create',
             },
             {
-                'id': 'customer_public_sea',
-                'label': '客户公海',
-                'icon': '🌊',
-                'url_name': 'customer_pages:customer_public_sea',
-                'permission': 'customer_management.public_sea.view',
+                'id': 'customer_warehouse_application_create',
+                'label': '创建客户入库申请',
+                'icon': '📦',
+                'url_name': 'customer_pages:customer_warehouse_application_create',
+                'permission': 'customer_management.client.create',
             },
         ]
     },
@@ -2202,6 +2233,172 @@ def customer_create(request):
     context['form_page_subtitle_text'] = '请填写客户基本信息'
     context['create_url_name'] = 'business_pages:customer_create'
     return render(request, "customer_management/customer_form.html", context)
+
+
+@login_required
+def customer_lead_create(request):
+    """创建客户线索"""
+    from backend.apps.customer_management.models import CustomerLead
+    from backend.apps.customer_management.forms import CustomerLeadForm
+    
+    permission_set = get_user_permission_codes(request.user)
+    if not _check_customer_permission('customer_management.client.edit', permission_set):
+        messages.error(request, '您没有权限创建客户线索')
+        return redirect('customer_pages:customer_management_home')
+    
+    if request.method == 'POST':
+        form = CustomerLeadForm(request.POST, user=request.user)
+        if form.is_valid():
+            lead = form.save(commit=False)
+            lead.created_by = request.user
+            # 如果表单中没有设置负责人，则默认设置为创建人
+            if not lead.responsible_user:
+                lead.responsible_user = request.user
+            
+            lead.save()
+            messages.success(request, '客户线索创建成功')
+            # 重定向到客户管理首页（客户线索列表功能待实现）
+            return redirect('customer_pages:customer_management_home')
+        else:
+            messages.error(request, '表单验证失败，请检查输入')
+    else:
+        form = CustomerLeadForm(user=request.user)
+    
+    context = _context(
+        "创建客户线索",
+        "➕",
+        "创建新客户线索信息",
+        request=request,
+    )
+    
+    # 生成左侧菜单
+    context['customer_menu'] = _build_customer_management_menu(
+        permission_set, 
+        active_id='customer_lead_create'
+    )
+    
+    context.update({
+        'form': form,
+        'lead_source_choices': CustomerLead.LEAD_SOURCE_CHOICES,
+        'follow_status_choices': CustomerLead.FOLLOW_STATUS_CHOICES,
+    })
+    context['cancel_url_name'] = 'customer_pages:customer_management_home'
+    context['form_page_subtitle_text'] = '请填写客户线索基本信息'
+    context['create_url_name'] = 'customer_pages:customer_lead_create'
+    return render(request, "customer_management/customer_lead_form.html", context)
+
+
+@login_required
+def customer_filing_create(request):
+    """创建客户备案"""
+    from backend.apps.customer_management.models import CustomerFiling, Client
+    from backend.apps.customer_management.forms import CustomerFilingForm
+    
+    permission_set = get_user_permission_codes(request.user)
+    if not _check_customer_permission('customer_management.client.edit', permission_set):
+        messages.error(request, '您没有权限创建客户备案')
+        return redirect('customer_pages:customer_management_home')
+    
+    if request.method == 'POST':
+        form = CustomerFilingForm(request.POST, user=request.user)
+        if form.is_valid():
+            filing = form.save(commit=False)
+            filing.created_by = request.user
+            filing.save()
+            messages.success(request, '客户备案创建成功')
+            # 重定向到客户详情页
+            return redirect('business_pages:customer_detail', client_id=filing.client.id)
+        else:
+            messages.error(request, '表单验证失败，请检查输入')
+    else:
+        form = CustomerFilingForm(user=request.user)
+        # 如果URL中有client_id参数，预填充客户字段
+        client_id = request.GET.get('client_id')
+        if client_id:
+            try:
+                client = Client.objects.get(id=client_id)
+                form.fields['client'].initial = client
+            except Client.DoesNotExist:
+                pass
+    
+    context = _context(
+        "创建客户备案",
+        "📋",
+        "创建新客户备案记录",
+        request=request,
+    )
+    
+    # 生成左侧菜单
+    context['customer_menu'] = _build_customer_management_menu(
+        permission_set, 
+        active_id='customer_filing_create'
+    )
+    
+    context.update({
+        'form': form,
+        'filing_type_choices': CustomerFiling.FILING_TYPE_CHOICES,
+    })
+    context['cancel_url_name'] = 'customer_pages:customer_management_home'
+    context['form_page_subtitle_text'] = '请填写客户备案信息'
+    context['create_url_name'] = 'customer_pages:customer_filing_create'
+    return render(request, "customer_management/customer_filing_form.html", context)
+
+
+@login_required
+def customer_warehouse_application_create(request):
+    """创建客户入库申请"""
+    from backend.apps.customer_management.models import CustomerWarehouseApplication, Client
+    from backend.apps.customer_management.forms import CustomerWarehouseApplicationForm
+    
+    permission_set = get_user_permission_codes(request.user)
+    if not _check_customer_permission('customer_management.client.edit', permission_set):
+        messages.error(request, '您没有权限创建客户入库申请')
+        return redirect('customer_pages:customer_management_home')
+    
+    if request.method == 'POST':
+        form = CustomerWarehouseApplicationForm(request.POST, user=request.user)
+        if form.is_valid():
+            application = form.save(commit=False)
+            application.created_by = request.user
+            application.save()
+            messages.success(request, '客户入库申请创建成功')
+            # 重定向到客户详情页
+            return redirect('business_pages:customer_detail', client_id=application.client.id)
+        else:
+            messages.error(request, '表单验证失败，请检查输入')
+    else:
+        form = CustomerWarehouseApplicationForm(user=request.user)
+        # 如果URL中有client_id参数，预填充客户字段
+        client_id = request.GET.get('client_id')
+        if client_id:
+            try:
+                client = Client.objects.get(id=client_id)
+                form.fields['client'].initial = client
+            except Client.DoesNotExist:
+                pass
+    
+    context = _context(
+        "创建客户入库申请",
+        "📦",
+        "创建新客户入库申请",
+        request=request,
+    )
+    
+    # 生成左侧菜单
+    context['customer_menu'] = _build_customer_management_menu(
+        permission_set, 
+        active_id='customer_warehouse_application_create'
+    )
+    
+    context.update({
+        'form': form,
+        'application_type_choices': CustomerWarehouseApplication.APPLICATION_TYPE_CHOICES,
+        'status_choices': CustomerWarehouseApplication.STATUS_CHOICES,
+    })
+    context['cancel_url_name'] = 'customer_pages:customer_management_home'
+    context['form_page_subtitle_text'] = '请填写客户入库申请信息'
+    context['create_url_name'] = 'customer_pages:customer_warehouse_application_create'
+    return render(request, "customer_management/customer_warehouse_application_form.html", context)
 
 
 @login_required

@@ -24,6 +24,15 @@ urlpatterns = [
     path("customers/public-sea/", views_pages.customer_public_sea, name="customer_public_sea"),
     path("customers/public-sea/<int:client_id>/claim/", views_pages.customer_public_sea_claim, name="customer_public_sea_claim"),
     
+    # 客户线索管理
+    path("customer-leads/create/", views_pages.customer_lead_create, name="customer_lead_create"),
+    
+    # 客户备案管理
+    path("customer-filings/create/", views_pages.customer_filing_create, name="customer_filing_create"),
+    
+    # 客户入库申请管理
+    path("customer-warehouse-applications/create/", views_pages.customer_warehouse_application_create, name="customer_warehouse_application_create"),
+    
     # 人员关系管理
     path("contacts/", views_pages.contact_list, name="contact_list"),
     path("contacts/create/", views_pages.contact_create, name="contact_create"),
