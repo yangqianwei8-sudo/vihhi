@@ -191,7 +191,7 @@ CUSTOMER_MANAGEMENT_MENU = [
     },
     {
         'id': 'customer_contact',
-        'label': '人员关系管理',
+        'label': '人员信息管理',
         'icon': '👤',
         'permission': 'customer_management.contact.view',
         'children': [
@@ -203,31 +203,46 @@ CUSTOMER_MANAGEMENT_MENU = [
                 'permission': 'customer_management.contact.view',
             },
             {
-                'id': 'contact_relationship_mining',
-                'label': '关系挖掘',
-                'icon': '🔍',
-                'url_name': 'customer_pages:contact_relationship_mining',
-                'permission': 'customer_management.contact.view',
+                'id': 'contact_create',
+                'label': '创建联系人',
+                'icon': '➕',
+                'url_name': 'customer_pages:contact_create',
+                'permission': 'customer_management.contact.create',
             },
+        ]
+    },
+    {
+        'id': 'contact_tracking_visit',
+        'label': '人员跟踪拜访',
+        'icon': '🚶',
+        'permission': 'customer_management.relationship.view',
+        'children': [
             {
                 'id': 'visit_list',
-                'label': '客户拜访',
+                'label': '拜访列表',
                 'icon': '🚪',
                 'url_name': 'customer_pages:customer_visit',
                 'permission': 'customer_management.relationship.view',
             },
             {
-                'id': 'contact_tracking_reminders',
-                'label': '逾期拜访提醒',
-                'icon': '🔔',
-                'url_name': 'customer_pages:contact_tracking_reminders',
-                'permission': 'customer_management.contact.view',
+                'id': 'visit_create',
+                'label': '创建人员拜访',
+                'icon': '➕',
+                'url_name': 'customer_pages:visit_plan_create',
+                'permission': 'customer_management.relationship.edit',
+            },
+            {
+                'id': 'first_visit_create',
+                'label': '创建首次拜访',
+                'icon': '🎯',
+                'url_name': 'customer_pages:first_visit_create',
+                'permission': 'customer_management.relationship.edit',
             },
         ]
     },
     {
         'id': 'relationship_upgrade',
-        'label': '关系升级管理',
+        'label': '人员关系管理',
         'icon': '📈',
         'permission': 'customer_management.relationship.view',
         'children': [
@@ -251,6 +266,13 @@ CUSTOMER_MANAGEMENT_MENU = [
                 'icon': '🤝',
                 'url_name': 'customer_pages:customer_relationship_collaboration',
                 'permission': 'customer_management.relationship.view',
+            },
+            {
+                'id': 'contact_relationship_mining',
+                'label': '关系挖掘',
+                'icon': '🔍',
+                'url_name': 'customer_pages:contact_relationship_mining',
+                'permission': 'customer_management.contact.view',
             },
         ]
     },
@@ -1311,7 +1333,7 @@ def customer_management_home(request):
         if is_admin or _permission_granted('customer_management.client.view', permission_set):
             try:
                 modules.append({
-                    'label': '人员关系管理',
+                    'label': '人员信息管理',
                     'icon': '👤',
                     'description': '管理客户联系人信息，维护人员关系',
                     'url': reverse('business_pages:contact_list'),
@@ -1320,7 +1342,7 @@ def customer_management_home(request):
             except NoReverseMatch:
                 pass
         
-        if is_admin or _permission_granted('customer_success.opportunity.view', permission_set):
+        if is_admin or _permission_granted('customer_management.opportunity.view', permission_set):
             try:
                 modules.append({
                     'label': '商机管理',
@@ -1358,30 +1380,6 @@ def customer_management_home(request):
             from datetime import datetime, timedelta
             today = timezone.now().date()
             
-            # 逾期拜访提醒
-            if is_admin or _permission_granted('customer_management.relationship.view', permission_set):
-                try:
-                    # VisitPlan使用plan_date字段，status字段可能有不同的值
-                    overdue_visits = VisitPlan.objects.filter(
-                        plan_date__date__lt=today,
-                        status__in=['planned', 'in_progress']
-                    ).select_related('client').order_by('plan_date')[:5]
-                    
-                    for visit in overdue_visits:
-                        days_overdue = (today - visit.plan_date.date()).days
-                        client_name = visit.client.name if visit.client else "未知客户"
-                        plan_title = visit.plan_title or "拜访计划"
-                        recent_notices.append({
-                            'type': 'warning',
-                            'icon': '⚠️',
-                            'title': f'逾期拜访提醒',
-                            'content': f'{client_name} - {plan_title}，已逾期 {days_overdue} 天',
-                            'date': visit.plan_date.date() if hasattr(visit.plan_date, 'date') else visit.plan_date,
-                        })
-                except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f'获取逾期拜访提醒失败: {str(e)}')
             
             # 最新反馈内容摘要（通过CustomerRelationship获取）
             if is_admin or _permission_granted('customer_management.relationship.view', permission_set):
@@ -3254,7 +3252,7 @@ def customer_public_sea_claim(request, client_id):
     return render(request, "customer_management/customer_public_sea_claim.html", context)
 
 
-# ==================== 人员关系管理视图函数 =====================
+# ==================== 人员信息管理视图函数 =====================
 
 @login_required
 def contact_list(request):
@@ -3538,6 +3536,11 @@ def contact_create(request):
         'gender_choices': ClientContact.GENDER_CHOICES,
         'decision_influence_choices': ClientContact.DECISION_INFLUENCE_CHOICES,
     })
+    # 添加与customer_create一致的上下文变量
+    context['cancel_url_name'] = 'business_pages:contact_list'
+    context['form_page_subtitle_text'] = '请填写联系人基本信息'
+    context['create_url_name'] = 'business_pages:contact_create'
+    context['page_title'] = '创建联系人信息'
     return render(request, "customer_management/contact_form.html", context)
 
 
@@ -4139,105 +4142,6 @@ def _mine_client_company_relationships(target_client, client_contacts):
     return related_contacts
 
 
-def contact_tracking_reminders(request):
-    """逾期拜访提醒列表"""
-    from django.db.models import Q
-    from datetime import timedelta
-    
-    # 获取权限
-    permission_set = get_user_permission_codes(request.user)
-    can_view = _check_customer_permission('customer_management.contact.view', permission_set)
-    
-    if not can_view:
-        messages.error(request, '您没有权限访问此功能')
-        return redirect('business_pages:contact_list')
-    
-    # 获取查询参数
-    days_ahead = int(request.GET.get('days_ahead', 7))  # 提前提醒天数
-    filter_type = request.GET.get('filter_type', 'all')  # all, overdue, upcoming
-    
-    # 获取当前用户创建的联系人（或根据权限获取）
-    contacts = ClientContact.objects.select_related('client', 'created_by').all()
-    
-    # 权限过滤：如果用户不是管理员，只显示自己创建的联系人
-    if not request.user.is_superuser:
-        # 检查是否有查看所有联系人的权限
-        if not _check_customer_permission('customer_management.contact.view_all', permission_set):
-            contacts = contacts.filter(created_by=request.user)
-    
-    # 计算提醒信息
-    reminders = []
-    today = timezone.now().date()
-    
-    for contact in contacts:
-        next_date = contact.get_next_tracking_date()
-        days_until = (next_date - today).days
-        is_overdue = days_until < 0
-        
-        # 根据筛选条件过滤
-        if filter_type == 'overdue' and not is_overdue:
-            continue
-        if filter_type == 'upcoming' and (is_overdue or days_until > days_ahead):
-            continue
-        if filter_type == 'all' and not is_overdue and days_until > days_ahead:
-            continue
-        
-        # 确定优先级
-        if contact.role == 'decision_maker':
-            priority = 'high'
-        elif contact.role == 'promoter':
-            priority = 'medium'
-        else:
-            priority = 'normal'
-        
-        reminders.append({
-            'contact': contact,
-            'next_date': next_date,
-            'days_until': days_until,
-            'is_overdue': is_overdue,
-            'overdue_days': abs(days_until) if is_overdue else 0,
-            'priority': priority,
-            'tracking_cycle': contact.calculate_tracking_cycle(),
-        })
-    
-    # 排序：超期 > 优先级 > 日期
-    reminders.sort(key=lambda x: (
-        not x['is_overdue'],  # 超期的在前
-        x['priority'] != 'high',  # 高优先级在前
-        x['days_until']  # 日期越近越前
-    ))
-    
-    # 统计信息
-    stats = {
-        'total': len(reminders),
-        'overdue': sum(1 for r in reminders if r['is_overdue']),
-        'upcoming': sum(1 for r in reminders if not r['is_overdue']),
-        'high_priority': sum(1 for r in reminders if r['priority'] == 'high'),
-    }
-    
-    context = _context(
-        "逾期拜访提醒",
-        "🔔",
-        "客户人员逾期拜访提醒列表",
-        request=request,
-    )
-    
-    # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
-        permission_set, 
-        active_id='contact_tracking_reminders'
-    )
-    
-    context.update({
-        'reminders': reminders,
-        'stats': stats,
-        'days_ahead': days_ahead,
-        'filter_type': filter_type,
-    })
-    
-    return render(request, "customer_management/contact_tracking_reminders.html", context)
-
-
 @login_required
 def contact_info_change_create(request):
     """创建联系人信息变更申请"""
@@ -4384,7 +4288,7 @@ def customer_visit(request):
     return render(request, "customer_management/customer_visit.html", context)
 
 
-# ==================== 关系升级管理视图函数 =====================
+# ==================== 人员关系管理视图函数 =====================
 
 @login_required
 def customer_relationship_upgrade(request):
@@ -10333,8 +10237,103 @@ def visit_plan_create(request):
         'step_title': '创建计划',
         'clients_with_address_json': json.dumps(clients_with_address),
         'clients_opportunities_json': json.dumps(clients_opportunities),
+        'existing_answers': {},  # 确保 existing_answers 不为 None
     })
     return render(request, "customer_management/visit_plan_step_form.html", context)
+
+
+@login_required
+def first_visit_create(request):
+    """创建首次拜访"""
+    from backend.apps.customer_management.forms import FirstVisitForm
+    from backend.apps.customer_management.models import VisitPlan
+    
+    permission_set = get_user_permission_codes(request.user)
+    if not _check_customer_permission('customer_management.relationship.edit', permission_set):
+        messages.error(request, '您没有权限创建首次拜访')
+        return redirect('customer_pages:customer_visit')
+    
+    if request.method == 'POST':
+        form = FirstVisitForm(request.POST, user=request.user, permission_set=permission_set)
+        if form.is_valid():
+            visit_plan = form.save(commit=False)
+            visit_plan.created_by = request.user
+            visit_plan.status = 'planned'
+            visit_plan.save()
+            
+            messages.success(request, '首次拜访创建成功')
+            return redirect('customer_pages:customer_visit')
+        else:
+            messages.error(request, '表单验证失败，请检查输入')
+    else:
+        form = FirstVisitForm(user=request.user, permission_set=permission_set)
+    
+    context = _context(
+        "创建首次拜访",
+        "🎯",
+        "创建客户首次拜访记录",
+        request=request,
+    )
+    
+    context['customer_menu'] = _build_customer_management_menu(
+        permission_set, 
+        active_id='first_visit_create'
+    )
+    
+    # 获取客户地址信息和商机信息（用于前端自动填充）
+    clients_with_address = {}
+    clients_opportunities = {}
+    
+    if request.user:
+        from django.contrib.contenttypes.models import ContentType
+        from backend.apps.workflow_engine.models import ApprovalInstance
+        
+        client_content_type = ContentType.objects.get_for_model(Client)
+        approved_instance_ids = ApprovalInstance.objects.filter(
+            content_type=client_content_type,
+            status='approved'
+        ).values_list('object_id', flat=True)
+        
+        if approved_instance_ids:
+            approved_clients = Client.objects.filter(
+                is_active=True,
+                responsible_user=request.user,
+                id__in=approved_instance_ids
+            ).distinct()
+        else:
+            approved_clients = Client.objects.none()
+        
+        # 获取客户地址信息
+        for client in approved_clients.values('id', 'company_address'):
+            clients_with_address[str(client['id'])] = client['company_address'] or ''
+        
+        # 获取客户及其对应的商机
+        opportunities = BusinessOpportunity.objects.filter(
+            client__in=approved_clients,
+            status__in=['potential', 'initial_contact', 'requirement_confirmed', 'quotation', 'negotiation']
+        ).select_related('client').order_by('-created_time')
+        
+        for opp in opportunities:
+            client_id = str(opp.client.id) if opp.client else ''
+            if client_id and client_id not in clients_opportunities:
+                clients_opportunities[client_id] = []
+            if client_id:
+                clients_opportunities[client_id].append({
+                    'id': opp.id,
+                    'name': opp.name,
+                    'client_name': opp.client.name if opp.client else ''
+                })
+    
+    import json
+    context.update({
+        'form': form,
+        'clients_with_address_json': json.dumps(clients_with_address),
+        'clients_opportunities_json': json.dumps(clients_opportunities),
+    })
+    context['cancel_url_name'] = 'customer_pages:customer_visit'
+    context['form_page_subtitle_text'] = '请填写首次拜访信息（不需要选择联系人）'
+    context['create_url_name'] = 'customer_pages:first_visit_create'
+    return render(request, "customer_management/first_visit_form.html", context)
 
 
 @login_required
