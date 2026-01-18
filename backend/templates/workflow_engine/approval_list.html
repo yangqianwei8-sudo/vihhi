@@ -1,111 +1,382 @@
-{% extends 'base.html' %}
-{% block title %}我的审批{% endblock %}
+{% extends "shared/list_page_base.html" %}
+{% load static %}
 
-{% block content %}
-<div class="container py-4">
-    <h2 class="mb-4">我的审批</h2>
+{% block list_page_title %}我的审批{% endblock %}
 
-    <ul class="nav nav-tabs mb-4">
-        <li class="nav-item">
-            <a class="nav-link active" data-bs-toggle="tab" href="#pending">待我审批</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#my_applications">我的申请</a>
-        </li>
-    </ul>
+{% block list_page_extra_css %}
+<style>
+    .approval-status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    .badge-pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+    .badge-approved {
+        background: #d4edda;
+        color: #155724;
+    }
+    .badge-rejected {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    .badge-withdrawn {
+        background: #e2e3e5;
+        color: #383d41;
+    }
+</style>
+{% endblock %}
 
-    <div class="tab-content">
-        <div class="tab-pane fade show active" id="pending">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    {% if pending_approvals %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>实例编号</th>
-                                    <th>流程名称</th>
-                                    <th>申请人</th>
-                                    <th>当前节点</th>
-                                    <th>申请时间</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for instance in pending_approvals %}
-                                <tr>
-                                    <td><code>{{ instance.instance_number }}</code></td>
-                                    <td>{{ instance.workflow.name }}</td>
-                                    <td>{{ instance.applicant.username }}</td>
-                                    <td>{{ instance.current_node.name|default:"-" }}</td>
-                                    <td>{{ instance.apply_time|date:"Y-m-d H:i" }}</td>
-                                    <td>
-                                        <a href="{% url 'workflow_engine:approval_detail' instance.id %}" class="btn btn-sm btn-primary">审批</a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-muted text-center py-4">暂无待审批事项</p>
-                    {% endif %}
-                </div>
-            </div>
+{% block list_page_tabs %}
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link {% if not tab or tab == 'pending' %}active{% endif %}" href="?tab=pending">
+            待我审批 
+            {% if pending_approvals %}
+            <span class="badge bg-danger">{{ pending_approvals|length }}</span>
+            {% endif %}
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if tab == 'historical' %}active{% endif %}" href="?tab=historical">
+            历史审批
+            {% if historical_approvals %}
+            <span class="badge bg-secondary">{{ historical_approvals|length }}</span>
+            {% endif %}
+        </a>
+    </li>
+</ul>
+{% endblock %}
+
+{% block list_page_actions %}
+<a href="{% url 'workflow_engine:export_approvals' %}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-download"></i> 导出数据
+</a>
+{% endblock %}
+
+{% block list_page_table_checkbox_header %}
+{% if not tab or tab == 'pending' %}
+<th style="width: 50px;">
+    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
+</th>
+{% else %}
+<th style="width: 50px;"></th>
+{% endif %}
+{% endblock %}
+
+{% block list_page_table_headers %}
+<th style="width: 12%;">审批编号</th>
+<th style="width: 15%;">流程名称</th>
+<th style="width: 10%;">申请人</th>
+<th style="width: 10%;">申请时间</th>
+<th style="width: 8%;">状态</th>
+<th style="width: 12%;">当前节点</th>
+<th style="width: 15%;">关联对象</th>
+<th style="width: 18%;">操作</th>
+{% endblock %}
+
+{% block list_page_table_checkbox_cell %}
+{% if not tab or tab == 'pending' %}
+<td>
+    <input type="checkbox" class="form-check-input row-checkbox" name="instance_ids" value="{{ item.id }}" id="instance_{{ item.id }}">
+</td>
+{% else %}
+<td></td>
+{% endif %}
+{% endblock %}
+
+{% block list_page_table_row_content %}
+{# 注意：此块在 list_page_base.html 的循环内部，item 变量已可用 #}
+{% if not tab or tab == 'pending' %}
+    {# 待我审批列表 #}
+    <td><code>{{ item.instance_number }}</code></td>
+    <td>
+        <strong>{{ item.workflow.name }}</strong>
+        {% if item.workflow.category %}
+        <br><small class="text-muted">{{ item.workflow.category }}</small>
+        {% endif %}
+    </td>
+    <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
+    <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
+    <td>
+        <span class="approval-status-badge badge-pending">待审批</span>
+    </td>
+    <td>
+        {% if item.current_node %}
+        <span class="badge bg-info">{{ item.current_node.name }}</span>
+        {% else %}
+        <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if item.content_object %}
+            {% if item.content_type.model == 'outgoingdocument' %}
+            <div><strong>{{ item.content_object.document_number }}</strong></div>
+            <small class="text-muted">{{ item.content_object.title|truncatewords:5 }}</small>
+            {% else %}
+            {{ item.content_object }}
+            {% endif %}
+        {% else %}
+        <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        <div class="list-page-table-actions">
+            <a href="#" class="action-edit" data-bs-toggle="modal" data-bs-target="#approvalModal{{ item.id }}" onclick="loadApprovalModal({{ item.id }}); return false;" title="立即审批">
+                <i class="bi bi-check-circle"></i>
+            </a>
+            <span class="action-separator">|</span>
+            <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
+                <i class="bi bi-eye"></i>
+            </a>
         </div>
+    </td>
+{% elif tab == 'historical' %}
+    {# 历史审批列表 #}
+    <td><code>{{ item.instance_number }}</code></td>
+    <td>
+        <strong>{{ item.workflow.name }}</strong>
+        {% if item.workflow.category %}
+        <br><small class="text-muted">{{ item.workflow.category }}</small>
+        {% endif %}
+    </td>
+    <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
+    <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
+    <td>
+        {% if item.status == 'approved' %}
+            <span class="approval-status-badge badge-approved">已通过</span>
+        {% elif item.status == 'rejected' %}
+            <span class="approval-status-badge badge-rejected">已驳回</span>
+        {% elif item.status == 'withdrawn' %}
+            <span class="approval-status-badge badge-withdrawn">已撤回</span>
+        {% else %}
+            <span class="badge bg-secondary">{{ item.get_status_display }}</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if item.current_node %}
+        <span class="badge bg-info">{{ item.current_node.name }}</span>
+        {% else %}
+        <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if item.content_object %}
+            {% if item.content_type.model == 'outgoingdocument' %}
+            <div><strong>{{ item.content_object.document_number }}</strong></div>
+            <small class="text-muted">{{ item.content_object.title|truncatewords:5 }}</small>
+            {% else %}
+            {{ item.content_object }}
+            {% endif %}
+        {% else %}
+        <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        <div class="list-page-table-actions">
+            <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
+                <i class="bi bi-eye"></i>
+            </a>
+        </div>
+    </td>
+{% endif %}
+{% endblock %}
 
-        <div class="tab-pane fade" id="my_applications">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    {% if my_applications %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>实例编号</th>
-                                    <th>流程名称</th>
-                                    <th>状态</th>
-                                    <th>当前节点</th>
-                                    <th>申请时间</th>
-                                    <th>完成时间</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for instance in my_applications %}
-                                <tr>
-                                    <td><code>{{ instance.instance_number }}</code></td>
-                                    <td>{{ instance.workflow.name }}</td>
-                                    <td>
-                                        {% if instance.status == 'pending' %}
-                                        <span class="badge bg-warning">审批中</span>
-                                        {% elif instance.status == 'approved' %}
-                                        <span class="badge bg-success">已通过</span>
-                                        {% elif instance.status == 'rejected' %}
-                                        <span class="badge bg-danger">已驳回</span>
-                                        {% elif instance.status == 'withdrawn' %}
-                                        <span class="badge bg-secondary">已撤回</span>
-                                        {% else %}
-                                        <span class="badge bg-secondary">{{ instance.get_status_display }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ instance.current_node.name|default:"-" }}</td>
-                                    <td>{{ instance.apply_time|date:"Y-m-d H:i" }}</td>
-                                    <td>{{ instance.completed_time|date:"Y-m-d H:i"|default:"-" }}</td>
-                                    <td>
-                                        <a href="{% url 'workflow_engine:approval_detail' instance.id %}" class="btn btn-sm btn-outline-primary">查看</a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-muted text-center py-4">暂无申请记录</p>
-                    {% endif %}
-                </div>
+{% block empty_table_message %}
+{% if not tab or tab == 'pending' %}
+<i class="bi bi-inbox" style="font-size: 2rem;"></i>
+<p class="mt-2">暂无待审批事项</p>
+<p class="text-muted" style="font-size: 0.9rem;">
+    💡 提示：如果您刚刚完成了审批，审批事项可能已进入下一节点或已完成。<br>
+    您可以在"历史审批"标签中查看所有已审批的记录。
+</p>
+{% elif tab == 'historical' %}
+<i class="bi bi-inbox" style="font-size: 2rem;"></i>
+<p class="mt-2">暂无历史审批记录</p>
+<p class="text-muted" style="font-size: 0.9rem;">
+    您审批过的记录将显示在这里
+</p>
+{% else %}
+暂无数据
+{% endif %}
+{% endblock %}
+
+{% block empty_colspan %}9{% endblock %}
+
+{% block list_page_batch_actions %}
+{% if not tab or tab == 'pending' %}
+{% if pending_approvals %}
+<form id="batchApproveForm" method="post" action="{% url 'workflow_engine:batch_approve' %}">
+    {% csrf_token %}
+    {% include "shared/batch_actions_bar.html" %}
+</form>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block list_page_batch_actions_custom_buttons %}
+{% if not tab or tab == 'pending' %}
+<button type="button" class="btn btn-sm btn-success" id="batchApproveBtn">
+    <i class="bi bi-check-circle"></i> 批量通过
+</button>
+<button type="button" class="btn btn-sm btn-danger" id="batchRejectBtn">
+    <i class="bi bi-x-circle"></i> 批量驳回
+</button>
+{% endif %}
+{% endblock %}
+
+{% block list_page_custom_js %}
+// 批量审批功能
+document.addEventListener('DOMContentLoaded', function() {
+    const batchApproveBtn = document.getElementById('batchApproveBtn');
+    const batchRejectBtn = document.getElementById('batchRejectBtn');
+    const batchApproveForm = document.getElementById('batchApproveForm');
+    
+    if (batchApproveBtn && batchApproveForm) {
+        batchApproveBtn.addEventListener('click', function() {
+            batchApprove('approve');
+        });
+    }
+    
+    if (batchRejectBtn && batchApproveForm) {
+        batchRejectBtn.addEventListener('click', function() {
+            batchApprove('reject');
+        });
+    }
+    
+    function batchApprove(action) {
+        const form = document.getElementById('batchApproveForm');
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        
+        if (checked.length === 0) {
+            showError('请至少选择一个审批实例');
+            return;
+        }
+        
+        if (!confirm(`确定要${action === 'approve' ? '批量通过' : '批量驳回'} ${checked.length} 个审批吗？`)) {
+            return;
+        }
+        
+        // 添加操作类型和审批意见
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = action;
+        form.appendChild(actionInput);
+        
+        const commentInput = document.createElement('input');
+        commentInput.type = 'hidden';
+        commentInput.name = 'comment';
+        commentInput.value = '批量审批';
+        form.appendChild(commentInput);
+        
+        form.submit();
+    }
+});
+
+// 加载审批模态框数据
+function loadApprovalModal(instanceId) {
+    // 模态框内容会在模板中动态生成，这里可以添加额外的逻辑
+    const modal = document.getElementById('approvalModal' + instanceId);
+    if (modal) {
+        // 可以在这里加载额外的数据
+    }
+}
+{% endblock %}
+
+{% block modals %}
+{{ block.super }}
+<!-- 审批模态框 -->
+{% if not tab or tab == 'pending' %}
+{% for instance in page_obj.object_list %}
+<div class="modal fade" id="approvalModal{{ instance.id }}" tabindex="-1" aria-labelledby="approvalModalLabel{{ instance.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="approvalModalLabel{{ instance.id }}">
+                    <i class="bi bi-check-circle"></i> 审批操作 - {{ instance.workflow.name }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <form method="post" action="{% url 'workflow_engine:approval_action' instance.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <!-- 审批信息 -->
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">审批信息</h6>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <small class="text-muted">审批编号：</small>
+                                <div><code>{{ instance.instance_number }}</code></div>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">申请人：</small>
+                                <div>{{ instance.applicant.username }}{% if instance.applicant.get_full_name %} ({{ instance.applicant.get_full_name }}){% endif %}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">当前节点：</small>
+                                <div>{{ instance.current_node.name|default:"-" }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">申请时间：</small>
+                                <div>{{ instance.apply_time|date:"Y-m-d H:i" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if instance.content_object %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">关联内容</h6>
+                        {% if instance.content_type.model == 'outgoingdocument' %}
+                        <div>
+                            <small class="text-muted">发文编号：</small>
+                            <div class="fw-bold text-primary">{{ instance.content_object.document_number }}</div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">标题：</small>
+                            <div>{{ instance.content_object.title }}</div>
+                        </div>
+                        {% else %}
+                        <div>{{ instance.content_object }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    {% if instance.apply_comment %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">申请说明</h6>
+                        <div class="p-2 bg-light rounded">{{ instance.apply_comment }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <!-- 审批操作 -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">审批意见 <span class="text-muted">(可选)</span></label>
+                        <textarea name="comment" class="form-control" rows="4" placeholder="请输入审批意见..."></textarea>
+                    </div>
+                    
+                    <input type="hidden" name="redirect_to" value="{% url 'workflow_engine:approval_list' %}">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    {% if instance.workflow.allow_reject %}
+                    <button type="submit" name="action" value="reject" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> 驳回
+                    </button>
+                    {% endif %}
+                    <button type="submit" name="action" value="approve" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> 通过
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+{% endfor %}
+{% endif %}
 {% endblock %}

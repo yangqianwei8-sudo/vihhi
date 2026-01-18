@@ -1,22 +1,14 @@
-{% extends "personnel_management/base.html" %}
+{% extends "shared/list_page_base.html" %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
 
 {% block breadcrumb_items %}
 <li class="breadcrumb-item active" aria-current="page">培训管理</li>
-{% endblock %}
+{% endblock breadcrumb_items %}
 
 {% block extra_css %}
-<style>
-    .content-card {
-        background: #fff;
-        border-radius: 18px;
-        padding: 24px;
-        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
-        border: 1px solid rgba(20, 47, 91, 0.08);
-    }
-</style>
-{% endblock %}
+
+{% endblock extra_css %}
 
 {% block personnel_content %}
 
@@ -58,67 +50,7 @@
             </div>
         </form>
 
-        {% if page_obj %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>培训编号</th>
-                        <th>培训标题</th>
-                        <th>培训讲师</th>
-                        <th>培训日期</th>
-                        <th>培训地点</th>
-                        <th>培训时长</th>
-                        <th>参与人数</th>
-                        <th>状态</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for training in trainings %}
-                    <tr>
-                        <td><code>{{ training.training_number }}</code></td>
-                        <td>{{ training.title }}</td>
-                        <td>{{ training.trainer|default:"-" }}</td>
-                        <td>{{ training.training_date|date:"Y-m-d"|default:"-" }}</td>
-                        <td>{{ training.training_location|default:"-" }}</td>
-                        <td>{{ training.duration }} 小时</td>
-                        <td>{{ training.participants.count }} 人</td>
-                        <td>
-                            {% if training.status == 'planned' %}
-                            <span class="badge bg-info">计划中</span>
-                            {% elif training.status == 'ongoing' %}
-                            <span class="badge bg-warning">进行中</span>
-                            {% elif training.status == 'completed' %}
-                            <span class="badge bg-success">已完成</span>
-                            {% else %}
-                            <span class="badge bg-secondary">已取消</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{% url 'personnel_pages:training_detail' training.id %}" class="btn btn-sm btn-outline-primary me-1" title="查看详情">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a href="{% url 'personnel_pages:training_update' training.id %}" class="btn btn-sm btn-outline-secondary" title="编辑">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="9" class="text-center text-muted py-4">暂无数据</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {% if page_obj.has_other_pages %}
-        <nav aria-label="分页导航">
-            <ul class="pagination justify-content-center mt-4">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}">上一页</a>
+        {% if current_status %}&status={{ current_status }}{% endif %}{% if current_date_from %}&date_from={{ current_date_from }}{% endif %}{% if current_date_to %}&date_to={{ current_date_to }}{% endif %}">上一页</a>
                 </li>
                 {% endif %}
                 <li class="page-item active">
@@ -140,4 +72,4 @@
         {% endif %}
     </div>
 </div>
-{% endblock %}
+{% endblock personnel_content %}

@@ -1,22 +1,14 @@
-{% extends "personnel_management/base.html" %}
+{% extends "shared/list_page_base.html" %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
 
 {% block breadcrumb_items %}
 <li class="breadcrumb-item active" aria-current="page">员工档案</li>
-{% endblock %}
+{% endblock breadcrumb_items %}
 
 {% block extra_css %}
-<style>
-    .content-card {
-        background: #fff;
-        border-radius: 18px;
-        padding: 24px;
-        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
-        border: 1px solid rgba(20, 47, 91, 0.08);
-    }
-</style>
-{% endblock %}
+
+{% endblock extra_css %}
 
 {% block personnel_content %}
 
@@ -60,67 +52,7 @@
             </div>
         </form>
 
-        {% if page_obj %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>员工编号</th>
-                        <th>姓名</th>
-                        <th>性别</th>
-                        <th>部门</th>
-                        <th>职位</th>
-                        <th>入职日期</th>
-                        <th>手机号</th>
-                        <th>状态</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for employee in employees %}
-                    <tr>
-                        <td><code>{{ employee.employee_number }}</code></td>
-                        <td>{{ employee.name }}</td>
-                        <td>{{ employee.get_gender_display }}</td>
-                        <td>{{ employee.department.name|default:"-" }}</td>
-                        <td>{{ employee.position }}</td>
-                        <td>{{ employee.entry_date|date:"Y-m-d" }}</td>
-                        <td>{{ employee.phone }}</td>
-                        <td>
-                            {% if employee.status == 'active' %}
-                            <span class="badge bg-success">在职</span>
-                            {% elif employee.status == 'on_leave' %}
-                            <span class="badge bg-warning">请假</span>
-                            {% elif employee.status == 'suspended' %}
-                            <span class="badge bg-secondary">停职</span>
-                            {% else %}
-                            <span class="badge bg-danger">离职</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{% url 'personnel_pages:employee_detail' employee.id %}" class="btn btn-sm btn-outline-primary me-1" title="查看详情">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a href="{% url 'personnel_pages:employee_update' employee.id %}" class="btn btn-sm btn-outline-secondary" title="编辑">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="9" class="text-center text-muted py-4">暂无数据</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {% if page_obj.has_other_pages %}
-        <nav aria-label="分页导航">
-            <ul class="pagination justify-content-center mt-4">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_department_id %}&department_id={{ current_department_id }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">上一页</a>
+        {% if current_department_id %}&department_id={{ current_department_id }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}">上一页</a>
                 </li>
                 {% endif %}
                 <li class="page-item active">
@@ -142,4 +74,4 @@
         {% endif %}
     </div>
 </div>
-{% endblock %}
+{% endblock personnel_content %}

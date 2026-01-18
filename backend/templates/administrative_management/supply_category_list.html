@@ -1,171 +1,250 @@
-{% extends "administrative_management/base.html" %}
+{% extends "shared/list_page_base.html" %}
+{% comment %}
+用品分类列表页面模板 (Supply Category List Template)
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+功能说明：
+- 展示用品分类记录的列表页面
+- 支持按状态、父分类等多维度筛选
+- 支持分类的查看、编辑、删除操作
+- 包含复选框功能，支持批量操作
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:supplies_management' %}">办公用品</a></li>
-<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+主要功能：
+1. 筛选功能：
+   - 状态筛选：全部、启用、停用
+   - 父分类筛选：根据父分类筛选
+2. 表格展示：分类编码、分类名称、父分类、排序顺序、状态、操作
+3. 复选框功能：支持全选和批量操作（继承自list_page_base.html）
+4. 操作功能：查看详情、编辑、删除
+{% endcomment %}
+{% load static %}
+
+{% block list_page_title %}用品分类管理{% endblock %}
+
+{% block list_page_actions %}
+{% if can_create %}
+<a href="{% url 'admin_pages:supply_category_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> 创建分类
+</a>
+{% endif %}
 {% endblock %}
 
-{% block extra_css %}
-<style>
-    .center-hero {
-        background: linear-gradient(135deg, rgba(20,47,91,0.95), rgba(31,62,124,0.92));
-        border-radius: 24px;
-        padding: 32px 36px;
-        color: #fff;
-        box-shadow: 0 24px 60px rgba(20, 47, 91, 0.18);
-        margin-bottom: 24px;
-    }
-    .hero-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 16px;
-        background: rgba(255,255,255,0.18);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 26px;
-        margin-bottom: 12px;
-    }
-    .content-card {
-        background: var(--vh-card-bg);
-        border-radius: var(--radius-xl);
-        padding: var(--spacing-lg);
-        box-shadow: var(--shadow-lg);
-        border: 1px solid rgba(20, 47, 91, 0.08);
-    }
-    .category-tree {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    .category-item {
-        padding: var(--spacing-md);
-        margin-bottom: var(--spacing-xs);
-        background: var(--vh-surface);
-        border-radius: var(--radius-md);
-        border: 1px solid var(--vh-border-light);
-        transition: all var(--transition-base);
-    }
-    .category-item:hover {
-        background: var(--vh-card-bg);
-        box-shadow: var(--shadow-sm);
-    }
-    .category-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .category-name {
-        font-weight: 500;
-        color: var(--vh-text);
-    }
-    .category-code {
-        font-size: var(--font-size-sm);
-        color: var(--vh-text-muted);
-        font-family: monospace;
-    }
-    .category-children {
-        margin-left: var(--spacing-xl);
-        margin-top: var(--spacing-sm);
-        padding-left: var(--spacing-md);
-        border-left: 2px solid var(--vh-border-light);
-    }
-    .badge-status {
-        padding: 2px 8px;
-        border-radius: 8px;
-        font-size: var(--font-size-xs);
-    }
-</style>
+{% block search_placeholder %}搜索分类名称、编码、描述...{% endblock %}
+
+{% block reset_url %}{% url 'admin_pages:supply_category_list' %}{% endblock %}
+
+<!-- 表格复选框列 -->
+{% block list_page_table_checkbox_header %}
+<th style="width: 40px;">
+    <input type="checkbox" id="selectAll" title="全选/取消全选">
+</th>
 {% endblock %}
 
-{% block content %}
-<div class="container-fluid py-4">
-    <div class="center-hero">
-        <h1 class="hero-title">{{ page_title }}</h1>
-        <p class="hero-subtitle">{{ description }}</p>
-    </div>
+{% block list_page_table_headers %}
+<th style="width: 10%;">分类编码</th>
+<th style="width: 20%;">分类名称</th>
+<th style="width: 15%;">父分类</th>
+<th style="width: 8%;">排序顺序</th>
+<th style="width: 20%;">描述</th>
+<th style="width: 8%;">状态</th>
+{% endblock %}
 
-    <div class="content-card">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="mb-0">分类列表</h3>
-            <a href="{% url 'admin_pages:supply_category_create' %}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> 创建分类
-            </a>
-        </div>
+{% block list_page_table_checkbox_cell %}
+<td>
+    <input type="checkbox" class="row-checkbox" value="{{ item.id }}" title="选择此项">
+</td>
+{% endblock %}
 
-        {% if category_tree %}
-        <ul class="category-tree">
-            {% for category in category_tree %}
-            <li class="category-item">
-                <div class="category-header">
-                    <div>
-                        <span class="category-name">{{ category.name }}</span>
-                        <span class="category-code ms-2">({{ category.code }})</span>
-                        {% if not category.is_active %}
-                        <span class="badge-status bg-secondary ms-2">停用</span>
-                        {% endif %}
-                    </div>
-                    <div>
-                        <a href="{% url 'admin_pages:supply_category_update' category.id %}" class="btn btn-sm btn-outline-secondary" title="编辑">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        {% if not category.children.exists and not category.supplies.exists %}
-                        <a href="{% url 'admin_pages:supply_category_delete' category.id %}" class="btn btn-sm btn-outline-danger" title="删除">
-                            <i class="bi bi-trash"></i>
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-                {% if category.description %}
-                <div class="mt-2 text-muted small">{{ category.description }}</div>
-                {% endif %}
-                {% if category.children_list %}
-                <ul class="category-children">
-                    {% for child in category.children_list %}
-                    <li class="category-item">
-                        <div class="category-header">
-                            <div>
-                                <span class="category-name">{{ child.name }}</span>
-                                <span class="category-code ms-2">({{ child.code }})</span>
-                                {% if not child.is_active %}
-                                <span class="badge-status bg-secondary ms-2">停用</span>
-                                {% endif %}
-                            </div>
-                            <div>
-                                <a href="{% url 'admin_pages:supply_category_update' child.id %}" class="btn btn-sm btn-outline-secondary" title="编辑">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                {% if not child.children.exists and not child.supplies.exists %}
-                                <a href="{% url 'admin_pages:supply_category_delete' child.id %}" class="btn btn-sm btn-outline-danger" title="删除">
-                                    <i class="bi bi-trash"></i>
-                                </a>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% if child.description %}
-                        <div class="mt-2 text-muted small">{{ child.description }}</div>
-                        {% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon">📁</div>
-            <div class="empty-state-title">暂无分类</div>
-            <div class="empty-state-text">
-                当前没有用品分类，请先创建分类。
-            </div>
-            <a href="{% url 'admin_pages:supply_category_create' %}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> 创建第一个分类
-            </a>
-        </div>
+{% block list_page_table_row_content %}
+<td><code>{{ item.code }}</code></td>
+<td>
+    {% if item.parent %}
+        <span class="text-muted">└─</span>
+    {% endif %}
+    {{ item.name }}
+</td>
+<td>
+    {% if item.parent %}
+        <a href="?parent_id={{ item.parent.id }}" class="text-decoration-none">
+            {{ item.parent.name }}
+        </a>
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>{{ item.sort_order }}</td>
+<td>
+    {% if item.description %}
+        {{ item.description|truncatewords:10 }}
+    {% else %}
+        <span class="text-muted">-</span>
+    {% endif %}
+</td>
+<td>
+    {% if item.is_active %}
+        <span class="badge bg-success">启用</span>
+    {% else %}
+        <span class="badge bg-secondary">停用</span>
+    {% endif %}
+</td>
+<td>
+    <div class="list-page-table-actions">
+        <a href="{% url 'admin_pages:supply_category_update' category_id=item.id %}" class="action-edit" title="编辑">
+            <i class="bi bi-pencil"></i>
+        </a>
+        {% if not item.children.exists and not item.supplies.exists %}
+        <span class="action-separator">|</span>
+        <a href="{% url 'admin_pages:supply_category_delete' category_id=item.id %}" class="action-delete" title="删除" onclick="return confirm('确定要删除分类 {{ item.name }} 吗？此操作不可撤销。');">
+            <i class="bi bi-trash"></i>
+        </a>
         {% endif %}
     </div>
-</div>
+</td>
+{% endblock %}
+
+{% block empty_colspan %}8{% endblock %}
+
+{% block empty_table_message %}暂无数据{% endblock %}
+
+{% block empty_message %}暂无数据{% endblock %}
+
+{% block empty_create_url %}{% url 'admin_pages:supply_category_create' %}{% endblock %}
+
+{% block list_page_batch_delete_js %}
+// 批量删除功能
+document.addEventListener('DOMContentLoaded', function() {
+    const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+    if (batchDeleteBtn) {
+        batchDeleteBtn.addEventListener('click', function() {
+            const checked = document.querySelectorAll('.row-checkbox:checked');
+            if (checked.length === 0) {
+                showError('请先选择要删除的数据');
+                return;
+            }
+            
+            if (!confirm(`确定要删除选中的 ${checked.length} 个分类吗？此操作不可撤销。`)) {
+                return;
+            }
+            
+            const ids = Array.from(checked).map(cb => cb.value);
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{% url "admin_pages:supply_category_list" %}';
+            
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfToken.value;
+                form.appendChild(csrfInput);
+            }
+            
+            ids.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'delete_ids';
+                input.value = id;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
+});
+{% endblock %}
+
+{% block list_page_batch_export_js %}
+// 批量导出功能
+document.addEventListener('DOMContentLoaded', function() {
+    const batchExportBtn = document.getElementById('batchExportBtn');
+    if (batchExportBtn) {
+        batchExportBtn.addEventListener('click', function() {
+            const checked = document.querySelectorAll('.row-checkbox:checked');
+            if (checked.length === 0) {
+                showError('请先选择要导出的数据');
+                return;
+            }
+            
+            const ids = Array.from(checked).map(cb => cb.value);
+            const format = this.dataset.exportFormat || 'excel';
+            const url = '{% url "admin_pages:supply_category_list" %}?export=1&format=' + format + '&ids=' + ids.join(',');
+            window.location.href = url;
+        });
+    }
+});
+{% endblock %}
+
+{% block list_page_batch_dropdown_items %}
+<li><a class="dropdown-item" href="#" id="batchStatusActiveBtn"><i class="bi bi-check-circle"></i> 批量设为启用</a></li>
+<li><a class="dropdown-item" href="#" id="batchStatusInactiveBtn"><i class="bi bi-x-circle"></i> 批量设为停用</a></li>
+<li><hr class="dropdown-divider"></li>
+<li><a class="dropdown-item" href="#" id="batchPrintBtn"><i class="bi bi-printer"></i> 打印选中</a></li>
+{% endblock %}
+
+{% block list_page_custom_js %}
+// 批量状态更新功能
+function batchUpdateStatus(isActive) {
+    const checked = document.querySelectorAll('.row-checkbox:checked');
+    if (checked.length === 0) {
+        showError('请先选择要操作的数据');
+        return;
+    }
+    
+    const statusLabel = isActive ? '启用' : '停用';
+    if (!confirm(`确定要将选中的 ${checked.length} 个分类状态更新为"${statusLabel}"吗？`)) {
+        return;
+    }
+    
+    const ids = Array.from(checked).map(cb => cb.value);
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{% url "admin_pages:supply_category_list" %}';
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfToken) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken.value;
+        form.appendChild(csrfInput);
+    }
+    
+    const statusInput = document.createElement('input');
+    statusInput.type = 'hidden';
+    statusInput.name = 'batch_is_active';
+    statusInput.value = isActive ? 'true' : 'false';
+    form.appendChild(statusInput);
+    
+    ids.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'update_ids';
+        input.value = id;
+        form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// 绑定批量状态更新按钮
+document.addEventListener('DOMContentLoaded', function() {
+    const batchStatusActiveBtn = document.getElementById('batchStatusActiveBtn');
+    const batchStatusInactiveBtn = document.getElementById('batchStatusInactiveBtn');
+    
+    if (batchStatusActiveBtn) {
+        batchStatusActiveBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            batchUpdateStatus(true);
+        });
+    }
+    
+    if (batchStatusInactiveBtn) {
+        batchStatusInactiveBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            batchUpdateStatus(false);
+        });
+    }
+});
 {% endblock %}

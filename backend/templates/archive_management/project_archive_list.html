@@ -1,28 +1,119 @@
-{% extends "archive_management/_base.html" %}
+{% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block pm_title %}项目归档{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">管理项目归档记录，支持筛选和搜索</span>{% endblock %}
+{% block list_page_title %}项目归档 - 档案管理{% endblock list_page_title %}
 
-{% block pm_actions %}
-<a href="{% url 'archive_management:project_archive_create' %}" class="list-btn list-btn-primary">
-  创建归档
-</a>
-{% endblock %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">项目归档</li>
+{% endblock breadcrumb_items %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-<style>
-  .list-badge-pending { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
-  .list-badge-approving { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-archiving { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-archived { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
-  .list-badge-rejected { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-</style>
-{% endblock %}
 
-{% block pm_content %}
-  {% include "archive_management/_partials/_project_archive_stats.html" %}
-  {% include "archive_management/_partials/_project_archive_filters.html" %}
-  {% include "archive_management/_partials/_project_archive_table.html" %}
-{% endblock %}
+
+
+{% block list_stats_content %}
+<div class="row g-3">
+    <div class="col-md-2">
+      <div class="list-stat-card">
+    <div class="list-stat-label">归档总数</div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+    <div class="list-stat-label">待归档</div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+    <div class="list-stat-label">审批中</div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+    <div class="list-stat-label">已归档</div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+    <div class="list-stat-label">已驳回</div>
+    </div>
+</div>
+{% endblock list_stats_content %}
+{% block list_filters_content %}
+  <div class="col-md-3">
+    <label class="form-label">状态</label>
+    <select name="status" class="list-filter-input">
+        <option value="" {% if not status_filter %}selected{% endif %}>全部状态</option>
+        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>待归档</option>
+        <option value="approving" {% if status_filter == 'approving' %}selected{% endif %}>审批中</option>
+        <option value="archiving" {% if status_filter == 'archiving' %}selected{% endif %}>归档中</option>
+        <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>已归档</option>
+        <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>已驳回</option>
+      </select>
+  </div>
+{% endblock list_filters_content %}
+{% block list_table_headers %}
+<th>归档编号</th>
+        <th>项目名称</th>
+        <th>项目编号</th>
+        <th>状态</th>
+        <th>申请人</th>
+        <th>申请时间</th>
+        <th>操作</th>
+{% endblock list_table_headers %}
+{% block list_table_rows %}
+{% for archive in page %}
+      <tr>
+        <td>
+          <a href="{% url 'archive_management:project_archive_detail' archive.pk %}">
+            <code>{{ archive.archive_number }}</code>
+          </a>
+        </td>
+        <td>
+          {% if archive.project %}
+            {{ archive.project.name|default:archive.project.project_number|truncatewords:10 }}
+          {% else %}
+            <span style="color: #999999;">-</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if archive.project %}
+            {{ archive.project.project_number|default:"-" }}
+          {% else %}
+            <span style="color: #999999;">-</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if archive.status == 'pending' %}
+            <span class="list-badge list-badge-pending">待归档</span>
+          {% elif archive.status == 'approving' %}
+            <span class="list-badge list-badge-approving">审批中</span>
+          {% elif archive.status == 'archiving' %}
+            <span class="list-badge list-badge-archiving">归档中</span>
+          {% elif archive.status == 'archived' %}
+            <span class="list-badge list-badge-archived">已归档</span>
+          {% elif archive.status == 'rejected' %}
+            <span class="list-badge list-badge-rejected">已驳回</span>
+          {% else %}
+            <span class="list-badge">{{ archive.get_status_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if archive.applicant %}
+            {{ archive.applicant.get_full_name|default:archive.applicant.username }}
+          {% else %}
+            <span style="color: #999999;">-</span>
+          {% endif %}
+        </td>
+        <td>{{ archive.created_time|date:"Y-m-d"|default:"-" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'archive_management:project_archive_detail' archive.pk %}" class="list-btn" title="查看">查看</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无归档数据</div>
+          <div class="list-empty-hint">请创建第一个归档记录开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}

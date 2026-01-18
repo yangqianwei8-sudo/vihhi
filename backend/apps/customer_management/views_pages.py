@@ -1030,14 +1030,14 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
             elif request.path.endswith('/opportunities/') or request.path.endswith('/opportunities') or '/opportunities/list' in request.path:
                 active_menu_id = 'opportunity_list'
             # 使用统一的侧边栏菜单格式
-            context['module_sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, request.path, active_id=active_menu_id)
-            # 保持向后兼容
-            context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id=active_menu_id)
+            context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, request.path, active_id=active_menu_id)
+            context['sidebar_title'] = '商机管理'
+            context['sidebar_subtitle'] = 'Opportunity Management'
         # 如果是业务委托书或合同管理相关页面，生成合同管理菜单（支持新路径 /contracts/ 和旧路径 /business/contracts）
         elif request.path and ('/contracts/' in request.path or '/authorization-letters' in request.path or '/authorization-letter-templates' in request.path or '/business/authorization-letters' in request.path or '/business/authorization-letter-templates' in request.path or '/business/contracts' in request.path):
             # 设置侧边栏标题
-            context['sidebar_module_title'] = '合同管理'
-            context['sidebar_module_subtitle'] = 'Contract Management'
+            context['sidebar_title'] = '合同管理'
+            context['sidebar_subtitle'] = 'Contract Management'
             # 根据路径确定激活的菜单项
             if active_menu_id is None:
                 if '/contracts/home' in request.path or request.path == '/contracts/' or request.path == '/contracts':
@@ -1070,35 +1070,28 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
                 elif '/authorization-letter-templates' in request.path:
                     active_menu_id = 'authorization_letter_template_list'
             # 使用统一的侧边栏菜单格式
-            context['module_sidebar_nav'] = _build_contract_management_sidebar_nav(permission_set, request.path, active_id=active_menu_id)
-            # 保持向后兼容
-            context['customer_menu'] = _build_contract_management_menu(permission_set, active_id=active_menu_id)
+            context['sidebar_nav'] = _build_contract_management_sidebar_nav(permission_set, request.path, active_id=active_menu_id)
         # 如果是客户管理相关页面，生成客户管理菜单（支持新路径 /customers/ 和旧路径 /business/customers）
         elif request.path and ('/customers/' in request.path or '/contacts/' in request.path or '/visit-plan/' in request.path or '/customer-visit/' in request.path or '/customer-relationship-' in request.path or '/business-expense-application' in request.path or '/business/customers' in request.path):
             # 设置侧边栏标题
-            context['sidebar_module_title'] = '客户管理'
-            context['sidebar_module_subtitle'] = 'Customer Management'
+            context['sidebar_title'] = '客户管理'
+            context['sidebar_subtitle'] = 'Customer Management'
             # 根据路径确定激活的菜单项
             if active_menu_id is None:
                 if '/customers/home' in request.path or (request.path == '/customers/' or request.path == '/customers'):
                     active_menu_id = 'customer_home'
             # 使用统一的侧边栏菜单格式
-            context['module_sidebar_nav'] = _build_customer_management_sidebar_nav(permission_set, request.path, active_id=active_menu_id)
-            # 保持向后兼容
-            context['customer_menu'] = _build_customer_management_menu(permission_set, active_id=active_menu_id)
+            context['sidebar_nav'] = _build_customer_management_sidebar_nav(permission_set, request.path, active_id=active_menu_id)
         # 如果是客户管理首页（/customers/ 或 /business/），生成客户管理菜单
         elif request.path == '/customers/' or request.path == '/customers' or request.path == '/business/' or request.path == '/business':
             # 设置侧边栏标题
-            context['sidebar_module_title'] = '客户管理'
-            context['sidebar_module_subtitle'] = 'Customer Management'
+            context['sidebar_title'] = '客户管理'
+            context['sidebar_subtitle'] = 'Customer Management'
             # 使用统一的侧边栏菜单格式
-            context['module_sidebar_nav'] = _build_customer_management_sidebar_nav(permission_set, request.path, active_id='customer_home')
-            # 保持向后兼容
-            context['customer_menu'] = _build_customer_management_menu(permission_set, active_id=None)
+            context['sidebar_nav'] = _build_customer_management_sidebar_nav(permission_set, request.path, active_id='customer_home')
     else:
         context['full_top_nav'] = []
-        context['module_sidebar_nav'] = []
-        context['customer_menu'] = []
+        context['sidebar_nav'] = []
     
     return context
 
@@ -1531,12 +1524,12 @@ def customer_management_home(request):
             active_id = 'customer_home'
             if '/customers/home' in request.path or request.path == '/customers/' or request.path == '/customers':
                 active_id = 'customer_home'
-            context['module_sidebar_nav'] = _build_customer_management_sidebar_nav(permission_set, request.path, active_id=active_id)
-            # 保持向后兼容
-            context['customer_menu'] = _build_customer_management_menu(permission_set, active_id=active_id)
+            context['sidebar_nav'] = _build_customer_management_sidebar_nav(permission_set, request.path, active_id=active_id)
+            context['sidebar_title'] = '客户管理'
+            context['sidebar_subtitle'] = 'Customer Management'
         else:
             context['full_top_nav'] = []
-            context['module_sidebar_nav'] = []
+            context['sidebar_nav'] = []
         
         return render(request, "customer_management/home.html", context)
     except Exception as e:
@@ -1562,13 +1555,12 @@ def customer_management_home(request):
                 active_id = 'customer_home'
                 if '/customers/home' in request.path or request.path == '/customers/' or request.path == '/customers':
                     active_id = 'customer_home'
-                context['module_sidebar_nav'] = _build_customer_management_sidebar_nav(permission_set, request.path, active_id=active_id)
-                # 保持向后兼容
-                context['customer_menu'] = _build_customer_management_menu(permission_set, active_id=active_id)
+                context['sidebar_nav'] = _build_customer_management_sidebar_nav(permission_set, request.path, active_id=active_id)
+                context['sidebar_title'] = '客户管理'
+                context['sidebar_subtitle'] = 'Customer Management'
             else:
                 context['full_top_nav'] = []
-                context['module_sidebar_nav'] = []
-                context['customer_menu'] = []
+                context['sidebar_nav'] = []
             
             return render(request, "customer_management/home.html", context)
         except Exception as inner_e:
@@ -1613,9 +1605,6 @@ def customer_list(request):
     from django.core.paginator import Paginator
     from backend.apps.customer_management.models import Client
     
-    # 获取标签页参数
-    tab = request.GET.get('tab', 'all')
-    
     # 获取筛选参数
     search = request.GET.get('search', '').strip()
     search_field = request.GET.get('search_field', 'name')  # 搜索字段
@@ -1655,46 +1644,8 @@ def customer_list(request):
     try:
         clients = Client.objects.select_related('created_by', 'responsible_user', 'responsible_user__department').prefetch_related('contacts')
         
-        # 根据权限过滤客户列表（在标签页筛选之前应用）
+        # 根据权限过滤客户列表
         clients = _filter_clients_by_permission(clients, request.user, permission_set)
-        
-        # 根据标签页应用不同的筛选逻辑
-        if tab == 'my_responsible':
-            # 我负责的
-            clients = clients.filter(responsible_user=request.user)
-        elif tab == 'subordinate_responsible':
-            # 下属负责的 - 需要获取当前用户的下属
-            from backend.apps.system_management.models import User
-            # 通过部门关系查找下属：如果用户是部门负责人，则部门成员是下属
-            subordinates = User.objects.none()
-            if request.user.department and request.user.department.leader == request.user:
-                # 用户是部门负责人，获取部门所有成员（不包括自己）
-                subordinates = User.objects.filter(
-                    department=request.user.department,
-                    is_active=True
-                ).exclude(id=request.user.id)
-            clients = clients.filter(responsible_user__in=subordinates)
-        elif tab == 'my_collaboration':
-            # 我协作的 - 需要根据协作关系筛选（这里需要根据实际模型调整）
-            # 暂时使用联系人关系作为协作关系
-            clients = clients.filter(contacts__user=request.user).distinct()
-        elif tab == 'subordinate_collaboration':
-            # 下属协作的
-            from backend.apps.system_management.models import User
-            # 通过部门关系查找下属：如果用户是部门负责人，则部门成员是下属
-            subordinates = User.objects.none()
-            if request.user.department and request.user.department.leader == request.user:
-                # 用户是部门负责人，获取部门所有成员（不包括自己）
-                subordinates = User.objects.filter(
-                    department=request.user.department,
-                    is_active=True
-                ).exclude(id=request.user.id)
-            clients = clients.filter(contacts__user__in=subordinates).distinct()
-        elif tab == 'pending_approval':
-            # 待审批的 - 需要根据审批状态筛选（这里需要根据实际审批流程调整）
-            # 暂时筛选没有负责人的客户作为待审批
-            clients = clients.filter(responsible_user__isnull=True)
-        # tab == 'all' 时不做额外筛选
         
         # 应用搜索条件
         if search:
@@ -1902,7 +1853,7 @@ def customer_list(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='customer_list'
     )
@@ -1932,7 +1883,6 @@ def customer_list(request):
     
     context.update({
         'page_obj': page_obj,
-        'tab': tab,
         'search': search,
         'search_field': search_field,
         'client_level': client_level,
@@ -2004,7 +1954,7 @@ def customer_create(request):
                         request=request,
                     )
                     permission_set = get_user_permission_codes(request.user)
-                    context['customer_menu'] = _build_customer_management_menu(
+                    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
                         permission_set, 
                         active_id='customer_create'
                     )
@@ -2039,7 +1989,7 @@ def customer_create(request):
                         request=request,
                     )
                     permission_set = get_user_permission_codes(request.user)
-                    context['customer_menu'] = _build_customer_management_menu(
+                    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
                         permission_set, 
                         active_id='customer_create'
                     )
@@ -2122,7 +2072,7 @@ def customer_create(request):
                         request=request,
                     )
                     permission_set = get_user_permission_codes(request.user)
-                    context['customer_menu'] = _build_customer_management_menu(
+                    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
                         permission_set, 
                         active_id='customer_create'
                     )
@@ -2223,7 +2173,7 @@ def customer_create(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='customer_create'
     )
@@ -2293,7 +2243,7 @@ def customer_lead_create(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='customer_lead_create'
     )
@@ -2349,7 +2299,7 @@ def customer_filing_create(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='customer_filing_create'
     )
@@ -2480,7 +2430,7 @@ def customer_detail(request, client_id):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='customer_list'
     )
@@ -2663,7 +2613,7 @@ def customer_edit(request, client_id):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='customer_list'
     )
@@ -3148,7 +3098,7 @@ def customer_public_sea(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='customer_public_sea'
     )
@@ -3284,7 +3234,7 @@ def contact_list(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='contact_list'
     )
@@ -3486,7 +3436,7 @@ def contact_create(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='contact_create'
     )
@@ -3859,7 +3809,7 @@ def contact_relationship_mining(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='contact_relationship_mining'
     )
@@ -4156,7 +4106,7 @@ def contact_info_change_create(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='contact_list'
     )
@@ -4234,7 +4184,7 @@ def customer_visit(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='visit_list'
     )
@@ -4317,7 +4267,7 @@ def customer_relationship_upgrade(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='upgrade_list'
     )
@@ -4415,7 +4365,7 @@ def customer_relationship_upgrade_create(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='upgrade_list'
     )
@@ -4494,7 +4444,7 @@ def business_expense_application_list(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='business_expense_application'
     )
@@ -4592,7 +4542,7 @@ def business_expense_application_create(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='business_expense_application'
     )
@@ -4680,7 +4630,7 @@ def customer_relationship_collaboration(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='relationship_collaboration'
     )
@@ -4760,7 +4710,7 @@ def customer_relationship_collaboration_create(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='relationship_collaboration'
     )
@@ -4987,7 +4937,7 @@ def customer_relationship_collaboration_detail(request, collaboration_id):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='relationship_collaboration'
     )
@@ -5241,12 +5191,12 @@ def contract_management_home(request):
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        context['module_sidebar_nav'] = _build_contract_management_sidebar_nav(permission_set, request.path, active_id='contract_home')
-        # 保持向后兼容
-        context['customer_menu'] = _build_contract_management_menu(permission_set, active_id='contract_home')
+        context['sidebar_nav'] = _build_contract_management_sidebar_nav(permission_set, request.path, active_id='contract_home')
+        context['sidebar_title'] = '合同管理'
+        context['sidebar_subtitle'] = 'Contract Management'
     else:
         context['full_top_nav'] = []
-        context['module_sidebar_nav'] = []
+        context['sidebar_nav'] = []
     
     return render(request, "customer_management/contract_home.html", context)
 
@@ -7519,12 +7469,12 @@ def opportunity_management_home(request):
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        context['module_sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, request.path, active_id='opportunity_home')
-        # 保持向后兼容
-        context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='opportunity_home')
+        context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, request.path, active_id='opportunity_home')
+        context['sidebar_title'] = '商机管理'
+        context['sidebar_subtitle'] = 'Opportunity Management'
     else:
         context['full_top_nav'] = []
-        context['module_sidebar_nav'] = []
+        context['sidebar_nav'] = []
     
     context.update({
         'total_opportunities': total_opportunities,
@@ -7667,10 +7617,10 @@ def opportunity_management(request):
     if request and request.user.is_authenticated:
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         # 生成左侧菜单（商机列表页面，激活商机列表项）
-        context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='opportunity_list')
+        context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, active_id='opportunity_list')
     else:
         context['full_top_nav'] = []
-        context['customer_menu'] = []
+        context['sidebar_nav'] = []
     context.update({
         'page_obj': page_obj,
         'search': search,
@@ -7768,10 +7718,10 @@ def opportunity_detail(request, opportunity_id):
     if request and request.user.is_authenticated:
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         # 生成左侧菜单（商机详情页面，激活商机列表）
-        context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='opportunity_list')
+        context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, active_id='opportunity_list')
     else:
         context['full_top_nav'] = []
-        context['customer_menu'] = []
+        context['sidebar_nav'] = []
     context.update({
         'opportunity': opportunity,
         'followups': followups,
@@ -7908,10 +7858,10 @@ def opportunity_create(request):
         if request and request.user.is_authenticated:
             context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
             # 生成左侧菜单（商机创建页面，激活"商机创建"菜单项）
-            context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='opportunity_create')
+            context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, active_id='opportunity_create')
         else:
             context['full_top_nav'] = []
-            context['customer_menu'] = []
+            context['sidebar_nav'] = []
         context.update({
             'clients': clients,
             'service_types': service_types,
@@ -8455,8 +8405,9 @@ def opportunity_warehouse_list(request):
     )
     
     # 生成左侧菜单
-    context['customer_menu'] = _build_opportunity_management_menu(
+    context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(
         permission_set, 
+        request_path=request.path,
         active_id='warehouse_list'
     )
     
@@ -8610,10 +8561,10 @@ def opportunity_drawing_evaluation(request):
     if request and request.user.is_authenticated:
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         # 生成左侧菜单（图纸评估页面，激活"图纸评估"菜单项）
-        context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='drawing_evaluation')
+        context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, active_id='drawing_evaluation')
     else:
         context['full_top_nav'] = []
-        context['customer_menu'] = []
+        context['sidebar_nav'] = []
     context.update({
         'opportunities': opportunities[:100],  # 限制显示数量
         'service_professions': service_professions,
@@ -8679,10 +8630,10 @@ def opportunity_bidding_quotation(request):
     if request and request.user.is_authenticated:
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         # 生成左侧菜单（投标报价页面，激活"投标报价"菜单项）
-        context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='bidding_quotation')
+        context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, active_id='bidding_quotation')
     else:
         context['full_top_nav'] = []
-        context['customer_menu'] = []
+        context['sidebar_nav'] = []
     # 获取商机列表（用于筛选下拉框）
     try:
         opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
@@ -8898,10 +8849,10 @@ def bidding_quotation_create(request):
     if request and request.user.is_authenticated:
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         # 生成左侧菜单（投标报价页面，激活"投标报价"菜单项）
-        context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='bidding_quotation')
+        context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, active_id='bidding_quotation')
     else:
         context['full_top_nav'] = []
-        context['customer_menu'] = []
+        context['sidebar_nav'] = []
     context.update({
         'opportunities': opportunities[:100],  # 限制显示数量
         'status_choices': BiddingQuotation.STATUS_CHOICES,
@@ -9107,10 +9058,10 @@ def opportunity_tech_meeting(request):
     if request and request.user.is_authenticated:
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         # 生成左侧菜单（技术沟通会页面，激活"技术沟通会"菜单项）
-        context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='tech_meeting')
+        context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, active_id='tech_meeting')
     else:
         context['full_top_nav'] = []
-        context['customer_menu'] = []
+        context['sidebar_nav'] = []
     context['opportunities'] = opportunities[:100]  # 限制显示数量
     return render(request, "customer_management/opportunity_tech_meeting.html", context)
 
@@ -9292,10 +9243,10 @@ def opportunity_sales_forecast(request):
     if request and request.user.is_authenticated:
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         # 生成左侧菜单（商机预测页面，激活"商机预测"菜单项）
-        context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='sales_forecast')
+        context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, active_id='sales_forecast')
     else:
         context['full_top_nav'] = []
-        context['customer_menu'] = []
+        context['sidebar_nav'] = []
     context['forecast_data'] = forecast_data
     
     return render(request, "customer_management/opportunity_sales_forecast.html", context)
@@ -9421,10 +9372,10 @@ def opportunity_win_loss(request):
     if request and request.user.is_authenticated:
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         # 生成左侧菜单（赢单与输单页面，激活"赢单与输单"菜单项）
-        context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='win_loss')
+        context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, active_id='win_loss')
     else:
         context['full_top_nav'] = []
-        context['customer_menu'] = []
+        context['sidebar_nav'] = []
     context.update({
         'page_obj': page_obj,
         'search': search,
@@ -9534,10 +9485,10 @@ def opportunity_win_loss_select(request):
     )
     if request and request.user.is_authenticated:
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='win_loss')
+        context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, active_id='win_loss')
     else:
         context['full_top_nav'] = []
-        context['customer_menu'] = []
+        context['sidebar_nav'] = []
     context.update({
         'page_obj': page_obj,
         'search': search,
@@ -9658,10 +9609,10 @@ def opportunity_mark_win_loss(request, opportunity_id):
     )
     if request and request.user.is_authenticated:
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='win_loss')
+        context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, active_id='win_loss')
     else:
         context['full_top_nav'] = []
-        context['customer_menu'] = []
+        context['sidebar_nav'] = []
     context.update({
         'opportunity': opportunity,
         'target_status': target_status,
@@ -9735,10 +9686,10 @@ def opportunity_business_negotiation(request):
     if request and request.user.is_authenticated:
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         # 生成左侧菜单（商务洽谈登记页面，激活"商务洽谈登记"菜单项）
-        context['customer_menu'] = _build_opportunity_management_menu(permission_set, active_id='business_negotiation')
+        context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, active_id='business_negotiation')
     else:
         context['full_top_nav'] = []
-        context['customer_menu'] = []
+        context['sidebar_nav'] = []
     context.update({
         'page_obj': page_obj,
         'search': search,
@@ -10090,7 +10041,7 @@ def visit_plan_flow(request, plan_id=None):
         request=request,
     )
     
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='visit_list'
     )
@@ -10193,7 +10144,7 @@ def visit_plan_create(request):
         request=request,
     )
     
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='visit_list'
     )
@@ -10299,7 +10250,7 @@ def first_visit_create(request):
         request=request,
     )
     
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='first_visit_create'
     )
@@ -10455,7 +10406,7 @@ def visit_plan_checklist(request, plan_id):
         request=request,
     )
     
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='visit_list'
     )
@@ -10523,7 +10474,7 @@ def visit_plan_checkin(request, plan_id):
         request=request,
     )
     
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='visit_list'
     )
@@ -10588,7 +10539,7 @@ def visit_plan_review(request, plan_id):
         request=request,
     )
     
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='visit_list'
     )
@@ -10654,7 +10605,7 @@ def visit_checkin_select(request):
         request=request,
     )
     
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set,
         active_id='visit_checkin'
     )
@@ -10728,7 +10679,7 @@ def visit_review_select(request):
         request=request,
     )
     
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set,
         active_id='visit_review'
     )
@@ -10780,7 +10731,7 @@ def visit_plan_detail(request, plan_id):
         request=request,
     )
     
-    context['customer_menu'] = _build_customer_management_menu(
+    context['sidebar_nav'] = _build_customer_management_sidebar_nav(
         permission_set, 
         active_id='visit_list'
     )
@@ -11934,7 +11885,9 @@ def opportunity_import(request):
                             messages.warning(request, f'{failure_count} 条记录导入失败，请查看结果列表。')
     
     # 添加左侧菜单
-    context['module_sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, request.path, active_id='opportunity_import')
+    context['sidebar_nav'] = _build_opportunity_management_sidebar_nav(permission_set, request.path, active_id='opportunity_import')
+    context['sidebar_title'] = '商机管理'
+    context['sidebar_subtitle'] = 'Opportunity Management'
     
     return render(
         request,

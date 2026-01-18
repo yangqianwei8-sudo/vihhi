@@ -469,32 +469,28 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
             context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
             
             # 添加左侧菜单导航（使用统一的变量名 sidebar_menu）
-            context['sidebar_menu'] = _build_administrative_sidebar_nav(permission_set, request.path)
-            context['module_sidebar_nav'] = context['sidebar_menu']  # 兼容模板中的变量名
+            context['sidebar_nav'] = _build_administrative_sidebar_nav(permission_set, request.path)
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
             logger.exception('构建页面上下文失败: %s', str(e))
             # 发生错误时使用空列表，避免页面崩溃
             context['full_top_nav'] = []
-            context['sidebar_menu'] = []
-            context['module_sidebar_nav'] = []
+            context['sidebar_nav'] = []
     else:
         context['full_top_nav'] = []
-        context['sidebar_menu'] = []
-        context['module_sidebar_nav'] = []
-    
+        context['sidebar_nav'] = []
     # 为所有可能的侧边栏变量设置默认值，避免模板错误
     # 这些变量可能在其他模块的模板中被引用
     context.setdefault('plan_menu', [])
-    context.setdefault('delivery_sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     context.setdefault('customer_menu', [])
-    context.setdefault('production_sidebar_nav', [])
-    context.setdefault('personnel_sidebar_nav', [])
-    context.setdefault('financial_menu', [])
-    context.setdefault('litigation_sidebar_nav', [])
-    context.setdefault('archive_sidebar_nav', [])
-    context.setdefault('production_management_menu', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     
     return context
 
@@ -706,8 +702,7 @@ def administrative_home(request):
     
     # 设置侧边栏导航
     administrative_sidebar_nav = _build_administrative_sidebar_nav(permission_codes, request.path, active_id='administrative_home')
-    page_context['sidebar_menu'] = administrative_sidebar_nav
-    page_context['module_sidebar_nav'] = administrative_sidebar_nav
+    page_context['sidebar_nav'] = administrative_sidebar_nav
     page_context['sidebar_title'] = '行政管理'
     page_context['sidebar_subtitle'] = 'Administrative Management'
     

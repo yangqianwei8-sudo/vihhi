@@ -1,0 +1,55 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block module_styles %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components/list_page_base_v2.css' %}">
+{% endblock module_styles %}
+
+{% block pm_content %}
+    {% block list_stats_section %}
+    <div class="list-stats-section">
+      {% block list_stats_content %}{% endblock list_stats_content %}
+    </div>
+    {% endblock list_stats_section %}
+
+    {% block list_filters_section %}
+    <div class="list-filters-section">
+      <form method="get">
+        <div class="row g-2">
+          {% block list_filters_content %}{% endblock list_filters_content %}
+          <div class="col-md-auto d-flex align-items-end">
+            <button type="submit" class="list-btn list-btn-primary">查询</button>
+            <a href="{{ request.path }}" class="list-btn list-btn-outline ms-2">重置</a>
+          </div>
+        </div>
+      </form>
+    </div>
+    {% endblock list_filters_section %}
+
+    <div class="list-table-section">
+      <div class="list-table-wrapper">
+        <table class="list-table">
+          <thead>
+            <tr>{% block list_table_headers %}{% endblock list_table_headers %}</tr>
+          </thead>
+          <tbody>
+            {% block list_table_rows %}
+            <tr>
+              <td colspan="100%" class="list-empty-state">暂无数据</td>
+            </tr>
+            {% endblock list_table_rows %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% block list_pagination_section %}
+    {% if page_obj and page_obj.has_other_pages %}
+    <div class="list-pagination-section">
+      {% include "shared/_pagination.html" %}
+    </div>
+    {% endif %}
+    {% endblock list_pagination_section %}
+{% endblock pm_content %}

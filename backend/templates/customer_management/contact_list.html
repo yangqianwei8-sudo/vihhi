@@ -1,8 +1,73 @@
-{% extends "customer_management/_base.html" %}
+{% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block pm_title %}人员关系管理{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">查看和管理所有联系人</span>{% endblock %}
+
+
+
+
+{% block list_table_rows %}
+{% for contact in page_obj %}
+      <tr>
+        <td>
+          <input type="checkbox" name="contact_ids" value="{{ contact.id }}" class="form-check-input row-checkbox">
+        </td>
+        <td>
+          <a href="{% url 'business_pages:customer_detail' contact.client.id %}">
+            {{ contact.client.name }}
+          </a>
+        </td>
+        <td>
+          <a href="{% url 'business_pages:contact_detail' contact.id %}">
+            {{ contact.name }}
+          </a>
+        </td>
+        <td>
+          {% if contact.role %}
+          <span class="list-badge">{{ contact.get_role_display }}</span>
+          {% else %}
+          <span style="color: #999999;">未设置</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="list-badge">{{ contact.get_relationship_level_display }}</span>
+        </td>
+        <td>{{ contact.position|default:"未填写" }}</td>
+        <td>{{ contact.phone|default:"未填写" }}</td>
+        <td style="color: #666666;">{{ contact.email|default:"未填写" }}</td>
+        <td style="color: #666666;">{{ contact.created_time|date:"Y-m-d" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'business_pages:contact_detail' contact.id %}" class="list-btn" title="查看">查看</a>
+            {% if can_create %}
+            <a href="{% url 'business_pages:contact_edit' contact.id %}" class="list-btn" title="编辑">编辑</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="10" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无联系人数据</div>
+          <div class="list-empty-hint">请创建第一个联系人开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}
+{% block list_table_headers %}
+<th><input type="checkbox" id="selectAll" class="form-check-input"></th>
+<th>客户名称</th>
+<th>联系人姓名</th>
+<th>人员角色</th>
+<th>关系等级</th>
+<th>职务</th>
+<th>电话</th>
+<th>邮箱</th>
+<th>创建时间</th>
+<th>操作</th>
+{% endblock list_table_headers %}
+{% block list_page_title %}人员关系管理{% endblock list_page_title %}
+{% block list_page_subtitle_content %}<span class="pm-subtitle">查看和管理所有联系人</span>{% endblock list_page_subtitle_content %}
 
 {% block pm_actions %}
 {% if can_create %}
@@ -10,43 +75,13 @@
   新增联系人
 </a>
 {% endif %}
-{% endblock %}
+{% endblock pm_actions %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-{% endblock %}
+{% endblock extra_css %}
 
-{% block pm_content %}
-  {% include "customer_management/_partials/_contact_filters.html" %}
 
-  {% if page_obj %}
-  <div class="list-page-action-bar mb-3 d-flex justify-content-between align-items-center">
-    <div class="d-flex align-items-center gap-3">
-      <span class="text-muted small">已选 <strong id="selectedCount">0</strong> 个</span>
-      <div class="btn-group btn-group-sm">
-        <button type="button" class="btn btn-outline-secondary" id="batchEditBtn" disabled>编辑</button>
-        <button type="button" class="btn btn-outline-secondary" id="batchExportBtn" disabled>导出</button>
-        <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" disabled>
-          <span class="visually-hidden">更多操作</span>
-        </button>
-        <ul class="dropdown-menu">
-          <li><a class="dropdown-item" href="#" id="batchDeleteBtn">删除</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="d-flex gap-2">
-      <button type="button" class="btn btn-outline-secondary btn-sm">导入</button>
-    </div>
-  </div>
-
-  {% include "customer_management/_partials/_contact_table.html" %}
-  {% else %}
-  <div class="list-empty">
-    <div class="list-empty-icon">▢</div>
-    <div class="list-empty-text">暂无联系人数据</div>
-  </div>
-  {% endif %}
-{% endblock %}
 
 {% block extra_js %}
 <script>
@@ -95,4 +130,4 @@ function updateSelectAllState() {
 // 初始化
 updateSelectedCount();
 </script>
-{% endblock %}
+{% endblock extra_js %}

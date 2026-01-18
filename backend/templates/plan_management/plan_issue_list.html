@@ -1,138 +1,228 @@
-{% extends "plan_management/_base.html" %}
+{% extends "plan_management/base.html" %}
 {% load static %}
 
-{% block pm_title %}问题管理 - {{ plan.name }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">管理计划执行中的问题</span>{% endblock %}
-
-{% block pm_actions %}
-<a href="{% url 'plan_pages:plan_detail' plan.id %}" class="list-btn">
-  返回详情
-</a>
-{% endblock %}
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
-  .list-badge-critical { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
-  .list-badge-high { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-medium { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-low { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-  .list-badge-open { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
-  .list-badge-in_progress { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-resolved { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
-  .list-badge-closed { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-
-  .issue-form-container {
-    background: #FFFFFF;
-    border: 1px solid #E0E0E0;
-    border-radius: 0;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .issue-form-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1A1A1A;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #E0E0E0;
-  }
-
-  .issue-form-group {
-    margin-bottom: 16px;
-  }
-
-  .issue-form-label {
-    font-size: 12px;
-    color: #666666;
-    margin-bottom: 6px;
-    display: block;
-  }
-
-  .issue-form-label.required::after {
-    content: ' *';
-    color: #999999;
-  }
-
-  .issue-form-input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #E0E0E0;
-    border-radius: 0;
-    font-size: 14px;
-    color: #333333;
-    background: #FFFFFF;
-  }
-
-  .issue-form-input:focus {
-    outline: none;
-    border-color: #999999;
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
-  }
-
-  .issue-form-submit {
-    width: 100%;
-    padding: 10px;
-    background: #1A1A1A;
-    color: #FFFFFF;
-    border: 1px solid #1A1A1A;
-    border-radius: 0;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .issue-form-submit:hover {
-    background: #333333;
-    border-color: #333333;
-  }
+    .severity-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    .severity-critical { background: #f8d7da; color: #842029; }
+    .severity-high { background: #fff3cd; color: #856404; }
+    .severity-medium { background: #cfe2ff; color: #084298; }
+    .severity-low { background: #e9ecef; color: #495057; }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    .status-open { background: #f8d7da; color: #842029; }
+    .status-in_progress { background: #fff3cd; color: #856404; }
+    .status-resolved { background: #d1e7dd; color: #0f5132; }
+    .status-closed { background: #e9ecef; color: #495057; }
 </style>
 {% endblock %}
 
-{% block pm_content %}
-<div style="display: grid; grid-template-columns: 1fr 320px; gap: 16px;">
-  <div>
-    {% include "plan_management/_partials/_issue_stats.html" %}
-    {% include "plan_management/_partials/_issue_filters.html" %}
-    {% include "plan_management/_partials/_issue_table.html" %}
-  </div>
-
-  <div class="issue-form-container">
-    <div class="issue-form-title">创建问题</div>
-    <form method="post">
-      {% csrf_token %}
-      <input type="hidden" name="create_issue" value="1">
-
-      <div class="issue-form-group">
-        <label class="issue-form-label required">问题标题</label>
-        {{ issue_form.title }}
-        {% if issue_form.title.errors %}
-        <div style="font-size: 12px; color: #999999; margin-top: 4px;">{{ issue_form.title.errors }}</div>
-        {% endif %}
-      </div>
-
-      <div class="issue-form-group">
-        <label class="issue-form-label required">问题描述</label>
-        {{ issue_form.description }}
-        {% if issue_form.description.errors %}
-        <div style="font-size: 12px; color: #999999; margin-top: 4px;">{{ issue_form.description.errors }}</div>
-        {% endif %}
-      </div>
-
-      <div class="issue-form-group">
-        <label class="issue-form-label">严重程度</label>
-        {{ issue_form.severity }}
-      </div>
-
-      <div class="issue-form-group">
-        <label class="issue-form-label">负责人</label>
-        {{ issue_form.assigned_to }}
-      </div>
-
-      <button type="submit" class="issue-form-submit">创建问题</button>
-    </form>
-  </div>
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">
+                {{ plan.name }}
+            </h2>
+            <p class="text-muted mb-0 mt-1">{{ plan.plan_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>返回详情
+            </a>
+        </div>
+    </div>
+    
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <span class="info-card-title">问题总数</span>
+                </div>
+                <div class="info-card-value">{{ total_count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <span class="info-card-title">待处理</span>
+                </div>
+                <div class="info-card-value">{{ open_count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <span class="info-card-title">处理中</span>
+                </div>
+                <div class="info-card-value">{{ in_progress_count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <span class="info-card-title">已解决</span>
+                </div>
+                <div class="info-card-value">{{ resolved_count }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 筛选 -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small">状态</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">全部状态</option>
+                        <option value="open" {% if status_filter == 'open' %}selected{% endif %}>待处理</option>
+                        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>处理中</option>
+                        <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>已解决</option>
+                        <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>已关闭</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">严重程度</label>
+                    <select name="severity" class="form-select form-select-sm">
+                        <option value="">全部</option>
+                        <option value="critical" {% if severity_filter == 'critical' %}selected{% endif %}>严重</option>
+                        <option value="high" {% if severity_filter == 'high' %}selected{% endif %}>高</option>
+                        <option value="medium" {% if severity_filter == 'medium' %}selected{% endif %}>中</option>
+                        <option value="low" {% if severity_filter == 'low' %}selected{% endif %}>低</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary btn-sm w-100">筛选</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- 左侧：问题列表 -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">问题列表</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>问题标题</th>
+                                    <th>严重程度</th>
+                                    <th>状态</th>
+                                    <th>负责人</th>
+                                    <th>发现时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for issue in issues %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ issue.title }}</strong>
+                                        <div class="small text-muted">{{ issue.description|truncatewords:10 }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="severity-badge severity-{{ issue.severity }}">
+                                            {{ issue.get_severity_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge status-{{ issue.status }}">
+                                            {{ issue.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if issue.assigned_to %}
+                                        {{ issue.assigned_to.get_full_name|default:issue.assigned_to.username }}
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ issue.discovered_time|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" title="查看详情">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-5">
+                                        <i class="bi bi-inbox" style="font-size: 48px; opacity: 0.3;"></i>
+                                        <p class="mt-3 mb-0">暂无问题</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧：创建问题 -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">创建问题</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="create_issue" value="1">
+                        
+                        <div class="mb-3">
+                            <label class="form-label required">问题标题</label>
+                            {{ issue_form.title }}
+                            {% if issue_form.title.errors %}
+                            <div class="text-danger small mt-1">{{ issue_form.title.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label required">问题描述</label>
+                            {{ issue_form.description }}
+                            {% if issue_form.description.errors %}
+                            <div class="text-danger small mt-1">{{ issue_form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">严重程度</label>
+                            {{ issue_form.severity }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">负责人</label>
+                            {{ issue_form.assigned_to }}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="bi bi-exclamation-triangle me-1"></i>创建问题
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

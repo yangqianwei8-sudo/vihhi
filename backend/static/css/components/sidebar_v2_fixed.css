@@ -8,6 +8,7 @@
   top: 56px;
   bottom: 0;
   left: 0;
+  height: calc(100vh - 56px);
   display: flex;
   flex-direction: column;
   background: #FFFFFF;
@@ -57,9 +58,11 @@
 
 /* 3) 中部：占满剩余高度，禁止滚动 */
 .vh-sb__nav{
-  flex: 1 1 auto;
-  overflow: hidden;
+  flex: 1 1 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 8px 4px;
+  padding-bottom: 80px;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -228,18 +231,6 @@
   background: #E8E8E8;
 }
 
-/* 子菜单容器 - 始终显示，垂直排列 */
-.vh-sb__children {
-  padding: 2px 0 1px 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  flex-wrap: nowrap !important;
-  width: 100% !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  align-items: stretch !important;
-}
-
 /* 确保子菜单项在容器中垂直排列 */
 .vh-sb__parent .vh-sb__children > .vh-sb__child {
   display: flex !important;
@@ -251,14 +242,17 @@
 
 /* 4) 底部：永远贴住屏幕底边 */
 .vh-sb__bottom{
-  flex: 0 0 auto;
-  margin-top: auto;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
   padding: 12px;
   border-top: 1px solid #E0E0E0;
   display: flex;
   flex-direction: column;
   gap: 4px;
   background: #FAFAFA;
+  z-index: 10;
 }
 .vh-sb__mini{
   font-size: 11px;
@@ -284,4 +278,53 @@
   min-height: calc(100vh - 56px);
   padding-top: 0;
   width: 100%;
+}
+
+
+
+
+/* ========== Sidebar Submenu Collapse (Global) ========== */
+
+.vh-sb__parent .vh-sb__children { 
+  display: none !important; 
+  padding-left: 16px; 
+}
+.vh-sb__parent.is-open .vh-sb__children,
+.vh-sb__parent.is-open > .vh-sb__children { 
+  display: block !important; 
+}
+
+.vh-sb__item--parent {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vh-sb__chev { margin-left: auto; transition: transform 0.15s ease; }
+.vh-sb__parent.is-open .vh-sb__chev { transform: rotate(90deg); }
+
+
+
+/* ========== 强制底部固定在底部 ========== */
+.vh-sb {
+  height: calc(100vh - 56px) !important;
+}
+
+.vh-sb__nav {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  padding-bottom: 80px !important;
+}
+
+.vh-sb__bottom {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  z-index: 10 !important;
 }

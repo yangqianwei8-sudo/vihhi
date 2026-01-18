@@ -1,30 +1,94 @@
-{% extends "customer_management/_base.html" %}
+{% extends "shared/list_page_base.html" %}
+
+
+
+
+
+{% block list_table_headers %}
+<th>申请单号</th>
+<th>客户名称</th>
+<th>费用类型</th>
+<th>费用金额</th>
+<th>费用日期</th>
+<th>审批状态</th>
+<th>申请人</th>
+<th>创建时间</th>
+<th>操作</th>
+{% endblock list_table_headers %}
+{% block list_table_rows %}
+{% for expense in page_obj %}
+      <tr>
+        <td><code>{{ expense.application_number }}</code></td>
+        <td>
+          {% if expense.client %}
+          <a href="{% url 'business_pages:customer_detail' expense.client.id %}">
+            {{ expense.client.name }}
+          </a>
+          {% else %}
+          <span style="color: #999999;">未指定</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="list-badge">{{ expense.get_expense_type_display }}</span>
+        </td>
+        <td style="text-align: right; font-weight: 600;">¥{{ expense.amount|floatformat:2 }}</td>
+        <td style="color: #666666;">{{ expense.expense_date|date:"Y-m-d" }}</td>
+        <td>
+          <span class="list-badge list-badge-{{ expense.approval_status }}">
+            {{ expense.get_approval_status_display }}
+          </span>
+        </td>
+        <td>{{ expense.created_by.get_full_name|default:expense.created_by.username }}</td>
+        <td style="color: #666666;">{{ expense.created_time|date:"Y-m-d" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="#" class="list-btn" title="查看">查看</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无业务费申请记录</div>
+          <div class="list-empty-hint">请创建第一个业务费申请开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}
+{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
+
 {% load static %}
-
-{% block pm_title %}{{ page_title }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">查看和管理所有业务费申请</span>{% endblock %}
-
-{% block pm_actions %}
-{% if can_create %}
-<a href="{% url 'business_pages:business_expense_application_create' %}" class="list-btn list-btn-primary">
-  新增业务费申请
-</a>
-{% endif %}
-{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-<style>
-  /* 审批状态badge样式 */
-  .list-badge-draft { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
-  .list-badge-pending { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-approved { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
-  .list-badge-rejected { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-  .list-badge-withdrawn { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-</style>
-{% endblock %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/list-filters.css' %}">
 
-{% block pm_content %}
-  {% include "customer_management/_partials/_business_expense_filters.html" %}
-  {% include "customer_management/_partials/_business_expense_table.html" %}
-{% endblock %}
+{% endblock extra_css %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+
+{% endblock breadcrumb_items %}
+
+{% block extra_js %}
+    {% include "customer_management/includes/filter_fields_settings_modal.html" %}
+
+    <!-- 引入筛选字段设置功能模块 -->
+    <script src="{% static 'js/filter-fields-settings.js' %}"></script>
+    <!-- 配置筛选字段设置功能（必须在 list-filters.js 之前） -->
+    <script>
+    window.listFiltersConfig = {
+        enableFieldsSettings: true,
+        fieldsSettingsStorageKey: 'business_expense_application_filter_fields',
+        fieldsSettingsContainerId: 'basicFilters',
+        fieldsSettingsModalId: 'filterFieldsSettingsModal',
+        fieldsSettingsListId: 'filterFieldsList',
+        fieldsSettingsBtnId: 'settingsFilterFieldsBtn',
+        fieldsSettingsSaveBtnId: 'saveFilterFieldsSettings',
+        fieldsSettingsResetBtnId: 'resetFilterFieldsSettings',
+        maxEnabledFields: 10,
+        defaultEnabledFields: ['search', 'client', 'expense_type', 'approval_status']
+    };
+    </script>
+    <!-- 引入列表筛选功能模块 -->
+    <script src="{% static 'js/list-filters.js' %}"></script>
+{% endblock extra_js %}

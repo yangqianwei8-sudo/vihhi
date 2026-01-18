@@ -1,8 +1,72 @@
-{% extends "customer_management/_base.html" %}
+{% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block pm_title %}{{ page_title }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">查看和管理所有合同</span>{% endblock %}
+
+
+
+
+{% block list_table_rows %}
+{% for contract in page_obj %}
+      <tr>
+        <td><code>{{ contract.project_number|default:contract.contract_number|default:"未编号" }}</code></td>
+        <td>{{ contract.contract_name|default:contract.contract_number }}</td>
+        <td>{{ contract.client.name|default:"未指定" }}</td>
+        <td>
+          {% if contract.project %}
+          {{ contract.project.project_number|default:contract.project.name }}
+          {% else %}
+          <span style="color: #999999;">未关联</span>
+          {% endif %}
+        </td>
+        <td>{{ contract.get_contract_type_display }}</td>
+        <td>
+          <span class="list-badge list-badge-{{ contract.status }}">
+            {{ contract.get_status_display }}
+          </span>
+        </td>
+        <td style="text-align: right;">{% if contract.contract_amount %}¥{{ contract.contract_amount|floatformat:2 }}{% else %}--{% endif %}</td>
+        <td style="text-align: right;">{% if contract.payment_amount %}¥{{ contract.payment_amount|floatformat:2 }}{% else %}¥0.00{% endif %}</td>
+        <td style="text-align: right;">{% if contract.unpaid_amount %}¥{{ contract.unpaid_amount|floatformat:2 }}{% else %}--{% endif %}</td>
+        <td>{{ contract.contract_date|date:"Y-m-d"|default:"未设置" }}</td>
+        <td>{{ contract.created_by.get_full_name|default:contract.created_by.username }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'contract_pages:contract_detail' contract.id %}" class="list-btn" title="查看">查看</a>
+            {% if contract.can_edit %}
+            <a href="{% url 'contract_pages:contract_edit' contract.id %}" class="list-btn" title="编辑">编辑</a>
+            {% if contract.can_delete %}
+            <button type="button" class="list-btn btn-delete-contract" data-contract-id="{{ contract.id }}" title="删除">删除</button>
+            {% endif %}
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="12" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无合同数据</div>
+          <div class="list-empty-hint">请创建第一个合同开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}
+{% block list_table_headers %}
+<th>合同编号</th>
+<th>合同名称</th>
+<th>客户</th>
+<th>关联项目</th>
+<th>合同类型</th>
+<th>状态</th>
+<th>合同金额</th>
+<th>已回款</th>
+<th>未回款</th>
+<th>签订日期</th>
+<th>创建人</th>
+<th>操作</th>
+{% endblock list_table_headers %}
+{% block list_page_title %}{{ page_title }}{% endblock list_page_title %}
+{% block list_page_subtitle_content %}<span class="pm-subtitle">查看和管理所有合同</span>{% endblock list_page_subtitle_content %}
 
 {% block pm_actions %}
 {% if can_create %}
@@ -10,28 +74,14 @@
   新增合同
 </a>
 {% endif %}
-{% endblock %}
+{% endblock pm_actions %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-<style>
-  /* 合同状态badge样式 */
-  .list-badge-draft { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
-  .list-badge-pending_review { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-reviewing { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-signed { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
-  .list-badge-effective { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-executing { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-completed { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
-  .list-badge-terminated { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-  .list-badge-cancelled { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
-</style>
-{% endblock %}
 
-{% block pm_content %}
-  {% include "customer_management/_partials/_contract_management_filters.html" %}
-  {% include "customer_management/_partials/_contract_management_table.html" %}
-{% endblock %}
+{% endblock extra_css %}
+
+
 
 {% block extra_js %}
 <div class="modal fade" id="deleteContractModal" tabindex="-1">
@@ -70,4 +120,4 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 </script>
-{% endblock %}
+{% endblock extra_js %}

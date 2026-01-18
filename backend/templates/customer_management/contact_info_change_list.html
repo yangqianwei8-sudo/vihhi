@@ -1,30 +1,95 @@
-{% extends "customer_management/_base.html" %}
+{% extends "shared/list_page_base.html" %}
+
+{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
+
 {% load static %}
 
-{% block pm_title %}{{ page_title }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">查看和管理所有人员信息变更申请</span>{% endblock %}
 
-{% block pm_actions %}
-{% if can_create %}
-<a href="{% url 'business_pages:contact_info_change_create' %}" class="list-btn list-btn-primary">
-  新增人员信息变更
-</a>
-{% endif %}
-{% endblock %}
+{% block list_filters_content %}
+  <div class="col-md-3">
+    <label class="form-label">联系人</label>
+    <select name="contact" class="list-filter-input">
+        <option value="">全部联系人</option>
+        {% for c in contacts %}
+        <option value="{{ c.id }}" {% if contact_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }} ({{ c.client.name }})</option>
+        {% endfor %}
+      </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">变更类型</label>
+    <select name="change_type" class="list-filter-input">
+        <option value="">全部类型</option>
+        {% for value, label in change_type_choices %}
+        <option value="{{ value }}" {% if change_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">审批状态</label>
+    <select name="approval_status" class="list-filter-input">
+        <option value="">全部</option>
+        {% for value, label in approval_status_choices %}
+        <option value="{{ value }}" {% if approval_status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+{% endblock list_filters_content %}
+{% block list_table_headers %}
+<th>联系人</th>
+        <th>客户</th>
+        <th>变更类型</th>
+        <th>变更原因</th>
+        <th>审批状态</th>
+        <th>申请人</th>
+        <th>创建时间</th>
+        <th width="100">操作</th>
+{% endblock list_table_headers %}
+{% block list_table_rows %}
+{% for change in page_obj %}
+      <tr>
+        <td>
+          <a href="{% url 'business_pages:contact_detail' change.contact.id %}">
+            {{ change.contact.name }}
+          </a>
+        </td>
+        <td>
+          <a href="{% url 'business_pages:customer_detail' change.contact.client.id %}">
+            {{ change.contact.client.name }}
+          </a>
+        </td>
+        <td>{{ change.get_change_type_display }}</td>
+        <td>{{ change.change_reason|truncatewords:10 }}</td>
+        <td>
+          <span class="list-badge list-badge-{{ change.approval_status }}">
+            {{ change.get_approval_status_display }}
+          </span>
+        </td>
+        <td>{{ change.created_by.get_full_name|default:change.created_by.username }}</td>
+        <td style="color: #666666;">{{ change.created_time|date:"Y-m-d H:i" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'business_pages:contact_info_change_detail' change.id %}" class="list-btn" title="查看">查看</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无人员信息变更申请记录</div>
+          <div class="list-empty-hint">请创建第一个人员信息变更申请开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-<style>
-  /* 审批状态badge样式 */
-  .list-badge-approved { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
-  .list-badge-rejected { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-  .list-badge-withdrawn { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-  .list-badge-draft { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-pending { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-</style>
-{% endblock %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock extra_css %}
 
-{% block pm_content %}
-  {% include "customer_management/_partials/_contact_info_change_filters.html" %}
-  {% include "customer_management/_partials/_contact_info_change_table.html" %}
-{% endblock %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock breadcrumb_items %}
+
+
+

@@ -229,8 +229,7 @@ def _get_resource_context(request, active_id=None):
     context = {}
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
-        context['resource_sidebar_nav'] = _build_resource_sidebar_nav(permission_set, request.path, active_id=active_id)
-        context['module_sidebar_nav'] = _build_resource_sidebar_nav(permission_set, request.path, active_id=active_id)
+        context['sidebar_nav'] = _build_resource_sidebar_nav(permission_set, request.path, active_id=active_id)
         context['sidebar_title'] = '资源管理'
         context['sidebar_subtitle'] = 'Resource Management'
         try:
@@ -238,8 +237,7 @@ def _get_resource_context(request, active_id=None):
         except Exception:
             context['full_top_nav'] = []
     else:
-        context['resource_sidebar_nav'] = []
-        context['module_sidebar_nav'] = []
+        context['sidebar_nav'] = []
         context['sidebar_title'] = '资源管理'
         context['sidebar_subtitle'] = 'Resource Management'
         context['full_top_nav'] = []

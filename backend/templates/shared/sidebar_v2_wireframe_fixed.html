@@ -4,417 +4,57 @@
   <div class="vh-sb__top">
     <div class="vh-sb__topInner">
       <div class="vh-sb__titleWrap">
-        <div class="vh-sb__title">{% if plan_menu|default:False or module_sidebar_nav|default:False or delivery_sidebar_nav|default:False or customer_menu|default:False or production_sidebar_nav|default:False or personnel_sidebar_nav|default:False or sidebar_menu|default:False or financial_menu|default:False or litigation_sidebar_nav|default:False or archive_sidebar_nav|default:False or production_management_menu|default:False or resource_sidebar_nav|default:False %}{{ sidebar_title }}{% else %}计划管理{% endif %}</div>
-        <div class="vh-sb__sub">{% if sidebar_subtitle %}{{ sidebar_subtitle }}{% else %}Plan Management{% endif %}</div>
+        <div class="vh-sb__title">{{ sidebar_title|default:"计划管理" }}</div>
+        <div class="vh-sb__sub">{{ sidebar_subtitle|default:"Plan Management" }}</div>
       </div>
 
       {% block sidebar_top_extra %}{% endblock %}
     </div>
   </div>
 
-      <nav class="vh-sb__nav">
-    {% if plan_menu|default:False or module_sidebar_nav|default:False or delivery_sidebar_nav|default:False or customer_menu|default:False or production_sidebar_nav|default:False or personnel_sidebar_nav|default:False or sidebar_menu|default:False or financial_menu|default:False or litigation_sidebar_nav|default:False or archive_sidebar_nav|default:False or production_management_menu|default:False or resource_sidebar_nav|default:False %}
-      {% if plan_menu|default:False %}
-        {% with menu_items=plan_menu %}
-          {% for item in menu_items %}
-            {% if item.children %}
-              <div class="vh-sb__parent">
-                <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
-                  <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                  <span class="vh-sb__label">{{ item.label }}</span>
-                </a>
-                <div class="vh-sb__children">
-                  {% for child in item.children %}
-                    <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                      <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
-                      <span class="vh-sb__label">{{ child.label }}</span>
-                    </a>
-                  {% endfor %}
-                </div>
-              </div>
-            {% else %}
-              <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
+  <nav class="vh-sb__nav">
+    {% with menu_items=sidebar_nav|default:None %}
+      {% if menu_items %}
+        {% for item in menu_items %}
+          {% if item.children %}
+            <div class="vh-sb__parent" data-sb-parent data-sb-key="{{ forloop.counter }}-{{ item.label }}">
+              <button type="button"
+                      class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}"
+                      data-sb-toggle
+                      aria-expanded="false">
                 <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
                 <span class="vh-sb__label">{{ item.label }}</span>
-                {% if item.badge %}
-                  <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
-                    {{ item.badge }}
-                  </span>
-                {% endif %}
-              </a>
-            {% endif %}
-          {% endfor %}
-        {% endwith %}
-      {% else %}
-        {% if module_sidebar_nav|default:False %}
-          {% with menu_items=module_sidebar_nav %}
-            {% for item in menu_items %}
-              {% if item.children %}
-                <div class="vh-sb__parent">
-                  <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
-                    <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                    <span class="vh-sb__label">{{ item.label }}</span>
+                <span class="vh-sb__chev" aria-hidden="true">▸</span>
+              </button>
+
+              <div class="vh-sb__children" data-sb-children>
+                {% for child in item.children %}
+                  <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
+                    <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
+                    <span class="vh-sb__label">{{ child.label }}</span>
                   </a>
-                  <div class="vh-sb__children">
-                    {% for child in item.children %}
-                      <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                        <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
-                        <span class="vh-sb__label">{{ child.label }}</span>
-                      </a>
-                    {% endfor %}
-                  </div>
-                </div>
-              {% else %}
-                <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
-                  <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                  <span class="vh-sb__label">{{ item.label }}</span>
-                  {% if item.badge %}
-                    <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
-                      {{ item.badge }}
-                    </span>
-                  {% endif %}
-                </a>
-              {% endif %}
-            {% endfor %}
-          {% endwith %}
-        {% else %}
-          {% if resource_sidebar_nav|default:False %}
-            {% with menu_items=resource_sidebar_nav %}
-              {% for item in menu_items %}
-                {% if item.children %}
-                  <div class="vh-sb__parent">
-                    <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
-                      <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                      <span class="vh-sb__label">{{ item.label }}</span>
-                    </a>
-                    <div class="vh-sb__children">
-                      {% for child in item.children %}
-                        <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                          <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
-                          <span class="vh-sb__label">{{ child.label }}</span>
-                        </a>
-                      {% endfor %}
-                    </div>
-                  </div>
-                {% else %}
-                  <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
-                    <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                    <span class="vh-sb__label">{{ item.label }}</span>
-                    {% if item.badge %}
-                      <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
-                        {{ item.badge }}
-                      </span>
-                    {% endif %}
-                  </a>
-                {% endif %}
-              {% endfor %}
-            {% endwith %}
-          {% else %}
-            {% if delivery_sidebar_nav|default:False %}
-              {% with menu_items=delivery_sidebar_nav %}
-                {% for item in menu_items %}
-                  {% if item.children %}
-                    <div class="vh-sb__parent">
-                      <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
-                        <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                        <span class="vh-sb__label">{{ item.label }}</span>
-                      </a>
-                      <div class="vh-sb__children">
-                        {% for child in item.children %}
-                          <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                            <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
-                            <span class="vh-sb__label">{{ child.label }}</span>
-                          </a>
-                        {% endfor %}
-                      </div>
-                    </div>
-                  {% else %}
-                    <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
-                      <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                      <span class="vh-sb__label">{{ item.label }}</span>
-                      {% if item.badge %}
-                        <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
-                          {{ item.badge }}
-                        </span>
-                      {% endif %}
-                    </a>
-                  {% endif %}
                 {% endfor %}
-              {% endwith %}
-            {% else %}
-              {% if customer_menu|default:False %}
-                {% with menu_items=customer_menu %}
-                  {% for item in menu_items %}
-                    {% if item.children %}
-                      <div class="vh-sb__parent">
-                        <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
-                          <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                          <span class="vh-sb__label">{{ item.label }}</span>
-                        </a>
-                        <div class="vh-sb__children">
-                          {% for child in item.children %}
-                            <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                              <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
-                              <span class="vh-sb__label">{{ child.label }}</span>
-                            </a>
-                          {% endfor %}
-                        </div>
-                      </div>
-                    {% else %}
-                      <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
-                        <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                        <span class="vh-sb__label">{{ item.label }}</span>
-                        {% if item.badge %}
-                          <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
-                            {{ item.badge }}
-                          </span>
-                        {% endif %}
-                      </a>
-                    {% endif %}
-                  {% endfor %}
-                {% endwith %}
-              {% else %}
-                {% if production_sidebar_nav|default:False %}
-                  {% with menu_items=production_sidebar_nav %}
-                    {% for item in menu_items %}
-                      {% if item.children %}
-                        <div class="vh-sb__parent">
-                          <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
-                            <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                            <span class="vh-sb__label">{{ item.label }}</span>
-                          </a>
-                          <div class="vh-sb__children">
-                            {% for child in item.children %}
-                              <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                                <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
-                                <span class="vh-sb__label">{{ child.label }}</span>
-                              </a>
-                            {% endfor %}
-                          </div>
-                        </div>
-                      {% else %}
-                        <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
-                          <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                          <span class="vh-sb__label">{{ item.label }}</span>
-                          {% if item.badge %}
-                            <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
-                              {{ item.badge }}
-                            </span>
-                          {% endif %}
-                        </a>
-                      {% endif %}
-                    {% endfor %}
-                  {% endwith %}
-                {% else %}
-                  {% if personnel_sidebar_nav|default:False %}
-                    {% with menu_items=personnel_sidebar_nav %}
-                      {% for item in menu_items %}
-                        {% if item.children %}
-                          <div class="vh-sb__parent">
-                            <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
-                              <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                              <span class="vh-sb__label">{{ item.label }}</span>
-                            </a>
-                            <div class="vh-sb__children">
-                              {% for child in item.children %}
-                                <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                                  <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
-                                  <span class="vh-sb__label">{{ child.label }}</span>
-                                </a>
-                              {% endfor %}
-                            </div>
-                          </div>
-                        {% else %}
-                          <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
-                            <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                            <span class="vh-sb__label">{{ item.label }}</span>
-                            {% if item.badge %}
-                              <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
-                                {{ item.badge }}
-                              </span>
-                            {% endif %}
-                          </a>
-                        {% endif %}
-                      {% endfor %}
-                    {% endwith %}
-                  {% else %}
-                    {% if sidebar_menu|default:False %}
-                      {% with menu_items=sidebar_menu %}
-                        {% for item in menu_items %}
-                          {% if item.children %}
-                            <div class="vh-sb__parent">
-                              <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
-                                <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                                <span class="vh-sb__label">{{ item.label }}</span>
-                              </a>
-                              <div class="vh-sb__children">
-                                {% for child in item.children %}
-                                  <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                                    <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
-                                    <span class="vh-sb__label">{{ child.label }}</span>
-                                  </a>
-                                {% endfor %}
-                              </div>
-                            </div>
-                          {% else %}
-                            <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
-                              <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                              <span class="vh-sb__label">{{ item.label }}</span>
-                              {% if item.badge %}
-                                <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
-                                  {{ item.badge }}
-                                </span>
-                              {% endif %}
-                            </a>
-                          {% endif %}
-                        {% endfor %}
-                      {% endwith %}
-                    {% else %}
-                      {% if financial_menu|default:False %}
-                        {% with menu_items=financial_menu %}
-                          {% for item in menu_items %}
-                            {% if item.children %}
-                              <div class="vh-sb__parent">
-                                <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
-                                  <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                                  <span class="vh-sb__label">{{ item.label }}</span>
-                                </a>
-                                <div class="vh-sb__children">
-                                  {% for child in item.children %}
-                                    <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                                      <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
-                                      <span class="vh-sb__label">{{ child.label }}</span>
-                                    </a>
-                                  {% endfor %}
-                                </div>
-                              </div>
-                            {% else %}
-                              <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
-                                <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                                <span class="vh-sb__label">{{ item.label }}</span>
-                                {% if item.badge %}
-                                  <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
-                                    {{ item.badge }}
-                                  </span>
-                                {% endif %}
-                              </a>
-                            {% endif %}
-                          {% endfor %}
-                        {% endwith %}
-                      {% else %}
-                        {% if litigation_sidebar_nav|default:False %}
-                          {% with menu_items=litigation_sidebar_nav %}
-                            {% for item in menu_items %}
-                              {% if item.children %}
-                                <div class="vh-sb__parent">
-                                  <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
-                                    <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                                    <span class="vh-sb__label">{{ item.label }}</span>
-                                  </a>
-                                  <div class="vh-sb__children">
-                                    {% for child in item.children %}
-                                      <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                                        <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
-                                        <span class="vh-sb__label">{{ child.label }}</span>
-                                      </a>
-                                    {% endfor %}
-                                  </div>
-                                </div>
-                              {% else %}
-                                <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
-                                  <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                                  <span class="vh-sb__label">{{ item.label }}</span>
-                                  {% if item.badge %}
-                                    <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
-                                      {{ item.badge }}
-                                    </span>
-                                  {% endif %}
-                                </a>
-                              {% endif %}
-                            {% endfor %}
-                          {% endwith %}
-                        {% else %}
-                          {% if archive_sidebar_nav|default:False %}
-                            {% with menu_items=archive_sidebar_nav %}
-                              {% for item in menu_items %}
-                                {% if item.children %}
-                                  <div class="vh-sb__parent">
-                                    <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
-                                      <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                                      <span class="vh-sb__label">{{ item.label }}</span>
-                                    </a>
-                                    <div class="vh-sb__children">
-                                      {% for child in item.children %}
-                                        <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                                          <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
-                                          <span class="vh-sb__label">{{ child.label }}</span>
-                                        </a>
-                                      {% endfor %}
-                                    </div>
-                                  </div>
-                                {% else %}
-                                  <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
-                                    <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                                    <span class="vh-sb__label">{{ item.label }}</span>
-                                    {% if item.badge %}
-                                      <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
-                                        {{ item.badge }}
-                                      </span>
-                                    {% endif %}
-                                  </a>
-                                {% endif %}
-                              {% endfor %}
-                            {% endwith %}
-                          {% else %}
-                            {% if production_management_menu|default:False %}
-                              {% with menu_items=production_management_menu %}
-                                {% for item in menu_items %}
-                                  {% if item.children %}
-                                    <div class="vh-sb__parent">
-                                      <a href="{{ item.url|default:'#' }}" class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}">
-                                        <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                                        <span class="vh-sb__label">{{ item.label }}</span>
-                                      </a>
-                                      <div class="vh-sb__children">
-                                        {% for child in item.children %}
-                                          <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                                            <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
-                                            <span class="vh-sb__label">{{ child.label }}</span>
-                                          </a>
-                                        {% endfor %}
-                                      </div>
-                                    </div>
-                                  {% else %}
-                                    <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
-                                      <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
-                                      <span class="vh-sb__label">{{ item.label }}</span>
-                                      {% if item.badge %}
-                                        <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
-                                          {{ item.badge }}
-                                        </span>
-                                      {% endif %}
-                                    </a>
-                                  {% endif %}
-                                {% endfor %}
-                              {% endwith %}
-                            {% endif %}
-                          {% endif %}
-                        {% endif %}
-                      {% endif %}
-                    {% endif %}
-                  {% endif %}
-                {% endif %}
+              </div>
+            </div>
+          {% else %}
+            <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
+              <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
+              <span class="vh-sb__label">{{ item.label }}</span>
+              {% if item.badge %}
+                <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
+                  {{ item.badge }}
+                </span>
               {% endif %}
-            {% endif %}
+            </a>
           {% endif %}
-        {% endif %}
+        {% endfor %}
+      {% else %}
+        <a href="/" class="vh-sb__item is-active">
+          <span class="vh-sb__icon">▣</span>
+          <span class="vh-sb__label">首页</span>
+        </a>
       {% endif %}
-    {% else %}
-      <div class="vh-sb__item is-active">
-        <span class="vh-sb__icon">▣</span>
-        <span class="vh-sb__label">首页</span>
-      </div>
-    {% endif %}
+    {% endwith %}
 
     {% block sidebar_nav_extra %}{% endblock %}
   </nav>

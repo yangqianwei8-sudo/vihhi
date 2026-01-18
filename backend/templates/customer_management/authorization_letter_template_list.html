@@ -1,26 +1,79 @@
-{% extends "customer_management/_base.html" %}
-{% load static %}
+{% extends "shared/list_page_base.html" %}
 
-{% block pm_title %}{{ page_title }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">{{ description }}</span>{% endblock %}
+{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
 
-{% block pm_actions %}
-<a href="{% url 'business_pages:authorization_letter_template_create' %}" class="list-btn list-btn-primary">
-  新建模板
-</a>
-{% endblock %}
+
+
+{% block list_filters_content %}
+  <div class="col-md-3">
+    <label class="form-label">模板类型</label>
+    <select name="template_type" class="list-filter-input">
+        <option value="">全部类型</option>
+        {% for value, label in template_type_choices %}
+        <option value="{{ value }}" {% if template_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">状态</label>
+    <select name="status" class="list-filter-input">
+        <option value="">全部状态</option>
+        {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+{% endblock list_filters_content %}
+{% block list_table_headers %}
+<th>模板名称</th>
+        <th>模板类型</th>
+        <th>分类</th>
+        <th>状态</th>
+        <th>使用次数</th>
+        <th>创建人</th>
+        <th>创建时间</th>
+        <th>操作</th>
+{% endblock list_table_headers %}
+{% block list_table_rows %}
+{% for template in page_obj %}
+      <tr>
+        <td><strong>{{ template.template_name }}</strong></td>
+        <td>{{ template.get_template_type_display }}</td>
+        <td>{{ template.category|default:"--" }}</td>
+        <td>
+          <span class="list-badge list-badge-{{ template.status }}">
+            {{ template.get_status_display }}
+          </span>
+        </td>
+        <td>{{ template.usage_count }}</td>
+        <td>{{ template.created_by.get_full_name|default:template.created_by.username }}</td>
+        <td>{{ template.created_time|date:"Y-m-d H:i" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'business_pages:authorization_letter_create_from_template' template.id %}" class="list-btn" title="使用模板创建委托书">使用</a>
+            <a href="{% url 'business_pages:authorization_letter_template_edit' template.id %}" class="list-btn" title="编辑">编辑</a>
+            {% if template.template_file %}
+            <a href="{% url 'business_pages:authorization_letter_template_file_preview' template.id %}" target="_blank" class="list-btn" title="预览文件">预览</a>
+            <a href="{% url 'business_pages:authorization_letter_template_file_download' template.id %}" class="list-btn" title="下载文件">下载</a>
+            {% endif %}
+            <a href="{% url 'business_pages:authorization_letter_template_delete' template.id %}" class="list-btn" title="删除">删除</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无模板数据</div>
+          <div class="list-empty-hint">请创建第一个模板开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-<style>
-  /* 模板状态badge样式 */
-  .list-badge-draft { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
-  .list-badge-active { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
-  .list-badge-archived { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-</style>
-{% endblock %}
 
-{% block pm_content %}
-  {% include "customer_management/_partials/_authorization_letter_template_filters.html" %}
-  {% include "customer_management/_partials/_authorization_letter_template_table.html" %}
-{% endblock %}
+{% endblock extra_css %}
+
+
+

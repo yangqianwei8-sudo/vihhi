@@ -1,20 +1,265 @@
-{% extends "customer_management/_base.html" %}
+{% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block pm_actions %}
-{% if can_create %}
-<a href="{% url 'business_pages:customer_create' %}" class="list-btn list-btn-primary">
-  新增客户
-</a>
-{% endif %}
+{% block list_page_title %}
+<div class="d-flex justify-content-between align-items-center w-100">
+  <span>客户列表</span>
+  {% if can_create %}
+  <a href="{% url 'business_pages:customer_create' %}" class="list-btn list-btn-primary">创建客户</a>
+  {% endif %}
+</div>
 {% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+{% block list_page_subtitle_content %}查看和管理所有客户信息{% endblock %}
+
+{% block list_stats_content %}
+  <div class="row g-3">
+    {% if summary_cards %}
+      {% for card in summary_cards %}
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">{{ card.label }}</div>
+          <div class="list-stat-value">{{ card.value|default:0 }}</div>
+          {% if card.hint %}
+          <div class="list-stat-hint">{{ card.hint }}</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">客户总数</div>
+          <div class="list-stat-value">{{ page_obj.paginator.count|default:0 }}</div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
 {% endblock %}
 
-{% block pm_content %}
-  {% include "customer_management/_partials/_customer_filters.html" %}
-  {% include "customer_management/_partials/_customer_table.html" %}
+{% block list_filters_content %}
+  {# 搜索字段 #}
+  <div class="col-md-3">
+    <label class="form-label">搜索</label>
+    <div class="input-group">
+      <select name="search_field" class="form-select" style="max-width: 120px;">
+        <option value="name" {% if search_field == 'name' %}selected{% endif %}>客户名称</option>
+        <option value="phone" {% if search_field == 'phone' %}selected{% endif %}>电话</option>
+        <option value="wechat" {% if search_field == 'wechat' %}selected{% endif %}>微信</option>
+        <option value="address" {% if search_field == 'address' %}selected{% endif %}>地址</option>
+        <option value="unified_credit_code" {% if search_field == 'unified_credit_code' %}selected{% endif %}>统一信用代码</option>
+      </select>
+      <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="请输入关键词">
+    </div>
+  </div>
 
+  {# 客户等级 #}
+  <div class="col-md-2">
+    <label class="form-label">客户等级</label>
+    <select name="client_level" class="form-select">
+      <option value="">全部</option>
+      {% for value, label in client_level_choices %}
+      <option value="{{ value }}" {% if client_level == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  {# 客户类型 #}
+  <div class="col-md-2">
+    <label class="form-label">客户类型</label>
+    <select name="client_type" class="form-select">
+      <option value="">全部</option>
+      {% for id, name in client_type_choices %}
+      <option value="{{ id }}" {% if client_type == id|stringformat:"s" %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  {# 信用等级 #}
+  <div class="col-md-2">
+    <label class="form-label">信用等级</label>
+    <select name="credit_level" class="form-select">
+      <option value="">全部</option>
+      {% for value, label in credit_level_choices %}
+      <option value="{{ value }}" {% if credit_level == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  {# 负责人 #}
+  <div class="col-md-2">
+    <label class="form-label">负责人</label>
+    <select name="responsible_user" class="form-select">
+      <option value="">全部</option>
+      {% for user in users %}
+      <option value="{{ user.id }}" {% if responsible_user_id == user.id|stringformat:"s" %}selected{% endif %}>
+        {{ user.get_full_name|default:user.username }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  {# 是否活跃 #}
+  <div class="col-md-2">
+    <label class="form-label">状态</label>
+    <select name="is_active" class="form-select">
+      <option value="">全部</option>
+      <option value="1" {% if is_active == '1' %}selected{% endif %}>活跃</option>
+      <option value="0" {% if is_active == '0' %}selected{% endif %}>非活跃</option>
+    </select>
+  </div>
+
+  {# 来源 #}
+  <div class="col-md-2">
+    <label class="form-label">来源</label>
+    <select name="source" class="form-select">
+      <option value="">全部</option>
+      {% for value, label in source_choices %}
+      <option value="{{ value }}" {% if source == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  {# 行业 #}
+  <div class="col-md-2">
+    <label class="form-label">行业</label>
+    <input type="text" name="industry" class="form-control" value="{{ industry }}" placeholder="请输入行业">
+  </div>
+
+  {# 地区 #}
+  <div class="col-md-2">
+    <label class="form-label">地区</label>
+    <input type="text" name="region" class="form-control" value="{{ region }}" placeholder="请输入地区">
+  </div>
+
+  {# 审批状态 #}
+  <div class="col-md-2">
+    <label class="form-label">审批状态</label>
+    <select name="approval_status" class="form-select">
+      {% for value, label in approval_status_choices %}
+      <option value="{{ value }}" {% if approval_status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  {# 日期范围 #}
+  <div class="col-md-2">
+    <label class="form-label">创建时间</label>
+    <select name="date_range" class="form-select" id="date_range">
+      <option value="">全部</option>
+      <option value="today" {% if date_range == 'today' %}selected{% endif %}>今天</option>
+      <option value="yesterday" {% if date_range == 'yesterday' %}selected{% endif %}>昨天</option>
+      <option value="this_week" {% if date_range == 'this_week' %}selected{% endif %}>本周</option>
+      <option value="last_week" {% if date_range == 'last_week' %}selected{% endif %}>上周</option>
+      <option value="this_month" {% if date_range == 'this_month' %}selected{% endif %}>本月</option>
+      <option value="last_month" {% if date_range == 'last_month' %}selected{% endif %}>上月</option>
+      <option value="custom" {% if date_range == 'custom' %}selected{% endif %}>自定义</option>
+    </select>
+  </div>
+
+  {# 自定义日期范围 #}
+  <div class="col-md-3" id="custom_date_range" style="display: {% if date_range == 'custom' %}block{% else %}none{% endif %};">
+    <label class="form-label">开始日期</label>
+    <input type="date" name="created_time_start" class="form-control" value="{{ created_time_start }}">
+  </div>
+  <div class="col-md-3" id="custom_date_range_end" style="display: {% if date_range == 'custom' %}block{% else %}none{% endif %};">
+    <label class="form-label">结束日期</label>
+    <input type="date" name="created_time_end" class="form-control" value="{{ created_time_end }}">
+  </div>
+{% endblock %}
+
+{% block list_table_section %}
+  {# 操作栏 #}
+  <div class="list-action-bar mb-2">
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="text-muted small">
+        共 <strong>{{ page_obj.paginator.count|default:0 }}</strong> 条记录
+      </div>
+    </div>
+  </div>
+
+  {# 表格 #}
+  {{ block.super }}
+{% endblock %}
+
+{% block list_table_headers %}
+<th>客户名称</th>
+<th>统一信用代码</th>
+<th>客户等级</th>
+<th>客户类型</th>
+<th>信用等级</th>
+<th>负责人</th>
+<th>创建时间</th>
+<th>操作</th>
+{% endblock %}
+
+{% block list_table_rows %}
+{% for client in page_obj %}
+<tr>
+  <td>
+    <a href="{% url 'business_pages:customer_detail' client.id %}">
+      {{ client.name }}
+    </a>
+  </td>
+  <td><code>{{ client.unified_credit_code|default:"未填写" }}</code></td>
+  <td>
+    <span class="badge bg-secondary">{{ client.get_client_level_display }}</span>
+  </td>
+  <td>{{ client.get_client_type_display|default:"未填写" }}</td>
+  <td>
+    <span class="badge bg-secondary">{{ client.get_credit_level_display }}</span>
+  </td>
+  <td>
+    {% if client.responsible_user %}
+    {{ client.responsible_user.get_full_name|default:client.responsible_user.username }}
+    {% else %}
+    <span class="text-muted">公海</span>
+    {% endif %}
+  </td>
+  <td>{{ client.created_time|date:"Y-m-d" }}</td>
+  <td>
+    <div class="btn-group btn-group-sm">
+      <a href="{% url 'business_pages:customer_detail' client.id %}" class="btn btn-outline-primary" title="查看">
+        <i class="bi bi-eye"></i>
+      </a>
+      {% if client.can_edit %}
+      <a href="{% url 'business_pages:customer_edit' client.id %}" class="btn btn-outline-secondary" title="编辑">
+        <i class="bi bi-pencil"></i>
+      </a>
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="8" class="list-empty-state">
+    <div class="list-empty-state-icon">📋</div>
+    <div class="list-empty-state-text">暂无客户数据</div>
+    <div class="list-empty-state-hint">请创建第一个客户开始使用</div>
+  </td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{% block module_extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // 日期范围选择器联动
+  const dateRangeSelect = document.getElementById('date_range');
+  const customDateRange = document.getElementById('custom_date_range');
+  const customDateRangeEnd = document.getElementById('custom_date_range_end');
+  
+  if (dateRangeSelect) {
+    dateRangeSelect.addEventListener('change', function() {
+      if (this.value === 'custom') {
+        customDateRange.style.display = 'block';
+        customDateRangeEnd.style.display = 'block';
+      } else {
+        customDateRange.style.display = 'none';
+        customDateRangeEnd.style.display = 'none';
+      }
+    });
+  }
+});
+</script>
 {% endblock %}

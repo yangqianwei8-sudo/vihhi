@@ -603,23 +603,23 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        context['archive_sidebar_nav'] = _build_archive_sidebar_nav(permission_set, request.path)
+        context['sidebar_nav'] = _build_archive_sidebar_nav(permission_set, request.path)
     else:
         context['full_top_nav'] = []
-        context['archive_sidebar_nav'] = []
+        context['sidebar_nav'] = []
     
     # 为所有可能的侧边栏变量设置默认值，避免模板错误
     # 这些变量可能在其他模块的模板中被引用
     context.setdefault('plan_menu', [])
     context.setdefault('module_sidebar_nav', [])
-    context.setdefault('delivery_sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     context.setdefault('customer_menu', [])
-    context.setdefault('production_sidebar_nav', [])
-    context.setdefault('personnel_sidebar_nav', [])
-    context.setdefault('sidebar_menu', [])
-    context.setdefault('financial_menu', [])
-    context.setdefault('litigation_sidebar_nav', [])
-    context.setdefault('production_management_menu', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     
     return context
 
@@ -892,8 +892,7 @@ def archive_management_home(request):
     
     # 设置侧边栏导航
     archive_sidebar_nav = _build_archive_sidebar_nav(permission_set, request.path, active_id='archive_home')
-    page_context['archive_sidebar_nav'] = archive_sidebar_nav
-    page_context['module_sidebar_nav'] = archive_sidebar_nav
+    page_context['sidebar_nav'] = archive_sidebar_nav
     page_context['sidebar_title'] = '档案管理'
     page_context['sidebar_subtitle'] = 'Archive Management'
     

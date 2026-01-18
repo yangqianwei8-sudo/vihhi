@@ -1,42 +1,181 @@
-{% extends "litigation_management/_base.html" %}
+{% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block pm_title %}案件列表{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">管理所有诉讼案件</span>{% endblock %}
 
-{% block pm_actions %}
-{% if perms.litigation_management.case.view %}
-<a href="{% url 'litigation_pages:case_list_export' %}?{{ request.GET.urlencode }}" class="list-btn" style="margin-right: 8px;">
-  导出Excel
-</a>
-{% endif %}
-{% if perms.litigation_management.case.create %}
-<button type="button" class="list-btn list-btn-primary" data-bs-toggle="modal" data-bs-target="#createCaseModal">
-  案件登记
-</button>
-{% endif %}
-{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-<style>
-  .list-badge-pending { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
-  .list-badge-filed { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-trial { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-judged { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
-  .list-badge-executing { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
-  .list-badge-closed { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
-  .list-badge-withdrawn { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-  .list-badge-settled { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-  .list-badge-urgent { background: #FFE5E5; color: #CC0000; border-color: #FF9999; }
-  .list-badge-high { background: #FFF4E5; color: #CC6600; border-color: #FFCC99; }
-  .list-badge-medium { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-low { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-</style>
-{% endblock %}
 
-{% block pm_content %}
-  {% include "litigation_management/_partials/_case_stats.html" %}
-  {% include "litigation_management/_partials/_case_filters.html" %}
-  {% include "litigation_management/_partials/_case_table.html" %}
-{% endblock %}
+
+{% block list_table_rows %}
+{% for case in cases %}
+      <tr>
+        <td>
+          <a href="{% url 'litigation_pages:case_detail' case.id %}">
+            <code>{{ case.case_number }}</code>
+          </a>
+        </td>
+        <td>{{ case.case_name|truncatewords:10 }}</td>
+        <td>
+          <span class="list-badge">{{ case.get_case_type_display }}</span>
+        </td>
+        <td>
+          <span class="list-badge">{{ case.get_case_nature_display }}</span>
+        </td>
+        <td>
+          {% if case.status == 'pending_filing' %}
+            <span class="list-badge list-badge-pending">待立案</span>
+          {% elif case.status == 'filed' %}
+            <span class="list-badge list-badge-filed">已立案</span>
+          {% elif case.status == 'trial' %}
+            <span class="list-badge list-badge-trial">审理中</span>
+          {% elif case.status == 'judged' %}
+            <span class="list-badge list-badge-judged">已判决</span>
+          {% elif case.status == 'executing' %}
+            <span class="list-badge list-badge-executing">执行中</span>
+          {% elif case.status == 'closed' %}
+            <span class="list-badge list-badge-closed">已结案</span>
+          {% elif case.status == 'withdrawn' %}
+            <span class="list-badge list-badge-withdrawn">已撤诉</span>
+          {% elif case.status == 'settled' %}
+            <span class="list-badge list-badge-settled">已和解</span>
+          {% else %}
+            <span class="list-badge">{{ case.get_status_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if case.priority == 'urgent' %}
+            <span class="list-badge list-badge-urgent">紧急</span>
+          {% elif case.priority == 'high' %}
+            <span class="list-badge list-badge-high">高</span>
+          {% elif case.priority == 'medium' %}
+            <span class="list-badge list-badge-medium">中</span>
+          {% else %}
+            <span class="list-badge list-badge-low">低</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if case.case_manager %}
+            {{ case.case_manager.get_full_name|default:case.case_manager.username }}
+          {% else %}
+            <span style="color: #999999;">未分配</span>
+          {% endif %}
+        </td>
+        <td>{{ case.registration_date|date:"Y-m-d"|default:"-" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'litigation_pages:case_detail' case.id %}" class="list-btn" title="查看">查看</a>
+            {% if perms.litigation_management.case.edit %}
+            <a href="{% url 'litigation_pages:case_edit' case.id %}" class="list-btn" title="编辑">编辑</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无案件数据</div>
+          <div class="list-empty-hint">请创建第一个案件记录开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}
+{% block list_table_headers %}
+<th>案件编号</th>
+<th>案件名称</th>
+<th>案件类型</th>
+<th>案件性质</th>
+<th>状态</th>
+<th>优先级</th>
+<th>案件负责人</th>
+<th>登记日期</th>
+<th>操作</th>
+{% endblock list_table_headers %}
+{% block list_page_title %}案件列表 - 诉讼管理{% endblock list_page_title %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'litigation_pages:case_list' %}">诉讼管理</a></li>
+<li class="breadcrumb-item active" aria-current="page">案件列表</li>
+{% endblock breadcrumb_items %}
+
+
+    {% endif %}
+</div>
+
+<script>
+// 案件登记表单提交处理
+document.addEventListener('DOMContentLoaded', function() {
+    const createCaseForm = document.getElementById('createCaseModalForm');
+    if (createCaseForm) {
+        createCaseForm.addEventListener('submit', function(e) {
+            e.preventDefault(); // 阻止默认表单提交
+            
+            const formData = new FormData(this);
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton ? submitButton.innerHTML : '';
+            
+            // 显示加载状态
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>提交中...';
+            }
+            
+            // 发送AJAX请求
+            fetch(this.action, {
+                method: this.method,
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 显示成功消息
+                    alert(data.message || '案件创建成功！');
+                    
+                    // 关闭弹窗
+                    const modalElement = document.getElementById('createCaseModal');
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // 刷新页面以显示新案件
+                    window.location.reload();
+                } else {
+                    // 显示错误消息
+                    alert('案件创建失败：' + (data.message || '请检查输入信息'));
+                    
+                    // 恢复提交按钮
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalText;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('案件创建失败，请稍后再试。');
+                
+                // 恢复提交按钮
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalText;
+                }
+            });
+        });
+        
+        // 弹窗关闭时重置表单
+        const createCaseModal = document.getElementById('createCaseModal');
+        if (createCaseModal) {
+            createCaseModal.addEventListener('hidden.bs.modal', function() {
+                createCaseForm.reset();
+                // 清除表单验证状态
+                const invalidFields = createCaseForm.querySelectorAll('.is-invalid');
+                invalidFields.forEach(field => field.classList.remove('is-invalid'));
+            });
+        }
+    }
+});
+</script>
+{% endblock list_page_title %}

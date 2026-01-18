@@ -411,23 +411,23 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
         
         # 添加左侧菜单
         request_path = request.path
-        context['litigation_sidebar_nav'] = _build_litigation_sidebar_nav(permission_set, request_path)
+        context['sidebar_nav'] = _build_litigation_sidebar_nav(permission_set, request_path)
     else:
         context['full_top_nav'] = []
-        context['litigation_sidebar_nav'] = []
+        context['sidebar_nav'] = []
     
     # 为所有可能的侧边栏变量设置默认值，避免模板错误
     # 这些变量可能在其他模块的模板中被引用
     context.setdefault('plan_menu', [])
     context.setdefault('module_sidebar_nav', [])
-    context.setdefault('delivery_sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     context.setdefault('customer_menu', [])
-    context.setdefault('production_sidebar_nav', [])
-    context.setdefault('personnel_sidebar_nav', [])
-    context.setdefault('sidebar_menu', [])
-    context.setdefault('financial_menu', [])
-    context.setdefault('archive_sidebar_nav', [])
-    context.setdefault('production_management_menu', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     
     return context
 
@@ -732,8 +732,7 @@ def litigation_home(request):
     
     # 设置侧边栏导航
     litigation_sidebar_nav = _build_litigation_sidebar_nav(permission_codes, request.path, active_id='litigation_home')
-    page_context['litigation_sidebar_nav'] = litigation_sidebar_nav
-    page_context['module_sidebar_nav'] = litigation_sidebar_nav
+    page_context['sidebar_nav'] = litigation_sidebar_nav
     page_context['sidebar_title'] = '诉讼管理'
     page_context['sidebar_subtitle'] = 'Litigation Management'
     

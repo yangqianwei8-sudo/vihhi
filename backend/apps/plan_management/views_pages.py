@@ -333,22 +333,13 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        context['module_sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, request.path)
+        context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, request.path)
+        # 添加侧边栏标题（计划管理模块）
+        context['sidebar_title'] = '计划管理'
+        context['sidebar_subtitle'] = 'Plan Management'
     else:
         context['full_top_nav'] = []
-        context['module_sidebar_nav'] = []
-    
-    # 为所有可能的侧边栏变量设置默认值，避免模板错误
-    # 这些变量可能在其他模块的模板中被引用
-    context.setdefault('delivery_sidebar_nav', [])
-    context.setdefault('customer_menu', [])
-    context.setdefault('production_sidebar_nav', [])
-    context.setdefault('personnel_sidebar_nav', [])
-    context.setdefault('sidebar_menu', [])
-    context.setdefault('financial_menu', [])
-    context.setdefault('litigation_sidebar_nav', [])
-    context.setdefault('archive_sidebar_nav', [])
-    context.setdefault('production_management_menu', [])
+        context['sidebar_nav'] = []
     
     return context
 
@@ -493,6 +484,211 @@ def plan_management_home(request):
     
     context['top_actions'] = top_actions
     
+    # ========== 安全字段检查（统一获取，避免重复）==========
+    plan_fields = {f.name for f in Plan._meta.get_fields()}
+    goal_fields = {f.name for f in StrategicGoal._meta.get_fields()}
+    
+    # ========== 计划状态分布（用于图表）==========
+    plan_filter_kwargs = {}
+    if 'level' in plan_fields:
+        plan_filter_kwargs['level'] = 'personal'
+    if 'owner' in plan_fields:
+        plan_filter_kwargs['owner'] = request.user
+    
+    user_plans_qs = Plan.objects.filter(**plan_filter_kwargs) if plan_filter_kwargs else Plan.objects.none()
+    plan_status_rows = user_plans_qs.values('status').annotate(count=Count('id')) if plan_filter_kwargs else []
+    
+    # 兼容：拿到"状态码 -> 显示名"的映射
+    plan_status_label_map = {}
+    try:
+        # Django choices 常见写法：STATUS_CHOICES = [(code,label),...]
+        for code, label in getattr(Plan, 'STATUS_CHOICES', Plan._meta.get_field('status').choices):
+            plan_status_label_map[code] = label
+    except Exception:
+        # 兜底：没有 choices 就用原值
+        plan_status_label_map = {}
+    
+    plan_status_dist = {}
+    for row in plan_status_rows:
+        code = row['status']
+        cnt = row['count']
+        plan_status_dist[str(code)] = {
+            'label': plan_status_label_map.get(code, str(code)),
+            'count': cnt
+        }
+    context['plan_status_dist'] = plan_status_dist or None
+    
+    # ========== 目标状态分布（用于图表）==========
+    goal_filter_kwargs = {}
+    if 'level' in goal_fields:
+        goal_filter_kwargs['level'] = 'personal'
+    if 'owner' in goal_fields:
+        goal_filter_kwargs['owner'] = request.user
+    
+    user_goals_qs = StrategicGoal.objects.filter(**goal_filter_kwargs) if goal_filter_kwargs else StrategicGoal.objects.none()
+    goal_status_rows = user_goals_qs.values('status').annotate(count=Count('id')) if goal_filter_kwargs else []
+    
+    goal_status_label_map = {}
+    try:
+        for code, label in getattr(StrategicGoal, 'STATUS_CHOICES', StrategicGoal._meta.get_field('status').choices):
+            goal_status_label_map[code] = label
+    except Exception:
+        goal_status_label_map = {}
+    
+    goal_status_dist = {}
+    for row in goal_status_rows:
+        code = row['status']
+        cnt = row['count']
+        goal_status_dist[str(code)] = {
+            'label': goal_status_label_map.get(code, str(code)),
+            'count': cnt
+        }
+    context['goal_status_dist'] = goal_status_dist or None
+    
+    # ========== 我的工作 ==========
+    my_work = {}
+    
+    # 我负责的计划（安全字段检查）
+    plan_related_fields = []
+    if 'responsible_person' in plan_fields:
+        plan_related_fields.append('responsible_person')
+    if 'related_goal' in plan_fields:
+        plan_related_fields.append('related_goal')
+    
+    my_plans_qs = Plan.objects.filter(responsible_person=request.user).order_by('-updated_time') if 'responsible_person' in plan_fields else Plan.objects.none()
+    my_plans = my_plans_qs.select_related(*plan_related_fields)[:5] if plan_related_fields and my_plans_qs else []
+    my_work['my_plans'] = [{
+        'title': p.name,
+        'status': p.get_status_display() if hasattr(p, 'get_status_display') else str(getattr(p, 'status', '')),
+        'progress': getattr(p, 'progress', 0) or 0,
+        'url': reverse('plan_pages:plan_detail', args=[p.id])
+    } for p in my_plans]
+    my_work['my_plans_count'] = my_plans_qs.count()
+    
+    # 我负责的目标（安全字段检查）
+    goal_related_fields = []
+    if 'responsible_person' in goal_fields:
+        goal_related_fields.append('responsible_person')
+    if 'parent_goal' in goal_fields:
+        goal_related_fields.append('parent_goal')
+    
+    my_goals_qs = StrategicGoal.objects.filter(responsible_person=request.user).order_by('-updated_time') if 'responsible_person' in goal_fields else StrategicGoal.objects.none()
+    my_goals = my_goals_qs.select_related(*goal_related_fields)[:5] if goal_related_fields and my_goals_qs else []
+    my_work['my_goals'] = [{
+        'title': g.name,
+        'status': g.get_status_display() if hasattr(g, 'get_status_display') else str(getattr(g, 'status', '')),
+        'completion_rate': float(getattr(g, 'completion_rate', 0) or 0),
+        'url': reverse('plan_pages:strategic_goal_detail', args=[g.id])
+    } for g in my_goals]
+    my_work['my_goals_count'] = my_goals_qs.count()
+    
+    # 我参与的计划（仅当 participants 字段存在才统计，避免 FieldError）
+    participating_plans = []
+    participating_plans_count = 0
+    if 'participants' in plan_fields:
+        participating_qs = Plan.objects.filter(participants=request.user).exclude(responsible_person=request.user).distinct().order_by('-updated_time')
+        participating_plans = [{
+            'title': p.name,
+            'role': '参与者',
+            'progress': getattr(p, 'progress', 0) or 0,
+            'url': reverse('plan_pages:plan_detail', args=[p.id])
+        } for p in participating_qs[:5]]
+        participating_plans_count = participating_qs.count()
+    
+    my_work['participating_plans'] = participating_plans
+    my_work['participating_plans_count'] = participating_plans_count
+    
+    context['my_work'] = my_work
+    
+    # ========== 最近活动 ==========
+    recent_activities = {}
+    
+    # 最近创建的计划（个人计划，安全字段检查）
+    plan_filter_kwargs = {}
+    if 'level' in plan_fields:
+        plan_filter_kwargs['level'] = 'personal'
+    if 'owner' in plan_fields:
+        plan_filter_kwargs['owner'] = request.user
+    
+    plan_related_fields = []
+    if 'created_by' in plan_fields:
+        plan_related_fields.append('created_by')
+    if 'responsible_person' in plan_fields:
+        plan_related_fields.append('responsible_person')
+    
+    recent_plans_qs = Plan.objects.filter(**plan_filter_kwargs) if plan_filter_kwargs else Plan.objects.none()
+    recent_plans = recent_plans_qs.select_related(*plan_related_fields).order_by('-created_time')[:5] if plan_related_fields and recent_plans_qs else []
+    recent_activities['recent_plans'] = [{
+        'title': p.name,
+        'creator': (p.created_by.get_full_name() if getattr(p, 'created_by', None) else '系统'),
+        'time': getattr(p, 'created_time', None),
+        'url': reverse('plan_pages:plan_detail', args=[p.id])
+    } for p in recent_plans]
+    
+    # 最近更新的目标（个人目标，安全字段检查）
+    goal_filter_kwargs = {}
+    if 'level' in goal_fields:
+        goal_filter_kwargs['level'] = 'personal'
+    if 'owner' in goal_fields:
+        goal_filter_kwargs['owner'] = request.user
+    
+    goal_related_fields = []
+    if 'created_by' in goal_fields:
+        goal_related_fields.append('created_by')
+    if 'responsible_person' in goal_fields:
+        goal_related_fields.append('responsible_person')
+    if 'parent_goal' in goal_fields:
+        goal_related_fields.append('parent_goal')
+    
+    recent_goals_qs = StrategicGoal.objects.filter(**goal_filter_kwargs) if goal_filter_kwargs else StrategicGoal.objects.none()
+    recent_goals = recent_goals_qs.select_related(*goal_related_fields).order_by('-updated_time')[:5] if goal_related_fields and recent_goals_qs else []
+    recent_activities['recent_goals'] = [{
+        'title': g.name,
+        'updater': (
+            g.responsible_person.get_full_name() if getattr(g, 'responsible_person', None)
+            else (g.created_by.get_full_name() if getattr(g, 'created_by', None) else '系统')
+        ),
+        'time': getattr(g, 'updated_time', None),
+        'completion_rate': float(getattr(g, 'completion_rate', 0) or 0),
+        'url': reverse('plan_pages:strategic_goal_detail', args=[g.id])
+    } for g in recent_goals]
+    
+    # 最近审批记录（如果 PlanDecision 存在才查；避免 import/模型不存在直接炸）
+    recent_activities['recent_approvals'] = []
+    try:
+        from .models import PlanDecision  # 如果不在同 app，这里会 ImportError
+        # 安全字段检查
+        decision_fields = {f.name for f in PlanDecision._meta.get_fields()}
+        decision_related_fields = []
+        if 'plan' in decision_fields:
+            decision_related_fields.append('plan')
+        if 'decided_by' in decision_fields:
+            decision_related_fields.append('decided_by')
+        
+        # 检查 plan__created_by 关系是否存在
+        has_plan_created_by = 'plan' in decision_fields and hasattr(PlanDecision._meta.get_field('plan'), 'related_model')
+        filter_kwargs = {}
+        if has_plan_created_by:
+            plan_model = PlanDecision._meta.get_field('plan').related_model
+            if plan_model and 'created_by' in {f.name for f in plan_model._meta.get_fields()}:
+                filter_kwargs['plan__created_by'] = request.user
+        
+        recent_approvals_qs = PlanDecision.objects.filter(**filter_kwargs) if filter_kwargs else PlanDecision.objects.none()
+        recent_approvals = recent_approvals_qs.select_related(*decision_related_fields).order_by('-requested_at')[:5] if decision_related_fields and recent_approvals_qs else []
+        
+        recent_activities['recent_approvals'] = [{
+            'plan_title': (a.plan.name if getattr(a, 'plan', None) else '未知计划'),
+            'approver': (a.decided_by.get_full_name() if getattr(a, 'decided_by', None) else '待审批'),
+            'result': (a.get_decision_display() if hasattr(a, 'get_decision_display') else str(getattr(a, 'decision', '待审批'))),
+            'time': getattr(a, 'decided_at', None) or getattr(a, 'requested_at', None),
+            'url': (reverse('plan_pages:plan_detail', args=[a.plan.id]) if getattr(a, 'plan', None) else '#')
+        } for a in recent_approvals]
+    except Exception:
+        # 没有审批模型/不在该 app，就跳过
+        pass
+    
+    context['recent_activities'] = recent_activities
+    
     # 构建上下文
     page_context = _context(
         page_title="计划管理",
@@ -506,8 +702,10 @@ def plan_management_home(request):
     # 合并所有数据
     page_context.update(context)
     
-    # 添加 plan_menu（与左侧栏同源，确保对齐）
-    page_context['plan_menu'] = _build_plan_management_menu(permission_codes, active_id='plan_home')
+    # 添加 sidebar_nav（与左侧栏同源，确保对齐）
+    page_context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_codes, request_path=request.path, active_id='plan_home')
+    page_context['sidebar_title'] = '计划管理'
+    page_context['sidebar_subtitle'] = 'Plan Management'
     
     return render(request, "plan_management/home.html", page_context)
 
@@ -641,13 +839,16 @@ def plan_list(request):
     )
     
     # 生成左侧菜单
-    context['plan_menu'] = _build_plan_management_menu(
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(
         permission_set,
+        request_path=request.path,
         active_id='plan_list'
     )
+    context['sidebar_title'] = '计划管理'
+    context['sidebar_subtitle'] = 'Plan Management'
     
     context.update({
-        'plans': page_obj,
+        'page_obj': page_obj,
         'total_count': total_count,
         'draft_count': draft_count,
         'in_progress_count': in_progress_count,
@@ -755,6 +956,12 @@ def strategic_goal_list(request):
     # 获取所有用户（用于筛选）
     all_users = User.objects.filter(is_active=True).order_by('username')
     
+    # 获取选择项数据（用于筛选下拉框）
+    status_options = StrategicGoal.STATUS_CHOICES
+    goal_type_choices = StrategicGoal.GOAL_TYPE_CHOICES
+    goal_period_choices = StrategicGoal.GOAL_PERIOD_CHOICES
+    level_choices = StrategicGoal.LEVEL_CHOICES
+    
     context = _context(
         "目标列表",
         "🎯",
@@ -763,13 +970,13 @@ def strategic_goal_list(request):
     )
     
     # 生成左侧菜单
-    context['plan_menu'] = _build_plan_management_menu(
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(
         permission_set,
         active_id='strategic_goal_list'
     )
     
     context.update({
-        'goals': page_obj,
+        'page_obj': page_obj,  # 使用 page_obj 以匹配新模板
         'total_count': total_count,
         'draft_count': draft_count,
         'published_count': published_count,
@@ -785,9 +992,13 @@ def strategic_goal_list(request):
         'responsible_filter': responsible_filter,
         'date_from': date_from,
         'date_to': date_to,
+        'status_options': status_options,
+        'goal_type_choices': goal_type_choices,
+        'goal_period_choices': goal_period_choices,
+        'level_choices': level_choices,
     })
     
-    return render(request, "goal_management/goal_list.html", context)
+    return render(request, "plan_management/strategic_goal_list.html", context)
 
 
 # ==================== 其他占位视图函数（待实现） ====================
@@ -830,7 +1041,7 @@ def plan_create(request):
             messages.error(request, '表单验证失败，请检查输入')
             # 关键：无效就回渲染，不要 redirect
             context = _context("创建计划", "➕", "创建新的工作计划", request=request)
-            context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_create')
+            context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_create')
             context['form'] = form
             context['page_title'] = "创建计划"
             context['submit_text'] = "创建"
@@ -844,7 +1055,7 @@ def plan_create(request):
         form = PlanForm(user=request.user)
     
     context = _context("创建计划", "➕", "创建新的工作计划", request=request)
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_create')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_create')
     context['form'] = form
     context['page_title'] = "创建计划"
     context['submit_text'] = "创建"
@@ -932,7 +1143,7 @@ def plan_detail(request, plan_id):
         plan.name,
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_list')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_list')
     
     # P1: 权限判断（围绕 decision 的裁决）
     # 允许草稿和已取消状态的计划提交审批
@@ -1101,7 +1312,7 @@ def plan_edit(request, plan_id):
                 "编辑工作计划",
                 request=request,
             )
-            context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_list')
+            context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_list')
             context['form'] = form
             context['plan'] = plan
             context['page_title'] = f"编辑计划 - {plan.name}"
@@ -1117,7 +1328,7 @@ def plan_edit(request, plan_id):
         "编辑工作计划",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_list')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_list')
     context['form'] = form
     context['plan'] = plan
     context['page_title'] = f"编辑计划 - {plan.name}"
@@ -1180,7 +1391,7 @@ def plan_decompose_entry(request):
         "选择要分解的计划",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_decompose')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_decompose')
     context.update({
         'plans': page_obj,
         'all_users': all_users,
@@ -1232,7 +1443,7 @@ def plan_decompose(request, plan_id):
         "将计划分解为子计划和任务",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_decompose')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_decompose')
     context.update({
         'plan': plan,
         'plan_tree': plan_tree,
@@ -1287,7 +1498,7 @@ def plan_goal_alignment(request, plan_id):
         "检查计划与战略目标的对齐情况",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_goal_alignment')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_goal_alignment')
     context.update({
         'plan': plan,
         'alignment_score': alignment_score,
@@ -1350,7 +1561,7 @@ def plan_approval_list(request):
         "待裁决的计划请求",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_approval')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_approval')
     context.update({
         "pending_decisions": pending_decisions,
         "can_approve": can_approve,
@@ -1489,7 +1700,7 @@ def plan_execution_track(request, plan_id):
         "跟踪计划的执行情况",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_execution_track')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_execution_track')
     context.update({
         'plan': plan,
         'progress_records': progress_records,
@@ -1546,7 +1757,7 @@ def plan_progress_update(request, plan_id):
         "更新计划执行进度",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_progress_update')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_progress_update')
     context['form'] = form
     context['plan'] = plan
     return render(request, "plan_management/plan_progress_update.html", context)
@@ -1605,7 +1816,7 @@ def plan_issue_list(request, plan_id):
         "管理计划执行中的问题",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_issue_list')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_issue_list')
     context.update({
         'plan': plan,
         'issues': issues,
@@ -1685,7 +1896,7 @@ def plan_complete(request, plan_id):
         "确认计划完成情况",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_complete')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_complete')
     context.update({
         'plan': plan,
         'progress_records': progress_records,
@@ -1734,7 +1945,7 @@ def strategic_goal_create(request):
             messages.error(request, '表单验证失败，请检查输入')
             # 关键：invalid 时回渲染，不要 redirect
             context = _context("创建战略目标", "➕", "创建新的战略目标", request=request)
-            context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_create')
+            context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_create')
             context['form'] = form
             context['page_title'] = "创建战略目标"
             context['submit_text'] = "创建"
@@ -1743,12 +1954,13 @@ def strategic_goal_create(request):
             context['full_width_fields'] = 'description,notes,background,significance'
             context['form_page_subtitle_text'] = '请填写目标基本信息'
             context['create_url_name'] = 'plan_pages:strategic_goal_create'
+            context['business_module'] = 'goal'  # 业务模块名称，用于表单编号生成
             return render(request, "goal_management/goal_form.html", context)
     else:
         form = StrategicGoalForm(user=request.user)
     
     context = _context("创建战略目标", "➕", "创建新的战略目标", request=request)
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_create')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_create')
     context['form'] = form
     context['page_title'] = "创建战略目标"
     context['submit_text'] = "创建"
@@ -1756,6 +1968,7 @@ def strategic_goal_create(request):
     context['form_js_file'] = 'js/goal_form_date_calculator.js'
     context['full_width_fields'] = 'description,notes,background,significance'
     context['form_page_subtitle_text'] = '请填写目标基本信息'
+    context['business_module'] = 'goal'  # 业务模块名称，用于表单编号生成
     return render(request, "goal_management/goal_form.html", context)
 
 
@@ -1879,7 +2092,7 @@ def strategic_goal_detail(request, goal_id):
         goal.name,
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_list')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_list')
     context.update({
         'goal': goal,
         'progress_records': progress_records,
@@ -1929,7 +2142,7 @@ def strategic_goal_edit(request, goal_id):
                 "编辑战略目标信息",
                 request=request,
             )
-            context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_create')
+            context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_create')
             context['form'] = form
             context['goal'] = goal
             context['page_title'] = "编辑战略目标"
@@ -1945,7 +2158,7 @@ def strategic_goal_edit(request, goal_id):
         "编辑战略目标信息",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_list')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_list')
     context['form'] = form
     context['goal'] = goal
     context['page_title'] = "编辑战略目标"
@@ -2019,7 +2232,7 @@ def strategic_goal_decompose(request, goal_id):
         "将战略目标分解为部门、团队、个人目标",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_decompose')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_decompose')
     context.update({
         'goal': goal,
         'goal_tree': goal_tree,
@@ -2071,7 +2284,7 @@ def strategic_goal_track_entry(request):
         "选择要跟踪的战略目标",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_track')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_track')
     context.update({
         'goals': all_goals,
         'trackable_goals': trackable_goals,
@@ -2204,7 +2417,7 @@ def strategic_goal_track(request, goal_id):
         "跟踪战略目标的执行进度",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_track')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_track')
     context.update({
         'goal': goal,
         'progress_records': progress_records,
@@ -2288,7 +2501,7 @@ def strategic_goal_delete(request, goal_id):
         "确认删除战略目标",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='strategic_goal_list')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_list')
     context['goal'] = goal
     context['can_delete'] = can_delete
     context['delete_warnings'] = delete_warnings
@@ -2357,7 +2570,7 @@ def plan_delete(request, plan_id):
         "确认删除计划",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_list')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_list')
     context['plan'] = plan
     context['can_delete'] = can_delete
     context['delete_warnings'] = delete_warnings
@@ -2508,7 +2721,7 @@ def plan_completion_analysis(request):
     }
     
     context = _context("完成分析", "📊", "分析计划的完成情况", request=request)
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_completion_analysis')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_completion_analysis')
     context.update({
         'total_count': total_count,
         'completed_count': completed_count,
@@ -2599,7 +2812,7 @@ def plan_goal_achievement(request):
     low_completion_goals = goals.filter(completion_rate__lt=50).order_by('completion_rate')[:10]
     
     context = _context("目标达成", "🎯", "分析战略目标的达成情况", request=request)
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_goal_achievement')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_goal_achievement')
     context.update({
         'total_count': total_count,
         'completed_count': completed_count,
@@ -2692,7 +2905,7 @@ def plan_statistics(request):
         })
     
     context = _context("计划统计", "📈", "统计计划相关数据", request=request)
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_statistics')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_statistics')
     context.update({
         'plan_total': plan_total,
         'plan_by_status': plan_by_status,
@@ -2947,7 +3160,7 @@ def plan_adjustment_create(request, plan_id):
         "申请调整计划截止时间",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_list')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_list')
     context['form'] = form
     context['plan'] = plan
     context['page_title'] = f"申请调整 - {plan.name}"
@@ -2998,7 +3211,7 @@ def plan_adjustment_list(request):
         "查看和管理计划调整申请",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_list')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_list')
     context['page_obj'] = page_obj
     context['status_filter'] = status_filter
     context['can_approve'] = can_approve
@@ -3062,7 +3275,7 @@ def plan_adjustment_approve(request, adjustment_id):
         "审批计划调整申请",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_list')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_list')
     context['adjustment'] = adjustment
     context['plan'] = plan
     
@@ -3106,7 +3319,7 @@ def plan_adjustment_reject(request, adjustment_id):
         "拒绝计划调整申请",
         request=request,
     )
-    context['plan_menu'] = _build_plan_management_menu(permission_set, active_id='plan_list')
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_list')
     context['adjustment'] = adjustment
     context['plan'] = plan
     

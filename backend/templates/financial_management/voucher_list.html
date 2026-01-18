@@ -1,35 +1,126 @@
-{% extends "financial_management/_base.html" %}
-{% load static %}
+{% extends "shared/list_page_base.html" %}
 
-{% block pm_title %}凭证管理{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">管理记账凭证</span>{% endblock %}
+{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
 
-{% block pm_actions %}
-{% if perms.financial_management.voucher.view %}
-<a href="{% url 'finance_pages:voucher_export' %}?{{ request.GET.urlencode }}" class="list-btn" style="margin-right: 8px;">
-  导出Excel
-</a>
-{% endif %}
-{% if perms.financial_management.voucher.create %}
-<a href="{% url 'finance_pages:voucher_create' %}" class="list-btn list-btn-primary">
-  新增凭证
-</a>
-{% endif %}
-{% endblock %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">凭证管理</li>
+{% endblock breadcrumb_items %}
+
+
+
+{% block list_stats_content %}
+<div class="row g-3">
+    <div class="col-md-2">
+      <div class="list-stat-card">
+    <div class="list-stat-label">凭证总数</div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+    <div class="list-stat-label">草稿</div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+    <div class="list-stat-label">已提交</div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+    <div class="list-stat-label">已审核</div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+    <div class="list-stat-label">已过账</div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+    <div class="list-stat-label">已拒绝</div>
+    </div>
+</div>
+{% endblock list_stats_content %}
+{% block list_filters_content %}
+  <div class="col-md-3">
+    <label class="form-label">状态</label>
+    <select name="status" class="list-filter-input">
+        <option value="" {% if not status %}selected{% endif %}>全部状态</option>
+        {% for code, label in status_choices %}
+        <option value="{{ code }}" {% if status == code or current_status == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+{% endblock list_filters_content %}
+{% block list_table_headers %}
+<th>凭证字号</th>
+        <th>凭证日期</th>
+        <th>借方合计</th>
+        <th>贷方合计</th>
+        <th>状态</th>
+        <th>制单人</th>
+        <th>审核人</th>
+        <th>操作</th>
+{% endblock list_table_headers %}
+{% block list_table_rows %}
+{% for voucher in vouchers %}
+      <tr>
+        <td>
+          <a href="{% url 'finance_pages:voucher_detail' voucher.id %}">
+            <code>{{ voucher.voucher_number }}</code>
+          </a>
+        </td>
+        <td>{{ voucher.voucher_date|date:"Y-m-d"|default:"-" }}</td>
+        <td>¥{{ voucher.total_debit|floatformat:2|default:"0.00" }}</td>
+        <td>¥{{ voucher.total_credit|floatformat:2|default:"0.00" }}</td>
+        <td>
+          {% if voucher.status == 'draft' %}
+            <span class="list-badge list-badge-draft">草稿</span>
+          {% elif voucher.status == 'submitted' %}
+            <span class="list-badge list-badge-submitted">已提交</span>
+          {% elif voucher.status == 'approved' %}
+            <span class="list-badge list-badge-approved">已审核</span>
+          {% elif voucher.status == 'posted' %}
+            <span class="list-badge list-badge-posted">已过账</span>
+          {% elif voucher.status == 'rejected' %}
+            <span class="list-badge list-badge-rejected">已拒绝</span>
+          {% else %}
+            <span class="list-badge">{{ voucher.get_status_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if voucher.preparer %}
+            {{ voucher.preparer.get_full_name|default:voucher.preparer.username }}
+          {% else %}
+            <span style="color: #999999;">未分配</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if voucher.reviewer %}
+            {{ voucher.reviewer.get_full_name|default:voucher.reviewer.username }}
+          {% else %}
+            <span style="color: #999999;">未审核</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'finance_pages:voucher_detail' voucher.id %}" class="list-btn" title="查看">查看</a>
+            {% if perms.financial_management.voucher.edit %}
+            <a href="{% url 'finance_pages:voucher_update' voucher.id %}" class="list-btn" title="编辑">编辑</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无凭证数据</div>
+          <div class="list-empty-hint">请创建第一个凭证记录开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-<style>
-  .list-badge-draft { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
-  .list-badge-submitted { background: #FFF4E5; color: #CC6600; border-color: #FFCC99; }
-  .list-badge-approved { background: #E8F5E9; color: #2E7D32; border-color: #A5D6A7; }
-  .list-badge-posted { background: #E3F2FD; color: #1565C0; border-color: #90CAF9; }
-  .list-badge-rejected { background: #FFE5E5; color: #CC0000; border-color: #FF9999; }
-</style>
-{% endblock %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
 
-{% block pm_content %}
-  {% include "financial_management/_partials/_voucher_stats.html" %}
-  {% include "financial_management/_partials/_voucher_filters.html" %}
-  {% include "financial_management/_partials/_voucher_table.html" %}
-{% endblock %}
+{% endblock extra_css %}
+
+

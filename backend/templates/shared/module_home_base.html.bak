@@ -1,0 +1,321 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block module_styles %}
+  {{ block.super }}
+  <style>
+    /* ========== 功能模块首页样式 ========== */
+
+    .module-home-wrap {
+      padding: 0;
+    }
+
+    /* 第一行：顶部操作栏 */
+    .module-home-top-actions {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding: 16px;
+      background: var(--vh-card-bg, #FFFFFF);
+      border: 1px solid var(--vh-border-secondary, #E0E0E0);
+      border-radius: 4px;
+    }
+
+    .module-home-top-action-btn {
+      padding: 8px 16px;
+      background: var(--vh-text-primary, #1A1A1A);
+      color: var(--vh-bg-primary, #FFFFFF);
+      border: none;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .module-home-top-action-btn:hover {
+      background: var(--vh-text-secondary, #333333);
+      color: var(--vh-bg-primary, #FFFFFF);
+      text-decoration: none;
+    }
+
+    /* 第二行：核心指标卡片 */
+    .module-home-core-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 1200px) {
+      .module-home-core-cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .module-home-core-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .module-home-core-card {
+      background: var(--vh-card-bg, #FFFFFF);
+      border: 1px solid var(--vh-border-secondary, #E0E0E0);
+      border-radius: 4px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.2s ease;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .module-home-core-card:hover {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .module-home-core-card-icon {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--vh-bg-secondary, #F5F5F5);
+      border: 1px solid var(--vh-border-secondary, #E0E0E0);
+      border-radius: 4px;
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+
+    .module-home-core-card-label {
+      font-size: 14px;
+      color: var(--vh-text-tertiary, #666666);
+      font-weight: 400;
+      margin-bottom: 8px;
+    }
+
+    .module-home-core-card-value {
+      font-size: 32px;
+      font-weight: 600;
+      color: var(--vh-text-primary, #1A1A1A);
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+
+    .module-home-core-card-subvalue {
+      font-size: 12px;
+      color: var(--vh-text-tertiary, #666666);
+      line-height: 1.5;
+    }
+
+    /* 第三行：状态分布统计（左右分栏） */
+    .module-home-stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .module-home-stats-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .module-home-stats-card {
+      background: var(--vh-card-bg, #FFFFFF);
+      border: 1px solid var(--vh-border-secondary, #E0E0E0);
+      border-radius: 4px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .module-home-stats-card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--vh-text-primary, #1A1A1A);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--vh-border-secondary, #E0E0E0);
+    }
+
+    .module-home-chart-container {
+      position: relative;
+      height: 300px;
+    }
+
+    /* 第四行：风险预警与待办（左右分栏） */
+    .module-home-warning-card,
+    .module-home-todo-card {
+      background: var(--vh-card-bg, #FFFFFF);
+      border: 1px solid var(--vh-border-secondary, #E0E0E0);
+      border-radius: 4px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .module-home-card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--vh-text-primary, #1A1A1A);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--vh-border-secondary, #E0E0E0);
+    }
+
+    .module-home-warning-list,
+    .module-home-todo-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .module-home-warning-item,
+    .module-home-todo-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      border-left: 3px solid var(--vh-text-tertiary, #666666);
+      background: var(--vh-bg-secondary, #F5F5F5);
+      border-radius: 4px;
+    }
+
+    .module-home-warning-item.overdue {
+      border-left-color: var(--vh-text-primary, #1A1A1A);
+      background: var(--vh-bg-secondary, #F5F5F5);
+    }
+
+    .module-home-todo-item {
+      border-left-color: var(--vh-text-primary, #1A1A1A);
+      background: var(--vh-bg-secondary, #F5F5F5);
+    }
+
+    .module-home-item-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--vh-text-primary, #1A1A1A);
+      margin-bottom: 4px;
+    }
+
+    .module-home-item-meta {
+      font-size: 12px;
+      color: var(--vh-text-tertiary, #666666);
+    }
+
+    .module-home-item-link {
+      color: var(--vh-text-primary, #1A1A1A);
+      text-decoration: none;
+    }
+
+    .module-home-item-link:hover {
+      text-decoration: underline;
+    }
+
+    /* 第五行：快速访问与最近活动（左右分栏） */
+    .module-home-my-work-card,
+    .module-home-activities-card {
+      background: var(--vh-card-bg, #FFFFFF);
+      border: 1px solid var(--vh-border-secondary, #E0E0E0);
+      border-radius: 4px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .module-home-work-section {
+      margin-bottom: 24px;
+    }
+
+    .module-home-work-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .module-home-work-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--vh-text-primary, #1A1A1A);
+      margin-bottom: 12px;
+    }
+
+    .module-home-work-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .module-home-work-item {
+      padding: 10px;
+      margin-bottom: 8px;
+      background: var(--vh-bg-secondary, #F5F5F5);
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .module-home-work-item-title {
+      font-size: 14px;
+      color: var(--vh-text-primary, #1A1A1A);
+      flex: 1;
+    }
+
+    .module-home-work-item-meta {
+      font-size: 12px;
+      color: var(--vh-text-tertiary, #666666);
+      margin-left: 12px;
+    }
+
+    .module-home-activity-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .module-home-activity-item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--vh-border-tertiary, #CCCCCC);
+    }
+
+    .module-home-activity-item:last-child {
+      border-bottom: none;
+    }
+
+    .module-home-activity-title {
+      font-size: 14px;
+      color: var(--vh-text-primary, #1A1A1A);
+      margin-bottom: 4px;
+    }
+
+    .module-home-activity-meta {
+      font-size: 12px;
+      color: var(--vh-text-tertiary, #666666);
+    }
+
+    .module-home-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--vh-text-muted, #999999);
+      font-size: 14px;
+      background: var(--vh-bg-secondary, #F5F5F5);
+      border: 1px dashed var(--vh-border-secondary, #E0E0E0);
+      border-radius: 4px;
+    }
+  </style>
+{% endblock module_styles %}
+
+{% block pm_content %}
+  <div class="module-home-wrap">
+    {% block module_home_top_actions %}{% endblock module_home_top_actions %}
+    {% block module_home_core_cards %}{% endblock module_home_core_cards %}
+    {% block module_home_stats_row %}{% endblock module_home_stats_row %}
+    {% block module_home_warning_todo_row %}{% endblock module_home_warning_todo_row %}
+    {% block module_home_work_activities_row %}{% endblock module_home_work_activities_row %}
+    {% block module_home_custom_content %}{% endblock module_home_custom_content %}
+  </div>
+{% endblock pm_content %}
+
+{% block module_extra_js %}
+  {{ block.super }}
+  {% block module_home_scripts %}{% endblock module_home_scripts %}
+{% endblock module_extra_js %}

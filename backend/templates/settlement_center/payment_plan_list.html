@@ -1,22 +1,101 @@
-{% extends "settlement_center/_base.html" %}
-{% load static %}
+{% extends "shared/list_page_base.html" %}
 
-{% block sc_title %}{{ page_title }}{% endblock %}
-{% block sc_subtitle %}<span class="pm-subtitle">{{ description }}</span>{% endblock %}
+{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
 
-{% block sc_extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-<style>
-  /* 回款计划状态badge样式 */
-  .list-badge-pending { background: #fff3cd; color: #856404; border-color: #ffc107; }
-  .list-badge-partial { background: #d1ecf1; color: #0c5460; border-color: #17a2b8; }
-  .list-badge-completed { background: #d4edda; color: #155724; border-color: #28a745; }
-  .list-badge-overdue { background: #f8d7da; color: #721c24; border-color: #dc3545; }
-  .list-badge-cancelled { background: #e2e3e5; color: #383d41; border-color: #6c757d; }
-</style>
-{% endblock %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">回款计划管理</li>
+{% endblock breadcrumb_items %}
 
-{% block sc_content %}
-  {% include "settlement_center/_partials/_payment_plan_filters.html" %}
-  {% include "settlement_center/_partials/_payment_plan_table.html" %}
-{% endblock %}
+
+
+{% block list_filters_content %}
+  <div class="col-md-3">
+    <label class="form-label">类型</label>
+    <select name="plan_type" class="list-filter-input">
+        <option value="">全部类型</option>
+        <option value="project" {% if plan_type == 'project' %}selected{% endif %}>项目回款计划</option>
+        <option value="business" {% if plan_type == 'business' %}selected{% endif %}>商务回款计划</option>
+      </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">状态</label>
+    <select name="status" class="list-filter-input">
+        <option value="">全部状态</option>
+        {% for code, label in status_choices %}
+        <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+{% endblock list_filters_content %}
+{% block list_table_headers %}
+<th>类型</th>
+        <th>阶段名称</th>
+        <th>关联项目/合同</th>
+        <th>计划金额</th>
+        <th>实际金额</th>
+        <th>计划日期</th>
+        <th>实际日期</th>
+        <th>状态</th>
+        <th>操作</th>
+{% endblock list_table_headers %}
+{% block list_table_rows %}
+{% for plan in page_obj %}
+      <tr>
+        <td>
+          {% if plan.type == 'project' %}
+          <span class="list-badge" style="background: #E8E8E8; color: #333333;">项目</span>
+          {% else %}
+          <span class="list-badge" style="background: #E8E8E8; color: #333333;">商务</span>
+          {% endif %}
+        </td>
+        <td><strong>{{ plan.phase_name }}</strong></td>
+        <td>
+          <div>{{ plan.related_number }}</div>
+          <small style="color: #999999; font-size: 12px;">{{ plan.related_name }}</small>
+        </td>
+        <td>¥{{ plan.planned_amount|floatformat:2 }}</td>
+        <td>
+          {% if plan.actual_amount %}
+          <strong style="color: #28a745;">¥{{ plan.actual_amount|floatformat:2 }}</strong>
+          {% else %}
+          <span style="color: #999999;">—</span>
+          {% endif %}
+        </td>
+        <td>{{ plan.planned_date|date:"Y-m-d" }}</td>
+        <td>
+          {% if plan.actual_date %}
+          {{ plan.actual_date|date:"Y-m-d" }}
+          {% else %}
+          <span style="color: #999999;">—</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="list-badge list-badge-{{ plan.status }}">
+            {% for code, label in status_choices %}
+            {% if code == plan.status %}{{ label }}{% endif %}
+            {% endfor %}
+          </span>
+        </td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'settlement_pages:payment_plan_detail' plan.type plan.id %}" class="list-btn" title="查看">查看</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无回款计划数据</div>
+          <div class="list-empty-hint">请创建第一个回款计划开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}
+
+{% block extra_css %}
+
+{% endblock extra_css %}
+
+
+

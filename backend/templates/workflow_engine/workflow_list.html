@@ -1,122 +1,147 @@
-{% extends 'base.html' %}
-{% block title %}审批流程管理{% endblock %}
+{% extends "shared/list_page_base.html" %}
+{% comment %}
+审批流程列表页面模板 (Workflow List Template)
 
-{% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="mb-0">审批流程管理</h2>
-        <a class="btn btn-primary" href="{% url 'workflow_engine:workflow_create' %}">创建流程</a>
-    </div>
+功能说明：
+- 展示审批流程模板的列表页面
+- 支持按状态筛选
+- 支持搜索流程名称、代码、描述
+- 支持查看详情、编辑操作
 
-    {% if messages %}
-    <div class="mb-3">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
+主要功能：
+1. 筛选功能：
+   - 搜索：流程名称、代码、描述
+   - 状态筛选：下拉选择状态（草稿、激活、停用）
+2. 表格展示：流程名称、代码、状态、节点数、实例数、创建时间、操作
+3. 操作功能：查看详情、编辑
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <form method="get" class="mb-3">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <input type="text" name="search" class="form-control" placeholder="搜索流程名称或代码..." value="{{ search }}">
-                    </div>
-                    <div class="col-md-3">
-                        <select name="status" class="form-select">
-                            <option value="">全部状态</option>
-                            {% for value, label in status_choices %}
-                            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">搜索</button>
-                    </div>
-                    <div class="col-md-2">
-                        <a href="{% url 'workflow_engine:workflow_list' %}" class="btn btn-outline-secondary w-100">重置</a>
-                    </div>
-                </div>
-            </form>
+JavaScript功能：
+- 筛选字段设置功能（继承自list_page_base.html）
+{% endcomment %}
+{% load static %}
 
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>流程名称</th>
-                            <th>流程代码</th>
-                            <th>分类</th>
-                            <th>状态</th>
-                            <th>创建人</th>
-                            <th>创建时间</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for workflow in workflows %}
-                        <tr>
-                            <td><strong>{{ workflow.name }}</strong></td>
-                            <td><code>{{ workflow.code }}</code></td>
-                            <td>{{ workflow.category|default:"-" }}</td>
-                            <td>
-                                {% if workflow.status == 'active' %}
-                                <span class="badge bg-success">启用</span>
-                                {% elif workflow.status == 'inactive' %}
-                                <span class="badge bg-secondary">停用</span>
-                                {% else %}
-                                <span class="badge bg-warning">草稿</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ workflow.created_by.username }}</td>
-                            <td>{{ workflow.created_time|date:"Y-m-d H:i" }}</td>
-                            <td>
-                                <a href="{% url 'workflow_engine:workflow_detail' workflow.id %}" class="btn btn-sm btn-outline-primary">查看</a>
-                                <a href="{% url 'workflow_engine:workflow_edit' workflow.id %}" class="btn btn-sm btn-outline-secondary">编辑</a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center text-muted">暂无审批流程</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+{% block list_page_title %}审批流程管理{% endblock %}
 
-            {% if workflows.has_other_pages %}
-            <nav aria-label="分页">
-                <ul class="pagination justify-content-center">
-                    {% if workflows.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ workflows.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">上一页</a>
-                    </li>
-                    {% endif %}
+{% block list_page_actions %}
+<a href="{% url 'workflow_engine:workflow_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> 创建流程
+</a>
+{% endblock %}
 
-                    {% for num in workflows.paginator.page_range %}
-                    {% if workflows.number == num %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ num }}</span>
-                    </li>
-                    {% elif num > workflows.number|add:'-3' and num < workflows.number|add:'3' %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">{{ num }}</a>
-                    </li>
-                    {% endif %}
-                    {% endfor %}
+{% block search_placeholder %}搜索流程名称、代码、描述...{% endblock %}
 
-                    {% if workflows.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ workflows.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">下一页</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
-        </div>
+{% block list_page_filter_fields %}
+<!-- 状态筛选 -->
+<div class="filter-row" data-filter-key="status">
+    <label class="filter-label">状态:</label>
+    <div class="filter-control">
+        <select name="status" class="form-control form-control-sm" id="statusSelect">
+            <option value="">全部状态</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
     </div>
 </div>
+{% endblock %}
+
+{% block list_page_table_checkbox_header %}
+<th style="width: 40px;">
+    <input type="checkbox" id="selectAll" aria-label="全选">
+</th>
+{% endblock %}
+
+{% block list_page_table_headers %}
+<th style="width: 20%;">流程名称</th>
+<th style="width: 12%;">流程代码</th>
+<th style="width: 8%;">状态</th>
+<th style="width: 8%;">节点数</th>
+<th style="width: 8%;">实例数</th>
+<th style="width: 12%;">创建时间</th>
+{% endblock %}
+
+{% block list_page_table_actions_header %}
+<th style="width: 10%;">
+    操作
+    <span id="columnSettingsBtn"
+          data-bs-toggle="modal"
+          data-bs-target="#columnSettingsModal"
+          aria-label="设置表格字段"
+          title="设置表格字段"
+          style="cursor: pointer; color: #000000 !important; font-size: 16px; vertical-align: middle; margin-left: 8px; display: inline-block;">
+        <i class="bi bi-gear" style="color: #000000 !important;"></i>
+    </span>
+</th>
+{% endblock %}
+
+{% block list_page_table_checkbox_cell %}
+<td>
+    <input type="checkbox" class="row-checkbox" value="{{ item.id }}" aria-label="选择">
+</td>
+{% endblock %}
+
+{% block list_page_table_row_content %}
+<td>
+    <div>
+        <strong>{{ item.name }}</strong>
+        {% if item.description %}
+        <div class="small text-muted mt-1">{{ item.description|truncatewords:15 }}</div>
+        {% endif %}
+    </div>
+</td>
+<td>
+    <code class="small">{{ item.code }}</code>
+</td>
+<td>
+    {% if item.status == 'active' %}
+    <span class="badge bg-success">{{ item.get_status_display }}</span>
+    {% elif item.status == 'draft' %}
+    <span class="badge bg-warning">{{ item.get_status_display }}</span>
+    {% elif item.status == 'inactive' %}
+    <span class="badge bg-danger">{{ item.get_status_display }}</span>
+    {% else %}
+    <span class="badge bg-secondary">{{ item.get_status_display }}</span>
+    {% endif %}
+</td>
+<td class="small">{{ item.nodes.count }}</td>
+<td class="small">{{ item.instances.count }}</td>
+<td class="small text-muted">{{ item.created_time|date:"Y-m-d H:i" }}</td>
+{% endblock %}
+
+{% block list_page_table_actions_cell %}
+<td>
+    <div class="list-page-table-actions">
+        <a href="{% url 'workflow_engine:workflow_detail' item.id %}" 
+           class="action-view" 
+           title="查看详情">
+            <i class="bi bi-eye"></i>
+        </a>
+        <span class="action-separator">|</span>
+        <a href="{% url 'workflow_engine:workflow_edit' item.id %}" 
+           class="action-edit" 
+           title="编辑">
+            <i class="bi bi-pencil"></i>
+        </a>
+    </div>
+</td>
+{% endblock %}
+
+{% block empty_colspan %}8{% endblock %}
+
+{% block empty_message %}暂无流程模板{% endblock %}
+
+{% block empty_create_url %}{% url 'workflow_engine:workflow_create' %}{% endblock %}
+
+{% block list_page_custom_js %}
+// 配置筛选字段设置功能（继承自 list_page_base.html）
+window.listPageFilterFieldsSettingsConfig = {
+    enableFieldsSettings: true,
+    storageKey: 'workflow_list_filter_fields',
+    defaultEnabledFields: ['status'],
+    maxEnabledFields: 10,
+    requiredFields: [],
+    containerId: 'filterFieldsContainer',
+    modalId: 'filterFieldsSettingsModal',
+    settingsBtnId: 'settingsFilterFieldsBtn'
+};
 {% endblock %}

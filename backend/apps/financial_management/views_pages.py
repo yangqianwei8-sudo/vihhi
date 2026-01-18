@@ -170,31 +170,27 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
             # 统一使用全局系统主菜单（与客户管理模块保持一致）
             context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
             if use_financial_nav:
-                context['financial_menu'] = _build_financial_sidebar_nav(permission_set, request.path)
-                context['module_sidebar_nav'] = context['financial_menu']  # 兼容模板中的变量名
+                context['sidebar_nav'] = _build_financial_sidebar_nav(permission_set, request.path)
         else:
             context['full_top_nav'] = []
-            context['financial_menu'] = []
-            context['module_sidebar_nav'] = []
+            context['sidebar_nav'] = []
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f'构建页面上下文错误: {str(e)}', exc_info=True)
         context['full_top_nav'] = []
-        context['financial_menu'] = []
-        context['module_sidebar_nav'] = []
-    
+        context['sidebar_nav'] = []
     # 为所有可能的侧边栏变量设置默认值，避免模板错误
     # 这些变量可能在其他模块的模板中被引用
     context.setdefault('plan_menu', [])
-    context.setdefault('delivery_sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     context.setdefault('customer_menu', [])
-    context.setdefault('production_sidebar_nav', [])
-    context.setdefault('personnel_sidebar_nav', [])
-    context.setdefault('sidebar_menu', [])
-    context.setdefault('litigation_sidebar_nav', [])
-    context.setdefault('archive_sidebar_nav', [])
-    context.setdefault('production_management_menu', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     
     return context
 
@@ -817,8 +813,7 @@ def financial_home(request):
     
     # 设置侧边栏导航
     financial_sidebar_nav = _build_financial_sidebar_nav(permission_codes, request.path, active_id='financial_home')
-    page_context['financial_menu'] = financial_sidebar_nav
-    page_context['module_sidebar_nav'] = financial_sidebar_nav
+    page_context['sidebar_nav'] = financial_sidebar_nav
     page_context['sidebar_title'] = '财务管理'
     page_context['sidebar_subtitle'] = 'Financial Management'
     

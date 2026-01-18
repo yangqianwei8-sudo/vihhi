@@ -1,34 +1,115 @@
-{% extends "customer_management/_base.html" %}
+{% extends "shared/list_page_base.html" %}
+
+{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
+
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item"><a href="{% url 'business_pages:contract_management_list' %}">合同管理</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock breadcrumb_items %}
+
+
+
 {% load static %}
 
-{% block pm_title %}{{ page_title }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">查看和管理所有合同</span>{% endblock %}
 
-{% block pm_actions %}
-{% if can_create %}
-<a href="{% url 'contract_pages:contract_create' %}" class="list-btn list-btn-primary">
-  新增合同
-</a>
-{% endif %}
-{% endblock %}
+{% block list_filters_content %}
+  <div class="col-md-3">
+    <label class="form-label">状态</label>
+    <select name="status" class="list-filter-input">
+        <option value="">全部状态</option>
+        <option value="pending_review" {% if selected_status == 'pending_review' %}selected{% endif %}>待审核</option>
+        <option value="reviewing" {% if selected_status == 'reviewing' %}selected{% endif %}>审核中</option>
+      </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">合同类型</label>
+    <select name="contract_type" class="list-filter-input">
+        <option value="">全部类型</option>
+        {% for value, label in type_choices %}
+        <option value="{{ value }}" {% if selected_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">客户</label>
+    <select name="client_id" class="list-filter-input">
+        <option value="">全部客户</option>
+        {% for client in clients %}
+        <option value="{{ client.id }}" {% if selected_client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
+        {% endfor %}
+      </select>
+  </div>
+{% endblock list_filters_content %}
+{% block list_table_headers %}
+<th>合同编号</th>
+        <th>合同名称</th>
+        <th>客户</th>
+        <th>关联项目</th>
+        <th>合同类型</th>
+        <th>状态</th>
+        <th>合同金额</th>
+        <th>已回款</th>
+        <th>未回款</th>
+        <th>签订日期</th>
+        <th>创建人</th>
+        <th>操作</th>
+{% endblock list_table_headers %}
+{% block list_table_rows %}
+{% for contract in page_obj %}
+      <tr>
+        <td><code>{{ contract.contract_number|default:"未编号" }}</code></td>
+        <td>{{ contract.contract_name|default:contract.contract_number }}</td>
+        <td>
+          {% if contract.client %}
+          <a href="{% url 'business_pages:customer_detail' contract.client.id %}">
+            {{ contract.client.name }}
+          </a>
+          {% else %}
+          <span style="color: #999999;">未指定</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if contract.project %}
+          {{ contract.project.project_number|default:contract.project.name }}
+          {% else %}
+          <span style="color: #999999;">未关联</span>
+          {% endif %}
+        </td>
+        <td>{{ contract.get_contract_type_display }}</td>
+        <td>
+          <span class="list-badge list-badge-{{ contract.status }}">
+            {{ contract.get_status_display }}
+          </span>
+        </td>
+        <td style="text-align: right;">{% if contract.contract_amount %}¥{{ contract.contract_amount|floatformat:2 }}{% else %}--{% endif %}</td>
+        <td style="text-align: right;">{% if contract.payment_amount %}¥{{ contract.payment_amount|floatformat:2 }}{% else %}¥0.00{% endif %}</td>
+        <td style="text-align: right;">{% if contract.unpaid_amount %}¥{{ contract.unpaid_amount|floatformat:2 }}{% else %}--{% endif %}</td>
+        <td>{{ contract.contract_date|date:"Y-m-d"|default:"未设置" }}</td>
+        <td>{{ contract.created_by.get_full_name|default:contract.created_by.username }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'contract_pages:contract_detail' contract.id %}" class="list-btn" title="查看">查看</a>
+            {% if contract.can_edit %}
+            <a href="{% url 'contract_pages:contract_edit' contract.id %}" class="list-btn" title="编辑">编辑</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="12" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无合同数据</div>
+          <div class="list-empty-hint">请创建第一个合同开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-<style>
-  /* 合同状态badge样式 */
-  .list-badge-draft { background: #F5F5F5; color: #666666; border-color: #E0E0E0; }
-  .list-badge-pending_review { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-reviewing { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-signed { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
-  .list-badge-effective { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-executing { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-completed { background: #E8E8E8; color: #1A1A1A; border-color: #CCCCCC; }
-  .list-badge-terminated { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-  .list-badge-cancelled { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-</style>
-{% endblock %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
 
-{% block pm_content %}
-  {% include "customer_management/_partials/_contract_filters.html" %}
-  {% include "customer_management/_partials/_contract_table.html" %}
-{% endblock %}
+{% endblock extra_css %}
+
+
+

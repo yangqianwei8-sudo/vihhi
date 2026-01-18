@@ -78,7 +78,7 @@ class StrategicGoal(models.Model):
         User, 
         on_delete=models.PROTECT, 
         related_name='responsible_goals',
-        verbose_name='目标负责人'
+        verbose_name='负责人'
     )
     participants = models.ManyToManyField(
         User, 
@@ -92,7 +92,7 @@ class StrategicGoal(models.Model):
         null=True,
         blank=True,
         related_name='goals',
-        verbose_name='负责部门'
+        verbose_name='所属部门'
     )
     
     # 目标描述
@@ -589,7 +589,7 @@ class Plan(models.Model):
         null=True,
         blank=True,
         related_name='plans',
-        verbose_name='负责部门'
+        verbose_name='所属部门'
     )
     
     # 优先级和预算

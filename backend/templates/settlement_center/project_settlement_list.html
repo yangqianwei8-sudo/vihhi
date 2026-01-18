@@ -1,30 +1,89 @@
-{% extends "settlement_center/_base.html" %}
-{% load static %}
+{% extends "shared/list_page_base.html" %}
 
-{% block sc_title %}{{ page_title }}{% endblock %}
-{% block sc_subtitle %}<span class="pm-subtitle">{{ description }}</span>{% endblock %}
+{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
 
-{% block sc_actions %}
-{% if can_create %}
-<a href="{% url 'settlement_pages:project_settlement_create' %}" class="list-btn list-btn-primary">
-  新增结算单
-</a>
-{% endif %}
-{% endblock %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">项目结算管理</li>
+{% endblock breadcrumb_items %}
 
-{% block sc_extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-<style>
-  /* 项目结算状态badge样式 */
-  .list-badge-draft { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-pending { background: #fff3cd; color: #856404; border-color: #ffc107; }
-  .list-badge-approved { background: #d4edda; color: #155724; border-color: #28a745; }
-  .list-badge-rejected { background: #f8d7da; color: #721c24; border-color: #dc3545; }
-  .list-badge-cancelled { background: #e2e3e5; color: #383d41; border-color: #6c757d; }
-</style>
-{% endblock %}
 
-{% block sc_content %}
-  {% include "settlement_center/_partials/_project_settlement_filters.html" %}
-  {% include "settlement_center/_partials/_project_settlement_table.html" %}
-{% endblock %}
+
+{% block list_filters_content %}
+  <div class="col-md-3">
+    <label class="form-label">项目</label>
+    <select name="project_id" class="list-filter-input">
+        <option value="">全部项目</option>
+        {% for project in projects %}
+        <option value="{{ project.id }}" {% if project_id == project.id|stringformat:"s" %}selected{% endif %}>
+          {{ project.project_number }} - {{ project.name }}
+        </option>
+        {% endfor %}
+      </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">状态</label>
+    <select name="status" class="list-filter-input">
+        <option value="">全部状态</option>
+        {% for code, label in status_choices %}
+        <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+{% endblock list_filters_content %}
+{% block list_table_headers %}
+<th>结算单号</th>
+        <th>项目名称</th>
+        <th>结算类型</th>
+        <th>合同金额</th>
+        <th>结算金额</th>
+        <th>结算日期</th>
+        <th>状态</th>
+        <th>创建人</th>
+        <th>创建时间</th>
+        <th>操作</th>
+{% endblock list_table_headers %}
+{% block list_table_rows %}
+{% for settlement in page_obj %}
+      <tr>
+        <td><strong>{{ settlement.settlement_number }}</strong></td>
+        <td>
+          <a href="{% url 'production_pages:project_detail' settlement.project.id %}">
+            {{ settlement.project.name }}
+          </a>
+        </td>
+        <td>
+          <span class="list-badge">{{ settlement.get_settlement_type_display }}</span>
+        </td>
+        <td>¥{{ settlement.contract_amount|floatformat:2 }}</td>
+        <td><strong>¥{{ settlement.settlement_amount|floatformat:2 }}</strong></td>
+        <td>{{ settlement.settlement_date|date:"Y-m-d" }}</td>
+        <td>
+          <span class="list-badge list-badge-{{ settlement.status }}">
+            {{ settlement.get_status_display }}
+          </span>
+        </td>
+        <td>{{ settlement.created_by.get_full_name|default:settlement.created_by.username }}</td>
+        <td>{{ settlement.created_time|date:"Y-m-d H:i" }}</td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'settlement_pages:project_settlement_detail' settlement.id %}" class="list-btn" title="查看">查看</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="10" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无结算单数据</div>
+          <div class="list-empty-hint">请创建第一个结算单开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}
+
+{% block extra_css %}
+
+{% endblock extra_css %}
+
+
+

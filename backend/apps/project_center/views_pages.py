@@ -924,7 +924,7 @@ def _with_nav(context, permission_set, active_id=None, user=None, request_path=N
     # 如果提供了request对象但没有提供request_path，则从request中获取
     if request and not request_path:
         request_path = request.path
-    context['production_management_menu'] = _build_production_management_sidebar_nav(permission_set, request_path, user)
+    context['sidebar_nav'] = _build_production_management_sidebar_nav(permission_set, request_path, user)
     return context
 
 

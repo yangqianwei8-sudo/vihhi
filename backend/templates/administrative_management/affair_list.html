@@ -1,33 +1,161 @@
-{% extends "administrative_management/_base.html" %}
-{% load static %}
+{% extends "shared/list_page_base.html" %}
 
-{% block pm_title %}行政事务管理{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">管理日常行政事务，包括事务创建、分配、处理、跟踪等全流程管理。</span>{% endblock %}
+{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
 
-{% block pm_actions %}
-{% if perms.administrative_management.affair.create %}
-<a href="{% url 'admin_pages:affair_create' %}" class="list-btn list-btn-primary">
-  创建事务
-</a>
-{% endif %}
-{% endblock %}
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+{% endblock breadcrumb_items %}
+
+
+
+{% block list_stats_content %}
+  <div class="row g-3">
+    <div class="col-md-2">
+      <div class="list-stat-card">
+        <div class="list-stat-label">事务总数</div>
+        <div class="list-stat-value">{{ total_count|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+        <div class="list-stat-label">待处理</div>
+        <div class="list-stat-value">{{ pending_count|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+        <div class="list-stat-label">进行中</div>
+        <div class="list-stat-value">{{ in_progress_count|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+        <div class="list-stat-label">已完成</div>
+        <div class="list-stat-value">{{ completed_count|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+        <div class="list-stat-label">已取消</div>
+        <div class="list-stat-value">{{ cancelled_count|default:0 }}</div>
+      </div>
+    </div>
+  </div>
+{% endblock list_stats_content %}
+{% block list_filters_content %}
+  <div class="col-md-3">
+    <label class="form-label">事务类型</label>
+    <select name="affair_type" class="list-filter-input">
+        <option value="" {% if not affair_type %}selected{% endif %}>全部类型</option>
+        {% for code, label in affair_type_choices %}
+        <option value="{{ code }}" {% if affair_type == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">状态</label>
+    <select name="status" class="list-filter-input">
+        <option value="" {% if not status %}selected{% endif %}>全部状态</option>
+        {% for code, label in status_choices %}
+        <option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">优先级</label>
+    <select name="priority" class="list-filter-input">
+        <option value="" {% if not priority %}selected{% endif %}>全部优先级</option>
+        {% for code, label in priority_choices %}
+        <option value="{{ code }}" {% if priority == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+{% endblock list_filters_content %}
+{% block list_table_headers %}
+<th>事务编号</th>
+        <th>事务标题</th>
+        <th>事务类型</th>
+        <th>状态</th>
+        <th>优先级</th>
+        <th>负责人</th>
+        <th>计划完成时间</th>
+        <th>处理进度</th>
+        <th>操作</th>
+{% endblock list_table_headers %}
+{% block list_table_rows %}
+{% for affair in affairs %}
+      <tr>
+        <td>
+          <a href="{% url 'admin_pages:affair_detail' affair.id %}">
+            <code>{{ affair.affair_number }}</code>
+          </a>
+        </td>
+        <td>{{ affair.title|truncatewords:10 }}</td>
+        <td>
+          <span class="list-badge">{{ affair.get_affair_type_display }}</span>
+        </td>
+        <td>
+          {% if affair.status == 'pending' %}
+            <span class="list-badge list-badge-pending">待处理</span>
+          {% elif affair.status == 'in_progress' %}
+            <span class="list-badge list-badge-in-progress">处理中</span>
+          {% elif affair.status == 'completed' %}
+            <span class="list-badge list-badge-completed">已完成</span>
+          {% elif affair.status == 'cancelled' %}
+            <span class="list-badge list-badge-cancelled">已取消</span>
+          {% else %}
+            <span class="list-badge">{{ affair.get_status_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if affair.priority == 'urgent' %}
+            <span class="list-badge list-badge-urgent">紧急</span>
+          {% elif affair.priority == 'high' %}
+            <span class="list-badge list-badge-high">高</span>
+          {% elif affair.priority == 'normal' %}
+            <span class="list-badge list-badge-normal">普通</span>
+          {% else %}
+            <span class="list-badge list-badge-low">低</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if affair.responsible_user %}
+            {{ affair.responsible_user.get_full_name|default:affair.responsible_user.username }}
+          {% else %}
+            <span style="color: #999999;">未分配</span>
+          {% endif %}
+        </td>
+        <td>{{ affair.planned_end_time|date:"Y-m-d H:i"|default:"-" }}</td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="flex: 1; height: 8px; background: #E0E0E0; border-radius: 4px; overflow: hidden;">
+              <div style="height: 100%; width: {{ affair.progress }}%; background: #1F3E7C; transition: width 0.3s;"></div>
+            </div>
+            <span style="font-size: 12px; color: #666666;">{{ affair.progress }}%</span>
+          </div>
+        </td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'admin_pages:affair_detail' affair.id %}" class="list-btn" title="查看">查看</a>
+            {% if perms.administrative_management.affair.edit %}
+            <a href="{% url 'admin_pages:affair_update' affair.id %}" class="list-btn" title="编辑">编辑</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无行政事务数据</div>
+          <div class="list-empty-hint">请创建第一个行政事务记录开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-<style>
-  .list-badge-pending { background: #FFF3CD; color: #856404; border-color: #FFE69C; }
-  .list-badge-in-progress { background: #CFE2FF; color: #084298; border-color: #9EC5FE; }
-  .list-badge-completed { background: #D1E7DD; color: #0F5132; border-color: #A3CFBB; }
-  .list-badge-cancelled { background: #F8D7DA; color: #842029; border-color: #F1AEB5; }
-  .list-badge-urgent { background: #FFE5E5; color: #CC0000; border-color: #FF9999; }
-  .list-badge-high { background: #FFF4E5; color: #CC6600; border-color: #FFCC99; }
-  .list-badge-normal { background: #E8E8E8; color: #333333; border-color: #CCCCCC; }
-  .list-badge-low { background: #F5F5F5; color: #999999; border-color: #E0E0E0; }
-</style>
-{% endblock %}
 
-{% block pm_content %}
-  {% include "administrative_management/_partials/_affair_stats.html" %}
-  {% include "administrative_management/_partials/_affair_filters.html" %}
-  {% include "administrative_management/_partials/_affair_table.html" %}
-{% endblock %}
+{% endblock extra_css %}
+
+

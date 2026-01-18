@@ -174,9 +174,9 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
             permission_set = get_user_permission_codes(request.user)
             context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
             # 添加左侧菜单
-            context['settlement_menu'] = _build_settlement_sidebar_nav(permission_set, request.path)
-            context['settlement_sidebar_nav'] = context['settlement_menu']
-            context['module_sidebar_nav'] = context['settlement_menu']
+            context['sidebar_nav'] = _build_settlement_sidebar_nav(permission_set, request.path)
+            context['sidebar_title'] = '结算中心'
+            context['sidebar_subtitle'] = 'Settlement Center'
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
@@ -184,24 +184,21 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
             context['full_top_nav'] = []
             context['settlement_menu'] = []
             context['settlement_sidebar_nav'] = []
-            context['module_sidebar_nav'] = []
     else:
         context['full_top_nav'] = []
         context['settlement_menu'] = []
         context['settlement_sidebar_nav'] = []
-        context['module_sidebar_nav'] = []
-    
     # 为所有可能的侧边栏变量设置默认值，避免模板错误
     context.setdefault('plan_menu', [])
-    context.setdefault('delivery_sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     context.setdefault('customer_menu', [])
-    context.setdefault('production_sidebar_nav', [])
-    context.setdefault('personnel_sidebar_nav', [])
-    context.setdefault('sidebar_menu', [])
-    context.setdefault('financial_menu', [])
-    context.setdefault('litigation_sidebar_nav', [])
-    context.setdefault('archive_sidebar_nav', [])
-    context.setdefault('production_management_menu', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     context.setdefault('administrative_sidebar_nav', [])
     
     return context
@@ -1617,21 +1614,20 @@ def settlement_home(request):
     settlement_sidebar_nav = _build_settlement_sidebar_nav(permission_codes, request.path, active_id='settlement_home')
     page_context['settlement_menu'] = settlement_sidebar_nav
     page_context['settlement_sidebar_nav'] = settlement_sidebar_nav
-    page_context['module_sidebar_nav'] = settlement_sidebar_nav
     page_context['sidebar_title'] = '回款管理'
     page_context['sidebar_subtitle'] = 'Settlement Management'
     
     # 为所有可能的侧边栏变量设置默认值，避免模板错误
     page_context.setdefault('plan_menu', [])
-    page_context.setdefault('delivery_sidebar_nav', [])
+    page_context.setdefault('sidebar_nav', [])
     page_context.setdefault('customer_menu', [])
-    page_context.setdefault('production_sidebar_nav', [])
-    page_context.setdefault('personnel_sidebar_nav', [])
-    page_context.setdefault('sidebar_menu', [])
-    page_context.setdefault('financial_menu', [])
-    page_context.setdefault('litigation_sidebar_nav', [])
-    page_context.setdefault('archive_sidebar_nav', [])
-    page_context.setdefault('production_management_menu', [])
+    page_context.setdefault('sidebar_nav', [])
+    page_context.setdefault('sidebar_nav', [])
+    page_context.setdefault('sidebar_nav', [])
+    page_context.setdefault('sidebar_nav', [])
+    page_context.setdefault('sidebar_nav', [])
+    page_context.setdefault('sidebar_nav', [])
+    page_context.setdefault('sidebar_nav', [])
     page_context.setdefault('administrative_sidebar_nav', [])
     
     # 合并所有数据

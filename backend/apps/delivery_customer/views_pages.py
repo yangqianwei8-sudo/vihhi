@@ -202,29 +202,17 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
         "sections": sections or [],
     }
     
-    # 为所有可能的侧边栏变量设置默认值，避免模板错误
-    context['plan_menu'] = []
-    context['module_sidebar_nav'] = []
-    context['delivery_sidebar_nav'] = []
-    context['customer_menu'] = []
-    context['production_sidebar_nav'] = []
-    context['personnel_sidebar_nav'] = []
-    context['sidebar_menu'] = []
-    context['financial_menu'] = []
-    context['litigation_sidebar_nav'] = []
-    context['archive_sidebar_nav'] = []
-    context['production_management_menu'] = []
-    
     # 添加顶部导航菜单
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         # 添加左侧菜单
-        sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path)
-        context['delivery_sidebar_nav'] = sidebar_nav
-        context['module_sidebar_nav'] = sidebar_nav  # 兼容模板中的变量名
+        context['sidebar_nav'] = _build_delivery_sidebar_nav(permission_set, request.path)
+        context['sidebar_title'] = '交付客户'
+        context['sidebar_subtitle'] = 'Delivery Customer'
     else:
         context['full_top_nav'] = []
+        context['sidebar_nav'] = []
     
     return context
 
@@ -488,20 +476,18 @@ def delivery_list(request):
         "overdue_count": overdue_count,
         "full_top_nav": _build_full_top_nav(permission_set, request.user),
         "delivery_sidebar_nav": delivery_sidebar_nav,
-        "module_sidebar_nav": delivery_sidebar_nav,  # 添加此变量以兼容模板中的变量检查
+        "sidebar_nav": delivery_sidebar_nav,  # 添加此变量以兼容模板中的变量检查
     }
     
     # 为所有可能的侧边栏变量设置默认值，避免模板错误
     # 这些变量可能在其他模块的模板中被引用
-    context.setdefault('plan_menu', [])
-    context.setdefault('customer_menu', [])
-    context.setdefault('production_sidebar_nav', [])
-    context.setdefault('personnel_sidebar_nav', [])
-    context.setdefault('sidebar_menu', [])
-    context.setdefault('financial_menu', [])
-    context.setdefault('litigation_sidebar_nav', [])
-    context.setdefault('archive_sidebar_nav', [])
-    context.setdefault('production_management_menu', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     
     return render(request, "delivery_customer/delivery_list.html", context)
 
@@ -4145,8 +4131,8 @@ def incoming_document_home(request):
     
     # 设置侧边栏导航
     delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path, active_id='incoming_document_home')
-    page_context['delivery_sidebar_nav'] = delivery_sidebar_nav
-    page_context['module_sidebar_nav'] = delivery_sidebar_nav
+    page_context['sidebar_nav'] = delivery_sidebar_nav
+    page_context['sidebar_nav'] = delivery_sidebar_nav
     page_context['sidebar_title'] = '收发管理'
     page_context['sidebar_subtitle'] = 'Delivery Management'
     
@@ -4250,8 +4236,8 @@ def incoming_document_list(request):
         categories_by_stage[category.stage].append(category)
     
     # 生成左侧菜单（类似计划管理的 plan_menu）
-    context['delivery_sidebar_nav'] = delivery_sidebar_nav
-    context['module_sidebar_nav'] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context['sidebar_nav'] = delivery_sidebar_nav
+    context['sidebar_nav'] = delivery_sidebar_nav  # 兼容模板中的变量名
     context['sidebar_title'] = '收发管理'  # 侧边栏标题
     context['sidebar_subtitle'] = 'Delivery Management'  # 侧边栏副标题
     
@@ -4367,7 +4353,7 @@ def incoming_document_create(request):
         categories_by_stage[category.stage].append(category)
     
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["status_choices"] = IncomingDocument.STATUS_CHOICES
     context["priority_choices"] = IncomingDocument.PRIORITY_CHOICES
     context["stage_choices"] = IncomingDocument.STAGE_CHOICES
@@ -4395,7 +4381,7 @@ def incoming_document_detail(request, document_id):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["document"] = document
     context["can_edit"] = _permission_granted('delivery_center.create', permission_set)
     return render(request, "delivery_customer/incoming_document_detail.html", context)
@@ -4473,7 +4459,7 @@ def incoming_document_edit(request, document_id):
         categories_by_stage[category.stage].append(category)
     
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["document"] = document
     context["status_choices"] = IncomingDocument.STATUS_CHOICES
     context["priority_choices"] = IncomingDocument.PRIORITY_CHOICES
@@ -4727,8 +4713,8 @@ def outgoing_document_home(request):
     
     # 设置侧边栏导航
     delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path, active_id='outgoing_document_home')
-    page_context['delivery_sidebar_nav'] = delivery_sidebar_nav
-    page_context['module_sidebar_nav'] = delivery_sidebar_nav
+    page_context['sidebar_nav'] = delivery_sidebar_nav
+    page_context['sidebar_nav'] = delivery_sidebar_nav
     page_context['sidebar_title'] = '收发管理'
     page_context['sidebar_subtitle'] = 'Delivery Management'
     
@@ -4832,8 +4818,8 @@ def outgoing_document_list(request):
         categories_by_stage[category.stage].append(category)
     
     # 生成左侧菜单（类似计划管理的 plan_menu）
-    context['delivery_sidebar_nav'] = delivery_sidebar_nav
-    context['module_sidebar_nav'] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context['sidebar_nav'] = delivery_sidebar_nav
+    context['sidebar_nav'] = delivery_sidebar_nav  # 兼容模板中的变量名
     context['sidebar_title'] = '收发管理'  # 侧边栏标题
     context['sidebar_subtitle'] = 'Delivery Management'  # 侧边栏副标题
     
@@ -5014,7 +5000,7 @@ def outgoing_document_create(request):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["status_choices"] = OutgoingDocument.STATUS_CHOICES
     context["priority_choices"] = OutgoingDocument.PRIORITY_CHOICES
     context["stage_choices"] = OutgoingDocument.STAGE_CHOICES
@@ -5043,7 +5029,7 @@ def outgoing_document_detail(request, document_id):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["document"] = document
     context["can_edit"] = _permission_granted('delivery_center.create', permission_set)
     return render(request, "delivery_customer/outgoing_document_detail.html", context)
@@ -5196,7 +5182,7 @@ def outgoing_document_edit(request, document_id):
         delivery_methods_list = [m.strip() for m in document.delivery_methods.split(',') if m.strip()]
     
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["document"] = document
     context["document"].delivery_methods_list = delivery_methods_list  # 添加属性到document对象
     context["status_choices"] = OutgoingDocument.STATUS_CHOICES
@@ -5265,7 +5251,7 @@ def express_company_list(request):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["companies"] = companies_page
     context["search_query"] = search_query
     context["status_filter"] = status_filter
@@ -5327,7 +5313,7 @@ def express_company_create(request):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     return render(request, "delivery_customer/express_company_create.html", context)
 
 
@@ -5352,7 +5338,7 @@ def express_company_detail(request, company_id):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["company"] = company
     context["usage_count"] = usage_count
     context["can_edit"] = _permission_granted('delivery_center.create', permission_set)
@@ -5417,7 +5403,7 @@ def express_company_edit(request, company_id):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["company"] = company
     return render(request, "delivery_customer/express_company_edit.html", context)
 
@@ -5576,7 +5562,7 @@ def file_category_manage(request):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["stage_code"] = selected_stage if not show_all else 'all'
     context["stage_name"] = stage_name
     context["show_all"] = show_all
@@ -5643,7 +5629,7 @@ def file_category_list(request, stage_code):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["stage_code"] = stage_code
     context["stage_name"] = stage_name
     context["categories"] = page
@@ -5707,7 +5693,7 @@ def file_category_create(request, stage_code):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["stage_code"] = stage_code
     context["stage_name"] = stage_name
     
@@ -5852,7 +5838,7 @@ def file_template_manage(request):
         request=request,
     )
     context["delivery_sidebar_nav"] = delivery_sidebar_nav
-    context["module_sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
+    context["sidebar_nav"] = delivery_sidebar_nav  # 兼容模板中的变量名
     context["stage_code"] = selected_stage if not show_all else 'all'
     context["stage_name"] = stage_name
     context["show_all"] = show_all

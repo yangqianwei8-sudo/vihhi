@@ -1186,8 +1186,7 @@ def _with_nav(context, permission_set, active_id=None, user=None, request_path=N
     if request and not request_path:
         request_path = request.path
     production_menu = _build_production_management_sidebar_nav(permission_set, request_path, user)
-    context['production_management_menu'] = production_menu
-    context['module_sidebar_nav'] = production_menu  # 兼容计划管理的变量名
+    context['sidebar_nav'] = production_menu
     # 转换为 scene_groups 格式以支持 base_with_sidebar.html
     # scene_groups 格式: [{'title': str, 'icon': str, 'items': [{'label': str, 'icon': str, 'url': str}]}]
     scene_groups = []
@@ -1215,14 +1214,14 @@ def _with_nav(context, permission_set, active_id=None, user=None, request_path=N
     
     # 为所有可能的侧边栏变量设置默认值，避免模板错误
     # 这些变量可能在其他模块的模板中被引用
-    context.setdefault('delivery_sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     context.setdefault('customer_menu', [])
-    context.setdefault('production_sidebar_nav', [])
-    context.setdefault('personnel_sidebar_nav', [])
-    context.setdefault('sidebar_menu', [])
-    context.setdefault('financial_menu', [])
-    context.setdefault('litigation_sidebar_nav', [])
-    context.setdefault('archive_sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('sidebar_nav', [])
     context.setdefault('plan_menu', [])
     
     return context
