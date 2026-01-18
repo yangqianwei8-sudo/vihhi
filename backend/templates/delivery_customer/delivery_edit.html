@@ -12,7 +12,7 @@
 
 {% block content %}
 <div class="container-fluid">
-    
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">✏️ 编辑交付记录</h2>
@@ -27,7 +27,7 @@
 
     <form id="deliveryEditForm" method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        
+
         <div class="info-card mb-4">
             <div class="info-card-header">
                 <h5 class="info-card-title">基本信息</h5>
@@ -207,12 +207,12 @@
                 <div class="info-grid info-grid-2">
                     <div class="info-item">
                         <label class="info-label info-label-required">计划交付时间</label>
-                        <input type="datetime-local" name="scheduled_delivery_time" class="form-control" required 
+                        <input type="datetime-local" name="scheduled_delivery_time" class="form-control" required
                                value="{% if delivery.scheduled_delivery_time %}{{ delivery.scheduled_delivery_time|date:'Y-m-d\TH:i' }}{% endif %}">
                     </div>
                     <div class="info-item">
                         <label class="info-label info-label-required">交付期限</label>
-                        <input type="datetime-local" name="deadline" class="form-control" required 
+                        <input type="datetime-local" name="deadline" class="form-control" required
                                value="{% if delivery.deadline %}{{ delivery.deadline|date:'Y-m-d\TH:i' }}{% endif %}">
                     </div>
                 </div>
@@ -224,7 +224,7 @@
                 <h5 class="info-card-title">交付文件</h5>
             </div>
             <div class="info-card-body">
-                
+
                 {% if delivery.files.all %}
                 <div class="mb-3">
                     <h6>已有文件：</h6>
@@ -245,7 +245,7 @@
                     </ul>
                 </div>
                 {% endif %}
-                
+
                 <div class="info-item">
                     <label class="info-label">添加文件</label>
                     <input type="file" name="files" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.dwg,.dgn,.jpg,.jpeg,.png,.zip,.rar,.7z">
@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const emailFields = document.getElementById('email_fields');
     const expressFields = document.getElementById('express_fields');
     const handDeliveryFields = document.getElementById('hand_delivery_fields');
-    
+
     deliveryMethodRadios.forEach(radio => {
         radio.addEventListener('change', function() {
             if (this.value === 'email') {
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // 项目选择变化时自动填充客户信息
     const projectSelect = document.getElementById('project_select');
     if (projectSelect) {
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const projectId = this.value;
             const clientIdInput = document.getElementById('client_id');
             const clientNameInput = document.getElementById('client_name');
-            
+
             if (projectId) {
                 // 通过API获取项目信息
                 fetch(`/api/project/projects/${projectId}/`)

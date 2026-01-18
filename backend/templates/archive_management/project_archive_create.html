@@ -10,7 +10,7 @@
 
 {% block content %}
 <div class="container-fluid">
-    
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">➕ 创建项目归档</h2>
@@ -43,9 +43,9 @@
 
             <form method="post" id="archiveForm">
                 {% csrf_token %}
-                
+
                 <div class="row g-3">
-                    
+
                     <div class="col-md-12">
                         <label for="{{ form.project.id_for_label }}" class="form-label">
                             {{ form.project.label }} <span class="text-danger">*</span>
@@ -127,7 +127,7 @@
                             </td>
                             <td>{{ project.updated_time|date:"Y-m-d H:i"|default:"-" }}</td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                <button type="button" class="btn btn-sm btn-outline-primary"
                                         onclick="selectProject({{ project.id }}, '{{ project.project_name }}')">
                                     <i class="bi bi-check-circle"></i> 选择
                                 </button>
@@ -177,7 +177,7 @@ function selectProject(projectId, projectName) {
         // 触发change事件以更新UI
         projectSelect.dispatchEvent(new Event('change'));
     }
-    
+
     // 显示提示信息
     const alertDiv = document.createElement('div');
     alertDiv.className = 'alert alert-success alert-dismissible fade show';
@@ -186,7 +186,7 @@ function selectProject(projectId, projectName) {
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     document.querySelector('.info-card-body').insertBefore(alertDiv, document.querySelector('form'));
-    
+
     // 滚动到表单
     document.querySelector('form').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -195,20 +195,20 @@ function selectProject(projectId, projectName) {
 document.getElementById('archiveForm').addEventListener('submit', function(e) {
     const projectSelect = document.getElementById('{{ form.project.id_for_label }}');
     const archiveReason = document.getElementById('{{ form.archive_reason.id_for_label }}');
-    
+
     if (!projectSelect.value) {
         e.preventDefault();
         alert('请选择要归档的项目');
         return false;
     }
-    
+
     if (!archiveReason.value.trim()) {
         e.preventDefault();
         alert('请填写归档原因');
         archiveReason.focus();
         return false;
     }
-    
+
     if (!confirm('确定要提交归档申请吗？提交后将进入审批流程。')) {
         e.preventDefault();
         return false;

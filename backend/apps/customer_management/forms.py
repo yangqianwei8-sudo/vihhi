@@ -1210,24 +1210,22 @@ class VisitPlanForm(forms.ModelForm):
 class VisitPlanWithChecklistForm(forms.ModelForm):
     """创建拜访计划表单（合并拜访计划和沟通清单准备）"""
     
-    # 参与人员多选字段（不在模型中，需要手动处理）
-    participants = forms.ModelMultipleChoiceField(
-        queryset=None,
-        required=False,
-        widget=forms.SelectMultiple(attrs={
-            'class': 'form-select', 
-            'size': '5',
-            'title': '可多选，按住 Ctrl 键或 Command 键选择多个'
-        }),
-        label='参与人员'
-    )
-    
     class Meta:
         model = VisitPlan
         fields = [
-            'client', 'plan_date', 'location', 'related_opportunity', 'communication_checklist'
+            'department', 'responsible_user', 'client', 'plan_date', 'location', 'related_opportunity', 'communication_checklist'
         ]
         widgets = {
+            'department': forms.Select(attrs={
+                'class': 'form-select',
+                'disabled': True,
+                'id': 'id_department'
+            }),
+            'responsible_user': forms.Select(attrs={
+                'class': 'form-select',
+                'disabled': True,
+                'id': 'id_responsible_user'
+            }),
             'client': forms.Select(attrs={'class': 'form-select', 'required': True, 'id': 'id_client'}),
             'plan_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'required': True}),
             'location': forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'id': 'id_location', 'placeholder': '将根据客户办公地址自动填充'}),
@@ -1247,6 +1245,25 @@ class VisitPlanWithChecklistForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         permission_set = kwargs.pop('permission_set', None)
         super().__init__(*args, **kwargs)
+        
+        # 设置所属部门和负责人的默认值（只读，不可修改）
+        if user:
+            from backend.apps.system_management.models import Department, User
+            
+            # 设置所属部门（ForeignKey，设置为用户所属的部门）
+            if user.department:
+                self.fields['department'].initial = user.department.id
+                self.fields['department'].queryset = Department.objects.filter(id=user.department.id)
+            else:
+                self.fields['department'].queryset = Department.objects.none()
+            
+            # 设置负责人（ForeignKey，设置为当前用户）
+            self.fields['responsible_user'].initial = user.id
+            self.fields['responsible_user'].queryset = User.objects.filter(id=user.id)
+            
+            # 设置字段为只读（通过 disabled 属性）
+            self.fields['department'].widget.attrs['disabled'] = True
+            self.fields['responsible_user'].widget.attrs['disabled'] = True
         
         # 根据用户过滤客户：只显示该用户作为负责人的、已审批通过的客户
         if user:
@@ -1309,24 +1326,6 @@ class VisitPlanWithChecklistForm(forms.ModelForm):
         self.fields['related_opportunity'].queryset = BusinessOpportunity.objects.none()
         self.fields['related_opportunity'].empty_label = '-- 请先选择客户 --'
         
-        # 设置参与人员查询集（所有激活的用户）
-        from backend.apps.system_management.models import User
-        self.fields['participants'].queryset = User.objects.filter(is_active=True).order_by('username')
-        
-        # 如果是编辑模式，设置已选择的参与人员
-        if self.instance and self.instance.pk and self.instance.participants:
-            # 将逗号分隔的字符串转换为用户ID列表
-            participant_names = [name.strip() for name in self.instance.participants.split(',') if name.strip()]
-            # 根据用户名查找用户
-            participant_users = User.objects.filter(
-                username__in=participant_names
-            ) | User.objects.filter(
-                first_name__in=participant_names
-            ) | User.objects.filter(
-                last_name__in=participant_names
-            )
-            self.fields['participants'].initial = participant_users
-    
     def clean(self):
         cleaned_data = super().clean()
         plan_date = cleaned_data.get('plan_date')
@@ -1349,6 +1348,18 @@ class VisitPlanWithChecklistForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
         
+        # 处理 disabled 字段：从 POST 数据或 initial 中获取值
+        # 因为 disabled 字段不会在 POST 数据中，需要从 initial 值获取
+        if hasattr(self, 'initial') and 'department' in self.initial:
+            instance.department_id = self.initial['department']
+        elif hasattr(self, 'data') and 'department' in self.data:
+            instance.department_id = self.data['department']
+        
+        if hasattr(self, 'initial') and 'responsible_user' in self.initial:
+            instance.responsible_user_id = self.initial['responsible_user']
+        elif hasattr(self, 'data') and 'responsible_user' in self.data:
+            instance.responsible_user_id = self.data['responsible_user']
+        
         # 自动生成计划标题（如果未提供）
         if not instance.plan_title:
             client_name = instance.client.name if instance.client else '客户'
@@ -1358,18 +1369,6 @@ class VisitPlanWithChecklistForm(forms.ModelForm):
         # 自动生成拜访目的（如果未提供）
         if not instance.plan_purpose:
             instance.plan_purpose = '客户拜访'
-        
-        # 处理参与人员：将选中的用户转换为逗号分隔的字符串
-        selected_users = self.cleaned_data.get('participants', [])
-        if selected_users:
-            # 使用用户的显示名称（全名或用户名）
-            participant_names = []
-            for user in selected_users:
-                name = user.get_full_name() or user.username
-                participant_names.append(name)
-            instance.participants = ', '.join(participant_names)
-        else:
-            instance.participants = ''
         
         # 标记沟通清单已准备
         instance.checklist_prepared = True

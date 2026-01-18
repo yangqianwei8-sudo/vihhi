@@ -1,12 +1,11 @@
 {% extends "customer_management/_base.html" %}
 {% load static %}
 
-
 {% block extra_css %}
 {{ block.super }}
 <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.css" rel="stylesheet">
 <style>
-  .pm-home-wrap { 
+  .pm-home-wrap {
     padding: 0;
   }
 
@@ -303,108 +302,14 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  {# // 计划状态分布饼图 #}
-  {#   {% if plan_status_dist %} #}
-  {#   const planCtx = document.getElementById('planStatusChart'); #}
-  {#   if (planCtx) { #}
-  {#     const planData = { #}
-  {#       labels: [ #}
-  {#         {% for status_code, status_data in plan_status_dist.items %} #}
-  {#         '{{ status_data.label }}'{% if not forloop.last %},{% endif %} #}
-  {#         {% endfor %} #}
-  {#       ], #}
-  {#       datasets: [{ #}
-  {#         data: [ #}
-  {#           {% for status_code, status_data in plan_status_dist.items %} #}
-  {#           {{ status_data.count }}{% if not forloop.last %},{% endif %} #}
-  {#           {% endfor %} #}
-  {#         ], #}
-  {#         backgroundColor: [ #}
-  {#           '#666666', '#999999', '#CCCCCC', '#333333', '#1A1A1A' #}
-  {#         ] #}
-  {#       }] #}
-  {#     }; #}
-  {#     new Chart(planCtx, { #}
-  {#       type: 'pie', #}
-  {#       data: planData, #}
-  {#       options: { #}
-  {#         responsive: true, #}
-  {#         maintainAspectRatio: false, #}
-  {#         plugins: { #}
-  {#           legend: { #}
-  {#             position: 'bottom' #}
-  {#           }, #}
-  {#           tooltip: { #}
-  {#             callbacks: { #}
-  {#               label: function(context) { #}
-  {#                 const label = context.label || ''; #}
-  {#                 const value = context.parsed || 0; #}
-  {#                 const total = context.dataset.data.reduce((a, b) => a + b, 0); #}
-  {#                 const percentage = ((value / total) * 100).toFixed(1); #}
-  {#                 return label + ': ' + value + ' (' + percentage + '%)'; #}
-  {#               } #}
-  {#             } #}
-  {#           } #}
-  {#         } #}
-  {#       } #}
-  {#     }); #}
-  {#   } #}
-  {#   {% endif %} #}
 
-  {# // 目标状态分布饼图 #}
-  {#   {% if goal_status_dist %} #}
-  {#   const goalCtx = document.getElementById('goalStatusChart'); #}
-  {#   if (goalCtx) { #}
-  {#     const goalData = { #}
-  {#       labels: [ #}
-  {#         {% for status_code, status_data in goal_status_dist.items %} #}
-  {#         '{{ status_data.label }}'{% if not forloop.last %},{% endif %} #}
-  {#         {% endfor %} #}
-  {#       ], #}
-  {#       datasets: [{ #}
-  {#         data: [ #}
-  {#           {% for status_code, status_data in goal_status_dist.items %} #}
-  {#           {{ status_data.count }}{% if not forloop.last %},{% endif %} #}
-  {#           {% endfor %} #}
-  {#         ], #}
-  {#         backgroundColor: [ #}
-  {#           '#666666', '#999999', '#CCCCCC', '#333333', '#1A1A1A' #}
-  {#         ] #}
-  {#       }] #}
-  {#     }; #}
-  {#     new Chart(goalCtx, { #}
-  {#       type: 'pie', #}
-  {#       data: goalData, #}
-  {#       options: { #}
-  {#         responsive: true, #}
-  {#         maintainAspectRatio: false, #}
-  {#         plugins: { #}
-  {#           legend: { #}
-  {#             position: 'bottom' #}
-  {#           }, #}
-  {#           tooltip: { #}
-  {#             callbacks: { #}
-  {#               label: function(context) { #}
-  {#                 const label = context.label || ''; #}
-  {#                 const value = context.parsed || 0; #}
-  {#                 const total = context.dataset.data.reduce((a, b) => a + b, 0); #}
-  {#                 const percentage = ((value / total) * 100).toFixed(1); #}
-  {#                 return label + ': ' + value + ' (' + percentage + '%)'; #}
-  {#               } #}
-  {#             } #}
-  {#           } #}
-  {#         } #}
-  {#       } #}
-  {#     }); #}
-  {#   } #}
-  {#   {% endif %} #}
 });
 </script>
 {% endblock %}
 
 {% block pm_content %}
 <div class="pm-home-wrap">
-  <!-- 第一行：顶部操作栏 -->
+
   {% if top_actions %}
   <div class="pm-top-actions">
     {% for action in top_actions %}
@@ -413,9 +318,9 @@ document.addEventListener('DOMContentLoaded', function() {
     </a>
     {% endfor %}
   </div>
-  {#   {% endif %} #}
+
   {% endif %}
-  <!-- 第二行：核心指标卡片（6个） -->
+
   {% if core_cards %}
   <div class="pm-core-cards">
     {% for card in core_cards %}
@@ -431,36 +336,8 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
   {% endif %}
 
-  {# <!-- 第三行：状态分布统计（左右分栏） --> #}
-  {#   <div class="pm-stats-row"> #}
-  {#     <!-- 左侧：计划状态分布 --> #}
-  {#     <div class="pm-stats-card"> #}
-  {#       <div class="pm-stats-card-title">计划状态分布</div> #}
-  {#       {% if plan_status_dist %} #}
-  {#       <div class="pm-chart-container"> #}
-  {#         <canvas id="planStatusChart"></canvas> #}
-  {#       </div> #}
-  {#       {% else %} #}
-  {#       <div class="pm-empty">暂无数据</div> #}
-  {#       {% endif %} #}
-  {#     </div> #}
-
-  {#     <!-- 右侧：目标状态分布 --> #}
-  {#     <div class="pm-stats-card"> #}
-  {#       <div class="pm-stats-card-title">目标状态分布</div> #}
-  {#       {% if goal_status_dist %} #}
-  {#       <div class="pm-chart-container"> #}
-  {#         <canvas id="goalStatusChart"></canvas> #}
-  {#       </div> #}
-  {#       {% else %} #}
-  {#       <div class="pm-empty">暂无数据</div> #}
-  {#       {% endif %} #}
-  {#     </div> #}
-  {#   </div> #}
-
-  <!-- 第四行：风险预警与待办（左右分栏） -->
   <div class="pm-stats-row">
-    <!-- 左侧：风险预警 -->
+
     <div class="pm-warning-card">
       <div class="pm-card-title">
         风险预警
@@ -492,7 +369,6 @@ document.addEventListener('DOMContentLoaded', function() {
       {% endif %}
     </div>
 
-    <!-- 右侧：待办事项 -->
     <div class="pm-todo-card">
       <div class="pm-card-title">
         {% if todo_summary_url %}
@@ -521,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="pm-item-meta">
             {% if item.type == 'approval' %}
             <div style="margin-bottom: 4px;">
-              <strong>{{ item.request_type }}</strong> | 
+              <strong>{{ item.request_type }}</strong> |
               {% if item.plan_type %}{{ item.plan_type }} | {% endif %}
               申请人：{{ item.requested_by }} | {{ item.time|date:"Y-m-d H:i" }}
             </div>
@@ -560,9 +436,8 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
 
-  <!-- 第五行：快速访问与最近活动（左右分栏） -->
   <div class="pm-stats-row">
-    <!-- 左侧：我的工作 -->
+
     <div class="pm-my-work-card">
       <div class="pm-card-title">
         {% if my_work.summary_url %}
@@ -571,9 +446,9 @@ document.addEventListener('DOMContentLoaded', function() {
           我的工作
         {% endif %}
       </div>
-      
+
       {% if my_work %}
-      <!-- 我负责的客户 -->
+
       <div class="pm-work-section">
         <div class="pm-work-section-title">
           我负责的客户 ({{ my_work.my_customers_count|default:0 }})
@@ -592,7 +467,6 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endif %}
       </div>
 
-      <!-- 我负责的商机 -->
       <div class="pm-work-section">
         <div class="pm-work-section-title">
           我负责的商机 ({{ my_work.my_opportunities_count|default:0 }})
@@ -611,7 +485,6 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endif %}
       </div>
 
-      <!-- 我参与的商机 -->
       <div class="pm-work-section">
         <div class="pm-work-section-title">
           我参与的商机 ({{ my_work.participating_opportunities_count|default:0 }})
@@ -634,13 +507,12 @@ document.addEventListener('DOMContentLoaded', function() {
       {% endif %}
     </div>
 
-    <!-- 右侧：最近活动 -->
     <div class="pm-activities-card">
       <div class="pm-card-title">最近活动</div>
-      
+
       {% if recent_activities %}
       <ul class="pm-activity-list">
-        <!-- 最近创建的客户 -->
+
         {% for customer in recent_activities.recent_customers %}
         <li class="pm-activity-item">
           <div class="pm-activity-title">
@@ -652,7 +524,6 @@ document.addEventListener('DOMContentLoaded', function() {
         </li>
         {% endfor %}
 
-        <!-- 最近创建的联系人 -->
         {% for contact in recent_activities.recent_contacts %}
         <li class="pm-activity-item">
           <div class="pm-activity-title">
@@ -664,7 +535,6 @@ document.addEventListener('DOMContentLoaded', function() {
         </li>
         {% endfor %}
 
-        <!-- 最近创建的合同 -->
         {% for contract in recent_activities.recent_contracts %}
         <li class="pm-activity-item">
           <div class="pm-activity-title">

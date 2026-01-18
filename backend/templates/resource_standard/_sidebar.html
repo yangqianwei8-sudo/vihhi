@@ -1,0 +1,164 @@
+{% load static %}
+
+<aside class="two-col-sidebar">
+  <div class="two-col-sidebar__inner">
+    <div class="two-col-sidebar__header">
+      <h2 class="two-col-sidebar__title">资源管理</h2>
+      <p class="two-col-sidebar__subtitle">资源标准库管理</p>
+    </div>
+
+    <nav class="two-col-sidebar__body">
+      {% if resource_sidebar_nav %}
+        {% for group in resource_sidebar_nav %}
+          {% if group.children %}
+            <div class="sidebar-group">
+              <div class="sidebar-group__header {% if group.active or group.expanded %}expanded{% endif %}"
+                   data-bs-toggle="collapse"
+                   data-bs-target="#group-{{ group.id }}"
+                   aria-expanded="{% if group.active or group.expanded %}true{% else %}false{% endif %}"
+                   role="button">
+                <span class="sidebar-group__icon">{{ group.icon|default:"📁" }}</span>
+                <span class="sidebar-group__label">{{ group.label }}</span>
+                <span class="sidebar-group__arrow">▼</span>
+              </div>
+              <div class="collapse {% if group.active or group.expanded %}show{% endif %}"
+                   id="group-{{ group.id }}">
+                <div class="sidebar-group__body">
+                  {% for item in group.children %}
+                    <a href="{{ item.url }}"
+                       class="sidebar-item {% if item.active %}active{% endif %}">
+                      <span class="sidebar-item__icon">{{ item.icon|default:"" }}</span>
+                      <span class="sidebar-item__label">{{ item.label }}</span>
+                    </a>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <a href="{{ group.url }}"
+               class="sidebar-item {% if group.active %}active{% endif %}">
+              <span class="sidebar-item__icon">{{ group.icon|default:"📁" }}</span>
+              <span class="sidebar-item__label">{{ group.label }}</span>
+            </a>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <div class="two-col-sidebar__placeholder">
+          <p>暂无菜单项</p>
+        </div>
+      {% endif %}
+    </nav>
+  </div>
+</aside>
+
+<style>
+.sidebar-group {
+  margin-bottom: 4px;
+}
+
+.sidebar-group__header {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: #333;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+
+.sidebar-group__header:hover {
+  background-color: #F5F5F5;
+}
+
+.sidebar-group__header.expanded {
+  background-color: #E8E8E8;
+  font-weight: 600;
+}
+
+.sidebar-group__icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.sidebar-group__label {
+  flex: 1;
+}
+
+.sidebar-group__arrow {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.sidebar-group__header.expanded .sidebar-group__arrow {
+  transform: rotate(180deg);
+}
+
+.sidebar-group__body {
+  padding-left: 8px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px 8px 32px;
+  color: #666;
+  text-decoration: none;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar-item:hover {
+  background-color: #F5F5F5;
+  color: #333;
+  text-decoration: none;
+}
+
+.sidebar-item.active {
+  background-color: #E3F2FD;
+  color: #1976D2;
+  font-weight: 500;
+}
+
+.sidebar-item__icon {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.sidebar-item__label {
+  flex: 1;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // 处理侧边栏分组展开/折叠（使用 Bootstrap 5 的 collapse）
+  document.querySelectorAll('.sidebar-group__header').forEach(function(header) {
+    header.addEventListener('click', function(e) {
+      e.preventDefault();
+      const targetId = this.getAttribute('data-bs-target');
+      const target = document.querySelector(targetId);
+
+      if (target) {
+        // 使用 Bootstrap 5 的 Collapse API
+        const bsCollapse = new bootstrap.Collapse(target, {
+          toggle: false
+        });
+
+        const isExpanded = this.classList.contains('expanded');
+        if (isExpanded) {
+          bsCollapse.hide();
+          this.classList.remove('expanded');
+          this.setAttribute('aria-expanded', 'false');
+        } else {
+          bsCollapse.show();
+          this.classList.add('expanded');
+          this.setAttribute('aria-expanded', 'true');
+        }
+      }
+    });
+  });
+});
+</script>

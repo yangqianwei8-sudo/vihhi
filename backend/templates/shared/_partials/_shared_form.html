@@ -1,37 +1,3 @@
-{# 共享表单模板 - 用于提交类表单复用
-   
-   使用方式：
-   {% extends "shared/two_column_layout_base.html" %}
-   {% load static %}
-   
-   {% block title %}{{ page_title|default:"表单页面" }}{% endblock %}
-   
-   {% block sidebar_content %}
-     {% include "plan_management/_sidebar.html" %}
-   {% endblock %}
-   
-   {% block content_inner %}
-     {% include "shared/_partials/_shared_form.html" with form=form page_title=page_title submit_text=submit_text cancel_url=cancel_url form_fields_layout=form_fields_layout %}
-   {% endblock %}
-   
-   上下文变量说明：
-   - form: Django表单对象（必需）
-   - page_title: 页面标题（可选，默认"表单页面"）
-   - submit_text: 提交按钮文本（可选，默认"保存草稿"，注意：保存只是暂存，为草稿）
-   - cancel_url: 取消按钮链接（可选，使用url_name或url）
-   - cancel_url_name: 取消按钮的URL名称（可选，与cancel_url二选一）
-   - create_url: 创建按钮链接（可选，使用url_name或url）
-   - create_url_name: 创建按钮的URL名称（可选，与create_url二选一）
-   
-   按钮布局：
-   - 左下角：取消、保存草稿按钮（注意：保存只是暂存，为草稿）
-   - 右下角：创建按钮（如果提供了 create_url_name 或 create_url）
-   - form_fields_layout: 字段布局配置（可选，默认自动布局）
-   - full_width_fields: 全宽字段列表（可选，默认包含description,notes,content等）
-   - extra_form_actions: 额外的表单操作按钮（可选）
-   - form_help_text: 表单帮助文本（可选）
-   - form_js_file: 额外的JavaScript文件路径（可选）
-#}
 {% load static %}
 
 <style>
@@ -42,11 +8,11 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     padding: 24px;
   }
-  
+
   .form-group {
     margin-bottom: 20px;
   }
-  
+
   .form-label {
     font-size: 12px;
     color: #666666;
@@ -54,12 +20,12 @@
     display: block;
     font-weight: 500;
   }
-  
+
   .form-label.required::after {
     content: ' *';
     color: #999999;
   }
-  
+
   .form-control,
   .form-select {
     width: 100%;
@@ -70,31 +36,31 @@
     color: #333333;
     background: #FFFFFF;
   }
-  
+
   .form-control:focus,
   .form-select:focus {
     outline: none;
     border-color: #999999;
     box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
   }
-  
+
   .form-control[readonly] {
     background: #F5F5F5;
     color: #666666;
   }
-  
+
   .form-text {
     font-size: 11px;
     color: #999999;
     margin-top: 4px;
   }
-  
+
   .form-error {
     font-size: 11px;
     color: #999999;
     margin-top: 4px;
   }
-  
+
   .form-actions {
     display: flex;
     justify-content: space-between;
@@ -104,17 +70,17 @@
     padding-top: 20px;
     border-top: 1px solid #E0E0E0;
   }
-  
+
   .form-actions-left {
     display: flex;
     gap: 12px;
   }
-  
+
   .form-actions-right {
     display: flex;
     gap: 12px;
   }
-  
+
   .form-btn {
     padding: 10px 20px;
     border-radius: 0;
@@ -126,31 +92,31 @@
     text-decoration: none;
     display: inline-block;
   }
-  
+
   .form-btn-secondary {
     background: #FFFFFF;
     color: #666666;
     border-color: #E0E0E0;
   }
-  
+
   .form-btn-secondary:hover {
     background: #F5F5F5;
     border-color: #CCCCCC;
     color: #333333;
     text-decoration: none;
   }
-  
+
   .form-btn-primary {
     background: #1A1A1A;
     color: #FFFFFF;
     border-color: #1A1A1A;
   }
-  
+
   .form-btn-primary:hover {
     background: #333333;
     border-color: #333333;
   }
-  
+
   .form-alert {
     background: #F5F5F5;
     border: 1px solid #E0E0E0;
@@ -158,37 +124,37 @@
     padding: 12px 16px;
     margin-bottom: 20px;
   }
-  
+
   .form-alert-danger {
     background: #FAFAFA;
     border-color: #E0E0E0;
     color: #666666;
   }
-  
+
   .form-alert-title {
     font-size: 13px;
     font-weight: 600;
     color: #1A1A1A;
     margin-bottom: 8px;
   }
-  
+
   .form-alert-list {
     margin: 0;
     padding-left: 20px;
     font-size: 12px;
     color: #666666;
   }
-  
+
   .form-row {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 20px;
   }
-  
+
   .form-row-full {
     grid-column: 1 / -1;
   }
-  
+
   .form-help-text {
     background: #F5F5F5;
     border: 1px solid #E0E0E0;
@@ -198,7 +164,7 @@
     font-size: 12px;
     color: #666666;
   }
-  
+
   @media (max-width: 768px) {
     .form-row {
       grid-template-columns: 1fr;
@@ -207,7 +173,7 @@
 </style>
 
 <div class="form-container">
-  {# 表单错误提示 #}
+
   {% if form.errors %}
   <div class="form-alert form-alert-danger">
     <div class="form-alert-title">提交失败：请完善必填项</div>
@@ -221,7 +187,6 @@
   </div>
   {% endif %}
 
-  {# 表单帮助文本 #}
   {% if form_help_text %}
   <div class="form-help-text">
     {{ form_help_text|safe }}
@@ -238,7 +203,6 @@
     </div>
     {% endif %}
 
-    {# 表单字段区域 #}
     <div class="form-row">
       {% for field in form %}
       <div class="form-group {% if field.name in full_width_fields|default:'description,notes,content,background,significance,plan_objective' %}form-row-full{% endif %}">
@@ -246,11 +210,11 @@
           {{ field.label }}
         </label>
         {{ field }}
-        
+
         {% if field.help_text %}
         <div class="form-text">{{ field.help_text }}</div>
         {% endif %}
-        
+
         {% if field.errors %}
         <div class="form-error">{{ field.errors }}</div>
         {% endif %}
@@ -258,7 +222,6 @@
       {% endfor %}
     </div>
 
-    {# 表单操作按钮 #}
         <div class="form-actions">
       <div class="form-actions-left">
         {% if cancel_url_name %}
@@ -284,7 +247,6 @@
   </form>
 </div>
 
-{# 额外的JavaScript（如果需要） #}
 {% if form_js_file %}
 <script src="{% static form_js_file %}"></script>
 {% endif %}

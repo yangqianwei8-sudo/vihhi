@@ -103,7 +103,7 @@
 
 {% block content %}
 <div class="container-fluid">
-    
+
     <div class="center-hero mb-4">
         <div style="position: relative; z-index: 1;">
             <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
@@ -115,7 +115,7 @@
         <div class="col-lg-8">
             <div class="calculator-container">
                 <h3>报价计算</h3>
-                
+
                 <form id="calculatorForm">
                     <div class="param-group">
                         <label for="mode">报价模式 <span class="text-danger">*</span></label>
@@ -156,7 +156,7 @@
                             <i class="bi bi-info-circle"></i> 已应用封顶费限制
                         </div>
                     </div>
-                    
+
                     <div class="calculation-steps" id="calculationSteps">
                         <h5>计算步骤</h5>
                         <div id="stepsContent"></div>
@@ -166,7 +166,7 @@
         </div>
 
         <div class="col-lg-4">
-            
+
             {% if quotation_rules %}
             <div class="calculator-container">
                 <h3>报价规则参考</h3>
@@ -233,7 +233,7 @@
             element.innerHTML = html;
         }
     }
-    
+
     // 安全的文本设置函数（推荐使用）
     function setSafeText(element, text) {
         if (element) {
@@ -288,11 +288,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const modeSelect = document.getElementById('mode');
     const modeDescription = document.getElementById('modeDescription');
     const modeParamsContainer = document.getElementById('modeParamsContainer');
-    
+
     // 监听模式选择变化
     modeSelect.addEventListener('change', function() {
         const selectedMode = this.value;
-        
+
         // 显示模式描述
         if (selectedMode && modeDescriptions[selectedMode]) {
             modeDescription.textContent = modeDescriptions[selectedMode];
@@ -300,31 +300,31 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             modeDescription.style.display = 'none';
         }
-        
+
         // 显示模式参数
         if (selectedMode && modeParamsConfig[selectedMode]) {
             let html = '<h5 style="font-size: 16px; font-weight: 600; margin-top: 20px; margin-bottom: 16px;">模式参数</h5>';
             modeParamsConfig[selectedMode].forEach(param => {
                 html += '<div class="param-group">';
                 html += `<label for="param_${param.name}">${param.label}${param.required ? ' <span class="text-danger">*</span>' : ''}</label>`;
-                
+
                 if (param.type === 'textarea') {
                     html += `<textarea class="form-control" id="param_${param.name}" name="${param.name}" ${param.required ? 'required' : ''} placeholder="${param.placeholder || ''}" rows="4"></textarea>`;
                 } else {
                     html += `<input type="${param.type}" class="form-control" id="param_${param.name}" name="${param.name}" step="${param.step || ''}" min="${param.min || ''}" max="${param.max || ''}" ${param.required ? 'required' : ''} placeholder="${param.placeholder || ''}">`;
                 }
-                
+
                 html += '</div>';
             });
             modeParamsContainer.innerHTML = html;
         } else {
             modeParamsContainer.textContent = '';
         }
-        
+
         // 隐藏结果
         document.getElementById('resultContainer').style.display = 'none';
     });
-    
+
     // 表单提交
     document.getElementById('calculatorForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function calculate() {
     const form = document.getElementById('calculatorForm');
     const formData = new FormData(form);
-    
+
     // 收集模式参数
     const modeParams = {};
     const selectedMode = formData.get('mode');
@@ -358,19 +358,19 @@ function calculate() {
             }
         });
     }
-    
+
     // 准备请求数据
     const requestData = {
         mode: formData.get('mode'),
         saved_amount: parseFloat(formData.get('saved_amount')),
         mode_params: modeParams,
     };
-    
+
     const capFee = formData.get('cap_fee');
     if (capFee) {
         requestData.cap_fee = parseFloat(capFee);
     }
-    
+
     // 发送请求
     fetch('{% url "business_pages:quotation_calculator_api" %}', {
         method: 'POST',
@@ -386,22 +386,22 @@ function calculate() {
             alert('计算失败：' + data.error);
             return;
         }
-        
+
         // 显示结果
         document.getElementById('serviceFee').textContent = data.service_fee.toFixed(2);
         document.getElementById('cappedNotice').style.display = data.is_capped ? 'block' : 'none';
-        
+
         // 显示计算步骤
         const stepsContent = document.getElementById('stepsContent');
         if (data.calculation_steps && data.calculation_steps.length > 0) {
-            stepsContent.innerHTML = data.calculation_steps.map(step => 
+            stepsContent.innerHTML = data.calculation_steps.map(step =>
                 `<div class="step-item">${step}</div>`
             ).join('');
         } else {
             // TODO: 使用DOMPurify清理HTML
             stepsContent.innerHTML = '<div class="step-item">暂无计算步骤</div>';
         }
-        
+
         document.getElementById('resultContainer').style.display = 'block';
     })
     .catch(error => {

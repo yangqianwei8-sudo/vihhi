@@ -2311,6 +2311,24 @@ class VisitPlan(models.Model):
         verbose_name='关联商机'
     )
     
+    # 所属部门和负责人
+    department = models.ForeignKey(
+        'system_management.Department',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='visit_plans',
+        verbose_name='所属部门'
+    )
+    responsible_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='responsible_visit_plans',
+        verbose_name='负责人'
+    )
+    
     # 审计字段
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_visit_plans', verbose_name='创建人')
     created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')

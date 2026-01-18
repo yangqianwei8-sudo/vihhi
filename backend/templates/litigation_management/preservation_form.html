@@ -12,7 +12,7 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">{{ page_title }}</h2>
@@ -32,7 +32,7 @@
         <div class="info-card-body">
             <form method="post" id="preservationForm">
                 {% csrf_token %}
-                
+
                 <div class="row mb-4">
                     <div class="col-12">
                         <h6 class="border-bottom pb-2 mb-3">基本信息</h6>
@@ -49,22 +49,22 @@
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label">保全金额</label>
-                        <input type="number" name="seal_amount" class="form-control" step="0.01" 
+                        <input type="number" name="seal_amount" class="form-control" step="0.01"
                                value="{% if seal and seal.seal_amount %}{{ seal.seal_amount }}{% endif %}" placeholder="请输入保全金额">
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label">保全案号</label>
-                        <input type="text" name="seal_number" class="form-control" 
+                        <input type="text" name="seal_number" class="form-control"
                                value="{% if seal %}{{ seal.seal_number }}{% endif %}" placeholder="请输入保全案号">
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">开始日期 <span class="text-danger">*</span></label>
-                        <input type="date" name="start_date" class="form-control" 
+                        <input type="date" name="start_date" class="form-control"
                                value="{% if seal %}{{ seal.start_date|date:'Y-m-d' }}{% else %}{{ 'now'|date:'Y-m-d' }}{% endif %}" required>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">结束日期 <span class="text-danger">*</span></label>
-                        <input type="date" name="end_date" class="form-control" 
+                        <input type="date" name="end_date" class="form-control"
                                value="{% if seal %}{{ seal.end_date|date:'Y-m-d' }}{% endif %}" required>
                     </div>
                 </div>
@@ -75,18 +75,18 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">法院名称</label>
-                        <input type="text" name="court_name" class="form-control" 
+                        <input type="text" name="court_name" class="form-control"
                                value="{% if seal %}{{ seal.court_name }}{% endif %}" placeholder="请输入法院名称">
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">续封申请截止日期</label>
-                        <input type="date" name="renewal_deadline" class="form-control" 
+                        <input type="date" name="renewal_deadline" class="form-control"
                                value="{% if seal and seal.renewal_deadline %}{{ seal.renewal_deadline|date:'Y-m-d' }}{% endif %}">
                         <small class="form-text text-muted">建议提前7-15天申请续封</small>
                     </div>
                     <div class="col-md-12 mb-3">
                         <label class="form-label">续封所需材料</label>
-                        <textarea name="renewal_materials" class="form-control" rows="3" 
+                        <textarea name="renewal_materials" class="form-control" rows="3"
                                   placeholder="请输入续封所需材料清单">{% if seal %}{{ seal.renewal_materials }}{% endif %}</textarea>
                     </div>
                 </div>
@@ -97,7 +97,7 @@
                     </div>
                     <div class="col-md-12 mb-3">
                         <label class="form-label">备注</label>
-                        <textarea name="notes" class="form-control" rows="3" 
+                        <textarea name="notes" class="form-control" rows="3"
                                   placeholder="请输入备注信息">{% if seal %}{{ seal.notes }}{% endif %}</textarea>
                     </div>
                 </div>
@@ -125,7 +125,7 @@
     document.getElementById('preservationForm').addEventListener('submit', function(e) {
         const startDate = document.querySelector('input[name="start_date"]').value;
         const endDate = document.querySelector('input[name="end_date"]').value;
-        
+
         if (startDate && endDate && startDate > endDate) {
             e.preventDefault();
             alert('结束日期不能早于开始日期');

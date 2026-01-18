@@ -10,7 +10,7 @@
 
 {% block content %}
 <div class="container-fluid">
-    
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">📖 新建档案借阅</h2>
@@ -43,9 +43,9 @@
 
             <form method="post" id="borrowForm">
                 {% csrf_token %}
-                
+
                 <div class="row g-3">
-                    
+
                     <div class="col-md-12">
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle"></i> 请选择要借阅的项目文档或行政档案（二选一）
@@ -150,7 +150,7 @@
     </div>
 
     <div class="row">
-        
+
         {% if project_documents %}
         <div class="col-md-6">
             <div class="info-card mb-4">
@@ -176,7 +176,7 @@
                                     <td>{{ doc.document_name|truncatewords:5 }}</td>
                                     <td><small>{{ doc.project.project_name|truncatewords:3|default:"-" }}</small></td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
                                                 onclick="selectProjectDocument({{ doc.id }}, '{{ doc.document_name }}')">
                                             <i class="bi bi-check-circle"></i> 选择
                                         </button>
@@ -216,7 +216,7 @@
                                     <td>{{ archive.archive_name|truncatewords:5 }}</td>
                                     <td><small>{{ archive.category.name|default:"-" }}</small></td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
                                                 onclick="selectAdministrativeArchive({{ archive.id }}, '{{ archive.archive_name }}')">
                                             <i class="bi bi-check-circle"></i> 选择
                                         </button>
@@ -265,7 +265,7 @@
 function selectProjectDocument(docId, docName) {
     const docSelect = document.getElementById('{{ form.project_document.id_for_label }}');
     const archiveSelect = document.getElementById('{{ form.administrative_archive.id_for_label }}');
-    
+
     if (docSelect) {
         docSelect.value = docId;
         // 清空行政档案选择
@@ -274,14 +274,14 @@ function selectProjectDocument(docId, docName) {
         }
         docSelect.dispatchEvent(new Event('change'));
     }
-    
+
     showAlert('已选择项目文档：' + docName);
 }
 
 function selectAdministrativeArchive(archiveId, archiveName) {
     const archiveSelect = document.getElementById('{{ form.administrative_archive.id_for_label }}');
     const docSelect = document.getElementById('{{ form.project_document.id_for_label }}');
-    
+
     if (archiveSelect) {
         archiveSelect.value = archiveId;
         // 清空项目文档选择
@@ -290,7 +290,7 @@ function selectAdministrativeArchive(archiveId, archiveName) {
         }
         archiveSelect.dispatchEvent(new Event('change'));
     }
-    
+
     showAlert('已选择行政档案：' + archiveName);
 }
 
@@ -302,7 +302,7 @@ function showAlert(message) {
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     document.querySelector('.info-card-body').insertBefore(alertDiv, document.querySelector('form'));
-    
+
     setTimeout(() => {
         alertDiv.remove();
     }, 3000);
@@ -315,37 +315,37 @@ document.getElementById('borrowForm').addEventListener('submit', function(e) {
     const borrowReason = document.getElementById('{{ form.borrow_reason.id_for_label }}').value;
     const returnDate = document.getElementById('{{ form.return_date.id_for_label }}').value;
     const borrowDate = document.getElementById('{{ form.borrow_date.id_for_label }}').value;
-    
+
     if (!projectDoc && !adminArchive) {
         e.preventDefault();
         alert('请选择要借阅的项目文档或行政档案');
         return false;
     }
-    
+
     if (projectDoc && adminArchive) {
         e.preventDefault();
         alert('不能同时选择项目文档和行政档案，请只选择其中一个');
         return false;
     }
-    
+
     if (!borrowReason.trim()) {
         e.preventDefault();
         alert('请填写借阅事由');
         return false;
     }
-    
+
     if (!returnDate) {
         e.preventDefault();
         alert('请选择归还日期');
         return false;
     }
-    
+
     if (borrowDate && returnDate && new Date(returnDate) <= new Date(borrowDate)) {
         e.preventDefault();
         alert('归还日期必须晚于借阅日期');
         return false;
     }
-    
+
     if (!confirm('确定要提交借阅申请吗？提交后将进入审批流程。')) {
         e.preventDefault();
         return false;

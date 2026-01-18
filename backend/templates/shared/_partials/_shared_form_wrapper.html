@@ -1,52 +1,6 @@
 {% extends "goal_management/_base.html" %}
 {% load static %}
 
-{# 共享表单包装模板 - 完整的表单页面模板，可直接继承使用
-   
-   使用方式：
-   extends "shared/_partials/_shared_form_wrapper.html"
-   load static
-   
-   ⚠️ 重要：使用此模板前，必须删除所有老设计元素！
-   
-   需要删除的老设计元素：
-   1. 旧的页面标题样式（如：.page-title, .page-header 等）
-   2. 旧的表单容器样式（如：.form-wrapper, .form-box 等）
-   3. 旧的按钮样式（如：.btn-primary, .btn-secondary 等，除非是通用按钮）
-   4. 旧的布局样式（如：.row, .col-* 等 Bootstrap 网格，除非必要）
-   5. 重复的样式定义（检查是否有重复的 CSS 规则）
-   6. 旧的侧边栏或导航元素（如果页面已有侧边栏）
-   7. 旧的页脚或底部元素（除非是页面特定内容）
-   
-   保留的元素：
-   - 表单字段本身（input, select, textarea 等）
-   - 表单验证逻辑和 JavaScript
-   - 业务特定的样式和脚本
-   - 页面特定的内容块
-   
-   上下文变量说明：
-   - form: Django表单对象（必需）
-   - page_title: 页面标题（可选）
-   - submit_text: 提交按钮文本（可选，默认"保存"）
-   - cancel_url: 取消按钮链接（可选）
-   - cancel_url_name: 取消按钮的URL名称（可选）
-   - full_width_fields: 全宽字段列表（可选）
-   - extra_form_actions: 额外的表单操作按钮（可选）
-   - form_help_text: 表单帮助文本（可选）
-   - form_js_file: 额外的JavaScript文件路径（可选）
-   - form_page_subtitle_text: 表单页面副标题文本（可选）
-   
-   模板特性：
-   - 主标题字体大小：24px
-   - 副标题字体大小：12px
-   - 主标题下划线：纯黑色，延伸到屏幕边缘
-   - 表单字段布局：4列网格（响应式）
-   - 必填字段标记：纯黑色星号
-   - 主标题和副标题底部对齐
-#}
-
-
-
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
 <style>
@@ -57,11 +11,11 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     padding: 24px;
   }
-  
+
   .form-group {
     margin-bottom: 20px;
   }
-  
+
   .form-label {
     font-size: 12px;
     color: #666666;
@@ -69,12 +23,12 @@
     display: block;
     font-weight: 500;
   }
-  
+
   .form-label.required::after {
     content: ' *';
     color: #000000;
   }
-  
+
   .form-control,
   .form-select {
     width: 100%;
@@ -85,31 +39,31 @@
     color: #333333;
     background: #FFFFFF;
   }
-  
+
   .form-control:focus,
   .form-select:focus {
     outline: none;
     border-color: #000000;
     box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
   }
-  
+
   .form-control[readonly] {
     background: #F5F5F5;
     color: #666666;
   }
-  
+
   .form-text {
     font-size: 11px;
     color: #000000;
     margin-top: 4px;
   }
-  
+
   .form-error {
     font-size: 11px;
     color: #000000;
     margin-top: 4px;
   }
-  
+
   .form-actions {
     align-items: center;
     display: flex;
@@ -129,7 +83,7 @@
     display: flex;
     gap: 12px;
   }
-  
+
   .form-btn {
     padding: 10px 20px;
     border-radius: 0;
@@ -141,31 +95,31 @@
     text-decoration: none;
     display: inline-block;
   }
-  
+
   .form-btn-secondary {
     background: #FFFFFF;
     color: #666666;
     border-color: #E0E0E0;
   }
-  
+
   .form-btn-secondary:hover {
     background: #F5F5F5;
     border-color: #CCCCCC;
     color: #333333;
     text-decoration: none;
   }
-  
+
   .form-btn-primary {
     background: #1A1A1A;
     color: #FFFFFF;
     border-color: #1A1A1A;
   }
-  
+
   .form-btn-primary:hover {
     background: #333333;
     border-color: #333333;
   }
-  
+
   .form-alert {
     background: #F5F5F5;
     border: 1px solid #E0E0E0;
@@ -173,37 +127,37 @@
     padding: 12px 16px;
     margin-bottom: 20px;
   }
-  
+
   .form-alert-danger {
     background: #FAFAFA;
     border-color: #E0E0E0;
     color: #666666;
   }
-  
+
   .form-alert-title {
     font-size: 13px;
     font-weight: 600;
     color: #1A1A1A;
     margin-bottom: 8px;
   }
-  
+
   .form-alert-list {
     margin: 0;
     padding-left: 20px;
     font-size: 12px;
     color: #666666;
   }
-  
+
   .form-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 20px;
   }
-  
+
   .form-row-full {
     grid-column: 1 / -1;
   }
-  
+
   .form-help-text {
 
   .list-btn {
@@ -243,7 +197,7 @@
     justify-content: space-between !important;
     position: relative !important;
   }
-  
+
   .pm-page-header::after {
     content: '';
     position: absolute;
@@ -253,8 +207,7 @@
     height: 1px;
     background-color: #000000;
   }
-  
-  
+
   .pm-page-header .pm-page-header-title-wrapper {
     position: relative !important;
     display: flex !important;
@@ -265,7 +218,7 @@
     padding-bottom: 8px !important;
     margin-bottom: 8px !important;
   }
-  
+
   .pm-page-header .pm-page-header-title-wrapper h1 {
     font-size: 24px !important;
     font-weight: 600 !important;
@@ -276,7 +229,7 @@
     position: relative !important;
     line-height: 1.2 !important;
   }
-  
+
   .pm-page-header .pm-page-header-title-wrapper .pm-subtitle {
     font-size: 12px !important;
     color: #999999 !important;
@@ -287,7 +240,7 @@
     display: inline-block !important;
     line-height: 1.2 !important;
   }
-  
+
   .pm-page-header .pm-actions {
     flex-shrink: 0 !important;
     margin-left: 16px !important;
@@ -296,9 +249,9 @@
     margin-bottom: 20px !important;
     border-bottom: none !important;
   }
-  
+
   @media (max-width: 768px) {
-  
+
   /* 页面标题区域样式 */
   .pm-page-header {
     margin-bottom: 24px !important;
@@ -309,7 +262,6 @@
     justify-content: space-between !important;
     position: relative !important;
   }
-  
 
   .pm-page-header::after {
 
@@ -329,9 +281,6 @@
 
   }
 
-  
-
-  
   .pm-page-header .pm-page-header-title-wrapper {
     position: relative !important;
     display: flex !important;
@@ -342,7 +291,7 @@
     padding-bottom: 8px !important;
     margin-bottom: 8px !important;
   }
-  
+
   .pm-page-header .pm-page-header-title-wrapper h1 {
     font-size: 24px !important;
     font-weight: 600 !important;
@@ -353,7 +302,7 @@
     position: relative !important;
     line-height: 1.2 !important;
   }
-  
+
   .pm-page-header .pm-page-header-title-wrapper .pm-subtitle {
     font-size: 12px !important;
     color: #999999 !important;
@@ -363,13 +312,13 @@
     font-weight: 400 !important;
     display: inline-block !important;
     line-height: 1.2 !important;
-    
+
   }
-  
+
   .pm-page-header .pm-page-header-title-wrapper .pm-subtitle span {
     display: inline !important;
   }
-  
+
   .pm-page-header .pm-actions {
     flex-shrink: 0 !important;
     margin-left: 16px !important;
@@ -393,7 +342,7 @@
 
 {% block pm_content %}
 <div class="form-container">
-  {# 表单错误提示 #}
+
   {% if form.errors %}
   <div class="form-alert form-alert-danger">
     <div class="form-alert-title">提交失败：请完善必填项</div>
@@ -407,7 +356,6 @@
   </div>
   {% endif %}
 
-  {# 表单帮助文本 #}
   {% if form_help_text %}
   <div class="form-help-text">
     {{ form_help_text|safe }}
@@ -424,7 +372,6 @@
     </div>
     {% endif %}
 
-    {# 表单字段区域 #}
     <div class="form-row">
       {% for field in form %}
       <div class="form-group {% if field.name in full_width_fields|default:'description,notes,content,background,significance,plan_objective' %}form-row-full{% endif %}">
@@ -432,11 +379,11 @@
           {{ field.label }}
         </label>
         {{ field }}
-        
+
         {% if field.help_text %}
         <div class="form-text">{{ field.help_text }}</div>
         {% endif %}
-        
+
         {% if field.errors %}
         <div class="form-error">{{ field.errors }}</div>
         {% endif %}
@@ -444,7 +391,6 @@
       {% endfor %}
     </div>
 
-    {# 表单操作按钮 #}
     <div class="form-actions">
       <div class="form-actions-left">
         {% if cancel_url_name %}

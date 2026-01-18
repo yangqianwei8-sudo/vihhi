@@ -53,13 +53,13 @@
 
     <form method="post" enctype="multipart/form-data" id="contract-form" class="form-card">
         {% csrf_token %}
-        
+
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
         {% endif %}
             {{ form.non_field_errors }}
         </div>
-        
+
         <div class="form-section">
             <div class="form-section-header">
                 <h5>🤖 AI合同识别</h5>
@@ -92,7 +92,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="form-section">
             <div class="form-section-header">
                 <h5>基础信息</h5>
@@ -141,7 +141,7 @@
                         <small class="form-text text-muted">YYYYMMDD-0000，系统自动生成，可手动修改，须保持唯一性</small>
                     </div>
                 </div>
-                
+
                 <div class="col-md-3">
                     <div class="form-group">
                         <label class="form-label">合同编号</label>
@@ -209,7 +209,7 @@
                     </div>
                 </div>
         </div>
-        
+
         <div class="form-section">
             <div class="form-section-header">
                 <h5>客户联系方式</h5>
@@ -230,7 +230,7 @@
                         </tr>
                     </thead>
                     <tbody id="parties-container">
-                        
+
                     </tbody>
                 </table>
             </div>
@@ -259,7 +259,7 @@
                         </tr>
                     </thead>
                     <tbody id="service-contents-container">
-                        
+
                     </tbody>
                 </table>
             </div>
@@ -274,7 +274,7 @@
             <div class="form-section-header">
                 <h5>价款信息</h5>
             </div>
-            
+
             <div class="row" style="margin-bottom: 20px;">
                 <div class="col-md-6">
                     <div class="form-group">
@@ -287,8 +287,8 @@
                         </select>
                         <small class="form-text text-muted">后台引入，未选择时隐藏列表</small>
                     </div>
-                </div>            
-            
+                </div>
+
             <div class="row" style="margin-bottom: 20px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
                 <div class="col-md-3">
                     <div class="form-group">
@@ -348,9 +348,9 @@
                     </div>
                 </div>
             </div>
-            
+
             </div>
-            
+
             <div id="fixed-total-list" style="display: none;">
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover">
@@ -363,7 +363,7 @@
                             </tr>
                         </thead>
                         <tbody id="fixed-total-container">
-                            
+
                         </tbody>
                     </table>
                 </div>
@@ -374,7 +374,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="form-section">
             <div class="form-section-header">
                 <h5>回款信息</h5>
@@ -393,7 +393,7 @@
                         </tr>
                     </thead>
                     <tbody id="payment-info-container">
-                        
+
                     </tbody>
                 </table>
             </div>
@@ -403,7 +403,7 @@
                 </button>
             </div>
         </div>
-        
+
         <div class="form-section">
             <div class="form-section-header">
                 <h5>合同信息</h5>
@@ -483,7 +483,7 @@
     const recognitionStatus = document.getElementById('recognition-status');
     const recognitionResult = document.getElementById('recognition-result');
     const recognitionMessage = document.getElementById('recognition-message');
-    
+
     if (recognizeBtn && contractFileInput) {
         recognizeBtn.addEventListener('click', async function() {
             const file = contractFileInput.files[0];
@@ -491,23 +491,23 @@
                 alert('请先选择合同文件');
                 return;
             }
-            
+
             // 检查文件大小
             if (file.size > 10 * 1024 * 1024) {
                 alert('文件大小不能超过10MB');
                 return;
             }
-            
+
             // 显示识别状态
             recognitionStatus.style.display = 'block';
             recognitionResult.style.display = 'none';
             recognitionMessage.textContent = '正在识别中，请稍候...';
             recognizeBtn.disabled = true;
-            
+
             // 创建FormData
             const formData = new FormData();
             formData.append('file', file);
-            
+
             try {
                 // 调用识别API
                 const response = await fetch('/api/customer/contracts/recognize/', {
@@ -517,9 +517,9 @@
                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                     }
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     // 识别成功，填充表单
                     fillFormWithRecognitionResult(result.data);
@@ -539,7 +539,7 @@
             }
         });
     }
-    
+
     // 填充表单数据
     function fillFormWithRecognitionResult(data) {
         // 合同名称
@@ -548,14 +548,14 @@
             if (contractNameField && !contractNameField.value) {
                 contractNameField.value = data.contract_name;
             }
-        
+
         // 项目编号（合同编号）
         if (data.contract_number) {
             const contractNumberField = document.querySelector('[name="project_number"]');
             if (contractNumberField && !contractNumberField.value) {
                 contractNumberField.value = data.contract_number;
             }
-        
+
         // 合同类型
         if (data.contract_type) {
             const contractTypeField = document.querySelector('[name="contract_type"]');
@@ -569,14 +569,14 @@
                     }
                 }
             }
-        
+
         // 合同描述
         if (data.description) {
             const descField = document.querySelector('[name="description"]');
             if (descField && !descField.value) {
                 descField.value = data.description;
             }
-        
+
         if (data.party_a && data.party_a.name) {
             if (partyRows.length > 0) {
                 const firstRow = partyRows[0];
@@ -622,7 +622,7 @@
                 }
             }
         }
-        
+
         if (data.party_b && data.party_b.name) {
             let secondRow = null;
             if (partyRows.length > 1) {
@@ -636,7 +636,7 @@
                     }
                 }, 300);
             }
-            
+
             if (secondRow) {
                 const partyNameInput = secondRow.querySelector('input[name*="[party_name]"]');
                 if (partyNameInput && !partyNameInput.value) {
@@ -680,10 +680,10 @@
                 }
             }
         }
-        
+
         // 如果有合同金额，可以尝试填充到结算方式中（固定总价）
     }
-    
+
 // ========== 结算方式管理（表格形式） ==========
 
     // 结算方式选项（从模板中获取）
@@ -702,16 +702,16 @@
     ];
 
     // 添加结算方式卡片
-    
+
         // 更新结算方式相关字段的显示
     // 添加分段取费行
     function addSegmentedRate(cardIndex, rateData = null) {
         const rate = rateData || {};
         if (!container) return;
-        
+
         const row = document.createElement('tr');
         row.setAttribute('data-rate-index', rateIndex);
-        
+
         // TODO: 使用DOMPurify清理HTML
             row.innerHTML = `
             <td>
@@ -735,7 +735,7 @@
                 </button>
             </td>
         `;
-        
+
         container.appendChild(row);
 
         // 绑定服务费输入框的change事件，自动计算小计
@@ -751,16 +751,16 @@
                 updateSegmentedRateNumbers(cardIndex);
             });
     }
-    
+
     // 更新分段序号
     // 添加总价包干条目
     function addFixedTotalItem(cardIndex, itemData = null) {
         const item = itemData || {};
         if (!container) return;
-        
+
         const row = document.createElement('tr');
         row.setAttribute('data-item-index', itemIndex);
-        
+
         // TODO: 使用DOMPurify清理HTML
             row.innerHTML = `
             <td>
@@ -776,29 +776,29 @@
                 </button>
             </td>
         `;
-        
+
         container.appendChild(row);
-        
+
         // 绑定服务费输入框的change事件，自动计算小计
         const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
         if (serviceFeeInput) {
             serviceFeeInput.addEventListener('input', function() {
                 calculateFixedTotalSum(cardIndex);
             });
-        
+
         // 计算小计
         calculateFixedTotalSum(cardIndex);
-        
+
         // 更新序号
         updateFixedTotalNumbers(cardIndex);
-        
+
     }
-    
+
     // 更新总价包干条目序号
 
     function updateFixedTotalNumbers(cardIndex) {
         if (!container) return;
-        
+
         rows.forEach(function(row, index) {
             row.setAttribute('data-item-index', index);
             // 更新name属性中的索引
@@ -821,9 +821,9 @@
     // 计算总价包干服务费小计
     function calculateFixedTotalSum(cardIndex) {
         if (!container || !sumElement) return;
-        
+
         let total = 0;
-        
+
         rows.forEach(function(row) {
             const serviceFeeInput = row.querySelector('input[name*="[service_fee]"]');
             if (serviceFeeInput && serviceFeeInput.value) {
@@ -831,13 +831,13 @@
                 total += value;
             }
         });
-        
+
         // 更新小计显示，保留两位小数
         sumElement.textContent = total.toFixed(2);
         // console.log(...) // 已移除}`);
     function updateSegmentedRateNumbers(cardIndex) {
         if (!container) return;
-        
+
         rows.forEach((row, idx) => {
             row.setAttribute('data-rate-index', idx);
             // 更新所有输入框的name属性
@@ -872,7 +872,7 @@
             });
         });
     }
-    
+
     // 添加按钮事件
 
         // 如果是总价包干，加载总价包干条目列表
@@ -883,7 +883,7 @@
             }
         });
     });
-    
+
     }
 
                 // 累计提成：需要节省金额，暂时无法计算
@@ -898,10 +898,10 @@
                 // 其他结算方式（分段递增提成、跳点提成等）需要节省金额，暂时无法计算
                 hasUncalculableMethod = true;
             }
-            
+
             totalPrice += rowPrice;
         });
-        
+
         if (hasUncalculableMethod && totalPrice === 0) {
             contractPriceInput.value = '需按实结算';
         } else if (hasUncalculableMethod) {
@@ -911,21 +911,21 @@
         } else {
             contractPriceInput.value = '';
     }
-    
+
     function getTotalBuildingArea() {
         let totalArea = 0;
-        
+
             const areaInput = card.querySelector('input[name*="[area_scale]"]');
             if (areaInput && areaInput.value) {
                 totalArea += parseFloat(areaInput.value) || 0;
             }
         });
-        
+
         return totalArea;
     }
-    
+
         // 使用事件委托监听所有结算方式相关字段的变化
-        
+
         // 监听结算方式表格中面积规模的变化
 
         // 页面加载时计算一次
@@ -1239,16 +1239,16 @@
             const taxDisplay = document.getElementById('contract_amount_tax_display');
             const paymentAmountDisplay = document.getElementById('payment_amount_display');
             const unpaidAmountDisplay = document.getElementById('unpaid_amount_display');
-            
+
             if (!contractAmountInput || !taxRateInput || !exclTaxDisplay || !taxDisplay || !unpaidAmountDisplay) {
                 return;
             }
-            
+
             // 获取值
             const contractAmount = parseFloat(contractAmountInput.value) || 0;
             const taxRate = parseFloat(taxRateInput.value) || 0;
             const paymentAmount = parseFloat(paymentAmountDisplay ? paymentAmountDisplay.value : 0) || 0;
-            
+
             // 计算不含税金额和税额
             if (contractAmount > 0 && taxRate >= 0) {
                 const taxRateDecimal = taxRate / 100;
@@ -1265,29 +1265,29 @@
                 exclTaxDisplay.value = '0.00';
                 taxDisplay.value = '0.00';
             }
-            
+
             // 计算未回款金额
             const unpaidAmount = contractAmount - paymentAmount;
             unpaidAmountDisplay.value = Math.max(0, unpaidAmount).toFixed(2);
         }
-        
+
         // 等待DOM加载
         function initAmountCalculation() {
             const contractAmountInput = document.querySelector('input[name="contract_amount"]');
             const taxRateInput = document.querySelector('input[name="tax_rate"]');
-            
+
             if (contractAmountInput && taxRateInput) {
                 // 绑定事件监听
                 contractAmountInput.addEventListener('input', calculateAmountFields);
                 contractAmountInput.addEventListener('change', calculateAmountFields);
                 taxRateInput.addEventListener('input', calculateAmountFields);
                 taxRateInput.addEventListener('change', calculateAmountFields);
-                
+
                 // 初始化计算
                 calculateAmountFields();
             }
         }
-        
+
         // 初始化
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initAmountCalculation);
@@ -1308,7 +1308,7 @@
         function initOpportunityClientFilter() {
             const clientSelect = document.querySelector('[name="client"]');
             const opportunitySelect = document.querySelector('[name="opportunity"]');
-            
+
             if (!clientSelect || !opportunitySelect) {
                 return;
             }
@@ -1318,23 +1318,23 @@
                 const selectedOption = this.options[this.selectedIndex];
                 const projectBusinessTypeInput = document.getElementById('project_business_type');
                 const opportunityId = this.value;
-                
+
                 if (opportunityId) {
                     // 从选项的data属性中获取客户信息和项目业态
                     const clientId = selectedOption.getAttribute('data-client-id');
                     const clientName = selectedOption.getAttribute('data-client-name');
                     const projectType = selectedOption.getAttribute('data-project-type');
-                    
+
                     if (clientId && clientSelect) {
                         // 填充关联客户
                         clientSelect.value = clientId;
                     }
-                    
+
                     if (projectType && projectBusinessTypeInput) {
                         // 填充项目业态
                         projectBusinessTypeInput.value = projectType;
                     }
-                    
+
                     // 如果选项中没有data属性（编辑模式下从Django模板渲染的选项），从API获取
                     if (!clientId || !projectType) {
                         fetch(`/api/customer/authorization-letters/opportunities/?opportunity_id=${opportunityId}`, {
@@ -1381,7 +1381,7 @@
             function initOpportunityOptions() {
                 const options = opportunitySelect.options;
                 const opportunityIds = [];
-                
+
                 // 收集所有需要初始化的商机ID
                 for (let i = 0; i < options.length; i++) {
                     const option = options[i];
@@ -1389,7 +1389,7 @@
                         opportunityIds.push(option.value);
                     }
                 }
-                
+
                 // 如果有需要初始化的商机，批量获取详情
                 if (opportunityIds.length > 0) {
                     // 为每个商机获取详情
@@ -1449,7 +1449,7 @@
         function initContractNumberAutoGen() {
             const projectNumberInput = document.querySelector('[name="project_number"]');
             const contractNumberInput = document.querySelector('[name="contract_number"]');
-            
+
             if (!projectNumberInput || !contractNumberInput) {
                 return;
             }
@@ -1463,7 +1463,7 @@
                 // 如果用户手动修改了合同编号，标记为已手动修改
                 const currentValue = this.value;
                 const autoGeneratedValue = projectNumberInput.value ? `HT-${projectNumberInput.value}` : '';
-                
+
                 // 如果当前值不等于自动生成的值，说明用户手动修改了
                 if (currentValue !== autoGeneratedValue && currentValue !== originalContractNumber) {
                     contractNumberManuallyModified = true;
@@ -1473,7 +1473,7 @@
             // 监听项目编号变化
             projectNumberInput.addEventListener('change', function() {
                 const projectNumber = this.value;
-                
+
                 // 只有在用户没有手动修改合同编号的情况下，才自动更新
                 if (!contractNumberManuallyModified) {
                     if (projectNumber) {
@@ -1518,13 +1518,13 @@
             if (callback) callback([]);
         });
     }
-    
+
     // 更新所有行的联系人下拉框 - 全局作用域
         function updateAllContactSelects(contacts) {
         selects.forEach(select => {
             const currentValue = select.value;
             select.innerHTML = '<option value="">请选择联系人</option>';
-            
+
             contacts.forEach(contact => {
                 const option = document.createElement('option');
                 option.value = party.party_name;  // 使用单位名称作为值
@@ -1535,14 +1535,14 @@
                 option.setAttribute('data-contact-address', contact.office_address || '');
                 select.appendChild(option);
             });
-            
+
             // 恢复之前选中的值
             if (currentValue) {
                 select.value = currentValue;
             }
         });
     }
-    
+
     // 监听关联客户的变化 - 全局作用域
     let clientContactListenerAttached = false;
     function );
@@ -1601,11 +1601,11 @@
         const contactCache = {};
         // 加载联系人列表的函数 - 提升到全局作用域
         function loadContactsByClientId(clientId, callback) {
-            
+
             // 如果缓存中有，直接使用
                 return;
             }
-            
+
             // 从API获取联系人列表
             fetch(`/api/customer-management/get-contacts-by-client-id/?client_id=${clientId}`, {
                 method: 'GET',
@@ -1632,13 +1632,13 @@
                 console.error('获取联系人列表失败:', error);
                 if (callback) callback([]);
             });
-        
+
         // 更新所有行的联系人下拉框 - 提升到全局作用域
         function updateAllContactSelects(contacts) {
             selects.forEach(select => {
                 const currentValue = select.value;
                 select.innerHTML = '<option value="">请选择联系人</option>';
-                
+
                 contacts.forEach(contact => {
                     const option = document.createElement('option');
                     option.value = party.party_name;  // 使用单位名称作为值
@@ -1649,19 +1649,19 @@
                     option.setAttribute('data-contact-address', contact.office_address || '');
                     select.appendChild(option);
                 });
-                
+
                 // 恢复之前选中的值
                 if (currentValue) {
                     select.value = currentValue;
                 }
             });
         }
-        
+
         // 监听关联客户的变化 - 提升到全局作用域
         let clientContactListenerAttached = false;
         function attachClientContactListener() {
                         // 清空所有联系人下拉框
-                        
+
                 });
                 clientContactListenerAttached = true;
 
@@ -1680,31 +1680,31 @@
                         <strong>${index + 1}</strong>
                     </td>
                     <td>
-                        <input type="text" name="parties[${index}][party_name]" class="form-control form-control-sm" 
+                        <input type="text" name="parties[${index}][party_name]" class="form-control form-control-sm"
                                value="${party.party_name || ''}" placeholder="请输入单位名称" required>
                     </td>
                     <td>
-                        <input type="text" name="parties[${index}][credit_code]" class="form-control form-control-sm" 
+                        <input type="text" name="parties[${index}][credit_code]" class="form-control form-control-sm"
                                value="${party.credit_code || ''}" placeholder="请输入统一社会信用代码">
                     </td>
                     <td>
-                        <input type="text" name="parties[${index}][legal_representative]" class="form-control form-control-sm" 
+                        <input type="text" name="parties[${index}][legal_representative]" class="form-control form-control-sm"
                                value="${party.legal_representative || ''}" placeholder="请输入法定代表人">
                     </td>
                     <td>
-                        <input type="text" name="parties[${index}][project_manager]" class="form-control form-control-sm" 
+                        <input type="text" name="parties[${index}][project_manager]" class="form-control form-control-sm"
                                value="${party.project_manager || ''}" placeholder="请输入项目负责人">
                     </td>
                     <td>
-                        <input type="text" name="parties[${index}][contact_phone]" class="form-control form-control-sm" 
+                        <input type="text" name="parties[${index}][contact_phone]" class="form-control form-control-sm"
                                value="${party.contact_phone || ''}" placeholder="请输入联系电话">
                     </td>
                     <td>
-                        <input type="email" name="parties[${index}][contact_email]" class="form-control form-control-sm" 
+                        <input type="email" name="parties[${index}][contact_email]" class="form-control form-control-sm"
                                value="${party.contact_email || ''}" placeholder="请输入联系邮箱">
                     </td>
                     <td>
-                        <input type="text" name="parties[${index}][address]" class="form-control form-control-sm" 
+                        <input type="text" name="parties[${index}][address]" class="form-control form-control-sm"
                                value="${party.address || ''}" placeholder="请输入办公地址">
                     </td>
                     <td style="text-align: center;">
@@ -1731,7 +1731,7 @@
                     if (clientSelect && clientSelect.value) {
                         const clientId = clientSelect.value;
                         console.log('添加新行，客户ID:', clientId);
-                        
+
                         loadContactsByClientId(clientId, function(contacts) {
                             updateAllContactSelects(contacts);
                         });
@@ -1752,20 +1752,20 @@
                     const select = e.target;
                     const selectedOption = select.options[select.selectedIndex];
                     const row = select.closest('tr');
-                    
+
                     if (selectedOption && selectedOption.value) {
                         // 自动填充联系电话
                         const phoneInput = row.querySelector('input[name*="[contact_phone]"]');
                         if (phoneInput && selectedOption.getAttribute('data-contact-phone')) {
                             phoneInput.value = selectedOption.getAttribute('data-contact-phone');
                         }
-                        
+
                         // 自动填充联系邮箱
                         const emailInput = row.querySelector('input[name*="[contact_email]"]');
                         if (emailInput && selectedOption.getAttribute('data-contact-email')) {
                             emailInput.value = selectedOption.getAttribute('data-contact-email');
                         }
-                        
+
                         // 自动填充办公地址
                         const addressInput = row.querySelector('input[name*="[address]"]');
                         if (addressInput && selectedOption.getAttribute('data-contact-address')) {
@@ -1783,7 +1783,7 @@
                     console.error('DynamicTableManager 未加载，请检查 dynamic-table.js 文件');
                     return;
                 }
-    
+
                 // 服务信息数据（从后端传入）
                 const serviceTypesData = [
                     {% for st in service_types %}
@@ -1792,7 +1792,7 @@
                     // 无服务类型数据
                     {% endfor %}
                 ];
-                
+
                 const designStagesData = [
                     {% for ds in design_stages %}
                     { id: {{ ds.id }}, name: "{{ ds.name|escapejs }}" }{% if not forloop.last %},{% endif %}
@@ -1800,7 +1800,7 @@
                     // 无图纸阶段数据
                     {% endfor %}
                 ];
-                
+
                 const businessTypesData = [
                     {% for bt in business_types %}
                     { id: {{ bt.id }}, name: "{{ bt.name|escapejs }}" }{% if not forloop.last %},{% endif %}
@@ -1808,7 +1808,7 @@
                     // 无项目业态数据
                     {% endfor %}
                 ];
-                
+
                 const serviceProfessionsData = [
                     {% for sp in service_professions %}
                     { id: {{ sp.id }}, name: "{{ sp.name|escapejs }}", service_type_id: {{ sp.service_type_id|default:"null" }} }{% if not forloop.last %},{% endif %}
@@ -1819,7 +1819,7 @@
             // 填充下拉选项的函数
             function populateSelectOptions(row, serviceTypeId, designStageId, businessTypeId, professionIds) {
                 if (!row) return;
-                
+
                 // 填充服务类型下拉选项
                 const serviceTypeSelect = row.querySelector('select[name*="[service_type]"]');
                 if (serviceTypeSelect && Array.isArray(serviceTypesData)) {
@@ -1835,7 +1835,7 @@
                         serviceTypeSelect.appendChild(option);
                     });
                 }
-                
+
                 // 填充设计阶段下拉选项
                 const designStageSelect = row.querySelector('select[name*="[design_stage]"]');
                 if (designStageSelect && Array.isArray(designStagesData)) {
@@ -1850,7 +1850,7 @@
                         designStageSelect.appendChild(option);
                     });
                 }
-                
+
                 // 填充项目业态下拉选项
                 const businessTypeSelect = row.querySelector('select[name*="[business_type]"]');
                 if (businessTypeSelect && Array.isArray(businessTypesData)) {
@@ -1865,7 +1865,7 @@
                         businessTypeSelect.appendChild(option);
                     });
                 }
-                
+
                 // 填充服务专业下拉选项（根据服务类型过滤）
                 const professionSelect = row.querySelector('select[name*="[service_professions]"]');
                 if (professionSelect && Array.isArray(serviceProfessionsData)) {
@@ -1884,7 +1884,7 @@
                         professionSelect.appendChild(option);
                     });
                 }
-                
+
                 // 监听服务类型变化，更新服务专业选项
                 if (serviceTypeSelect) {
                     serviceTypeSelect.addEventListener('change', function() {
@@ -1910,7 +1910,7 @@
             } else {
                 initServiceContentsTable();
             }
-    
+
 // 行模板函数
             function serviceContentRowTemplate(index, data) {
                 const service = data || {};
@@ -1934,7 +1934,7 @@
                         </select>
                     </td>
                     <td>
-                        <input type="number" name="service_contents[${index}][building_area]" class="form-control form-control-sm" 
+                        <input type="number" name="service_contents[${index}][building_area]" class="form-control form-control-sm"
                                step="0.01" placeholder="0.00" value="${buildingArea}">
                     </td>
                     <td>
@@ -1983,20 +1983,20 @@
                     const select = e.target;
                     const selectedOption = select.options[select.selectedIndex];
                     const row = select.closest('tr');
-                    
+
                     if (selectedOption && selectedOption.value) {
                         // 自动填充联系电话
                         const phoneInput = row.querySelector('input[name*="[contact_phone]"]');
                         if (phoneInput && selectedOption.getAttribute('data-contact-phone')) {
                             phoneInput.value = selectedOption.getAttribute('data-contact-phone');
                         }
-                        
+
                         // 自动填充联系邮箱
                         const emailInput = row.querySelector('input[name*="[contact_email]"]');
                         if (emailInput && selectedOption.getAttribute('data-contact-email')) {
                             emailInput.value = selectedOption.getAttribute('data-contact-email');
                         }
-                        
+
                         // 自动填充办公地址
                         const addressInput = row.querySelector('input[name*="[address]"]');
                         if (addressInput && selectedOption.getAttribute('data-contact-address')) {
@@ -2109,10 +2109,10 @@
     (function() {
         function testContactFunctions() {
             console.log('
-            
+
             // 尝试查找联系人下拉框
             const contactSelects = document.querySelectorAll('
-        
+
         // 在DOM加载完成后执行测试
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
@@ -2136,23 +2136,23 @@
                         <strong>${index + 1}</strong>
                     </td>
                     <td>
-                        <input type="text" name="payment_plans[${index}][phase_name]" class="form-control form-control-sm" 
+                        <input type="text" name="payment_plans[${index}][phase_name]" class="form-control form-control-sm"
                                value="${payment.phase_name || ''}" placeholder="请输入阶段名称" required>
                     </td>
                     <td>
-                        <input type="text" name="payment_plans[${index}][trigger_condition]" class="form-control form-control-sm" 
+                        <input type="text" name="payment_plans[${index}][trigger_condition]" class="form-control form-control-sm"
                                value="${payment.trigger_condition || ''}" placeholder="请输入触发条件">
                     </td>
                     <td>
-                        <input type="text" name="payment_plans[${index}][payment_method]" class="form-control form-control-sm" 
+                        <input type="text" name="payment_plans[${index}][payment_method]" class="form-control form-control-sm"
                                value="${payment.payment_method || ''}" placeholder="请输入付款方式">
                     </td>
                     <td>
-                        <input type="number" name="payment_plans[${index}][planned_amount]" class="form-control form-control-sm" 
+                        <input type="number" name="payment_plans[${index}][planned_amount]" class="form-control form-control-sm"
                                step="0.01" value="${payment.planned_amount || ''}" placeholder="0.00">
                     </td>
                     <td>
-                        <textarea name="payment_plans[${index}][condition_detail]" class="form-control form-control-sm" 
+                        <textarea name="payment_plans[${index}][condition_detail]" class="form-control form-control-sm"
                                   rows="2" placeholder="请输入条件详情">${payment.condition_detail || ''}</textarea>
                     </td>
                     <td style="text-align: center;">
@@ -2188,20 +2188,20 @@
                     const select = e.target;
                     const selectedOption = select.options[select.selectedIndex];
                     const row = select.closest('tr');
-                    
+
                     if (selectedOption && selectedOption.value) {
                         // 自动填充联系电话
                         const phoneInput = row.querySelector('input[name*="[contact_phone]"]');
                         if (phoneInput && selectedOption.getAttribute('data-contact-phone')) {
                             phoneInput.value = selectedOption.getAttribute('data-contact-phone');
                         }
-                        
+
                         // 自动填充联系邮箱
                         const emailInput = row.querySelector('input[name*="[contact_email]"]');
                         if (emailInput && selectedOption.getAttribute('data-contact-email')) {
                             emailInput.value = selectedOption.getAttribute('data-contact-email');
                         }
-                        
+
                         // 自动填充办公地址
                         const addressInput = row.querySelector('input[name*="[address]"]');
                         if (addressInput && selectedOption.getAttribute('data-contact-address')) {

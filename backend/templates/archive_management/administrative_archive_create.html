@@ -10,7 +10,7 @@
 
 {% block content %}
 <div class="container-fluid">
-    
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">➕ 新建行政档案</h2>
@@ -43,9 +43,9 @@
 
             <form method="post" enctype="multipart/form-data" id="createForm">
                 {% csrf_token %}
-                
+
                 <div class="row g-3">
-                    
+
                     <div class="col-md-12">
                         <label for="{{ form.archive_name.id_for_label }}" class="form-label">
                             {{ form.archive_name.label }} <span class="text-danger">*</span>
@@ -197,7 +197,7 @@
 document.getElementById('{{ form.storage_room.id_for_label }}').addEventListener('change', function() {
     const storageRoomId = this.value;
     const locationSelect = document.getElementById('{{ form.location.id_for_label }}');
-    
+
     if (storageRoomId) {
         // TODO: 通过AJAX加载该库房下的位置列表
         // 这里先清空位置选择
@@ -218,13 +218,13 @@ document.getElementById('{{ form.archive_file.id_for_label }}').addEventListener
             totalSize += files[i].size;
         }
         const totalSizeMB = (totalSize / 1024 / 1024).toFixed(2);
-        
+
         if (totalSize > 100 * 1024 * 1024) {
             alert(`文件总大小 ${totalSizeMB}MB 超过100MB限制，请选择较小的文件`);
             e.target.value = '';
             return;
         }
-        
+
         console.log(`已选择 ${files.length} 个文件，总大小：${totalSizeMB}MB`);
     }
 });
@@ -232,13 +232,13 @@ document.getElementById('{{ form.archive_file.id_for_label }}').addEventListener
 // 表单提交验证
 document.getElementById('createForm').addEventListener('submit', function(e) {
     const archiveName = document.getElementById('{{ form.archive_name.id_for_label }}').value;
-    
+
     if (!archiveName.trim()) {
         e.preventDefault();
         alert('请填写档案名称');
         return false;
     }
-    
+
     if (!confirm('确定要创建行政档案吗？提交后将进入审批流程。')) {
         e.preventDefault();
         return false;

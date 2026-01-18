@@ -28,16 +28,16 @@
                 <div class="card-body">
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
-                        
+
                         <div class="mb-4">
                             <h5 class="mb-3">基本信息</h5>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">收文编号</label>
                                 <input type="text" class="form-control" value="{{ document.document_number }}" disabled>
                                 <small class="form-text text-muted">收文编号不可修改</small>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">阶段</label>
@@ -53,7 +53,7 @@
                                     <select name="file_category" class="form-select" id="category_select">
                                         <option value="">请选择文件分类</option>
                                         {% for category in categories %}
-                                        <option value="{{ category.id }}" data-stage="{{ category.stage }}" 
+                                        <option value="{{ category.id }}" data-stage="{{ category.stage }}"
                                                 {% if document.file_category_id == category.id %}selected{% endif %}
                                                 style="{% if document.stage and category.stage != document.stage %}display: none;{% endif %}">
                                             {{ category.name }}
@@ -62,12 +62,12 @@
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">文件标题 <span class="text-danger">*</span></label>
                                 <input type="text" name="title" class="form-control" value="{{ document.title }}" required>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">发文单位 <span class="text-danger">*</span></label>
@@ -78,7 +78,7 @@
                                     <input type="text" name="sender_contact" class="form-control" value="{{ document.sender_contact|default:'' }}">
                                 </div>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">联系电话</label>
@@ -89,16 +89,16 @@
                                     <input type="text" name="document_type" class="form-control" value="{{ document.document_type|default:'' }}">
                                 </div>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">文件日期</label>
-                                    <input type="date" name="document_date" class="form-control" 
+                                    <input type="date" name="document_date" class="form-control"
                                            value="{{ document.document_date|date:'Y-m-d'|default:'' }}">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">收文日期</label>
-                                    <input type="date" name="receive_date" class="form-control" 
+                                    <input type="date" name="receive_date" class="form-control"
                                            value="{{ document.receive_date|date:'Y-m-d'|default:'' }}">
                                 </div>
                             </div>
@@ -106,12 +106,12 @@
 
                         <div class="mb-4">
                             <h5 class="mb-3">内容</h5>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">摘要</label>
                                 <textarea name="summary" class="form-control" rows="3">{{ document.summary|default:'' }}</textarea>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">文件内容</label>
                                 <textarea name="content" class="form-control" rows="5">{{ document.content|default:'' }}</textarea>
@@ -130,7 +130,7 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">处理意见</label>
                                 <textarea name="handle_notes" class="form-control" rows="3">{{ document.handle_notes|default:'' }}</textarea>
@@ -174,7 +174,7 @@ function updateCategoryOptions() {
     const stageSelect = document.getElementById('stage_select');
     const categorySelect = document.getElementById('category_select');
     const selectedStage = stageSelect.value;
-    
+
     // 显示/隐藏分类选项
     const options = categorySelect.querySelectorAll('option[data-stage]');
     options.forEach(option => {

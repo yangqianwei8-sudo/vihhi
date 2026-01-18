@@ -151,13 +151,13 @@
     <div class="import-section-header">
         <h5>📤 上传文件</h5>
     </div>
-    
+
     <form method="post" enctype="multipart/form-data" id="import-form">
         {% csrf_token %}
-        
+
         <div class="upload-area" id="upload-area">
             <div class="file-input-wrapper">
-                <input type="file" name="import_file" id="import_file" 
+                <input type="file" name="import_file" id="import_file"
                        accept=".csv,.xlsx,.xls" required>
                 <label for="import_file" class="list-btn list-btn-primary">
                     <i class="bi bi-cloud-upload"></i> 选择文件
@@ -170,7 +170,7 @@
                 支持 CSV 和 Excel 格式，最大 10MB
             </p>
         </div>
-        
+
         <div style="margin-top: 20px; text-align: center;">
             <button type="submit" class="list-btn list-btn-primary" id="submit-btn" disabled style="font-size: 16px; padding: 12px 24px;">
                 <i class="bi bi-upload"></i> 开始导入
@@ -184,7 +184,7 @@
     <div class="import-section-header">
         <h5>📊 导入结果</h5>
     </div>
-    
+
     <div class="result-summary">
         <div class="result-card total">
             <h3>{{ import_results.total }}</h3>
@@ -199,7 +199,7 @@
             <p>失败</p>
         </div>
     </div>
-    
+
     {% if import_results.rows %}
     <div class="list-table-container" style="max-height: 600px; overflow-y: auto;">
         <table class="list-table">
@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileNameText = document.getElementById('file-name-text');
     const submitBtn = document.getElementById('submit-btn');
     const uploadArea = document.getElementById('upload-area');
-    
+
     // 文件选择事件
     fileInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -249,18 +249,18 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = true;
         }
     });
-    
+
     // 拖拽上传
     uploadArea.addEventListener('dragover', function(e) {
         e.preventDefault();
         uploadArea.classList.add('dragover');
     });
-    
+
     uploadArea.addEventListener('dragleave', function(e) {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
     });
-    
+
     uploadArea.addEventListener('drop', function(e) {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fileInput.dispatchEvent(new Event('change'));
         }
     });
-    
+
     // 表单提交
     document.getElementById('import-form').addEventListener('submit', function(e) {
         const file = fileInput.files[0];
@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('请选择要上传的文件');
             return false;
         }
-        
+
         // 显示加载状态
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> 导入中...';

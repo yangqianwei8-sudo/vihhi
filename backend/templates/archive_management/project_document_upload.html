@@ -68,7 +68,7 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    
+
     <div class="form-page-title">
         <div class="d-flex justify-content-between align-items-center">
             <div>
@@ -85,13 +85,13 @@
 
     <form method="post" enctype="multipart/form-data" id="uploadForm" class="form-card">
         {% csrf_token %}
-        
+
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
             {{ form.non_field_errors }}
         </div>
         {% endif %}
-        
+
         {% if form.errors %}
         <div class="alert alert-danger">
             <h6><i class="bi bi-exclamation-triangle"></i> 表单验证失败</h6>
@@ -282,7 +282,7 @@
                             </span>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                            <button type="button" class="btn btn-sm btn-outline-primary"
                                     onclick="selectProject({{ project.id }}, '{{ project.project_name }}')">
                                 <i class="bi bi-check-circle"></i> 选择
                             </button>
@@ -328,7 +328,7 @@ function selectProject(projectId, projectName) {
         projectSelect.value = projectId;
         projectSelect.dispatchEvent(new Event('change'));
     }
-    
+
     // 显示提示信息
     const alertDiv = document.createElement('div');
     alertDiv.className = 'alert alert-success alert-dismissible fade show';
@@ -337,7 +337,7 @@ function selectProject(projectId, projectName) {
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     document.querySelector('.form-card').insertBefore(alertDiv, document.querySelector('.form-card').firstChild);
-    
+
     // 滚动到表单
     document.querySelector('form').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -352,7 +352,7 @@ document.getElementById('{{ form.file.id_for_label }}').addEventListener('change
             e.target.value = '';
             return;
         }
-        
+
         // 自动填充文档名称（如果没有填写）
         const docNameInput = document.getElementById('{{ form.document_name.id_for_label }}');
         if (!docNameInput.value) {
@@ -367,25 +367,25 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     const docName = document.getElementById('{{ form.document_name.id_for_label }}').value;
     const fileInput = document.getElementById('{{ form.file.id_for_label }}');
     const projectSelect = document.getElementById('{{ form.project.id_for_label }}');
-    
+
     if (!docName.trim()) {
         e.preventDefault();
         alert('请填写文档名称');
         return false;
     }
-    
+
     if (!fileInput.files || fileInput.files.length === 0) {
         e.preventDefault();
         alert('请选择要上传的文件');
         return false;
     }
-    
+
     if (!projectSelect.value) {
         e.preventDefault();
         alert('请选择所属项目');
         return false;
     }
-    
+
     if (!confirm('确定要上传文档吗？')) {
         e.preventDefault();
         return false;

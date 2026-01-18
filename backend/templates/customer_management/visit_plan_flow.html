@@ -83,7 +83,7 @@
 {% block content %}
 <div class="workspace-content">
     <div class="container-fluid py-4">
-        
+
         <div class="step-indicator">
             <div class="step-item {% if current_step >= 1 %}completed{% endif %} {% if current_step == 1 %}active{% endif %}" data-step="1">
                 <div class="step-number">1</div>
@@ -110,7 +110,7 @@
             <div class="info-card-body">
                 {% if visit_plan %}
                 <div class="alert alert-info mb-3">
-                    <strong>客户：</strong>{{ visit_plan.client.name }} | 
+                    <strong>客户：</strong>{{ visit_plan.client.name }} |
                     <strong>计划标题：</strong>{{ visit_plan.plan_title }}
                 </div>
                 {% endif %}
@@ -121,7 +121,7 @@
                     {% if visit_plan %}
                     <input type="hidden" name="plan_id" value="{{ visit_plan.id }}">
                     {% endif %}
-                    
+
                     <div class="step-content {% if current_step == 1 %}active{% endif %}" data-step="1">
                         <div class="card mb-4">
                             <div class="card-header bg-primary text-white">
@@ -192,7 +192,7 @@
                         </div>
                         <div class="info-section">
                             {% if questions_by_part %}
-                            
+
                             {% for part, questions in questions_by_part.items %}
                             <div class="card mb-3">
                                 <div class="card-header">
@@ -236,7 +236,7 @@
                                 </div>
                             </div>
                             {% endfor %}
-                            
+
                             <div class="mt-3">
                                 <label class="info-label info-label-required">{{ forms.step2.communication_checklist.label }}</label>
                                 {{ forms.step2.communication_checklist }}
@@ -246,7 +246,7 @@
                                 <small class="text-muted">请总结沟通清单的关键要点和注意事项</small>
                             </div>
                             {% else %}
-                            
+
                             <div class="info-item" style="grid-column: 1 / -1;">
                                 <label class="info-label info-label-required">{{ forms.step2.communication_checklist.label }}</label>
                                 {{ forms.step2.communication_checklist }}
@@ -300,14 +300,14 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="mt-3">
                             <button type="button" class="btn btn-outline-primary"data-click="handle_onclick_0">
                                 <i class="bi bi-geo-alt-fill"></i> 获取当前位置
                             </button>
                         </div>
                         <div id="locationDisplay" class="mt-3 p-3 bg-light rounded"></div>
-                        
+
                         <div class="mt-4">
                             <div class="card">
                                 <div class="card-header bg-light">
@@ -367,7 +367,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="d-flex justify-content-between gap-2 mt-4">
                         <div>
                             {% if visit_plan %}
@@ -427,18 +427,18 @@
     function updateLocationDisplay(latitude, longitude, address) {
         const locationDisplay = document.getElementById('locationDisplay');
         const currentLocationDisplay = document.getElementById('currentLocationDisplay');
-        
+
         if (latitude && longitude) {
             const lat = parseFloat(latitude).toFixed(7);
             const lon = parseFloat(longitude).toFixed(7);
-            
+
             let displayHtml = `
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <i class="bi bi-check-circle-fill text-success"></i>
                     <span class="fw-bold text-success">定位成功</span>
                 </div>
             `;
-            
+
             if (address) {
                 displayHtml += `
                     <div class="mb-2">
@@ -447,18 +447,18 @@
                     </div>
                 `;
             }
-            
+
             displayHtml += `
                 <div>
                     <div class="text-muted small">坐标：</div>
                     <div class="font-monospace small">纬度 ${lat}，经度 ${lon}</div>
                 </div>
             `;
-            
+
             if (locationDisplay) {
                 locationDisplay.innerHTML = displayHtml;
             }
-            
+
             // 更新当前地理位置显示区域
             if (currentLocationDisplay) {
                 let currentDisplayHtml = `
@@ -467,7 +467,7 @@
                         <span class="fw-bold text-success">定位成功</span>
                     </div>
                 `;
-                
+
                 if (address) {
                     currentDisplayHtml += `
                         <div class="w-100 mt-2">
@@ -476,14 +476,14 @@
                         </div>
                     `;
                 }
-                
+
                 currentDisplayHtml += `
                     <div class="w-100 mt-2">
                         <div class="text-muted small">坐标：</div>
                         <div class="font-monospace small">纬度 ${lat}，经度 ${lon}</div>
                     </div>
                 `;
-                
+
                 currentLocationDisplay.innerHTML = currentDisplayHtml;
             }
         } else {
@@ -497,12 +497,12 @@
             }
         }
     }
-    
+
     // 更新当前地理位置显示状态
     function updateCurrentLocationStatus(message, isSuccess = true) {
         const currentLocationDisplay = document.getElementById('currentLocationDisplay');
         if (!currentLocationDisplay) return;
-        
+
         const icon = isSuccess ? 'bi-hourglass-split' : 'bi-exclamation-circle';
         const color = isSuccess ? 'text-info' : 'text-danger';
         // TODO: 使用DOMPurify清理HTML
@@ -512,7 +512,7 @@
             </div>
         `;
     }
-    
+
     async function getAddressFromCoordinates(latitude, longitude) {
         try {
             updateCurrentLocationStatus('正在解析地址...', true);
@@ -523,9 +523,9 @@
                 },
                 credentials: 'same-origin'
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success && data.formatted_address) {
                 const locationInput = document.getElementById('id_checkin_location');
                 if (locationInput) {
@@ -543,12 +543,12 @@
             return false;
         }
     }
-    
+
     function getLocation(showStatus = true) {
         const locationDisplay = document.getElementById('locationDisplay');
         const latitudeInput = document.getElementById('id_latitude');
         const longitudeInput = document.getElementById('id_longitude');
-        
+
         if (!navigator.geolocation) {
             if (showStatus) {
                 updateCurrentLocationStatus('浏览器不支持GPS定位，尝试IP定位...', false);
@@ -557,7 +557,7 @@
             setTimeout(() => getIPLocation(), 1000);
             return;
         }
-        
+
         if (showStatus) {
             updateCurrentLocationStatus('正在获取GPS位置...', true);
         }
@@ -565,15 +565,15 @@
             // TODO: 使用DOMPurify清理HTML
             locationDisplay.innerHTML = '<div class="text-muted"><i class="bi bi-hourglass-split"></i> 正在获取位置信息...</div>';
         }
-        
+
         navigator.geolocation.getCurrentPosition(
             async function(position) {
                 const lat = position.coords.latitude.toFixed(7);
                 const lon = position.coords.longitude.toFixed(7);
-                
+
                 if (latitudeInput) latitudeInput.value = lat;
                 if (longitudeInput) longitudeInput.value = lon;
-                
+
                 await getAddressFromCoordinates(lat, lon);
             },
             function(error) {
@@ -609,11 +609,11 @@
             }
         );
     }
-    
+
     // IP定位（备选方案）
     async function getIPLocation() {
         updateCurrentLocationStatus('正在通过IP获取位置...', true);
-        
+
         try {
             const response = await fetch('/api/customer/ip-location/', {
                 method: 'GET',
@@ -622,22 +622,22 @@
                 },
                 credentials: 'same-origin'
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success && data.center_latitude && data.center_longitude) {
                 const lat = data.center_latitude.toFixed(7);
                 const lon = data.center_longitude.toFixed(7);
-                
+
                 const latitudeInput = document.getElementById('id_latitude');
                 const longitudeInput = document.getElementById('id_longitude');
-                
+
                 if (latitudeInput) latitudeInput.value = lat;
                 if (longitudeInput) longitudeInput.value = lon;
-                
+
                 // 调用API获取详细地址
                 await getAddressFromCoordinates(lat, lon);
-                
+
                 updateCurrentLocationStatus(`IP定位成功（${data.city || '城市级别'}）`, true);
             } else {
                 updateCurrentLocationStatus('IP定位失败：' + (data.message || '无法获取位置信息'), false);
@@ -646,13 +646,13 @@
             updateCurrentLocationStatus('IP定位失败，请检查网络连接', false);
         }
     }
-    
+
     // 检查是否已有位置信息（第三步）
     if (currentStep === 3) {
         const latitudeInput = document.getElementById('id_latitude');
         const longitudeInput = document.getElementById('id_longitude');
         const locationInput = document.getElementById('id_checkin_location');
-        
+
         if (latitudeInput && latitudeInput.value && longitudeInput && longitudeInput.value) {
             updateLocationDisplay(latitudeInput.value, longitudeInput.value, locationInput ? locationInput.value : '');
         } else {

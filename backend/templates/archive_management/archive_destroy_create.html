@@ -10,7 +10,7 @@
 
 {% block content %}
 <div class="container-fluid">
-    
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">🗑️ 新建档案销毁</h2>
@@ -43,9 +43,9 @@
 
             <form method="post" id="destroyForm">
                 {% csrf_token %}
-                
+
                 <div class="row g-3">
-                    
+
                     <div class="col-md-12">
                         <div class="alert alert-warning">
                             <i class="bi bi-exclamation-triangle"></i> 请选择要销毁的项目文档或行政档案（二选一），销毁操作不可逆，请谨慎操作
@@ -130,7 +130,7 @@
     </div>
 
     <div class="row">
-        
+
         {% if project_documents %}
         <div class="col-md-6">
             <div class="info-card mb-4">
@@ -156,7 +156,7 @@
                                     <td>{{ doc.document_name|truncatewords:5 }}</td>
                                     <td><small>{{ doc.project.project_name|truncatewords:3|default:"-" }}</small></td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
                                                 onclick="selectProjectDocument({{ doc.id }}, '{{ doc.document_name }}')">
                                             <i class="bi bi-check-circle"></i> 选择
                                         </button>
@@ -196,7 +196,7 @@
                                     <td>{{ archive.archive_name|truncatewords:5 }}</td>
                                     <td><small>{{ archive.category.name|default:"-" }}</small></td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
                                                 onclick="selectAdministrativeArchive({{ archive.id }}, '{{ archive.archive_name }}')">
                                             <i class="bi bi-check-circle"></i> 选择
                                         </button>
@@ -253,7 +253,7 @@
 function selectProjectDocument(docId, docName) {
     const docSelect = document.getElementById('{{ form.project_document.id_for_label }}');
     const archiveSelect = document.getElementById('{{ form.administrative_archive.id_for_label }}');
-    
+
     if (docSelect) {
         docSelect.value = docId;
         // 清空行政档案选择
@@ -262,14 +262,14 @@ function selectProjectDocument(docId, docName) {
         }
         docSelect.dispatchEvent(new Event('change'));
     }
-    
+
     showAlert('已选择项目文档：' + docName);
 }
 
 function selectAdministrativeArchive(archiveId, archiveName) {
     const archiveSelect = document.getElementById('{{ form.administrative_archive.id_for_label }}');
     const docSelect = document.getElementById('{{ form.project_document.id_for_label }}');
-    
+
     if (archiveSelect) {
         archiveSelect.value = archiveId;
         // 清空项目文档选择
@@ -278,7 +278,7 @@ function selectAdministrativeArchive(archiveId, archiveName) {
         }
         archiveSelect.dispatchEvent(new Event('change'));
     }
-    
+
     showAlert('已选择行政档案：' + archiveName);
 }
 
@@ -290,7 +290,7 @@ function showAlert(message) {
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     document.querySelector('.info-card-body').insertBefore(alertDiv, document.querySelector('form'));
-    
+
     setTimeout(() => {
         alertDiv.remove();
     }, 3000);
@@ -301,30 +301,30 @@ document.getElementById('destroyForm').addEventListener('submit', function(e) {
     const projectDoc = document.getElementById('{{ form.project_document.id_for_label }}').value;
     const adminArchive = document.getElementById('{{ form.administrative_archive.id_for_label }}').value;
     const destroyReason = document.getElementById('{{ form.destroy_reason.id_for_label }}').value;
-    
+
     if (!projectDoc && !adminArchive) {
         e.preventDefault();
         alert('请选择要销毁的项目文档或行政档案');
         return false;
     }
-    
+
     if (projectDoc && adminArchive) {
         e.preventDefault();
         alert('不能同时选择项目文档和行政档案，请只选择其中一个');
         return false;
     }
-    
+
     if (!destroyReason.trim()) {
         e.preventDefault();
         alert('请填写销毁原因');
         return false;
     }
-    
+
     if (!confirm('警告：档案销毁操作不可逆！确定要提交销毁申请吗？')) {
         e.preventDefault();
         return false;
     }
-    
+
     if (!confirm('再次确认：您确定要销毁该档案吗？此操作无法撤销！')) {
         e.preventDefault();
         return false;

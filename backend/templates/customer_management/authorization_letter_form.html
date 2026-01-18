@@ -65,7 +65,7 @@
 
     <form method="post" class="form-card">
         {% csrf_token %}
-        
+
         <div class="form-section">
             <h5>📋 基本信息</h5>
             <div class="row">
@@ -432,7 +432,7 @@
             element.innerHTML = html;
         }
     }
-    
+
     // 安全的文本设置函数（推荐使用）
     function setSafeText(element, text) {
         if (element) {
@@ -444,19 +444,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const clientSelect = document.getElementById('id_client');
     const clientNameInput = document.getElementById('id_client_name');
     const opportunitySelect = document.getElementById('id_opportunity');
-    
+
     // 如果使用客户下拉选择（新字段）
     if (clientSelect && opportunitySelect) {
         // 保存当前选中的商机ID（用于编辑模式）
         const selectedOpportunityId = opportunitySelect.value;
-        
+
         // 更新商机列表
         function updateOpportunities() {
             const clientId = clientSelect.value;
-            
+
             // 显示加载状态
             opportunitySelect.disabled = true;
-            
+
             // 构建API URL
             let apiUrl = '{% url "customer:get_opportunities_by_client_name" %}';
             if (clientId) {
@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const clientName = selectedOption.text;
                 apiUrl += `?client_name=${encodeURIComponent(clientName)}`;
             }
-            
+
             // 获取商机列表
             fetch(apiUrl)
                 .then(response => response.json())
@@ -474,7 +474,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // 清空当前选项
                         // TODO: 使用DOMPurify清理HTML
             opportunitySelect.innerHTML = '<option value="">-- 选择商机（可选） --</option>';
-                        
+
                         // 添加商机选项
                         if (data.opportunities.length === 0) {
                             const noOption = document.createElement('option');
@@ -503,21 +503,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     opportunitySelect.disabled = false;
                 });
         }
-        
+
         // 监听客户选择变化
         clientSelect.addEventListener('change', updateOpportunities);
-        
+
         // 如果客户已有值，初始化时也更新一次
         if (clientSelect.value) {
             updateOpportunities();
         }
     }
-    
+
     // 如果使用客户名称输入（旧字段，向后兼容）
     if (clientNameInput && opportunitySelect && !clientSelect) {
         // 保存当前选中的商机ID（用于编辑模式）
         const selectedOpportunityId = opportunitySelect.value;
-        
+
         // 防抖函数
         let debounceTimer;
         function debounce(func, wait) {
@@ -526,20 +526,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 debounceTimer = setTimeout(() => func.apply(this, args), wait);
             };
         }
-        
+
         // 更新商机列表
         function updateOpportunities() {
             const clientName = clientNameInput.value.trim();
-            
+
             // 显示加载状态
             opportunitySelect.disabled = true;
-            
+
             // 构建API URL
             let apiUrl = '{% url "customer:get_opportunities_by_client_name" %}';
             if (clientName) {
                 apiUrl += `?client_name=${encodeURIComponent(clientName)}`;
             }
-            
+
             // 获取商机列表
             fetch(apiUrl)
                 .then(response => response.json())
@@ -548,7 +548,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // 清空当前选项
                         // TODO: 使用DOMPurify清理HTML
             opportunitySelect.innerHTML = '<option value="">-- 选择商机（可选） --</option>';
-                        
+
                         // 添加商机选项
                         if (data.opportunities.length === 0) {
                             const noOption = document.createElement('option');
@@ -577,29 +577,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     opportunitySelect.disabled = false;
                 });
         }
-        
+
         // 监听客户名称输入变化（500ms防抖）
         clientNameInput.addEventListener('input', debounce(updateOpportunities, 500));
-        
+
         // 监听客户名称失去焦点（处理粘贴等情况）
         clientNameInput.addEventListener('blur', updateOpportunities);
-        
+
         // 如果客户名称已有值，初始化时也更新一次
         if (clientNameInput.value.trim()) {
             updateOpportunities();
         }
     }
-    
+
     // 付款计划编辑器
     (function() {
         const paymentScheduleEditor = document.getElementById('payment-schedule-editor');
         const paymentScheduleInput = document.getElementById('id_payment_schedule');
         const addPaymentStageBtn = document.getElementById('add-payment-stage');
-        
+
         if (!paymentScheduleEditor || !paymentScheduleInput || !addPaymentStageBtn) {
             return;
         }
-        
+
         // 创建付款阶段HTML
         function createPaymentStageHTML(name = '', amount = '') {
             return `
@@ -618,7 +618,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
         }
-        
+
         // 更新隐藏字段的值
         function updatePaymentSchedule() {
             const stages = {};
@@ -631,25 +631,25 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             paymentScheduleInput.value = JSON.stringify(stages);
         }
-        
+
         // 添加付款阶段
         addPaymentStageBtn.addEventListener('click', function() {
             const stageHTML = createPaymentStageHTML();
             paymentScheduleEditor.insertAdjacentHTML('beforeend', stageHTML);
-            
+
             // 绑定删除按钮事件
             const newStage = paymentScheduleEditor.lastElementChild;
             newStage.querySelector('.remove-payment-stage').addEventListener('click', function() {
                 newStage.remove();
                 updatePaymentSchedule();
             });
-            
+
             // 绑定输入事件
             newStage.querySelectorAll('input').forEach(input => {
                 input.addEventListener('input', updatePaymentSchedule);
             });
         });
-        
+
         // 删除付款阶段
         paymentScheduleEditor.addEventListener('click', function(e) {
             if (e.target.classList.contains('remove-payment-stage')) {
@@ -657,14 +657,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 updatePaymentSchedule();
             }
         });
-        
+
         // 监听输入变化
         paymentScheduleEditor.addEventListener('input', function(e) {
             if (e.target.classList.contains('payment-stage-name') || e.target.classList.contains('payment-stage-amount')) {
                 updatePaymentSchedule();
             }
         });
-        
+
         // 初始化：如果有现有数据，加载它
         if (paymentScheduleInput.value) {
             try {
@@ -677,13 +677,13 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (e) {
             }
         }
-        
+
         // 如果没有阶段，至少添加一个空阶段
         if (paymentScheduleEditor.querySelectorAll('.payment-stage').length === 0) {
             addPaymentStageBtn.click();
         }
     })();
-    
+
     // 委托单位信息：关联客户和联系人处理
     (function() {
         const clientSelect = document.getElementById('id_client');
@@ -693,15 +693,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const clientPhoneInput = document.getElementById('id_client_phone');
         const clientEmailInput = document.getElementById('id_client_email');
         const clientAddressInput = document.getElementById('id_client_address');
-        
+
         if (!clientSelect || !clientContactSelect) {
             return;
         }
-        
+
         // 更新联系人列表
         function updateContacts() {
             const clientId = clientSelect.value;
-            
+
             if (!clientId) {
                 // 清空联系人列表
                 // TODO: 使用DOMPurify清理HTML
@@ -713,22 +713,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return;
             }
-            
+
             // 显示加载状态
             clientContactSelect.disabled = true;
             // TODO: 使用DOMPurify清理HTML
             clientContactSelect.innerHTML = '<option value="">加载中...</option>';
-            
+
             // 获取客户名称
             const selectedOption = clientSelect.options[clientSelect.selectedIndex];
             const clientName = selectedOption.text;
             if (clientNameInput) {
                 clientNameInput.value = clientName;
             }
-            
+
             // 构建API URL
             const apiUrl = '{% url "customer:get_contacts_by_client_id" %}?client_id=' + encodeURIComponent(clientId);
-            
+
             // 获取联系人列表
             fetch(apiUrl)
                 .then(response => response.json())
@@ -737,7 +737,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // 清空当前选项
                         // TODO: 使用DOMPurify清理HTML
             clientContactSelect.innerHTML = '<option value="">-- 选择联系人 --</option>';
-                        
+
                         // 添加联系人选项
                         if (data.contacts.length === 0) {
                             const noOption = document.createElement('option');
@@ -766,11 +766,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     clientContactSelect.disabled = false;
                 });
         }
-        
+
         // 更新联系人信息
         function updateContactInfo() {
             const contactId = clientContactSelect.value;
-            
+
             if (!contactId) {
                 // 清空联系人相关信息
                 if (clientRepresentativeInput) {
@@ -787,15 +787,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return;
             }
-            
+
             // 获取选中的联系人信息
             const selectedOption = clientContactSelect.options[clientContactSelect.selectedIndex];
             const contactName = selectedOption.text;
-            
+
             // 从API获取联系人详细信息
             const clientId = clientSelect.value;
             const apiUrl = '{% url "customer:get_contacts_by_client_id" %}?client_id=' + encodeURIComponent(clientId);
-            
+
             fetch(apiUrl)
                 .then(response => response.json())
                 .then(data => {
@@ -821,7 +821,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .catch(error => {
                 });
         }
-        
+
         // 监听客户选择变化
         clientSelect.addEventListener('change', function() {
             updateContacts();
@@ -831,10 +831,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             updateContactInfo();
         });
-        
+
         // 监听联系人选择变化
         clientContactSelect.addEventListener('change', updateContactInfo);
-        
+
         // 如果客户已有值，初始化时也更新一次
         if (clientSelect.value) {
             updateContacts();
@@ -844,7 +844,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     })();
-    
+
 });
 </script>
 {% endblock %}

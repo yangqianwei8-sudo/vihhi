@@ -1,13 +1,9 @@
 {% extends "customer_management/_base.html" %}
 
-
-
 {% load static %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
 {% endblock %}
-
-
 
 {% block pm_title %}商机详情{% endblock %}
 
@@ -22,7 +18,7 @@
                 <i class="bi bi-pencil"></i> 编辑
             </a>
             {% endif %}
-            <button type="button" class="btn btn-outline-secondary dropdown-toggle" 
+            <button type="button" class="btn btn-outline-secondary dropdown-toggle"
                     data-bs-toggle="dropdown" aria-expanded="false">
                 更多操作
             </button>
@@ -46,7 +42,7 @@
             </ul>
         </div>
     </div>
-    
+
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
             <h5 class="info-card-title">基本信息</h5>
@@ -109,7 +105,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
             <h5 class="info-card-title">项目信息</h5>
@@ -149,7 +145,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
             <h5 class="info-card-title">金额和概率</h5>
@@ -183,7 +179,7 @@
             </div>
         </div>
     </div>
-    
+
     {% if opportunity.description %}
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
@@ -196,7 +192,7 @@
         </div>
     </div>
     {% endif %}
-    
+
     {% if approval_instance %}
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
@@ -211,7 +207,7 @@
             <div class="approval-timeline">
                 {% for record in approval_records %}
                 <div class="approval-timeline-item">
-                    <div class="approval-timeline-marker 
+                    <div class="approval-timeline-marker
                                 {% if record.approval_result == 'approved' %}approved
                                 {% elif record.approval_result == 'rejected' %}rejected
                                 {% else %}pending{% endif %}">
@@ -266,23 +262,23 @@
         </div>
     </div>
     {% endif %}
-    
+
     <style>
         .approval-timeline {
             position: relative;
             padding-left: 30px;
         }
-        
+
         .approval-timeline-item {
             position: relative;
             padding-bottom: 20px;
             padding-left: 20px;
         }
-        
+
         .approval-timeline-item:last-child {
             padding-bottom: 0;
         }
-        
+
         .approval-timeline-marker {
             position: absolute;
             left: -8px;
@@ -293,19 +289,19 @@
             border: 2px solid var(--vh-card-bg);
             z-index: 2;
         }
-        
+
         .approval-timeline-marker.approved {
             background: var(--vh-success);
         }
-        
+
         .approval-timeline-marker.rejected {
             background: var(--vh-error);
         }
-        
+
         .approval-timeline-marker.pending {
             background: var(--vh-warning);
         }
-        
+
         .approval-timeline-item::before {
             content: '';
             position: absolute;
@@ -315,11 +311,11 @@
             width: 2px;
             background: var(--vh-border);
         }
-        
+
         .approval-timeline-item:last-child::before {
             display: none;
         }
-        
+
         .approval-timeline-content {
             background: var(--vh-surface);
             padding: var(--spacing-md);
@@ -327,7 +323,7 @@
             border-left: 3px solid var(--vh-primary);
         }
     </style>
-    
+
     {% if opportunity.status == 'won' or opportunity.status == 'lost' %}
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
@@ -372,7 +368,7 @@
         </div>
     </div>
     {% endif %}
-    
+
     {% if opportunity.health_score and opportunity.health_score > 0 %}
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
@@ -399,12 +395,12 @@
         </div>
     </div>
     {% endif %}
-    
+
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
             <h5 class="info-card-title">跟进记录</h5>
             <div class="info-card-actions">
-                <a href="{% url 'opportunity_pages:opportunity_followup_create' opportunity.id %}" 
+                <a href="{% url 'opportunity_pages:opportunity_followup_create' opportunity.id %}"
                    class="btn btn-sm btn-primary">
                     <i class="bi bi-plus-circle"></i> 新增跟进
                 </a>
@@ -412,7 +408,7 @@
         </div>
         <div class="info-card-body">
             {% if followups %}
-            
+
             <div class="timeline">
                 {% for followup in followups %}
                 <div class="timeline-item">
@@ -432,11 +428,11 @@
                             </div>
                             <div class="btn-group btn-group-sm">
                                 {% if followup.created_by == user or can_edit %}
-                                <a href="{% url 'opportunity_pages:opportunity_followup_edit' opportunity.id followup.id %}" 
+                                <a href="{% url 'opportunity_pages:opportunity_followup_edit' opportunity.id followup.id %}"
                                    class="btn btn-outline-secondary btn-sm" title="编辑">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a href="{% url 'opportunity_pages:opportunity_followup_delete' opportunity.id followup.id %}" 
+                                <a href="{% url 'opportunity_pages:opportunity_followup_delete' opportunity.id followup.id %}"
                                    class="btn btn-outline-danger btn-sm" title="删除">
                                     <i class="bi bi-trash"></i>
                                 </a>
@@ -479,7 +475,7 @@
             <div class="text-center text-muted py-4">
                 <i class="bi bi-inbox" style="font-size: 3rem;"></i>
                 <p class="mt-3">暂无跟进记录</p>
-                <a href="{% url 'opportunity_pages:opportunity_followup_create' opportunity.id %}" 
+                <a href="{% url 'opportunity_pages:opportunity_followup_create' opportunity.id %}"
                    class="btn btn-primary mt-2">
                     <i class="bi bi-plus-circle"></i> 创建第一条跟进记录
                 </a>
@@ -487,23 +483,23 @@
             {% endif %}
         </div>
     </div>
-    
+
     <style>
         .timeline {
             position: relative;
             padding-left: 30px;
         }
-        
+
         .timeline-item {
             position: relative;
             padding-bottom: 30px;
             padding-left: 20px;
         }
-        
+
         .timeline-item:last-child {
             padding-bottom: 0;
         }
-        
+
         .timeline-marker {
             position: absolute;
             left: -8px;
@@ -515,7 +511,7 @@
             border: 2px solid var(--vh-card-bg);
             z-index: 2;
         }
-        
+
         .timeline-item::before {
             content: '';
             position: absolute;
@@ -525,11 +521,11 @@
             width: 2px;
             background: var(--vh-border);
         }
-        
+
         .timeline-item:last-child::before {
             display: none;
         }
-        
+
         .timeline-content {
             background: var(--vh-surface);
             padding: var(--spacing-md);
@@ -537,7 +533,7 @@
             border-left: 3px solid var(--vh-primary);
         }
     </style>
-    
+
     <div class="info-card info-card-fade-in">
         <div class="info-card-header">
             <h5 class="info-card-title">报价记录</h5>
@@ -546,7 +542,7 @@
                 <span class="badge bg-secondary">{{ quotations|length }} 个版本</span>
                 {% endif %}
                 {% if can_edit %}
-                <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?opportunity_id={{ opportunity.id }}" 
+                <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?opportunity_id={{ opportunity.id }}"
                    class="btn btn-sm btn-primary" title="创建报价">
                     <i class="bi bi-plus-circle"></i> 新建报价
                 </a>
@@ -597,12 +593,12 @@
                             <td>{{ quotation.created_time|date:'Y-m-d H:i' }}</td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?quotation_id={{ quotation.id }}" 
+                                    <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?quotation_id={{ quotation.id }}"
                                        class="btn btn-outline-primary" title="查看详情">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                     {% if can_edit %}
-                                    <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?quotation_id={{ quotation.id }}&edit=1" 
+                                    <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?quotation_id={{ quotation.id }}&edit=1"
                                        class="btn btn-outline-secondary" title="编辑">
                                         <i class="bi bi-pencil"></i>
                                     </a>
@@ -628,7 +624,7 @@
                 <i class="bi bi-inbox" style="font-size: 3rem;"></i>
                 <p class="mt-3">暂无报价记录</p>
                 {% if can_edit %}
-                <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?opportunity_id={{ opportunity.id }}" 
+                <a href="{% url 'opportunity_pages:opportunity_bidding_quotation' %}?opportunity_id={{ opportunity.id }}"
                    class="btn btn-primary mt-2">
                     <i class="bi bi-plus-circle"></i> 创建第一个报价
                 </a>

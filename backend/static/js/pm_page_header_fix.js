@@ -3,7 +3,7 @@
 
 (function() {
   function applyFixes() {
-    const h1Elements = document.querySelectorAll('.plan-content .pm-page-header .pm-page-header-title-wrapper h1');
+    const h1Elements = document.querySelectorAll('.plan-content .pm-page-header .pm-page-header-title-wrapper h1, .pm-page-header .pm-page-header-title-wrapper h1');
     
     h1Elements.forEach(function(h1) {
       // 直接设置内联样式（最高优先级）- 使用与用户测试相同的代码
@@ -24,7 +24,7 @@
       w.style.setProperty('margin-bottom', '8px', 'important');
     });
     
-    const subtitle = document.querySelectorAll('.plan-content .pm-page-header .pm-page-header-title-wrapper .pm-subtitle, .pm-subtitle');
+    const subtitle = document.querySelectorAll('.plan-content .pm-page-header .pm-page-header-title-wrapper .pm-subtitle, .pm-page-header .pm-page-header-title-wrapper .pm-subtitle, .pm-subtitle');
     subtitle.forEach(function(s) {
       s.style.setProperty('display', 'inline-block', 'important');
       s.style.setProperty('margin', '0', 'important');
@@ -116,7 +116,7 @@
       }
     });
     
-    const h1Elements = document.querySelectorAll('.plan-content .pm-page-header .pm-page-header-title-wrapper h1');
+    const h1Elements = document.querySelectorAll('.plan-content .pm-page-header .pm-page-header-title-wrapper h1, .pm-page-header .pm-page-header-title-wrapper h1');
     h1Elements.forEach(function(h1) {
       observer.observe(h1, {
         attributes: true,

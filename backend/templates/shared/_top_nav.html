@@ -63,37 +63,37 @@
                 <form id="topNavLoginForm" method="post" action="{% url 'login' %}">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.get_full_path|default:'/' }}">
-                    
+
                     <div class="mb-3">
                         <label for="topNavUsername" class="form-label">
                             <i class="bi bi-person"></i> 用户名
                         </label>
-                        <input type="text" class="form-control" id="topNavUsername" name="username" 
+                        <input type="text" class="form-control" id="topNavUsername" name="username"
                                placeholder="请输入用户名" required autofocus>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="topNavPassword" class="form-label">
                             <i class="bi bi-lock"></i> 密码
                         </label>
                         <div class="input-group">
-                            <input type="password" class="form-control" id="topNavPassword" name="password" 
+                            <input type="password" class="form-control" id="topNavPassword" name="password"
                                    placeholder="请输入密码" required>
                             <button class="btn btn-outline-secondary" type="button" id="toggleTopNavPassword">
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="topNavRememberMe" name="remember_me">
                         <label class="form-check-label" for="topNavRememberMe">
                             记住我
                         </label>
                     </div>
-                    
+
                     <div id="topNavLoginError" class="alert alert-danger d-none" role="alert"></div>
-                    
+
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary" id="topNavLoginBtn">
                             <i class="bi bi-box-arrow-in-right"></i> 登录
@@ -117,7 +117,7 @@
     const passwordToggle = document.getElementById('toggleTopNavPassword');
     const passwordInput = document.getElementById('topNavPassword');
     const errorDiv = document.getElementById('topNavLoginError');
-    
+
     // 密码显示/隐藏
     if (passwordToggle && passwordInput) {
         passwordToggle.addEventListener('click', function() {
@@ -128,28 +128,28 @@
             icon.classList.toggle('bi-eye-slash');
         });
     }
-    
+
     // 表单提交
     if (loginForm) {
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            
+
             const username = document.getElementById('topNavUsername').value.trim();
             const password = passwordInput.value;
-            
+
             if (!username || !password) {
                 showError('请输入用户名和密码');
                 return;
             }
-            
+
             // 显示加载状态
             loginBtn.disabled = true;
             loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>登录中...';
             errorDiv.classList.add('d-none');
-            
+
             // 提交表单
             const formData = new FormData(loginForm);
-            
+
             fetch(loginForm.action, {
                 method: 'POST',
                 body: formData,
@@ -190,12 +190,12 @@
             });
         });
     }
-    
+
     function showError(message) {
         errorDiv.textContent = message;
         errorDiv.classList.remove('d-none');
     }
-    
+
     // 模态框关闭时清除表单
     const loginModal = document.getElementById('loginModal');
     if (loginModal) {

@@ -41,7 +41,7 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    
+
     <div class="center-hero">
         <h1 class="hero-title">{{ page_title }}</h1>
         <p class="hero-subtitle">{{ description }}</p>
@@ -126,7 +126,7 @@
             </form>
             {% endif %}
         </div>
-        
+
         {% if settlement_items %}
         <div class="table-responsive">
             <table class="table table-hover">
@@ -307,7 +307,7 @@
 
     <div class="info-card">
         <h5>审核流程</h5>
-        
+
         <div class="review-step {% if settlement.status != 'draft' %}completed{% else %}pending{% endif %}">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
@@ -446,7 +446,7 @@
                     <div class="modal-body">
                         <input type="hidden" name="action" id="reviewAction">
                         <div id="itemInfo" class="mb-3"></div>
-                        
+
                         <div id="approveSection" style="display: none;">
                             <div class="mb-3">
                                 <label class="form-label">调整后节省金额</label>
@@ -462,7 +462,7 @@
                                 <textarea class="form-control" name="review_comment" id="reviewComment" rows="3" placeholder="填写审核意见"></textarea>
                             </div>
                         </div>
-                        
+
                         <div id="rejectSection" style="display: none;">
                             <div class="mb-3">
                                 <label class="form-label required">驳回原因</label>
@@ -496,17 +496,17 @@ function reviewItem(itemId, action) {
     const adjustmentReasonInput = document.getElementById('adjustmentReason');
     const reviewCommentInput = document.getElementById('reviewComment');
     const rejectionReasonInput = document.getElementById('rejectionReason');
-    
+
     // 重置表单
     if (adjustedAmountInput) adjustedAmountInput.value = '';
     if (adjustmentReasonInput) adjustmentReasonInput.value = '';
     if (reviewCommentInput) reviewCommentInput.value = '';
     if (rejectionReasonInput) rejectionReasonInput.value = '';
-    
+
     // 设置表单action
     form.action = '{% url "settlement_pages:settlement_item_review" 0 %}'.replace('0', itemId);
     actionInput.value = action;
-    
+
     // 获取当前行的数据
     const row = document.getElementById('item-row-' + itemId);
     let originalAmountValue = 0;
@@ -516,7 +516,7 @@ function reviewItem(itemId, action) {
         const opinionTitle = cells[1].textContent.trim();
         const originalAmountText = cells[4].textContent.trim();
         originalAmountValue = parseFloat(originalAmountText.replace(/[^\d.-]/g, '')) || 0;
-        
+
         itemInfo.innerHTML = `
             <div class="alert alert-info">
                 <strong>意见编号：</strong>${opinionNumber}<br>
@@ -525,7 +525,7 @@ function reviewItem(itemId, action) {
             </div>
         `;
     }
-    
+
     // 根据操作类型显示不同的表单
     if (action === 'approve') {
         approveSection.style.display = 'block';
@@ -533,7 +533,7 @@ function reviewItem(itemId, action) {
         submitBtn.className = 'btn btn-success';
         submitBtn.textContent = '确认通过';
         document.getElementById('reviewItemModalLabel').textContent = '确认结算明细项';
-        
+
         // 填充原始金额到调整金额输入框的占位符
         if (adjustedAmountInput && originalAmountValue > 0) {
             adjustedAmountInput.placeholder = originalAmountValue.toFixed(2);
@@ -545,7 +545,7 @@ function reviewItem(itemId, action) {
         submitBtn.textContent = '确认驳回';
         document.getElementById('reviewItemModalLabel').textContent = '驳回结算明细项';
     }
-    
+
     modal.show();
 }
 
@@ -555,10 +555,10 @@ document.getElementById('reviewItemForm')?.addEventListener('submit', function(e
     const form = this;
     const formData = new FormData(form);
     const submitBtn = document.getElementById('submitReviewBtn');
-    
+
     submitBtn.disabled = true;
     submitBtn.textContent = '提交中...';
-    
+
     fetch(form.action, {
         method: 'POST',
         body: formData,

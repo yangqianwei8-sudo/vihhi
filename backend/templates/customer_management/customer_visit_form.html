@@ -22,7 +22,7 @@
             <div class="info-card-body">
                 <form method="post">
                     {% csrf_token %}
-                    
+
                     <div class="info-section">
                         <div class="info-grid info-grid-2">
                             <div class="info-item">
@@ -47,11 +47,11 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <input type="hidden" name="latitude" id="hiddenLatitude" value="">
                     <input type="hidden" name="longitude" id="hiddenLongitude" value="">
                     <input type="hidden" name="location_address" id="hiddenLocationAddress" value="">
-                    
+
                     <div class="d-flex justify-content-end gap-2 mt-4">
                         <button type="submit" class="btn btn-primary">保存</button>
                         <a href="{% url 'business_pages:customer_visit' %}" class="btn btn-secondary">取消</a>
@@ -60,7 +60,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="container-fluid py-3" style="border-top: 1px solid #e0e0e0; background-color: #f8f9fa;">
         <div class="info-card info-card-compact" style="margin-bottom: 0;">
             <div class="info-card-header">
@@ -85,33 +85,33 @@
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                (window.innerWidth <= 768);
     }
-    
+
     // 自动定位功能
     const hiddenLatitude = document.getElementById('hiddenLatitude');
     const hiddenLongitude = document.getElementById('hiddenLongitude');
     const hiddenLocationAddress = document.getElementById('hiddenLocationAddress');
     const locationDisplay = document.getElementById('locationDisplay');
     const visitForm = document.querySelector('form');
-    
+
     // 定位状态
     let isLocating = false;
     let locationObtained = false;
-    
+
     // 更新位置显示
     function updateLocationDisplay(latitude, longitude, address) {
         if (!locationDisplay) return;
-        
+
         if (latitude && longitude) {
             const lat = parseFloat(latitude).toFixed(7);
             const lon = parseFloat(longitude).toFixed(7);
-            
+
             let displayHtml = `
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-check-circle-fill text-success"></i>
                     <span class="fw-bold text-success">定位成功</span>
                 </div>
             `;
-            
+
             if (address) {
                 displayHtml += `
                     <div class="w-100 mt-2">
@@ -120,14 +120,14 @@
                     </div>
                 `;
             }
-            
+
             displayHtml += `
                 <div class="w-100 mt-2">
                     <div class="text-muted small">坐标：</div>
                     <div class="font-monospace small">纬度 ${lat}，经度 ${lon}</div>
                 </div>
             `;
-            
+
             locationDisplay.innerHTML = displayHtml;
         } else {
             // TODO: 使用DOMPurify清理HTML
@@ -138,7 +138,7 @@
             `;
         }
     }
-    
+
     // 更新位置显示状态（简化版，主要用于底部显示）
     function updateLocationStatus(message, isSuccess = true) {
         if (locationDisplay && !locationObtained) {
@@ -152,7 +152,7 @@
             `;
         }
     }
-    
+
     // 调用高德地图API获取地址
     async function getAddressFromCoordinates(latitude, longitude) {
         try {
@@ -164,9 +164,9 @@
                 },
                 credentials: 'same-origin'
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success && data.formatted_address) {
                 // 保存地址到隐藏字段
                 hiddenLocationAddress.value = data.formatted_address;
@@ -184,7 +184,7 @@
             return false;
         }
     }
-    
+
     // GPS定位
     function getLocation(showStatus = true) {
         if (!navigator.geolocation) {
@@ -195,29 +195,29 @@
             setTimeout(() => getIPLocation(), 1000);
             return;
         }
-        
+
         if (isLocating) {
             return; // 正在定位中，避免重复请求
         }
-        
+
         isLocating = true;
         if (showStatus) {
             updateLocationStatus('正在获取GPS位置...', true);
         }
-        
+
         navigator.geolocation.getCurrentPosition(
             async function(position) {
                 const lat = position.coords.latitude.toFixed(7);
                 const lon = position.coords.longitude.toFixed(7);
-                
+
                 // 保存到隐藏字段
                 hiddenLatitude.value = lat;
                 hiddenLongitude.value = lon;
                 locationObtained = true;
-                
+
                 // 调用API获取地址
                 await getAddressFromCoordinates(lat, lon);
-                
+
                 isLocating = false;
             },
             function(error) {
@@ -250,11 +250,11 @@
             }
         );
     }
-    
+
     // IP定位（备选方案）
     async function getIPLocation() {
         updateLocationStatus('正在通过IP获取位置...', true);
-        
+
         try {
             const response = await fetch('/api/customer/ip-location/', {
                 method: 'GET',
@@ -263,21 +263,21 @@
                 },
                 credentials: 'same-origin'
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success && data.center_latitude && data.center_longitude) {
                 const lat = data.center_latitude.toFixed(7);
                 const lon = data.center_longitude.toFixed(7);
-                
+
                 // 保存到隐藏字段
                 hiddenLatitude.value = lat;
                 hiddenLongitude.value = lon;
                 locationObtained = true;
-                
+
                 // 调用API获取详细地址
                 await getAddressFromCoordinates(lat, lon);
-                
+
                 updateLocationStatus(`IP定位成功（${data.city || '城市级别'}）`, true);
             } else {
                 updateLocationStatus('IP定位失败：' + (data.message || '无法获取位置信息'), false);
@@ -286,22 +286,22 @@
             updateLocationStatus('IP定位失败，请检查网络连接', false);
         }
     }
-    
+
     // 检查是否已有位置信息（从隐藏字段）
     if (hiddenLatitude.value && hiddenLongitude.value) {
         locationObtained = true;
         updateLocationDisplay(hiddenLatitude.value, hiddenLongitude.value, hiddenLocationAddress.value);
     }
-    
+
     // 表单提交时自动获取位置（如果还没有）
     if (visitForm) {
         visitForm.addEventListener('submit', async function(e) {
             // 如果是移动设备且还没有位置信息，尝试自动获取
             if (isMobileDevice() && !locationObtained && !hiddenLatitude.value && !hiddenLongitude.value) {
                 e.preventDefault(); // 阻止提交
-                
+
                 updateLocationStatus('正在自动获取位置信息...', true);
-                
+
                 // 尝试GPS定位
                 if (navigator.geolocation) {
                     try {
@@ -312,14 +312,14 @@
                                 maximumAge: 60000
                             });
                         });
-                        
+
                         const lat = position.coords.latitude.toFixed(7);
                         const lon = position.coords.longitude.toFixed(7);
-                        
+
                         hiddenLatitude.value = lat;
                         hiddenLongitude.value = lon;
                         locationObtained = true;
-                        
+
                         // 快速获取地址（不等待完成）
                         getAddressFromCoordinates(lat, lon).then(() => {
                             // 地址获取完成后提交表单
@@ -328,12 +328,12 @@
                             // 即使地址获取失败也提交表单
                             visitForm.submit();
                         });
-                        
+
                         return;
                     } catch (error) {
                     }
                 }
-                
+
                 // GPS定位失败，尝试IP定位
                 try {
                     await getIPLocation();
@@ -344,7 +344,7 @@
                     }
                 } catch (error) {
                 }
-                
+
                 // 定位失败，询问用户是否继续提交
                 updateLocationStatus('自动定位失败，是否继续提交？', false);
                 if (confirm('无法自动获取位置信息，是否继续提交？（可以稍后手动添加位置信息）')) {
@@ -353,7 +353,7 @@
             }
         });
     }
-    
+
     // 页面加载时自动尝试定位（所有设备）
     if (!hiddenLatitude.value && !hiddenLongitude.value) {
         // 延迟1秒后自动定位，给页面加载时间

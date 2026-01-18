@@ -111,22 +111,22 @@
 document.addEventListener('DOMContentLoaded', function() {
     const departmentTree = {{ department_tree|safe|default:"[]" }};
     const container = document.getElementById('orgChart');
-    
+
     if (!departmentTree || departmentTree.length === 0) {
         container.innerHTML = '<div class="org-chart-placeholder"><i class="bi bi-info-circle" style="font-size: 48px; opacity: 0.3; margin-bottom: 16px; display: block;"></i><p>暂无组织架构数据</p></div>';
         return;
     }
-    
+
     // 简单的树形结构渲染
     function renderTree(nodes, parentElement, level = 0) {
         if (!nodes || nodes.length === 0) return;
-        
+
         const levelContainer = document.createElement('div');
         levelContainer.style.display = 'flex';
         levelContainer.style.justifyContent = 'center';
         levelContainer.style.flexWrap = 'wrap';
         levelContainer.style.marginBottom = level > 0 ? '20px' : '0';
-        
+
         nodes.forEach((node, index) => {
             const nodeDiv = document.createElement('div');
             nodeDiv.className = 'org-node';
@@ -138,9 +138,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div>员工数: ${node.employee_count} 人</div>
                 </div>
             `;
-            
+
             levelContainer.appendChild(nodeDiv);
-            
+
             // 递归渲染子节点
             if (node.children && node.children.length > 0) {
                 const childrenContainer = document.createElement('div');
@@ -150,10 +150,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 levelContainer.appendChild(childrenContainer);
             }
         });
-        
+
         parentElement.appendChild(levelContainer);
     }
-    
+
     container.innerHTML = '';
     renderTree(departmentTree, container);
 });

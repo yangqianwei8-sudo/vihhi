@@ -196,29 +196,29 @@
     // 转化为客户
     function convertLead(leadId) {
         if (!confirm('确认将此线索转化为客户？')) return;
-        
+
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '{% url "business_pages:customer_lead_bulk_action" %}';
-        
+
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
         csrfInput.name = 'csrfmiddlewaretoken';
         csrfInput.value = getCsrfToken();
         form.appendChild(csrfInput);
-        
+
         const actionInput = document.createElement('input');
         actionInput.type = 'hidden';
         actionInput.name = 'action';
         actionInput.value = 'convert';
         form.appendChild(actionInput);
-        
+
         const leadIdInput = document.createElement('input');
         leadIdInput.type = 'hidden';
         leadIdInput.name = 'lead_ids';
         leadIdInput.value = leadId;
         form.appendChild(leadIdInput);
-        
+
         document.body.appendChild(form);
         form.submit();
     }

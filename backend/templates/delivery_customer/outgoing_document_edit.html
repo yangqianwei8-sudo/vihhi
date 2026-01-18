@@ -28,16 +28,16 @@
                 <div class="card-body">
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
-                        
+
                         <div class="mb-4">
                             <h5 class="mb-3">基本信息</h5>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">发文编号</label>
                                 <input type="text" class="form-control" value="{{ document.document_number }}" disabled>
                                 <small class="form-text text-muted">发文编号不可修改</small>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">项目编号</label>
@@ -53,12 +53,12 @@
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">项目名称</label>
-                                    <input type="text" class="form-control" id="project_name_display" readonly 
-                                           value="{% if document.project %}{{ document.project.name }}{% endif %}" 
+                                    <input type="text" class="form-control" id="project_name_display" readonly
+                                           value="{% if document.project %}{{ document.project.name }}{% endif %}"
                                            placeholder="选择项目后自动显示">
                                 </div>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">阶段</label>
@@ -74,7 +74,7 @@
                                     <select name="file_category" class="form-select" id="category_select">
                                         <option value="">请选择文件分类</option>
                                         {% for category in categories %}
-                                        <option value="{{ category.id }}" data-stage="{{ category.stage }}" 
+                                        <option value="{{ category.id }}" data-stage="{{ category.stage }}"
                                                 {% if document.file_category_id == category.id %}selected{% endif %}
                                                 style="{% if document.stage and category.stage != document.stage %}display: none;{% endif %}">
                                             {{ category.name }}
@@ -83,12 +83,12 @@
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">文件标题 <span class="text-danger">*</span></label>
                                 <input type="text" name="title" class="form-control" value="{{ document.title }}" required>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">文件内容</label>
                                 <textarea name="content" class="form-control" rows="4" placeholder="要求采用deepseek概述100字以内">{{ document.content|default:'' }}</textarea>
@@ -98,7 +98,7 @@
 
                         <div class="mb-4">
                             <h5 class="mb-3">收文单位信息</h5>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">收文单位 <span class="text-danger">*</span></label>
@@ -109,14 +109,14 @@
                                     <input type="text" name="recipient_contact" class="form-control" value="{{ document.recipient_contact|default:'' }}">
                                 </div>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">联系电话</label>
                                     <input type="text" name="recipient_phone" class="form-control" value="{{ document.recipient_phone|default:'' }}">
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">收文地址</label>
                                 <textarea name="recipient_address" class="form-control" rows="2">{{ document.recipient_address|default:'' }}</textarea>
@@ -125,11 +125,11 @@
 
                         <div class="mb-4">
                             <h5 class="mb-3">报送方式</h5>
-                            
+
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-check mb-2">
-                                        <input class="form-check-input" type="checkbox" name="delivery_methods" value="email" id="delivery_method_email" 
+                                        <input class="form-check-input" type="checkbox" name="delivery_methods" value="email" id="delivery_method_email"
                                                {% if 'email' in document.delivery_methods_list %}checked{% endif %}>
                                         <label class="form-check-label" for="delivery_method_email">
                                             邮件
@@ -199,7 +199,7 @@ function updateCategoryOptions() {
     const stageSelect = document.getElementById('stage_select');
     const categorySelect = document.getElementById('category_select');
     const selectedStage = stageSelect.value;
-    
+
     // 显示/隐藏分类选项
     const options = categorySelect.querySelectorAll('option[data-stage]');
     options.forEach(option => {
@@ -220,7 +220,7 @@ function updateProjectName() {
     const projectSelect = document.getElementById('project_select');
     const projectNameDisplay = document.getElementById('project_name_display');
     const selectedOption = projectSelect.options[projectSelect.selectedIndex];
-    
+
     if (selectedOption && selectedOption.value) {
         const projectName = selectedOption.getAttribute('data-name');
         projectNameDisplay.value = projectName || '';

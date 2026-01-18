@@ -80,10 +80,10 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    
+
     <form method="post" id="voucherForm">
         {% csrf_token %}
-        
+
         <div class="form-card">
             <h5>基本信息</h5>
             <div class="row g-3">
@@ -139,9 +139,9 @@
                     <i class="bi bi-plus-circle"></i> 添加分录行
                 </button>
             </div>
-            
+
             {{ formset.management_form }}
-            
+
             <div id="entryContainer">
                 {% for entry_form in formset %}
                 <div class="entry-row" data-form-index="{{ forloop.counter0 }}">
@@ -328,22 +328,22 @@ function removeEntryRow(btn) {
 function calculateTotals() {
     let totalDebit = 0;
     let totalCredit = 0;
-    
+
     document.querySelectorAll('.entry-debit').forEach(input => {
         if (!input.closest('.entry-row').querySelector('[name*="-DELETE"]:checked')) {
             totalDebit += parseFloat(input.value) || 0;
         }
     });
-    
+
     document.querySelectorAll('.entry-credit').forEach(input => {
         if (!input.closest('.entry-row').querySelector('[name*="-DELETE"]:checked')) {
             totalCredit += parseFloat(input.value) || 0;
         }
     });
-    
+
     document.getElementById('totalDebit').textContent = '¥' + totalDebit.toFixed(2);
     document.getElementById('totalCredit').textContent = '¥' + totalCredit.toFixed(2);
-    
+
     const balanceStatus = document.getElementById('balanceStatus');
     const diff = Math.abs(totalDebit - totalCredit);
     if (diff < 0.01) {

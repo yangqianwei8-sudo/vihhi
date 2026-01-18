@@ -12,87 +12,11 @@
 {% block extra_css %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
-<style>
-    .step-indicator {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 2rem;
-        position: relative;
-        padding: 0 16px;
-    }
-    .step-indicator::before {
-        content: '';
-        position: absolute;
-        top: 20px;
-        left: 16px;
-        right: 16px;
-        height: 2px;
-        background: #e0e0e0;
-        z-index: 0;
-    }
-    .step-item {
-        flex: 1;
-        text-align: center;
-        position: relative;
-        z-index: 1;
-    }
-    .step-number {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: #e0e0e0;
-        color: #666;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 0.5rem;
-        font-weight: bold;
-        border: 3px solid #fff;
-    }
-    .step-item.active .step-number {
-        background: #0d6efd;
-        color: #fff;
-    }
-    .step-item.completed .step-number {
-        background: #198754;
-        color: #fff;
-    }
-    .step-label {
-        font-size: 0.875rem;
-        color: #666;
-    }
-    .step-item.active .step-label {
-        color: #0d6efd;
-        font-weight: bold;
-    }
-    .step-item.completed .step-label {
-        color: #198754;
-    }
-</style>
 {% endblock %}
 
 {% block pm_content %}
-<div class="step-indicator">
-    <div class="step-item {% if step >= 1 %}completed{% endif %} {% if step == 1 %}active{% endif %}">
-        <div class="step-number">1</div>
-        <div class="step-label">创建计划</div>
-    </div>
-    <div class="step-item {% if step >= 2 %}completed{% endif %} {% if step == 2 %}active{% endif %}">
-        <div class="step-number">2</div>
-        <div class="step-label">沟通清单准备</div>
-    </div>
-    <div class="step-item {% if step >= 3 %}completed{% endif %} {% if step == 3 %}active{% endif %}">
-        <div class="step-number">3</div>
-        <div class="step-label">拜访定位打卡</div>
-    </div>
-    <div class="step-item {% if step >= 4 %}completed{% endif %} {% if step == 4 %}active{% endif %}">
-        <div class="step-number">4</div>
-        <div class="step-label">拜访结果复盘</div>
-    </div>
-</div>
-
 <div class="form-container">
-    {# 表单错误提示 #}
+
     {% if form.errors %}
     <div class="form-alert form-alert-danger">
         <div class="form-alert-title">提交失败：请完善必填项</div>
@@ -122,84 +46,58 @@
         </div>
         {% endif %}
 
-        {% if step == 1 %}
-        {# 第一步：创建拜访计划 #}
-active{% endif %}">
-                <div class="step-number">1</div>
-                <div class="step-label">创建计划</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.department.id_for_label }}">
+                    {{ form.department.label }}
+                </label>
+                {{ form.department }}
             </div>
-            <div class="step-item {% if step >= 2 %}completed{% endif %} {% if step == 2 %}active{% endif %}">
-                <div class="step-number">2</div>
-                <div class="step-label">沟通清单准备</div>
-            </div>
-            <div class="step-item {% if step >= 3 %}completed{% endif %} {% if step == 3 %}active{% endif %}">
-                <div class="step-number">3</div>
-                <div class="step-label">拜访定位打卡</div>
-            </div>
-            <div class="step-item {% if step >= 4 %}completed{% endif %} {% if step == 4 %}active{% endif %}">
-                <div class="step-number">4</div>
-                <div class="step-label">拜访结果复盘</div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.responsible_user.id_for_label }}">
+                    {{ form.responsible_user.label }}
+                </label>
+                {{ form.responsible_user }}
             </div>
         </div>
 
-        <div class="info-card info-card-compact">
-            <div class="info-card-header">
-                <h5 class="info-card-title">{{ page_title }}</h5>
-            </div>
-            <div class="info-card-body">
-                {% if visit_plan %}
-                <div class="alert alert-info mb-3">
-                    <strong>客户：</strong>{{ visit_plan.client.name }}
-                </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label required" for="{{ form.client.id_for_label }}">
+                    {{ form.client.label }}
+                </label>
+                {{ form.client }}
+                {% if form.client.errors %}
+                <div class="form-error">{{ form.client.errors }}</div>
                 {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label required" for="{{ form.plan_date.id_for_label }}">
+                    {{ form.plan_date.label }}
+                </label>
+                {{ form.plan_date }}
+                {% if form.plan_date.errors %}
+                <div class="form-error">{{ form.plan_date.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="form-group form-row-full">
+                <label class="form-label" for="{{ form.location.id_for_label }}">
+                    {{ form.location.label }}
+                </label>
+                {{ form.location }}
+                <small class="text-muted">将根据客户办公地址自动填充</small>
+            </div>
+            <div class="form-group form-row-full">
+                <label class="form-label" for="{{ form.related_opportunity.id_for_label }}">
+                    {{ form.related_opportunity.label }}
+                </label>
+                {{ form.related_opportunity }}
+            </div>
+        </div>
 
-                <form method="post">
-                    {% csrf_token %}
-                    
-                    {% if step == 1 %}
-                    
-                    <div class="info-section">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label required">{{ form.client.label }}</label>
-                                {{ form.client }}
-                                {% if form.client.errors %}
-                                <div class="form-error">{{ form.client.errors }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label required">{{ form.plan_date.label }}</label>
-                                {{ form.plan_date }}
-                                {% if form.plan_date.errors %}
-                                <div class="form-error">{{ form.plan_date.errors }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">{{ form.location.label }}</label>
-                                {{ form.location }}
-                                <small class="text-muted">将根据客户办公地址自动填充</small>
-                            </div>
-                            <div class="form-group form-row-full">
-                                <label class="form-label">{{ form.participants.label }}</label>
-                                {{ form.participants }}
-                                {% if form.participants.errors %}
-                                <div class="form-error">{{ form.participants.errors }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="form-group form-row-full">
-                                <label class="form-label">{{ form.related_opportunity.label }}</label>
-                                {{ form.related_opportunity }}
-                            </div>
-                        </div>
-                    </div>
-                    
-        {% elif step == 2 %}
-        {# 第二步：沟通清单准备 #}
-
-                    
-                    <div class="info-section">
+<div class="form-row">
                         {% if questions_by_part %}
-                        
+
                         {% for part, questions in questions_by_part.items %}
                         <div class="card mb-3">
                             <div class="card-header">
@@ -263,117 +161,39 @@ active{% endif %}">
                             </div>
                         </div>
                         {% endfor %}
-                        
+
                         <div class="mt-3">
-                            <label class="info-label info-label-required">{{ form.communication_checklist.label }}</label>
+                            <label class="form-label required">{{ form.communication_checklist.label }}</label>
                             {{ form.communication_checklist }}
                             {% if form.communication_checklist.errors %}
-                            <div class="text-danger small">{{ form.communication_checklist.errors }}</div>
+                            <div class="form-error">{{ form.communication_checklist.errors }}</div>
                             {% endif %}
                             <small class="text-muted">请总结沟通清单的关键要点和注意事项</small>
                         </div>
                         {% else %}
-                        
-                        <div class="info-item" style="grid-column: 1 / -1;">
-                            <label class="info-label info-label-required">{{ form.communication_checklist.label }}</label>
+
+                        <div class="form-group form-row-full">
+                            <label class="form-label required">{{ form.communication_checklist.label }}</label>
                             {{ form.communication_checklist }}
                             {% if form.communication_checklist.errors %}
-                            <div class="text-danger small">{{ form.communication_checklist.errors }}</div>
+                            <div class="form-error">{{ form.communication_checklist.errors }}</div>
                             {% endif %}
                             <small class="text-muted">请详细列出拜访前需要准备的沟通要点、资料和注意事项</small>
                         </div>
                         {% endif %}
                     </div>
-                    
-        {% elif step == 3 %}
-        {# 第三步：拜访定位打卡 #}
 
-                    
-                    <div class="form-section">
-                        <h6 class="form-section-header">打卡信息</h6>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label required">{{ form.checkin_time.label }}</label>
-                                    {{ form.checkin_time }}
-                                    {% if form.checkin_time.errors %}
-                                    <div class="text-danger small mt-1">{{ form.checkin_time.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label required">{{ form.checkin_location.label }}</label>
-                                    {{ form.checkin_location }}
-                                    {% if form.checkin_location.errors %}
-                                    <div class="text-danger small mt-1">{{ form.checkin_location.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6 d-none d-md-block">
-                                <div class="form-group">
-                                    <label class="form-label">{{ form.latitude.label }}</label>
-                                    {{ form.latitude }}
-                                </div>
-                            </div>
-                            <div class="col-md-6 d-none d-md-block">
-                                <div class="form-group">
-                                    <label class="form-label">{{ form.longitude.label }}</label>
-                                    {{ form.longitude }}
-                                </div>
-                            </div>
-                            <div class="col-12">
-                                <div class="form-group">
-                                    <label class="form-label">{{ form.notes.label }}</label>
-                                    {{ form.notes }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-section">
-                        <h6 class="form-section-header">位置定位</h6>
-                        <div class="mb-3">
-                            <button type="button" class="btn btn-outline-primary" data-click="handle_onclick_0">
-                                <i class="bi bi-geo-alt-fill"></i> 获取当前位置
-                            </button>
-                        </div>
-                        <div id="locationDisplay" class="p-3 bg-light rounded"></div>
-                    </div>
-                    
-        {% elif step == 4 %}
-        {# 第四步：拜访结果复盘 #}
-
-                    
-                    <div class="info-section">
-                        <div class="form-group form-row-full">
-                            <label class="form-label required">{{ form.visit_result.label }}</label>
-                            {{ form.visit_result }}
-                            {% if form.visit_result.errors %}
-                            <div class="form-error">{{ form.visit_result.errors }}</div>
-                            
-        {% endif %}
-        
-        {# 表单操作按钮 #}
         <div class="form-actions">
             <div class="form-actions-left">
-                {% if visit_plan %}
-                <a href="{% url 'business_pages:visit_plan_detail' visit_plan.id %}" class="form-btn form-btn-secondary">返回详情</a>
-                {% else %}
                 <a href="{% url cancel_url_name|default:'business_pages:customer_visit' %}" class="form-btn form-btn-secondary">取消</a>
-                {% endif %}
-                <button type="submit" class="form-btn form-btn-primary">
-                    {% if step == 4 %}完成复盘{% else %}下一步{% endif %}
-                </button>
+                <button type="submit" class="form-btn form-btn-primary">提交</button>
             </div>
         </div>
     </form>
 </div>
 
-{% if step == 1 %}
 <script>
-
-    // 安全的HTML设置函数
+// 安全的HTML设置函数
     function setSafeHTML(element, html) {
         if (!element) return;
         // 如果内容不包含HTML标签，使用textContent
@@ -385,7 +205,7 @@ active{% endif %}">
             element.innerHTML = html;
         }
     }
-    
+
     // 安全的文本设置函数（推荐使用）
     function setSafeText(element, text) {
         if (element) {
@@ -400,7 +220,7 @@ active{% endif %}">
         const opportunitySelect = document.getElementById('id_related_opportunity');
         const clientsWithAddress = {{ clients_with_address_json|safe|default:"{}" }};
         const clientsOpportunities = {{ clients_opportunities_json|safe|default:"{}" }};
-        
+
         function updateLocation() {
             if (clientSelect && locationInput) {
                 const clientId = clientSelect.value;
@@ -411,20 +231,20 @@ active{% endif %}">
                 }
             }
         }
-        
+
         function updateOpportunities() {
             if (clientSelect && opportunitySelect) {
                 const clientId = clientSelect.value;
-                
+
                 // 清空当前选项
                 opportunitySelect.textContent = '';
-                
+
                 // 添加默认选项
                 const defaultOption = document.createElement('option');
                 defaultOption.value = '';
                 defaultOption.textContent = '-- 选择关联商机（可选） --';
                 opportunitySelect.appendChild(defaultOption);
-                
+
                 // 如果选择了客户，显示该客户的商机
                 if (clientId && clientsOpportunities[clientId]) {
                     const opportunities = clientsOpportunities[clientId];
@@ -444,145 +264,18 @@ active{% endif %}">
                 }
             }
         }
-        
+
         if (clientSelect) {
             // 监听客户选择变化
             clientSelect.addEventListener('change', function() {
                 updateLocation();
                 updateOpportunities();
             });
-            
+
             // 初始化
             updateLocation();
             updateOpportunities();
         }
     })();
-
 </script>
-{% elif step == 2 %}
-<script>
-
-    // 定位功能（第二步：拜访定位打卡）
-    const hiddenLatitude = document.getElementById('id_latitude');
-    const hiddenLongitude = document.getElementById('id_longitude');
-    const hiddenLocationAddress = document.getElementById('id_checkin_location');
-    const locationDisplay = document.getElementById('locationDisplay');
-    
-    function updateLocationDisplay(latitude, longitude, address) {
-        if (!locationDisplay) return;
-        
-        if (latitude && longitude) {
-            const lat = parseFloat(latitude).toFixed(7);
-            const lon = parseFloat(longitude).toFixed(7);
-            
-            let displayHtml = `
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <i class="bi bi-check-circle-fill text-success"></i>
-                    <span class="fw-bold text-success">定位成功</span>
-                </div>
-            `;
-            
-            if (address) {
-                displayHtml += `
-                    <div class="mb-2">
-                        <div class="text-muted small">地址：</div>
-                        <div class="fw-semibold">${address}</div>
-                    </div>
-                `;
-            }
-            
-            displayHtml += `
-                <div>
-                    <div class="text-muted small">坐标：</div>
-                    <div class="font-monospace small">纬度 ${lat}，经度 ${lon}</div>
-                </div>
-            `;
-            
-            locationDisplay.innerHTML = displayHtml;
-        }
-    }
-    
-    async function getAddressFromCoordinates(latitude, longitude) {
-        try {
-            const response = await fetch(`/api/customer/regeocode/?latitude=${latitude}&longitude=${longitude}`, {
-                method: 'GET',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                },
-                credentials: 'same-origin'
-            });
-            
-            const data = await response.json();
-            
-            if (data.success && data.formatted_address) {
-                hiddenLocationAddress.value = data.formatted_address;
-                hiddenLocationAddress.removeAttribute('readonly');
-                updateLocationDisplay(latitude, longitude, data.formatted_address);
-                return true;
-            } else {
-                updateLocationDisplay(latitude, longitude, null);
-                return false;
-            }
-        } catch (error) {
-            updateLocationDisplay(latitude, longitude, null);
-            return false;
-        }
-    }
-    
-    function getLocation() {
-        if (!navigator.geolocation) {
-            alert('浏览器不支持GPS定位');
-            return;
-        }
-        
-        // TODO: 使用DOMPurify清理HTML
-            locationDisplay.innerHTML = '<div class="text-muted"><i class="bi bi-hourglass-split"></i> 正在获取位置信息...</div>';
-        
-        navigator.geolocation.getCurrentPosition(
-            async function(position) {
-                const lat = position.coords.latitude.toFixed(7);
-                const lon = position.coords.longitude.toFixed(7);
-                
-                hiddenLatitude.value = lat;
-                hiddenLongitude.value = lon;
-                
-                await getAddressFromCoordinates(lat, lon);
-            },
-            function(error) {
-                // TODO: 使用DOMPurify清理HTML
-            locationDisplay.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle"></i> 定位失败：' + error.message + '</div>';
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 30000,
-                maximumAge: 60000
-            }
-        );
-    }
-    
-    // 检查是否已有位置信息
-    if (hiddenLatitude && hiddenLatitude.value && hiddenLongitude && hiddenLongitude.value) {
-        updateLocationDisplay(hiddenLatitude.value, hiddenLongitude.value, hiddenLocationAddress.value);
-    }
-
-    // 事件处理器: handle_onclick_0
-    document.addEventListener('DOMContentLoaded', function() {
-        const element = document.querySelector('.btn');
-        if (element) {
-            element.addEventListener('click', function(e) {
-                getLocation()
-            // 移动端自动获取位置
-            if (/Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-                // 移动端自动获取位置
-                if (!hiddenLatitude || !hiddenLatitude.value || !hiddenLongitude || !hiddenLongitude.value) {
-                    setTimeout(function() { getLocation(); }, 500);
-                }
-            }
-            });
-        }
-    });
-
-
-</script>
-{% endif %}
 {% endblock %}

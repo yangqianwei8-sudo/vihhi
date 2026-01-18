@@ -20,44 +20,44 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     margin-bottom: 16px;
   }
-  
+
   .track-form-header {
     padding: 12px 16px;
     border-bottom: 1px solid #E0E0E0;
     background: #F5F5F5;
   }
-  
+
   .track-form-title {
     font-size: 14px;
     font-weight: 600;
     color: #1A1A1A;
     margin: 0;
   }
-  
+
   .track-form-body {
     padding: 16px;
   }
-  
+
   .track-form-group {
     margin-bottom: 16px;
   }
-  
+
   .track-form-group:last-child {
     margin-bottom: 0;
   }
-  
+
   .track-form-label {
     font-size: 12px;
     color: var(--vh-primary); /* 主题深蓝色 */
     margin-bottom: 6px;
     display: block;
   }
-  
+
   .track-form-label.required::after {
     content: ' *';
     color: #999999;
   }
-  
+
   .track-form-input {
     color: var(--vh-primary); /* 主题深蓝色 */
     width: 100%;
@@ -67,18 +67,18 @@
     font-size: 14px;
     background: #FFFFFF;
   }
-  
+
   .track-form-input:focus {
     outline: none;
     border-color: #999999;
     box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
   }
-  
+
   .track-form-input[readonly] {
     background: #F5F5F5;
     color: var(--vh-primary); /* 主题深蓝色 */
   }
-  
+
   .track-form-submit {
     padding: 10px 20px;
     background: #1A1A1A;
@@ -90,49 +90,49 @@
     cursor: pointer;
     transition: all 0.2s ease;
   }
-  
+
   .track-form-submit:hover {
     background: #333333;
     border-color: #333333;
   }
-  
+
   .track-action-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
     margin-bottom: 16px;
   }
-  
+
   .track-action-card {
     background: #FFFFFF;
     border: 1px solid #E0E0E0;
     border-radius: 0;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
-  
+
   .track-action-header {
     padding: 12px 16px;
     border-bottom: 1px solid #E0E0E0;
     background: #F5F5F5;
   }
-  
+
   .track-action-title {
     font-size: 14px;
     font-weight: 600;
     color: #1A1A1A;
     margin: 0;
   }
-  
+
   .track-action-body {
     padding: 16px;
   }
-  
+
   .track-action-text {
     font-size: 12px;
     color: var(--vh-primary); /* 主题深蓝色 */
     margin-bottom: 12px;
   }
-  
+
   .track-action-select {
     width: 100%;
     padding: 8px 12px;
@@ -143,13 +143,13 @@
     background: #FFFFFF;
     color: #333333;
   }
-  
+
   .track-action-select:focus {
     outline: none;
     border-color: #999999;
     box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
   }
-  
+
   .track-action-btn {
     width: 100%;
     padding: 8px;
@@ -162,12 +162,12 @@
     cursor: pointer;
     transition: all 0.2s ease;
   }
-  
+
   .track-action-btn:hover {
     background: #333333;
     border-color: #333333;
   }
-  
+
   @media (max-width: 1200px) {
     .track-action-grid {
       grid-template-columns: 1fr;
@@ -205,7 +205,7 @@
     <form method="post">
       {% csrf_token %}
       <input type="hidden" name="update_progress" value="1">
-      
+
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
         <div class="track-form-group" style="margin-bottom: 0;">
           <label class="track-form-label required">当前值</label>
@@ -219,7 +219,7 @@
           <input type="text" class="track-form-input" id="predictedRate" readonly placeholder="自动计算">
         </div>
       </div>
-      
+
       <div class="track-form-group">
         <label class="track-form-label required">进度说明</label>
         {{ progress_form.progress_description }}
@@ -227,12 +227,12 @@
         <div style="font-size: 12px; color: #999999; margin-top: 4px;">{{ progress_form.progress_description.errors }}</div>
         {% endif %}
       </div>
-      
+
       <div class="track-form-group">
         <label class="track-form-label">备注</label>
         {{ progress_form.notes }}
       </div>
-      
+
       <button type="submit" class="track-form-submit">更新进度</button>
     </form>
   </div>
@@ -270,7 +270,7 @@
     </div>
   </div>
   {% endif %}
-  
+
   {% if can_complete %}
   <div class="track-action-card">
     <div class="track-action-header">
@@ -470,14 +470,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const currentValueInput = document.querySelector('#id_current_value');
   const predictedRateInput = document.getElementById('predictedRate');
   const targetValue = {{ goal.target_value }};
-  
+
   if (currentValueInput && predictedRateInput) {
     const initialValue = parseFloat(currentValueInput.value) || 0;
     if (targetValue > 0 && initialValue > 0) {
       const rate = (initialValue / targetValue) * 100;
       predictedRateInput.value = Math.min(rate, 100).toFixed(2) + '%';
     }
-    
+
     currentValueInput.addEventListener('input', function() {
       const currentValue = parseFloat(this.value) || 0;
       if (targetValue > 0) {

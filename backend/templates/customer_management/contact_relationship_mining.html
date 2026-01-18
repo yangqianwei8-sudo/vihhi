@@ -101,48 +101,48 @@
 {% block content %}
 <div class="workspace-content">
     <div class="container-fluid py-4">
-        
+
         <div class="mining-search-box">
             <h4 class="mb-3">🔍 关系挖掘</h4>
-            
+
             <ul class="nav nav-tabs mb-3" id="searchTypeTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link {% if search_type == 'phone' or not search_type %}active{% endif %}" 
-                            id="phone-tab" 
-                            data-bs-toggle="tab" 
-                            data-bs-target="#phone-search" 
-                            type="button" 
+                    <button class="nav-link {% if search_type == 'phone' or not search_type %}active{% endif %}"
+                            id="phone-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#phone-search"
+                            type="button"
                             role="tab">
                         <i class="bi bi-telephone"></i> 按电话号码挖掘
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link {% if search_type == 'client' %}active{% endif %}" 
-                            id="client-tab" 
-                            data-bs-toggle="tab" 
-                            data-bs-target="#client-search" 
-                            type="button" 
+                    <button class="nav-link {% if search_type == 'client' %}active{% endif %}"
+                            id="client-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#client-search"
+                            type="button"
                             role="tab">
                         <i class="bi bi-building"></i> 按客户公司挖掘
                     </button>
                 </li>
             </ul>
-            
+
             <div class="tab-content" id="searchTypeContent">
-                
-                <div class="tab-pane fade {% if search_type == 'phone' or not search_type %}show active{% endif %}" 
-                     id="phone-search" 
+
+                <div class="tab-pane fade {% if search_type == 'phone' or not search_type %}show active{% endif %}"
+                     id="phone-search"
                      role="tabpanel">
                     <form method="get" action="{% url 'business_pages:contact_relationship_mining' %}">
                         <input type="hidden" name="search_type" value="phone">
                         <div class="row g-3 align-items-end">
                             <div class="col-md-8">
                                 <label for="phone" class="form-label">输入电话号码</label>
-                                <input type="text" 
-                                       class="form-control form-control-lg" 
-                                       id="phone" 
-                                       name="phone" 
-                                       value="{{ phone }}" 
+                                <input type="text"
+                                       class="form-control form-control-lg"
+                                       id="phone"
+                                       name="phone"
+                                       value="{{ phone }}"
                                        placeholder="请输入手机号码或电话号码进行搜索..."
                                        required>
                                 <small class="form-text text-muted">支持手机号码和电话号码的模糊匹配</small>
@@ -155,18 +155,18 @@
                         </div>
                     </form>
                 </div>
-                
-                <div class="tab-pane fade {% if search_type == 'client' %}show active{% endif %}" 
-                     id="client-search" 
+
+                <div class="tab-pane fade {% if search_type == 'client' %}show active{% endif %}"
+                     id="client-search"
                      role="tabpanel">
                     <form method="get" action="{% url 'business_pages:contact_relationship_mining' %}">
                         <input type="hidden" name="search_type" value="client">
                         <div class="row g-3 align-items-end">
                             <div class="col-md-8">
                                 <label for="client_id" class="form-label">选择客户公司</label>
-                                <select class="form-select form-select-lg" 
-                                        id="client_id" 
-                                        name="client_id" 
+                                <select class="form-select form-select-lg"
+                                        id="client_id"
+                                        name="client_id"
                                         required>
                                     <option value="">-- 请选择客户公司 --</option>
                                     {% for client in clients %}
@@ -190,7 +190,7 @@
 
         {% if phone %}
             {% if target_contact %}
-                
+
                 <div class="target-contact-card">
                     <h5><i class="bi bi-person-circle"></i> 目标人员信息</h5>
                     <div class="target-contact-info">
@@ -221,8 +221,8 @@
                         <div class="target-contact-item">
                             <div class="target-contact-label">操作</div>
                             <div class="target-contact-value">
-                                <a href="{% url 'business_pages:contact_detail' target_contact.id %}" 
-                                   class="btn btn-sm btn-light" 
+                                <a href="{% url 'business_pages:contact_detail' target_contact.id %}"
+                                   class="btn btn-sm btn-light"
                                    style="color: #667eea;">
                                     查看详情
                                 </a>
@@ -234,7 +234,7 @@
                 <div class="mining-result-section">
                     <div class="mining-result-card">
                         <h6>
-                            <i class="bi bi-mortarboard"></i> 相同教育背景的人员 
+                            <i class="bi bi-mortarboard"></i> 相同教育背景的人员
                             <span class="badge bg-info">{{ same_education_contacts|length }}</span>
                         </h6>
                         {% if same_education_contacts %}
@@ -291,7 +291,7 @@
                 <div class="mining-result-section">
                     <div class="mining-result-card">
                         <h6>
-                            <i class="bi bi-geo-alt-fill"></i> 相同籍贯的人员 
+                            <i class="bi bi-geo-alt-fill"></i> 相同籍贯的人员
                             <span class="badge bg-success">{{ same_birthplace_contacts|length }}</span>
                         </h6>
                         {% if same_birthplace_contacts %}
@@ -331,7 +331,7 @@
                 <div class="mining-result-section">
                     <div class="mining-result-card">
                         <h6>
-                            <i class="bi bi-briefcase-fill"></i> 相同职业信息的人员 
+                            <i class="bi bi-briefcase-fill"></i> 相同职业信息的人员
                             <span class="badge bg-warning">{{ same_career_contacts|length }}</span>
                         </h6>
                         {% if same_career_contacts %}
@@ -379,17 +379,17 @@
                 </div>
 
             {% else %}
-                
+
                 <div class="alert alert-warning">
                     <i class="bi bi-exclamation-triangle"></i>
                     <strong>未找到匹配的联系人</strong>
                     <p class="mb-0 mt-2">系统中没有找到电话号码包含 "{{ phone }}" 的联系人，请检查输入的电话号码是否正确。</p>
                 </div>
             {% endif %}
-        
+
         {% elif search_type == 'client' and client_id %}
             {% if target_client %}
-                
+
                 <div class="target-contact-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
                     <h5><i class="bi bi-building"></i> 目标客户公司信息</h5>
                     <div class="target-contact-info">
@@ -408,8 +408,8 @@
                         <div class="target-contact-item">
                             <div class="target-contact-label">操作</div>
                             <div class="target-contact-value">
-                                <a href="{% url 'business_pages:customer_detail' target_client.id %}" 
-                                   class="btn btn-sm btn-light" 
+                                <a href="{% url 'business_pages:customer_detail' target_client.id %}"
+                                   class="btn btn-sm btn-light"
                                    style="color: #11998e;">
                                     查看客户详情
                                 </a>
@@ -421,7 +421,7 @@
                 <div class="mining-result-section">
                     <div class="mining-result-card">
                         <h6>
-                            <i class="bi bi-people-fill"></i> 客户公司内所有联系人 
+                            <i class="bi bi-people-fill"></i> 客户公司内所有联系人
                             <span class="badge bg-primary">{{ client_contacts|length }}</span>
                         </h6>
                         {% if client_contacts %}
@@ -462,7 +462,7 @@
                                             </div>
                                             {% endif %}
                                         </div>
-                                        <a href="{% url 'business_pages:contact_detail' contact.id %}" 
+                                        <a href="{% url 'business_pages:contact_detail' contact.id %}"
                                            class="btn btn-sm btn-outline-primary">
                                             查看详情
                                         </a>
@@ -483,22 +483,22 @@
                 <div class="mining-result-section">
                     <div class="mining-result-card">
                         <h6>
-                            <i class="bi bi-diagram-3-fill"></i> 客户公司关系网络 
+                            <i class="bi bi-diagram-3-fill"></i> 客户公司关系网络
                             <span class="badge bg-success">{{ client_company_contacts|length }}</span>
                         </h6>
                         <p class="text-muted mb-3">
                             <small>以下是与该公司内联系人具有关系的外部人员（按关系评分排序）</small>
                         </p>
-                        
+
                         <div class="accordion" id="relationTypeAccordion">
                             {% regroup client_company_contacts by relation_type as relations_by_type %}
                             {% for relation_group in relations_by_type %}
                             <div class="accordion-item">
                                 <h2 class="accordion-header" id="heading{{ relation_group.grouper }}">
-                                    <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" 
-                                            type="button" 
-                                            data-bs-toggle="collapse" 
-                                            data-bs-target="#collapse{{ relation_group.grouper }}" 
+                                    <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#collapse{{ relation_group.grouper }}"
                                             aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}">
                                         {% if relation_group.grouper == 'education' %}
                                             <i class="bi bi-mortarboard me-2"></i> 相同教育背景
@@ -512,8 +512,8 @@
                                         <span class="badge bg-primary ms-2">{{ relation_group.list|length }}</span>
                                     </button>
                                 </h2>
-                                <div id="collapse{{ relation_group.grouper }}" 
-                                     class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" 
+                                <div id="collapse{{ relation_group.grouper }}"
+                                     class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
                                      aria-labelledby="heading{{ relation_group.grouper }}">
                                     <div class="accordion-body">
                                         <div class="list-group">
@@ -561,16 +561,16 @@
                 {% endif %}
 
             {% else %}
-                
+
                 <div class="alert alert-warning">
                     <i class="bi bi-exclamation-triangle"></i>
                     <strong>未找到匹配的客户</strong>
                     <p class="mb-0 mt-2">请检查选择的客户是否正确。</p>
                 </div>
             {% endif %}
-        
+
         {% else %}
-            
+
             <div class="alert alert-info">
                 <i class="bi bi-info-circle"></i>
                 <strong>使用说明</strong>

@@ -3,14 +3,89 @@ import json
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
 from django.utils import timezone
 from django.http import HttpResponse
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
-from backend.apps.system_management.services import user_has_permission
+from backend.apps.system_management.services import user_has_permission, get_user_permission_codes
+
+# 导入菜单构建函数
+try:
+    from backend.core.views import _build_unified_sidebar_nav, _build_full_top_nav
+except ImportError:
+    # Fallback: 如果 _build_unified_sidebar_nav 不存在，提供简单实现
+    from backend.core.views import _permission_granted, _build_full_top_nav
+    
+    def _build_unified_sidebar_nav(menu_structure, permission_set, active_id=None):
+        """Fallback: 简单的侧边栏菜单构建函数（支持 url_name 转换）"""
+        nav = []
+        for item in menu_structure:
+            if item.get('permission'):
+                if not _permission_granted(item['permission'], permission_set):
+                    continue
+            
+            # 处理 URL：优先使用 url_name 转换为真实 URL
+            url = '#'
+            url_name = item.get('url_name')
+            if url_name:
+                try:
+                    url = reverse(url_name)
+                except NoReverseMatch:
+                    url = item.get('url', '#')
+            else:
+                url = item.get('url', '#')
+            
+            nav_item = {
+                'id': item.get('id'),
+                'label': item.get('label', ''),
+                'icon': item.get('icon', ''),
+                'url': url,
+                'active': item.get('id') == active_id if active_id else False,
+            }
+            
+            # 处理子菜单
+            if 'children' in item:
+                children = []
+                for child in item['children']:
+                    # 检查子菜单权限
+                    if child.get('permission'):
+                        if not _permission_granted(child['permission'], permission_set):
+                            continue
+                    
+                    # 处理子菜单 URL
+                    child_url = '#'
+                    child_url_name = child.get('url_name')
+                    if child_url_name:
+                        try:
+                            child_url = reverse(child_url_name)
+                        except NoReverseMatch:
+                            child_url = child.get('url', '#')
+                    else:
+                        child_url = child.get('url', '#')
+                    
+                    children.append({
+                        'id': child.get('id'),
+                        'label': child.get('label', ''),
+                        'icon': child.get('icon', ''),
+                        'url': child_url,
+                        'active': child.get('id') == active_id if active_id else False,
+                    })
+                
+                if children:
+                    nav_item['children'] = children
+                    # 如果父菜单没有 url，使用第一个子菜单的 URL
+                    if nav_item['url'] == '#':
+                        nav_item['url'] = children[0].get('url', '#')
+                    # 如果任意子菜单激活，父菜单也激活
+                    if any(child.get('active') for child in children):
+                        nav_item['active'] = True
+                        nav_item['expanded'] = True
+            
+            nav.append(nav_item)
+        return nav
 
 from .forms import (
     StandardForm,
@@ -50,6 +125,86 @@ RESOURCE_PERMISSIONS = {
     "maintenance": "resource_center.data_maintenance",
 }
 
+# ==================== 菜单结构定义 ====================
+
+RESOURCE_MANAGEMENT_MENU_STRUCTURE = [
+    {
+        'id': 'standard',
+        'label': '审查标准',
+        'icon': '📋',
+        'permission': 'resource_center.manage_library',
+        'children': [
+            {'id': 'standard_list', 'label': '标准列表', 'icon': '📋', 'url_name': 'resource_standard:standard_list', 'permission': 'resource_center.manage_library'},
+            {'id': 'standard_create', 'label': '新建标准', 'icon': '➕', 'url_name': 'resource_standard:standard_create', 'permission': 'resource_center.manage_library'},
+        ]
+    },
+    {
+        'id': 'material',
+        'label': '综合单价',
+        'icon': '💰',
+        'permission': 'resource_center.manage_library',
+        'children': [
+            {'id': 'material_price_list', 'label': '单价列表', 'icon': '💰', 'url_name': 'resource_standard:material_price_list', 'permission': 'resource_center.manage_library'},
+            {'id': 'material_price_create', 'label': '新增单价', 'icon': '➕', 'url_name': 'resource_standard:material_price_create', 'permission': 'resource_center.manage_library'},
+        ]
+    },
+    {
+        'id': 'cost',
+        'label': '成本指标',
+        'icon': '📊',
+        'permission': 'resource_center.manage_library',
+        'children': [
+            {'id': 'cost_indicator_list', 'label': '指标列表', 'icon': '📊', 'url_name': 'resource_standard:cost_indicator_list', 'permission': 'resource_center.manage_library'},
+            {'id': 'cost_indicator_create', 'label': '新建指标', 'icon': '➕', 'url_name': 'resource_standard:cost_indicator_create', 'permission': 'resource_center.manage_library'},
+        ]
+    },
+    {
+        'id': 'template',
+        'label': '报告模板',
+        'icon': '📄',
+        'permission': 'resource_center.manage_library',
+        'children': [
+            {'id': 'report_template_list', 'label': '报告模板', 'icon': '📄', 'url_name': 'resource_standard:report_template_list', 'permission': 'resource_center.manage_library'},
+            {'id': 'report_template_create', 'label': '新建模板', 'icon': '➕', 'url_name': 'resource_standard:report_template_create', 'permission': 'resource_center.manage_library'},
+            {'id': 'opinion_template_list', 'label': '意见书模板', 'icon': '📝', 'url_name': 'resource_standard:opinion_template_list', 'permission': 'resource_center.manage_library'},
+            {'id': 'opinion_template_create', 'label': '新建意见书', 'icon': '➕', 'url_name': 'resource_standard:opinion_template_create', 'permission': 'resource_center.manage_library'},
+        ]
+    },
+    {
+        'id': 'knowledge',
+        'label': '知识库',
+        'icon': '📚',
+        'permission': 'resource_center.view',
+        'children': [
+            {'id': 'knowledge_tag_list', 'label': '标签管理', 'icon': '🏷️', 'url_name': 'resource_standard:knowledge_tag_list', 'permission': 'resource_center.view'},
+            {'id': 'knowledge_tag_create', 'label': '新建标签', 'icon': '➕', 'url_name': 'resource_standard:knowledge_tag_create', 'permission': 'resource_center.view'},
+            {'id': 'risk_case_list', 'label': '风险案例', 'icon': '⚠️', 'url_name': 'resource_standard:risk_case_list', 'permission': 'resource_center.view'},
+            {'id': 'risk_case_create', 'label': '新建案例', 'icon': '➕', 'url_name': 'resource_standard:risk_case_create', 'permission': 'resource_center.view'},
+            {'id': 'technical_solution_list', 'label': '技术方案', 'icon': '💡', 'url_name': 'resource_standard:technical_solution_list', 'permission': 'resource_center.view'},
+            {'id': 'technical_solution_create', 'label': '新建方案', 'icon': '➕', 'url_name': 'resource_standard:technical_solution_create', 'permission': 'resource_center.view'},
+        ]
+    },
+    {
+        'id': 'maintenance',
+        'label': '数据维护',
+        'icon': '⚙️',
+        'permission': 'resource_center.data_maintenance',
+        'children': [
+            {'id': 'professional_category_list', 'label': '专业分类', 'icon': '📁', 'url_name': 'resource_standard:professional_category_list', 'permission': 'resource_center.data_maintenance'},
+            {'id': 'professional_category_create', 'label': '新建分类', 'icon': '➕', 'url_name': 'resource_standard:professional_category_create', 'permission': 'resource_center.data_maintenance'},
+            {'id': 'system_parameter_list', 'label': '系统参数', 'icon': '🔧', 'url_name': 'resource_standard:system_parameter_list', 'permission': 'resource_center.data_maintenance'},
+            {'id': 'system_parameter_create', 'label': '新建参数', 'icon': '➕', 'url_name': 'resource_standard:system_parameter_create', 'permission': 'resource_center.data_maintenance'},
+        ]
+    },
+]
+
+
+# ==================== 菜单生成函数 ====================
+
+def _build_resource_sidebar_nav(permission_set, request_path=None, active_id=None):
+    """生成资源管理左侧菜单（统一格式）"""
+    return _build_unified_sidebar_nav(RESOURCE_MANAGEMENT_MENU_STRUCTURE, permission_set, active_id=active_id)
+
 
 def _require_permission(request, code):
     if user_has_permission(request.user, code) or request.user.is_superuser:
@@ -69,15 +224,39 @@ def _wrap_text(text, max_chars=60):
     return lines
 
 
+def _get_resource_context(request, active_id=None):
+    """获取资源管理模块的通用上下文"""
+    context = {}
+    if request and request.user.is_authenticated:
+        permission_set = get_user_permission_codes(request.user)
+        context['resource_sidebar_nav'] = _build_resource_sidebar_nav(permission_set, request.path, active_id=active_id)
+        context['module_sidebar_nav'] = _build_resource_sidebar_nav(permission_set, request.path, active_id=active_id)
+        context['sidebar_title'] = '资源管理'
+        context['sidebar_subtitle'] = 'Resource Management'
+        try:
+            context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+        except Exception:
+            context['full_top_nav'] = []
+    else:
+        context['resource_sidebar_nav'] = []
+        context['module_sidebar_nav'] = []
+        context['sidebar_title'] = '资源管理'
+        context['sidebar_subtitle'] = 'Resource Management'
+        context['full_top_nav'] = []
+    return context
+
+
 @login_required
 def standard_list(request):
     if not _require_permission(request, RESOURCE_PERMISSIONS["standard"]):
         return redirect("home")
 
     standards = Standard.objects.select_related("created_by", "updated_by").prefetch_related("editable_roles")
-    return render(request, "resource_standard/standard_list.html", {
+    context = _get_resource_context(request, active_id='standard_list')
+    context.update({
         "standards": standards,
     })
+    return render(request, "resource_standard/standard_list.html", context)
 
 
 @login_required
@@ -102,11 +281,13 @@ def standard_create(request):
         form = StandardForm()
         items_formset = StandardReviewItemFormSet()
 
-    return render(request, "resource_standard/standard_form.html", {
+    context = _get_resource_context(request, active_id='standard_create')
+    context.update({
         "form": form,
         "items_formset": items_formset,
         "mode": "create",
     })
+    return render(request, "resource_standard/standard_form.html", context)
 
 
 @login_required
@@ -117,9 +298,11 @@ def standard_detail(request, pk):
         Standard.objects.prefetch_related("review_items"),
         pk=pk,
     )
-    return render(request, "resource_standard/standard_detail.html", {
+    context = _get_resource_context(request, active_id='standard_list')
+    context.update({
         "standard": standard,
     })
+    return render(request, "resource_standard/standard_detail.html", context)
 
 
 @login_required
@@ -143,12 +326,14 @@ def standard_edit(request, pk):
         form = StandardForm(instance=standard)
         items_formset = StandardReviewItemFormSet(instance=standard)
 
-    return render(request, "resource_standard/standard_form.html", {
+    context = _get_resource_context(request, active_id='standard_list')
+    context.update({
         "form": form,
         "items_formset": items_formset,
         "mode": "edit",
         "standard": standard,
     })
+    return render(request, "resource_standard/standard_form.html", context)
 
 
 @login_required
@@ -156,9 +341,11 @@ def material_price_list(request):
     if not _require_permission(request, RESOURCE_PERMISSIONS["material"]):
         return redirect("home")
     materials = MaterialPrice.objects.all()
-    return render(request, "resource_standard/material_price_list.html", {
+    context = _get_resource_context(request, active_id='material_price_list')
+    context.update({
         "materials": materials,
     })
+    return render(request, "resource_standard/material_price_list.html", context)
 
 
 @login_required
@@ -176,10 +363,12 @@ def material_price_create(request):
     else:
         form = MaterialPriceForm()
 
-    return render(request, "resource_standard/material_price_form.html", {
+    context = _get_resource_context(request, active_id='material_price_create')
+    context.update({
         "form": form,
         "mode": "create",
     })
+    return render(request, "resource_standard/material_price_form.html", context)
 
 
 @login_required
@@ -200,11 +389,13 @@ def material_price_edit(request, pk):
     else:
         form = MaterialPriceForm(instance=material)
 
-    return render(request, "resource_standard/material_price_form.html", {
+    context = _get_resource_context(request, active_id='material_price_list')
+    context.update({
         "form": form,
         "mode": "edit",
         "material": material,
     })
+    return render(request, "resource_standard/material_price_form.html", context)
 
 
 @login_required
@@ -212,9 +403,11 @@ def cost_indicator_list(request):
     if not _require_permission(request, RESOURCE_PERMISSIONS["cost"]):
         return redirect("home")
     indicators = CostIndicator.objects.all()
-    return render(request, "resource_standard/cost_indicator_list.html", {
+    context = _get_resource_context(request, active_id='cost_indicator_list')
+    context.update({
         "indicators": indicators,
     })
+    return render(request, "resource_standard/cost_indicator_list.html", context)
 
 
 @login_required
@@ -232,10 +425,12 @@ def cost_indicator_create(request):
     else:
         form = CostIndicatorForm()
 
-    return render(request, "resource_standard/cost_indicator_form.html", {
+    context = _get_resource_context(request, active_id='cost_indicator_create')
+    context.update({
         "form": form,
         "mode": "create",
     })
+    return render(request, "resource_standard/cost_indicator_form.html", context)
 
 
 @login_required
@@ -252,11 +447,13 @@ def cost_indicator_edit(request, pk):
     else:
         form = CostIndicatorForm(instance=indicator)
 
-    return render(request, "resource_standard/cost_indicator_form.html", {
+    context = _get_resource_context(request, active_id='cost_indicator_list')
+    context.update({
         "form": form,
         "mode": "edit",
         "indicator": indicator,
     })
+    return render(request, "resource_standard/cost_indicator_form.html", context)
 
 
 @login_required
@@ -264,9 +461,11 @@ def report_template_list(request):
     if not _require_permission(request, RESOURCE_PERMISSIONS["template"]):
         return redirect("home")
     templates = ReportTemplate.objects.all()
-    return render(request, "resource_standard/report_template_list.html", {
+    context = _get_resource_context(request, active_id='report_template_list')
+    context.update({
         "templates": templates,
     })
+    return render(request, "resource_standard/report_template_list.html", context)
 
 
 @login_required
@@ -295,10 +494,12 @@ def report_template_create(request):
     else:
         form = ReportTemplateForm()
 
-    return render(request, "resource_standard/report_template_form.html", {
+    context = _get_resource_context(request, active_id='report_template_create')
+    context.update({
         "form": form,
         "mode": "create",
     })
+    return render(request, "resource_standard/report_template_form.html", context)
 
 
 @login_required
@@ -332,12 +533,14 @@ def report_template_edit(request, pk):
         form.initial["sections"] = json.dumps(template.sections, ensure_ascii=False, indent=2)
         form.initial["styles"] = json.dumps(template.styles, ensure_ascii=False, indent=2)
 
-    return render(request, "resource_standard/report_template_form.html", {
+    context = _get_resource_context(request, active_id='report_template_list')
+    context.update({
         "form": form,
         "mode": "edit",
         "template_obj": template,
         "histories": template.history.all(),
     })
+    return render(request, "resource_standard/report_template_form.html", context)
 
 
 @login_required
@@ -345,9 +548,11 @@ def opinion_template_list(request):
     if not _require_permission(request, RESOURCE_PERMISSIONS["template"]):
         return redirect("home")
     templates = OpinionTemplate.objects.prefetch_related("default_review_points__standard")
-    return render(request, "resource_standard/opinion_template_list.html", {
+    context = _get_resource_context(request, active_id='opinion_template_list')
+    context.update({
         "templates": templates,
     })
+    return render(request, "resource_standard/opinion_template_list.html", context)
 
 
 @login_required
@@ -375,10 +580,12 @@ def opinion_template_create(request):
     else:
         form = OpinionTemplateForm()
 
-    return render(request, "resource_standard/opinion_template_form.html", {
+    context = _get_resource_context(request, active_id='opinion_template_create')
+    context.update({
         "form": form,
         "mode": "create",
     })
+    return render(request, "resource_standard/opinion_template_form.html", context)
 
 
 @login_required
@@ -411,12 +618,14 @@ def opinion_template_edit(request, pk):
         form.initial["category_templates"] = json.dumps(template.category_templates, ensure_ascii=False, indent=2)
         form.initial["calculation_rules"] = json.dumps(template.calculation_rules, ensure_ascii=False, indent=2)
 
-    return render(request, "resource_standard/opinion_template_form.html", {
+    context = _get_resource_context(request, active_id='opinion_template_list')
+    context.update({
         "form": form,
         "mode": "edit",
         "template_obj": template,
         "histories": template.history.all(),
     })
+    return render(request, "resource_standard/opinion_template_form.html", context)
 
 
 @login_required
@@ -424,7 +633,9 @@ def knowledge_tag_list(request):
     if not _require_permission(request, RESOURCE_PERMISSIONS["knowledge"]):
         return redirect("home")
     tags = KnowledgeTag.objects.all()
-    return render(request, "resource_standard/knowledge_tag_list.html", {"tags": tags})
+    context = _get_resource_context(request, active_id='knowledge_tag_list')
+    context.update({"tags": tags})
+    return render(request, "resource_standard/knowledge_tag_list.html", context)
 
 
 @login_required
@@ -439,7 +650,9 @@ def knowledge_tag_create(request):
             return redirect("resource_standard:knowledge_tag_list")
     else:
         form = KnowledgeTagForm()
-    return render(request, "resource_standard/knowledge_tag_form.html", {"form": form})
+    context = _get_resource_context(request, active_id='knowledge_tag_create')
+    context.update({"form": form})
+    return render(request, "resource_standard/knowledge_tag_form.html", context)
 
 
 @login_required
@@ -455,7 +668,9 @@ def knowledge_tag_edit(request, pk):
             return redirect("resource_standard:knowledge_tag_list")
     else:
         form = KnowledgeTagForm(instance=tag)
-    return render(request, "resource_standard/knowledge_tag_form.html", {"form": form, "tag": tag})
+    context = _get_resource_context(request, active_id='knowledge_tag_list')
+    context.update({"form": form, "tag": tag})
+    return render(request, "resource_standard/knowledge_tag_form.html", context)
 
 
 @login_required
@@ -463,7 +678,9 @@ def risk_case_list(request):
     if not _require_permission(request, RESOURCE_PERMISSIONS["knowledge"]):
         return redirect("home")
     cases = RiskCase.objects.select_related("project")
-    return render(request, "resource_standard/risk_case_list.html", {"cases": cases})
+    context = _get_resource_context(request, active_id='risk_case_list')
+    context.update({"cases": cases})
+    return render(request, "resource_standard/risk_case_list.html", context)
 
 
 @login_required
@@ -481,7 +698,9 @@ def risk_case_create(request):
             return redirect("resource_standard:risk_case_list")
     else:
         form = RiskCaseForm()
-    return render(request, "resource_standard/risk_case_form.html", {"form": form, "mode": "create"})
+    context = _get_resource_context(request, active_id='risk_case_create')
+    context.update({"form": form, "mode": "create"})
+    return render(request, "resource_standard/risk_case_form.html", context)
 
 
 @login_required
@@ -497,7 +716,9 @@ def risk_case_edit(request, pk):
             return redirect("resource_standard:risk_case_list")
     else:
         form = RiskCaseForm(instance=case)
-    return render(request, "resource_standard/risk_case_form.html", {"form": form, "mode": "edit", "case": case})
+    context = _get_resource_context(request, active_id='risk_case_list')
+    context.update({"form": form, "mode": "edit", "case": case})
+    return render(request, "resource_standard/risk_case_form.html", context)
 
 
 @login_required
@@ -579,7 +800,9 @@ def technical_solution_list(request):
     if not _require_permission(request, RESOURCE_PERMISSIONS["knowledge"]):
         return redirect("home")
     solutions = TechnicalSolution.objects.prefetch_related("tags")
-    return render(request, "resource_standard/technical_solution_list.html", {"solutions": solutions})
+    context = _get_resource_context(request, active_id='technical_solution_list')
+    context.update({"solutions": solutions})
+    return render(request, "resource_standard/technical_solution_list.html", context)
 
 
 @login_required
@@ -597,7 +820,9 @@ def technical_solution_create(request):
             return redirect("resource_standard:technical_solution_list")
     else:
         form = TechnicalSolutionForm()
-    return render(request, "resource_standard/technical_solution_form.html", {"form": form, "mode": "create"})
+    context = _get_resource_context(request, active_id='technical_solution_create')
+    context.update({"form": form, "mode": "create"})
+    return render(request, "resource_standard/technical_solution_form.html", context)
 
 
 @login_required
@@ -613,7 +838,9 @@ def technical_solution_edit(request, pk):
             return redirect("resource_standard:technical_solution_list")
     else:
         form = TechnicalSolutionForm(instance=solution)
-    return render(request, "resource_standard/technical_solution_form.html", {"form": form, "mode": "edit", "solution": solution})
+    context = _get_resource_context(request, active_id='technical_solution_list')
+    context.update({"form": form, "mode": "edit", "solution": solution})
+    return render(request, "resource_standard/technical_solution_form.html", context)
 
 
 @login_required
@@ -621,7 +848,9 @@ def professional_category_list(request):
     if not _require_permission(request, RESOURCE_PERMISSIONS["maintenance"]):
         return redirect("home")
     categories = ProfessionalCategory.objects.prefetch_related("data_permissions", "operation_permissions")
-    return render(request, "resource_standard/professional_category_list.html", {"categories": categories})
+    context = _get_resource_context(request, active_id='professional_category_list')
+    context.update({"categories": categories})
+    return render(request, "resource_standard/professional_category_list.html", context)
 
 
 @login_required
@@ -636,7 +865,9 @@ def professional_category_create(request):
             return redirect("resource_standard:professional_category_list")
     else:
         form = ProfessionalCategoryForm()
-    return render(request, "resource_standard/professional_category_form.html", {"form": form, "mode": "create"})
+    context = _get_resource_context(request, active_id='professional_category_create')
+    context.update({"form": form, "mode": "create"})
+    return render(request, "resource_standard/professional_category_form.html", context)
 
 
 @login_required
@@ -652,7 +883,9 @@ def professional_category_edit(request, pk):
             return redirect("resource_standard:professional_category_list")
     else:
         form = ProfessionalCategoryForm(instance=category)
-    return render(request, "resource_standard/professional_category_form.html", {"form": form, "mode": "edit", "category": category})
+    context = _get_resource_context(request, active_id='professional_category_list')
+    context.update({"form": form, "mode": "edit", "category": category})
+    return render(request, "resource_standard/professional_category_form.html", context)
 
 
 @login_required
@@ -660,7 +893,9 @@ def system_parameter_list(request):
     if not _require_permission(request, RESOURCE_PERMISSIONS["maintenance"]):
         return redirect("home")
     params = SystemParameter.objects.all()
-    return render(request, "resource_standard/system_parameter_list.html", {"params": params})
+    context = _get_resource_context(request, active_id='system_parameter_list')
+    context.update({"params": params})
+    return render(request, "resource_standard/system_parameter_list.html", context)
 
 
 @login_required
@@ -675,7 +910,9 @@ def system_parameter_create(request):
             return redirect("resource_standard:system_parameter_list")
     else:
         form = SystemParameterForm()
-    return render(request, "resource_standard/system_parameter_form.html", {"form": form, "mode": "create"})
+    context = _get_resource_context(request, active_id='system_parameter_create')
+    context.update({"form": form, "mode": "create"})
+    return render(request, "resource_standard/system_parameter_form.html", context)
 
 
 @login_required
@@ -691,4 +928,6 @@ def system_parameter_edit(request, pk):
             return redirect("resource_standard:system_parameter_list")
     else:
         form = SystemParameterForm(instance=param)
-    return render(request, "resource_standard/system_parameter_form.html", {"form": form, "mode": "edit", "param": param})
+    context = _get_resource_context(request, active_id='system_parameter_list')
+    context.update({"form": form, "mode": "edit", "param": param})
+    return render(request, "resource_standard/system_parameter_form.html", context)

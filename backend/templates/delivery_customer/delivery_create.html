@@ -224,7 +224,7 @@
             <div class="info-card-body">
                 <form method="post" id="deliveryCreateForm" enctype="multipart/form-data">
                     {% csrf_token %}
-                    
+
                     <div class="info-section">
                         <h6 class="info-section-title">交付类型</h6>
                         <div class="delivery-type-group">
@@ -240,7 +240,7 @@
                             </label>
                         </div>
                     </div>
-                    
+
                     <div class="info-section">
                         <h6 class="info-section-title">基本信息</h6>
                         <div class="info-grid info-grid-2">
@@ -270,7 +270,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="info-section conditional-field" id="project_fields">
                         <h6 class="info-section-title">关联信息</h6>
                         <div class="info-grid info-grid-2">
@@ -293,7 +293,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="info-section conditional-field hidden" id="non_project_fields">
                         <h6 class="info-section-title">关联信息</h6>
                         <div class="info-grid info-grid-2">
@@ -319,7 +319,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="info-section">
                         <h6 class="info-section-title">交付方式</h6>
                         <div class="delivery-method-group">
@@ -339,7 +339,7 @@
                                 <span>送达</span>
                             </label>
                         </div>
-                        
+
                         <div class="conditional-field" id="email_fields">
                             <div class="info-grid info-grid-2">
                                 <div class="info-item info-item-full-width">
@@ -360,7 +360,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="conditional-field hidden" id="express_fields">
                             <div class="info-grid info-grid-2">
                                 <div class="info-item">
@@ -386,7 +386,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="conditional-field hidden" id="hand_delivery_fields">
                             <div class="info-grid info-grid-2">
                                 <div class="info-item info-item-full-width">
@@ -396,7 +396,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="info-section">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="info-section-title mb-0">收件人信息</h6>
@@ -424,7 +424,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="info-section">
                         <h6 class="info-section-title">时间设置</h6>
                         <div class="info-grid info-grid-2">
@@ -440,7 +440,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="info-section">
                         <h6 class="info-section-title">其他设置</h6>
                         <div class="info-grid info-grid-2">
@@ -465,7 +465,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="d-flex justify-content-end gap-2 mt-4">
                         <a href="{% url 'delivery_pages:delivery_list' %}" class="btn btn-secondary">取消</a>
                         <button type="submit" class="btn btn-primary">
@@ -489,13 +489,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const deliveryTypeField = document.getElementById('delivery_type_field');
     const projectSelect = document.getElementById('project_select');
     const nonProjectFileType = document.getElementById('non_project_file_type');
-    
+
     fileTypeRadios.forEach(radio => {
         radio.addEventListener('change', function() {
             const labels = document.querySelectorAll('.delivery-type-btn');
             labels.forEach(label => label.classList.remove('active'));
             this.closest('label').classList.add('active');
-            
+
             if (this.value === 'project') {
                 projectFields.classList.remove('hidden');
                 nonProjectFields.classList.add('hidden');
@@ -511,24 +511,24 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // 交付方式切换
     const deliveryMethodRadios = document.querySelectorAll('input[name="delivery_method"]');
     const emailFields = document.getElementById('email_fields');
     const expressFields = document.getElementById('express_fields');
     const handDeliveryFields = document.getElementById('hand_delivery_fields');
-    
+
     deliveryMethodRadios.forEach(radio => {
         radio.addEventListener('change', function() {
             const labels = document.querySelectorAll('.delivery-method-btn');
             labels.forEach(label => label.classList.remove('active'));
             this.closest('label').classList.add('active');
-            
+
             // 隐藏所有字段
             emailFields.classList.add('hidden');
             expressFields.classList.add('hidden');
             if (handDeliveryFields) handDeliveryFields.classList.add('hidden');
-            
+
             // 显示对应字段
             if (this.value === 'email') {
                 emailFields.classList.remove('hidden');
@@ -539,7 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // 项目选择变化时自动填充客户信息
     if (projectSelect) {
         projectSelect.addEventListener('change', function() {
@@ -548,7 +548,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const clientName = selectedOption.getAttribute('data-client-name');
             const clientIdInput = document.getElementById('client_id');
             const clientNameInput = document.getElementById('client_name');
-            
+
             if (clientId && clientName) {
                 if (clientIdInput) clientIdInput.value = clientId;
                 if (clientNameInput) clientNameInput.value = clientName;
@@ -558,7 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // 自动填充收件人信息
     const autoFillBtn = document.getElementById('autoFillRecipient');
     if (autoFillBtn) {
@@ -568,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('请先选择项目');
                 return;
             }
-            
+
             // 通过API获取项目团队成员收件人信息
             fetch(`/api/delivery/delivery/project_recipients/?project_id=${projectId}`)
                 .then(response => response.json())
@@ -591,41 +591,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
     }
-    
+
     // 文件上传处理
     const fileUploadArea = document.getElementById('fileUploadArea');
     const fileInput = document.getElementById('fileInput');
     const fileList = document.getElementById('fileList');
     const selectedFiles = [];
-    
+
     if (fileUploadArea && fileInput) {
         // 点击上传区域
         fileUploadArea.addEventListener('click', function() {
             fileInput.click();
         });
-        
+
         // 文件选择
         fileInput.addEventListener('change', function() {
             handleFiles(this.files);
         });
-        
+
         // 拖拽上传
         fileUploadArea.addEventListener('dragover', function(e) {
             e.preventDefault();
             this.classList.add('dragover');
         });
-        
+
         fileUploadArea.addEventListener('dragleave', function() {
             this.classList.remove('dragover');
         });
-        
+
         fileUploadArea.addEventListener('drop', function(e) {
             e.preventDefault();
             this.classList.remove('dragover');
             handleFiles(e.dataTransfer.files);
         });
     }
-    
+
     function handleFiles(files) {
         Array.from(files).forEach(file => {
             // 检查文件大小（100MB限制）
@@ -633,15 +633,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert(`文件 ${file.name} 超过100MB限制`);
                 return;
             }
-            
+
             selectedFiles.push(file);
             addFileToList(file);
         });
-        
+
         // 更新文件输入
         updateFileInput();
     }
-    
+
     function addFileToList(file) {
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item';
@@ -652,9 +652,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 <i class="bi bi-x-circle"></i>
             </span>
         `;
-        
+
         fileList.appendChild(fileItem);
-        
+
         // 删除文件
         fileItem.querySelector('.file-item-remove').addEventListener('click', function() {
             const fileName = this.getAttribute('data-file-name');
@@ -666,13 +666,13 @@ document.addEventListener('DOMContentLoaded', function() {
             updateFileInput();
         });
     }
-    
+
     function updateFileInput() {
         const dt = new DataTransfer();
         selectedFiles.forEach(file => dt.items.add(file));
         fileInput.files = dt.files;
     }
-    
+
     function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -680,17 +680,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
-    
+
     // 表单验证
     const form = document.getElementById('deliveryCreateForm');
     if (form) {
         form.addEventListener('submit', function(e) {
             let isValid = true;
-            
+
             // 清除之前的错误
             document.querySelectorAll('.form-error').forEach(el => el.textContent = '');
             document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-            
+
             // 验证必填字段
             const title = document.querySelector('input[name="title"]').value.trim();
             if (!title) {
@@ -698,7 +698,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.querySelector('input[name="title"]').classList.add('is-invalid');
                 isValid = false;
             }
-            
+
             const fileType = document.querySelector('input[name="file_type"]:checked').value;
             if (fileType === 'project') {
                 const projectId = projectSelect ? projectSelect.value : '';
@@ -707,7 +707,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (projectSelect) projectSelect.classList.add('is-invalid');
                     isValid = false;
                 }
-                
+
                 const deliveryType = document.querySelector('select[name="delivery_type"]').value;
                 if (!deliveryType) {
                     showError('delivery_type_error', '请选择交付类型');
@@ -722,28 +722,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     isValid = false;
                 }
             }
-            
+
             const recipientName = document.querySelector('input[name="recipient_name"]').value.trim();
             if (!recipientName) {
                 showError('recipient_name_error', '收件人姓名不能为空');
                 document.querySelector('input[name="recipient_name"]').classList.add('is-invalid');
                 isValid = false;
             }
-            
+
             const scheduledTime = document.querySelector('input[name="scheduled_delivery_time"]').value;
             if (!scheduledTime) {
                 showError('scheduled_delivery_time_error', '计划交付时间不能为空');
                 document.querySelector('input[name="scheduled_delivery_time"]').classList.add('is-invalid');
                 isValid = false;
             }
-            
+
             const deadline = document.querySelector('input[name="deadline"]').value;
             if (!deadline) {
                 showError('deadline_error', '交付期限不能为空');
                 document.querySelector('input[name="deadline"]').classList.add('is-invalid');
                 isValid = false;
             }
-            
+
             if (!isValid) {
                 e.preventDefault();
                 // 滚动到第一个错误字段
@@ -754,7 +754,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     function showError(errorId, message) {
         const errorEl = document.getElementById(errorId);
         if (errorEl) {

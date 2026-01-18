@@ -59,7 +59,7 @@
 
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        
+
         <div class="form-card">
             <h5>发票信息</h5>
             <div class="row g-3">
@@ -210,12 +210,12 @@
         }
         return cookieValue;
     }
-    
+
     // 智能识别按钮
     const btnRecognize = document.getElementById('btnRecognizeInvoice');
     const attachmentInput = document.querySelector('input[name="attachment"]');
     const recognizeStatus = document.getElementById('recognizeStatus');
-    
+
     if (btnRecognize && attachmentInput) {
         btnRecognize.addEventListener('click', function() {
             const file = attachmentInput.files[0];
@@ -223,33 +223,33 @@
                 alert('请先选择发票文件');
                 return;
             }
-            
+
             // 检查文件类型
             const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/bmp'];
             if (!allowedTypes.includes(file.type) && !file.name.match(/\.(pdf|jpg|jpeg|png|bmp)$/i)) {
                 alert('不支持的文件格式，请上传PDF或图片文件');
                 return;
             }
-            
+
             // 检查文件大小（10MB）
             if (file.size > 10 * 1024 * 1024) {
                 alert('文件大小不能超过10MB');
                 return;
             }
-            
+
             // 显示识别中状态
             btnRecognize.disabled = true;
             btnRecognize.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>识别中...';
             recognizeStatus.style.display = 'block';
             recognizeStatus.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> 正在识别发票信息，请稍候...（首次使用可能需要下载模型文件）</div>';
-            
+
             // 创建FormData
             const formData = new FormData();
             formData.append('file', file);
-            
+
             // 记录开始时间
             const startTime = Date.now();
-            
+
             // 发送识别请求
             fetch('{% url "finance_pages:invoice_recognize_api" %}', {
                 method: 'POST',
@@ -268,7 +268,7 @@
                 const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
                 btnRecognize.disabled = false;
                 btnRecognize.innerHTML = '<i class="bi bi-magic"></i> 智能识别';
-                
+
                 if (data.success && data.data) {
                     // 填充表单字段
                     const filledCount = fillInvoiceForm(data.data);
@@ -297,11 +297,11 @@
             });
         });
     }
-    
+
     // 填充发票表单
     function fillInvoiceForm(data) {
         let filledCount = 0;
-        
+
         // 填充发票代码
         const invoiceCodeInput = document.querySelector('input[name="invoice_code"]');
         if (invoiceCodeInput && data.invoice_code && !invoiceCodeInput.value) {
@@ -309,7 +309,7 @@
             filledCount++;
             console.log('✓ 填充发票代码:', data.invoice_code);
         }
-        
+
         // 填充发票号码
         const invoiceNumberInput = document.querySelector('input[name="invoice_number"]');
         if (invoiceNumberInput && data.invoice_number && !invoiceNumberInput.value) {
@@ -317,7 +317,7 @@
             filledCount++;
             console.log('✓ 填充发票号码:', data.invoice_number);
         }
-        
+
         // 填充发票类型
         const invoiceTypeSelect = document.querySelector('select[name="invoice_type"]');
         if (invoiceTypeSelect && data.invoice_type) {
@@ -325,7 +325,7 @@
             filledCount++;
             console.log('✓ 填充发票类型:', data.invoice_type);
         }
-        
+
         // 填充开票日期
         const invoiceDateInput = document.querySelector('input[name="invoice_date"]');
         if (invoiceDateInput && data.invoice_date && !invoiceDateInput.value) {
@@ -333,7 +333,7 @@
             filledCount++;
             console.log('✓ 填充开票日期:', data.invoice_date);
         }
-        
+
         // 填充客户名称（销项发票）
         const customerNameInput = document.querySelector('input[name="customer_name"]');
         if (customerNameInput && data.customer_name && !customerNameInput.value) {
@@ -341,7 +341,7 @@
             filledCount++;
             console.log('✓ 填充客户名称:', data.customer_name);
         }
-        
+
         // 填充供应商名称（进项发票）
         const supplierNameInput = document.querySelector('input[name="supplier_name"]');
         if (supplierNameInput && data.supplier_name && !supplierNameInput.value) {
@@ -349,7 +349,7 @@
             filledCount++;
             console.log('✓ 填充供应商名称:', data.supplier_name);
         }
-        
+
         // 填充发票金额（不含税）
         const amountInput = document.querySelector('input[name="amount"]');
         if (amountInput && data.amount && !amountInput.value) {
@@ -357,7 +357,7 @@
             filledCount++;
             console.log('✓ 填充发票金额:', data.amount);
         }
-        
+
         // 填充税额
         const taxAmountInput = document.querySelector('input[name="tax_amount"]');
         if (taxAmountInput && data.tax_amount && !taxAmountInput.value) {
@@ -365,7 +365,7 @@
             filledCount++;
             console.log('✓ 填充税额:', data.tax_amount);
         }
-        
+
         // 填充价税合计
         const totalAmountInput = document.querySelector('input[name="total_amount"]');
         if (totalAmountInput && data.total_amount && !totalAmountInput.value) {
@@ -373,11 +373,11 @@
             filledCount++;
             console.log('✓ 填充价税合计:', data.total_amount);
         }
-        
+
         console.log(`✅ 成功填充 ${filledCount} 个字段`);
         return filledCount;
     }
-    
+
     // 当文件选择后，自动触发识别（可选）
     if (attachmentInput) {
         attachmentInput.addEventListener('change', function() {
