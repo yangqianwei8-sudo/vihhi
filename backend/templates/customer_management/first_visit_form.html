@@ -1,0 +1,132 @@
+{% extends "shared/_partials/_shared_form_wrapper_customer.html" %}
+{% load static %}
+
+{% block pm_title %}{{ page_title|default:"创建首次拜访" }}{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">{{ form_page_subtitle_text|default:"请填写首次拜访信息（不需要选择联系人）" }}</span>{% endblock %}
+{% block pm_actions %}
+<a href="{% url cancel_url_name|default:'customer_pages:customer_visit' %}" class="list-btn">
+  返回
+</a>
+{% endblock %}
+
+{% block form_content %}
+  <form method="post" class="form-card">
+      {% csrf_token %}
+      
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+          {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+      
+      <div class="form-section">
+          <h5>基本信息</h5>
+          <div class="row">
+              <div class="col-md-6">
+                  <div class="form-group">
+                      <label class="form-label required-field">{{ form.client.label }}</label>
+                      {{ form.client }}
+                      {% if form.client.errors %}
+                          <div class="text-danger small">{{ form.client.errors }}</div>
+                      {% endif %}
+                  </div>
+              </div>
+              <div class="col-md-3">
+                  <div class="form-group">
+                      <label class="form-label required-field">{{ form.plan_date.label }}</label>
+                      {{ form.plan_date }}
+                      {% if form.plan_date.errors %}
+                          <div class="text-danger small">{{ form.plan_date.errors }}</div>
+                      {% endif %}
+                  </div>
+              </div>
+              <div class="col-md-3">
+                  <div class="form-group">
+                      <label class="form-label">{{ form.location.label }}</label>
+                      {{ form.location }}
+                      {% if form.location.errors %}
+                          <div class="text-danger small">{{ form.location.errors }}</div>
+                      {% endif %}
+                      <small class="form-text text-muted">将根据客户地址自动填充</small>
+                  </div>
+              </div>
+          </div>
+          <div class="row mt-3">
+              <div class="col-md-12">
+                  <div class="form-group">
+                      <label class="form-label required-field">{{ form.plan_title.label }}</label>
+                      {{ form.plan_title }}
+                      {% if form.plan_title.errors %}
+                          <div class="text-danger small">{{ form.plan_title.errors }}</div>
+                      {% endif %}
+                  </div>
+              </div>
+          </div>
+          <div class="row mt-3">
+              <div class="col-md-12">
+                  <div class="form-group">
+                      <label class="form-label required-field">{{ form.plan_purpose.label }}</label>
+                      {{ form.plan_purpose }}
+                      {% if form.plan_purpose.errors %}
+                          <div class="text-danger small">{{ form.plan_purpose.errors }}</div>
+                      {% endif %}
+                  </div>
+              </div>
+          </div>
+          <div class="row mt-3">
+              <div class="col-md-12">
+                  <div class="form-group">
+                      <label class="form-label">{{ form.related_opportunity.label }}</label>
+                      {{ form.related_opportunity }}
+                      {% if form.related_opportunity.errors %}
+                          <div class="text-danger small">{{ form.related_opportunity.errors }}</div>
+                      {% endif %}
+                      <small class="form-text text-muted">请先选择客户后，再选择关联商机（可选）</small>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <div class="form-actions">
+          <button type="submit" class="btn btn-primary">保存</button>
+          <a href="{% url cancel_url_name|default:'customer_pages:customer_visit' %}" class="btn btn-secondary">取消</a>
+      </div>
+  </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 客户地址自动填充
+    const clientsWithAddress = {{ clients_with_address_json|safe }};
+    const clientsOpportunities = {{ clients_opportunities_json|safe }};
+    const clientSelect = document.getElementById('id_client');
+    const locationInput = document.getElementById('id_location');
+    const opportunitySelect = document.getElementById('id_related_opportunity');
+    
+    if (clientSelect && locationInput) {
+        clientSelect.addEventListener('change', function() {
+            const clientId = this.value;
+            if (clientId && clientsWithAddress[clientId]) {
+                locationInput.value = clientsWithAddress[clientId];
+            } else {
+                locationInput.value = '';
+            }
+            
+            // 更新关联商机选项
+            if (opportunitySelect) {
+                opportunitySelect.innerHTML = '<option value="">-- 请先选择客户 (可选) --</option>';
+                if (clientId && clientsOpportunities[clientId]) {
+                    clientsOpportunities[clientId].forEach(function(opp) {
+                        const option = document.createElement('option');
+                        option.value = opp.id;
+                        option.textContent = opp.name;
+                        opportunitySelect.appendChild(option);
+                    });
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

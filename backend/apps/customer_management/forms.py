@@ -2156,3 +2156,142 @@ class CustomerWarehouseApplicationForm(forms.ModelForm):
             raise forms.ValidationError({'application_content': '申请内容不能为空'})
         
         return cleaned_data
+
+
+class FirstVisitForm(forms.ModelForm):
+    """首次拜访表单（不需要人员信息）"""
+    
+    class Meta:
+        model = VisitPlan
+        fields = [
+            'client', 'plan_date', 'plan_title', 'plan_purpose', 'location', 'related_opportunity'
+        ]
+        widgets = {
+            'client': forms.Select(attrs={'class': 'form-select', 'required': True}),
+            'plan_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'required': True}),
+            'plan_title': forms.TextInput(attrs={'class': 'form-control', 'required': True, 'placeholder': '请输入拜访标题'}),
+            'plan_purpose': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'required': True, 'placeholder': '请输入拜访目的'}),
+            'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '拜访地点'}),
+            'related_opportunity': forms.Select(attrs={'class': 'form-select'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        permission_set = kwargs.pop('permission_set', None)
+        super().__init__(*args, **kwargs)
+        
+        # 设置字段标签
+        self.fields['client'].label = '客户'
+        self.fields['plan_date'].label = '拜访日期'
+        self.fields['plan_title'].label = '拜访标题'
+        self.fields['plan_purpose'].label = '拜访目的'
+        self.fields['location'].label = '拜访地点'
+        self.fields['related_opportunity'].label = '关联商机'
+        
+        # 根据用户过滤客户：只显示该用户作为负责人的、已审批通过的客户
+        if user:
+            from django.contrib.contenttypes.models import ContentType
+            from backend.apps.workflow_engine.models import ApprovalInstance
+            
+            # 只显示该用户作为负责人的客户
+            base_queryset = Client.objects.filter(
+                is_active=True,
+                responsible_user=user
+            )
+            
+            # 只显示已审批通过的客户
+            client_content_type = ContentType.objects.get_for_model(Client)
+            approved_instance_ids = ApprovalInstance.objects.filter(
+                content_type=client_content_type,
+                status='approved'
+            ).values_list('object_id', flat=True)
+            
+            if approved_instance_ids:
+                approved_clients = base_queryset.filter(id__in=approved_instance_ids)
+                self.fields['client'].queryset = approved_clients.distinct().order_by('name')
+            else:
+                self.fields['client'].queryset = Client.objects.none()
+        else:
+            # 没有用户信息，显示所有已审批通过的激活客户
+            from django.contrib.contenttypes.models import ContentType
+            from backend.apps.workflow_engine.models import ApprovalInstance
+            
+            client_content_type = ContentType.objects.get_for_model(Client)
+            approved_instance_ids = ApprovalInstance.objects.filter(
+                content_type=client_content_type,
+                status='approved'
+            ).values_list('object_id', flat=True)
+            
+            if approved_instance_ids:
+                approved_clients = Client.objects.filter(
+                    is_active=True,
+                    id__in=approved_instance_ids
+                )
+                self.fields['client'].queryset = approved_clients.distinct().order_by('name')
+            else:
+                self.fields['client'].queryset = Client.objects.none()
+        
+        self.fields['client'].empty_label = '-- 选择客户 --'
+        
+        # 设置日期字段默认值为当天
+        from datetime import date
+        today = date.today()
+        self.fields['plan_date'].initial = today
+        
+        # 关联商机会根据选择的客户动态过滤（在模板中通过 JavaScript 实现）
+        self.fields['related_opportunity'].queryset = BusinessOpportunity.objects.none()
+        self.fields['related_opportunity'].empty_label = '-- 请先选择客户 (可选) --'
+        self.fields['related_opportunity'].required = False
+        
+        # 设置默认标题和目的
+        if not self.instance or not self.instance.pk:
+            self.fields['plan_title'].initial = '首次拜访'
+            self.fields['plan_purpose'].initial = '首次拜访客户，了解客户需求'
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        plan_date = cleaned_data.get('plan_date')
+        client = cleaned_data.get('client')
+        plan_title = cleaned_data.get('plan_title')
+        plan_purpose = cleaned_data.get('plan_purpose')
+        
+        if not client:
+            raise forms.ValidationError({'client': '请选择客户'})
+        
+        if not plan_date:
+            raise forms.ValidationError({'plan_date': '请选择拜访日期'})
+        
+        if not plan_title:
+            raise forms.ValidationError({'plan_title': '请输入拜访标题'})
+        
+        if not plan_purpose:
+            raise forms.ValidationError({'plan_purpose': '请输入拜访目的'})
+        
+        # 将日期转换为datetime（设置为当天的开始时间 00:00:00）
+        if plan_date:
+            from django.utils import timezone
+            from datetime import datetime
+            if isinstance(plan_date, datetime):
+                cleaned_data['plan_date'] = datetime.combine(plan_date.date(), datetime.min.time())
+                cleaned_data['plan_date'] = timezone.make_aware(cleaned_data['plan_date'])
+            elif hasattr(plan_date, 'date'):
+                cleaned_data['plan_date'] = datetime.combine(plan_date, datetime.min.time())
+                cleaned_data['plan_date'] = timezone.make_aware(cleaned_data['plan_date'])
+        
+        return cleaned_data
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # 设置状态为已计划
+        instance.status = 'planned'
+        
+        # 如果没有提供标题，自动生成
+        if not instance.plan_title:
+            client_name = instance.client.name if instance.client else '客户'
+            plan_date_str = instance.plan_date.strftime('%Y-%m-%d') if instance.plan_date else ''
+            instance.plan_title = f"{client_name} - {plan_date_str} 首次拜访"
+        
+        if commit:
+            instance.save()
+        return instance
