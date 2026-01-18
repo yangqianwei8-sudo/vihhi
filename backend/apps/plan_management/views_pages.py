@@ -456,295 +456,6 @@ def plan_management_home(request):
         
         context['can_view_management'] = can_view_management
         
-        # ========== 第四行：风险预警与待办 ==========
-        # 风险预警（只显示与当前用户相关的）
-        risk_warnings = []
-        
-        # 获取用户的公司ID（用于数据隔离）
-        company_id = None
-        if not request.user.is_superuser:
-            try:
-                profile = request.user.profile
-                if profile:
-                    company_id = getattr(profile, 'company_id', None)
-                    if company_id is None and hasattr(profile, 'department') and profile.department:
-                        company_id = getattr(profile.department, 'company_id', None)
-            except AttributeError:
-                pass
-        
-        # 构建用户相关的计划查询条件
-        # 显示：当前用户负责的、参与的、或同公司的计划
-        user_related_plans_filter = Q(
-            Q(responsible_person=request.user) | 
-            Q(participants=request.user)
-        )
-        if company_id:
-            user_related_plans_filter |= Q(company_id=company_id)
-        
-        # 逾期计划（结束时间已过但状态仍为执行中）
-        overdue_plans_list = Plan.objects.filter(
-            status='in_progress',
-            end_time__lt=now
-        ).filter(user_related_plans_filter).distinct().select_related('responsible_person')[:5]
-        
-        for plan in overdue_plans_list:
-            overdue_days = (today - plan.end_time.date()).days
-            risk_warnings.append({
-                'type': 'overdue',
-                'title': plan.name,
-                'responsible': plan.responsible_person.get_full_name() or plan.responsible_person.username,
-                'days': overdue_days,
-                'url': reverse('plan_pages:plan_detail', args=[plan.id])
-            })
-        
-        # 7天未更新计划
-        stale_plans = Plan.objects.filter(
-            status='in_progress',
-            updated_time__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()))
-        ).filter(user_related_plans_filter).distinct().select_related('responsible_person')[:5]
-        
-        for plan in stale_plans:
-            days_since_update = (today - plan.updated_time.date()).days
-            risk_warnings.append({
-                'type': 'stale',
-                'title': plan.name,
-                'responsible': plan.responsible_person.get_full_name() or plan.responsible_person.username,
-                'days': days_since_update,
-                'url': reverse('plan_pages:plan_detail', args=[plan.id])
-            })
-        
-        context['risk_warnings'] = risk_warnings[:5]
-        
-        # 统计数量（也应用用户过滤）
-        overdue_plans_count = Plan.objects.filter(
-            status='in_progress', 
-            end_time__lt=now
-        ).filter(user_related_plans_filter).distinct().count()
-        stale_plans_count = Plan.objects.filter(
-            status='in_progress',
-            updated_time__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()))
-        ).filter(user_related_plans_filter).distinct().count()
-        
-        context['overdue_plans_count'] = overdue_plans_count
-        context['stale_plans_count'] = stale_plans_count
-        
-        # 待办事项（只显示与当前用户相关的）
-        todo_items = []
-        
-        # 待审批计划 - 只显示当前用户有权限审批的
-        can_approve = (
-            _permission_granted('plan_management.approve_plan', permission_codes) or 
-            _permission_granted('plan_management.approve', permission_codes) or 
-            request.user.is_superuser
-        )
-        
-        if can_approve:
-            # 获取当前用户有权限审批的待审批事项
-            user_pending_decisions = PlanDecision.objects.filter(decision__isnull=True)
-            
-            # 应用公司数据隔离：只显示与当前用户同一公司的计划的审批请求
-            if not request.user.is_superuser:
-                # 获取用户的公司ID
-                company_id = None
-                try:
-                    profile = request.user.profile
-                    if profile:
-                        company_id = getattr(profile, 'company_id', None)
-                        if company_id is None and hasattr(profile, 'department') and profile.department:
-                            company_id = getattr(profile.department, 'company_id', None)
-                except AttributeError:
-                    pass
-                
-                if company_id:
-                    user_pending_decisions = user_pending_decisions.filter(
-                        plan__company_id=company_id
-                    )
-                else:
-                    # 如果没有公司信息，只显示自己负责的计划
-                    user_pending_decisions = user_pending_decisions.filter(
-                        plan__responsible_person=request.user
-                    )
-            
-            for decision in user_pending_decisions.select_related(
-                'plan', 'plan__responsible_person', 'plan__responsible_department', 
-                'plan__related_goal', 'requested_by'
-            )[:5]:
-                plan = decision.plan
-                responsible_name = plan.responsible_person.get_full_name() or plan.responsible_person.username
-                department_name = plan.responsible_department.name if plan.responsible_department else '未设置'
-                goal_name = plan.related_goal.name if plan.related_goal else '未关联目标'
-                requested_by_name = decision.requested_by.get_full_name() or decision.requested_by.username if decision.requested_by else '系统'
-                
-                todo_items.append({
-                    'type': 'approval',
-                    'title': plan.name,
-                    'plan_number': plan.plan_number,
-                    'request_type': '启动计划' if decision.request_type == 'start' else '取消计划',
-                    'plan_type': plan.get_plan_type_display(),
-                    'responsible': responsible_name,
-                    'department': department_name,
-                    'related_goal': goal_name,
-                    'requested_by': requested_by_name,
-                    'time': decision.requested_at,
-                    'url': reverse('plan_pages:plan_detail', args=[plan.id])
-                })
-        
-        # 即将到期计划（7天内）- 只显示当前用户负责的或参与的计划
-        upcoming_deadline_plans = Plan.objects.filter(
-            status='in_progress',
-            end_time__gte=now,
-            end_time__lte=now + timedelta(days=7)
-        ).filter(
-            Q(responsible_person=request.user) | Q(participants=request.user)
-        ).distinct().select_related('responsible_person', 'responsible_department', 'related_goal')[:5]
-        
-        for plan in upcoming_deadline_plans:
-            days_left = (plan.end_time.date() - today).days
-            responsible_name = plan.responsible_person.get_full_name() or plan.responsible_person.username
-            department_name = plan.responsible_department.name if plan.responsible_department else '未设置'
-            goal_name = plan.related_goal.name if plan.related_goal else '未关联目标'
-            progress = plan.progress
-            
-            todo_items.append({
-                'type': 'deadline',
-                'title': plan.name,
-                'plan_number': plan.plan_number,
-                'plan_type': plan.get_plan_type_display(),
-                'responsible': responsible_name,
-                'department': department_name,
-                'related_goal': goal_name,
-                'progress': progress,
-                'deadline': plan.end_time.date(),
-                'days_left': days_left,
-                'url': reverse('plan_pages:plan_detail', args=[plan.id])
-            })
-        
-        # 需要更新的目标（超过7天未更新进度）- 只显示当前用户负责的目标
-        stale_goals = StrategicGoal.objects.filter(
-            status__in=['in_progress', 'published'],
-            updated_time__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time())),
-            responsible_person=request.user  # 只显示当前用户负责的目标
-        ).select_related('responsible_person', 'responsible_department')[:5]
-        
-        for goal in stale_goals:
-            days_since_update = (today - goal.updated_time.date()).days
-            responsible_name = goal.responsible_person.get_full_name() or goal.responsible_person.username
-            department_name = goal.responsible_department.name if goal.responsible_department else '未设置'
-            goal_status = goal.get_status_display()
-            completion_rate = goal.completion_rate
-            
-            todo_items.append({
-                'type': 'goal_update',
-                'title': goal.name,
-                'goal_number': goal.goal_number,
-                'goal_type': goal.get_goal_type_display(),
-                'responsible': responsible_name,
-                'department': department_name,
-                'status': goal_status,
-                'completion_rate': completion_rate,
-                'days': days_since_update,
-                'url': reverse('plan_pages:strategic_goal_detail', args=[goal.id])
-            })
-        
-        context['todo_items'] = todo_items[:10]
-        context['pending_approval_count'] = pending_total
-        # 待办事项汇总URL：链接到计划审批列表（因为待办事项主要是待审批的计划）
-        context['todo_summary_url'] = reverse('plan_pages:plan_approval_list')
-        context['upcoming_deadline_count'] = Plan.objects.filter(
-            status='in_progress',
-            end_time__gte=now,
-            end_time__lte=now + timedelta(days=7)
-        ).count()
-        context['stale_goals_count'] = StrategicGoal.objects.filter(
-            status__in=['in_progress', 'published'],
-            updated_time__lt=timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()))
-        ).count()
-        
-        # ========== 第五行：快速访问与最近活动 ==========
-        # 我的工作
-        my_work = {}
-        
-        # 我负责的计划
-        my_responsible_plans = Plan.objects.filter(
-            responsible_person=request.user
-        ).select_related('responsible_person').order_by('-updated_time')[:3]
-        
-        my_work['my_plans'] = [{
-            'title': plan.name,
-            'status': plan.get_status_display(),
-            'progress': float(plan.progress),
-            'url': reverse('plan_pages:plan_detail', args=[plan.id])
-        } for plan in my_responsible_plans]
-        my_work['my_plans_count'] = Plan.objects.filter(responsible_person=request.user).count()
-        
-        # 我负责的目标
-        my_responsible_goals = StrategicGoal.objects.filter(
-            responsible_person=request.user
-        ).select_related('responsible_person').order_by('-updated_time')[:3]
-        
-        my_work['my_goals'] = [{
-            'title': goal.name,
-            'status': goal.get_status_display(),
-            'completion_rate': float(goal.completion_rate),
-            'url': reverse('plan_pages:strategic_goal_detail', args=[goal.id])
-        } for goal in my_responsible_goals]
-        my_work['my_goals_count'] = StrategicGoal.objects.filter(responsible_person=request.user).count()
-        
-        # 我参与的计划
-        my_participating_plans = Plan.objects.filter(
-            participants=request.user
-        ).select_related('responsible_person').distinct().order_by('-updated_time')[:3]
-        
-        my_work['participating_plans'] = [{
-            'title': plan.name,
-            'role': '参与者',
-            'progress': float(plan.progress),
-            'url': reverse('plan_pages:plan_detail', args=[plan.id])
-        } for plan in my_participating_plans]
-        my_work['participating_plans_count'] = Plan.objects.filter(participants=request.user).distinct().count()
-        
-        # 我的工作汇总URL：链接到计划列表，筛选当前用户负责的计划
-        my_work['summary_url'] = reverse('plan_pages:plan_list') + f'?responsible_person={request.user.id}'
-        
-        context['my_work'] = my_work
-        
-        # 最近活动
-        recent_activities = {}
-        
-        # 最近创建的计划
-        recent_plans = Plan.objects.select_related('created_by').order_by('-created_time')[:5]
-        recent_activities['recent_plans'] = [{
-            'title': plan.name,
-            'creator': plan.created_by.get_full_name() or plan.created_by.username,
-            'time': plan.created_time,
-            'url': reverse('plan_pages:plan_detail', args=[plan.id])
-        } for plan in recent_plans]
-        
-        # 最近更新的目标
-        recent_goal_updates = StrategicGoal.objects.select_related('responsible_person').order_by('-updated_time')[:5]
-        recent_activities['recent_goals'] = [{
-            'title': goal.name,
-            'updater': goal.responsible_person.get_full_name() or goal.responsible_person.username,
-            'time': goal.updated_time,
-            'completion_rate': float(goal.completion_rate),
-            'url': reverse('plan_pages:strategic_goal_detail', args=[goal.id])
-        } for goal in recent_goal_updates]
-        
-        # 最近审批记录
-        recent_approvals = PlanDecision.objects.filter(
-            decision__isnull=False
-        ).select_related('plan', 'approved_by').order_by('-approved_time')[:5]
-        
-        recent_activities['recent_approvals'] = [{
-            'plan_title': decision.plan.name,
-            'approver': decision.approved_by.get_full_name() or decision.approved_by.username if decision.approved_by else '系统',
-            'result': '通过' if decision.decision == 'approve' else '驳回',
-            'time': decision.decided_at or decision.requested_at,
-            'url': reverse('plan_pages:plan_detail', args=[decision.plan.id])
-        } for decision in recent_approvals]
-        
-        context['recent_activities'] = recent_activities
-        
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
@@ -816,6 +527,7 @@ def plan_list(request):
     # 获取筛选参数
     search = request.GET.get('search', '').strip()
     status_filter = request.GET.get('status', '').strip()
+    level_filter = request.GET.get('level', '').strip()  # P2-3: 添加 level 过滤
     plan_type_filter = request.GET.get('plan_type', '').strip()
     plan_period_filter = request.GET.get('plan_period', '').strip()
     related_goal_filter = request.GET.get('related_goal', '').strip()
@@ -847,8 +559,17 @@ def plan_list(request):
     if level_filter:
         plans = plans.filter(level=level_filter)
     
+    # 注意：plan_type 字段已在 P2-1 迁移中被 level 字段替代，保留此代码仅为向后兼容
+    # 如果 URL 参数中有 plan_type，将其映射到 level
     if plan_type_filter:
-        plans = plans.filter(plan_type=plan_type_filter)
+        # plan_type 的旧值映射到 level 的新值
+        plan_type_to_level_map = {
+            'company': 'company',
+            'personal': 'personal',
+        }
+        mapped_level = plan_type_to_level_map.get(plan_type_filter)
+        if mapped_level:
+            plans = plans.filter(level=mapped_level)
     
     if plan_period_filter:
         plans = plans.filter(plan_period=plan_period_filter)
@@ -936,6 +657,7 @@ def plan_list(request):
         'all_goals': all_goals,
         'search': search,
         'status_filter': status_filter,
+        'level_filter': level_filter,  # P2-3: 添加 level 过滤
         'plan_type_filter': plan_type_filter,
         'plan_period_filter': plan_period_filter,
         'related_goal_filter': related_goal_filter,
@@ -2491,13 +2213,16 @@ def strategic_goal_track(request, goal_id):
         'progress_trend': progress_trend,
         'progress_form': progress_form,
         'adjustment_form': adjustment_form,
-        # P2-2 补强：个人目标必须接收后才能更新进度
-        can_update_progress = False
-        if goal.level == 'personal':
-            can_update_progress = goal.status in ['accepted', 'in_progress']
-        else:
-            can_update_progress = goal.status in ['published', 'accepted', 'in_progress']
-        
+    })
+    
+    # P2-2 补强：个人目标必须接收后才能更新进度
+    can_update_progress = False
+    if goal.level == 'personal':
+        can_update_progress = goal.status in ['accepted', 'in_progress']
+    else:
+        can_update_progress = goal.status in ['published', 'accepted', 'in_progress']
+    
+    context.update({
         'can_update_progress': can_update_progress,  # P2-2 补强
         'can_start_execution': goal.status == 'accepted',  # P2-2
         'can_complete': goal.status == 'in_progress',

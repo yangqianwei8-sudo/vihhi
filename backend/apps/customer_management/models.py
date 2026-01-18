@@ -2168,6 +2168,9 @@ class CustomerLead(models.Model):
         ('lost', '已流失'),
     ]
     
+    # 客户编号
+    lead_number = models.CharField(max_length=50, unique=True, blank=True, verbose_name='客户编号')
+    
     # 联系人信息
     contact_name = models.CharField(max_length=100, verbose_name='联系人姓名')
     contact_phone = models.CharField(max_length=20, blank=True, verbose_name='联系电话')
@@ -2244,6 +2247,33 @@ class CustomerLead(models.Model):
     
     def __str__(self):
         return f"{self.company_name} - {self.contact_name}"
+    
+    def save(self, *args, **kwargs):
+        # 自动生成客户编号：XS-YYYYMMDD-0000（线索的拼音首字母）
+        if not self.lead_number:
+            from django.db.models import Max
+            from datetime import datetime
+            
+            current_date = datetime.now().strftime('%Y%m%d')
+            date_prefix = f'XS-{current_date}-'
+            
+            # 查找当天最大编号
+            max_lead = CustomerLead.objects.filter(
+                lead_number__startswith=date_prefix
+            ).aggregate(max_num=Max('lead_number'))['max_num']
+            
+            if max_lead:
+                try:
+                    # 提取最后4位数字作为序号
+                    seq = int(max_lead.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            
+            self.lead_number = f'{date_prefix}{seq:04d}'
+        
+        super().save(*args, **kwargs)
 
 # ==================== 客户关系管理模块（已删除，将按新设计方案重构）====================
 # CustomerRelationship 模型已删除，将按新设计方案重新实现

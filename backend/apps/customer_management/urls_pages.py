@@ -30,7 +30,6 @@ urlpatterns = [
     path("contacts/<int:contact_id>/edit/", views_pages.contact_edit, name="contact_edit"),
     path("contacts/<int:contact_id>/delete/", views_pages.contact_delete, name="contact_delete"),
     path("contacts/relationship-mining/", views_pages.contact_relationship_mining, name="contact_relationship_mining"),
-    path("contacts/tracking-reminders/", views_pages.contact_tracking_reminders, name="contact_tracking_reminders"),
     path("contacts/info-change/create/", views_pages.contact_info_change_create, name="contact_info_change_create"),
     
     # 跟进与拜访管理（放在客户管理模块下）

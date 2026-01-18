@@ -1,3 +1,39 @@
+{% extends "customer_management/_base.html" %}
+{% load static %}
+
+{% block pm_title %}{{ page_title }}{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">{{ page_subtitle }}</span>{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+{% endblock %}
+
+{% block pm_content %}
+<div class="list-filters">
+  <form method="get" class="list-filters-form" id="filterForm">
+    <div class="list-filter-group">
+      <label class="list-filter-label">搜索</label>
+      <input type="text" name="search" class="list-filter-input" 
+             value="{{ search }}" placeholder="拜访计划标题、客户名称">
+    </div>
+    <div class="list-filter-group">
+      <label class="list-filter-label">状态</label>
+      <select name="status" class="list-filter-input">
+        <option value="">全部状态</option>
+        {% for status_code, status_label in status_options %}
+        <option value="{{ status_code }}" {% if status_filter == status_code %}selected{% endif %}>
+          {{ status_label }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="list-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url current_url_name %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>
+
 <div class="list-table-container">
   <table class="list-table">
     <thead>
@@ -36,7 +72,9 @@
         <td>{{ visit_plan.created_by.get_full_name|default:visit_plan.created_by.username }}</td>
         <td>
           <div class="list-actions">
-            <a href="{% url 'customer_pages:visit_plan_detail' visit_plan.id %}" class="list-btn" title="查看">查看</a>
+            <a href="{% url action_url_name visit_plan.id %}" class="list-btn list-btn-primary">
+              {% if action_type == 'checkin' %}打卡{% else %}复盘{% endif %}
+            </a>
           </div>
         </td>
       </tr>
@@ -44,8 +82,8 @@
       <tr>
         <td colspan="7" class="list-empty">
           <div class="list-empty-icon">▢</div>
-          <div class="list-empty-text">暂无拜访计划</div>
-          <div class="list-empty-hint">请创建第一个拜访计划开始使用</div>
+          <div class="list-empty-text">暂无符合条件的拜访计划</div>
+          <div class="list-empty-hint">请先创建拜访计划</div>
         </td>
       </tr>
       {% endfor %}
@@ -60,7 +98,7 @@
   </div>
   <div class="list-pagination-nav">
     {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}" class="list-pagination-btn">上一页</a>
+    <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="list-pagination-btn">上一页</a>
     {% else %}
     <span class="list-pagination-btn disabled">上一页</span>
     {% endif %}
@@ -69,19 +107,20 @@
     {% if page_obj.number == num %}
     <span class="list-pagination-btn active">{{ num }}</span>
     {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
     {% elif num == 1 or num == page_obj.paginator.num_pages %}
-    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
     {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
     <span class="list-pagination-btn disabled">...</span>
     {% endif %}
     {% endfor %}
     
     {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if client_id %}&client={{ client_id }}{% endif %}" class="list-pagination-btn">下一页</a>
+    <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="list-pagination-btn">下一页</a>
     {% else %}
     <span class="list-pagination-btn disabled">下一页</span>
     {% endif %}
   </div>
 </div>
 {% endif %}
+{% endblock %}

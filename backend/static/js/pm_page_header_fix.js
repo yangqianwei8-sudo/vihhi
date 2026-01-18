@@ -30,7 +30,26 @@
       s.style.setProperty('margin', '0', 'important');
       s.style.setProperty('padding', '0 0 2px 0', 'important');
       s.style.setProperty('line-height', '1.2', 'important');
-      s.style.setProperty('border-bottom', '1px solid #000000', 'important');
+      s.style.setProperty('border-bottom', 'none', 'important');
+      s.style.setProperty('border-bottom-width', '0', 'important');
+      s.style.setProperty('border-bottom-style', 'none', 'important');
+      s.style.setProperty('border-bottom-color', 'transparent', 'important');
+      s.style.setProperty('text-decoration', 'none', 'important');
+      s.style.setProperty('text-decoration-line', 'none', 'important');
+      s.style.setProperty('text-decoration-style', 'none', 'important');
+      s.style.setProperty('text-decoration-color', 'transparent', 'important');
+      // 确保span标签内也没有下划线
+      const spans = s.querySelectorAll('span');
+      spans.forEach(function(span) {
+        span.style.setProperty('border-bottom', 'none', 'important');
+        span.style.setProperty('border-bottom-width', '0', 'important');
+        span.style.setProperty('border-bottom-style', 'none', 'important');
+        span.style.setProperty('border-bottom-color', 'transparent', 'important');
+        span.style.setProperty('text-decoration', 'none', 'important');
+        span.style.setProperty('text-decoration-line', 'none', 'important');
+        span.style.setProperty('text-decoration-style', 'none', 'important');
+        span.style.setProperty('text-decoration-color', 'transparent', 'important');
+      });
     });
     
     const actions = document.querySelector('.pm-page-header .pm-actions');

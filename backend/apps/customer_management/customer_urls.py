@@ -30,9 +30,6 @@ urlpatterns = [
     # 客户备案管理
     path("customer-filings/create/", views_pages.customer_filing_create, name="customer_filing_create"),
     
-    # 客户入库申请管理
-    path("customer-warehouse-applications/create/", views_pages.customer_warehouse_application_create, name="customer_warehouse_application_create"),
-    
     # 人员关系管理
     path("contacts/", views_pages.contact_list, name="contact_list"),
     path("contacts/create/", views_pages.contact_create, name="contact_create"),
@@ -57,6 +54,9 @@ urlpatterns = [
     path("visit-plan/<int:plan_id>/checklist/", views_pages.visit_plan_checklist, name="visit_plan_checklist"),
     path("visit-plan/<int:plan_id>/checkin/", views_pages.visit_plan_checkin, name="visit_plan_checkin"),
     path("visit-plan/<int:plan_id>/review/", views_pages.visit_plan_review, name="visit_plan_review"),
+    # 独立的打卡和复盘选择页面
+    path("visit-checkin/select/", views_pages.visit_checkin_select, name="visit_checkin_select"),
+    path("visit-review/select/", views_pages.visit_review_select, name="visit_review_select"),
     
     # 关系升级管理
     path("customer-relationship-upgrade/", views_pages.customer_relationship_upgrade, name="customer_relationship_upgrade"),

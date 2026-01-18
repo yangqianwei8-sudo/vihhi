@@ -1,9 +1,16 @@
-{% extends "customer_management/_base.html" %}
+{% extends "shared/_partials/_shared_form_wrapper_customer.html" %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+{% block pm_title %}{{ page_title|default:"创建拜访计划" }}{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">{{ form_page_subtitle_text|default:"请填写拜访计划信息并准备沟通清单" }}</span>{% endblock %}
+{% block pm_actions %}
+<a href="{% url cancel_url_name|default:'business_pages:customer_visit' %}" class="form-btn form-btn-secondary">
+  返回列表
+</a>
+{% endblock %}
 
 {% load static %}
 {% block extra_css %}
+{{ block.super }}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
 <style>
     .step-indicator {
@@ -11,13 +18,14 @@
         justify-content: space-between;
         margin-bottom: 2rem;
         position: relative;
+        padding: 0 16px;
     }
     .step-indicator::before {
         content: '';
         position: absolute;
         top: 20px;
-        left: 0;
-        right: 0;
+        left: 16px;
+        right: 16px;
         height: 2px;
         background: #e0e0e0;
         z-index: 0;
@@ -63,20 +71,60 @@
 </style>
 {% endblock %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_visit' %}">创建联系人拜访</a></li>
-{% if visit_plan %}
-<li class="breadcrumb-item"><a href="{% url 'business_pages:visit_plan_detail' visit_plan.id %}">拜访计划详情</a></li>
-{% endif %}
-<li class="breadcrumb-item active" aria-current="page">{{ step_title }}</li>
-{% endblock %}
+{% block pm_content %}
+<div class="step-indicator">
+    <div class="step-item {% if step >= 1 %}completed{% endif %} {% if step == 1 %}active{% endif %}">
+        <div class="step-number">1</div>
+        <div class="step-label">创建计划</div>
+    </div>
+    <div class="step-item {% if step >= 2 %}completed{% endif %} {% if step == 2 %}active{% endif %}">
+        <div class="step-number">2</div>
+        <div class="step-label">沟通清单准备</div>
+    </div>
+    <div class="step-item {% if step >= 3 %}completed{% endif %} {% if step == 3 %}active{% endif %}">
+        <div class="step-number">3</div>
+        <div class="step-label">拜访定位打卡</div>
+    </div>
+    <div class="step-item {% if step >= 4 %}completed{% endif %} {% if step == 4 %}active{% endif %}">
+        <div class="step-number">4</div>
+        <div class="step-label">拜访结果复盘</div>
+    </div>
+</div>
 
-{% block content %}
-<div class="workspace-content">
-    <div class="container-fluid py-4">
-        
-        <div class="step-indicator">
-            <div class="step-item {% if step >= 1 %}completed{% endif %} {% if step == 1 %}active{% endif %}">
+<div class="form-container">
+    {# 表单错误提示 #}
+    {% if form.errors %}
+    <div class="form-alert form-alert-danger">
+        <div class="form-alert-title">提交失败：请完善必填项</div>
+        <ul class="form-alert-list">
+            {% for field in form %}
+                {% if field.errors %}
+                    <li><strong>{{ field.label }}</strong>：{{ field.errors|striptags }}</li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if visit_plan %}
+    <div class="alert alert-info mb-3">
+        <strong>客户：</strong>{{ visit_plan.client.name }}
+    </div>
+    {% endif %}
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="form-alert form-alert-danger">
+            <div class="form-alert-title">提交失败</div>
+            <div class="form-alert-list">{{ form.non_field_errors }}</div>
+        </div>
+        {% endif %}
+
+        {% if step == 1 %}
+        {# 第一步：创建拜访计划 #}
+active{% endif %}">
                 <div class="step-number">1</div>
                 <div class="step-label">创建计划</div>
             </div>
@@ -111,40 +159,43 @@
                     {% if step == 1 %}
                     
                     <div class="info-section">
-                        <div class="info-grid info-grid-2">
-                            <div class="info-item">
-                                <label class="info-label info-label-required">{{ form.client.label }}</label>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label required">{{ form.client.label }}</label>
                                 {{ form.client }}
                                 {% if form.client.errors %}
-                                <div class="text-danger small">{{ form.client.errors }}</div>
+                                <div class="form-error">{{ form.client.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="info-item">
-                                <label class="info-label info-label-required">{{ form.plan_date.label }}</label>
+                            <div class="form-group">
+                                <label class="form-label required">{{ form.plan_date.label }}</label>
                                 {{ form.plan_date }}
                                 {% if form.plan_date.errors %}
-                                <div class="text-danger small">{{ form.plan_date.errors }}</div>
+                                <div class="form-error">{{ form.plan_date.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="info-item">
-                                <label class="info-label">{{ form.location.label }}</label>
+                            <div class="form-group">
+                                <label class="form-label">{{ form.location.label }}</label>
                                 {{ form.location }}
                                 <small class="text-muted">将根据客户办公地址自动填充</small>
                             </div>
-                            <div class="info-item" style="grid-column: 1 / -1;">
-                                <label class="info-label">{{ form.participants.label }}</label>
+                            <div class="form-group form-row-full">
+                                <label class="form-label">{{ form.participants.label }}</label>
                                 {{ form.participants }}
                                 {% if form.participants.errors %}
-                                <div class="text-danger small">{{ form.participants.errors }}</div>
+                                <div class="form-error">{{ form.participants.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="info-item" style="grid-column: 1 / -1;">
-                                <label class="info-label">{{ form.related_opportunity.label }}</label>
+                            <div class="form-group form-row-full">
+                                <label class="form-label">{{ form.related_opportunity.label }}</label>
                                 {{ form.related_opportunity }}
                             </div>
                         </div>
                     </div>
-                    {% elif step == 2 %}
+                    
+        {% elif step == 2 %}
+        {# 第二步：沟通清单准备 #}
+
                     
                     <div class="info-section">
                         {% if questions_by_part %}
@@ -233,100 +284,95 @@
                         </div>
                         {% endif %}
                     </div>
-                    {% elif step == 3 %}
                     
-                    <div class="info-section">
-                        <div class="info-grid info-grid-2">
-                            <div class="info-item">
-                                <label class="info-label info-label-required">{{ form.checkin_time.label }}</label>
-                                {{ form.checkin_time }}
-                                {% if form.checkin_time.errors %}
-                                <div class="text-danger small">{{ form.checkin_time.errors }}</div>
-                                {% endif %}
+        {% elif step == 3 %}
+        {# 第三步：拜访定位打卡 #}
+
+                    
+                    <div class="form-section">
+                        <h6 class="form-section-header">打卡信息</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required">{{ form.checkin_time.label }}</label>
+                                    {{ form.checkin_time }}
+                                    {% if form.checkin_time.errors %}
+                                    <div class="text-danger small mt-1">{{ form.checkin_time.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <div class="info-item">
-                                <label class="info-label info-label-required">{{ form.checkin_location.label }}</label>
-                                {{ form.checkin_location }}
-                                {% if form.checkin_location.errors %}
-                                <div class="text-danger small">{{ form.checkin_location.errors }}</div>
-                                {% endif %}
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required">{{ form.checkin_location.label }}</label>
+                                    {{ form.checkin_location }}
+                                    {% if form.checkin_location.errors %}
+                                    <div class="text-danger small mt-1">{{ form.checkin_location.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <div class="info-item">
-                                <label class="info-label">{{ form.latitude.label }}</label>
-                                {{ form.latitude }}
+                            <div class="col-md-6 d-none d-md-block">
+                                <div class="form-group">
+                                    <label class="form-label">{{ form.latitude.label }}</label>
+                                    {{ form.latitude }}
+                                </div>
                             </div>
-                            <div class="info-item">
-                                <label class="info-label">{{ form.longitude.label }}</label>
-                                {{ form.longitude }}
+                            <div class="col-md-6 d-none d-md-block">
+                                <div class="form-group">
+                                    <label class="form-label">{{ form.longitude.label }}</label>
+                                    {{ form.longitude }}
+                                </div>
                             </div>
-                            <div class="info-item" style="grid-column: 1 / -1;">
-                                <label class="info-label">{{ form.notes.label }}</label>
-                                {{ form.notes }}
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label class="form-label">{{ form.notes.label }}</label>
+                                    {{ form.notes }}
+                                </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="mt-3">
-                        <button type="button" class="btn btn-outline-primary"data-click="handle_onclick_0">
-                            <i class="bi bi-geo-alt-fill"></i> 获取当前位置
-                        </button>
-                    </div>
-                    <div id="locationDisplay" class="mt-3 p-3 bg-light rounded"></div>
-                    {% elif step == 4 %}
-                    
-                    <div class="info-section">
-                        <div class="info-item" style="grid-column: 1 / -1;">
-                            <label class="info-label info-label-required">{{ form.visit_result.label }}</label>
-                            {{ form.visit_result }}
-                            {% if form.visit_result.errors %}
-                            <div class="text-danger small">{{ form.visit_result.errors }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="info-item" style="grid-column: 1 / -1;">
-                            <label class="info-label">{{ form.customer_feedback.label }}</label>
-                            {{ form.customer_feedback }}
-                        </div>
-                        <div class="info-item" style="grid-column: 1 / -1;">
-                            <label class="info-label">{{ form.key_points.label }}</label>
-                            {{ form.key_points }}
-                        </div>
-                        <div class="info-item" style="grid-column: 1 / -1;">
-                            <label class="info-label">{{ form.next_actions.label }}</label>
-                            {{ form.next_actions }}
-                        </div>
-                        <div class="info-item">
-                            <label class="info-label">{{ form.satisfaction_score.label }}</label>
-                            {{ form.satisfaction_score }}
-                        </div>
-                        <div class="info-item">
-                            <label class="info-label">{{ form.effectiveness.label }}</label>
-                            {{ form.effectiveness }}
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    <div class="d-flex justify-content-between gap-2 mt-4">
-                        <div>
-                            {% if visit_plan %}
-                            <a href="{% url 'business_pages:visit_plan_detail' visit_plan.id %}" class="btn btn-outline-secondary">返回详情</a>
-                            {% else %}
-                            <a href="{% url 'business_pages:customer_visit' %}" class="btn btn-outline-secondary">取消</a>
-                            {% endif %}
-                        </div>
-                        <div>
-                            <button type="submit" class="btn btn-primary">
-                                {% if step == 4 %}完成复盘{% else %}下一步{% endif %}
+                    <div class="form-section">
+                        <h6 class="form-section-header">位置定位</h6>
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-outline-primary" data-click="handle_onclick_0">
+                                <i class="bi bi-geo-alt-fill"></i> 获取当前位置
                             </button>
                         </div>
+                        <div id="locationDisplay" class="p-3 bg-light rounded"></div>
                     </div>
-                </form>
+                    
+        {% elif step == 4 %}
+        {# 第四步：拜访结果复盘 #}
+
+                    
+                    <div class="info-section">
+                        <div class="form-group form-row-full">
+                            <label class="form-label required">{{ form.visit_result.label }}</label>
+                            {{ form.visit_result }}
+                            {% if form.visit_result.errors %}
+                            <div class="form-error">{{ form.visit_result.errors }}</div>
+                            
+        {% endif %}
+        
+        {# 表单操作按钮 #}
+        <div class="form-actions">
+            <div class="form-actions-left">
+                {% if visit_plan %}
+                <a href="{% url 'business_pages:visit_plan_detail' visit_plan.id %}" class="form-btn form-btn-secondary">返回详情</a>
+                {% else %}
+                <a href="{% url cancel_url_name|default:'business_pages:customer_visit' %}" class="form-btn form-btn-secondary">取消</a>
+                {% endif %}
+                <button type="submit" class="form-btn form-btn-primary">
+                    {% if step == 4 %}完成复盘{% else %}下一步{% endif %}
+                </button>
             </div>
         </div>
-    </div>
+    </form>
 </div>
 
 {% if step == 1 %}
 <script>
+
     // 安全的HTML设置函数
     function setSafeHTML(element, html) {
         if (!element) return;
@@ -411,9 +457,11 @@
             updateOpportunities();
         }
     })();
+
 </script>
 {% elif step == 2 %}
 <script>
+
     // 定位功能（第二步：拜访定位打卡）
     const hiddenLatitude = document.getElementById('id_latitude');
     const hiddenLongitude = document.getElementById('id_longitude');
@@ -505,7 +553,7 @@
             locationDisplay.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle"></i> 定位失败：' + error.message + '</div>';
             },
             {
-                enableHighAccuracy: false,
+                enableHighAccuracy: true,
                 timeout: 30000,
                 maximumAge: 60000
             }
@@ -523,9 +571,17 @@
         if (element) {
             element.addEventListener('click', function(e) {
                 getLocation()
+            // 移动端自动获取位置
+            if (/Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+                // 移动端自动获取位置
+                if (!hiddenLatitude || !hiddenLatitude.value || !hiddenLongitude || !hiddenLongitude.value) {
+                    setTimeout(function() { getLocation(); }, 500);
+                }
+            }
             });
         }
     });
+
 
 </script>
 {% endif %}

@@ -1,17 +1,9 @@
-{% extends "shared/_partials/_shared_form_wrapper_customer.html" %}
+{% extends "customer_management/_base.html" %}
 
-
-{% block pm_title %}{{ page_title|default:"创建联系人信息" }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">{{ form_page_subtitle_text|default:"请填写联系人基本信息" }}</span>{% endblock %}
-{% block pm_actions %}
-<a href="{% url cancel_url_name|default:'business_pages:contact_list' %}" class="list-btn">
-  返回列表
-</a>
-{% endblock %}
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
 {% load static %}
 {% block extra_css %}
-{{ block.super }}
 <link rel="stylesheet" href="{% static 'css/common.css' %}">
 <link rel="stylesheet" href="{% static 'css/qixinbao-autofill.css' %}">
 <style>
@@ -191,16 +183,26 @@
 </style>
 {% endblock %}
 
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'business_pages:contact_list' %}">创建联系人信息</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if contact %}编辑{% else %}创建{% endif %}</li>
+{% endblock %}
 
-{% block pm_content %}
-<div class="form-container">
+{% block content %}
+<div class="workspace-content">
+    <div class="container-fluid py-4">
+        <div class="info-card info-card-compact">
+            <div class="info-card-header">
+                <h5 class="info-card-title">{{ page_title }}</h5>
+            </div>
+            <div class="info-card-body">
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     
                     {% if form.errors %}
-                    <div class="form-alert form-alert-danger">
-                        <div class="form-alert-title">提交失败：请完善必填项</div>
-                        <ul class="form-alert-list">
+                    <div class="alert alert-danger">
+                        <strong>表单验证失败，请检查以下错误：</strong>
+                        <ul class="mb-0">
                             {% for field, errors in form.errors.items %}
                                 {% for error in errors %}
                                 <li>{{ field }}: {{ error }}</li>
@@ -217,21 +219,21 @@
                                 <label class="info-label info-label-required">{{ form.client.label }}</label>
                                 {{ form.client }}
                                 {% if form.client.errors %}
-                                <div class="form-error">{{ form.client.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.client.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="col-md-4">
                                 <label class="info-label info-label-required">{{ form.name.label }}</label>
                                 {{ form.name }}
                                 {% if form.name.errors %}
-                                <div class="form-error">{{ form.name.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.name.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="col-md-4">
                                 <label class="info-label info-label-required">{{ form.gender.label }}</label>
                                 {{ form.gender }}
                                 {% if form.gender.errors %}
-                                <div class="form-error">{{ form.gender.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.gender.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -257,7 +259,7 @@
                                     </div>
                                 </div>
                                 {% if form.birthplace.errors %}
-                                <div class="form-error">{{ form.birthplace.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.birthplace.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -294,42 +296,42 @@
                                         </div>
                                         <small class="text-muted d-block mt-1">输入企业名称（至少2个字符）后自动搜索启信宝，选择匹配的企业将自动填充信息</small>
                                         {% if form.company.errors %}
-                                        <div class="form-error">{{ form.company.errors }}</div>
+                                        <div class="text-danger small mt-1">{{ form.company.errors }}</div>
                                         {% endif %}
                                     </div>
                                     <div class="info-item">
                                         <label class="info-label">{{ form.unified_credit_code.label }}</label>
                                         {{ form.unified_credit_code }}
                                         {% if form.unified_credit_code.errors %}
-                                        <div class="form-error">{{ form.unified_credit_code.errors }}</div>
+                                        <div class="text-danger small mt-1">{{ form.unified_credit_code.errors }}</div>
                                         {% endif %}
                                     </div>
                                     <div class="info-item">
                                         <label class="info-label info-label-required">{{ form.department.label }}</label>
                                         {{ form.department }}
                                         {% if form.department.errors %}
-                                        <div class="form-error">{{ form.department.errors }}</div>
+                                        <div class="text-danger small mt-1">{{ form.department.errors }}</div>
                                         {% endif %}
                                     </div>
                                     <div class="info-item">
                                         <label class="info-label info-label-required">{{ form.position.label }}</label>
                                         {{ form.position }}
                                         {% if form.position.errors %}
-                                        <div class="form-error">{{ form.position.errors }}</div>
+                                        <div class="text-danger small mt-1">{{ form.position.errors }}</div>
                                         {% endif %}
                                     </div>
                                     <div class="info-item">
                                         <label class="info-label info-label-required">{{ form.join_date.label }}</label>
                                         {{ form.join_date }}
                                         {% if form.join_date.errors %}
-                                        <div class="form-error">{{ form.join_date.errors }}</div>
+                                        <div class="text-danger small mt-1">{{ form.join_date.errors }}</div>
                                         {% endif %}
                                     </div>
                                     <div class="info-item">
                                         <label class="info-label">{{ form.leave_date.label }}</label>
                                         {{ form.leave_date }}
                                         {% if form.leave_date.errors %}
-                                        <div class="form-error">{{ form.leave_date.errors }}</div>
+                                        <div class="text-danger small mt-1">{{ form.leave_date.errors }}</div>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -411,7 +413,7 @@
                                         <label class="info-label info-label-required">{{ form.degree.label }}</label>
                                         {{ form.degree }}
                                         {% if form.degree.errors %}
-                                        <div class="form-error">{{ form.degree.errors }}</div>
+                                        <div class="text-danger small mt-1">{{ form.degree.errors }}</div>
                                         {% endif %}
                                     </div>
                                     <div class="info-item">
@@ -432,10 +434,10 @@
                                             {{ form.school_name }}
                                         </div>
                                         {% if form.school.errors %}
-                                        <div class="form-error">{{ form.school.errors }}</div>
+                                        <div class="text-danger small mt-1">{{ form.school.errors }}</div>
                                         {% endif %}
                                         {% if form.school_name.errors %}
-                                        <div class="form-error">{{ form.school_name.errors }}</div>
+                                        <div class="text-danger small mt-1">{{ form.school_name.errors }}</div>
                                         {% endif %}
                                     </div>
                                     <div class="info-item d-flex align-items-end">
@@ -452,14 +454,14 @@
                                         <label class="info-label info-label-required">{{ form.enrollment_date.label }}</label>
                                         {{ form.enrollment_date }}
                                         {% if form.enrollment_date.errors %}
-                                        <div class="form-error">{{ form.enrollment_date.errors }}</div>
+                                        <div class="text-danger small mt-1">{{ form.enrollment_date.errors }}</div>
                                         {% endif %}
                                     </div>
                                     <div class="info-item">
                                         <label class="info-label info-label-required">{{ form.graduation_date.label }}</label>
                                         {{ form.graduation_date }}
                                         {% if form.graduation_date.errors %}
-                                        <div class="form-error">{{ form.graduation_date.errors }}</div>
+                                        <div class="text-danger small mt-1">{{ form.graduation_date.errors }}</div>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -478,14 +480,14 @@
                                 <label class="info-label">{{ form.phone.label }}</label>
                                 {{ form.phone }}
                                 {% if form.phone.errors %}
-                                <div class="form-error">{{ form.phone.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.phone.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="info-item">
                                 <label class="info-label">{{ form.email.label }}</label>
                                 {{ form.email }}
                                 {% if form.email.errors %}
-                                <div class="form-error">{{ form.email.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.email.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="info-item">
@@ -493,7 +495,7 @@
                                 {{ form.wechat }}
                                 <small class="text-muted d-block">可输入多个微信号，用逗号分隔</small>
                                 {% if form.wechat.errors %}
-                                <div class="form-error">{{ form.wechat.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.wechat.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="info-item" style="grid-column: span 2;">
@@ -525,7 +527,7 @@
                                     </div>
                                 </div>
                                 {% if form.office_address.errors %}
-                                <div class="form-error">{{ form.office_address.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.office_address.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -538,21 +540,21 @@
                                 <label class="info-label info-label-required">{{ form.role.label }}</label>
                                 {{ form.role }}
                                 {% if form.role.errors %}
-                                <div class="form-error">{{ form.role.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.role.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="info-item">
                                 <label class="info-label info-label-required">{{ form.relationship_level.label }}</label>
                                 {{ form.relationship_level }}
                                 {% if form.relationship_level.errors %}
-                                <div class="form-error">{{ form.relationship_level.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.relationship_level.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="info-item">
                                 <label class="info-label info-label-required">{{ form.decision_influence.label }}</label>
                                 {{ form.decision_influence }}
                                 {% if form.decision_influence.errors %}
-                                <div class="form-error">{{ form.decision_influence.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.decision_influence.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="info-item">
@@ -564,7 +566,7 @@
                                     </label>
                                 </div>
                                 {% if form.is_primary.errors %}
-                                <div class="form-error">{{ form.is_primary.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.is_primary.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -579,28 +581,28 @@
                                 {{ form.resume_file }}
                                 <small class="text-muted d-block mt-1">支持格式：PDF、Word、图片；大小限制：10MB</small>
                                 {% if form.resume_file.errors %}
-                                <div class="form-error">{{ form.resume_file.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.resume_file.errors }}</div>
                                 {% endif %}
                             </div>
                             <div class="info-item">
                                 <label class="info-label">{{ form.resume_source.label }}</label>
                                 {{ form.resume_source }}
                                 {% if form.resume_source.errors %}
-                                <div class="form-error">{{ form.resume_source.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.resume_source.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
                     
-                    <div class="form-actions">
-                        <div class="form-actions-left">
-                            <a href="{% url cancel_url_name|default:'business_pages:contact_list' %}" class="form-btn form-btn-secondary">取消</a>
-                            <button type="submit" name="action" value="save_draft" class="form-btn form-btn-secondary">保存草稿</button>
-                            <button type="submit" name="action" value="submit" class="form-btn form-btn-primary">提交申请</button>
-                        </div>
-                        <div class="form-actions-right">
-                        </div>
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="submit" name="action" value="save_draft" class="btn btn-outline-secondary">保存草稿</button>
+                        <button type="submit" name="action" value="submit" class="btn btn-primary">提交申请</button>
+                        <a href="{% if contact %}{% url 'business_pages:contact_detail' contact.id %}{% else %}{% url 'business_pages:contact_list' %}{% endif %}" class="btn btn-secondary">取消</a>
                     </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 

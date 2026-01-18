@@ -22,7 +22,6 @@ from backend.apps.customer_management.models import (
     OpportunityQuotation,
     CustomerLead,
     CustomerFiling,
-    CustomerWarehouseApplication,
     CustomerRelationship,
     CustomerRelationshipUpgrade,
     BusinessExpenseApplication,
@@ -152,6 +151,13 @@ CUSTOMER_MANAGEMENT_MENU = [
                 'permission': 'customer_management.client.create',
             },
             {
+                'id': 'first_visit_create',
+                'label': '创建首次拜访',
+                'icon': '📅',
+                'url_name': 'customer_pages:first_visit_create',
+                'permission': 'customer_management.relationship.edit',
+            },
+            {
                 'id': 'customer_public_sea',
                 'label': '客户公海',
                 'icon': '🌊',
@@ -178,13 +184,6 @@ CUSTOMER_MANAGEMENT_MENU = [
                 'label': '创建新客户',
                 'icon': '➕',
                 'url_name': 'business_pages:customer_create',
-                'permission': 'customer_management.client.create',
-            },
-            {
-                'id': 'customer_warehouse_application_create',
-                'label': '创建客户入库申请',
-                'icon': '📦',
-                'url_name': 'customer_pages:customer_warehouse_application_create',
                 'permission': 'customer_management.client.create',
             },
         ]
@@ -226,16 +225,23 @@ CUSTOMER_MANAGEMENT_MENU = [
             },
             {
                 'id': 'visit_create',
-                'label': '创建人员拜访',
+                'label': '创建拜访计划',
                 'icon': '➕',
                 'url_name': 'customer_pages:visit_plan_create',
                 'permission': 'customer_management.relationship.edit',
             },
             {
-                'id': 'first_visit_create',
-                'label': '创建首次拜访',
-                'icon': '🎯',
-                'url_name': 'customer_pages:first_visit_create',
+                'id': 'visit_checkin',
+                'label': '创建拜访打卡',
+                'icon': '📍',
+                'url_name': 'customer_pages:visit_checkin_select',
+                'permission': 'customer_management.relationship.edit',
+            },
+            {
+                'id': 'visit_review',
+                'label': '拜访结果复盘',
+                'icon': '📊',
+                'url_name': 'customer_pages:visit_review_select',
                 'permission': 'customer_management.relationship.edit',
             },
         ]
@@ -2249,9 +2255,26 @@ def customer_lead_create(request):
         if form.is_valid():
             lead = form.save(commit=False)
             lead.created_by = request.user
-            # 如果表单中没有设置负责人，则默认设置为创建人
-            if not lead.responsible_user:
-                lead.responsible_user = request.user
+            # 设置默认负责人为当前用户（因为字段被禁用，需要手动设置）
+            lead.responsible_user = request.user
+            # 设置默认部门为当前用户的部门（因为字段被禁用，需要手动设置）
+            if request.user.department:
+                lead.department = request.user.department.name
+            else:
+                lead.department = ''
+            # 设置已删除字段的默认值（这些字段已从表单中删除，但模型中仍存在）
+            if not lead.contact_name:
+                lead.contact_name = ''
+            if not lead.contact_phone:
+                lead.contact_phone = ''
+            if not lead.contact_email:
+                lead.contact_email = ''
+            if not lead.channel:
+                lead.channel = ''
+            if not lead.follow_status:
+                lead.follow_status = 'unhandled'
+            if not lead.latest_followup_note:
+                lead.latest_followup_note = ''
             
             lead.save()
             messages.success(request, '客户线索创建成功')
@@ -2278,7 +2301,6 @@ def customer_lead_create(request):
     context.update({
         'form': form,
         'lead_source_choices': CustomerLead.LEAD_SOURCE_CHOICES,
-        'follow_status_choices': CustomerLead.FOLLOW_STATUS_CHOICES,
     })
     context['cancel_url_name'] = 'customer_pages:customer_management_home'
     context['form_page_subtitle_text'] = '请填写客户线索基本信息'
@@ -2340,63 +2362,6 @@ def customer_filing_create(request):
     context['form_page_subtitle_text'] = '请填写客户备案信息'
     context['create_url_name'] = 'customer_pages:customer_filing_create'
     return render(request, "customer_management/customer_filing_form.html", context)
-
-
-@login_required
-def customer_warehouse_application_create(request):
-    """创建客户入库申请"""
-    from backend.apps.customer_management.models import CustomerWarehouseApplication, Client
-    from backend.apps.customer_management.forms import CustomerWarehouseApplicationForm
-    
-    permission_set = get_user_permission_codes(request.user)
-    if not _check_customer_permission('customer_management.client.edit', permission_set):
-        messages.error(request, '您没有权限创建客户入库申请')
-        return redirect('customer_pages:customer_management_home')
-    
-    if request.method == 'POST':
-        form = CustomerWarehouseApplicationForm(request.POST, user=request.user)
-        if form.is_valid():
-            application = form.save(commit=False)
-            application.created_by = request.user
-            application.save()
-            messages.success(request, '客户入库申请创建成功')
-            # 重定向到客户详情页
-            return redirect('business_pages:customer_detail', client_id=application.client.id)
-        else:
-            messages.error(request, '表单验证失败，请检查输入')
-    else:
-        form = CustomerWarehouseApplicationForm(user=request.user)
-        # 如果URL中有client_id参数，预填充客户字段
-        client_id = request.GET.get('client_id')
-        if client_id:
-            try:
-                client = Client.objects.get(id=client_id)
-                form.fields['client'].initial = client
-            except Client.DoesNotExist:
-                pass
-    
-    context = _context(
-        "创建客户入库申请",
-        "📦",
-        "创建新客户入库申请",
-        request=request,
-    )
-    
-    # 生成左侧菜单
-    context['customer_menu'] = _build_customer_management_menu(
-        permission_set, 
-        active_id='customer_warehouse_application_create'
-    )
-    
-    context.update({
-        'form': form,
-        'application_type_choices': CustomerWarehouseApplication.APPLICATION_TYPE_CHOICES,
-        'status_choices': CustomerWarehouseApplication.STATUS_CHOICES,
-    })
-    context['cancel_url_name'] = 'customer_pages:customer_management_home'
-    context['form_page_subtitle_text'] = '请填写客户入库申请信息'
-    context['create_url_name'] = 'customer_pages:customer_warehouse_application_create'
-    return render(request, "customer_management/customer_warehouse_application_form.html", context)
 
 
 @login_required
@@ -4208,65 +4173,63 @@ def contact_info_change_create(request):
 
 @login_required
 def customer_visit(request):
-    """创建联系人拜访"""
+    """拜访列表"""
     from django.core.paginator import Paginator
-    from backend.apps.customer_management.models import CustomerRelationship
     
-    # 获取筛选参数（使用通用方式支持新筛选模块）
+    # 获取筛选参数
     search = request.GET.get('search', '').strip()
-    
-    # 获取通用筛选参数
-    filter_params = {}
-    for key, value in request.GET.items():
-        if key not in ['search', 'page', 'page_size'] and value:
-            filter_params[key] = value
+    status_filter = request.GET.get('status', '').strip()
+    client_id = request.GET.get('client', '').strip()
     
     # 获取权限
     permission_set = get_user_permission_codes(request.user)
-    can_create = _check_customer_permission('customer_management.relationship.create', permission_set)
+    can_create = _check_customer_permission('customer_management.relationship.edit', permission_set)
     
-    # 获取拜访记录列表（record_type='visit'）
+    # 获取拜访计划列表
     try:
-        relationships = CustomerRelationship.objects.filter(
-            record_type='visit'
-        ).select_related('client', 'followup_person', 'created_by').prefetch_related('related_contacts')
+        visit_plans = VisitPlan.objects.select_related('client', 'created_by', 'related_opportunity').order_by('-plan_date')
+        
+        # 只显示当前用户创建的或管理员可以查看的
+        if not _permission_granted('customer_management.manage', permission_set):
+            visit_plans = visit_plans.filter(created_by=request.user)
         
         # 应用搜索条件
         if search:
-            relationships = relationships.filter(
+            visit_plans = visit_plans.filter(
+                Q(plan_title__icontains=search) |
                 Q(client__name__icontains=search) |
-                Q(content__icontains=search)
+                Q(plan_purpose__icontains=search)
             )
         
-        # 应用通用筛选条件
-        if filter_params.get('client'):
-            relationships = relationships.filter(client_id=filter_params['client'])
-        if filter_params.get('visit_type'):
-            relationships = relationships.filter(visit_type=filter_params['visit_type'])
+        # 应用状态筛选
+        if status_filter:
+            visit_plans = visit_plans.filter(status=status_filter)
         
-        # 按跟进时间倒序排列
-        relationships = relationships.order_by('-followup_time')
+        # 应用客户筛选
+        if client_id:
+            visit_plans = visit_plans.filter(client_id=client_id)
         
         # 分页
-        paginator = Paginator(relationships, 20)
+        paginator = Paginator(visit_plans, 20)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
+        
         
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.exception('获取拜访记录列表失败: %s', str(e))
-        messages.error(request, f'获取拜访记录列表失败：{str(e)}')
+        logger.exception('获取拜访列表失败: %s', str(e))
+        messages.error(request, f'获取拜访列表失败：{str(e)}')
         page_obj = None
     
     # 获取客户列表（用于筛选）
     from backend.apps.customer_management.models import Client
-    clients = Client.objects.all().order_by('name')
+    clients = Client.objects.filter(is_active=True).order_by('name')
     
     context = _context(
-        "创建联系人拜访",
+        "拜访列表",
         "🚪",
-        "查看和管理客户拜访记录",
+        "查看和管理所有拜访计划",
         request=request,
     )
     
@@ -4279,11 +4242,11 @@ def customer_visit(request):
     context.update({
         'page_obj': page_obj,
         'search': search,
-        'client_id': filter_params.get('client', ''),
-        'visit_type': filter_params.get('visit_type', ''),
+        'status_filter': status_filter,
+        'client_id': client_id,
         'clients': clients,
         'can_create': can_create,
-        'visit_type_choices': CustomerRelationship.VISIT_TYPE_CHOICES,
+        'status_options': VisitPlan.PLAN_STATUS_CHOICES,
     })
     return render(request, "customer_management/customer_visit.html", context)
 
@@ -10145,33 +10108,88 @@ def visit_plan_flow(request, plan_id=None):
 
 @login_required
 def visit_plan_create(request):
-    """第一步：创建拜访计划"""
-    from backend.apps.customer_management.forms import VisitPlanForm
+    """创建拜访计划（合并拜访计划和沟通清单准备）"""
+    from backend.apps.customer_management.forms import VisitPlanWithChecklistForm
     
     permission_set = get_user_permission_codes(request.user)
     if not _check_customer_permission('customer_management.relationship.edit', permission_set):
         messages.error(request, '您没有权限创建拜访计划')
         return redirect('business_pages:customer_visit')
     
+    # 获取启用的沟通清单问题，按部分和排序分组（如果模型存在）
+    questions_by_part = {}
+    existing_answers = {}
+    
+    # 获取启用的沟通清单问题（用于显示）
+    if HAS_COMMUNICATION_CHECKLIST_MODELS:
+        questions = CommunicationChecklistQuestion.objects.filter(is_active=True).order_by('part', 'order')
+        for question in questions:
+            if question.part not in questions_by_part:
+                questions_by_part[question.part] = []
+            questions_by_part[question.part].append(question)
+    
     if request.method == 'POST':
-        form = VisitPlanForm(request.POST, user=request.user, permission_set=permission_set)
+        form = VisitPlanWithChecklistForm(request.POST, user=request.user, permission_set=permission_set)
         if form.is_valid():
             visit_plan = form.save(commit=False)
             visit_plan.created_by = request.user
             visit_plan.status = 'planned'
+            visit_plan.checklist_prepared_time = timezone.now()
             visit_plan.save()
             
-            messages.success(request, '拜访计划创建成功，请继续准备沟通清单')
-            return redirect('business_pages:visit_plan_checklist', plan_id=visit_plan.id)
+            # 保存沟通清单问题的答案（如果模型存在）
+            if HAS_COMMUNICATION_CHECKLIST_MODELS and questions_by_part:
+                # 获取或创建沟通清单记录
+                checklist, created = CustomerCommunicationChecklist.objects.get_or_create(
+                    client=visit_plan.client,
+                    communication_date=visit_plan.plan_date,
+                    defaults={
+                        'title': f'{visit_plan.plan_title} - 沟通清单',
+                        'location': visit_plan.location or '',
+                        'status': 'before',
+                        'created_by': request.user,
+                        'opportunity': visit_plan.related_opportunity,
+                    }
+                )
+                
+                # 保存每个问题的答案
+                for part, part_questions in questions_by_part.items():
+                    for question in part_questions:
+                        answer_value = request.POST.get(f'question_{question.id}', 'unknown')
+                        note_before = request.POST.get(f'note_before_{question.id}', '').strip()
+                        
+                        answer, answer_created = CommunicationChecklistAnswer.objects.get_or_create(
+                            checklist=checklist,
+                            question=question,
+                            defaults={
+                                'answer': answer_value,
+                                'note_before': note_before,
+                            }
+                        )
+                        if not answer_created:
+                            answer.answer = answer_value
+                            answer.note_before = note_before
+                            answer.save()
+            
+            messages.success(request, '拜访计划创建成功，可以进行拜访定位打卡')
+            return redirect('business_pages:visit_plan_checkin', plan_id=visit_plan.id)
         else:
             messages.error(request, '表单验证失败，请检查输入')
     else:
-        form = VisitPlanForm(user=request.user, permission_set=permission_set)
+        form = VisitPlanWithChecklistForm(user=request.user, permission_set=permission_set)
+    
+    # 获取启用的沟通清单问题（用于显示）
+    if HAS_COMMUNICATION_CHECKLIST_MODELS:
+        questions = CommunicationChecklistQuestion.objects.filter(is_active=True).order_by('part', 'order')
+        for question in questions:
+            if question.part not in questions_by_part:
+                questions_by_part[question.part] = []
+            questions_by_part[question.part].append(question)
     
     context = _context(
         "创建拜访计划",
         "📅",
-        "第一步：创建拜访计划",
+        "创建拜访计划并准备沟通清单",
         request=request,
     )
     
@@ -10234,11 +10252,17 @@ def visit_plan_create(request):
     context.update({
         'form': form,
         'step': 1,
-        'step_title': '创建计划',
+        'step_title': '创建拜访计划',
         'clients_with_address_json': json.dumps(clients_with_address),
         'clients_opportunities_json': json.dumps(clients_opportunities),
-        'existing_answers': {},  # 确保 existing_answers 不为 None
+        'questions_by_part': questions_by_part,
+        'existing_answers': existing_answers,  # 确保 existing_answers 不为 None
     })
+    # 添加与 contact_create 一致的上下文变量
+    context['cancel_url_name'] = 'business_pages:customer_visit'
+    context['form_page_subtitle_text'] = '请填写拜访计划信息并准备沟通清单'
+    context['create_url_name'] = 'business_pages:visit_plan_create'
+    context['page_title'] = '创建拜访计划'
     return render(request, "customer_management/visit_plan_step_form.html", context)
 
 
@@ -10449,7 +10473,7 @@ def visit_plan_checklist(request, plan_id):
 
 @login_required
 def visit_plan_checkin(request, plan_id):
-    """第三步：拜访定位打卡"""
+    """创建拜访打卡"""
     from backend.apps.customer_management.forms import VisitCheckinForm
     
     permission_set = get_user_permission_codes(request.user)
@@ -10461,14 +10485,20 @@ def visit_plan_checkin(request, plan_id):
         return redirect('business_pages:visit_plan_detail', plan_id=plan_id)
     
     if request.method == 'POST':
-        form = VisitCheckinForm(request.POST)
+        form = VisitCheckinForm(request.POST, visit_plan=visit_plan)
         if form.is_valid():
             checkin = form.save(commit=False)
             checkin.visit_plan = visit_plan
             checkin.client = visit_plan.client
             checkin.created_by = request.user
-            if not checkin.checkin_time:
-                checkin.checkin_time = timezone.now()
+            # 打卡时间始终使用服务器当前时间，不允许用户修改
+            checkin.checkin_time = timezone.now()
+            # 打卡地点根据经纬度自动获取，不允许用户修改
+            # 如果有经纬度，根据经纬度获取地址；否则使用表单提交的值（由JavaScript自动设置）
+            if checkin.latitude and checkin.longitude:
+                # 如果已有经纬度，尝试根据经纬度获取地址（如果需要）
+                # 地址应该已经由前端JavaScript通过逆地理编码设置好了
+                pass
             checkin.save()
             
             # 更新拜访计划状态
@@ -10487,9 +10517,9 @@ def visit_plan_checkin(request, plan_id):
         })
     
     context = _context(
-        f"拜访定位打卡 - {visit_plan.plan_title}",
+        "创建拜访打卡",
         "📍",
-        "第三步：拜访定位打卡",
+        "创建拜访定位打卡",
         request=request,
     )
     
@@ -10501,15 +10531,14 @@ def visit_plan_checkin(request, plan_id):
     context.update({
         'form': form,
         'visit_plan': visit_plan,
-        'step': 3,
-        'step_title': '拜访定位打卡',
+        'form_page_subtitle_text': f'客户：{visit_plan.client.name} | 拜访计划：{visit_plan.plan_title or "未设置标题"}',
     })
-    return render(request, "customer_management/visit_plan_step_form.html", context)
+    return render(request, "customer_management/visit_checkin_form.html", context)
 
 
 @login_required
 def visit_plan_review(request, plan_id):
-    """第四步：拜访结果复盘"""
+    """拜访结果复盘"""
     from backend.apps.customer_management.forms import VisitReviewForm
     
     permission_set = get_user_permission_codes(request.user)
@@ -10555,7 +10584,7 @@ def visit_plan_review(request, plan_id):
     context = _context(
         f"拜访结果复盘 - {visit_plan.plan_title}",
         "📊",
-        "第四步：拜访结果复盘",
+        "拜访结果复盘",
         request=request,
     )
     
@@ -10573,6 +10602,152 @@ def visit_plan_review(request, plan_id):
         'step_title': '拜访结果复盘',
     })
     return render(request, "customer_management/visit_plan_step_form.html", context)
+
+
+@login_required
+def visit_checkin_select(request):
+    """选择拜访计划进行打卡"""
+    from django.core.paginator import Paginator
+    
+    permission_set = get_user_permission_codes(request.user)
+    if not _check_customer_permission('customer_management.relationship.edit', permission_set):
+        messages.error(request, '您没有权限进行拜访打卡')
+        return redirect('business_pages:customer_visit')
+    
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    
+    # 获取可打卡的拜访计划（未打卡的）
+    visit_plans = VisitPlan.objects.all().select_related('client', 'created_by', 'related_opportunity').order_by('-plan_date')
+    
+    # 只显示当前用户创建的或管理员可以查看的
+    if not _permission_granted('customer_management.manage', permission_set):
+        visit_plans = visit_plans.filter(created_by=request.user)
+    
+    # 应用搜索条件
+    if search:
+        visit_plans = visit_plans.filter(
+            Q(plan_title__icontains=search) |
+            Q(client__name__icontains=search) |
+            Q(plan_purpose__icontains=search)
+        )
+    
+    # 应用状态筛选
+    if status_filter:
+        visit_plans = visit_plans.filter(status=status_filter)
+    
+    # 排除已完成的打卡
+    visit_plans = visit_plans.exclude(
+        id__in=VisitCheckin.objects.values_list('visit_plan_id', flat=True)
+    )
+    
+    # 分页
+    paginator = Paginator(visit_plans, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = _context(
+        "创建拜访打卡",
+        "📍",
+        "选择拜访计划进行定位打卡",
+        request=request,
+    )
+    
+    context['customer_menu'] = _build_customer_management_menu(
+        permission_set,
+        active_id='visit_checkin'
+    )
+    
+    # 确定操作类型和URL名称
+    action_type = 'checkin'
+    action_url_name = 'customer_pages:visit_plan_checkin'
+    current_url_name = 'customer_pages:visit_checkin_select'
+    
+    context.update({
+        'page_obj': page_obj,
+        'search': search,
+        'status_filter': status_filter,
+        'status_options': VisitPlan.PLAN_STATUS_CHOICES,
+        'action_type': action_type,
+        'action_url_name': action_url_name,
+        'current_url_name': current_url_name,
+    })
+    return render(request, "customer_management/visit_plan_select.html", context)
+
+
+@login_required
+def visit_review_select(request):
+    """选择拜访计划进行复盘"""
+    from django.core.paginator import Paginator
+    
+    permission_set = get_user_permission_codes(request.user)
+    if not _check_customer_permission('customer_management.relationship.edit', permission_set):
+        messages.error(request, '您没有权限进行拜访复盘')
+        return redirect('business_pages:customer_visit')
+    
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    
+    # 获取可复盘的拜访计划（已打卡但未复盘的）
+    visit_plans = VisitPlan.objects.filter(
+        checkins__isnull=False
+    ).select_related('client', 'created_by', 'related_opportunity').distinct().order_by('-plan_date')
+    
+    # 只显示当前用户创建的或管理员可以查看的
+    if not _permission_granted('customer_management.manage', permission_set):
+        visit_plans = visit_plans.filter(created_by=request.user)
+    
+    # 应用搜索条件
+    if search:
+        visit_plans = visit_plans.filter(
+            Q(plan_title__icontains=search) |
+            Q(client__name__icontains=search) |
+            Q(plan_purpose__icontains=search)
+        )
+    
+    # 应用状态筛选
+    if status_filter:
+        visit_plans = visit_plans.filter(status=status_filter)
+    
+    # 排除已完成的复盘
+    visit_plans = visit_plans.exclude(
+        id__in=VisitReview.objects.values_list('visit_plan_id', flat=True)
+    )
+    
+    # 分页
+    paginator = Paginator(visit_plans, 20)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = _context(
+        "拜访结果复盘",
+        "📊",
+        "选择拜访计划进行结果复盘",
+        request=request,
+    )
+    
+    context['customer_menu'] = _build_customer_management_menu(
+        permission_set,
+        active_id='visit_review'
+    )
+    
+    # 确定操作类型和URL名称
+    action_type = 'review'
+    action_url_name = 'customer_pages:visit_plan_review'
+    current_url_name = 'customer_pages:visit_review_select'
+    
+    context.update({
+        'page_obj': page_obj,
+        'search': search,
+        'status_filter': status_filter,
+        'status_options': VisitPlan.PLAN_STATUS_CHOICES,
+        'action_type': action_type,
+        'action_url_name': action_url_name,
+        'current_url_name': current_url_name,
+    })
+    return render(request, "customer_management/visit_plan_select.html", context)
 
 
 @login_required
