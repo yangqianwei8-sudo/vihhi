@@ -143,4 +143,123 @@
     }
 }
 
+/* ========== 强制 changelist 使用 flex 布局，确保过滤器在右侧 ========== */
+/* 使用最高优先级选择器，确保在所有样式之后生效 */
+#content #changelist.module.filtered,
+#content #changelist.module,
+#content #changelist,
+body #content #changelist.module.filtered,
+body #content #changelist.module,
+body #content #changelist,
+html body #content #changelist.module.filtered,
+html body #content #changelist.module,
+html body #content #changelist {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    flex-direction: row !important;
+    overflow: visible !important;
+}
+
+#content #changelist .changelist-form-container,
+body #content #changelist .changelist-form-container,
+html body #content #changelist .changelist-form-container {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    order: 0 !important;
+}
+
+/* 将表格位置往下移动 16px */
+/* 方法1: 给表单容器添加 padding-top */
+#content #changelist .changelist-form-container #changelist-form,
+body #content #changelist .changelist-form-container #changelist-form,
+html body #content #changelist .changelist-form-container #changelist-form {
+    padding-top: 16px !important;
+}
+
+/* 方法2: 给表格容器添加 margin-top */
+#content #changelist .changelist-form-container .results,
+body #content #changelist .changelist-form-container .results,
+html body #content #changelist .changelist-form-container .results {
+    margin-top: 16px !important;
+}
+
+/* 方法3: 给表格本身添加 margin-top */
+#content #changelist .changelist-form-container #result_list,
+body #content #changelist .changelist-form-container #result_list,
+html body #content #changelist .changelist-form-container #result_list {
+    margin-top: 16px !important;
+}
+
+#content #changelist-filter,
+body #content #changelist-filter,
+html body #content #changelist-filter {
+    flex: 0 0 240px !important;
+    order: 1 !important;
+    margin: 0 0 0 30px !important;
+    background: var(--darkened-bg, #f8f9fa) !important;
+    border-left: none !important;
+    padding: 0 !important; /* 让 Django 默认样式控制内部 padding */
+}
+
+/* 恢复 Django 默认的过滤器内部样式 */
+#content #changelist-filter h2,
+body #content #changelist-filter h2,
+html body #content #changelist-filter h2 {
+    font-size: 0.875rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 5px 15px !important;
+    margin-bottom: 12px !important;
+    border-bottom: none !important;
+}
+
+#content #changelist-filter h3,
+body #content #changelist-filter h3,
+html body #content #changelist-filter h3,
+#content #changelist-filter details summary,
+body #content #changelist-filter details summary,
+html body #content #changelist-filter details summary {
+    font-weight: 400 !important;
+    padding: 0 15px !important;
+    margin-bottom: 10px !important;
+}
+
+#content #changelist-filter ul,
+body #content #changelist-filter ul,
+html body #content #changelist-filter ul {
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
+}
+
+#content #changelist-filter li,
+body #content #changelist-filter li,
+html body #content #changelist-filter li {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#content #changelist-filter a,
+body #content #changelist-filter a,
+html body #content #changelist-filter a {
+    display: block !important;
+    padding: 8px 15px !important;
+    text-decoration: none !important;
+    color: var(--link-fg, #417690) !important;
+}
+
+#content #changelist-filter li.selected,
+body #content #changelist-filter li.selected,
+html body #content #changelist-filter li.selected {
+    background: var(--selected-row, #ffc) !important;
+}
+
+#content #changelist-filter li.selected a,
+body #content #changelist-filter li.selected a,
+html body #content #changelist-filter li.selected a {
+    color: var(--link-selected-fg, #5b80b2) !important;
+    font-weight: 600 !important;
+}
+
 

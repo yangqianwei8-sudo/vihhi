@@ -20,6 +20,19 @@ def payment_management_redirect(request):
     from backend.apps.settlement_center.views_pages import payment_plan_list
     return payment_plan_list(request)
 
+@login_required
+def report_management_redirect(request):
+    """报表管理重定向视图"""
+    # 重定向到财务报表管理页面
+    return redirect('finance_pages:report_management')
+
+@login_required
+def risk_management_redirect(request):
+    """风险管理重定向视图"""
+    # 风险管理模块尚未实现，暂时重定向到admin首页
+    # TODO: 当风险管理功能实现后，修改此重定向
+    return redirect('admin:index')
+
 # 导入自定义admin配置（这会禁用"最近动作"模块）
 from backend.config import admin as custom_admin  # noqa: F401
 
@@ -53,6 +66,10 @@ urlpatterns = [
     path('admin/registrations/<int:pk>/', registration_views.registration_detail, name='admin_registration_detail'),
     # 回款管理重定向（从admin路径重定向到settlement路径）
     path('admin/payment_management/', payment_management_redirect, name='admin_payment_management'),
+    # 报表管理重定向（从admin路径重定向到financial路径）
+    path('admin/report_management/', report_management_redirect, name='admin_report_management'),
+    # 风险管理重定向（风险管理模块尚未实现，暂时重定向到admin首页）
+    path('admin/risk_management/', risk_management_redirect, name='admin_risk_management'),
     path('admin/', admin_site.urls),
     path('api/', api_root, name='api-root'),
     path('api/docs/', api_docs, name='api-docs'),
@@ -107,12 +124,13 @@ urlpatterns = [
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 if settings.DEBUG:
     # 开发环境：Django 开发服务器提供静态文件
-    # 使用 STATICFILES_DIRS 而不是 STATIC_ROOT，因为开发模式下文件在 STATICFILES_DIRS 中
-    if settings.STATICFILES_DIRS and len(settings.STATICFILES_DIRS) > 0:
-        urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
-    else:
-        # 如果没有 STATICFILES_DIRS，回退到 STATIC_ROOT
+    # 优先使用 STATIC_ROOT，因为它包含了所有收集的静态文件（包括 Django admin）
+    # 如果 STATIC_ROOT 不存在，则回退到 STATICFILES_DIRS
+    import os
+    if settings.STATIC_ROOT and os.path.exists(settings.STATIC_ROOT):
         urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    elif settings.STATICFILES_DIRS and len(settings.STATICFILES_DIRS) > 0:
+        urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
     
     # P2: 已移除旧版 Vue SPA 静态资源服务
     # 不再提供 frontend/dist 下的 js/css/img 等静态资源

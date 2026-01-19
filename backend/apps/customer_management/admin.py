@@ -190,7 +190,7 @@ class SchoolAdmin(BaseModelAdmin):
 }
 
 #changelist {
-    display: block !important;
+    display: flex !important; /* 使用 flex 布局以支持右侧过滤器 */
     visibility: visible !important;
 }
 
@@ -212,9 +212,14 @@ class SchoolAdmin(BaseModelAdmin):
 
 /* 确保body内容不被隐藏 */
 body:not(.login) #content-main,
-body:not(.login) .results,
-body:not(.login) #changelist {
+body:not(.login) .results {
     display: block !important;
+    visibility: visible !important;
+}
+
+/* changelist 使用 flex 布局 */
+body:not(.login) #changelist {
+    display: flex !important;
     visibility: visible !important;
 }
 </style>

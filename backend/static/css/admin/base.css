@@ -100,6 +100,43 @@ form.form-card:first-child,
     margin-top: 0 !important;
 }
 
+/* ========== 强制隐藏业务导航（兜底保护） ========== */
+/* 只要在 admin 页面，就强制隐藏业务系统的侧边栏/顶部栏 */
+/* 这是兜底方案，即使 JS 注入也能隐藏 */
+html[data-in-admin="1"] .vh-sb,
+html[data-in-admin="1"] .workspace-nav,
+html[data-in-admin="1"] .workspace-sidebar,
+html[data-in-admin="1"] .sidebar-nav,
+html[data-in-admin="1"] .module-sidebar,
+html[data-in-admin="1"] .topbar,
+html[data-in-admin="1"] .top-nav,
+html[data-in-admin="1"] .full-top-nav,
+html[data-in-admin="1"] [class*="sidebar"],
+html[data-in-admin="1"] [class*="topbar"],
+html[data-in-admin="1"] [class*="workspace-nav"],
+html[data-in-admin="1"] [id*="sidebar"],
+html[data-in-admin="1"] [id*="topbar"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+}
+
+/* 如果 body 有 admin 相关 class，也隐藏业务导航 */
+body.change-list .vh-sb,
+body.change-list .workspace-nav,
+body.change-list .workspace-sidebar,
+body.change-list .sidebar-nav,
+body.change-list .module-sidebar,
+body.change-list .topbar,
+body.change-list .top-nav,
+body.change-list .full-top-nav {
+    display: none !important;
+}
+/* ========== 强制隐藏业务导航结束 ========== */
+
 /* 全局强制样式 - 确保所有卡片都是直角 */
 .card,
 .info-card,
@@ -140,5 +177,31 @@ form.form-card:first-child,
 
 
 
-/* ========== 过滤器使用Django默认flex布局，保持在右侧 ========== */
-/* 已移除position: fixed，使用Django默认的flex布局 */
+/* ========== 恢复 Django 默认样式 ========== */
+/* 确保 changelist 使用 Django 默认的 flex 布局 - 使用最高优先级选择器 */
+#content #changelist.module,
+#content #changelist.module.filtered,
+#content #changelist,
+#changelist.module,
+#changelist.module.filtered,
+#changelist {
+    display: flex !important; /* Django 默认使用 flex 布局 */
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    flex-direction: row !important;
+    overflow: visible !important; /* 确保不会被 components.css 的 overflow: hidden 覆盖 */
+}
+
+/* 确保表单容器占据左侧空间 */
+#content #changelist .changelist-form-container,
+#changelist .changelist-form-container {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+}
+
+/* 确保过滤器显示在右侧（Django 默认行为） */
+#content #changelist-filter,
+#changelist-filter {
+    flex: 0 0 240px !important;
+    order: 1 !important;
+}
