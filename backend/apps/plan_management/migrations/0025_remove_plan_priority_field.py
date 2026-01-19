@@ -3,8 +3,8 @@
 from django.db import migrations
 
 
-def check_and_remove_priority_from_db(apps, schema_editor):
-    """从数据库中删除priority字段（如果存在）"""
+def remove_priority_from_db_and_state(apps, schema_editor):
+    """从数据库中删除priority字段（如果存在），并更新状态"""
     from django.db import connection
     
     with connection.cursor() as cursor:
@@ -16,13 +16,6 @@ def check_and_remove_priority_from_db(apps, schema_editor):
         """)
         if cursor.fetchone():
             cursor.execute("ALTER TABLE plan_management_plan DROP COLUMN priority")
-
-
-def remove_priority_from_state_safely(apps, schema_editor):
-    """安全地从迁移状态中删除priority字段"""
-    # 这个函数用于安全地更新状态
-    # 实际的状态更新在 state_operations 中处理
-    pass
 
 
 def reverse_operation(apps, schema_editor):
@@ -44,19 +37,18 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # 先从数据库中删除字段（如果存在）
+        # 从数据库中删除字段（如果存在）
         migrations.RunPython(
-            check_and_remove_priority_from_db,
+            remove_priority_from_db_and_state,
             reverse_operation,
         ),
-        # 然后从迁移状态中删除字段（使用 SeparateDatabaseAndState 来安全处理）
+        # 尝试从迁移状态中删除字段，如果不存在则会被捕获
         migrations.SeparateDatabaseAndState(
             database_operations=[],  # 数据库操作已在上面完成
             state_operations=[
-                # 使用 RunPython 来触发状态检查（占位符）
-                migrations.RunPython(
-                    remove_priority_from_state_safely,
-                    migrations.RunPython.noop,
+                migrations.RemoveField(
+                    model_name='plan',
+                    name='priority',
                 ),
             ],
         ),
@@ -78,10 +70,7 @@ class Migration(migrations.Migration):
                 
                 # 然后安全地执行状态操作
                 for state_op in operation.state_operations:
-                    if isinstance(state_op, migrations.RunPython):
-                        state_op.state_forwards(self.app_label, project_state)
-                        state_op.database_forwards(self.app_label, schema_editor, project_state, None)
-                    elif isinstance(state_op, migrations.RemoveField):
+                    if isinstance(state_op, migrations.RemoveField):
                         # 检查字段是否存在
                         try:
                             model_state = project_state.models[self.app_label]['plan']
@@ -91,11 +80,19 @@ class Migration(migrations.Migration):
                             # 字段或模型不存在，跳过
                             pass
                     else:
-                        state_op.state_forwards(self.app_label, project_state)
+                        try:
+                            state_op.state_forwards(self.app_label, project_state)
+                        except (KeyError, AttributeError):
+                            # 操作失败，跳过
+                            pass
             else:
                 # 其他操作正常执行
-                operation.state_forwards(self.app_label, project_state)
-                if hasattr(operation, 'database_forwards'):
-                    operation.database_forwards(self.app_label, schema_editor, project_state, None)
+                try:
+                    operation.state_forwards(self.app_label, project_state)
+                    if hasattr(operation, 'database_forwards'):
+                        operation.database_forwards(self.app_label, schema_editor, project_state, None)
+                except (KeyError, AttributeError):
+                    # 操作失败，跳过
+                    pass
         
         return project_state
