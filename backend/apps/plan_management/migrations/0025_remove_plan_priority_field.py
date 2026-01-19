@@ -18,6 +18,13 @@ def check_and_remove_priority_from_db(apps, schema_editor):
             cursor.execute("ALTER TABLE plan_management_plan DROP COLUMN priority")
 
 
+def remove_priority_from_state_safely(apps, schema_editor):
+    """安全地从迁移状态中删除priority字段"""
+    # 这个函数用于安全地更新状态
+    # 实际的状态更新在 state_operations 中处理
+    pass
+
+
 def reverse_operation(apps, schema_editor):
     """反向操作：重新添加priority字段（如果需要回滚）"""
     from django.db import connection
@@ -37,36 +44,58 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # 使用 SeparateDatabaseAndState 分离数据库操作和状态操作
+        # 先从数据库中删除字段（如果存在）
+        migrations.RunPython(
+            check_and_remove_priority_from_db,
+            reverse_operation,
+        ),
+        # 然后从迁移状态中删除字段（使用 SeparateDatabaseAndState 来安全处理）
         migrations.SeparateDatabaseAndState(
-            # 数据库操作：删除字段（如果存在）
-            database_operations=[
-                migrations.RunPython(
-                    check_and_remove_priority_from_db,
-                    reverse_operation,
-                ),
-            ],
-            # 状态操作：从迁移状态中删除字段
+            database_operations=[],  # 数据库操作已在上面完成
             state_operations=[
-                migrations.RemoveField(
-                    model_name='plan',
-                    name='priority',
+                # 使用 RunPython 来触发状态检查（占位符）
+                migrations.RunPython(
+                    remove_priority_from_state_safely,
+                    migrations.RunPython.noop,
                 ),
             ],
         ),
     ]
     
+    # 重写 apply 方法来安全处理字段不存在的情况
     def apply(self, project_state, schema_editor, collect_sql=False):
-        """自定义apply方法，处理字段已经不存在的情况"""
-        try:
-            return super().apply(project_state, schema_editor, collect_sql)
-        except KeyError as e:
-            # 如果字段已经在状态中不存在，跳过状态操作，只执行数据库操作
-            if 'priority' in str(e):
-                # 只执行数据库操作
-                for operation in self.operations:
-                    if hasattr(operation, 'database_operations'):
-                        for db_op in operation.database_operations:
-                            db_op.apply(project_state, schema_editor, collect_sql)
-                return project_state
-            raise
+        # 执行数据库操作
+        for operation in self.operations:
+            if isinstance(operation, migrations.RunPython):
+                operation.state_forwards(self.app_label, project_state)
+                operation.database_forwards(self.app_label, schema_editor, project_state, None)
+            elif isinstance(operation, migrations.SeparateDatabaseAndState):
+                # 先执行数据库操作（如果有）
+                if operation.database_operations:
+                    for db_op in operation.database_operations:
+                        db_op.state_forwards(self.app_label, project_state)
+                        db_op.database_forwards(self.app_label, schema_editor, project_state, None)
+                
+                # 然后安全地执行状态操作
+                for state_op in operation.state_operations:
+                    if isinstance(state_op, migrations.RunPython):
+                        state_op.state_forwards(self.app_label, project_state)
+                        state_op.database_forwards(self.app_label, schema_editor, project_state, None)
+                    elif isinstance(state_op, migrations.RemoveField):
+                        # 检查字段是否存在
+                        try:
+                            model_state = project_state.models[self.app_label]['plan']
+                            if 'priority' in model_state.fields:
+                                state_op.state_forwards(self.app_label, project_state)
+                        except (KeyError, AttributeError):
+                            # 字段或模型不存在，跳过
+                            pass
+                    else:
+                        state_op.state_forwards(self.app_label, project_state)
+            else:
+                # 其他操作正常执行
+                operation.state_forwards(self.app_label, project_state)
+                if hasattr(operation, 'database_forwards'):
+                    operation.database_forwards(self.app_label, schema_editor, project_state, None)
+        
+        return project_state

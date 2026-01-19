@@ -30,6 +30,16 @@ def reverse_operation(apps, schema_editor):
         """)
 
 
+class SafeRemoveField(migrations.operations.fields.RemoveField):
+    """安全删除字段：如果字段不存在则跳过"""
+    def state_forwards(self, app_label, state):
+        try:
+            super().state_forwards(app_label, state)
+        except KeyError:
+            # 字段在状态中不存在，忽略错误
+            pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -37,36 +47,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # 使用 SeparateDatabaseAndState 分离数据库操作和状态操作
-        migrations.SeparateDatabaseAndState(
-            # 数据库操作：删除字段（如果存在）
-            database_operations=[
-                migrations.RunPython(
-                    check_and_remove_budget_from_db,
-                    reverse_operation,
-                ),
-            ],
-            # 状态操作：从迁移状态中删除字段
-            state_operations=[
-                migrations.RemoveField(
-                    model_name='plan',
-                    name='budget',
-                ),
-            ],
+        # 先从数据库中删除字段（如果存在）
+        migrations.RunPython(
+            check_and_remove_budget_from_db,
+            reverse_operation,
+        ),
+        # 然后从迁移状态中删除字段（如果存在）
+        SafeRemoveField(
+            model_name='plan',
+            name='budget',
         ),
     ]
-    
-    def apply(self, project_state, schema_editor, collect_sql=False):
-        """自定义apply方法，处理字段已经不存在的情况"""
-        try:
-            return super().apply(project_state, schema_editor, collect_sql)
-        except KeyError as e:
-            # 如果字段已经在状态中不存在，跳过状态操作，只执行数据库操作
-            if 'budget' in str(e):
-                # 只执行数据库操作
-                for operation in self.operations:
-                    if hasattr(operation, 'database_operations'):
-                        for db_op in operation.database_operations:
-                            db_op.apply(project_state, schema_editor, collect_sql)
-                return project_state
-            raise
