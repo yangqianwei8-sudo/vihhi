@@ -28,6 +28,35 @@ def _permission_granted(required_code, user_permissions: set) -> bool:
     if isinstance(required_code, str) and required_code.endswith('.view_assigned'):
         return required_code.replace('view_assigned', 'view_all') in user_permissions
     
+    # 权限继承机制：manage 权限自动包含子权限
+    # plan.manage 自动包含 plan.create、plan.edit、plan.delete
+    if required_code == 'plan_management.plan.create' or \
+       required_code == 'plan_management.plan.edit' or \
+       required_code == 'plan_management.plan.delete':
+        if 'plan_management.plan.manage' in user_permissions:
+            return True
+    
+    # goal.manage 自动包含 goal.create、goal.edit、goal.delete、goal.decompose
+    if required_code == 'plan_management.goal.create' or \
+       required_code == 'plan_management.goal.edit' or \
+       required_code == 'plan_management.goal.delete' or \
+       required_code == 'plan_management.goal.decompose':
+        if 'plan_management.goal.manage' in user_permissions or \
+           'plan_management.manage_goal' in user_permissions:
+            return True
+    
+    # 审批权限兼容性：approve_plan 和 approve 等同于 plan.approve_decision
+    if required_code == 'plan_management.plan.approve_decision':
+        if 'plan_management.plan.approve_decision' in user_permissions or \
+           'plan_management.approve_plan' in user_permissions or \
+           'plan_management.approve' in user_permissions:
+            return True
+    if required_code == 'plan_management.approve_plan' or required_code == 'plan_management.approve':
+        if 'plan_management.plan.approve_decision' in user_permissions or \
+           'plan_management.approve_plan' in user_permissions or \
+           'plan_management.approve' in user_permissions:
+            return True
+    
     # 特殊处理：计划管理模块的权限检查
     # 如果要求 plan_management.view，但用户有审批权限或业务权限，也允许显示菜单
     if required_code == 'plan_management.view':
@@ -36,6 +65,7 @@ def _permission_granted(required_code, user_permissions: set) -> bool:
             'plan_management.view',  # 标准权限（菜单系统使用）
             'plan_management.approve',
             'plan_management.approve_plan',
+            'plan_management.plan.approve_decision',
             'plan_management.plan.view',  # 业务权限（查看计划）
             'plan_management.goal.view',  # 业务权限（查看目标）
         ]

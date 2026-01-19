@@ -41,10 +41,13 @@
 /* ===== 右侧主内容区 ===== */
 .two-col-main {
   flex: 1 1 auto;
-  margin-left: var(--sidebar-width, 224px);
+  margin-left: calc(var(--sidebar-width, 224px) + 8px) !important;
   min-height: calc(100vh - 56px);
   background: #F5F5F5;
   overflow-x: hidden;
+  overflow-y: visible !important; /* 不产生自己的滚动条，让body处理滚动 */
+  height: auto !important;
+  max-height: none !important;
   margin-top: 0;
   padding-top: 0;
 }
@@ -52,6 +55,10 @@
 .two-col-content {
   padding: 8px 8px 24px 8px;
   min-height: 100%;
+  overflow: visible !important; /* 不产生自己的滚动条，让body处理滚动 */
+  overflow-x: hidden !important;
+  height: auto !important;
+  max-height: none !important;
 }
 
 .two-col-content__placeholder {
@@ -106,7 +113,7 @@
   }
   
   .two-col-main {
-    margin-left: 0;
+    margin-left: 0 !important;
     width: 100%;
   }
   
@@ -153,7 +160,7 @@
 
 /* 标题区整体：距顶部栏 16px，并加下划线 */
 .two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 {
-  margin-top: 16px;
+  margin-top: 32px;
   padding-bottom: 12px;
   border-bottom: 1px solid #000000;
 }
@@ -176,4 +183,32 @@
 /* 副标题紧跟主标题，移除底部边距 */
 .two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > :not(h1) {
   margin-bottom: 0;
+}
+
+/* =========================
+   修复双滚动条问题
+   确保所有使用两栏布局的页面都只有一个滚动条
+   ========================= */
+
+/* 确保其他可能产生滚动条的容器也不产生滚动条 */
+.module-content-wrapper,
+.content_inner,
+.two-col-content form,
+.two-col-main form {
+  overflow: visible !important;
+  overflow-x: hidden !important;
+}
+
+/* 确保html和body不会同时产生滚动条 */
+/* 只让body产生滚动条，而不是内部容器 */
+html {
+  overflow-x: hidden !important;
+  overflow-y: hidden !important; /* html不产生滚动条，只让body产生 */
+  height: 100%;
+}
+
+body {
+  overflow-x: hidden !important;
+  overflow-y: auto !important; /* 只让body有滚动条 */
+  height: 100%;
 }

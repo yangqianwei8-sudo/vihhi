@@ -1,48 +1,70 @@
-{% extends "plan_management/_base.html" %}
+{% extends "shared/module_base.html" %}
 {% load static %}
 
+{% block module_title %}目标分解 - {{ goal.name }}{% endblock %}
 {% block pm_title %}目标分解 - {{ goal.name }}{% endblock %}
 {% block pm_subtitle %}<span class="pm-subtitle">将战略目标分解为部门、团队、个人目标</span>{% endblock %}
 
 {% block pm_actions %}
 <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="list-btn">
-  返回详情
+  <i class="bi bi-arrow-left"></i> 返回详情
 </a>
 {% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+{% block module_styles %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components/list_page_base_v2.css' %}">
+{% endblock module_styles %}
+
+{% block module_extra_css %}
 <style>
-  .decompose-container {
+  /* 列板布局：左侧目标树，右侧表单和统计 */
+  .decompose-column-layout {
     display: grid;
-    grid-template-columns: 1fr 360px;
-    gap: 16px;
+    grid-template-columns: 1fr 400px;
+    gap: 24px;
+    margin-top: 24px;
   }
 
-  .decompose-tree-card {
+  @media (max-width: 1200px) {
+    .decompose-column-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* 左侧：目标树区域 */
+  .decompose-tree-column {
+    min-height: 400px;
+  }
+
+  .goal-tree-card {
     background: #FFFFFF;
     border: 1px solid #E0E0E0;
-    border-radius: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
 
-  .decompose-tree-header {
-    padding: 16px;
+  .goal-tree-header {
+    padding: 16px 20px;
     border-bottom: 1px solid #E0E0E0;
-    background: #F5F5F5;
+    background: #F8F9FA;
   }
 
-  .decompose-tree-title {
-    font-size: 14px;
+  .goal-tree-title {
+    font-size: 1rem;
     font-weight: 600;
     color: #1A1A1A;
     margin: 0;
   }
 
-  .decompose-tree-body {
-    padding: 16px;
+  .goal-tree-body {
+    padding: 20px;
+    max-height: 700px;
+    overflow-y: auto;
   }
 
+  /* 目标树结构 */
   .goal-tree {
     margin: 0;
     padding: 0;
@@ -50,23 +72,20 @@
   }
 
   .goal-tree-item {
+    margin: 0;
+    padding: 0;
     list-style: none;
-    margin: 12px 0;
-    padding-left: 40px;
     position: relative;
-  }
-
-  .goal-tree-item[data-level="0"] {
-    padding-left: 0;
+    margin-bottom: 16px;
   }
 
   .goal-tree-item::before {
     content: '';
     position: absolute;
-    left: 20px;
-    top: 24px;
-    width: 20px;
-    height: 2px;
+    left: -24px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
     background: #E0E0E0;
   }
 
@@ -74,13 +93,17 @@
     display: none;
   }
 
+  .goal-tree-item:last-child::before {
+    height: 20px;
+  }
+
   .goal-tree-item::after {
     content: '';
     position: absolute;
-    left: 20px;
-    top: 0;
-    width: 2px;
-    height: 24px;
+    left: -24px;
+    top: 20px;
+    width: 20px;
+    height: 2px;
     background: #E0E0E0;
   }
 
@@ -88,42 +111,34 @@
     display: none;
   }
 
-  .goal-tree-item:first-child::after {
-    height: 24px;
-  }
-
-  .goal-tree-item:last-child::after {
-    height: 24px;
-  }
-
+  /* 目标卡片 */
   .goal-card {
     background: #FFFFFF;
     border: 1px solid #E0E0E0;
-    border-radius: 0;
+    border-radius: 8px;
     padding: 16px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    transition: box-shadow 0.2s ease;
+    margin-left: 24px;
+    margin-bottom: 16px;
+    border-left: 4px solid #3498db;
+    transition: all 0.3s ease;
   }
 
   .goal-card:hover {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateX(4px);
   }
 
-  .goal-card.level-0 {
-    border-left: 4px solid #1A1A1A;
-    background: #FAFAFA;
+  .goal-card[data-level="0"] {
+    border-left-color: #9b59b6;
+    background: #F9F7FC;
   }
 
-  .goal-card.level-1 {
-    border-left: 4px solid #666666;
+  .goal-card[data-level="1"] {
+    border-left-color: #3498db;
   }
 
-  .goal-card.level-2 {
-    border-left: 4px solid #999999;
-  }
-
-  .goal-card.level-3 {
-    border-left: 4px solid #CCCCCC;
+  .goal-card[data-level="2"] {
+    border-left-color: #2ecc71;
   }
 
   .goal-card-header {
@@ -134,7 +149,7 @@
   }
 
   .goal-card-title {
-    font-size: 14px;
+    font-size: 1rem;
     font-weight: 600;
     color: #1A1A1A;
     margin: 0 8px 0 0;
@@ -146,265 +161,340 @@
   }
 
   .goal-card-title a:hover {
-    color: #666666;
+    color: #3498db;
   }
 
   .goal-card-number {
-    font-size: 12px;
+    font-size: 0.85rem;
     color: #999999;
     font-family: monospace;
+    background: #F5F5F5;
+    padding: 2px 8px;
+    border-radius: 4px;
   }
 
   .goal-card-badges {
     display: flex;
     gap: 6px;
-    margin-bottom: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
   }
 
-  .goal-card-badge {
+  .goal-badge {
     padding: 3px 8px;
-    border-radius: 0;
-    font-size: 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
     font-weight: 500;
-    background: #F5F5F5;
-    color: #666666;
-    border: 1px solid #E0E0E0;
+  }
+
+  .badge-type {
+    background: #E3F2FD;
+    color: #1976D2;
+  }
+
+  .badge-period {
+    background: #F3E5F5;
+    color: #7B1FA2;
+  }
+
+  .badge-status {
+    background: #E8F5E9;
+    color: #388E3C;
+  }
+
+  .badge-status.draft {
+    background: #FFF3E0;
+    color: #F57C00;
+  }
+
+  .badge-status.in_progress {
+    background: #E3F2FD;
+    color: #1976D2;
   }
 
   .goal-card-info {
-    font-size: 12px;
+    font-size: 0.9rem;
     color: #666666;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
     line-height: 1.6;
   }
 
   .goal-card-info strong {
-    color: var(--vh-primary); /* 主题深蓝色 */
+    color: #1A1A1A;
     font-weight: 600;
   }
 
   .goal-card-actions {
     display: flex;
-    gap: 6px;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
   }
 
-  .goal-card-action {
-    padding: 4px 8px;
-    font-size: 12px;
+  .goal-action-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
     border: 1px solid #E0E0E0;
     background: #FFFFFF;
     color: #666666;
     text-decoration: none;
-    border-radius: 0;
+    border-radius: 6px;
     transition: all 0.2s ease;
   }
 
-  .goal-card-action:hover {
+  .goal-action-btn:hover {
     background: #F5F5F5;
     border-color: #CCCCCC;
     color: #1A1A1A;
   }
 
-  .decompose-form-card {
-    background: #FFFFFF;
-    border: 1px solid #E0E0E0;
-    border-radius: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    margin-bottom: 16px;
-  }
-
-  .decompose-form-header {
-    padding: 16px;
-    border-bottom: 1px solid #E0E0E0;
-    background: #F5F5F5;
-  }
-
-  .decompose-form-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1A1A1A;
-    margin: 0;
-  }
-
-  .decompose-form-body {
-    padding: 16px;
-  }
-
-  .decompose-form-group {
-    margin-bottom: 16px;
-  }
-
-  .decompose-form-label {
-    font-size: 12px;
-    color: #666666;
-    margin-bottom: 6px;
-    display: block;
-  }
-
-  .decompose-form-label.required::after {
-    content: ' *';
-    color: #999999;
-  }
-
-  .decompose-form-input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #E0E0E0;
-    border-radius: 0;
-    font-size: 14px;
-    color: var(--vh-primary); /* 主题深蓝色 */
-    background: #FFFFFF;
-  }
-
-  .decompose-form-input:focus {
-    outline: none;
-    border-color: #999999;
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
-  }
-
-  .decompose-form-hint {
-    font-size: 12px;
-    color: #999999;
-    margin-top: 4px;
-  }
-
-  .decompose-form-submit {
-    width: 100%;
-    padding: 10px;
-    background: #1A1A1A;
+  .goal-action-btn.btn-primary {
+    background: #3498db;
     color: #FFFFFF;
-    border: 1px solid #1A1A1A;
-    border-radius: 0;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    border-color: #3498db;
   }
 
-  .decompose-form-submit:hover {
-    background: #333333;
-    border-color: var(--vh-primary); /* 主题深蓝色 */
+  .goal-action-btn.btn-primary:hover {
+    background: #2980b9;
+    border-color: #2980b9;
   }
 
-  .decompose-stats-card {
+  /* 右侧：表单和统计区域 */
+  .decompose-sidebar-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .sidebar-card {
     background: #FFFFFF;
     border: 1px solid #E0E0E0;
-    border-radius: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
 
-  .decompose-stats-header {
-    padding: 16px;
+  .sidebar-card-header {
+    padding: 16px 20px;
     border-bottom: 1px solid #E0E0E0;
-    background: #F5F5F5;
+    background: #F8F9FA;
   }
 
-  .decompose-stats-title {
-    font-size: 14px;
+  .sidebar-card-title {
+    font-size: 0.95rem;
     font-weight: 600;
     color: #1A1A1A;
     margin: 0;
   }
 
-  .decompose-stats-body {
-    padding: 16px;
+  .sidebar-card-body {
+    padding: 20px;
   }
 
-  .decompose-stats-item {
-    font-size: 12px;
-    color: #666666;
+  /* 表单样式 */
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1A1A1A;
     margin-bottom: 8px;
   }
 
-  .decompose-stats-item strong {
-    color: var(--vh-primary); /* 主题深蓝色 */
-    font-weight: 600;
+  .form-label.required::after {
+    content: ' *';
+    color: #e74c3c;
   }
 
-  .decompose-empty {
+  .form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #E0E0E0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #1A1A1A;
+    background: #FFFFFF;
+    transition: border-color 0.2s ease;
+  }
+
+  .form-control:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  }
+
+  .form-hint {
+    font-size: 0.8rem;
+    color: #999999;
+    margin-top: 6px;
+  }
+
+  .form-submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: #2ecc71;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .form-submit-btn:hover {
+    background: #27ae60;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
+  }
+
+  /* 空状态 */
+  .empty-state {
     text-align: center;
     padding: 60px 20px;
     color: #999999;
   }
 
-  .decompose-empty-icon {
-    font-size: 48px;
+  .empty-state-icon {
+    font-size: 3rem;
     opacity: 0.3;
     margin-bottom: 16px;
-    display: block;
   }
 
-  .decompose-empty-text {
-    font-size: 14px;
+  .empty-state-text {
+    font-size: 1rem;
     margin: 0;
   }
 
-  @media (max-width: 1200px) {
-    .decompose-container {
-      grid-template-columns: 1fr;
-    }
+  /* 统计列表 */
+  .stats-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .stats-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #F0F0F0;
+  }
+
+  .stats-item:last-child {
+    border-bottom: none;
+  }
+
+  .stats-item-label {
+    font-size: 0.9rem;
+    color: #666666;
+  }
+
+  .stats-item-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1A1A1A;
   }
 </style>
-{% endblock %}
+{% endblock module_extra_css %}
 
 {% block pm_content %}
-<div class="decompose-container">
-  <div>
-    <div class="decompose-tree-card">
-      <div class="decompose-tree-header">
-        <h3 class="decompose-tree-title">目标分解树</h3>
+  <!-- 统计卡片区域 -->
+  {% block list_stats_section %}
+  <div class="list-stats-section">
+    <div class="row g-3">
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">总目标数</div>
+          <div class="list-stat-value">{{ goal.child_goals.count|add:1 }}</div>
+        </div>
       </div>
-      <div class="decompose-tree-body">
-        {% if goal_tree %}
-        <ul class="goal-tree">
-          {% for goal_item, level in goal_tree %}
-          <li class="goal-tree-item" data-level="{{ level }}">
-            <div class="goal-card level-{{ level }}">
-              <div class="goal-card-header">
-                <div style="flex: 1;">
-                  <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                    <h6 class="goal-card-title">
-                      <a href="{% url 'plan_pages:strategic_goal_detail' goal_item.id %}">
-                        {{ goal_item.name }}
-                      </a>
-                    </h6>
-                    <code class="goal-card-number">{{ goal_item.goal_number }}</code>
-                  </div>
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">总层级数</div>
+          <div class="list-stat-value">{{ goal_tree|length }}</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">子目标数</div>
+          <div class="list-stat-value">{{ goal.child_goals.count }}</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">完成进度</div>
+          <div class="list-stat-value">{{ goal.completion_rate|floatformat:0 }}%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endblock list_stats_section %}
 
-                  <div class="goal-card-badges">
-                    <span class="goal-card-badge">{{ goal_item.get_goal_type_display }}</span>
-                    <span class="goal-card-badge">{{ goal_item.get_goal_period_display }}</span>
-                    <span class="goal-card-badge">{{ goal_item.get_status_display }}</span>
-                  </div>
+  <!-- 列板布局：左侧目标树，右侧表单和统计 -->
+  <div class="decompose-column-layout">
+    <!-- 左侧：目标树 -->
+    <div class="decompose-tree-column">
+      <div class="goal-tree-card">
+        <div class="goal-tree-header">
+          <h3 class="goal-tree-title">
+            <i class="bi bi-diagram-3"></i> 目标分解树
+          </h3>
+        </div>
+        <div class="goal-tree-body">
+          {% if goal_tree %}
+          <ul class="goal-tree">
+            {% for goal_item, level in goal_tree %}
+            <li class="goal-tree-item" data-level="{{ level }}">
+              <div class="goal-card" data-level="{{ level }}">
+                <div class="goal-card-header">
+                  <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                      <h4 class="goal-card-title">
+                        <a href="{% url 'plan_pages:strategic_goal_detail' goal_item.id %}">
+                          {{ goal_item.name }}
+                        </a>
+                      </h4>
+                      <code class="goal-card-number">{{ goal_item.goal_number }}</code>
+                    </div>
 
-                  <div class="goal-card-info">
-                    <span style="margin-right: 16px;">
-                      <strong>指标名称：</strong>{{ goal_item.indicator_name }}{% if goal_item.indicator_unit %} ({{ goal_item.indicator_unit }}){% endif %}
-                    </span>
-                    <span style="margin-right: 16px;">
+                    <div class="goal-card-badges">
+                      <span class="goal-badge badge-type">{{ goal_item.get_goal_type_display }}</span>
+                      <span class="goal-badge badge-period">{{ goal_item.get_goal_period_display }}</span>
+                      <span class="goal-badge badge-status {{ goal_item.status }}">{{ goal_item.get_status_display }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="goal-card-info">
+                  <div style="margin-bottom: 8px;">
+                    <strong>指标：</strong>{{ goal_item.indicator_name }}{% if goal_item.indicator_unit %} ({{ goal_item.indicator_unit }}){% endif %}
+                    <span style="margin-left: 16px;">
                       <strong>目标值：</strong>{{ goal_item.target_value }}{% if goal_item.indicator_unit %} {{ goal_item.indicator_unit }}{% endif %}
                     </span>
                     {% if goal_item.weight > 0 %}
-                    <span>
+                    <span style="margin-left: 16px;">
                       <strong>权重：</strong>{{ goal_item.weight }}%
                     </span>
                     {% endif %}
                   </div>
 
-                  <div class="goal-card-info">
+                  <div style="margin-bottom: 8px;">
                     {% if goal_item.start_date %}
-                    <span style="margin-right: 16px;">
-                      <strong>开始日期：</strong>{{ goal_item.start_date|date:"Y-m-d" }}
+                    <span>
+                      <strong>开始：</strong>{{ goal_item.start_date|date:"Y-m-d" }}
                     </span>
                     {% endif %}
                     {% if goal_item.end_date %}
-                    <span style="margin-right: 16px;">
-                      <strong>结束日期：</strong>{{ goal_item.end_date|date:"Y-m-d" }}
+                    <span style="margin-left: 16px;">
+                      <strong>结束：</strong>{{ goal_item.end_date|date:"Y-m-d" }}
                     </span>
                     {% endif %}
                   </div>
 
-                  <div class="goal-card-info">
+                  <div>
                     <span>
                       <strong>负责人：</strong>{{ goal_item.responsible_person.get_full_name|default:goal_item.responsible_person.username }}
                     </span>
@@ -417,103 +507,142 @@
                 </div>
 
                 <div class="goal-card-actions">
-                  <a href="{% url 'plan_pages:strategic_goal_detail' goal_item.id %}" class="goal-card-action" title="查看详情">查看</a>
+                  <a href="{% url 'plan_pages:strategic_goal_detail' goal_item.id %}" class="goal-action-btn btn-primary">
+                    <i class="bi bi-eye"></i> 查看
+                  </a>
                   {% if goal_item.status in 'draft,published' %}
-                  <a href="{% url 'plan_pages:strategic_goal_edit' goal_item.id %}" class="goal-card-action" title="编辑">编辑</a>
+                  <a href="{% url 'plan_pages:strategic_goal_edit' goal_item.id %}" class="goal-action-btn">
+                    <i class="bi bi-pencil"></i> 编辑
+                  </a>
                   {% endif %}
+                  <a href="{% url 'plan_pages:strategic_goal_decompose' goal_item.id %}" class="goal-action-btn">
+                    <i class="bi bi-diagram-3"></i> 继续分解
+                  </a>
                 </div>
               </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="empty-state">
+            <div class="empty-state-icon">
+              <i class="bi bi-diagram-3"></i>
             </div>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <div class="decompose-empty">
-          <span class="decompose-empty-icon">▢</span>
-          <p class="decompose-empty-text">暂无下级目标，请在右侧创建</p>
+            <p class="empty-state-text">暂无下级目标，请在右侧创建</p>
+          </div>
+          {% endif %}
         </div>
-        {% endif %}
+      </div>
+    </div>
+
+    <!-- 右侧：表单和统计 -->
+    <div class="decompose-sidebar-column">
+      <!-- 创建下级目标表单 -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">
+          <h4 class="sidebar-card-title">
+            <i class="bi bi-plus-circle"></i> 创建下级目标
+          </h4>
+        </div>
+        <div class="sidebar-card-body">
+          <form id="createChildGoalForm">
+            {% csrf_token %}
+            <input type="hidden" name="parent_goal_id" value="{{ goal.id }}">
+
+            <div class="form-group">
+              <label class="form-label required">
+                <i class="bi bi-diagram-3"></i> 分解方式
+              </label>
+              <select name="goal_type" class="form-control" id="goalTypeSelect" required>
+                <option value="">请选择分解方式</option>
+                <option value="department">按部门分解</option>
+                <option value="personal">按个人分解</option>
+              </select>
+              <div class="form-hint">选择分解方式后，将自动填充负责人信息</div>
+            </div>
+
+            <div class="form-group" id="departmentSelectDiv" style="display: none;">
+              <label class="form-label required">
+                <i class="bi bi-building"></i> 选择部门
+              </label>
+              <select name="department_id" class="form-control" id="departmentSelect">
+                <option value="">请选择部门</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group" id="userSelectDiv" style="display: none;">
+              <label class="form-label required">
+                <i class="bi bi-person"></i> 选择负责人
+              </label>
+              <select name="responsible_id" class="form-control" id="userSelect" required>
+                <option value="">请选择负责人</option>
+                {% for user in users %}
+                <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">
+                <i class="bi bi-tag"></i> 目标名称
+              </label>
+              <input type="text" name="name" class="form-control" required placeholder="请输入目标名称">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">
+                <i class="bi bi-bullseye"></i> 目标值
+              </label>
+              <input type="number" name="target_value" class="form-control" step="0.01" required placeholder="0.00">
+              <div class="form-hint">继承指标：{{ goal.indicator_name }} ({{ goal.indicator_unit }})</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-file-text"></i> 目标描述
+              </label>
+              <textarea name="description" class="form-control" rows="3" placeholder="请输入目标描述（可选）"></textarea>
+            </div>
+
+            <button type="submit" class="form-submit-btn">
+              <i class="bi bi-check-circle"></i> 创建下级目标
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- 结构统计 -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">
+          <h4 class="sidebar-card-title">
+            <i class="bi bi-bar-chart"></i> 结构统计
+          </h4>
+        </div>
+        <div class="sidebar-card-body">
+          <ul class="stats-list">
+            <li class="stats-item">
+              <span class="stats-item-label">下级目标</span>
+              <span class="stats-item-value">{{ goal.child_goals.count }} 个</span>
+            </li>
+            <li class="stats-item">
+              <span class="stats-item-label">总层级</span>
+              <span class="stats-item-value">{{ goal_tree|length }} 层</span>
+            </li>
+            <li class="stats-item">
+              <span class="stats-item-label">完成进度</span>
+              <span class="stats-item-value">{{ goal.completion_rate|floatformat:0 }}%</span>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
+{% endblock pm_content %}
 
-  <div>
-    <div class="decompose-form-card">
-      <div class="decompose-form-header">
-        <h3 class="decompose-form-title">创建下级目标</h3>
-      </div>
-      <div class="decompose-form-body">
-        <form id="createChildGoalForm">
-          {% csrf_token %}
-          <input type="hidden" name="parent_goal_id" value="{{ goal.id }}">
-
-          <div class="decompose-form-group">
-            <label class="decompose-form-label required">分解方式</label>
-            <select name="goal_type" class="form-control" id="goalTypeSelect" required>
-              <option value="">请选择</option>
-              <option value="department">按部门分解</option>
-              <option value="personal">按个人分解</option>
-            </select>
-            <div class="decompose-form-hint">选择分解方式后，将自动填充负责人信息</div>
-          </div>
-
-          <div class="decompose-form-group" id="departmentSelectDiv" style="display: none;">
-            <label class="decompose-form-label required">选择部门</label>
-            <select name="department_id" class="form-control" id="departmentSelect">
-              <option value="">请选择部门</option>
-              {% for dept in departments %}
-              <option value="{{ dept.id }}">{{ dept.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="decompose-form-group" id="userSelectDiv" style="display: none;">
-            <label class="decompose-form-label required">选择负责人</label>
-            <select name="responsible_id" class="form-control" id="userSelect" required>
-              <option value="">请选择负责人</option>
-              {% for user in users %}
-              <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="decompose-form-group">
-            <label class="decompose-form-label required">目标名称</label>
-            <input type="text" name="name" class="form-control" required placeholder="请输入目标名称">
-          </div>
-
-          <div class="decompose-form-group">
-            <label class="decompose-form-label required">目标值</label>
-            <input type="number" name="target_value" class="form-control" step="0.01" required placeholder="0.00">
-            <div class="decompose-form-hint">继承指标：{{ goal.indicator_name }} ({{ goal.indicator_unit }})</div>
-          </div>
-
-          <div class="decompose-form-group">
-            <label class="decompose-form-label">目标描述</label>
-            <textarea name="description" class="form-control" rows="3" placeholder="请输入目标描述（可选）"></textarea>
-          </div>
-
-          <button type="submit" class="decompose-form-submit">创建下级目标</button>
-        </form>
-      </div>
-    </div>
-
-    <div class="decompose-stats-card">
-      <div class="decompose-stats-header">
-        <h6 class="decompose-stats-title">结构统计</h6>
-      </div>
-      <div class="decompose-stats-body">
-        <div class="decompose-stats-item">
-          <strong>下级目标：</strong><span>{{ goal.child_goals.count }} 个</span>
-        </div>
-        <div class="decompose-stats-item">
-          <strong>总层级：</strong><span>{{ goal_tree|length }} 层</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
+{% block module_extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const goalTypeSelect = document.getElementById('goalTypeSelect');
@@ -618,4 +747,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-{% endblock %}
+{% endblock module_extra_js %}

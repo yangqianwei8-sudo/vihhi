@@ -1,354 +1,323 @@
-{% extends "plan_management/_base.html" %}
+{% extends "shared/module_base.html" %}
 {% load static %}
 
-{% block pm_title %}{{ page_title }}{% endblock %}
+{% block module_title %}目标详情 - {{ goal.name }}{% endblock %}
+{% block pm_title %}目标详情 - {{ goal.name }}{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">{{ goal.goal_number }} - {{ goal.get_status_display }}</span>{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-<style>
-    .info-card {
-        background: #fff;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border: 1px solid #e5e7eb;
-        margin-bottom: 20px;
-    }
-    .info-card h5 {
-        margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 2px solid var(--vh-primary);
-        font-weight: 600;
-        color: var(--vh-primary); /* 主题深蓝色 */
-        font-size: 16px;
-    }
-    .info-row {
-        display: flex;
-        padding: 12px 0;
-        border-bottom: 1px solid #f3f4f6;
-    }
-    .info-row:last-child {
-        border-bottom: none;
-    }
-    .info-label {
-        width: 150px;
-        font-weight: 500;
-        color: #6b7280;
-        flex-shrink: 0;
-    }
-    .info-value {
-        flex: 1;
-        color: var(--vh-primary); /* 主题深蓝色 */
-    }
-    .status-badge {
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 500;
-    }
-    .status-draft { background: #e9ecef; color: #495057; }
-    .status-published { background: #cfe2ff; color: #084298; }
-    .status-in_progress { background: #fff3cd; color: #856404; }
-    .status-completed { background: #d1e7dd; color: #0f5132; }
-    .status-cancelled { background: #f8d7da; color: #842029; }
-    .progress-bar-container {
-        width: 200px;
-        height: 24px;
-        background: #e9ecef;
-        border-radius: 12px;
-        overflow: hidden;
-        position: relative;
-    }
-    .progress-bar-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #28a745, #20c997);
-        transition: width 0.3s;
-    }
-    .progress-text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 12px;
-        font-weight: 600;
-        color: #000;
-        z-index: 1;
-    }
-</style>
+{% block pm_actions %}
+  <a href="{% url 'plan_pages:strategic_goal_list' %}" class="list-btn">
+    <i class="bi bi-arrow-left"></i> 返回列表
+  </a>
+  {% if can_edit %}
+  <a href="{% url 'plan_pages:strategic_goal_edit' goal.id %}" class="list-btn list-btn-primary">
+    <i class="bi bi-pencil"></i> 编辑
+  </a>
+  {% endif %}
+  <a href="{% url 'plan_pages:strategic_goal_track' goal.id %}" class="list-btn list-btn-outline">
+    <i class="bi bi-graph-up"></i> 跟踪
+  </a>
+  <a href="{% url 'plan_pages:strategic_goal_decompose' goal.id %}" class="list-btn list-btn-outline">
+    <i class="bi bi-diagram-3"></i> 分解
+  </a>
+  {% if can_delete %}
+  <a href="{% url 'plan_pages:strategic_goal_delete' goal.id %}" class="list-btn list-btn-outline" onclick="return confirm('确定要删除吗？')">
+    <i class="bi bi-trash"></i> 删除
+  </a>
+  {% endif %}
 {% endblock %}
+
+{% block module_styles %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components/list_page_base_v2.css' %}">
+{% endblock module_styles %}
+
+{% block module_extra_css %}
+<style>
+  /* 目标基本信息卡片 */
+  .goal-info-header {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .goal-info-header h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1A1A1A;
+    margin-bottom: 12px;
+  }
+
+  .goal-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .goal-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .goal-info-label {
+    font-size: 0.85rem;
+    color: #666666;
+  }
+
+  .goal-info-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1A1A1A;
+  }
+
+  .status-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: inline-block;
+  }
+
+  .status-draft { background: #FFF3E0; color: #F57C00; }
+  .status-published { background: #E3F2FD; color: #1976D2; }
+  .status-accepted { background: #E8F5E9; color: #388E3C; }
+  .status-in_progress { background: #E3F2FD; color: #1976D2; }
+  .status-completed { background: #E8F5E9; color: #388E3C; }
+  .status-cancelled { background: #FFEBEE; color: #C62828; }
+
+  /* 进度条 */
+  .progress-bar-container {
+    width: 100%;
+    height: 24px;
+    background: #F0F0F0;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2ecc71 0%, #3498db 100%);
+    border-radius: 12px;
+    transition: width 0.3s ease;
+  }
+
+  .progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1A1A1A;
+    z-index: 1;
+  }
+</style>
+{% endblock module_extra_css %}
 
 {% block pm_content %}
-<div class="container-fluid py-4">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-0">
-                {{ goal.name }}
-            </h2>
-            <p class="text-muted mb-0 mt-1">{{ goal.goal_number }}</p>
-        </div>
-        <div class="btn-group">
-            <a href="{% url 'plan_pages:strategic_goal_list' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i>返回列表
-            </a>
-            {% if can_edit %}
-            <a href="{% url 'plan_pages:strategic_goal_edit' goal.id %}" class="btn btn-primary">
-                <i class="bi bi-pencil me-1"></i>编辑
-            </a>
-            {% endif %}
-            <a href="{% url 'plan_pages:strategic_goal_track' goal.id %}" class="btn btn-info">
-                <i class="bi bi-graph-up me-1"></i>跟踪
-            </a>
-            <a href="{% url 'plan_pages:strategic_goal_decompose' goal.id %}" class="btn btn-success">
-                <i class="bi bi-diagram-3 me-1"></i>分解
-            </a>
-            {% if can_delete %}
-            <a href="{% url 'plan_pages:strategic_goal_delete' goal.id %}" class="btn btn-danger">
-                <i class="bi bi-trash me-1"></i>删除
-            </a>
-            {% endif %}
-        </div>
+  <!-- 目标基本信息 -->
+  <div class="goal-info-header">
+    <h3>{{ goal.name }}</h3>
+    <div class="goal-info-grid">
+      <div class="goal-info-item">
+        <span class="goal-info-label">目标编号</span>
+        <span class="goal-info-value"><code>{{ goal.goal_number }}</code></span>
+      </div>
+      <div class="goal-info-item">
+        <span class="goal-info-label">目标类型</span>
+        <span class="goal-info-value">{{ goal.get_goal_type_display }}</span>
+      </div>
+      <div class="goal-info-item">
+        <span class="goal-info-label">目标周期</span>
+        <span class="goal-info-value">{{ goal.get_goal_period_display }}</span>
+      </div>
+      <div class="goal-info-item">
+        <span class="goal-info-label">目标状态</span>
+        <span class="goal-info-value">
+          <span class="status-badge status-{{ goal.status }}">{{ goal.get_status_display }}</span>
+        </span>
+      </div>
+      <div class="goal-info-item">
+        <span class="goal-info-label">目标值</span>
+        <span class="goal-info-value">{{ goal.target_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</span>
+      </div>
+      <div class="goal-info-item">
+        <span class="goal-info-label">当前值</span>
+        <span class="goal-info-value">{{ goal.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</span>
+      </div>
+      <div class="goal-info-item">
+        <span class="goal-info-label">完成进度</span>
+        <span class="goal-info-value">
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: {{ goal.completion_rate }}%"></div>
+            <span class="progress-text">{{ goal.completion_rate }}%</span>
+          </div>
+        </span>
+      </div>
+      <div class="goal-info-item">
+        <span class="goal-info-label">负责人</span>
+        <span class="goal-info-value">{{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}</span>
+      </div>
     </div>
+  </div>
 
-    <div class="row">
-
-        <div class="col-md-8">
-
-            <div class="info-card">
-                <h5>📋 基本信息</h5>
-                <div class="info-row">
-                    <div class="info-label">目标编号</div>
-                    <div class="info-value"><code>{{ goal.goal_number }}</code></div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">目标名称</div>
-                    <div class="info-value"><strong>{{ goal.name }}</strong></div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">目标类型</div>
-                    <div class="info-value">{{ goal.get_goal_type_display }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">目标周期</div>
-                    <div class="info-value">{{ goal.get_goal_period_display }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">目标状态</div>
-                    <div class="info-value">
-                        <span class="status-badge status-{{ goal.status }}">
-                            {{ goal.get_status_display }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="info-card">
-                <h5>📊 目标指标</h5>
-                <div class="info-row">
-                    <div class="info-label">指标名称</div>
-                    <div class="info-value">{{ goal.indicator_name }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">指标类型</div>
-                    <div class="info-value">{{ goal.get_indicator_type_display }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">指标单位</div>
-                    <div class="info-value">{{ goal.indicator_unit|default:"-" }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">目标值</div>
-                    <div class="info-value">
-                        <strong>{{ goal.target_value }}</strong>
-                        {% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
-                    </div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">当前值</div>
-                    <div class="info-value">
-                        <strong>{{ goal.current_value }}</strong>
-                        {% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
-                    </div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">完成率</div>
-                    <div class="info-value">
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" style="width: {{ goal.completion_rate }}%"></div>
-                            <span class="progress-text">{{ goal.completion_rate }}%</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="info-card">
-                <h5>📝 目标描述</h5>
-                <div class="info-row">
-                    <div class="info-label">目标描述</div>
-                    <div class="info-value">{{ goal.description|linebreaks }}</div>
-                </div>
-                {% if goal.background %}
-                <div class="info-row">
-                    <div class="info-label">目标背景</div>
-                    <div class="info-value">{{ goal.background|linebreaks }}</div>
-                </div>
-                {% endif %}
-                {% if goal.significance %}
-                <div class="info-row">
-                    <div class="info-label">目标意义</div>
-                    <div class="info-value">{{ goal.significance|linebreaks }}</div>
-                </div>
-                {% endif %}
-            </div>
-
-            <div class="info-card">
-                <h5>📅 时间信息</h5>
-                <div class="info-row">
-                    <div class="info-label">开始日期</div>
-                    <div class="info-value">{{ goal.start_date }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">结束日期</div>
-                    <div class="info-value">{{ goal.end_date }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">目标周期</div>
-                    <div class="info-value">{{ goal.duration_days }} 天</div>
-                </div>
-            </div>
+  <!-- 统计卡片 -->
+  {% block list_stats_section %}
+  <div class="list-stats-section">
+    <div class="row g-3">
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">子目标数</div>
+          <div class="list-stat-value">{{ child_goals.count }}</div>
         </div>
-
-        <div class="col-md-4">
-
-            <div class="info-card">
-                <h5>👤 责任人信息</h5>
-                <div class="info-row">
-                    <div class="info-label">负责人</div>
-                    <div class="info-value">
-                        <strong>{{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}</strong>
-                    </div>
-                </div>
-                {% if goal.responsible_department %}
-                <div class="info-row">
-                    <div class="info-label">负责部门</div>
-                    <div class="info-value">{{ goal.responsible_department.name }}</div>
-                </div>
-                {% endif %}
-                {% if goal.participants.exists %}
-                <div class="info-row">
-                    <div class="info-label">参与人员</div>
-                    <div class="info-value">
-                        {% for participant in goal.participants.all %}
-                        <span class="badge bg-secondary me-1">{{ participant.get_full_name|default:participant.username }}</span>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-
-            <div class="info-card">
-                <h5>🔗 关联信息</h5>
-                {% if goal.parent_goal %}
-                <div class="info-row">
-                    <div class="info-label">上级目标</div>
-                    <div class="info-value">
-                        <a href="{% url 'plan_pages:strategic_goal_detail' goal.parent_goal.id %}">
-                            {{ goal.parent_goal.name }}
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
-                {% if goal.child_goals.exists %}
-                <div class="info-row">
-                    <div class="info-label">下级目标</div>
-                    <div class="info-value">
-                        <span class="badge bg-info">{{ goal.child_goals.count }} 个</span>
-                        <a href="{% url 'plan_pages:strategic_goal_decompose' goal.id %}" class="ms-2 small">查看详情</a>
-                    </div>
-                </div>
-                {% endif %}
-                {% if goal.related_projects.exists %}
-                <div class="info-row">
-                    <div class="info-label">关联项目</div>
-                    <div class="info-value">
-                        {% for project in goal.related_projects.all %}
-                        <span class="badge bg-primary me-1">{{ project.name }}</span>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-                {% if related_plans_count > 0 %}
-                <div class="info-row">
-                    <div class="info-label">关联计划</div>
-                    <div class="info-value">
-                        <span class="badge bg-warning">{{ related_plans_count }} 个</span>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-
-            <div class="info-card">
-                <h5>⚖️ 权重信息</h5>
-                <div class="info-row">
-                    <div class="info-label">目标权重</div>
-                    <div class="info-value">
-                        <strong>{{ goal.weight }}%</strong>
-                    </div>
-                </div>
-                {% if goal.weight_description %}
-                <div class="info-row">
-                    <div class="info-label">权重说明</div>
-                    <div class="info-value">{{ goal.weight_description|linebreaks }}</div>
-                </div>
-                {% endif %}
-            </div>
-
-            <div class="info-card">
-                <h5>ℹ️ 系统信息</h5>
-                <div class="info-row">
-                    <div class="info-label">创建人</div>
-                    <div class="info-value">{{ goal.created_by.get_full_name|default:goal.created_by.username }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">创建时间</div>
-                    <div class="info-value">{{ goal.created_time|date:"Y-m-d H:i" }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">更新时间</div>
-                    <div class="info-value">{{ goal.updated_time|date:"Y-m-d H:i" }}</div>
-                </div>
-            </div>
+      </div>
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">关联计划</div>
+          <div class="list-stat-value">{{ related_plans_count }}</div>
         </div>
+      </div>
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">进度记录</div>
+          <div class="list-stat-value">{{ progress_records|length }}</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">完成率</div>
+          <div class="list-stat-value">{{ goal.completion_rate|floatformat:0 }}%</div>
+        </div>
+      </div>
     </div>
+  </div>
+  {% endblock list_stats_section %}
 
-    {% if progress_records %}
-    <div class="info-card mt-4">
-        <h5>📈 最近进度记录</h5>
-        <div class="table-responsive">
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>记录时间</th>
-                        <th>当前值</th>
-                        <th>完成率</th>
-                        <th>进度说明</th>
-                        <th>记录人</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record in progress_records %}
-                    <tr>
-                        <td>{{ record.recorded_time|date:"Y-m-d H:i" }}</td>
-                        <td>{{ record.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</td>
-                        <td>{{ record.completion_rate }}%</td>
-                        <td>{{ record.progress_description|truncatewords:20 }}</td>
-                        <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+  <!-- 筛选区域 -->
+  {% block list_filters_section %}
+  <div class="list-filters-section">
+    <form method="get">
+      <div class="row">
+        <div class="col-md-3">
+          <label class="form-label">目标状态</label>
+          <select name="status" class="form-select">
+            <option value="">全部状态</option>
+            <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>制定中</option>
+            <option value="published" {% if request.GET.status == 'published' %}selected{% endif %}>已发布</option>
+            <option value="accepted" {% if request.GET.status == 'accepted' %}selected{% endif %}>已接收</option>
+            <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>执行中</option>
+            <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>已完成</option>
+            <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>已取消</option>
+          </select>
         </div>
+        <div class="col-md-3">
+          <label class="form-label">负责人</label>
+          <input type="text" name="responsible" class="form-control" value="{{ request.GET.responsible }}" placeholder="请输入负责人">
+        </div>
+        <div class="col-md-auto d-flex align-items-end">
+          <button type="submit" class="list-btn list-btn-primary">查询</button>
+          <a href="{{ request.path }}" class="list-btn list-btn-outline ms-2">重置</a>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% endblock list_filters_section %}
+
+  <!-- 子目标列表表格 -->
+  <div class="list-table-section">
+    <div class="list-table-wrapper">
+      <table class="list-table">
+        <thead>
+          <tr>
+            {% block list_table_headers %}
+            <th>目标名称</th>
+            <th>目标编号</th>
+            <th>目标类型</th>
+            <th>目标值</th>
+            <th>当前值</th>
+            <th>完成率</th>
+            <th>负责人</th>
+            <th>状态</th>
+            <th>操作</th>
+            {% endblock list_table_headers %}
+          </tr>
+        </thead>
+        <tbody>
+          {% block list_table_rows %}
+          {% for child_goal in child_goals %}
+          <tr>
+            <td>
+              <strong>
+                <a href="{% url 'plan_pages:strategic_goal_detail' child_goal.id %}" style="color: #1A1A1A; text-decoration: none;">
+                  {{ child_goal.name }}
+                </a>
+              </strong>
+            </td>
+            <td><code>{{ child_goal.goal_number }}</code></td>
+            <td>{{ child_goal.get_goal_type_display }}</td>
+            <td>{{ child_goal.target_value }}{% if child_goal.indicator_unit %} {{ child_goal.indicator_unit }}{% endif %}</td>
+            <td>{{ child_goal.current_value }}{% if child_goal.indicator_unit %} {{ child_goal.indicator_unit }}{% endif %}</td>
+            <td>
+              <div class="progress-bar-container" style="width: 100px; height: 20px;">
+                <div class="progress-bar-fill" style="width: {{ child_goal.completion_rate }}%"></div>
+                <span class="progress-text" style="font-size: 0.75rem;">{{ child_goal.completion_rate }}%</span>
+              </div>
+            </td>
+            <td>{{ child_goal.responsible_person.get_full_name|default:child_goal.responsible_person.username }}</td>
+            <td>
+              <span class="status-badge status-{{ child_goal.status }}">{{ child_goal.get_status_display }}</span>
+            </td>
+            <td>
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'plan_pages:strategic_goal_detail' child_goal.id %}" class="btn btn-outline-primary" title="查看">
+                  <i class="bi bi-eye"></i>
+                </a>
+                {% if child_goal.status in 'draft,published' %}
+                <a href="{% url 'plan_pages:strategic_goal_edit' child_goal.id %}" class="btn btn-outline-secondary" title="编辑">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                {% endif %}
+                <a href="{% url 'plan_pages:strategic_goal_decompose' child_goal.id %}" class="btn btn-outline-info" title="分解">
+                  <i class="bi bi-diagram-3"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="list-empty-state">
+              <div class="list-empty-state-icon">📋</div>
+              <div class="list-empty-state-text">暂无子目标</div>
+              <div class="list-empty-state-hint">
+                <a href="{% url 'plan_pages:strategic_goal_decompose' goal.id %}" class="list-btn list-btn-primary mt-2">
+                  <i class="bi bi-plus-circle"></i> 创建子目标
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+          {% endblock list_table_rows %}
+        </tbody>
+      </table>
     </div>
-    {% endif %}
-</div>
-{% endblock %}
+  </div>
+
+  <!-- 如果没有任何子目标，显示创建提示 -->
+  {% if not child_goals.exists %}
+  <div class="alert alert-info mt-4">
+    <h5><i class="bi bi-info-circle"></i> 提示</h5>
+    <p>当前目标还没有子目标，您可以：</p>
+    <ul>
+      <li><a href="{% url 'plan_pages:strategic_goal_decompose' goal.id %}">创建子目标</a> - 将目标分解为更小的子目标</li>
+      <li><a href="{% url 'plan_pages:strategic_goal_track' goal.id %}">跟踪进度</a> - 记录目标的执行进度</li>
+    </ul>
+  </div>
+  {% endif %}
+{% endblock pm_content %}

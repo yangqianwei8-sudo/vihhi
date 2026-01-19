@@ -1,10 +1,258 @@
-{% extends "shared/_partials/_shared_form_wrapper.html" %}
+{% extends "shared/create_form_base.html" %}
 {% load static %}
 
-{% block pm_title %}{{ page_title|default:"创建计划" }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">{{ form_page_subtitle_text|default:"请填写计划基本信息" }}</span>{% endblock %}
-{% block pm_actions %}
-<a href="{% url 'plan_pages:plan_list' %}" class="list-btn">
+{% block form_title %}{{ page_title|default:"创建计划" }}{% endblock %}
+{% block form_subtitle %}{{ form_page_subtitle_text|default:"请填写计划基本信息" }}{% endblock %}
+
+{% block form_header_actions %}
+<a href="{% url 'plan_pages:plan_list' %}" class="btn btn-secondary">
   返回列表
 </a>
+{% endblock %}
+
+{# 第一排额外字段：计划名称、计划级别 #}
+{% block form_first_row_extra_fields %}
+  {# 计划名称 #}
+  {% if form.name %}
+  <div class="col-5-fields form-field-wrapper">
+    <label for="{{ form.name.id_for_label }}" class="form-label">
+      {{ form.name.label }}
+      {% if form.name.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.name }}
+    {% if form.name.errors %}
+    <div class="text-danger small">{{ form.name.errors }}</div>
+    {% endif %}
+    {% if form.name.help_text %}
+    <div class="form-text">{{ form.name.help_text }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# 计划级别 #}
+  {% if form.level %}
+  <div class="col-5-fields form-field-wrapper">
+    <label for="{{ form.level.id_for_label }}" class="form-label">
+      {{ form.level.label }}
+      {% if form.level.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.level }}
+    {% if form.level.errors %}
+    <div class="text-danger small">{{ form.level.errors }}</div>
+    {% endif %}
+    {% if form.level.help_text %}
+    <div class="form-text">{{ form.level.help_text }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+{% endblock %}
+
+{# 其他表单字段 #}
+{% block form_fields %}
+  {# 第二排：关联战略目标、计划周期、父计划、关联项目 #}
+  <div class="row mb-3 form-row-5">
+
+    {% if form.related_goal %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.related_goal.id_for_label }}" class="form-label">
+        {{ form.related_goal.label }}
+        {% if form.related_goal.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.related_goal }}
+      {% if form.related_goal.errors %}
+      <div class="text-danger small">{{ form.related_goal.errors }}</div>
+      {% endif %}
+      {% if form.related_goal.help_text %}
+      <div class="form-text">{{ form.related_goal.help_text }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if form.plan_period %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.plan_period.id_for_label }}" class="form-label">
+        {{ form.plan_period.label }}
+        {% if form.plan_period.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.plan_period }}
+      {% if form.plan_period.errors %}
+      <div class="text-danger small">{{ form.plan_period.errors }}</div>
+      {% endif %}
+      {% if form.plan_period.help_text %}
+      <div class="form-text">{{ form.plan_period.help_text }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if form.parent_plan %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.parent_plan.id_for_label }}" class="form-label">
+        {{ form.parent_plan.label }}
+        {% if form.parent_plan.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.parent_plan }}
+      {% if form.parent_plan.errors %}
+      <div class="text-danger small">{{ form.parent_plan.errors }}</div>
+      {% endif %}
+      {% if form.parent_plan.help_text %}
+      <div class="form-text">{{ form.parent_plan.help_text }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if form.related_project %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.related_project.id_for_label }}" class="form-label">
+        {{ form.related_project.label }}
+        {% if form.related_project.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.related_project }}
+      {% if form.related_project.errors %}
+      <div class="text-danger small">{{ form.related_project.errors }}</div>
+      {% endif %}
+      {% if form.related_project.help_text %}
+      <div class="form-text">{{ form.related_project.help_text }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+    {# 空占位符，凑满5个字段 #}
+    <div class="col-5-fields form-field-wrapper"></div>
+  </div>
+
+  {# 第三排：开始时间、结束时间 #}
+  <div class="row mb-3 form-row-5">
+    {% if form.start_time %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.start_time.id_for_label }}" class="form-label">
+        {{ form.start_time.label }}
+        {% if form.start_time.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.start_time }}
+      {% if form.start_time.errors %}
+      <div class="text-danger small">{{ form.start_time.errors }}</div>
+      {% endif %}
+      {% if form.start_time.help_text %}
+      <div class="form-text">{{ form.start_time.help_text }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if form.end_time %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.end_time.id_for_label }}" class="form-label">
+        {{ form.end_time.label }}
+        {% if form.end_time.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.end_time }}
+      {% if form.end_time.errors %}
+      <div class="text-danger small">{{ form.end_time.errors }}</div>
+      {% endif %}
+      {% if form.end_time.help_text %}
+      <div class="form-text">{{ form.end_time.help_text }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+    {# 空占位符，凑满5个字段 #}
+    <div class="col-5-fields form-field-wrapper"></div>
+  </div>
+
+  {# 多行文本字段：计划内容（整行） #}
+  {% if form.content %}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.content.id_for_label }}" class="form-label">
+        {{ form.content.label }}
+        {% if form.content.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.content }}
+      {% if form.content.errors %}
+      <div class="text-danger small">{{ form.content.errors }}</div>
+      {% endif %}
+      {% if form.content.help_text %}
+      <div class="form-text">{{ form.content.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# 多行文本字段：计划目标（整行） #}
+  {% if form.plan_objective %}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.plan_objective.id_for_label }}" class="form-label">
+        {{ form.plan_objective.label }}
+        {% if form.plan_objective.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.plan_objective }}
+      {% if form.plan_objective.errors %}
+      <div class="text-danger small">{{ form.plan_objective.errors }}</div>
+      {% endif %}
+      {% if form.plan_objective.help_text %}
+      <div class="form-text">{{ form.plan_objective.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# 多行文本字段：协作计划（整行） #}
+  {% if form.collaboration_plan %}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.collaboration_plan.id_for_label }}" class="form-label">
+        {{ form.collaboration_plan.label }}
+        {% if form.collaboration_plan.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.collaboration_plan }}
+      {% if form.collaboration_plan.errors %}
+      <div class="text-danger small">{{ form.collaboration_plan.errors }}</div>
+      {% endif %}
+      {% if form.collaboration_plan.help_text %}
+      <div class="form-text">{{ form.collaboration_plan.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# 协作人员（多选字段） #}
+  {% if form.participants %}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.participants.id_for_label }}" class="form-label">
+        {{ form.participants.label }}
+        {% if form.participants.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.participants }}
+      {% if form.participants.errors %}
+      <div class="text-danger small">{{ form.participants.errors }}</div>
+      {% endif %}
+      {% if form.participants.help_text %}
+      <div class="form-text">{{ form.participants.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+{% endblock %}
+
+{# 暂存草稿按钮 #}
+{% block form_draft_actions %}
+  <button type="submit" name="action" value="draft" class="btn btn-draft">暂存草稿</button>
+{% endblock %}
+
+{# 表单操作按钮 #}
+{% block form_actions %}
+  <button type="submit" class="btn btn-primary">{{ submit_text|default:"创建" }}</button>
+  {% if cancel_url %}
+    <a href="{{ cancel_url }}" class="btn btn-secondary">取消</a>
+  {% elif cancel_url_name %}
+    <a href="{% url cancel_url_name %}" class="btn btn-secondary">取消</a>
+  {% else %}
+    <a href="{% url 'plan_pages:plan_list' %}" class="btn btn-secondary">取消</a>
+  {% endif %}
+{% endblock %}
+
+{# 额外的 JavaScript #}
+{% block module_extra_js %}
+  {% if form_js_file %}
+  <script src="{% static form_js_file %}"></script>
+  {% endif %}
 {% endblock %}

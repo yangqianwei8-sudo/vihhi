@@ -5,8 +5,8 @@
 继承 module_base.html，提供统一的创建表单结构
 
 固定字段：
-1. 所属部门（responsible_department）- 默认值：当前用户所在部门（默认，不可修改）
-2. 负责人（responsible_person）- 默认值：当前用户（默认，不可修改）
+1. 所属部门（responsible_department）- 默认值：当前用户所在部门
+2. 负责人（responsible_person）- 默认值：当前用户
 3. 表单编号（form_number_field 或 form_number）- 根据业务模块自动生成
 
 布局说明：
@@ -35,19 +35,11 @@
 
   {# 固定字段区域 - 每行5个字段 #}
   <div class="row mb-3 form-row-5">
-    {# 固定字段1：所属部门（默认，不可修改） #}
+    {# 固定字段1：所属部门 #}
     {% if form.responsible_department %}
     <div class="col-5-fields form-field-wrapper">
       <label for="{{ form.responsible_department.id_for_label }}" class="form-label">
-        {% if form.responsible_department.label %}
-          {% if "默认" in form.responsible_department.label or "不可修改" in form.responsible_department.label %}
-            {{ form.responsible_department.label }}
-          {% else %}
-            {{ form.responsible_department.label }}（默认，不可修改）
-          {% endif %}
-        {% else %}
-          所属部门（默认，不可修改）
-        {% endif %}
+        {{ form.responsible_department.label }}
         {% if form.responsible_department.field.required %}<span class="text-danger">*</span>{% endif %}
       </label>
       {{ form.responsible_department }}
@@ -60,19 +52,11 @@
     </div>
     {% endif %}
 
-    {# 固定字段2：负责人（默认，不可修改） #}
+    {# 固定字段2：负责人 #}
     {% if form.responsible_person %}
     <div class="col-5-fields form-field-wrapper">
       <label for="{{ form.responsible_person.id_for_label }}" class="form-label">
-        {% if form.responsible_person.label %}
-          {% if "默认" in form.responsible_person.label or "不可修改" in form.responsible_person.label %}
-            {{ form.responsible_person.label }}
-          {% else %}
-            {{ form.responsible_person.label }}（默认，不可修改）
-          {% endif %}
-        {% else %}
-          负责人（默认，不可修改）
-        {% endif %}
+        {{ form.responsible_person.label }}
         {% if form.responsible_person.field.required %}<span class="text-danger">*</span>{% endif %}
       </label>
       {{ form.responsible_person }}
@@ -157,44 +141,23 @@
 {% endblock %}
 {% block module_extra_js %}
 <script>
-// 设置所属部门和负责人字段为默认、不可修改
-document.addEventListener('DOMContentLoaded', function() {
-  const form = document.getElementById('createForm');
-  if (form) {
-    // 处理所属部门字段
-    const responsibleDeptField = form.querySelector('select[name="responsible_department"], input[name="responsible_department"]');
-    if (responsibleDeptField && !responsibleDeptField.hasAttribute('disabled')) {
-      responsibleDeptField.setAttribute('disabled', 'disabled');
-      // 添加隐藏字段以确保值被提交（disabled 字段不会提交）
-      const hiddenDept = document.createElement('input');
-      hiddenDept.type = 'hidden';
-      hiddenDept.name = responsibleDeptField.name;
-      hiddenDept.value = responsibleDeptField.value;
-      form.appendChild(hiddenDept);
-      
-      // 在表单提交时更新隐藏字段的值
-      form.addEventListener('submit', function() {
-        hiddenDept.value = responsibleDeptField.value;
-      });
-    }
+  // 表单编号自动生成逻辑
+  // 根据业务模块自动生成表单编号
+  document.addEventListener('DOMContentLoaded', function() {
+    // 尝试查找常见的表单编号字段
+    const formNumberFields = [
+      'id_form_number',
+      'id_plan_number',
+      'id_goal_number',
+      'id_project_number',
+      'id_contract_number'
+    ];
     
-    // 处理负责人字段
-    const responsiblePersonField = form.querySelector('select[name="responsible_person"], input[name="responsible_person"]');
-    if (responsiblePersonField && !responsiblePersonField.hasAttribute('disabled')) {
-      responsiblePersonField.setAttribute('disabled', 'disabled');
-      // 添加隐藏字段以确保值被提交
-      const hiddenPerson = document.createElement('input');
-      hiddenPerson.type = 'hidden';
-      hiddenPerson.name = responsiblePersonField.name;
-      hiddenPerson.value = responsiblePersonField.value;
-      form.appendChild(hiddenPerson);
-      
-      // 在表单提交时更新隐藏字段的值
-      form.addEventListener('submit', function() {
-        hiddenPerson.value = responsiblePersonField.value;
-      });
-    }
-  }
-});
-</script>
+    let formNumberField = null;
+    for (let fieldId of formNumberFields) {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        formNumberField = field;
+        break;
+      }
 {% endblock %}

@@ -497,12 +497,6 @@ class Plan(models.Model):
         ('cancelled', '已取消'),
     ]
     
-    PRIORITY_CHOICES = [
-        ('high', '高'),
-        ('medium', '中'),
-        ('low', '低'),
-    ]
-    
     # 基本信息
     plan_number = models.CharField(max_length=50, unique=True, verbose_name='计划编号', help_text='格式：PLAN-{YYYYMMDD}-{序列号}')
     name = models.CharField(max_length=200, verbose_name='计划名称')
@@ -544,7 +538,6 @@ class Plan(models.Model):
         verbose_name='验收标准',
         help_text='明确说明如何判定计划完成，提交审批前必填'
     )
-    description = models.TextField(blank=True, verbose_name='计划描述')
     
     # 时间信息
     start_time = models.DateTimeField(verbose_name='计划开始时间')
@@ -592,16 +585,6 @@ class Plan(models.Model):
         verbose_name='所属部门'
     )
     
-    # 优先级和预算
-    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium', verbose_name='计划优先级')
-    budget = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name='计划预算',
-        help_text='单位：元'
-    )
     
     # 关联信息
     related_project = models.CharField(
@@ -619,7 +602,6 @@ class Plan(models.Model):
         verbose_name='父计划',
         help_text='用于计划分解'
     )
-    notes = models.TextField(blank=True, verbose_name='备注')
     
     # 公司和组织部门（用于数据隔离）
     company = models.ForeignKey(

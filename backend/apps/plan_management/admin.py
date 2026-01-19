@@ -536,7 +536,6 @@ class PlanAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
         'level',
         'status',
         'plan_period',
-        'priority',
         ('start_time', admin.DateFieldListFilter),
         ('end_time', admin.DateFieldListFilter),
         ('created_time', admin.DateFieldListFilter),
@@ -580,7 +579,6 @@ class PlanAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
                 'level',
                 'plan_period',
                 'status',
-                'priority',
             )
         }),
         ('计划内容', {
@@ -625,12 +623,6 @@ class PlanAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
                 'parent_plan',
                 'related_goal',
                 'related_project',
-            ),
-            'classes': ('collapse',),
-        }),
-        ('预算信息', {
-            'fields': (
-                'budget',
             ),
             'classes': ('collapse',),
         }),

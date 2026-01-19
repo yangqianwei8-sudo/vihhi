@@ -44,15 +44,10 @@ class StrategicGoalForm(forms.ModelForm):
             'name', 'level', 'goal_type', 'goal_period', 'status',  # P2-2: 添加 level
             # 目标指标
             'indicator_name', 'indicator_type', 'indicator_unit', 'target_value', 'current_value',
-            # 目标描述
-            'description', 'background', 'significance',
-            # 权重设置
-            'weight', 'weight_description',
             # 时间信息
             'start_date', 'end_date',
             # 关联信息
             'parent_goal',
-            'notes',
         ]
         widgets = {
             'goal_number': forms.TextInput(attrs={
@@ -65,6 +60,7 @@ class StrategicGoalForm(forms.ModelForm):
                 'placeholder': '请输入目标名称',
                 'maxlength': '200'
             }),
+            'level': forms.Select(attrs={'class': 'form-select'}),
             'goal_type': forms.Select(attrs={'class': 'form-select'}),
             'goal_period': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
@@ -91,80 +87,32 @@ class StrategicGoalForm(forms.ModelForm):
             }),
             'responsible_person': forms.Select(attrs={'class': 'form-select'}),
             'responsible_department': forms.Select(attrs={'class': 'form-select'}),
-            'description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '4',
-                'placeholder': '请输入目标描述',
-                'maxlength': '2000'
-            }),
-            'background': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '3',
-                'placeholder': '请输入目标背景（可选）'
-            }),
-            'significance': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '3',
-                'placeholder': '请输入目标意义（可选）'
-            }),
-            'weight': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0',
-                'max': '100',
-                'placeholder': '范围0-100，同一周期内所有目标权重总和不能超过100'
-            }),
-            'weight_description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '2',
-                'placeholder': '权重说明（可选）'
-            }),
-            'start_date': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'end_date': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
+            'start_date': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'class': 'form-control',
+                    'type': 'date'
+                }
+            ),
+            'end_date': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'class': 'form-control',
+                    'type': 'date'
+                }
+            ),
             'parent_goal': forms.Select(attrs={
                 'class': 'form-select',
                 'title': '用于目标分解，选择上级目标后，当前目标将成为下级目标'
             }),
-            'notes': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '3',
-                'placeholder': '备注（可选）'
-            }),
         }
-    
-    participants = forms.ModelMultipleChoiceField(
-        queryset=User.objects.filter(is_active=True),
-        required=False,
-        widget=forms.SelectMultiple(attrs={
-            'class': 'form-select',
-            'title': '可多选，按住 Ctrl 键或 Command 键选择多个'
-        }),
-        label='参与人员'
-    )
-    
-    related_projects = forms.ModelMultipleChoiceField(
-        queryset=Project.objects.all(),
-        required=False,
-        widget=forms.SelectMultiple(attrs={
-            'class': 'form-select',
-            'title': '可多选，按住 Ctrl 键或 Command 键选择多个'
-        }),
-        label='关联项目'
-    )
     
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        # 设置负责人和参与人员查询集（确保始终有查询集）
+        # 设置负责人查询集（确保始终有查询集）
         self.fields['responsible_person'].queryset = User.objects.filter(is_active=True)
-        self.fields['participants'].queryset = User.objects.filter(is_active=True)
         
         # 设置部门查询集
         self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
@@ -176,9 +124,6 @@ class StrategicGoalForm(forms.ModelForm):
             self.fields['parent_goal'].queryset = StrategicGoal.objects.exclude(pk__in=exclude_ids)
         else:
             self.fields['parent_goal'].queryset = StrategicGoal.objects.all()
-        
-        # 设置关联项目查询集
-        self.fields['related_projects'].queryset = Project.objects.all()
         
         # 目标编号字段处理：完全由系统自动生成，不允许修改
         self.fields['goal_number'].widget.attrs['readonly'] = True
@@ -193,8 +138,7 @@ class StrategicGoalForm(forms.ModelForm):
         # P2-2: 设置 level 字段的初始值和逻辑
         if self.instance and self.instance.pk:
             # 编辑时：使用现有值
-            self.fields['participants'].initial = self.instance.participants.all()
-            self.fields['related_projects'].initial = self.instance.related_projects.all()
+            pass
         else:
             # 新建时：设置默认值
             # 设置所属部门和负责人为只读（默认值，不可修改）
@@ -227,16 +171,21 @@ class StrategicGoalForm(forms.ModelForm):
             
             # 设置开始日期默认为当天
             today = date.today()
+            # 确保初始值正确设置，并且格式化为 YYYY-MM-DD 格式（HTML5 date input 需要的格式）
             self.fields['start_date'].initial = today
+            # 同时在 widget 的 attrs 中设置 value，确保 HTML 正确显示
+            self.fields['start_date'].widget.attrs['value'] = today.strftime('%Y-%m-%d')
             
             # 根据目标周期自动计算结束日期
             goal_period = self.data.get('goal_period') or self.initial.get('goal_period')
             if goal_period:
                 end_date = self._calculate_end_date_by_period(today, goal_period)
                 self.fields['end_date'].initial = end_date
+                self.fields['end_date'].widget.attrs['value'] = end_date.strftime('%Y-%m-%d')
             else:
                 # 如果没有选择目标周期，默认设置为当天（用户选择周期后会通过JavaScript更新）
                 self.fields['end_date'].initial = today
+                self.fields['end_date'].widget.attrs['value'] = today.strftime('%Y-%m-%d')
     
     def _calculate_end_date_by_period(self, start_date, goal_period):
         """根据目标周期计算结束日期"""
@@ -453,11 +402,14 @@ class GoalAdjustmentForm(forms.ModelForm):
                 'step': '0.01',
                 'placeholder': '新目标值（可选）'
             }),
-            'new_end_date': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date',
-                'placeholder': '新结束日期（可选）'
-            }),
+            'new_end_date': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'class': 'form-control',
+                    'type': 'date',
+                    'placeholder': '新结束日期（可选）'
+                }
+            ),
         }
     
     def __init__(self, *args, **kwargs):
@@ -504,21 +456,17 @@ class PlanForm(forms.ModelForm):
         model = Plan
         fields = [
             # 基本信息
-            'plan_number', 'name', 'level', 'plan_period',
+            'plan_number', 'name', 'level',
             # 关联信息
-            'related_goal', 'parent_plan', 'related_project',
+            'related_goal', 'plan_period', 'parent_plan', 'related_project',
             # 计划内容
-            'content', 'plan_objective', 'description',
+            'content', 'plan_objective',
             # 协作信息
             'collaboration_plan',
             # 时间信息
             'start_time', 'end_time',
             # 责任人信息
             'responsible_person', 'responsible_department',
-            # 优先级和预算
-            'priority', 'budget',
-            # 其他
-            'notes',
         ]
         widgets = {
             'plan_number': forms.TextInput(attrs={
@@ -550,34 +498,24 @@ class PlanForm(forms.ModelForm):
                 'placeholder': '请输入计划目标',
                 'maxlength': '1000'
             }),
-            'description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '3',
-                'placeholder': '计划描述（可选）'
-            }),
-            'start_time': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date',
-                'placeholder': '请选择计划开始日期'
-            }),
-            'end_time': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date',
-                'placeholder': '请选择计划结束日期'
-            }),
+            'start_time': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'class': 'form-control',
+                    'type': 'date',
+                    'placeholder': '请选择计划开始日期'
+                }
+            ),
+            'end_time': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'class': 'form-control',
+                    'type': 'date',
+                    'placeholder': '请选择计划结束日期'
+                }
+            ),
             'responsible_person': forms.Select(attrs={'class': 'form-select'}),
             'responsible_department': forms.Select(attrs={'class': 'form-select'}),
-            'priority': forms.Select(attrs={'class': 'form-select'}),
-            'budget': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'placeholder': '0.00'
-            }),
-            'notes': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '3',
-                'placeholder': '备注（可选）'
-            }),
             'collaboration_plan': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': '4',
@@ -607,6 +545,26 @@ class PlanForm(forms.ModelForm):
         
         # 设置部门查询集
         self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
+        
+        # 新建时：设置所属部门和负责人为只读（默认值，不可修改）
+        if not self.instance or not self.instance.pk:
+            if user:
+                # 先设置默认值
+                self.fields['responsible_person'].initial = user
+                # 所属部门默认为当前用户所在部门
+                user_department = None
+                if hasattr(user, 'department') and user.department:
+                    user_department = user.department
+                elif hasattr(user, 'profile') and hasattr(user.profile, 'department') and user.profile.department:
+                    user_department = user.profile.department
+                if user_department:
+                    self.fields['responsible_department'].initial = user_department
+                
+                # 然后设置为只读和禁用
+                self.fields['responsible_department'].widget.attrs['disabled'] = True
+                self.fields['responsible_department'].label = '所属部门（默认，不可修改）'
+                self.fields['responsible_person'].widget.attrs['disabled'] = True
+                self.fields['responsible_person'].label = '负责人（默认，不可修改）'
         
         # 设置关联战略目标查询集：只显示当前用户负责的目标
         # 状态必须是已发布或进行中，且负责人必须是当前用户
@@ -696,15 +654,19 @@ class PlanForm(forms.ModelForm):
             # 设置开始日期默认为当天
             today = date.today()
             self.fields['start_time'].initial = today
+            # 同时在 widget 的 attrs 中设置 value，确保 HTML 正确显示
+            self.fields['start_time'].widget.attrs['value'] = today.strftime('%Y-%m-%d')
             
             # 根据计划周期自动计算结束日期
             plan_period = self.data.get('plan_period') or self.initial.get('plan_period')
             if plan_period:
                 end_date = self._calculate_end_date_by_period(today, plan_period)
                 self.fields['end_time'].initial = end_date
+                self.fields['end_time'].widget.attrs['value'] = end_date.strftime('%Y-%m-%d')
             else:
                 # 如果没有选择计划周期，默认设置为当天（用户选择周期后会通过JavaScript更新）
                 self.fields['end_time'].initial = today
+                self.fields['end_time'].widget.attrs['value'] = today.strftime('%Y-%m-%d')
     
     def _calculate_end_date_by_period(self, start_date, plan_period):
         """根据计划周期计算结束日期"""
@@ -778,7 +740,6 @@ class PlanForm(forms.ModelForm):
                     cleaned_data['responsible_department'] = self.fields['responsible_department'].initial
         start_time = cleaned_data.get('start_time')
         end_time = cleaned_data.get('end_time')
-        budget = cleaned_data.get('budget')
         plan_number = cleaned_data.get('plan_number')
         participants = cleaned_data.get('participants')
         collaboration_plan = cleaned_data.get('collaboration_plan')
@@ -821,10 +782,6 @@ class PlanForm(forms.ModelForm):
             end_dt = cleaned_data.get('end_time')
             if end_dt < start_dt:
                 self.add_error('end_time', '结束时间不能早于开始时间。')
-        
-        # 验证预算
-        if budget is not None and budget < 0:
-            raise ValidationError({'budget': '预算不能小于0'})
         
         # 验证协作计划：如果选择了协作人员，必须填写协作计划
         if participants and len(participants) > 0:

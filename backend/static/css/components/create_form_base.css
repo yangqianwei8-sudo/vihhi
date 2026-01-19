@@ -4,14 +4,48 @@
 /* 移除顶部横线 */
 .module-content-wrapper {
   border-top: none !important;
+  overflow: visible !important; /* 不产生滚动条 */
 }
 
 .content_inner {
   border-top: none !important;
+  overflow: visible !important; /* 不产生滚动条 */
 }
 
 form {
   border-top: none !important;
+  overflow: visible !important; /* 不产生滚动条 */
+}
+
+/* 修复双滚动条问题：确保主内容区不产生额外的滚动条 */
+/* 主内容区应该允许自然滚动，而不是自己产生滚动条 */
+.two-col-main {
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* 确保内容容器不产生滚动条 */
+.two-col-content {
+  overflow: visible !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* 确保body和html不会同时产生滚动条 */
+/* 只让body产生滚动条，而不是.two-col-main或.two-col-content */
+html {
+  overflow-x: hidden !important;
+  overflow-y: hidden !important; /* html不产生滚动条，只让body产生 */
+  height: 100%;
+}
+
+body {
+  overflow-x: hidden !important;
+  overflow-y: auto !important; /* 只让body有滚动条 */
+  height: 100%;
 }
 
 .module-content-wrapper::before,
@@ -20,25 +54,54 @@ form {
   content: none !important;
 }
 
-/* 每行5个字段的布局 */
-.form-row-5 {
-  display: flex;
-  flex-wrap: wrap;
+/* 每行字段自动适应布局 - 强制排满整行，每排必须5个字段 */
+/* 使用更具体的选择器确保优先级最高，覆盖所有可能的类组合 */
+.form-row-5,
+.row.form-row-5,
+.row.mb-3.form-row-5,
+.form-row-5.row,
+.form-row-5.row.mb-3,
+.row.mb-3.form-row-5.row,
+.form-row-5.mb-3.row,
+.mb-3.row.form-row-5,
+.mb-3.form-row-5.row,
+.row.form-row-5.mb-3,
+.form-row-5.mb-3 {
+  display: flex !important;
+  flex-wrap: nowrap !important; /* 不换行，强制排满整行 */
   margin-left: -4px !important;
   margin-right: -4px !important;
-  margin-bottom: 16px;
+  margin-bottom: 20px !important; /* 统一行距：20px，覆盖所有其他规则 */
 }
 
+/* 字段自动适应宽度，每排必须5个字段，每个占20%宽度 */
 .col-5-fields {
-  flex: 0 0 20%;
-  max-width: 20%;
+  flex: 0 0 20% !important; /* 固定每个字段占20%宽度，确保每排5个字段 */
+  max-width: 20% !important; /* 最大宽度20% */
+  min-width: 0 !important; /* 允许字段收缩 */
   padding-left: 4px !important;
   padding-right: 4px !important;
-  margin-bottom: 16px;
+  margin-bottom: 0 !important; /* 移除字段的margin-bottom，统一由行容器控制 */
+  box-sizing: border-box !important;
+}
+
+/* 确保 Bootstrap row 类不会覆盖我们的样式 */
+.form-row-5.row .col-5-fields {
+  flex: 0 0 20% !important; /* 保持20%宽度，确保每排5个字段 */
+  max-width: 20% !important; /* 保持最大宽度20% */
 }
 
 .form-field-wrapper {
   padding: 0;
+  margin: 0;
+}
+
+/* 确保空占位字段不影响行高 */
+.col-5-fields.form-field-wrapper:empty {
+  min-height: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
 }
 
 
@@ -85,9 +148,21 @@ form {
 
 .form-actions {
   display: flex;
-  gap: 12px;
-  justify-content: flex-end;
+  justify-content: space-between; /* 左右分布 */
+  align-items: center;
   padding: 16px 0;
+}
+
+.form-actions-left {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.form-actions-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .btn {
@@ -113,14 +188,27 @@ form {
 }
 
 .btn-secondary {
-  background-color: #F5F5F5;
-  color: #1A1A1A;
-  border: 1px solid #E0E0E0;
+  background-color: #1A1A1A;
+  color: #FFFFFF;
+  border: 1px solid #1A1A1A;
 }
 
 .btn-secondary:hover {
-  background-color: #E0E0E0;
-  color: #1A1A1A;
+  background-color: #333333;
+  color: #FFFFFF;
+  border-color: #333333;
+}
+
+.btn-draft {
+  background-color: #1A1A1A;
+  color: #FFFFFF;
+  border: 1px solid #1A1A1A;
+}
+
+.btn-draft:hover {
+  background-color: #333333;
+  color: #FFFFFF;
+  border-color: #333333;
 }
 
 .alert {
@@ -135,51 +223,57 @@ form {
   color: #C53030;
 }
 
-/* 响应式设计 */
-@media (max-width: 1400px) {
-  .col-5-fields {
-    flex: 0 0 20%;
-    max-width: 20%;
-  }
-}
-
-@media (max-width: 1200px) {
-  .col-5-fields {
-    flex: 0 0 25%;
-    max-width: 25%;
-  }
-}
-
+/* 响应式设计 - 小屏幕时允许换行 */
 @media (max-width: 992px) {
-  .col-5-fields {
-    flex: 0 0 33.333333%;
-    max-width: 33.333333%;
+  .form-row-5 {
+    flex-wrap: wrap; /* 小屏幕允许换行 */
   }
-}
-
-@media (max-width: 768px) {
+  
   .col-5-fields {
-    flex: 0 0 50%;
-    max-width: 50%;
+    flex: 0 0 calc(50% - 8px); /* 小屏幕每行2个字段 */
+    max-width: calc(50% - 8px);
   }
 }
 
 @media (max-width: 576px) {
   .col-5-fields {
-    flex: 0 0 100%;
+    flex: 0 0 100%; /* 手机屏幕每行1个字段 */
     max-width: 100%;
   }
 }
 
-/* 覆盖 Bootstrap row 类的样式 */
-.form-row-5.row {
+/* 覆盖 Bootstrap row 类的样式 - 统一行间距 */
+/* 使用更具体的选择器确保优先级最高，覆盖所有可能的类组合 */
+.form-row-5.row,
+.row.form-row-5,
+.row.mb-3.form-row-5,
+.form-row-5.row.mb-3,
+.row.mb-3.form-row-5.row,
+.form-row-5.mb-3.row,
+.mb-3.row.form-row-5,
+.mb-3.form-row-5.row,
+.row.form-row-5.mb-3,
+.form-row-5.mb-3,
+.form-row-5 {
   margin-left: -4px !important;
   margin-right: -4px !important;
+  margin-bottom: 20px !important; /* 统一行距：20px，覆盖Bootstrap的mb-3和base.css的mb-3 */
 }
 
-.form-row-5.row > * {
+.form-row-5.row > *,
+.row.form-row-5 > * {
   padding-left: 4px !important;
   padding-right: 4px !important;
+}
+
+/* 最终保障：使用属性选择器确保所有包含 form-row-5 类的元素都有统一的行距 */
+[class*="form-row-5"] {
+  margin-bottom: 20px !important;
+}
+
+/* 但排除非行元素（如字段本身） */
+[class*="form-row-5"]:not(.col-5-fields):not(.form-field-wrapper) {
+  margin-bottom: 20px !important;
 }
 
 
@@ -213,11 +307,12 @@ form {
   max-width: 100%;
   padding-left: 4px !important;
   padding-right: 4px;
-  margin-bottom: 16px;
+  margin-bottom: 0; /* 移除字段的margin-bottom，统一由行容器控制 */
 }
 
-/* 包含 col-12 的行容器 - 重置 margin */
+/* 包含 col-12 的行容器 - 统一间距 */
 .row.mb-3:not(.form-row-5) {
   margin-left: 0;
   margin-right: 0;
+  margin-bottom: 20px !important; /* 统一行距：20px */
 }
