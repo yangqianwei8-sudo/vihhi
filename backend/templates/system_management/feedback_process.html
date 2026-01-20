@@ -1,0 +1,131 @@
+{% extends "shared/module_base.html" %}
+
+{% block page_title %}处理反馈{% endblock %}
+{% block page_icon %}💬{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">反馈详情</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>反馈标题：</strong>{{ feedback.title }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>反馈类型：</strong>{{ feedback.get_feedback_type_display }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>提交人：</strong>{{ feedback.submitted_by.get_full_name|default:feedback.submitted_by.username }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>提交时间：</strong>{{ feedback.submitted_at|date:"Y-m-d H:i:s" }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>当前状态：</strong>
+                            <span class="badge 
+                                {% if feedback.status == 'pending' %}bg-warning
+                                {% elif feedback.status == 'processing' %}bg-info
+                                {% elif feedback.status == 'resolved' %}bg-success
+                                {% else %}bg-secondary{% endif %}">
+                                {{ feedback.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>优先级：</strong>
+                            <span class="badge 
+                                {% if feedback.priority == 'urgent' %}bg-danger
+                                {% elif feedback.priority == 'high' %}bg-warning
+                                {% elif feedback.priority == 'medium' %}bg-info
+                                {% else %}bg-secondary{% endif %}">
+                                {{ feedback.get_priority_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% if feedback.related_module %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <strong>关联模块：</strong>{{ feedback.related_module }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <strong>反馈内容：</strong>
+                            <div class="border p-3 mt-2" style="min-height: 100px; white-space: pre-wrap;">{{ feedback.content }}</div>
+                        </div>
+                    </div>
+                    {% if feedback.attachment %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <strong>附件：</strong>
+                            <a href="{{ feedback.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-download"></i> 下载附件
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if feedback.process_comment %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <strong>处理意见：</strong>
+                            <div class="border p-3 mt-2" style="min-height: 50px; white-space: pre-wrap;">{{ feedback.process_comment }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if feedback.processed_by %}
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>处理人：</strong>{{ feedback.processed_by.get_full_name|default:feedback.processed_by.username }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>处理时间：</strong>{{ feedback.processed_at|date:"Y-m-d H:i:s" }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">处理反馈</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">处理状态 <span class="text-danger">*</span></label>
+                            <select name="status" class="form-control" required>
+                                <option value="pending" {% if feedback.status == 'pending' %}selected{% endif %}>待处理</option>
+                                <option value="processing" {% if feedback.status == 'processing' %}selected{% endif %}>处理中</option>
+                                <option value="resolved" {% if feedback.status == 'resolved' %}selected{% endif %}>已解决</option>
+                                <option value="closed" {% if feedback.status == 'closed' %}selected{% endif %}>已关闭</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">处理意见</label>
+                            <textarea name="comment" class="form-control" rows="4" placeholder="请输入处理意见...">{{ feedback.process_comment }}</textarea>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'system_pages:feedback_list' %}" class="btn btn-secondary">返回列表</a>
+                            <button type="submit" class="btn btn-primary">保存处理结果</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

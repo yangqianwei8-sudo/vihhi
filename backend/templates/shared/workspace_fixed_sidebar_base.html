@@ -7,8 +7,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}维海生产系统{% endblock %}</title>
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://unpkg.com/bootstrap@5.3.0/dist/css/bootstrap.min.css'">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" onerror="this.onerror=null;this.href='https://unpkg.com/bootstrap-icons@1.11.0/font/bootstrap-icons.css'">
   <link rel="stylesheet" href="{% static 'css/common.css' %}">
 
   <link rel="stylesheet" href="{% static 'css/components/sidebar_v2_fixed.css' %}">
@@ -34,7 +34,8 @@
     {% block content %}{% endblock %}
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'"></script>
+  {% include "system_management/feedback_form_modal.html" %}
   {% block extra_js %}{% endblock %}
   {% if notification_widget_enabled %}
   {% load static %}
@@ -42,3 +43,23 @@
   {% endif %}
 </body>
 </html>
+
+<script>
+// 确保反馈按钮能正常工作
+document.addEventListener('DOMContentLoaded', function() {
+    const feedbackBtn = document.querySelector('a[data-bs-target="#feedbackModal"]');
+    const feedbackModal = document.getElementById('feedbackModal');
+    
+    if (feedbackBtn && feedbackModal) {
+        console.log('反馈按钮和弹窗已找到');
+        // 确保Bootstrap已加载
+        if (typeof bootstrap !== 'undefined') {
+            console.log('Bootstrap已加载');
+        } else {
+            console.error('Bootstrap未加载');
+        }
+    } else {
+        console.error('反馈按钮或弹窗未找到', {feedbackBtn, feedbackModal});
+    }
+});
+</script>

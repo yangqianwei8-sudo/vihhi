@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 
-from backend.apps.system_management.models import RegistrationRequest, Department, Role
+from backend.apps.system_management.models import RegistrationRequest, Department, Role, SystemFeedback
 
 
 CONSULTING_UNIT_POSITIONS = [
@@ -360,4 +360,55 @@ class ProfileCompletionForm(forms.Form):
             if group_label == name or group_label in name or name in group_label:
                 return group_label
         return None
+
+
+class SystemFeedbackForm(forms.ModelForm):
+    """系统反馈表单"""
+    
+    class Meta:
+        model = SystemFeedback
+        fields = ['feedback_type', 'title', 'content', 'priority', 'related_module', 'attachment']
+        widgets = {
+            'feedback_type': forms.Select(attrs={
+                'class': 'form-control',
+                'required': True
+            }),
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '请简要描述您的反馈',
+                'maxlength': 200,
+                'required': True
+            }),
+            'content': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 6,
+                'placeholder': '请详细描述您的反馈内容...',
+                'required': True
+            }),
+            'priority': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'related_module': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '例如：生产管理、客户管理等（可选）'
+            }),
+            'attachment': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png'
+            }),
+        }
+        labels = {
+            'feedback_type': '反馈类型',
+            'title': '反馈标题',
+            'content': '反馈内容',
+            'priority': '优先级',
+            'related_module': '关联模块',
+            'attachment': '附件',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 设置必填字段
+        self.fields['title'].required = True
+        self.fields['content'].required = True
 

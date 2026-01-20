@@ -1,0 +1,165 @@
+{% extends "shared/module_base.html" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_icon %}{{ page_icon }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">反馈统计</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h6>全部反馈</h6>
+                                    <h3>{{ stats.total }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body">
+                                    <h6>待处理</h6>
+                                    <h3>{{ stats.pending }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h6>处理中</h6>
+                                    <h3>{{ stats.processing }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h6>已解决</h6>
+                                    <h3>{{ stats.resolved }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">反馈列表</h5>
+                    <div>
+                        <form method="get" class="d-inline">
+                            <select name="status" class="form-select form-select-sm d-inline-block" style="width: auto;" onchange="this.form.submit()">
+                                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>全部状态</option>
+                                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>待处理</option>
+                                <option value="processing" {% if status_filter == 'processing' %}selected{% endif %}>处理中</option>
+                                <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>已解决</option>
+                                <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>已关闭</option>
+                            </select>
+                            <select name="type" class="form-select form-select-sm d-inline-block ms-2" style="width: auto;" onchange="this.form.submit()">
+                                <option value="all" {% if type_filter == 'all' %}selected{% endif %}>全部类型</option>
+                                <option value="bug" {% if type_filter == 'bug' %}selected{% endif %}>问题报告</option>
+                                <option value="suggestion" {% if type_filter == 'suggestion' %}selected{% endif %}>功能建议</option>
+                                <option value="complaint" {% if type_filter == 'complaint' %}selected{% endif %}>投诉建议</option>
+                                <option value="praise" {% if type_filter == 'praise' %}selected{% endif %}>表扬反馈</option>
+                                <option value="other" {% if type_filter == 'other' %}selected{% endif %}>其他</option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>标题</th>
+                                    <th>类型</th>
+                                    <th>提交人</th>
+                                    <th>状态</th>
+                                    <th>优先级</th>
+                                    <th>提交时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for feedback in feedbacks %}
+                                <tr>
+                                    <td>{{ feedback.title }}</td>
+                                    <td>{{ feedback.get_feedback_type_display }}</td>
+                                    <td>{{ feedback.submitted_by.get_full_name|default:feedback.submitted_by.username }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if feedback.status == 'pending' %}bg-warning
+                                            {% elif feedback.status == 'processing' %}bg-info
+                                            {% elif feedback.status == 'resolved' %}bg-success
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ feedback.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if feedback.priority == 'urgent' %}bg-danger
+                                            {% elif feedback.priority == 'high' %}bg-warning
+                                            {% elif feedback.priority == 'medium' %}bg-info
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ feedback.get_priority_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ feedback.submitted_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'system_pages:feedback_process' feedback.id %}" class="btn btn-sm btn-primary">查看/处理</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">暂无反馈记录</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if feedbacks.has_other_pages %}
+                    <nav aria-label="反馈分页">
+                        <ul class="pagination justify-content-center">
+                            {% if feedbacks.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ feedbacks.previous_page_number }}&status={{ status_filter }}&type={{ type_filter }}">上一页</a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in feedbacks.paginator.page_range %}
+                            {% if feedbacks.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}&status={{ status_filter }}&type={{ type_filter }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                            {% endfor %}
+                            
+                            {% if feedbacks.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ feedbacks.next_page_number }}&status={{ status_filter }}&type={{ type_filter }}">下一页</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

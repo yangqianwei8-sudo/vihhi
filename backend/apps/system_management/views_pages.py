@@ -1,12 +1,15 @@
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required, permission_required
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
+from django.http import JsonResponse
+from django.utils import timezone
+from django.core.paginator import Paginator
 
 from collections import defaultdict, OrderedDict
 
-from backend.apps.system_management.models import Department, Role, User
+from backend.apps.system_management.models import Department, Role, User, SystemFeedback
 from backend.apps.permission_management.models import PermissionItem
 from backend.apps.system_management.serializers import (
     AccountProfileSerializer,
@@ -14,7 +17,8 @@ from backend.apps.system_management.serializers import (
     AccountPasswordChangeSerializer,
 )
 from backend.apps.system_management.services import get_user_permission_codes
-from backend.apps.system_management.forms import POSITION_CHOICES
+from backend.apps.system_management.forms import POSITION_CHOICES, SystemFeedbackForm
+from backend.core.views import _build_full_top_nav, _permission_granted
 
 
 def _context(page_title, page_icon, description, summary_cards=None, sections=None):
@@ -270,3 +274,129 @@ def permission_matrix(request):
         "role_total": roles.count(),
     }
     return render(request, "system_management/permission_matrix.html", context)
+
+
+@login_required
+def feedback_submit(request):
+    """提交反馈（弹窗表单提交）"""
+    if request.method == 'POST':
+        form = SystemFeedbackForm(request.POST, request.FILES)
+        if form.is_valid():
+            feedback = form.save(commit=False)
+            feedback.submitted_by = request.user
+            # 自动获取当前页面信息
+            referer = request.META.get('HTTP_REFERER', '')
+            if referer:
+                feedback.related_url = referer
+            feedback.save()
+            
+            # 返回JSON响应（用于AJAX提交）
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': '反馈已提交，我们会尽快处理！',
+                    'feedback_id': feedback.id
+                })
+            else:
+                messages.success(request, '反馈已提交，我们会尽快处理！')
+                return redirect(request.META.get('HTTP_REFERER', '/'))
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                }, status=400)
+    
+    # GET请求返回表单（用于弹窗）
+    form = SystemFeedbackForm()
+    permission_set = get_user_permission_codes(request.user)
+    
+    return render(request, 'system_management/feedback_form_modal.html', {
+        'form': form,
+        'full_top_nav': _build_full_top_nav(permission_set, request.user),
+    })
+
+
+@login_required
+def feedback_list(request):
+    """反馈列表（管理员查看）"""
+    permission_set = get_user_permission_codes(request.user)
+    
+    # 查询参数
+    status_filter = request.GET.get('status', 'all')
+    type_filter = request.GET.get('type', 'all')
+    page_num = request.GET.get('page', 1)
+    
+    # 构建查询
+    queryset = SystemFeedback.objects.select_related('submitted_by', 'processed_by')
+    
+    # 权限过滤：普通用户只能看自己的反馈
+    if not _permission_granted('system_management.view_all_feedback', permission_set):
+        queryset = queryset.filter(submitted_by=request.user)
+    
+    # 状态筛选
+    if status_filter != 'all':
+        queryset = queryset.filter(status=status_filter)
+    
+    # 类型筛选
+    if type_filter != 'all':
+        queryset = queryset.filter(feedback_type=type_filter)
+    
+    # 排序和分页
+    queryset = queryset.order_by('-submitted_at')
+    paginator = Paginator(queryset, 20)
+    page = paginator.get_page(page_num)
+    
+    # 统计信息
+    base_queryset = SystemFeedback.objects.all()
+    if not _permission_granted('system_management.view_all_feedback', permission_set):
+        base_queryset = base_queryset.filter(submitted_by=request.user)
+    
+    stats = {
+        'total': base_queryset.count(),
+        'pending': base_queryset.filter(status='pending').count(),
+        'processing': base_queryset.filter(status='processing').count(),
+        'resolved': base_queryset.filter(status='resolved').count(),
+    }
+    
+    return render(request, 'system_management/feedback_list.html', {
+        'page_title': '系统反馈',
+        'page_icon': '💬',
+        'feedbacks': page,
+        'status_filter': status_filter,
+        'type_filter': type_filter,
+        'stats': stats,
+        'full_top_nav': _build_full_top_nav(permission_set, request.user),
+    })
+
+
+@login_required
+def feedback_process(request, feedback_id):
+    """处理反馈"""
+    feedback = get_object_or_404(SystemFeedback, id=feedback_id)
+    permission_set = get_user_permission_codes(request.user)
+    
+    # 权限检查：只有管理员可以处理，或者用户只能处理自己的反馈
+    can_process = _permission_granted('system_management.process_feedback', permission_set)
+    if not can_process and feedback.submitted_by != request.user:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("您没有权限处理此反馈。")
+    
+    if request.method == 'POST':
+        status = request.POST.get('status')
+        comment = request.POST.get('comment', '').strip()
+        
+        if status in dict(SystemFeedback.STATUS_CHOICES):
+            feedback.status = status
+            feedback.process_comment = comment
+            feedback.processed_by = request.user
+            feedback.processed_at = timezone.now()
+            feedback.save()
+            
+            messages.success(request, '反馈处理完成')
+            return redirect('system_pages:feedback_list')
+    
+    return render(request, 'system_management/feedback_process.html', {
+        'feedback': feedback,
+        'full_top_nav': _build_full_top_nav(permission_set, request.user),
+    })

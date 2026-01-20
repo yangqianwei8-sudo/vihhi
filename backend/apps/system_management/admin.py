@@ -8,7 +8,7 @@ from django.db.models import Count
 
 from backend.apps.system_management.models import (
     User, Department, Role, RegistrationRequest,
-    DataDictionary, SystemConfig, OurCompany
+    DataDictionary, SystemConfig, OurCompany, SystemFeedback
 )
 from backend.core.admin_base import BaseModelAdmin, AuditAdminMixin, StatusBadgeMixin
 from .services_registration import finalize_approval
@@ -463,3 +463,31 @@ class OurCompanyAdmin(AuditAdminMixin, BaseModelAdmin):
             messages.success(request, f'我方主体信息 "{obj.company_name}" 已更新。')
         else:
             messages.success(request, f'我方主体信息 "{obj.company_name}" 已创建。')
+
+
+@admin.register(SystemFeedback)
+class SystemFeedbackAdmin(StatusBadgeMixin, BaseModelAdmin):
+    """系统反馈管理"""
+    list_display = ('title', 'feedback_type', 'submitted_by', 'status', 'priority', 'submitted_at', 'processed_by')
+    list_filter = ('feedback_type', 'status', 'priority', 'submitted_at')
+    search_fields = ('title', 'content', 'submitted_by__username', 'submitted_by__first_name')
+    readonly_fields = ('submitted_by', 'submitted_at', 'related_url')
+    date_hierarchy = 'submitted_at'
+    ordering = ('-submitted_at',)
+    
+    fieldsets = (
+        ('反馈信息', {
+            'fields': ('feedback_type', 'title', 'content', 'priority', 'related_module', 'attachment')
+        }),
+        ('提交信息', {
+            'fields': ('submitted_by', 'submitted_at', 'related_url')
+        }),
+        ('处理信息', {
+            'fields': ('status', 'processed_by', 'processed_at', 'process_comment')
+        }),
+    )
+    
+    def get_queryset(self, request):
+        """优化查询性能"""
+        qs = super().get_queryset(request)
+        return qs.select_related('submitted_by', 'processed_by')

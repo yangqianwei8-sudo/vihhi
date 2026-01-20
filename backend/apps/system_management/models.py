@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+from django.conf import settings
 
 
 class User(AbstractUser):
@@ -205,3 +206,88 @@ class OurCompany(models.Model):
     
     def __str__(self):
         return self.company_name
+
+
+class SystemFeedback(models.Model):
+    """系统反馈模型"""
+    
+    FEEDBACK_TYPE_CHOICES = [
+        ('bug', '问题报告'),
+        ('suggestion', '功能建议'),
+        ('complaint', '投诉建议'),
+        ('praise', '表扬反馈'),
+        ('other', '其他'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', '待处理'),
+        ('processing', '处理中'),
+        ('resolved', '已解决'),
+        ('closed', '已关闭'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('low', '低'),
+        ('medium', '中'),
+        ('high', '高'),
+        ('urgent', '紧急'),
+    ]
+    
+    # 反馈基本信息
+    feedback_type = models.CharField('反馈类型', max_length=20, choices=FEEDBACK_TYPE_CHOICES)
+    title = models.CharField('反馈标题', max_length=200)
+    content = models.TextField('反馈内容')
+    
+    # 提交人信息（自动获取登录用户）
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='submitted_feedbacks',
+        verbose_name='提交人',
+        db_constraint=True
+    )
+    submitted_at = models.DateTimeField('提交时间', auto_now_add=True, db_index=True)
+    
+    # 处理信息
+    status = models.CharField('处理状态', max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    processed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='processed_feedbacks',
+        verbose_name='处理人',
+        db_constraint=True
+    )
+    processed_at = models.DateTimeField('处理时间', null=True, blank=True)
+    process_comment = models.TextField('处理意见', blank=True)
+    
+    # 附件支持
+    attachment = models.FileField('附件', upload_to='feedback_attachments/%Y/%m/', blank=True, null=True)
+    
+    # 优先级
+    priority = models.CharField(
+        '优先级',
+        max_length=10,
+        choices=PRIORITY_CHOICES,
+        default='medium'
+    )
+    
+    # 关联信息（可选，用于关联到具体业务）
+    related_module = models.CharField('关联模块', max_length=50, blank=True)
+    related_url = models.URLField('关联页面', blank=True)
+    
+    class Meta:
+        db_table = 'system_feedback'
+        verbose_name = '系统反馈'
+        verbose_name_plural = '系统反馈'
+        ordering = ['-submitted_at']
+        indexes = [
+            models.Index(fields=['status', '-submitted_at']),
+            models.Index(fields=['submitted_by', '-submitted_at']),
+            models.Index(fields=['feedback_type', '-submitted_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_feedback_type_display()} - {self.title}"
