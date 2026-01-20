@@ -39,12 +39,14 @@ def get_user_goal_stats(user) -> Dict[str, Any]:
     in_progress = my_goals.filter(status='in_progress').count()
     
     # 逾期目标（需要立刻处理的）
-    overdue_goals = my_goals.filter(
+    overdue_qs = my_goals.filter(
         status__in=['published', 'accepted', 'in_progress'],
         end_date__lt=today
-    ).select_related('parent_goal', 'responsible_person').order_by('end_date')[:5]
+    )
     
-    overdue = overdue_goals.count()
+    # 先统计总数，再获取列表（避免切片后count只返回切片数量）
+    overdue = overdue_qs.count()
+    overdue_goals = overdue_qs.select_related('parent_goal', 'responsible_person').order_by('end_date')[:5]
     
     # 本月需完成目标
     this_month = my_goals.filter(

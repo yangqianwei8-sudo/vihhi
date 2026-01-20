@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load admin_tags %}
 <button class="sticky toggle-nav-sidebar" id="toggle-nav-sidebar" aria-label="{% translate 'Toggle navigation' %}"></button>
 <nav class="sticky" id="nav-sidebar" aria-label="{% translate 'Sidebar' %}">
   <input type="search" id="nav-filter"
@@ -12,8 +13,14 @@
         <div class="app-{{ main_menu|slugify }} module{% if main_menu in request.path %} current-app{% endif %}">
           <table>
             <caption>
-              {% if main_menu == '合同管理' %}
-                <a href="{% url 'admin:app_list' 'production_management' %}" class="section" title="{{ main_menu }}">{{ main_menu }}</a>
+              {% if admin_menu_urls %}
+                {% with menu_url=admin_menu_urls|get_item:main_menu %}
+                  {% if menu_url %}
+                    <a href="{{ menu_url }}" class="section" title="{{ main_menu }}">{{ main_menu }}</a>
+                  {% else %}
+                    <a href="#" class="section" title="{{ main_menu }}">{{ main_menu }}</a>
+                  {% endif %}
+                {% endwith %}
               {% else %}
                 <a href="#" class="section" title="{{ main_menu }}">{{ main_menu }}</a>
               {% endif %}

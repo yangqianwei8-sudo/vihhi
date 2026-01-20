@@ -170,10 +170,11 @@ class Command(BaseCommand):
         if not plan1 and create_test_data:
             from django.utils import timezone
             from datetime import timedelta
+            # 修复：使用level字段替代plan_type
             plan1 = Plan.objects.create(
                 plan_number=f'TEST-COMPANY1-{timezone.now().strftime("%Y%m%d")}-001',
                 name='测试计划1（公司1）',
-                plan_type='monthly',
+                level='company',
                 plan_period='monthly',
                 status='in_progress',
                 progress=50,
@@ -190,10 +191,11 @@ class Command(BaseCommand):
         if not plan2 and create_test_data:
             from django.utils import timezone
             from datetime import timedelta
+            # 修复：使用level字段替代plan_type
             plan2 = Plan.objects.create(
                 plan_number=f'TEST-COMPANY2-{timezone.now().strftime("%Y%m%d")}-001',
                 name='测试计划2（公司2）',
-                plan_type='monthly',
+                level='company',
                 plan_period='monthly',
                 status='in_progress',
                 progress=50,

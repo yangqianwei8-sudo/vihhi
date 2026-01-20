@@ -1,23 +1,18 @@
-{% extends "plan_management/_base.html" %}
-
-{% block pm_title %}{{ page_title }}{% endblock %}
-
+{% extends "shared/list_page_base.html" %}
 {% load static %}
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-<style>
-    .list-page-container {
-        padding: 12px !important;
-        gap: 8px !important;
-    }
 
+{% block page_title %}计划分解{% endblock page_title %}
+{% block page_subtitle %}选择要分解的计划{% endblock page_subtitle %}
+
+{% block module_styles %}
+  {{ block.super }}
+  <style>
     .status-badge {
         padding: 2px 8px;
         border-radius: 12px;
         font-size: 12px;
         font-weight: 500;
     }
-
     .status-draft { background: #e9ecef; color: #495057; }
     .status-pending_approval { background: #cfe2ff; color: #084298; }
     .status-approving { background: #fff3cd; color: #856404; }
@@ -25,180 +20,150 @@
     .status-in_progress { background: #fff3cd; color: #856404; }
     .status-completed { background: #d1e7dd; color: #0f5132; }
     .status-cancelled { background: #f8d7da; color: #842029; }
-</style>
+  </style>
 {% endblock %}
 
-{% block pm_content %}
-<div class="list-page-container">
-
-    <div class="list-page-header">
-        <h2 class="mb-0">
-            {{ page_title }}
-        </h2>
-        <p class="text-muted mb-0 mt-1">{{ description }}</p>
+{% block list_stats_content %}
+  <div class="row g-3">
+    <div class="col-md-3">
+      <div class="list-stat-card">
+        <div class="list-stat-label">可分解计划总数</div>
+        <div class="list-stat-value">{{ total_count|default:0 }}</div>
+      </div>
     </div>
-
-    <div class="list-page-filters card mb-3">
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label small">搜索</label>
-                    <input type="text" name="search" class="form-control form-control-sm"
-                           value="{{ search }}" placeholder="计划编号、名称、负责人">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small">状态</label>
-                    <select name="status" class="form-select form-select-sm">
-                        <option value="">全部状态</option>
-                        <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>草稿</option>
-                        <option value="pending_approval" {% if status_filter == 'pending_approval' %}selected{% endif %}>待审批</option>
-                        <option value="approving" {% if status_filter == 'approving' %}selected{% endif %}>审批中</option>
-                        <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>已审批</option>
-                        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>执行中</option>
-                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>已完成</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small">计划类型</label>
-                    <select name="plan_type" class="form-select form-select-sm">
-                        <option value="">全部类型</option>
-                        <option value="personal" {% if plan_type_filter == 'personal' %}selected{% endif %}>个人计划</option>
-                        <option value="department" {% if plan_type_filter == 'department' %}selected{% endif %}>部门计划</option>
-                        <option value="company" {% if plan_type_filter == 'company' %}selected{% endif %}>公司计划</option>
-                        <option value="project" {% if plan_type_filter == 'project' %}selected{% endif %}>项目计划</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small">&nbsp;</label>
-                    <button type="submit" class="btn btn-primary btn-sm w-100">筛选</button>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small">&nbsp;</label>
-                    <a href="{% url 'plan_pages:plan_decompose_entry' %}" class="btn btn-secondary btn-sm w-100">重置</a>
-                </div>
-            </form>
-        </div>
+    <div class="col-md-3">
+      <div class="list-stat-card">
+        <div class="list-stat-label">执行中</div>
+        <div class="list-stat-value">{{ in_progress_count|default:0 }}</div>
+      </div>
     </div>
-
-    <div class="list-page-action-bar card mb-3">
-        <div class="card-body py-2">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <span class="text-muted small">共 {{ total_count }} 条记录</span>
-                </div>
-                <div>
-                    <a href="{% url 'plan_pages:plan_list' %}" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-arrow-left me-1"></i>返回计划列表
-                    </a>
-                </div>
-            </div>
-        </div>
+    <div class="col-md-3">
+      <div class="list-stat-card">
+        <div class="list-stat-label">草稿</div>
+        <div class="list-stat-value">{{ draft_count|default:0 }}</div>
+      </div>
     </div>
-
-    <div class="list-page-table card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover table-sm">
-                    <thead>
-                        <tr>
-                            <th>计划编号</th>
-                            <th>计划名称</th>
-                            <th>计划类型</th>
-                            <th>关联目标</th>
-                            <th>负责人</th>
-                            <th>时间范围</th>
-                            <th>状态</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for plan in plans %}
-                        <tr>
-                            <td><code>{{ plan.plan_number }}</code></td>
-                            <td>
-                                <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="text-decoration-none">
-                                    {{ plan.name }}
-                                </a>
-                            </td>
-                            <td>{{ plan.get_plan_type_display }}</td>
-                            <td>
-                                {% if plan.related_goal %}
-                                <a href="{% url 'plan_pages:strategic_goal_detail' plan.related_goal.id %}" class="text-decoration-none">
-                                    {{ plan.related_goal.name|truncatewords:5 }}
-                                </a>
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ plan.responsible_person.get_full_name|default:plan.responsible_person.username }}</td>
-                            <td>
-                                <small>
-                                    {{ plan.start_time|date:"Y-m-d" }}<br>
-                                    {{ plan.end_time|date:"Y-m-d" }}
-                                </small>
-                            </td>
-                            <td>
-                                <span class="status-badge status-{{ plan.status }}">
-                                    {{ plan.get_status_display }}
-                                </span>
-                            </td>
-                            <td>
-                                <a href="{% url 'plan_pages:plan_decompose' plan.id %}" class="btn btn-success btn-sm">
-                                    <i class="bi bi-diagram-3 me-1"></i>开始分解
-                                </a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-5">
-                                <i class="bi bi-inbox" style="font-size: 48px; opacity: 0.3;"></i>
-                                <p class="mt-3 mb-0">暂无可分解的计划</p>
-                                <p class="text-muted small">请先创建计划或调整筛选条件</p>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            {% if plans.has_other_pages %}
-            <nav aria-label="计划列表分页" class="mt-3">
-                <ul class="pagination pagination-sm justify-content-end mb-0">
-                    {% if plans.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ plans.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if plan_type_filter %}&plan_type={{ plan_type_filter }}{% endif %}">上一页</a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#" tabindex="-1">上一页</a>
-                    </li>
-                    {% endif %}
-
-                    {% for num in plans.paginator.page_range %}
-                    {% if plans.number == num %}
-                    <li class="page-item active">
-                        <a class="page-link" href="#">{{ num }}</a>
-                    </li>
-                    {% elif num > plans.number|add:'-3' and num < plans.number|add:'3' %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if plan_type_filter %}&plan_type={{ plan_type_filter }}{% endif %}">{{ num }}</a>
-                    </li>
-                    {% endif %}
-                    {% endfor %}
-
-                    {% if plans.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ plans.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if plan_type_filter %}&plan_type={{ plan_type_filter }}{% endif %}">下一页</a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#" tabindex="-1">下一页</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
-        </div>
+    <div class="col-md-3">
+      <div class="list-stat-card">
+        <div class="list-stat-label">已完成</div>
+        <div class="list-stat-value">{{ completed_count|default:0 }}</div>
+      </div>
     </div>
-</div>
-{% endblock %}
+  </div>
+{% endblock list_stats_content %}
+
+{% block list_filters_content %}
+  <div class="col-md-3">
+    <label class="form-label">搜索</label>
+    <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="计划编号、名称、负责人">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">状态</label>
+    <select name="status" class="form-select">
+      <option value="">全部状态</option>
+      {% for value, label in status_options %}
+      <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">计划层级</label>
+    <select name="level" class="form-select">
+      <option value="">全部层级</option>
+      {% for value, label in level_choices %}
+      <option value="{{ value }}" {% if level_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">计划周期</label>
+    <select name="plan_period" class="form-select">
+      <option value="">全部周期</option>
+      {% for value, label in plan_period_choices %}
+      <option value="{{ value }}" {% if plan_period_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">负责人</label>
+    <select name="responsible_person" class="form-select">
+      <option value="">全部负责人</option>
+      {% for u in all_users %}
+      <option value="{{ u.id }}" {% if responsible_filter|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>
+        {{ u.get_full_name|default:u.username }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">关联目标</label>
+    <select name="related_goal" class="form-select">
+      <option value="">全部目标</option>
+      {% for goal in all_goals %}
+      <option value="{{ goal.id }}" {% if related_goal_filter|stringformat:"s" == goal.id|stringformat:"s" %}selected{% endif %}>
+        {{ goal.name|truncatewords:5 }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+{% endblock list_filters_content %}
+
+{% block list_table_headers %}
+  <th>计划编号</th>
+  <th>计划名称</th>
+  <th>计划层级</th>
+  <th>计划周期</th>
+  <th>关联目标</th>
+  <th>负责人</th>
+  <th>时间范围</th>
+  <th>状态</th>
+  <th>操作</th>
+{% endblock list_table_headers %}
+
+{% block list_table_rows %}
+  {% for plan in page_obj %}
+  <tr>
+    <td><code>{{ plan.plan_number }}</code></td>
+    <td>
+      <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="text-dark text-decoration-none fw-medium">
+        {{ plan.name }}
+      </a>
+    </td>
+    <td>{{ plan.get_level_display }}</td>
+    <td>{{ plan.get_plan_period_display }}</td>
+    <td>
+      {% if plan.related_goal %}
+      <a href="{% url 'plan_pages:strategic_goal_detail' plan.related_goal.id %}" class="text-dark text-decoration-none">
+        {{ plan.related_goal.name|truncatewords:5 }}
+      </a>
+      {% else %}
+      <span style="color: #999999;">-</span>
+      {% endif %}
+    </td>
+    <td>{{ plan.responsible_person.get_full_name|default:plan.responsible_person.username }}</td>
+    <td>
+      <div style="font-size: 12px; color: #666666;">
+        {{ plan.start_time|date:"Y-m-d" }} ~ {{ plan.end_time|date:"Y-m-d" }}
+      </div>
+    </td>
+    <td>
+      <span class="status-badge status-{{ plan.status }}">
+        {{ plan.get_status_display }}
+      </span>
+    </td>
+    <td>
+      <div class="btn-group btn-group-sm">
+        <a href="{% url 'plan_pages:plan_decompose' plan.id %}" class="btn btn-sm" title="开始分解">分解</a>
+      </div>
+    </td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="9" class="list-empty-state">
+      <div class="list-empty-state-icon">📋</div>
+      <div class="list-empty-state-text">暂无可分解的计划</div>
+      <div class="list-empty-state-hint">请先创建计划或调整筛选条件</div>
+    </td>
+  </tr>
+  {% endfor %}
+{% endblock list_table_rows %}

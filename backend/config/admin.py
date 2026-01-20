@@ -150,6 +150,18 @@ def custom_each_context(self, request):
     if 'subtitle' in context:
         del context['subtitle']
     
+    # ========== 强制清空业务菜单数据（防止业务导航出现在 admin 页面）==========
+    # 确保 admin 页面不会渲染业务系统的顶部导航栏和侧边栏
+    context['full_top_nav'] = []
+    context['sidebar_nav'] = []
+    context['sidebar_menu'] = []
+    context['personnel_menu'] = []
+    context['customer_menu'] = []
+    context['plan_menu'] = []
+    context['settlement_menu'] = []
+    context['administrative_sidebar_nav'] = []
+    # ========== 强制清空业务菜单数据结束 ==========
+    
     # 检测当前URL路径，判断是否是应用级别的页面
     filter_app_label = _extract_app_label_from_path(request.path)
     
@@ -169,6 +181,10 @@ def custom_each_context(self, request):
     
     # 添加菜单URL映射到上下文，供前端使用
     context['admin_menu_url_mapping'] = MENU_URL_MAPPING
+    
+    # 创建一个简单的字典，将主菜单名称映射到URL，方便模板使用
+    # 这个字典可以直接在模板中通过 admin_menu_urls.菜单名 访问
+    context['admin_menu_urls'] = MENU_URL_MAPPING.copy()
     
     # 添加排序后的主菜单项列表，供前端使用，并为每个菜单项添加URL
     from .admin_menu_config import MAIN_MENU_ITEMS, get_menu_url
@@ -194,6 +210,11 @@ def custom_get_app_list(self, request, app_label=None):
         app_list = _original_get_app_list(request, app_label)
     else:
         app_list = _original_get_app_list(request)
+    
+    # 在首页（app_label为None）时，过滤掉 plan_management 应用
+    # plan_management 有自己的前端页面，不应该在 admin 首页显示
+    if app_label is None:
+        app_list = [app for app in app_list if app.get('app_label') != 'plan_management']
     
     # 遍历所有应用来处理URL
     for app in app_list:

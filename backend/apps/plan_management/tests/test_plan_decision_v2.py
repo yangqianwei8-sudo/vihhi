@@ -43,10 +43,11 @@ class PlanDecisionV2Tests(TestCase):
         start_time = now
         end_time = now + timedelta(days=30)
         
+        # 修复：使用level字段替代plan_type
         self.plan = Plan.objects.create(
             plan_number="PLAN-TEST-001",
             name="p1-test",
-            plan_type="personal",
+            level="personal",
             plan_period="monthly",
             status="draft",
             progress=0,

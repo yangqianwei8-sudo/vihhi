@@ -706,10 +706,38 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
     serializer_class = PlanSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['status', 'plan_type', 'plan_period']
+    # 修复：plan_type不是数据库字段，使用level字段替代
+    # plan_type字段已在P2-1迁移中被level字段替代，保留向后兼容
+    filterset_fields = ['status', 'level', 'plan_period']
     search_fields = ['plan_number', 'name']
     ordering_fields = ['created_time', 'start_time', 'end_time', 'progress']
     ordering = ['-created_time']
+    
+    def list(self, request, *args, **kwargs):
+        """列表视图，支持向后兼容plan_type参数"""
+        # 向后兼容：将plan_type参数映射到level参数
+        if 'plan_type' in request.query_params:
+            plan_type_value = request.query_params.get('plan_type')
+            # plan_type到level的映射
+            plan_type_to_level_map = {
+                'company': 'company',
+                'personal': 'personal',
+                'department': 'company',  # 部门计划映射为公司计划
+                'project': 'company',     # 项目计划映射为公司计划
+            }
+            mapped_level = plan_type_to_level_map.get(plan_type_value)
+            if mapped_level:
+                # 创建新的QueryDict，添加level参数
+                from django.http import QueryDict
+                new_params = request.query_params.copy()
+                new_params['level'] = mapped_level
+                # 移除plan_type参数，避免重复过滤
+                new_params.pop('plan_type', None)
+                # 修改request的query_params
+                request._request.GET = new_params
+                request._full_cache = {}
+        
+        return super().list(request, *args, **kwargs)
 
     def _require_change_perm(self, request, perm):
         """

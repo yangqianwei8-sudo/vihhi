@@ -109,6 +109,13 @@ class StrategicGoalForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
+        # 获取is_draft参数，判断是否是草稿模式
+        self.is_draft = kwargs.pop('is_draft', False)
+        # 从POST数据中检查action参数
+        if 'data' in kwargs and hasattr(kwargs['data'], 'get'):
+            action = kwargs['data'].get('action', '')
+            if action == 'draft':
+                self.is_draft = True
         super().__init__(*args, **kwargs)
         
         # 设置负责人查询集（确保始终有查询集）
@@ -134,6 +141,25 @@ class StrategicGoalForm(forms.ModelForm):
         else:
             # 新建时：显示提示信息，系统会自动生成
             self.fields['goal_number'].widget.attrs['placeholder'] = '系统将自动生成'
+        
+        # 如果是草稿模式，将必填字段设置为非必填
+        if self.is_draft:
+            # 草稿模式下，允许字段为空
+            if 'name' in self.fields:
+                self.fields['name'].required = False
+            if 'goal_type' in self.fields:
+                self.fields['goal_type'].required = False
+            if 'goal_period' in self.fields:
+                self.fields['goal_period'].required = False
+            if 'start_date' in self.fields:
+                self.fields['start_date'].required = False
+            if 'end_date' in self.fields:
+                self.fields['end_date'].required = False
+            # 草稿模式下，所属部门和负责人也允许为空（虽然通常有默认值）
+            if 'responsible_department' in self.fields:
+                self.fields['responsible_department'].required = False
+            if 'responsible_person' in self.fields:
+                self.fields['responsible_person'].required = False
         
         # P2-2: 设置 level 字段的初始值和逻辑
         if self.instance and self.instance.pk:
@@ -241,6 +267,21 @@ class StrategicGoalForm(forms.ModelForm):
     
     def clean(self):
         cleaned_data = super().clean()
+        
+        # 如果是草稿模式，跳过大部分验证，只做基本的数据处理
+        if self.is_draft:
+            # 处理 disabled 字段：如果字段被禁用，从 initial 值获取
+            if not self.instance or not self.instance.pk:
+                # 新建时，如果字段被禁用，使用 initial 值
+                if 'responsible_person' in self.fields:
+                    if self.fields['responsible_person'].widget.attrs.get('disabled'):
+                        if not cleaned_data.get('responsible_person') and self.fields['responsible_person'].initial:
+                            cleaned_data['responsible_person'] = self.fields['responsible_person'].initial
+                if 'responsible_department' in self.fields:
+                    if self.fields['responsible_department'].widget.attrs.get('disabled'):
+                        if not cleaned_data.get('responsible_department') and self.fields['responsible_department'].initial:
+                            cleaned_data['responsible_department'] = self.fields['responsible_department'].initial
+            return cleaned_data
         
         # 处理 disabled 字段：如果字段被禁用，从 initial 值获取
         if not self.instance or not self.instance.pk:
@@ -533,6 +574,13 @@ class PlanForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
+        # 获取is_draft参数，判断是否是草稿模式
+        self.is_draft = kwargs.pop('is_draft', False)
+        # 从POST数据中检查action参数
+        if 'data' in kwargs and hasattr(kwargs['data'], 'get'):
+            action = kwargs['data'].get('action', '')
+            if action == 'draft':
+                self.is_draft = True
         super().__init__(*args, **kwargs)
         
         # 确保删除可能存在的 related_opportunity 字段（如果迁移后仍有残留）
@@ -640,6 +688,25 @@ class PlanForm(forms.ModelForm):
             # 新建时：显示提示信息
             self.fields['plan_number'].widget.attrs['placeholder'] = '系统将自动生成'
         
+        # 如果是草稿模式，将必填字段设置为非必填
+        if self.is_draft:
+            # 草稿模式下，允许字段为空
+            if 'name' in self.fields:
+                self.fields['name'].required = False
+            if 'related_goal' in self.fields:
+                self.fields['related_goal'].required = False
+            if 'plan_period' in self.fields:
+                self.fields['plan_period'].required = False
+            if 'start_time' in self.fields:
+                self.fields['start_time'].required = False
+            if 'end_time' in self.fields:
+                self.fields['end_time'].required = False
+            # 草稿模式下，所属部门和负责人也允许为空（虽然通常有默认值）
+            if 'responsible_department' in self.fields:
+                self.fields['responsible_department'].required = False
+            if 'responsible_person' in self.fields:
+                self.fields['responsible_person'].required = False
+        
         # 如果是编辑，设置初始值
         if self.instance and self.instance.pk:
             self.fields['participants'].initial = self.instance.participants.all()
@@ -728,6 +795,38 @@ class PlanForm(forms.ModelForm):
     
     def clean(self):
         cleaned_data = super().clean()
+        
+        # 如果是草稿模式，跳过大部分验证，只做基本的数据处理
+        if self.is_draft:
+            # 处理 disabled 字段：如果字段被禁用，从 initial 值获取
+            if not self.instance or not self.instance.pk:
+                # 新建时，如果字段被禁用，使用 initial 值
+                if 'responsible_person' in self.fields:
+                    if self.fields['responsible_person'].widget.attrs.get('disabled'):
+                        if not cleaned_data.get('responsible_person') and self.fields['responsible_person'].initial:
+                            cleaned_data['responsible_person'] = self.fields['responsible_person'].initial
+                if 'responsible_department' in self.fields:
+                    if self.fields['responsible_department'].widget.attrs.get('disabled'):
+                        if not cleaned_data.get('responsible_department') and self.fields['responsible_department'].initial:
+                            cleaned_data['responsible_department'] = self.fields['responsible_department'].initial
+            # 草稿模式下，如果有日期数据，仍然需要转换格式
+            start_time = cleaned_data.get('start_time')
+            end_time = cleaned_data.get('end_time')
+            if start_time:
+                if isinstance(start_time, datetime):
+                    cleaned_data['start_time'] = datetime.combine(start_time.date(), datetime.min.time())
+                    cleaned_data['start_time'] = timezone.make_aware(cleaned_data['start_time'])
+                elif hasattr(start_time, 'date'):
+                    cleaned_data['start_time'] = datetime.combine(start_time, datetime.min.time())
+                    cleaned_data['start_time'] = timezone.make_aware(cleaned_data['start_time'])
+            if end_time:
+                if isinstance(end_time, datetime):
+                    cleaned_data['end_time'] = datetime.combine(end_time.date(), datetime.max.time().replace(microsecond=0))
+                    cleaned_data['end_time'] = timezone.make_aware(cleaned_data['end_time'])
+                elif hasattr(end_time, 'date'):
+                    cleaned_data['end_time'] = datetime.combine(end_time, datetime.max.time().replace(microsecond=0))
+                    cleaned_data['end_time'] = timezone.make_aware(cleaned_data['end_time'])
+            return cleaned_data
         
         # 处理 disabled 字段：如果字段被禁用，从 initial 值获取
         if not self.instance or not self.instance.pk:

@@ -1,3 +1,107 @@
+{% block module_styles %}
+<style>
+  /* 表单页面移动端优化 */
+  @media (max-width: 768px) {
+    .form-row {
+      flex-direction: column;
+    }
+
+    .form-row .col-md-6,
+    .form-row .col-md-4,
+    .form-row .col-md-3,
+    .col-5-fields {
+      flex: 0 0 100% !important;
+      max-width: 100% !important;
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .form-control,
+    .form-select,
+    .form-check-input {
+      font-size: 16px;
+      padding: 10px 12px;
+      min-height: 44px;
+    }
+
+    textarea.form-control {
+      min-height: 100px;
+    }
+
+    .btn {
+      min-height: 44px;
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+
+    .btn-group {
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .btn-group .btn {
+      width: 100%;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .form-actions {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-actions .btn {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .form-control,
+    .form-select {
+      font-size: 16px;
+      padding: 12px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      font-size: 16px;
+    }
+
+    .card {
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .card-header {
+      padding: 12px;
+      font-size: 16px;
+    }
+
+    .card-body {
+      padding: 16px;
+    }
+  }
+
+  /* 移动端触摸优化 */
+  @media (hover: none) and (pointer: coarse) {
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    input[type="checkbox"],
+    input[type="radio"] {
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+    }
+  }
+</style>
+{% endblock %}
 {% extends "plan_management/_base.html" %}
 {% load static %}
 
@@ -56,14 +160,14 @@
 
 {% block pm_content %}
 <div class="container-fluid py-4">
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <div class="form-section">
+        <div class="form-section-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h4 class="mb-0">{{ page_title }}</h4>
             <a href="{% if goal %}{% url 'plan_pages:strategic_goal_detail' goal.id %}{% else %}{% url 'plan_pages:strategic_goal_list' %}{% endif %}" class="btn btn-light btn-sm">
                 <i class="bi bi-arrow-left me-1"></i>返回
             </a>
         </div>
-        <div class="card-body">
+        <div class="form-section-body">
             <form method="post" id="goalForm">
                 {% csrf_token %}
 

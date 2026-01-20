@@ -1,235 +1,704 @@
-{% extends "plan_management/_base.html" %}
+{% extends "shared/module_base.html" %}
 {% load static %}
 
-{% block pm_title %}{{ page_title }}{% endblock %}
+{% block module_title %}计划分解 - {{ plan.name }}{% endblock %}
+{% block pm_title %}计划分解 - {{ plan.name }}{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">将计划分解为子计划和任务</span>{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-<style>
-    .plan-tree {
-        margin-left: 0;
-        padding-left: 0;
-    }
-    .plan-tree-item {
-        list-style: none;
-        margin: 12px 0;
-        padding-left: 30px;
-        position: relative;
-    }
-    .plan-tree-item::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 20px;
-        width: 20px;
-        height: 2px;
-        background: #dee2e6;
-    }
-    .plan-tree-item::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 2px;
-        height: 20px;
-        background: #dee2e6;
-    }
-    .plan-card {
-        background: #fff;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 16px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .plan-card.level-0 { border-left: 4px solid #142F5B; }
-    .plan-card.level-1 { border-left: 4px solid #0d6efd; }
-    .plan-card.level-2 { border-left: 4px solid #198754; }
-    .plan-card.level-3 { border-left: 4px solid #ffc107; }
-</style>
+{% block pm_actions %}
+<a href="{% url 'plan_pages:plan_detail' plan.id %}" class="list-btn">
+  <i class="bi bi-arrow-left"></i> 返回详情
+</a>
 {% endblock %}
+
+{% block module_styles %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components/list_page_base_v2.css' %}">
+{% endblock module_styles %}
+
+{% block module_extra_css %}
+<style>
+  /* 列板布局：左侧计划树，右侧表单和统计 */
+  .decompose-column-layout {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 24px;
+    margin-top: 24px;
+  }
+
+  @media (max-width: 1200px) {
+    .decompose-column-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* 左侧：计划树区域 */
+  .decompose-tree-column {
+    min-height: 400px;
+  }
+
+  .plan-tree-card {
+    background: var(--vh-card-bg, #FFFFFF);
+    border: 1px solid var(--vh-border, #E4E8F4);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(15, 30, 58, 0.05);
+  }
+
+  .plan-tree-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--vh-border, #E4E8F4);
+    background: var(--vh-bg, #F6F8FC);
+  }
+
+  .plan-tree-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--vh-text, #1F2937);
+    margin: 0;
+  }
+
+  .plan-tree-body {
+    padding: 20px;
+    max-height: 700px;
+    overflow-y: auto;
+  }
+
+  /* 计划树结构 */
+  .plan-tree {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .plan-tree-item {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .plan-tree-item::before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--vh-border, #E4E8F4);
+  }
+
+  .plan-tree-item[data-level="0"]::before {
+    display: none;
+  }
+
+  .plan-tree-item:last-child::before {
+    height: 20px;
+  }
+
+  .plan-tree-item::after {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 20px;
+    width: 20px;
+    height: 2px;
+    background: var(--vh-border, #E4E8F4);
+  }
+
+  .plan-tree-item[data-level="0"]::after {
+    display: none;
+  }
+
+  /* 计划卡片 */
+  .plan-card {
+    background: var(--vh-card-bg, #FFFFFF);
+    border: 1px solid var(--vh-border, #E4E8F4);
+    border-radius: 8px;
+    padding: 16px;
+    margin-left: 24px;
+    margin-bottom: 16px;
+    border-left: 4px solid var(--vh-border, #E4E8F4);
+    transition: all 0.3s ease;
+  }
+
+  .plan-card:hover {
+    box-shadow: 0 4px 12px rgba(15, 30, 58, 0.08);
+    transform: translateX(4px);
+  }
+
+  .plan-card[data-level="0"] {
+    border-left-color: var(--vh-text-light, #9CA3AF);
+    background: var(--vh-bg, #F6F8FC);
+  }
+
+  .plan-card[data-level="1"] {
+    border-left-color: var(--vh-text-muted, #6B7280);
+  }
+
+  .plan-card[data-level="2"] {
+    border-left-color: var(--vh-border, #E4E8F4);
+  }
+
+  .plan-card[data-level="3"] {
+    border-left-color: var(--vh-text-muted, #6B7280);
+  }
+
+  .plan-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+
+  .plan-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--vh-text, #1F2937);
+    margin: 0 8px 0 0;
+  }
+
+  .plan-card-title a {
+    color: var(--vh-text, #1F2937);
+    text-decoration: none;
+  }
+
+  .plan-card-title a:hover {
+    color: var(--vh-text, #1F2937);
+  }
+
+  .plan-card-number {
+    font-size: 0.85rem;
+    color: var(--vh-text-light, #9CA3AF);
+    font-family: monospace;
+    background: var(--vh-surface, #F6F7FD);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .plan-card-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .plan-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-level {
+    background: var(--vh-surface, #F6F7FD);
+    color: var(--vh-text-muted, #6B7280);
+  }
+
+  .badge-period {
+    background: var(--vh-surface, #F6F7FD);
+    color: var(--vh-text-muted, #6B7280);
+  }
+
+  .badge-status {
+    background: var(--vh-surface, #F6F7FD);
+    color: var(--vh-text-muted, #6B7280);
+  }
+
+  .badge-status.draft {
+    background: var(--vh-surface, #F6F7FD);
+    color: var(--vh-text-muted, #6B7280);
+  }
+
+  .badge-status.in_progress {
+    background: var(--vh-surface, #F6F7FD);
+    color: var(--vh-text-muted, #6B7280);
+  }
+
+  .badge-status.completed {
+    background: var(--vh-surface, #F6F7FD);
+    color: var(--vh-text-muted, #6B7280);
+  }
+
+  .badge-status.cancelled {
+    background: var(--vh-surface, #F6F7FD);
+    color: var(--vh-text-muted, #6B7280);
+  }
+
+  .plan-card-info {
+    font-size: 0.9rem;
+    color: var(--vh-text-muted, #6B7280);
+    margin-bottom: 12px;
+    line-height: 1.6;
+  }
+
+  .plan-card-info strong {
+    color: var(--vh-text, #1F2937);
+    font-weight: 600;
+  }
+
+  .plan-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .plan-action-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    border: 1px solid var(--vh-border, #E4E8F4);
+    background: var(--vh-card-bg, #FFFFFF);
+    color: var(--vh-text-muted, #6B7280);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .plan-action-btn:hover {
+    background: var(--vh-surface, #F6F7FD);
+    border-color: var(--vh-border, #E4E8F4);
+    color: var(--vh-text, #1F2937);
+  }
+
+  .plan-action-btn.btn-primary {
+    background: var(--vh-text, #1F2937);
+    color: var(--vh-card-bg, #FFFFFF);
+    border-color: var(--vh-text, #1F2937);
+  }
+
+  .plan-action-btn.btn-primary:hover {
+    background: var(--vh-text-muted, #6B7280);
+    border-color: var(--vh-border, #E4E8F4);
+  }
+
+  /* 右侧：表单和统计区域 */
+  .decompose-sidebar-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .sidebar-card {
+    background: var(--vh-card-bg, #FFFFFF);
+    border: 1px solid var(--vh-border, #E4E8F4);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(15, 30, 58, 0.05);
+  }
+
+  .sidebar-card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--vh-border, #E4E8F4);
+    background: var(--vh-bg, #F6F8FC);
+  }
+
+  .sidebar-card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--vh-text, #1F2937);
+    margin: 0;
+  }
+
+  .sidebar-card-body {
+    padding: 20px;
+  }
+
+  /* 表单样式 */
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--vh-text, #1F2937);
+    margin-bottom: 8px;
+  }
+
+  .form-label.required::after {
+    content: ' *';
+    color: var(--vh-text-muted, #6B7280);
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--vh-border, #E4E8F4);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--vh-text, #1F2937);
+    background: var(--vh-card-bg, #FFFFFF);
+    transition: border-color 0.2s ease;
+  }
+
+  .form-control:focus {
+    outline: none;
+    border-color: var(--vh-text, #1F2937);
+    box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.08);
+  }
+
+  .form-hint {
+    font-size: 0.8rem;
+    color: var(--vh-text-light, #9CA3AF);
+    margin-top: 6px;
+  }
+
+  .form-submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--vh-text, #1F2937);
+    color: var(--vh-card-bg, #FFFFFF);
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .form-submit-btn:hover {
+    background: var(--vh-text-muted, #6B7280);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(31, 41, 55, 0.1);
+  }
+
+  /* 空状态 */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--vh-text-light, #9CA3AF);
+  }
+
+  .empty-state-icon {
+    font-size: 3rem;
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  .empty-state-text {
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  /* 统计列表 */
+  .stats-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .stats-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--vh-border-light, #F1F5F9);
+  }
+
+  .stats-item:last-child {
+    border-bottom: none;
+  }
+
+  .stats-item-label {
+    font-size: 0.9rem;
+    color: var(--vh-text-muted, #6B7280);
+  }
+
+  .stats-item-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--vh-text, #1F2937);
+  }
+</style>
+{% endblock module_extra_css %}
 
 {% block pm_content %}
-<div class="container-fluid py-4">
+  <!-- 统计卡片区域 -->
+  {% block list_stats_section %}
+  <div class="list-stats-section">
+    <div class="row g-3">
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">总计划数</div>
+          <div class="list-stat-value">{{ plan.get_child_plans_count|add:1 }}</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">总层级数</div>
+          <div class="list-stat-value">{{ plan_tree|length }}</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">子计划数</div>
+          <div class="list-stat-value">{{ plan.get_child_plans_count }}</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="list-stat-card">
+          <div class="list-stat-label">完成进度</div>
+          <div class="list-stat-value">{{ plan.progress|floatformat:0 }}%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endblock list_stats_section %}
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-0">
-                {{ plan.name }}
-            </h2>
-            <p class="text-muted mb-0 mt-1">计划分解：将计划分解为子计划和任务</p>
+  <!-- 列板布局：左侧计划树，右侧表单和统计 -->
+  <div class="decompose-column-layout">
+    <!-- 左侧：计划树 -->
+    <div class="decompose-tree-column">
+      <div class="plan-tree-card">
+        <div class="plan-tree-header">
+          <h3 class="plan-tree-title">
+            <i class="bi bi-diagram-3"></i> 计划分解树
+          </h3>
         </div>
-        <div>
-            <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i>返回详情
-            </a>
+        <div class="plan-tree-body">
+          {% if plan_tree %}
+          <ul class="plan-tree">
+            {% for plan_item, level in plan_tree %}
+            <li class="plan-tree-item" data-level="{{ level }}">
+              <div class="plan-card" data-level="{{ level }}">
+                <div class="plan-card-header">
+                  <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                      <h4 class="plan-card-title">
+                        <a href="{% url 'plan_pages:plan_detail' plan_item.id %}">
+                          {{ plan_item.name }}
+                        </a>
+                      </h4>
+                      <code class="plan-card-number">{{ plan_item.plan_number }}</code>
+                    </div>
+
+                    <div class="plan-card-badges">
+                      <span class="plan-badge badge-level">{{ plan_item.get_level_display }}</span>
+                      <span class="plan-badge badge-period">{{ plan_item.get_plan_period_display }}</span>
+                      <span class="plan-badge badge-status {{ plan_item.status }}">{{ plan_item.get_status_display }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="plan-card-info">
+                  <div style="margin-bottom: 8px;">
+                    <span>
+                      <strong>开始：</strong>{{ plan_item.start_time|date:"Y-m-d" }}
+                    </span>
+                    <span style="margin-left: 16px;">
+                      <strong>结束：</strong>{{ plan_item.end_time|date:"Y-m-d" }}
+                    </span>
+                    <span style="margin-left: 16px;">
+                      <strong>进度：</strong>{{ plan_item.progress }}%
+                    </span>
+                  </div>
+
+                  <div>
+                    <span>
+                      <strong>负责人：</strong>{{ plan_item.responsible_person.get_full_name|default:plan_item.responsible_person.username }}
+                    </span>
+                    {% if plan_item.responsible_department %}
+                    <span style="margin-left: 16px;">
+                      <strong>部门：</strong>{{ plan_item.responsible_department.name }}
+                    </span>
+                    {% endif %}
+                    {% if plan_item.related_goal %}
+                    <span style="margin-left: 16px;">
+                      <strong>关联目标：</strong>{{ plan_item.related_goal.name }}
+                    </span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="plan-card-actions">
+                  <a href="{% url 'plan_pages:plan_detail' plan_item.id %}" class="plan-action-btn btn-primary">
+                    <i class="bi bi-eye"></i> 查看
+                  </a>
+                  <a href="{% url 'plan_pages:plan_execution_track' plan_item.id %}" class="plan-action-btn">
+                    <i class="bi bi-graph-up"></i> 跟踪
+                  </a>
+                  <a href="{% url 'plan_pages:plan_decompose' plan_item.id %}" class="plan-action-btn">
+                    <i class="bi bi-diagram-3"></i> 继续分解
+                  </a>
+                </div>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="empty-state">
+            <div class="empty-state-icon">
+              <i class="bi bi-diagram-3"></i>
+            </div>
+            <p class="empty-state-text">暂无下级计划，请在右侧创建</p>
+          </div>
+          {% endif %}
         </div>
+      </div>
     </div>
 
-    <div class="row">
-
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">计划分解树</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="plan-tree">
-                        {% for plan_item, level in plan_tree %}
-                        <li class="plan-tree-item">
-                            <div class="plan-card level-{{ level }}">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-2">
-                                            <a href="{% url 'plan_pages:plan_detail' plan_item.id %}" class="text-decoration-none">
-                                                {{ plan_item.name }}
-                                            </a>
-                                        </h6>
-                                        <div class="small text-muted mb-2">
-                                            <span class="me-3"><code>{{ plan_item.plan_number }}</code></span>
-                                            <span class="me-3">{{ plan_item.get_plan_type_display }}</span>
-                                            <span class="badge bg-{% if plan_item.status == 'completed' %}success{% elif plan_item.status == 'in_progress' %}warning{% elif plan_item.status == 'cancelled' %}danger{% else %}secondary{% endif %}">
-                                                {{ plan_item.get_status_display }}
-                                            </span>
-                                        </div>
-                                        <div class="small">
-                                            <span class="me-3">
-                                                <strong>时间：</strong>{{ plan_item.start_time|date:"Y-m-d" }} ~ {{ plan_item.end_time|date:"Y-m-d" }}
-                                            </span>
-                                            <span>
-                                                <strong>进度：</strong>{{ plan_item.progress }}%
-                                            </span>
-                                        </div>
-                                        <div class="small mt-2">
-                                            <strong>负责人：</strong>{{ plan_item.responsible_person.get_full_name|default:plan_item.responsible_person.username }}
-                                            {% if plan_item.responsible_department %}
-                                            <span class="ms-3">
-                                                <strong>部门：</strong>{{ plan_item.responsible_department.name }}
-                                            </span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{% url 'plan_pages:plan_detail' plan_item.id %}" class="btn btn-outline-primary" title="查看">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        <a href="{% url 'plan_pages:plan_execution_track' plan_item.id %}" class="btn btn-outline-info" title="跟踪">
-                                            <i class="bi bi-graph-up"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
+    <!-- 右侧：表单和统计 -->
+    <div class="decompose-sidebar-column">
+      <!-- 创建子计划表单 -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">
+          <h4 class="sidebar-card-title">
+            <i class="bi bi-plus-circle"></i> 创建子计划
+          </h4>
         </div>
+        <div class="sidebar-card-body">
+          <form method="post" action="{% url 'plan_pages:plan_create' %}">
+            {% csrf_token %}
+            <input type="hidden" name="parent_plan_id" value="{{ plan.id }}">
 
-        <div class="col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">创建子计划</h5>
-                </div>
-                <div class="card-body">
-                    <form method="post" action="{% url 'plan_pages:plan_create' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="parent_plan_id" value="{{ plan.id }}">
-
-                        <div class="mb-3">
-                            <label class="form-label required">计划名称</label>
-                            <input type="text" name="name" class="form-control" required placeholder="请输入子计划名称">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label required">计划类型</label>
-                            <select name="plan_type" class="form-select" required>
-                                <option value="personal">个人计划</option>
-                                <option value="department">部门计划</option>
-                                <option value="company">公司计划</option>
-                                <option value="project">项目计划</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label required">计划周期</label>
-                            <select name="plan_period" class="form-select" required>
-                                <option value="daily">日计划</option>
-                                <option value="weekly">周计划</option>
-                                <option value="monthly">月计划</option>
-                                <option value="quarterly">季度计划</option>
-                                <option value="yearly">年计划</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label required">负责人</label>
-                            <select name="responsible_person" class="form-select" required>
-                                <option value="">请选择负责人</option>
-                                {% for user in users %}
-                                <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">负责部门</label>
-                            <select name="responsible_department" class="form-select">
-                                <option value="">请选择部门</option>
-                                {% for dept in departments %}
-                                <option value="{{ dept.id }}">{{ dept.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label required">关联战略目标</label>
-                            <select name="related_goal" class="form-select" required>
-                                <option value="">请选择战略目标</option>
-                                <option value="{{ plan.related_goal.id }}" selected>{{ plan.related_goal.name }}</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label required">开始时间</label>
-                            <input type="datetime-local" name="start_time" class="form-control" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label required">结束时间</label>
-                            <input type="datetime-local" name="end_time" class="form-control" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label required">计划内容</label>
-                            <textarea name="content" class="form-control" rows="4" required placeholder="请输入计划内容"></textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label required">计划目标</label>
-                            <textarea name="plan_objective" class="form-control" rows="3" required placeholder="请输入计划目标"></textarea>
-                        </div>
-
-                        <button type="submit" class="btn btn-success w-100">
-                            <i class="bi bi-plus-circle me-1"></i>创建子计划
-                        </button>
-                    </form>
-                </div>
+            <div class="form-group">
+              <label class="form-label required">
+                <i class="bi bi-tag"></i> 计划名称
+              </label>
+              <input type="text" name="name" class="form-control" required placeholder="请输入子计划名称">
             </div>
 
-            <div class="card shadow-sm mt-3">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">分解统计</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-2">
-                        <strong>子计划数量：</strong>{{ plan.get_child_plans_count }}
-                    </div>
-                    <div class="mb-2">
-                        <strong>总层级数：</strong>{{ plan_tree|length }}
-                    </div>
-                </div>
+            <div class="form-group">
+              <label class="form-label required">
+                <i class="bi bi-layers"></i> 计划层级
+              </label>
+              <select name="level" class="form-control" required>
+                <option value="personal">个人计划</option>
+                <option value="department">部门计划</option>
+                <option value="company">公司计划</option>
+              </select>
             </div>
+
+            <div class="form-group">
+              <label class="form-label required">
+                <i class="bi bi-calendar-range"></i> 计划周期
+              </label>
+              <select name="plan_period" class="form-control" required>
+                <option value="daily">日计划</option>
+                <option value="weekly">周计划</option>
+                <option value="monthly">月计划</option>
+                <option value="quarterly">季度计划</option>
+                <option value="yearly">年计划</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">
+                <i class="bi bi-person"></i> 负责人
+              </label>
+              <select name="responsible_person" class="form-control" required>
+                <option value="">请选择负责人</option>
+                {% for user in users %}
+                <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-building"></i> 负责部门
+              </label>
+              <select name="responsible_department" class="form-control">
+                <option value="">请选择部门</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-bullseye"></i> 关联战略目标
+              </label>
+              <select name="related_goal" class="form-control">
+                <option value="">请选择战略目标</option>
+                {% if plan.related_goal %}
+                <option value="{{ plan.related_goal.id }}" selected>{{ plan.related_goal.name }}</option>
+                {% endif %}
+              </select>
+              <div class="form-hint">继承父计划的关联目标</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">
+                <i class="bi bi-calendar-event"></i> 开始时间
+              </label>
+              <input type="datetime-local" name="start_time" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">
+                <i class="bi bi-calendar-check"></i> 结束时间
+              </label>
+              <input type="datetime-local" name="end_time" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">
+                <i class="bi bi-file-text"></i> 计划内容
+              </label>
+              <textarea name="content" class="form-control" rows="4" required placeholder="请输入计划内容"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">
+                <i class="bi bi-bullseye"></i> 计划目标
+              </label>
+              <textarea name="plan_objective" class="form-control" rows="3" required placeholder="请输入计划目标"></textarea>
+            </div>
+
+            <button type="submit" class="form-submit-btn">
+              <i class="bi bi-check-circle"></i> 创建子计划
+            </button>
+          </form>
         </div>
+      </div>
+
+      <!-- 分解统计 -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">
+          <h4 class="sidebar-card-title">
+            <i class="bi bi-bar-chart"></i> 分解统计
+          </h4>
+        </div>
+        <div class="sidebar-card-body">
+          <ul class="stats-list">
+            <li class="stats-item">
+              <span class="stats-item-label">子计划数</span>
+              <span class="stats-item-value">{{ plan.get_child_plans_count }} 个</span>
+            </li>
+            <li class="stats-item">
+              <span class="stats-item-label">总层级</span>
+              <span class="stats-item-value">{{ plan_tree|length }} 层</span>
+            </li>
+            <li class="stats-item">
+              <span class="stats-item-label">完成进度</span>
+              <span class="stats-item-value">{{ plan.progress|floatformat:0 }}%</span>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
-</div>
-{% endblock %}
+  </div>
+{% endblock pm_content %}
+
+{% block module_extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 表单验证和提交处理（如果需要 AJAX 提交可以在这里添加）
+    const form = document.querySelector('form[action*="plan_create"]');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // 可以在这里添加前端验证
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                form.reportValidity();
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock module_extra_js %}

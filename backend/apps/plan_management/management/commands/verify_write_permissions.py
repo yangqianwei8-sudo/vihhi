@@ -140,10 +140,11 @@ class Command(BaseCommand):
         from django.utils import timezone
         from datetime import timedelta
 
+        # 修复：使用level字段替代plan_type
         plan = Plan.objects.create(
             plan_number=f'TEST-{timezone.now().strftime("%Y%m%d")}-001',
             name='测试计划（用于权限验证）',
-            plan_type='monthly',
+            level='company',
             plan_period='monthly',
             status='in_progress',
             progress=50,

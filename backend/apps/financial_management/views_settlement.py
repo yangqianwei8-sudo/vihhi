@@ -17,21 +17,44 @@ from .services_settlement import get_project_output_value_for_settlement, get_pr
 from backend.apps.production_management.models import Project
 from backend.apps.system_management.models import User
 from backend.apps.system_management.services import get_user_permission_codes
-from backend.core.views import _permission_granted
+from backend.core.views import _permission_granted, _build_full_top_nav
 from backend.apps.production_management.models import BusinessContract
 from django.core.paginator import Paginator
 from django.db.models import Max
 
 
-def _context(page_title, page_icon, description, summary_cards=None, sections=None):
+def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None):
     """统一的页面上下文生成函数"""
-    return {
+    context = {
         "page_title": page_title,
         "page_icon": page_icon,
         "description": description,
         "summary_cards": summary_cards or [],
         "sections": sections or [],
     }
+    
+    # 添加顶部导航栏和左侧菜单
+    if request and request.user.is_authenticated:
+        try:
+            permission_set = get_user_permission_codes(request.user)
+            context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception('构建导航栏失败: %s', str(e))
+            context['full_top_nav'] = []
+    else:
+        context['full_top_nav'] = []
+    
+    # 为所有可能的侧边栏变量设置默认值，避免模板错误
+    context.setdefault('plan_menu', [])
+    context.setdefault('sidebar_nav', [])
+    context.setdefault('customer_menu', [])
+    context.setdefault('settlement_menu', [])
+    context.setdefault('settlement_sidebar_nav', [])
+    context.setdefault('administrative_sidebar_nav', [])
+    
+    return context
 
 
 @login_required
@@ -65,6 +88,7 @@ def output_value_template_manage(request):
                 "产值管理模块尚未初始化，请先运行数据库迁移。",
                 summary_cards=[],
                 sections=[],
+                request=request,
             ))
     except Exception as e:
         import logging
@@ -78,6 +102,7 @@ def output_value_template_manage(request):
             "无法访问数据库，请检查数据库配置。",
             summary_cards=[],
             sections=[],
+            request=request,
         ))
     
     # 获取所有阶段及其里程碑和事件
@@ -97,6 +122,7 @@ def output_value_template_manage(request):
             "获取产值阶段失败，请检查数据库表是否正确创建。",
             summary_cards=[],
             sections=[],
+            request=request,
         ))
     
     # 统计信息
@@ -165,6 +191,7 @@ def output_value_template_manage(request):
         "配置和管理产值计算模板，包括阶段、里程碑和事件的设置。",
         summary_cards=summary_cards,
         sections=sections,
+        request=request,
     )
     context['stages'] = stage_data
     
@@ -201,6 +228,7 @@ def output_value_record_list(request):
                 "📈",
                 "产值管理模块尚未初始化，请先运行数据库迁移。",
                 summary_cards=[],
+                request=request,
             ))
     except Exception as e:
         import logging
@@ -213,6 +241,7 @@ def output_value_record_list(request):
             "📈",
             "无法访问数据库，请检查数据库配置。",
             summary_cards=[],
+            request=request,
         ))
     
     # 获取当前用户的产值记录
@@ -231,6 +260,7 @@ def output_value_record_list(request):
             "📈",
             "获取产值记录失败，请检查数据库表是否正确创建。",
             summary_cards=[],
+            request=request,
         ))
     
     # 如果是普通用户，只显示自己的记录
@@ -274,6 +304,7 @@ def output_value_record_list(request):
         "📈",
         "查看和管理产值计算记录，了解产值分配情况。",
         summary_cards=summary_cards,
+        request=request,
     )
     context['records'] = page_obj
     context['projects'] = Project.objects.filter(status__in=['in_progress', 'completed']).order_by('-created_time')
@@ -320,6 +351,7 @@ def project_output_value_detail(request, project_id):
         f"项目产值详情 - {project.project_number}",
         "📊",
         f"项目：{project.name}",
+        request=request,
     )
     context.update({
         'project': project,
@@ -388,6 +420,7 @@ def output_value_statistics(request):
                 "📊",
                 "产值管理模块尚未初始化，请先运行数据库迁移。",
                 summary_cards=[],
+                request=request,
             ))
     except Exception as e:
         import logging
@@ -400,6 +433,7 @@ def output_value_statistics(request):
             "📊",
             "无法访问数据库，请检查数据库配置。",
             summary_cards=[],
+            request=request,
         ))
     
     # 获取筛选参数
@@ -425,6 +459,7 @@ def output_value_statistics(request):
             "📊",
             "获取产值记录失败，请检查数据库表是否正确创建。",
             summary_cards=[],
+            request=request,
         ))
     
     if date_from:
@@ -505,6 +540,7 @@ def output_value_statistics(request):
         "📊",
         "查看产值分配统计和分析报表。",
         summary_cards=summary_cards,
+        request=request,
     )
     context.update({
         'user_stats': user_stats,
@@ -638,6 +674,7 @@ def project_settlement_list(request):
         "💰",
         "管理项目结算单，包括结算申请、审核和确认",
         summary_cards=summary_cards,
+        request=request,
     )
     context.update({
         'settlements': page_obj,
@@ -704,6 +741,7 @@ def project_settlement_detail(request, settlement_id):
         f"项目结算 - {settlement.settlement_number}",
         "💰",
         f"项目：{settlement.project.name}",
+        request=request,
     )
     # 获取结算明细项
     settlement_items = settlement.items.select_related('reviewed_by', 'created_by').order_by('order')
@@ -797,6 +835,7 @@ def project_settlement_create(request):
         "新增项目结算单",
         "➕",
         "创建新的项目结算单",
+        request=request,
     )
     context.update({
         'form': form,
@@ -837,6 +876,7 @@ def project_settlement_update(request, settlement_id):
         f"编辑项目结算单 - {settlement.settlement_number}",
         "✏️",
         f"项目：{settlement.project.name}",
+        request=request,
     )
     context.update({
         'form': form,
@@ -874,6 +914,7 @@ def project_settlement_submit(request, settlement_id):
         "提交结算单",
         "📤",
         f"确认提交结算单 {settlement.settlement_number} 进行审核？",
+        request=request,
     )
     context.update({
         'settlement': settlement,
@@ -979,6 +1020,7 @@ def payment_plan_list(request):
         "💳",
         "统一管理项目回款计划和商务合同回款计划",
         summary_cards=summary_cards,
+        request=request,
     )
     context.update({
         'page_obj': page_obj,
@@ -1024,6 +1066,7 @@ def payment_plan_detail(request, plan_type, plan_id):
         f"回款计划详情 - {plan.phase_name}",
         "💳",
         f"计划金额：¥{plan.planned_amount:,.2f}",
+        request=request,
     )
     context.update({
         'plan': plan,
@@ -1099,6 +1142,7 @@ def payment_record_list(request):
         "💰",
         "管理所有实际回款记录",
         summary_cards=summary_cards,
+        request=request,
     )
     context.update({
         'page_obj': page_obj,
@@ -1168,6 +1212,7 @@ def payment_record_create(request, plan_type, plan_id):
         "创建回款记录",
         "💰",
         f"回款计划：{plan.phase_name}",
+        request=request,
     )
     context.update({
         'plan': plan,

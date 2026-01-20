@@ -1,0 +1,462 @@
+{% extends "plan_management/_base.html" %}
+{% load static %}
+
+{% block pm_title %}计划完成度分析{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">分析计划的完成情况和统计数据</span>{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
+<style>
+  .analysis-filters {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    padding: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .analysis-filters-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+
+  .analysis-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .analysis-filter-label {
+    font-size: 12px;
+    color: #666666;
+    font-weight: 400;
+  }
+
+  .analysis-filter-input {
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    padding: 6px 10px;
+    font-size: 14px;
+    color: #333333;
+    background: #FFFFFF;
+    width: 100%;
+  }
+
+  .analysis-filter-input:focus {
+    outline: none;
+    border-color: #999999;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .analysis-filter-actions {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  .analysis-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .analysis-stat-card {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s ease;
+  }
+
+  .analysis-stat-card:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  .analysis-stat-value {
+    font-size: 32px;
+    font-weight: 600;
+    color: #1A1A1A;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+
+  .analysis-stat-label {
+    font-size: 12px;
+    color: #666666;
+    font-weight: 400;
+  }
+
+  .analysis-charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .analysis-chart-card {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+
+  .analysis-chart-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #E0E0E0;
+    background: #F5F5F5;
+  }
+
+  .analysis-chart-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1A1A1A;
+    margin: 0;
+  }
+
+  .analysis-chart-body {
+    padding: 20px;
+  }
+
+  .analysis-chart-container {
+    position: relative;
+    height: 300px;
+  }
+
+  .analysis-empty {
+    background: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 0;
+    padding: 60px 20px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .analysis-empty-icon {
+    font-size: 48px;
+    color: #CCCCCC;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .analysis-empty-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #666666;
+    margin-bottom: 8px;
+  }
+
+  .analysis-empty-text {
+    font-size: 14px;
+    color: #999999;
+  }
+
+  @media (max-width: 768px) {
+    .analysis-filters-form {
+      grid-template-columns: 1fr;
+    }
+    .analysis-charts {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block pm_content %}
+<div class="analysis-filters">
+  <form method="get" class="analysis-filters-form">
+    <div class="analysis-filter-group">
+      <label class="analysis-filter-label">开始时间</label>
+      <input type="date" name="date_from" class="analysis-filter-input" value="{{ date_from }}">
+    </div>
+    <div class="analysis-filter-group">
+      <label class="analysis-filter-label">结束时间</label>
+      <input type="date" name="date_to" class="analysis-filter-input" value="{{ date_to }}">
+    </div>
+    <div class="analysis-filter-group">
+      <label class="analysis-filter-label">计划类型</label>
+      <select name="plan_type" class="analysis-filter-input">
+        <option value="">全部类型</option>
+        <option value="personal" {% if plan_type == 'personal' %}selected{% endif %}>个人计划</option>
+        <option value="department" {% if plan_type == 'department' %}selected{% endif %}>部门计划</option>
+        <option value="company" {% if plan_type == 'company' %}selected{% endif %}>公司计划</option>
+        <option value="project" {% if plan_type == 'project' %}selected{% endif %}>项目计划</option>
+      </select>
+    </div>
+    <div class="analysis-filter-group">
+      <label class="analysis-filter-label">计划周期</label>
+      <select name="plan_period" class="analysis-filter-input">
+        <option value="">全部周期</option>
+        <option value="daily" {% if plan_period == 'daily' %}selected{% endif %}>日计划</option>
+        <option value="weekly" {% if plan_period == 'weekly' %}selected{% endif %}>周计划</option>
+        <option value="monthly" {% if plan_period == 'monthly' %}selected{% endif %}>月计划</option>
+        <option value="quarterly" {% if plan_period == 'quarterly' %}selected{% endif %}>季度计划</option>
+        <option value="yearly" {% if plan_period == 'yearly' %}selected{% endif %}>年计划</option>
+      </select>
+    </div>
+    <div class="analysis-filter-group analysis-filter-actions">
+      <button type="submit" class="list-btn list-btn-primary">筛选</button>
+      <a href="{% url 'plan_pages:plan_completion_analysis' %}" class="list-btn">重置</a>
+    </div>
+  </form>
+</div>
+
+<div class="analysis-stats">
+  <div class="analysis-stat-card">
+    <div class="analysis-stat-value">{{ total_count }}</div>
+    <div class="analysis-stat-label">计划总数</div>
+  </div>
+  <div class="analysis-stat-card">
+    <div class="analysis-stat-value">{{ completed_count }}</div>
+    <div class="analysis-stat-label">已完成</div>
+  </div>
+  <div class="analysis-stat-card">
+    <div class="analysis-stat-value">{{ in_progress_count }}</div>
+    <div class="analysis-stat-label">执行中</div>
+  </div>
+  <div class="analysis-stat-card">
+    <div class="analysis-stat-value">{{ completion_rate }}%</div>
+    <div class="analysis-stat-label">完成率</div>
+  </div>
+  <div class="analysis-stat-card">
+    <div class="analysis-stat-value">{{ cancelled_count }}</div>
+    <div class="analysis-stat-label">已取消</div>
+  </div>
+  <div class="analysis-stat-card">
+    <div class="analysis-stat-value">{{ avg_progress }}%</div>
+    <div class="analysis-stat-label">平均进度</div>
+  </div>
+</div>
+
+{% if total_count > 0 %}
+<div class="analysis-charts">
+  <div class="analysis-chart-card">
+    <div class="analysis-chart-header">
+      <h5 class="analysis-chart-title">状态分布</h5>
+    </div>
+    <div class="analysis-chart-body">
+      <div class="analysis-chart-container">
+        <canvas id="statusChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="analysis-chart-card">
+    <div class="analysis-chart-header">
+      <h5 class="analysis-chart-title">进度分布</h5>
+    </div>
+    <div class="analysis-chart-body">
+      <div class="analysis-chart-container">
+        <canvas id="progressChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="analysis-chart-card">
+    <div class="analysis-chart-header">
+      <h5 class="analysis-chart-title">类型分布</h5>
+    </div>
+    <div class="analysis-chart-body">
+      <div class="analysis-chart-container">
+        <canvas id="typeChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="analysis-chart-card">
+    <div class="analysis-chart-header">
+      <h5 class="analysis-chart-title">周期分布</h5>
+    </div>
+    <div class="analysis-chart-body">
+      <div class="analysis-chart-container">
+        <canvas id="periodChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="analysis-empty">
+  <span class="analysis-empty-icon">▢</span>
+  <div class="analysis-empty-title">暂无数据</div>
+  <div class="analysis-empty-text">请调整筛选条件后重试</div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+{% if total_count > 0 %}try {
+
+const statusMap = {
+    "draft": "草稿",
+    "in_progress": "执行中",
+    "completed": "已完成",
+    "cancelled": "已取消"
+};
+
+const typeMap = {
+    "personal": "个人计划",
+    "company": "公司计划"
+};
+
+const periodMap = {
+    "daily": "日计划",
+    "weekly": "周计划",
+    "monthly": "月计划",
+    "quarterly": "季度计划",
+    "yearly": "年计划"
+};
+
+const statusCtx = document.getElementById("statusChart").getContext("2d");
+const statusLabels = [
+    {% for stat in status_stats %}
+    statusMap["{{ stat.status }}"] || "{{ stat.status }}",
+    {% endfor %}
+];
+const statusData = [
+    {% for stat in status_stats %}
+    {{ stat.count }},
+    {% endfor %}
+];
+new Chart(statusCtx, {
+        console.log("初始化图表...");
+    type: "doughnut",
+    data: {
+        labels: statusLabels,
+        datasets: [{
+            data: statusData,
+            backgroundColor: ["#E0E0E0", "#999999", "#666666", "#333333"]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: "bottom"
+            }
+        }
+    }
+});
+
+const progressCtx = document.getElementById("progressChart").getContext("2d");
+new Chart(progressCtx, {
+    type: "bar",
+    data: {
+        labels: ["0-25%", "25-50%", "50-75%", "75-100%", "100%"],
+        datasets: [{
+            label: "计划数量",
+            data: [
+                {{ progress_distribution.progress_0_25 }},
+                {{ progress_distribution.progress_25_50 }},
+                {{ progress_distribution.progress_50_75 }},
+                {{ progress_distribution.progress_75_100 }},
+                {{ progress_distribution.progress_100 }}
+            ],
+            backgroundColor: "#666666"
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+const typeCtx = document.getElementById("typeChart").getContext("2d");
+const typeLabels = [
+    {% for stat in type_stats %}
+    typeMap["{{ stat.level }}"] || "{{ stat.level }}",
+    {% endfor %}
+];
+const typeData = [
+    {% for stat in type_stats %}
+    {{ stat.count }},
+    {% endfor %}
+];
+new Chart(typeCtx, {
+    type: "pie",
+    data: {
+        labels: typeLabels,
+        datasets: [{
+            data: typeData,
+            backgroundColor: ["#E0E0E0", "#CCCCCC", "#999999", "#666666"]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: "bottom"
+            }
+        }
+    }
+});
+
+const periodCtx = document.getElementById("periodChart").getContext("2d");
+const periodLabels = [
+    {% for stat in period_stats %}
+    periodMap["{{ stat.plan_period }}"] || "{{ stat.plan_period }}",
+    {% endfor %}
+];
+const periodData = [
+    {% for stat in period_stats %}
+    {{ stat.count }},
+    {% endfor %}
+];
+new Chart(periodCtx, {
+    type: "bar",
+    data: {
+        labels: periodLabels,
+        datasets: [{
+            label: "计划数量",
+            data: periodData,
+            backgroundColor: "#999999"
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+} catch (error) {
+  console.error("图表初始化错误:", error);
+}
+
+});{% endif %}
+});
+
+{% endblock %}

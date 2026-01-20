@@ -1,0 +1,200 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+{# 
+共享创建表单模板
+继承 module_base.html，提供统一的创建表单结构
+
+固定字段：
+1. 所属部门（responsible_department）- 默认值：当前用户所在部门（默认，不可修改）
+2. 负责人（responsible_person）- 默认值：当前用户（默认，不可修改）
+3. 表单编号（form_number_field 或 form_number）- 根据业务模块自动生成
+
+布局说明：
+- 每行显示5个字段（使用 col-5-fields 自定义类）
+- 多行文本字段（Textarea）占据整行（col-12）
+- 使用 form-field-wrapper 类包装每个字段
+#}
+
+{% block module_styles %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/components/create_form_base.css' %}">
+{% endblock module_styles %}
+{% block pm_title %}{% block form_title %}创建表单{% endblock %}{% endblock %}
+{% block pm_subtitle %}{% block form_subtitle %}请填写表单信息{% endblock %}{% endblock %}
+{% block pm_actions %}{% block form_header_actions %}{% endblock %}{% endblock %}
+{% block pm_content %}
+<form method="post" class="create-form" id="createForm">
+  {% csrf_token %}
+  
+  {# 表单错误提示 #}
+  {% if form.non_field_errors %}
+  <div class="alert alert-danger">
+    {{ form.non_field_errors }}
+  </div>
+  {% endif %}
+
+  {# 固定字段区域 - 每行5个字段 #}
+  <div class="row mb-3 form-row-5">
+    {# 固定字段1：所属部门（默认，不可修改） #}
+    {% if form.responsible_department %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.responsible_department.id_for_label }}" class="form-label">
+        {% if form.responsible_department.label %}
+          {% if "默认" in form.responsible_department.label or "不可修改" in form.responsible_department.label %}
+            {{ form.responsible_department.label }}
+          {% else %}
+            {{ form.responsible_department.label }}（默认，不可修改）
+          {% endif %}
+        {% else %}
+          所属部门（默认，不可修改）
+        {% endif %}
+        {% if form.responsible_department.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.responsible_department }}
+      {% if form.responsible_department.errors %}
+      <div class="text-danger small">{{ form.responsible_department.errors }}</div>
+      {% endif %}
+      {% if form.responsible_department.help_text %}
+      <div class="form-text">{{ form.responsible_department.help_text }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# 固定字段2：负责人（默认，不可修改） #}
+    {% if form.responsible_person %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.responsible_person.id_for_label }}" class="form-label">
+        {% if form.responsible_person.label %}
+          {% if "默认" in form.responsible_person.label or "不可修改" in form.responsible_person.label %}
+            {{ form.responsible_person.label }}
+          {% else %}
+            {{ form.responsible_person.label }}（默认，不可修改）
+          {% endif %}
+        {% else %}
+          负责人（默认，不可修改）
+        {% endif %}
+        {% if form.responsible_person.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.responsible_person }}
+      {% if form.responsible_person.errors %}
+      <div class="text-danger small">{{ form.responsible_person.errors }}</div>
+      {% endif %}
+      {% if form.responsible_person.help_text %}
+      <div class="form-text">{{ form.responsible_person.help_text }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# 固定字段3：表单编号（支持多种字段名） #}
+    {% if form.form_number %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.form_number.id_for_label }}" class="form-label">
+        {{ form.form_number.label }}
+        {% if form.form_number.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.form_number }}
+      {% if form.form_number.errors %}
+      <div class="text-danger small">{{ form.form_number.errors }}</div>
+      {% endif %}
+      {% if form.form_number.help_text %}
+      <div class="form-text">{{ form.form_number.help_text }}</div>
+      {% endif %}
+    </div>
+    {% elif form.plan_number %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.plan_number.id_for_label }}" class="form-label">
+        {{ form.plan_number.label }}
+        {% if form.plan_number.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.plan_number }}
+      {% if form.plan_number.errors %}
+      <div class="text-danger small">{{ form.plan_number.errors }}</div>
+      {% endif %}
+      {% if form.plan_number.help_text %}
+      <div class="form-text">{{ form.plan_number.help_text }}</div>
+      {% endif %}
+    </div>
+    {% elif form.goal_number %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.goal_number.id_for_label }}" class="form-label">
+        {{ form.goal_number.label }}
+        {% if form.goal_number.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.goal_number }}
+      {% if form.goal_number.errors %}
+      <div class="text-danger small">{{ form.goal_number.errors }}</div>
+      {% endif %}
+      {% if form.goal_number.help_text %}
+      <div class="form-text">{{ form.goal_number.help_text }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+    {# 允许子模板在第一排添加额外字段（最多2个，凑满5个字段） #}
+    {% block form_first_row_extra_fields %}{% endblock %}
+  </div>
+
+  {# 其他表单字段 #}
+  {% block form_fields %}{% endblock %}
+
+  {# 表单操作按钮 #}
+  <div class="form-actions">
+    <div class="form-actions-left">
+      {% block form_draft_actions %}
+      <button type="submit" name="action" value="draft" class="btn btn-draft">暂存草稿</button>
+      {% endblock %}
+    </div>
+    <div class="form-actions-right">
+      {% block form_actions %}
+      <button type="submit" class="btn btn-primary">创建</button>
+      <a href="{% url 'home' %}" class="btn btn-secondary">取消</a>
+      {% endblock %}
+    </div>
+  </div>
+</form>
+{% endblock %}
+{% block module_extra_css %}
+{{ block.super }}
+{% endblock %}
+{% block module_extra_js %}
+<script>
+// 设置所属部门和负责人字段为默认、不可修改
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('createForm');
+  if (form) {
+    // 处理所属部门字段
+    const responsibleDeptField = form.querySelector('select[name="responsible_department"], input[name="responsible_department"]');
+    if (responsibleDeptField && !responsibleDeptField.hasAttribute('disabled')) {
+      responsibleDeptField.setAttribute('disabled', 'disabled');
+      // 添加隐藏字段以确保值被提交（disabled 字段不会提交）
+      const hiddenDept = document.createElement('input');
+      hiddenDept.type = 'hidden';
+      hiddenDept.name = responsibleDeptField.name;
+      hiddenDept.value = responsibleDeptField.value;
+      form.appendChild(hiddenDept);
+      
+      // 在表单提交时更新隐藏字段的值
+      form.addEventListener('submit', function() {
+        hiddenDept.value = responsibleDeptField.value;
+      });
+    }
+    
+    // 处理负责人字段
+    const responsiblePersonField = form.querySelector('select[name="responsible_person"], input[name="responsible_person"]');
+    if (responsiblePersonField && !responsiblePersonField.hasAttribute('disabled')) {
+      responsiblePersonField.setAttribute('disabled', 'disabled');
+      // 添加隐藏字段以确保值被提交
+      const hiddenPerson = document.createElement('input');
+      hiddenPerson.type = 'hidden';
+      hiddenPerson.name = responsiblePersonField.name;
+      hiddenPerson.value = responsiblePersonField.value;
+      form.appendChild(hiddenPerson);
+      
+      // 在表单提交时更新隐藏字段的值
+      form.addEventListener('submit', function() {
+        hiddenPerson.value = responsiblePersonField.value;
+      });
+    }
+  }
+});
+</script>
+{% endblock %}

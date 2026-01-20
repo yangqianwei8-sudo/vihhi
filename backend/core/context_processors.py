@@ -13,6 +13,12 @@ def sidebar_menu(request):
        'backend.core.context_processors.sidebar_menu',
     2. 在模板中直接使用 {{ sidebar_menu }} 即可获取当前模块的左侧菜单
     """
+    # ========== Admin 页面早退 ==========
+    # 如果是 admin 页面，直接返回空菜单，避免业务菜单与 Django admin 混合
+    if request and hasattr(request, 'path') and request.path.startswith('/admin/'):
+        return {'sidebar_menu': []}
+    # ========== Admin 页面早退结束 ==========
+    
     # 如果请求对象不存在或用户未登录，直接返回空菜单
     if not request:
         return {'sidebar_menu': []}

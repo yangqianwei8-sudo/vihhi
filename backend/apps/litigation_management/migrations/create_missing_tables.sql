@@ -89,22 +89,25 @@ CREATE TABLE IF NOT EXISTS preservation_seal (
 CREATE TABLE IF NOT EXISTS litigation_notification_confirmation (
     id BIGSERIAL PRIMARY KEY,
     recipient_id BIGINT NOT NULL,
-    notification_type VARCHAR(50) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    message TEXT NOT NULL,
-    action_url VARCHAR(255),
-    case_id BIGINT,
+    notification_type VARCHAR(30) NOT NULL,
+    notification_title VARCHAR(200) NOT NULL,
+    notification_content TEXT NOT NULL,
+    case_id BIGINT NOT NULL,
     timeline_id BIGINT,
     seal_id BIGINT,
     sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    read_at TIMESTAMP,
     confirmed_at TIMESTAMP,
     confirmed_by_id BIGINT,
-    status VARCHAR(20) NOT NULL DEFAULT 'sent',
-    urgency_level VARCHAR(20) NOT NULL DEFAULT 'medium',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    sent_via_system BOOLEAN NOT NULL DEFAULT TRUE,
+    sent_via_email BOOLEAN NOT NULL DEFAULT FALSE,
+    sent_via_sms BOOLEAN NOT NULL DEFAULT FALSE,
+    escalated_at TIMESTAMP,
     escalation_level INTEGER NOT NULL DEFAULT 0,
     escalated_to_id BIGINT,
-    notification_channels JSONB DEFAULT '[]'::jsonb
+    urgency_level VARCHAR(10) NOT NULL DEFAULT 'normal',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 创建索引

@@ -1,143 +1,171 @@
-{% extends "plan_management/_base.html" %}
+{% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block pm_title %}目标跟踪{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">选择要跟踪的战略目标</span>{% endblock %}
+{% block page_title %}目标跟踪{% endblock page_title %}
+{% block page_subtitle %}选择要跟踪的战略目标{% endblock page_subtitle %}
 
-{% block pm_actions %}
-<a href="{% url 'plan_pages:strategic_goal_list' %}" class="list-btn">
-  返回列表
-</a>
-{% endblock %}
+{% block list_stats_content %}
+  <div class="row g-3">
+    <div class="col-md-2">
+      <div class="list-stat-card">
+        <div class="list-stat-label">目标总数</div>
+        <div class="list-stat-value">{{ total_count|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+        <div class="list-stat-label">制定中</div>
+        <div class="list-stat-value">{{ draft_count|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+        <div class="list-stat-label">已发布</div>
+        <div class="list-stat-value">{{ published_count|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+        <div class="list-stat-label">执行中</div>
+        <div class="list-stat-value">{{ in_progress_count|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+        <div class="list-stat-label">已完成</div>
+        <div class="list-stat-value">{{ completed_count|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="list-stat-card">
+        <div class="list-stat-label">已取消</div>
+        <div class="list-stat-value">{{ cancelled_count|default:0 }}</div>
+      </div>
+    </div>
+  </div>
+{% endblock list_stats_content %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
-{% endblock %}
-
-{% block pm_content %}
-<div class="list-stats">
-  <div class="list-stat-card">
-    <div class="list-stat-label">目标总数</div>
-    <div class="list-stat-value">{{ total_count|default:0 }}</div>
+{% block list_filters_content %}
+  <div class="col-md-3">
+    <label class="form-label">搜索</label>
+    <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="目标编号、名称、负责人">
   </div>
-  <div class="list-stat-card">
-    <div class="list-stat-label">制定中</div>
-    <div class="list-stat-value">{{ draft_count|default:0 }}</div>
-  </div>
-  <div class="list-stat-card">
-    <div class="list-stat-label">已发布</div>
-    <div class="list-stat-value">{{ published_count|default:0 }}</div>
-  </div>
-  <div class="list-stat-card">
-    <div class="list-stat-label">执行中</div>
-    <div class="list-stat-value">{{ in_progress_count|default:0 }}</div>
-  </div>
-  <div class="list-stat-card">
-    <div class="list-stat-label">已完成</div>
-    <div class="list-stat-value">{{ completed_count|default:0 }}</div>
-  </div>
-  <div class="list-stat-card">
-    <div class="list-stat-label">已取消</div>
-    <div class="list-stat-value">{{ cancelled_count|default:0 }}</div>
-  </div>
-</div>
-
-{% if goals %}
-<div class="list-action-bar">
-  <div class="list-action-left">
-    <span style="font-weight: 600;">目标列表</span>
-  </div>
-  <div class="list-action-right">
-    <span>共 {{ goals|length }} 条记录</span>
-  </div>
-</div>
-
-<div class="list-table-container">
-  <table class="list-table">
-    <thead>
-      <tr>
-        <th>目标编号</th>
-        <th>目标名称</th>
-        <th>目标类型</th>
-        <th>目标周期</th>
-        <th>负责人</th>
-        <th>时间范围</th>
-        <th>进度</th>
-        <th>状态</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for goal in goals %}
-      <tr {% if goal.status not in 'published,in_progress' %}style="opacity: 0.6;"{% endif %}>
-        <td><code>{{ goal.goal_number }}</code></td>
-        <td>
-          <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}">
-            {{ goal.name }}
-          </a>
-        </td>
-        <td>{{ goal.get_goal_type_display }}</td>
-        <td>{{ goal.get_goal_period_display }}</td>
-        <td>
-          {{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}
-          {% if goal.responsible_department %}
-          <div style="font-size: 12px; color: #999999;">{{ goal.responsible_department.name }}</div>
-          {% endif %}
-        </td>
-        <td>
-          {% if goal.start_date and goal.end_date %}
-          <div style="font-size: 12px; color: #666666;">
-            {{ goal.start_date|date:"Y-m-d" }}<br>
-            {{ goal.end_date|date:"Y-m-d" }}
-          </div>
-          {% else %}
-          <span style="color: #999999;">-</span>
-          {% endif %}
-        </td>
-        <td>
-          <div class="list-progress">
-            <div class="list-progress-fill" style="width: {{ goal.completion_rate }}%"></div>
-            <span class="list-progress-text">{{ goal.completion_rate }}%</span>
-          </div>
-          <div style="font-size: 12px; color: #999999; margin-top: 4px;">
-            {{ goal.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %} / {{ goal.target_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
-          </div>
-        </td>
-        <td>
-          <span class="list-badge list-badge-{{ goal.status }}">{{ goal.get_status_display }}</span>
-        </td>
-        <td>
-          <div class="list-actions">
-            {% if goal.status in 'published,in_progress' %}
-            <a href="{% url 'plan_pages:strategic_goal_track' goal.id %}" class="list-btn" title="开始跟踪">跟踪</a>
-            {% else %}
-            <span class="list-btn" style="opacity: 0.5; cursor: not-allowed;" title="只有已发布或执行中的目标可以跟踪">不可跟踪</span>
-            {% endif %}
-          </div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="9" class="list-empty">
-          <div class="list-empty-icon">▢</div>
-          <div class="list-empty-text">暂无可跟踪的战略目标</div>
-          <div class="list-empty-hint">请先创建并发布战略目标</div>
-        </td>
-      </tr>
+  <div class="col-md-2">
+    <label class="form-label">状态</label>
+    <select name="status" class="form-select">
+      <option value="">全部状态</option>
+      {% for value, label in status_options %}
+      <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% else %}
-<div class="list-empty-state">
-  <div class="list-empty-icon">▢</div>
-  <div class="list-empty-text">暂无可跟踪的战略目标</div>
-  <div class="list-empty-hint">请先创建并发布战略目标</div>
-  <div style="margin-top: 16px;">
-    <a href="{% url 'plan_pages:strategic_goal_list' %}" class="list-btn list-btn-primary">
-      创建目标
-    </a>
+    </select>
   </div>
-</div>
-{% endif %}
-{% endblock %}
+  <div class="col-md-2">
+    <label class="form-label">目标层级</label>
+    <select name="level" class="form-select">
+      <option value="">全部层级</option>
+      {% for value, label in level_choices %}
+      <option value="{{ value }}" {% if level_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">目标类型</label>
+    <select name="goal_type" class="form-select">
+      <option value="">全部类型</option>
+      {% for value, label in goal_type_choices %}
+      <option value="{{ value }}" {% if goal_type_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">目标周期</label>
+    <select name="goal_period" class="form-select">
+      <option value="">全部周期</option>
+      {% for value, label in goal_period_choices %}
+      <option value="{{ value }}" {% if goal_period_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">负责人</label>
+    <select name="responsible" class="form-select">
+      <option value="">全部负责人</option>
+      {% for u in all_users %}
+      <option value="{{ u.id }}" {% if responsible_filter|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>
+        {{ u.get_full_name|default:u.username }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+{% endblock list_filters_content %}
+
+{% block list_table_headers %}
+  <th>目标编号</th>
+  <th>目标名称</th>
+  <th>目标类型</th>
+  <th>目标周期</th>
+  <th>负责人</th>
+  <th>时间范围</th>
+  <th>进度</th>
+  <th>状态</th>
+  <th>操作</th>
+{% endblock list_table_headers %}
+
+{% block list_table_rows %}
+  {% for goal in page_obj %}
+  <tr {% if goal.status not in 'published,in_progress' %}style="opacity: 0.6;"{% endif %}>
+    <td><code>{{ goal.goal_number }}</code></td>
+    <td>
+      <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="text-dark text-decoration-none fw-medium">
+        {{ goal.name }}
+      </a>
+    </td>
+    <td>{{ goal.get_goal_type_display }}</td>
+    <td>{{ goal.get_goal_period_display }}</td>
+    <td>
+      {{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}
+      {% if goal.responsible_department %}
+      <div style="font-size: 12px; color: #999999;">{{ goal.responsible_department.name }}</div>
+      {% endif %}
+    </td>
+    <td>
+      {% if goal.start_date and goal.end_date %}
+      <div style="font-size: 12px; color: #666666;">
+        {{ goal.start_date|date:"Y-m-d" }} ~ {{ goal.end_date|date:"Y-m-d" }}
+      </div>
+      {% else %}
+      <span style="color: #999999;">-</span>
+      {% endif %}
+    </td>
+    <td>
+      <div class="list-progress">
+        <div class="list-progress-fill" style="width: {{ goal.completion_rate }}%"></div>
+        <span class="list-progress-text">{{ goal.completion_rate }}%</span>
+      </div>
+      <div style="font-size: 12px; color: #999999; margin-top: 4px;">
+        {{ goal.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %} / {{ goal.target_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+      </div>
+    </td>
+    <td>
+      <span class="list-badge list-badge-{{ goal.status }}">{{ goal.get_status_display }}</span>
+    </td>
+    <td>
+      <div class="btn-group btn-group-sm">
+        {% if goal.status in 'published,in_progress' %}
+        <a href="{% url 'plan_pages:strategic_goal_track' goal.id %}" class="btn btn-sm" title="开始跟踪">跟踪</a>
+        {% else %}
+        <span class="btn btn-sm" style="opacity: 0.5; cursor: not-allowed;" title="只有已发布或执行中的目标可以跟踪">不可跟踪</span>
+        {% endif %}
+      </div>
+    </td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="9" class="list-empty-state">
+      <div class="list-empty-state-icon">▢</div>
+      <div class="list-empty-state-text">暂无可跟踪的战略目标</div>
+      <div class="list-empty-state-hint">请先创建并发布战略目标</div>
+    </td>
+  </tr>
+  {% endfor %}
+{% endblock list_table_rows %}

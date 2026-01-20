@@ -47,12 +47,14 @@ def get_user_plan_stats(user) -> Dict[str, Any]:
     ).count()
     
     # 逾期计划（需要立刻处理的）
-    overdue_plans = my_plans.filter(
+    overdue_qs = my_plans.filter(
         status__in=['draft', 'published', 'accepted', 'in_progress'],
         end_time__lt=now
-    ).select_related('parent_plan', 'responsible_person').order_by('end_time')[:5]
+    )
     
-    overdue = overdue_plans.count()
+    # 先统计总数，再获取列表（避免切片后count只返回切片数量）
+    overdue = overdue_qs.count()
+    overdue_plans = overdue_qs.select_related('parent_plan', 'responsible_person').order_by('end_time')[:5]
     
     return {
         'total': total,

@@ -1,3 +1,16 @@
+// ================== Admin 页面硬终止 ==================
+// 必须在所有 import 之前检查，确保业务前端系统在 admin 页面完全不启动
+if (
+  window.__DISABLE_BUSINESS_APP__ === true ||
+  document.documentElement?.dataset?.inAdmin === '1' ||
+  window.location.pathname.startsWith('/admin/')
+) {
+  console.warn('[BusinessApp] 业务前端系统在 admin 页面被禁用');
+  // 关键：必须 throw，return 不够，因为后续的 import 可能已经执行
+  throw new Error('BusinessApp disabled on admin page');
+}
+// ================== Admin 页面硬终止结束 ==================
+
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
@@ -6,7 +19,7 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
-// 检查当前路径是否为Admin页面
+// 检查当前路径是否为Admin页面（二次检查，双重保险）
 const isAdminPath = window.location.pathname.startsWith('/admin/')
 
 // 检查当前路径是否为根路径（需要跳转到Django首页）

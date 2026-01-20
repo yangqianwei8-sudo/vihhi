@@ -3,7 +3,17 @@
 from django.db import migrations
 
 
-def check_and_remove_budget_from_db(apps, schema_editor):
+class SafeRemoveField(migrations.operations.fields.RemoveField):
+    """安全删除字段：如果字段不存在则跳过"""
+    def state_forwards(self, app_label, state):
+        try:
+            super().state_forwards(app_label, state)
+        except KeyError:
+            # 字段在状态中不存在，忽略错误
+            pass
+
+
+def remove_budget_from_db(apps, schema_editor):
     """从数据库中删除budget字段（如果存在）"""
     from django.db import connection
     
@@ -30,16 +40,6 @@ def reverse_operation(apps, schema_editor):
         """)
 
 
-class SafeRemoveField(migrations.operations.fields.RemoveField):
-    """安全删除字段：如果字段不存在则跳过"""
-    def state_forwards(self, app_label, state):
-        try:
-            super().state_forwards(app_label, state)
-        except KeyError:
-            # 字段在状态中不存在，忽略错误
-            pass
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -49,10 +49,10 @@ class Migration(migrations.Migration):
     operations = [
         # 先从数据库中删除字段（如果存在）
         migrations.RunPython(
-            check_and_remove_budget_from_db,
+            remove_budget_from_db,
             reverse_operation,
         ),
-        # 然后从迁移状态中删除字段（如果存在）
+        # 然后从迁移状态中删除字段（使用安全删除）
         SafeRemoveField(
             model_name='plan',
             name='budget',

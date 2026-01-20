@@ -231,6 +231,12 @@ def get_menu_path_for_model(app_label, model_name):
     Returns:
         str: 菜单路径，格式如 "行政管理 > 办公用品管理"，如果未找到匹配则返回 None
     """
+    # 对于 plan_management 和 settlement_center，直接返回 None（不显示）
+    # 这些模块有自己的前端页面，不应该在 admin 首页显示
+    # 但模型仍然可以在 /admin/plan_management/ 或 /admin/settlement_center/ 页面访问（用于数据维护）
+    if app_label in ['plan_management', 'settlement_center']:
+        return None
+    
     app_mapping = MENU_MAPPING.get(app_label, {})
     
     # 先查找精确匹配
@@ -240,10 +246,6 @@ def get_menu_path_for_model(app_label, model_name):
     # 查找通配符匹配
     if '*' in app_mapping:
         return app_mapping['*']
-    
-    # 对于 settlement_center，如果没有明确配置，返回 None（不显示）
-    if app_label == 'settlement_center':
-        return None
     
     # 默认返回应用标签
     return app_label
@@ -384,22 +386,38 @@ def build_menu_structure(app_list, filter_app_label=None):
         # 如果没有pypinyin库，保持原有顺序
         pass
     
-    # 确保 MAIN_MENU_ITEMS 中定义的所有菜单项都会显示，即使没有模型
-    for menu_item in MAIN_MENU_ITEMS:
-        menu_path = menu_item.get('path', '')
-        if menu_path and menu_path not in menu_structure:
-            menu_structure[menu_path] = {'默认': []}
+    # 移除空菜单项（没有模型的菜单项不显示）
+    # 检查每个菜单项是否有模型，如果没有则移除
+    menu_structure_to_remove = []
+    for menu_path, sub_menus in menu_structure.items():
+        has_models = False
+        for sub_menu, models in sub_menus.items():
+            if models:  # 如果有模型
+                has_models = True
+                break
+        if not has_models:
+            menu_structure_to_remove.append(menu_path)
+    
+    for menu_path in menu_structure_to_remove:
+        del menu_structure[menu_path]
     
     # 按照 MAIN_MENU_ITEMS 的顺序重新构建有序的菜单结构
     # 使用 OrderedDict 或者按照 MAIN_MENU_ITEMS 的顺序返回
     from collections import OrderedDict
     ordered_menu_structure = OrderedDict()
     
-    # 按照 MAIN_MENU_ITEMS 的顺序添加菜单项
+    # 按照 MAIN_MENU_ITEMS 的顺序添加菜单项（只添加有模型的菜单项）
     for menu_item in MAIN_MENU_ITEMS:
         menu_path = menu_item.get('path', '')
         if menu_path and menu_path in menu_structure:
-            ordered_menu_structure[menu_path] = menu_structure[menu_path]
+            # 再次检查是否有模型，确保不添加空菜单
+            has_models = False
+            for sub_menu, models in menu_structure[menu_path].items():
+                if models:
+                    has_models = True
+                    break
+            if has_models:
+                ordered_menu_structure[menu_path] = menu_structure[menu_path]
     
     # 添加其他不在 MAIN_MENU_ITEMS 中的菜单项（如果有）
     for menu_path, sub_menus in menu_structure.items():

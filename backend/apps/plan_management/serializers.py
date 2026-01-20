@@ -55,10 +55,14 @@ class StrategicGoalSerializer(serializers.ModelSerializer):
 
 class PlanSerializer(serializers.ModelSerializer):
     """计划序列化器"""
+    # 修复：plan_type是只读属性（property），不是数据库字段
+    # 将其显式声明为只读字段，并支持向后兼容
+    plan_type = serializers.CharField(source='plan_type', read_only=True)
+    
     class Meta:
         model = Plan
         fields = '__all__'
-        read_only_fields = ('plan_number', 'created_time', 'updated_time', 'duration_days', 'alignment_score', 'status')
+        read_only_fields = ('plan_number', 'created_time', 'updated_time', 'duration_days', 'alignment_score', 'status', 'plan_type')
     
     def validate_related_goal(self, goal):
         """
@@ -80,11 +84,27 @@ class PlanSerializer(serializers.ModelSerializer):
         """
         P1: 禁止在 update/partial_update 中直接修改 status
         status 只能通过裁决接口修改（start-request/cancel-request + decide）
+        P2: 支持向后兼容，将plan_type参数映射到level字段
         """
         if 'status' in getattr(self, 'initial_data', {}):
             raise serializers.ValidationError({
                 'status': 'status 禁止直接修改，请使用裁决接口（start-request/cancel-request + decide）'
             })
+        
+        # 修复：向后兼容处理plan_type输入，映射到level字段
+        initial_data = getattr(self, 'initial_data', {})
+        if 'plan_type' in initial_data and 'level' not in attrs:
+            plan_type_value = initial_data.get('plan_type')
+            plan_type_to_level_map = {
+                'company': 'company',
+                'personal': 'personal',
+                'department': 'company',  # 部门计划映射为公司计划
+                'project': 'company',     # 项目计划映射为公司计划
+            }
+            mapped_level = plan_type_to_level_map.get(plan_type_value)
+            if mapped_level:
+                attrs['level'] = mapped_level
+        
         return attrs
 
 

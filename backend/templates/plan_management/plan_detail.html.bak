@@ -1,0 +1,934 @@
+{% extends "shared/detail_base.html" %}
+{% load static %}
+
+{% block detail_title %}计划详情{% endblock %}
+{% block detail_subtitle %}{{ plan.name }}{% endblock %}
+
+{% block detail_header_actions %}
+<a href="{% url 'plan_pages:plan_list' %}" class="btn btn-secondary">
+  <i class="fas fa-arrow-left"></i>
+  返回列表
+</a>
+{% endblock %}
+
+{% block detail_basic_info_card %}
+  {# 第一排：计划编号、计划名称、计划层级、计划周期、计划状态（5个字段） #}
+  {% block detail_basic_info_row1 %}
+  {# 计划编号 #}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">计划编号</label>
+      <div class="detail-field-value">
+        <code>{{ plan.plan_number|default:plan.id }}</code>
+      </div>
+    </div>
+  </div>
+  {# 计划名称 #}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">计划名称</label>
+      <div class="detail-field-value">
+        <strong>{{ plan.name }}</strong>
+      </div>
+    </div>
+  </div>
+  {# 计划层级 #}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">计划层级</label>
+      <div class="detail-field-value">
+        {{ plan.get_level_display|default:plan.level }}
+      </div>
+    </div>
+  </div>
+  {# 计划周期 #}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">计划周期</label>
+      <div class="detail-field-value">
+        {{ plan.get_plan_period_display|default:plan.plan_period }}
+      </div>
+    </div>
+  </div>
+  {# 计划状态 #}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">计划状态</label>
+      <div class="detail-field-value">
+        <span class="badge badge-status badge-{{ plan.status }}">
+          {{ plan.get_status_display|default:plan.status }}
+        </span>
+      </div>
+    </div>
+  </div>
+  {% endblock detail_basic_info_row1 %}
+
+  {# 第二排：关联战略目标、父计划、关联项目（3个字段 + 2个空占位符 = 5个位置） #}
+  {% block detail_basic_info_row2 %}
+  {# 关联战略目标 #}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">关联战略目标</label>
+      <div class="detail-field-value">
+        {% if plan.related_goal %}
+          <a href="{% url 'plan_pages:strategic_goal_detail' plan.related_goal.id %}">{{ plan.related_goal.name }}</a>
+        {% else %}
+          -
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {# 父计划 #}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">父计划</label>
+      <div class="detail-field-value">
+        {% if plan.parent_plan %}
+          <a href="{% url 'plan_pages:plan_detail' plan.parent_plan.id %}">{{ plan.parent_plan.name }}</a>
+        {% else %}
+          -
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {# 关联项目 #}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">关联项目</label>
+      <div class="detail-field-value">
+        {% if plan.related_project %}
+          {{ plan.related_project }}
+        {% else %}
+          -
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {# 空占位符，凑满5个字段 #}
+  <div class="col-5-fields detail-field-wrapper"></div>
+  <div class="col-5-fields detail-field-wrapper"></div>
+  {% endblock detail_basic_info_row2 %}
+
+  {# 第三排：开始时间、结束时间（2个字段 + 3个空占位符 = 5个位置） #}
+  {% block detail_basic_info_row3 %}
+  {# 开始时间 #}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">计划开始时间</label>
+      <div class="detail-field-value">
+        {{ plan.start_time|date:"Y-m-d H:i"|default:"-" }}
+      </div>
+    </div>
+  </div>
+  {# 结束时间 #}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">计划结束时间</label>
+      <div class="detail-field-value">
+        {{ plan.end_time|date:"Y-m-d H:i"|default:"-" }}
+      </div>
+    </div>
+  </div>
+  {# 空占位符，凑满5个字段 #}
+  <div class="col-5-fields detail-field-wrapper"></div>
+  <div class="col-5-fields detail-field-wrapper"></div>
+  <div class="col-5-fields detail-field-wrapper"></div>
+  {% endblock detail_basic_info_row3 %}
+
+  {# 多行文本字段：计划内容（整行，使用 col-12） #}
+  {% block detail_basic_info_content %}
+  <div class="col-12 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">计划内容</label>
+      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+        {% if plan.content %}{{ plan.content }}{% else %}暂无内容{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endblock detail_basic_info_content %}
+
+  {# 多行文本字段：计划目标（整行，使用 col-12） #}
+  {% block detail_basic_info_objective %}
+  <div class="col-12 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">计划目标</label>
+      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+        {% if plan.plan_objective %}{{ plan.plan_objective }}{% else %}暂无目标{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endblock detail_basic_info_objective %}
+
+  {# 多行文本字段：协作计划（整行，使用 col-12） #}
+  {% block detail_basic_info_collaboration %}
+  <div class="col-12 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">协作计划</label>
+      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+        {% if plan.collaboration_plan %}{{ plan.collaboration_plan }}{% else %}暂无协作计划{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endblock detail_basic_info_collaboration %}
+
+  {# 多选字段：协作人员（整行，使用 col-12） #}
+  {% block detail_basic_info_participants %}
+  <div class="col-12 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">协作人员</label>
+      <div class="detail-field-value">
+        {% if plan.participants.all %}
+          {% for participant in plan.participants.all %}
+            <span class="badge badge-secondary">{{ participant.get_full_name|default:participant.username }}</span>
+          {% endfor %}
+        {% else %}
+          暂无协作人员
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endblock detail_basic_info_participants %}
+{% endblock detail_basic_info_card %}
+
+
+
+
+
+
+{% block detail_edit_url %}{% url 'plan_pages:plan_edit' plan.id %}{% endblock %}
+{% block detail_delete_url %}{% url 'plan_pages:plan_delete' plan.id %}{% endblock %}
+{% block detail_approval_url %}{% url 'plan_pages:plan_approval_list' %}{% endblock %}
+
+{% block detail_other_actions %}{% endblock detail_other_actions %}
+{% block detail_approval_button_header %}
+  {% if can_approve %}
+  <a href="#" class="btn btn-warning">
+    <i class="fas fa-check-circle"></i>
+    审批
+  </a>
+  {% endif %}
+{% endblock detail_approval_button_header %}
+
+{% block detail_other_actions_header %}
+  {# 申请调整 #}
+  {% if can_request_adjustment %}
+  <a href="{% url 'plan_pages:plan_adjustment_create' plan.id %}" class="btn btn-info">
+    <i class="fas fa-edit"></i>
+    申请调整
+  </a>
+  {% endif %}
+
+  {# 申请取消 #}
+  {% if can_request_cancel %}
+  <a href="{% url 'plan_pages:plan_request_cancel' plan.id %}" class="btn btn-warning">
+    <i class="fas fa-times-circle"></i>
+    申请取消
+  </a>
+  {% endif %}
+{% endblock detail_other_actions_header %}
+{% block detail_history %}
+{{ block.super }}
+{% endblock detail_history %}
+
+{# ==================== 计划内容独立卡片 ==================== #}
+{% if plan.content %}
+<div class="detail-section detail-content-section">
+  <div class="detail-section-header">
+    <h3 class="detail-section-title">
+      <i class="fas fa-file-alt"></i>
+      计划内容
+    </h3>
+  </div>
+  <div class="detail-section-body">
+    <div class="detail-field">
+      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6; padding: 16px;">
+        {{ plan.content }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% block detail_modification_history_content %}
+  {% if progress_records %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>记录时间</th>
+          <th>进度</th>
+          <th>记录人</th>
+          <th>备注</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in progress_records %}
+        <tr>
+          <td>{{ record.recorded_time|date:"Y-m-d H:i" }}</td>
+          <td><strong>{{ record.progress }}%</strong></td>
+          <td>
+            {% if record.recorded_by %}
+              {{ record.recorded_by.get_full_name|default:record.recorded_by.username }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>{{ record.notes|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-muted">暂无进度记录</div>
+  {% endif %}
+{% endblock detail_modification_history_content %}
+
+{% block detail_status_history_content %}
+  {% if status_logs %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>变更时间</th>
+          <th>状态变更</th>
+          <th>变更人</th>
+          <th>变更原因</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in status_logs %}
+        <tr>
+          <td>{{ log.changed_time|date:"Y-m-d H:i" }}</td>
+          <td>
+            <span class="badge badge-status badge-{{ log.old_status }}">
+              {{ log.get_old_status_display|default:log.old_status }}
+            </span>
+            →
+            <span class="badge badge-status badge-{{ log.new_status }}">
+              {{ log.get_new_status_display|default:log.new_status }}
+            </span>
+          </td>
+          <td>
+            {% if log.changed_by %}
+              {{ log.changed_by.get_full_name|default:log.changed_by.username }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>{{ log.change_reason|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-muted">暂无状态变更记录</div>
+  {% endif %}
+{% endblock detail_status_history_content %}
+{% block detail_status_timestamps_content %}
+  {# 发布时间 #}
+  {% if plan.published_at %}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">发布时间</label>
+      <div class="detail-field-value">
+        {{ plan.published_at|date:"Y-m-d H:i" }}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {# 接收时间 #}
+  {% if plan.accepted_at %}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">接收时间</label>
+      <div class="detail-field-value">
+        {{ plan.accepted_at|date:"Y-m-d H:i" }}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {# 完成时间 #}
+  {% if plan.completed_at %}
+  <div class="col-5-fields detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">完成时间</label>
+      <div class="detail-field-value">
+        {{ plan.completed_at|date:"Y-m-d H:i" }}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+{% endblock detail_status_timestamps_content %}
+
+{% block detail_audit_log_content %}
+  {# 不作为记录 #}
+  {% if inactivity_logs %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>检测时间</th>
+          <th>时间段</th>
+          <th>原因</th>
+          <th>说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in inactivity_logs %}
+        <tr>
+          <td>{{ log.detected_at|date:"Y-m-d H:i" }}</td>
+          <td>
+            {{ log.period_start|date:"Y-m-d" }} 至 {{ log.period_end|date:"Y-m-d" }}
+          </td>
+          <td>{{ log.get_reason_display|default:log.reason }}</td>
+          <td>{{ log.description|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-muted">暂无不作为记录</div>
+  {% endif %}
+{% endblock detail_audit_log_content %}
+
+{% block detail_related_records_content %}
+  {# 下级计划 #}
+  {% if child_plans %}
+  <div class="mb-4">
+    <h6 class="mb-3">下级计划 ({{ child_plans|length }})</h6>
+    <div class="row">
+      {% for child in child_plans %}
+      <div class="col-5-fields detail-field-wrapper mb-3">
+        <div class="card">
+          <div class="card-body">
+            <h6 class="card-title">
+              <a href="{% url 'plan_pages:plan_detail' child.id %}">{{ child.plan_number }}</a>
+            </h6>
+            <p class="card-text">{{ child.name }}</p>
+            <span class="badge badge-status badge-{{ child.status }}">
+              {{ child.get_status_display }}
+            </span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# 待审批决策 #}
+  {% if pending_decisions %}
+  <div class="mb-4">
+    <h6 class="mb-3">待审批决策 ({{ pending_decisions|length }})</h6>
+    <div class="list-group">
+      {% for decision in pending_decisions %}
+      <div class="list-group-item">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="mb-1">{{ decision.get_request_type_display }}</h6>
+            <small class="text-muted">
+              {% if decision.requested_by %}
+                {{ decision.requested_by.get_full_name|default:decision.requested_by.username }}
+              {% endif %}
+              - {{ decision.requested_at|date:"Y-m-d H:i" }}
+            </small>
+          </div>
+          {% if can_approve %}
+          <div>
+            <a href="{% url 'plan_pages:decision_approve' decision.id %}" class="btn btn-sm btn-success">
+              <i class="fas fa-check"></i>
+              批准
+            </a>
+            <a href="{% url 'plan_pages:decision_reject' decision.id %}" class="btn btn-sm btn-danger">
+              <i class="fas fa-times"></i>
+              拒绝
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# 问题列表 #}
+  {% if issues %}
+  <div class="mb-4">
+    <h6 class="mb-3">问题列表 ({{ issues|length }})</h6>
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>问题标题</th>
+            <th>严重程度</th>
+            <th>状态</th>
+            <th>负责人</th>
+            <th>创建时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for issue in issues %}
+          <tr>
+            <td>{{ issue.title }}</td>
+            <td>
+              <span class="badge badge-{{ issue.severity }}">
+                {{ issue.get_severity_display|default:issue.severity }}
+              </span>
+            </td>
+            <td>
+              <span class="badge badge-{{ issue.status }}">
+                {{ issue.get_status_display|default:issue.status }}
+              </span>
+            </td>
+            <td>
+              {% if issue.assigned_to %}
+                {{ issue.assigned_to.get_full_name|default:issue.assigned_to.username }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>{{ issue.created_time|date:"Y-m-d"|default:"-" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+{% endblock detail_related_records_content %}
+
+{% block detail_related_links_content %}
+  {# 关联目标 #}
+  {% if plan.related_goal %}
+  <div class="mb-2">
+    <a href="{% url 'plan_pages:strategic_goal_detail' plan.related_goal.id %}" class="btn btn-sm btn-outline-primary">
+      <i class="fas fa-bullseye"></i>
+      查看关联目标：{{ plan.related_goal.name }}
+    </a>
+  </div>
+  {% endif %}
+
+  {# 关联项目 #}
+  {% if plan.related_project %}
+  <div class="mb-2">
+    <a href="#" class="btn btn-sm btn-outline-primary">
+      <i class="fas fa-project-diagram"></i>
+      查看关联项目：{{ plan.related_project.name }}
+    </a>
+  </div>
+  {% endif %}
+
+  {# 父计划 #}
+  {% if plan.parent_plan %}
+  <div class="mb-2">
+    <a href="{% url 'plan_pages:plan_detail' plan.parent_plan.id %}" class="btn btn-sm btn-outline-primary">
+      <i class="fas fa-level-up-alt"></i>
+      查看父计划：{{ plan.parent_plan.name }}
+    </a>
+  </div>
+  {% endif %}
+{% endblock detail_related_links_content %}
+
+{% block detail_statistics_content %}
+  {# 时间进度 #}
+  {% if progress_percent is not None %}
+  <div class="mb-4">
+    <h5 class="detail-subsection-title">时间进度</h5>
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <div class="detail-field">
+          <label class="detail-field-label">进度百分比</label>
+          <div class="detail-field-value">
+            <strong style="font-size: 16px;">{{ progress_percent }}%</strong>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="detail-field">
+          <label class="detail-field-label">时间范围</label>
+          <div class="detail-field-value">
+            {{ plan.start_time|date:"Y-m-d" }} → {{ plan.end_time|date:"Y-m-d" }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="progress" style="height: 30px;">
+      <div class="progress-bar progress-bar-striped progress-bar-animated" 
+           role="progressbar" 
+           style="width: {{ progress_percent }}%;" 
+           aria-valuenow="{{ progress_percent }}" 
+           aria-valuemin="0" 
+           aria-valuemax="100">
+        {{ progress_percent }}%
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# 统计信息卡片 #}
+  <div class="row">
+    <div class="col-md-3 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h5 class="card-title">{{ child_plans|length|default:0 }}</h5>
+          <p class="card-text text-muted">下级计划</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h5 class="card-title">{{ issues|length|default:0 }}</h5>
+          <p class="card-text text-muted">问题数量</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h5 class="card-title">{{ progress_records|length|default:0 }}</h5>
+          <p class="card-text text-muted">进度记录</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h5 class="card-title">{{ status_logs|length|default:0 }}</h5>
+          <p class="card-text text-muted">状态变更</p>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock detail_statistics_content %}
+
+{% block module_extra_css %}
+{{ block.super }}
+<style>
+  
+  /* 边框样式：只保留 detail-section 的外边框 */
+  .detail-field-wrapper {
+    padding: 8px;
+    background: #FFFFFF;
+    margin-bottom: 8px;
+  }
+  
+  .col-5-fields {
+    border-radius: 0;
+  }
+  
+  .col-12-fields {
+    border-radius: 0;
+  }
+  
+  .detail-section-body {
+    border-radius: 0;
+    padding: 16px;
+    background: #FFFFFF;
+  }
+  
+  /* 确保所有文本内容区域都有边框 */
+  .detail-field-label {
+    border-bottom: 1px solid #F0F0F0;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+  }
+  /* 统一所有字段的行距 */
+  .detail-section-body,
+  .detail-section-body *,
+  .detail-field,
+  .detail-field-label,
+  .detail-field-value {
+    color: #333;
+    font-size: 16px;
+    word-break: break-word;
+    line-height: 1.5;
+    padding: 8px;
+    background: #FFFFFF;
+  }
+  /* 每排5个字段的布局 */
+  .detail-section-body .row {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -8px;
+  }
+  
+  .col-5-fields {
+    flex: 0 0 calc(20% - 16px);
+    max-width: calc(20% - 16px);
+    padding: 0 8px;
+    margin-bottom: 16px;
+  }
+  
+  .col-12-fields {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding: 0 8px;
+    margin-bottom: 16px;
+  }
+  
+  @media (max-width: 1200px) {
+    .col-5-fields {
+      flex: 0 0 calc(25% - 16px);
+      max-width: calc(25% - 16px);
+    }
+  }
+  
+  @media (max-width: 992px) {
+    .col-5-fields {
+      flex: 0 0 calc(33.333% - 16px);
+      max-width: calc(33.333% - 16px);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .col-5-fields {
+      flex: 0 0 calc(50% - 16px);
+      max-width: calc(50% - 16px);
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .col-5-fields {
+      flex: 0 0 100%;
+      max-width: 100%;
+    }
+  }
+  
+  .badge-status {
+    padding: 5px 12px;
+    border-radius: 0;
+    font-size: 16px;
+    font-weight: 500;
+  }
+  
+  .badge-draft {
+    background: #F5F5F5;
+    color: #666666;
+    border: 1px solid #E0E0E0;
+  }
+  
+  .badge-published {
+    background: #E3F2FD;
+    color: #1976D2;
+    border: 1px solid #BBDEFB;
+  }
+  
+  .badge-accepted {
+    background: #E8F5E9;
+    color: #388E3C;
+    border: 1px solid #C8E6C9;
+  }
+  
+  .badge-in_progress {
+    background: #FFF3E0;
+    color: #F57C00;
+    border: 1px solid #FFE0B2;
+  }
+  
+  .badge-completed {
+    background: #E8F5E9;
+    color: #2E7D32;
+    border: 1px solid #C8E6C9;
+  }
+  
+  .badge-cancelled {
+    background: #F5F5F5;
+    color: #999999;
+    border: 1px solid #E0E0E0;
+  }
+  
+  .badge-critical {
+    background: #FFEBEE;
+    color: #C62828;
+  }
+  
+  .badge-high {
+    background: #FFF3E0;
+    color: #E65100;
+  }
+  
+  .badge-medium {
+    background: #FFF9C4;
+    color: #F57F17;
+  }
+  
+  .badge-low {
+    background: #E8F5E9;
+    color: #388E3C;
+  }
+  
+  .badge-open {
+    background: #E3F2FD;
+    color: #1976D2;
+  }
+  
+  .badge-in_progress {
+    background: #FFF3E0;
+    color: #F57C00;
+  }
+  
+  .badge-resolved {
+    background: #E8F5E9;
+    color: #2E7D32;
+  }
+  
+  .badge-closed {
+    background: #F5F5F5;
+    color: #666666;
+  }
+  
+  /* 将所有卡片改为直角 */
+  
+  /* 按钮样式：黑底白字、间距4px、直角 - 只作用于详情页内容区域 */
+  .two-col-content .btn,
+  .two-col-content .btn-primary,
+  .two-col-content .btn-secondary,
+  .two-col-content .btn-danger,
+  .two-col-content .btn-warning,
+  .two-col-content .btn-success,
+  .two-col-content .btn-info,
+  .two-col-content .btn-sm,
+  .two-col-content button[type="submit"],
+  .two-col-content button[type="button"],
+  .detail-page-container .btn,
+  .detail-page-container .btn-primary,
+  .detail-page-container .btn-secondary,
+  .detail-page-container .btn-danger,
+  .detail-page-container .btn-warning,
+  .detail-page-container .btn-success,
+  .detail-page-container .btn-info,
+  .detail-page-container .btn-sm,
+  .detail-page-container button[type="submit"],
+  .detail-page-container button[type="button"] {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+    border: 1px solid #000000 !important;
+    border-radius: 0 !important;
+    margin-right: 4px !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .two-col-content .btn:hover,
+  .two-col-content .btn-primary:hover,
+  .two-col-content .btn-secondary:hover,
+  .two-col-content .btn-danger:hover,
+  .two-col-content .btn-warning:hover,
+  .two-col-content .btn-success:hover,
+  .two-col-content .btn-info:hover,
+  .detail-page-container .btn:hover,
+  .detail-page-container .btn-primary:hover,
+  .detail-page-container .btn-secondary:hover,
+  .detail-page-container .btn-danger:hover,
+  .detail-page-container .btn-warning:hover,
+  .detail-page-container .btn-success:hover,
+  .detail-page-container .btn-info:hover {
+    background-color: #333333 !important;
+    color: #FFFFFF !important;
+    border-color: #333333 !important;
+  }
+  
+  .two-col-content .btn-group .btn,
+  .detail-page-container .btn-group .btn {
+    margin-right: 4px !important;
+  }
+  
+  .two-col-content .btn-group .btn:last-child,
+  .detail-page-container .btn-group .btn:last-child {
+    margin-right: 0 !important;
+  }
+  
+  /* 将所有卡片改为直角 */
+  .card {
+    border-radius: 0 !important;
+  }
+
+  
+  /* 修复按钮白框问题 */
+  .two-col-content .btn i,
+  .two-col-content .btn i::before,
+  .detail-page-container .btn i,
+  .detail-page-container .btn i::before {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin-right: 4px !important;
+  }
+  
+  .two-col-content .btn *,
+  .detail-page-container .btn * {
+    background: transparent !important;
+  }
+  
+  /* 确保按钮内容区域没有额外的背景 */
+  .two-col-content .btn > *:first-child,
+  .detail-page-container .btn > *:first-child {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  
+  /* 进度条样式 */
+  .detail-page-container .progress,
+  .two-col-content .progress {
+    height: 25px !important;
+    background-color: #E0E0E0 !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+    display: block !important;
+    width: 100% !important;
+  }
+  
+  .detail-page-container .progress-bar,
+  .two-col-content .progress-bar {
+    height: 100% !important;
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: width 0.3s ease !important;
+    border-radius: 0 !important;
+  }
+  
+  .detail-page-container .progress-bar-striped,
+  .two-col-content .progress-bar-striped {
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent) !important;
+    background-size: 1rem 1rem !important;
+  }
+  
+  .detail-page-container .progress-bar-animated,
+  .two-col-content .progress-bar-animated {
+    animation: progress-bar-stripes 1s linear infinite !important;
+  }
+  
+  @keyframes progress-bar-stripes {
+    0% {
+      background-position: 1rem 0;
+    }
+    100% {
+      background-position: 0 0;
+    }
+  }
+  
+  /* 统一所有字体大小为16px */
+  .detail-page-container,
+  .detail-section,
+  .detail-section-body,
+  .detail-section-body *,
+  .detail-field,
+  .detail-field *,
+  .detail-field-label,
+  .detail-field-value,
+  .detail-section-title,
+  .detail-subsection-title {
+    font-size: 16px !important;
+  }</style>
+{% endblock module_extra_css %}
+

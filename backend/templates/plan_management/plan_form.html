@@ -1,16 +1,115 @@
 {% extends "shared/create_form_base.html" %}
 {% load static %}
 
+{% block module_styles %}
+{{ block.super }}
+<style>
+  /* 表单页面移动端优化 */
+  @media (max-width: 768px) {
+    .form-row {
+      flex-direction: column;
+    }
+
+    .form-row .col-md-6,
+    .form-row .col-md-4,
+    .form-row .col-md-3 {
+      flex: 0 0 100%;
+      max-width: 100%;
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .form-control,
+    .form-select,
+    .form-check-input {
+      font-size: 16px; /* 防止iOS自动缩放 */
+      padding: 10px 12px;
+      min-height: 44px; /* 触摸友好尺寸 */
+    }
+
+    textarea.form-control {
+      min-height: 100px;
+    }
+
+    .btn {
+      min-height: 44px;
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+
+    .btn-group {
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .btn-group .btn {
+      width: 100%;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .form-actions {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-actions .btn {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .form-control,
+    .form-select {
+      font-size: 16px;
+      padding: 12px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      font-size: 16px;
+    }
+
+    .card {
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .card-header {
+      padding: 12px;
+      font-size: 16px;
+    }
+
+    .card-body {
+      padding: 16px;
+    }
+  }
+
+  /* 移动端触摸优化 */
+  @media (hover: none) and (pointer: coarse) {
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    input[type="checkbox"],
+    input[type="radio"] {
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block form_title %}{{ page_title|default:"创建计划" }}{% endblock %}
 {% block form_subtitle %}{{ form_page_subtitle_text|default:"请填写计划基本信息" }}{% endblock %}
 
-{% block form_header_actions %}
-<a href="{% url 'plan_pages:plan_list' %}" class="btn btn-secondary">
-  返回列表
-</a>
-{% endblock %}
-
-{# 第一排额外字段：计划名称、计划级别 #}
+{# 第一排额外字段：计划名称、计划级别（凑满第一排的5个字段） #}
 {% block form_first_row_extra_fields %}
   {# 计划名称 #}
   {% if form.name %}
@@ -49,7 +148,7 @@
 
 {# 其他表单字段 #}
 {% block form_fields %}
-  {# 第二排：关联战略目标、计划周期、父计划、关联项目 #}
+  {# 第二排：关联战略目标、计划周期、父计划、关联项目（4个字段 + 1个空占位符 = 5个位置） #}
   <div class="row mb-3 form-row-5">
 
     {% if form.related_goal %}
@@ -119,7 +218,7 @@
     <div class="col-5-fields form-field-wrapper"></div>
   </div>
 
-  {# 第三排：开始时间、结束时间 #}
+  {# 第三排：开始时间、结束时间（2个字段 + 3个空占位符 = 5个位置） #}
   <div class="row mb-3 form-row-5">
     {% if form.start_time %}
     <div class="col-5-fields form-field-wrapper">
@@ -154,9 +253,11 @@
     {% endif %}
     {# 空占位符，凑满5个字段 #}
     <div class="col-5-fields form-field-wrapper"></div>
+    <div class="col-5-fields form-field-wrapper"></div>
+    <div class="col-5-fields form-field-wrapper"></div>
   </div>
 
-  {# 多行文本字段：计划内容（整行） #}
+  {# 多行文本字段：计划内容（整行，使用 col-12） #}
   {% if form.content %}
   <div class="row mb-3">
     <div class="col-12 form-field-wrapper">
@@ -175,7 +276,7 @@
   </div>
   {% endif %}
 
-  {# 多行文本字段：计划目标（整行） #}
+  {# 多行文本字段：计划目标（整行，使用 col-12） #}
   {% if form.plan_objective %}
   <div class="row mb-3">
     <div class="col-12 form-field-wrapper">
@@ -194,7 +295,7 @@
   </div>
   {% endif %}
 
-  {# 多行文本字段：协作计划（整行） #}
+  {# 多行文本字段：协作计划（整行，使用 col-12） #}
   {% if form.collaboration_plan %}
   <div class="row mb-3">
     <div class="col-12 form-field-wrapper">
@@ -213,7 +314,7 @@
   </div>
   {% endif %}
 
-  {# 协作人员（多选字段） #}
+  {# 多选字段：协作人员（整行，使用 col-12） #}
   {% if form.participants %}
   <div class="row mb-3">
     <div class="col-12 form-field-wrapper">
@@ -252,6 +353,7 @@
 
 {# 额外的 JavaScript #}
 {% block module_extra_js %}
+  {{ block.super }}
   {% if form_js_file %}
   <script src="{% static form_js_file %}"></script>
   {% endif %}

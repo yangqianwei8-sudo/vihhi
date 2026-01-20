@@ -224,7 +224,11 @@ class StrategicGoalAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
     
     def completion_rate_display(self, obj):
         """完成率显示（带颜色）"""
-        rate = obj.completion_rate
+        try:
+            rate = float(obj.completion_rate) if obj.completion_rate is not None else 0.0
+        except (ValueError, TypeError):
+            rate = 0.0
+        
         if rate >= 100:
             color = '#28a745'
         elif rate >= 80:
@@ -233,10 +237,12 @@ class StrategicGoalAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
             color = '#ffc107'
         else:
             color = '#dc3545'
+        # 先格式化数值，再传递给 format_html，避免 SafeString 格式化问题
+        rate_str = f'{rate:.1f}%'
         return format_html(
-            '<span style="color: {}; font-weight: bold;">{:.1f}%</span>',
+            '<span style="color: {}; font-weight: bold;">{}</span>',
             color,
-            rate
+            rate_str
         )
     completion_rate_display.short_description = '完成率'
     
@@ -586,7 +592,6 @@ class PlanAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
                 'content',
                 'plan_objective',
                 'acceptance_criteria',
-                'description',
             )
         }),
         ('责任人信息', {
@@ -693,7 +698,19 @@ class PlanAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
     
     def progress_display(self, obj):
         """进度显示（带颜色）"""
-        progress = float(obj.progress)
+        try:
+            # 确保 progress 是数值类型，不是 SafeString
+            if obj.progress is None:
+                progress = 0.0
+            else:
+                # 如果是字符串类型，先尝试转换
+                if isinstance(obj.progress, str):
+                    progress = float(obj.progress)
+                else:
+                    progress = float(obj.progress)
+        except (ValueError, TypeError):
+            progress = 0.0
+        
         if progress >= 100:
             color = '#28a745'
         elif progress >= 80:
@@ -702,10 +719,12 @@ class PlanAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
             color = '#ffc107'
         else:
             color = '#dc3545'
+        # 先格式化数值，再传递给 format_html，避免 SafeString 格式化问题
+        progress_str = f'{progress:.1f}%'
         return format_html(
-            '<span style="color: {}; font-weight: bold;">{:.1f}%</span>',
+            '<span style="color: {}; font-weight: bold;">{}</span>',
             color,
-            progress
+            progress_str
         )
     progress_display.short_description = '进度'
     

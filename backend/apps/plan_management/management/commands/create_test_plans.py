@@ -91,7 +91,15 @@ class Command(BaseCommand):
             plan = Plan()
             plan.plan_number = plan.generate_plan_number()
             plan.name = plan_data['name']
-            plan.plan_type = plan_data['plan_type']
+            # 修复：plan_type不是数据库字段，直接设置level字段
+            plan_type_to_level_map = {
+                'department': 'company',
+                'project': 'company',
+                'personal': 'personal',
+                'company': 'company',
+            }
+            mapped_level = plan_type_to_level_map.get(plan_data.get('plan_type', ''), 'company')
+            plan.level = mapped_level
             plan.plan_period = plan_data['plan_period']
             plan.status = plan_data['status']
             plan.content = plan_data['content']

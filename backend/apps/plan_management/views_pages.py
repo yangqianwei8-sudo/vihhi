@@ -78,15 +78,21 @@ except ImportError:
                         'active': child.get('id') == active_id if active_id else False,
                     })
                 
-                if children:
-                    nav_item['children'] = children
-                    # 如果父菜单没有 url，使用第一个子菜单的 URL
-                    if nav_item['url'] == '#':
-                        nav_item['url'] = children[0].get('url', '#')
-                    # 如果任意子菜单激活，父菜单也激活
-                    if any(child.get('active') for child in children):
-                        nav_item['active'] = True
-                        nav_item['expanded'] = True
+                # 如果父菜单定义了子菜单，但所有子菜单都被过滤掉了，则跳过该父菜单
+                if not children:
+                    continue
+                
+                nav_item['children'] = children
+                # 如果父菜单没有 url，使用第一个子菜单的 URL
+                if nav_item['url'] == '#':
+                    nav_item['url'] = children[0].get('url', '#')
+                # 如果任意子菜单激活，父菜单也激活并展开
+                if any(child.get('active') for child in children):
+                    nav_item['active'] = True
+                    nav_item['expanded'] = True
+                # 如果菜单结构定义中设置了 expanded 属性，则使用该值（默认展开）
+                elif item.get('expanded', False):
+                    nav_item['expanded'] = True
             
             nav.append(nav_item)
         return nav
@@ -134,6 +140,7 @@ PLAN_MANAGEMENT_MENU_STRUCTURE = [
         'label': '战略目标',
         'icon': '🎯',
         'permission': 'plan_management.manage_goal',
+        'expanded': True,  # 默认展开
         'children': [
             {'id': 'strategic_goal_list', 'label': '目标列表', 'icon': '🎯', 'url_name': 'plan_pages:strategic_goal_list', 'permission': 'plan_management.manage_goal'},
             {'id': 'strategic_goal_create', 'label': '创建目标', 'icon': '➕', 'url_name': 'plan_pages:strategic_goal_create', 'permission': 'plan_management.manage_goal'},
@@ -146,9 +153,11 @@ PLAN_MANAGEMENT_MENU_STRUCTURE = [
         'label': '计划管理',
         'icon': '📅',
         'permission': 'plan_management.view',
+        'expanded': True,  # 默认展开
         'children': [
             {'id': 'plan_list', 'label': '计划列表', 'icon': '📋', 'url_name': 'plan_pages:plan_list', 'permission': 'plan_management.view'},
             {'id': 'plan_create', 'label': '创建计划', 'icon': '➕', 'url_name': 'plan_pages:plan_create', 'permission': 'plan_management.plan.create'},
+            {'id': 'plan_decompose', 'label': '计划分解', 'icon': '📊', 'url_name': 'plan_pages:plan_decompose_entry', 'permission': 'plan_management.view'},
             {'id': 'plan_approval', 'label': '计划审批', 'icon': '✅', 'url_name': 'plan_pages:plan_approval_list', 'permission': 'plan_management.approve'},
         ]
     },
@@ -157,6 +166,7 @@ PLAN_MANAGEMENT_MENU_STRUCTURE = [
         'label': '计划分析',
         'icon': '📈',
         'permission': 'plan_management.view_analysis',
+        'expanded': True,  # 默认展开
         'children': [
             {'id': 'plan_completion_analysis', 'label': '完成度分析', 'icon': '✅', 'url_name': 'plan_pages:plan_completion_analysis', 'permission': 'plan_management.view_analysis'},
             {'id': 'plan_goal_achievement', 'label': '目标达成分析', 'icon': '🎯', 'url_name': 'plan_pages:plan_goal_achievement', 'permission': 'plan_management.view_analysis'},
@@ -347,7 +357,8 @@ def plan_management_home(request):
             context['company_plan_stats'] = company_plan_stats
             
             # 审批统计（仅管理视角）
-            pending_decisions = PlanDecision.objects.filter(decision__isnull=True)
+            # 待审批判定：decided_at is null（根据模型定义和注释）
+            pending_decisions = PlanDecision.objects.filter(decided_at__isnull=True)
             pending_total = pending_decisions.count()
             pending_start = pending_decisions.filter(request_type='start').count()
             pending_cancel = pending_decisions.filter(request_type='cancel').count()
@@ -924,8 +935,9 @@ def plan_create(request):
         return redirect('plan_pages:plan_list')
     
     if request.method == 'POST':
-        form = PlanForm(request.POST, user=request.user)
+        # 检查是否是草稿保存
         is_draft = request.POST.get('action') == 'draft'
+        form = PlanForm(request.POST, user=request.user, is_draft=is_draft)
         if form.is_valid():
             plan = form.save(commit=False)
             plan.created_by = request.user
@@ -1145,6 +1157,7 @@ def plan_detail(request, plan_id):
     
     context.update({
         'plan': plan,
+        'object': plan,  # 为 detail_base.html 模板提供 object 变量
         'progress_records': progress_records,
         'status_logs': status_logs,
         'issues': issues,
@@ -1280,11 +1293,15 @@ def plan_decompose_entry(request):
         return redirect('plan_pages:plan_list')
     
     # 获取筛选参数
-    search = request.GET.get('search', '')
+    search = request.GET.get('search', '').strip()
     status_filter = request.GET.get('status', '')
-    plan_type_filter = request.GET.get('plan_type', '')
+    level_filter = request.GET.get('level', '')
+    plan_type_filter = request.GET.get('plan_type', '')  # 向后兼容
+    plan_period_filter = request.GET.get('plan_period', '')
+    responsible_filter = request.GET.get('responsible_person', '')
+    related_goal_filter = request.GET.get('related_goal', '')
     
-    # 查询可分解的计划（排除已取消的计划，优先显示已审批和执行中的计划）
+    # 查询可分解的计划（排除已取消的计划）
     plans = Plan.objects.select_related(
         'responsible_person', 'responsible_department', 'related_goal'
     ).exclude(status='cancelled')
@@ -1304,19 +1321,61 @@ def plan_decompose_entry(request):
         # P1: 默认只显示执行中的计划
         plans = plans.filter(status='in_progress')
     
-    if plan_type_filter:
-        plans = plans.filter(plan_type=plan_type_filter)
+    # P2-3: level 过滤（优先使用 level）
+    if level_filter:
+        plans = plans.filter(level=level_filter)
+    # 注意：plan_type 字段已在 P2-1 迁移中被 level 字段替代，保留此代码仅为向后兼容
+    elif plan_type_filter:
+        # plan_type 的旧值映射到 level 的新值
+        plan_type_to_level_map = {
+            'personal': 'personal',
+            'department': 'company',  # 部门计划映射为公司计划
+            'company': 'company',
+            'project': 'company',  # 项目计划映射为公司计划
+        }
+        mapped_level = plan_type_to_level_map.get(plan_type_filter)
+        if mapped_level:
+            plans = plans.filter(level=mapped_level)
+    
+    if plan_period_filter:
+        plans = plans.filter(plan_period=plan_period_filter)
+    
+    if responsible_filter:
+        plans = plans.filter(responsible_person_id=responsible_filter)
+    
+    if related_goal_filter:
+        plans = plans.filter(related_goal_id=related_goal_filter)
     
     # 排序：优先显示已审批和执行中的计划
     plans = plans.order_by('-status', '-created_time')
     
-    # 分页（每页10条）
-    paginator = Paginator(plans, 10)
+    # 分页
+    page_size = request.GET.get('page_size', '10')
+    try:
+        per_page = int(page_size)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+    
+    paginator = Paginator(plans, per_page)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
+    # 统计信息（基于原始查询，不受筛选影响）
+    base_plans = Plan.objects.exclude(status='cancelled')
+    total_count = base_plans.count()
+    in_progress_count = base_plans.filter(status='in_progress').count()
+    draft_count = base_plans.filter(status='draft').count()
+    completed_count = base_plans.filter(status='completed').count()
+    
     # 获取所有用户（用于筛选）
     all_users = User.objects.filter(is_active=True).order_by('username')
+    
+    # 获取所有战略目标（用于筛选）
+    all_goals = StrategicGoal.objects.filter(
+        status__in=['published', 'in_progress']
+    ).order_by('name')
     
     context = _context(
         "计划分解",
@@ -1326,12 +1385,24 @@ def plan_decompose_entry(request):
     )
     context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_decompose')
     context.update({
-        'plans': page_obj,
+        'page_obj': page_obj,
+        'plans': list(page_obj),  # 保持向后兼容
         'all_users': all_users,
+        'all_goals': all_goals,
         'search': search,
         'status_filter': status_filter,
+        'level_filter': level_filter,
         'plan_type_filter': plan_type_filter,
-        'total_count': plans.count(),
+        'plan_period_filter': plan_period_filter,
+        'responsible_filter': responsible_filter,
+        'related_goal_filter': related_goal_filter,
+        'total_count': total_count,
+        'in_progress_count': in_progress_count,
+        'draft_count': draft_count,
+        'completed_count': completed_count,
+        'status_options': Plan.STATUS_CHOICES,
+        'level_choices': Plan.LEVEL_CHOICES,
+        'plan_period_choices': Plan.PLAN_PERIOD_CHOICES,
     })
     return render(request, "plan_management/plan_decompose_entry.html", context)
 
@@ -1448,12 +1519,21 @@ def plan_approval_list(request):
     展示所有待裁决 PlanDecision（decided_at is null）
     应用公司数据隔离：只显示与当前用户同一公司的计划的审批请求
     """
+    permission_set = get_user_permission_codes(request.user)
+    can_approve = _permission_granted('plan_management.approve_plan', permission_set) or request.user.is_superuser
+    
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    request_type_filter = request.GET.get('request_type', '')
+    status_filter = request.GET.get('status', '')
+    requested_by_filter = request.GET.get('requested_by', '')
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
     
     pending_decisions = (
         PlanDecision.objects
         .filter(decided_at__isnull=True)
         .select_related("plan", "requested_by", "plan__responsible_person", "plan__created_by", "plan__company")
-        .order_by("-requested_at")
     )
     
     # 应用公司数据隔离：只显示与当前用户同一公司的计划的审批请求
@@ -1474,10 +1554,69 @@ def plan_approval_list(request):
         if company_id:
             pending_decisions = pending_decisions.filter(plan__company_id=company_id)
     
-    # 统计信息
-    total_count = pending_decisions.count()
-    pending_count = pending_decisions.filter(request_type='start').count()
-    cancel_count = pending_decisions.filter(request_type='cancel').count()
+    # 应用筛选
+    if search:
+        pending_decisions = pending_decisions.filter(
+            Q(plan__plan_number__icontains=search) |
+            Q(plan__name__icontains=search) |
+            Q(requested_by__username__icontains=search) |
+            Q(requested_by__full_name__icontains=search)
+        )
+    
+    if request_type_filter:
+        pending_decisions = pending_decisions.filter(request_type=request_type_filter)
+    
+    if status_filter:
+        pending_decisions = pending_decisions.filter(plan__status=status_filter)
+    
+    if requested_by_filter:
+        pending_decisions = pending_decisions.filter(requested_by_id=requested_by_filter)
+    
+    if date_from:
+        pending_decisions = pending_decisions.filter(requested_at__date__gte=date_from)
+    
+    if date_to:
+        pending_decisions = pending_decisions.filter(requested_at__date__lte=date_to)
+    
+    # 排序
+    pending_decisions = pending_decisions.order_by("-requested_at")
+    
+    # 分页
+    page_size = request.GET.get('page_size', '10')
+    try:
+        per_page = int(page_size)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+    
+    paginator = Paginator(pending_decisions, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # 统计信息（基于原始查询，不受筛选影响，但应用公司数据隔离）
+    stats_base = PlanDecision.objects.filter(decided_at__isnull=True)
+    if not request.user.is_superuser:
+        company_id = None
+        try:
+            profile = request.user.profile
+            if profile:
+                company_id = getattr(profile, 'company_id', None)
+                if company_id is None and hasattr(profile, 'department') and profile.department:
+                    company_id = getattr(profile.department, 'company_id', None)
+        except AttributeError:
+            pass
+        if company_id:
+            stats_base = stats_base.filter(plan__company_id=company_id)
+    
+    total_count = stats_base.count()
+    pending_count = stats_base.filter(request_type='start').count()
+    cancel_count = stats_base.filter(request_type='cancel').count()
+    
+    # 获取所有用户（用于筛选）
+    all_users = User.objects.filter(
+        id__in=pending_decisions.values_list('requested_by_id', flat=True).distinct()
+    ).order_by('username')
     
     context = _context(
         "计划审批列表",
@@ -1487,11 +1626,21 @@ def plan_approval_list(request):
     )
     context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_approval')
     context.update({
-        "pending_decisions": pending_decisions,
+        "page_obj": page_obj,
+        "pending_decisions": list(page_obj),  # 保持向后兼容
         "can_approve": can_approve,
         "total_count": total_count,
         "pending_count": pending_count,
         "cancel_count": cancel_count,
+        "all_users": all_users,
+        "search": search,
+        "request_type_filter": request_type_filter,
+        "status_filter": status_filter,
+        "requested_by_filter": requested_by_filter,
+        "date_from": date_from,
+        "date_to": date_to,
+        "request_type_choices": PlanDecision.REQUEST_TYPES,
+        "status_options": Plan.STATUS_CHOICES,
     })
     return render(request, "plan_management/plan_approval_list.html", context)
 
@@ -1840,9 +1989,9 @@ def strategic_goal_create(request):
         return redirect('plan_pages:strategic_goal_list')
     
     if request.method == 'POST':
-        form = StrategicGoalForm(request.POST, user=request.user)
         # 检查是否是草稿保存
         is_draft = request.POST.get('action') == 'draft'
+        form = StrategicGoalForm(request.POST, user=request.user, is_draft=is_draft)
         
         if form.is_valid():
             goal = form.save(commit=False)
@@ -2035,6 +2184,7 @@ def strategic_goal_detail(request, goal_id):
     )
     context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_list')
     context.update({
+        'object': goal,  # 用于 detail_base.html
         'goal': goal,
         'progress_records': progress_records,
         'status_logs': status_logs,
@@ -2047,6 +2197,7 @@ def strategic_goal_detail(request, goal_id):
         'can_accept': can_accept,  # P2-2
         'can_start_execution': can_start_execution,  # P2-2
         'valid_transitions': goal.get_valid_transitions(),
+        'progress_percent': goal.completion_rate,  # 用于进度条
     })
     return render(request, "plan_management/strategic_goal_detail.html", context)
 
@@ -2193,6 +2344,14 @@ def strategic_goal_track_entry(request):
         messages.error(request, '您没有权限跟踪战略目标')
         return redirect('plan_pages:strategic_goal_list')
     
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '')
+    level_filter = request.GET.get('level', '')
+    goal_type_filter = request.GET.get('goal_type', '')
+    goal_period_filter = request.GET.get('goal_period', '')
+    responsible_filter = request.GET.get('responsible', '')
+    
     # 获取所有目标（包括制定中的，但标记哪些可以跟踪）
     all_goals = StrategicGoal.objects.select_related(
         'responsible_person', 'responsible_department', 'parent_goal'
@@ -2203,20 +2362,60 @@ def strategic_goal_track_entry(request):
         messages.info(request, '暂无战略目标，请先创建目标')
         return redirect('plan_pages:strategic_goal_list')
     
+    # 应用筛选
+    if search:
+        all_goals = all_goals.filter(
+            Q(goal_number__icontains=search) |
+            Q(name__icontains=search) |
+            Q(responsible_person__username__icontains=search) |
+            Q(responsible_person__full_name__icontains=search)
+        )
+    
+    if status_filter:
+        all_goals = all_goals.filter(status=status_filter)
+    
+    if level_filter:
+        all_goals = all_goals.filter(level=level_filter)
+    
+    if goal_type_filter:
+        all_goals = all_goals.filter(goal_type=goal_type_filter)
+    
+    if goal_period_filter:
+        all_goals = all_goals.filter(goal_period=goal_period_filter)
+    
+    if responsible_filter:
+        all_goals = all_goals.filter(responsible_person_id=responsible_filter)
+    
     # P2-2: 筛选可跟踪的目标（已发布、已接收或执行中的目标）
     trackable_goals = all_goals.filter(status__in=['published', 'accepted', 'in_progress'])
     
-    # 统计信息（所有状态）
-    total_count = all_goals.count()
-    draft_count = all_goals.filter(status='draft').count()
-    published_count = all_goals.filter(status='published').count()
-    in_progress_count = all_goals.filter(status='in_progress').count()
-    completed_count = all_goals.filter(status='completed').count()
-    cancelled_count = all_goals.filter(status='cancelled').count()
+    # 统计信息（所有状态，基于原始查询）
+    total_count = StrategicGoal.objects.count()
+    draft_count = StrategicGoal.objects.filter(status='draft').count()
+    published_count = StrategicGoal.objects.filter(status='published').count()
+    in_progress_count = StrategicGoal.objects.filter(status='in_progress').count()
+    completed_count = StrategicGoal.objects.filter(status='completed').count()
+    cancelled_count = StrategicGoal.objects.filter(status='cancelled').count()
     
     # 如果只有一个可跟踪的目标，直接跳转到该目标的跟踪页面
     if trackable_goals.count() == 1:
         return redirect('plan_pages:strategic_goal_track', goal_id=trackable_goals.first().id)
+    
+    # 分页
+    page_size = request.GET.get('page_size', '10')
+    try:
+        per_page = int(page_size)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+    
+    paginator = Paginator(all_goals, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # 获取所有用户（用于筛选）
+    all_users = User.objects.filter(is_active=True).order_by('username')
     
     # 显示选择页面（显示所有目标，但标记哪些可以跟踪）
     context = _context(
@@ -2227,7 +2426,8 @@ def strategic_goal_track_entry(request):
     )
     context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_track')
     context.update({
-        'goals': all_goals,
+        'page_obj': page_obj,
+        'goals': list(page_obj),  # 保持向后兼容
         'trackable_goals': trackable_goals,
         'has_trackable_goals': trackable_goals.exists(),
         'total_count': total_count,
@@ -2236,6 +2436,17 @@ def strategic_goal_track_entry(request):
         'in_progress_count': in_progress_count,
         'completed_count': completed_count,
         'cancelled_count': cancelled_count,
+        'all_users': all_users,
+        'search': search,
+        'status_filter': status_filter,
+        'level_filter': level_filter,
+        'goal_type_filter': goal_type_filter,
+        'goal_period_filter': goal_period_filter,
+        'responsible_filter': responsible_filter,
+        'status_options': StrategicGoal.STATUS_CHOICES,
+        'level_choices': StrategicGoal.LEVEL_CHOICES,
+        'goal_type_choices': StrategicGoal.GOAL_TYPE_CHOICES,
+        'goal_period_choices': StrategicGoal.GOAL_PERIOD_CHOICES,
     })
     return render(request, "plan_management/strategic_goal_track_entry.html", context)
 
@@ -2257,10 +2468,44 @@ def strategic_goal_track(request, goal_id):
         id=goal_id
     )
     
+    # 获取筛选参数
+    recorded_by_filter = request.GET.get('recorded_by', '')
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    
     # 获取所有进度记录
     progress_records = GoalProgressRecord.objects.filter(
         goal=goal
     ).select_related('recorded_by').order_by('-recorded_time')
+    
+    # 应用筛选
+    if recorded_by_filter:
+        progress_records = progress_records.filter(recorded_by_id=recorded_by_filter)
+    
+    if date_from:
+        progress_records = progress_records.filter(recorded_time__date__gte=date_from)
+    
+    if date_to:
+        progress_records = progress_records.filter(recorded_time__date__lte=date_to)
+    
+    # 分页
+    from django.core.paginator import Paginator
+    page_size = request.GET.get('page_size', '10')
+    try:
+        per_page = int(page_size)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+    
+    paginator = Paginator(progress_records, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # 获取所有用户（用于筛选）
+    all_users = User.objects.filter(
+        id__in=progress_records.values_list('recorded_by_id', flat=True).distinct()
+    ).order_by('username')
     
     # 获取状态日志
     status_logs = GoalStatusLog.objects.filter(
@@ -2361,12 +2606,17 @@ def strategic_goal_track(request, goal_id):
     context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_track')
     context.update({
         'goal': goal,
-        'progress_records': progress_records,
+        'page_obj': page_obj,
+        'progress_records': list(page_obj),  # 保持向后兼容
         'status_logs': status_logs,
         'adjustments': adjustments,
         'progress_trend': progress_trend,
         'progress_form': progress_form,
         'adjustment_form': adjustment_form,
+        'all_users': all_users,
+        'recorded_by_filter': recorded_by_filter,
+        'date_from': date_from,
+        'date_to': date_to,
     })
     
     # P2-2 补强：个人目标必须接收后才能更新进度
@@ -2613,15 +2863,31 @@ def plan_completion_analysis(request):
     # 查询计划
     plans = Plan.objects.select_related('responsible_person', 'related_goal')
     
+    # 公司隔离
+    from backend.apps.plan_management.utils import apply_company_scope
+    plans = apply_company_scope(plans, request.user)
+    
+    # 权限过滤
+    plans = _filter_plans_by_permission(plans, request.user, permission_set)
+    
     # 时间筛选
     if date_from:
         plans = plans.filter(start_time__gte=date_from)
     if date_to:
         plans = plans.filter(end_time__lte=date_to)
     
-    # 类型筛选
+    # 类型筛选（plan_type 字段已在 P2-1 迁移中被 level 字段替代）
     if plan_type:
-        plans = plans.filter(plan_type=plan_type)
+        # plan_type 的旧值映射到 level 的新值
+        plan_type_to_level_map = {
+            'personal': 'personal',
+            'department': 'company',  # 部门计划映射为公司计划
+            'company': 'company',
+            'project': 'company',  # 项目计划映射为公司计划
+        }
+        mapped_level = plan_type_to_level_map.get(plan_type)
+        if mapped_level:
+            plans = plans.filter(level=mapped_level)
     
     # 周期筛选
     if plan_period:
@@ -2639,16 +2905,16 @@ def plan_completion_analysis(request):
     # 按状态统计
     status_stats = plans.values('status').annotate(count=Count('id')).order_by('status')
     
-    # 按类型统计
-    type_stats = plans.values('plan_type').annotate(count=Count('id')).order_by('plan_type')
+    # 按类型统计（使用 level 字段替代 plan_type）
+    type_stats = plans.values('level').annotate(count=Count('id')).order_by('level')
     
     # 按周期统计
     period_stats = plans.values('plan_period').annotate(count=Count('id')).order_by('plan_period')
     
-    # 平均进度
-    avg_progress = plans.aggregate(avg=Sum('progress'))['avg']
-    if avg_progress and total_count > 0:
-        avg_progress = avg_progress / total_count
+    # 平均进度（使用 Avg 而不是 Sum，更准确）
+    avg_progress_result = plans.aggregate(avg=Avg('progress'))['avg']
+    if avg_progress_result is not None:
+        avg_progress = float(avg_progress_result)
     else:
         avg_progress = 0
     
@@ -2805,7 +3071,8 @@ def plan_statistics(request):
     # 计划统计
     plan_total = plans.count()
     plan_by_status = plans.values('status').annotate(count=Count('id'))
-    plan_by_type = plans.values('plan_type').annotate(count=Count('id'))
+    # 注意：plan_type 字段已在 P2-1 迁移中被 level 字段替代
+    plan_by_type = plans.values('level').annotate(count=Count('id'))
     plan_by_period = plans.values('plan_period').annotate(count=Count('id'))
     
     # 目标统计

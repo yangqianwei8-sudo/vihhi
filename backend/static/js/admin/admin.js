@@ -390,6 +390,16 @@
      * 初始化一级菜单
      */
     function initPrimaryMenu() {
+        // ========== Admin 页面早退 ==========
+        // 如果是 admin 页面，不初始化业务菜单，避免与 Django admin 混合
+        // 注意：admin.js 本身是 admin 专用脚本，但 initPrimaryMenu 不应该在 admin 页面初始化业务菜单
+        // 这里检查是否在 admin 路径，如果是则跳过业务菜单初始化
+        if (window.location.pathname.startsWith('/admin/')) {
+            // admin 页面只初始化 admin 自己的菜单，不初始化业务菜单
+            return;
+        }
+        // ========== Admin 页面早退结束 ==========
+        
         // 直接查找所有包含菜单文本的链接元素
         const allLinks = document.querySelectorAll('a');
         const menuLabels = ['首页', '客户管理', '合同管理', '商机管理', '生产管理', '结算管理', '收文管理', '发文管理', '档案管理', '财务管理', '人事管理', '行政管理', '计划管理', '诉讼管理', '风险管理', '资源管理', '报表管理', '系统设置', '权限设置', '流程设置', 'API管理', '团队管理'];
