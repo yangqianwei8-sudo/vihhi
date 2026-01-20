@@ -1,0 +1,63 @@
+{% load static %}
+
+<aside class="vh-sb" aria-label="左侧栏（全屏固定）">
+  <div class="vh-sb__top">
+    <div class="vh-sb__topInner">
+      <div class="vh-sb__titleWrap">
+        <div class="vh-sb__title">系统总工作台</div>
+        <div class="vh-sb__sub">System Dashboard</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="vh-sb__nav">
+    {% if centers_navigation %}
+      {% for item in centers_navigation %}
+        {% if item.children %}
+          <div class="vh-sb__parent">
+            <a href="{{ item.url }}" class="vh-sb__item vh-sb__item--parent {% if item.active or request.path == item.url or request.path|slice:":20" == item.url|slice:":20" %}is-active{% endif %}">
+              <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
+              <span class="vh-sb__label">{{ item.label }}</span>
+            </a>
+            <div class="vh-sb__children {% if item.active or request.path == item.url %}is-expanded{% endif %}">
+              {% for child in item.children %}
+                <a href="{{ child.url }}" class="vh-sb__child {% if child.active or request.path == child.url %}is-active{% endif %}">
+                  <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
+                  <span class="vh-sb__label">{{ child.label }}</span>
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        {% else %}
+          <a href="{{ item.url }}" class="vh-sb__item {% if item.active or request.path == item.url %}is-active{% endif %}">
+            <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
+            <span class="vh-sb__label">{{ item.label }}</span>
+            {% if item.badge %}
+              <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
+                {{ item.badge }}
+              </span>
+            {% endif %}
+          </a>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <div class="vh-sb__item is-active">
+        <span class="vh-sb__icon">▣</span>
+        <span class="vh-sb__label">系统总工作台</span>
+      </div>
+    {% endif %}
+
+    <div class="vh-sb__group">
+      <a href="{% url 'admin:index' %}" class="vh-sb__item">
+        <span class="vh-sb__icon">⚙️</span>
+        <span class="vh-sb__label">管理后台</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="vh-sb__bottom">
+    <div class="vh-sb__mini">帮助</div>
+    <div class="vh-sb__mini">设置</div>
+    <div class="vh-sb__mini">反馈</div>
+  </div>
+</aside>

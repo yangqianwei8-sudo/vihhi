@@ -33,17 +33,23 @@ form {
 }
 
 /* 确保body和html不会同时产生滚动条 */
-/* 只让body产生滚动条，而不是.two-col-main或.two-col-content */
+/* 当使用 two-column-layout 时，禁用 body 的滚动条，由 .two-col-main 控制 */
 html {
   overflow-x: hidden !important;
-  overflow-y: hidden !important; /* html不产生滚动条，只让body产生 */
+  overflow-y: hidden !important; /* html不产生滚动条 */
   height: 100%;
 }
 
 body {
   overflow-x: hidden !important;
-  overflow-y: auto !important; /* 只让body有滚动条 */
+  overflow-y: auto !important; /* 默认让body有滚动条 */
   height: 100%;
+}
+
+/* 当使用 two-column-layout 时，禁用 body 的滚动条，由 .two-col-main 控制 */
+body:has(.two-column-layout),
+.two-column-layout ~ * {
+  overflow-y: hidden !important; /* 禁用 body 的滚动条 */
 }
 
 .module-content-wrapper::before,

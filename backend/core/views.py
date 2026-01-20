@@ -792,6 +792,31 @@ def home(request):
         except Exception as e:
             logger.warning(f'获取计划管理统计数据失败: {e}')
         
+        # 将 scene_groups 转换为侧边栏菜单格式
+        sidebar_nav = []
+        try:
+            for group in scene_groups:
+                if group.get('items'):
+                    # 将场景分组转换为侧边栏菜单项（带子菜单）
+                    sidebar_nav.append({
+                        'label': group.get('title', ''),
+                        'icon': group.get('icon', ''),
+                        'url': '#',
+                        'active': False,
+                        'children': [
+                            {
+                                'label': item.get('label', ''),
+                                'icon': item.get('icon', ''),
+                                'url': item.get('url', '#'),
+                                'active': False,
+                            }
+                            for item in group.get('items', [])
+                        ]
+                    })
+        except Exception as e:
+            logger.warning(f'转换场景分组为侧边栏菜单失败: {e}', exc_info=True)
+            sidebar_nav = []
+        
         # 构建上下文
         context = {
             'user': user,
@@ -818,6 +843,10 @@ def home(request):
             'top_actions': top_actions,
             'my_work': my_work,
             'operation_center_sections': operation_center_sections,  # 运营中心模块卡片
+            # 添加左侧栏数据
+            'sidebar_nav': sidebar_nav,  # 从 scene_groups 转换而来的侧边栏菜单
+            'sidebar_title': '首页',
+            'sidebar_subtitle': 'Home',
         }
         
         # 尝试渲染模板，如果模板不存在则返回简单HTML

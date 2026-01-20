@@ -1551,8 +1551,11 @@ def plan_approval_list(request):
             pass
         
         # 如果有公司ID，过滤只显示同一公司的计划审批请求
+        # 注意：如果计划的 company 为 null，也会被包含（使用 Q 对象）
         if company_id:
-            pending_decisions = pending_decisions.filter(plan__company_id=company_id)
+            pending_decisions = pending_decisions.filter(
+                Q(plan__company_id=company_id) | Q(plan__company__isnull=True)
+            )
     
     # 应用筛选
     if search:
@@ -1607,7 +1610,9 @@ def plan_approval_list(request):
         except AttributeError:
             pass
         if company_id:
-            stats_base = stats_base.filter(plan__company_id=company_id)
+            stats_base = stats_base.filter(
+                Q(plan__company_id=company_id) | Q(plan__company__isnull=True)
+            )
     
     total_count = stats_base.count()
     pending_count = stats_base.filter(request_type='start').count()

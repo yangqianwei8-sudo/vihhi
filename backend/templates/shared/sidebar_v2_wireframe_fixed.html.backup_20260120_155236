@@ -13,7 +13,7 @@
   </div>
 
   <nav class="vh-sb__nav">
-    {% with menu_items=sidebar_nav|default:sidebar_menu|default:None %}
+    {% with menu_items=sidebar_nav|default:None %}
       {% if menu_items %}
         {% for item in menu_items %}
           {% if item.children %}
@@ -22,15 +22,7 @@
                       class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}"
                       data-sb-toggle
                       aria-expanded="false">
-                <span class="vh-sb__icon">
-                  {% if item.icon and item.icon|slice:":3" == "fa-" %}
-                    <i class="fas {{ item.icon }}"></i>
-                  {% elif item.icon %}
-                    {{ item.icon|default:"▢" }}
-                  {% else %}
-                    ▢
-                  {% endif %}
-                </span>
+                <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
                 <span class="vh-sb__label">{{ item.label }}</span>
                 <span class="vh-sb__chev" aria-hidden="true">▸</span>
               </button>
@@ -38,15 +30,7 @@
               <div class="vh-sb__children" data-sb-children>
                 {% for child in item.children %}
                   <a href="{{ child.url|default:'#' }}" class="vh-sb__child {% if child.active %}is-active{% endif %}">
-                    <span class="vh-sb__icon">
-                      {% if child.icon and child.icon|slice:":3" == "fa-" %}
-                        <i class="fas {{ child.icon }}"></i>
-                      {% elif child.icon %}
-                        {{ child.icon|default:"·" }}
-                      {% else %}
-                        ·
-                      {% endif %}
-                    </span>
+                    <span class="vh-sb__icon">{{ child.icon|default:"·" }}</span>
                     <span class="vh-sb__label">{{ child.label }}</span>
                   </a>
                 {% endfor %}
@@ -54,15 +38,7 @@
             </div>
           {% else %}
             <a href="{{ item.url|default:'#' }}" class="vh-sb__item {% if item.active %}is-active{% endif %}">
-              <span class="vh-sb__icon">
-                {% if item.icon and item.icon|slice:":3" == "fa-" %}
-                  <i class="fas {{ item.icon }}"></i>
-                {% elif item.icon %}
-                  {{ item.icon|default:"▢" }}
-                {% else %}
-                  ▢
-                {% endif %}
-              </span>
+              <span class="vh-sb__icon">{{ item.icon|default:"▢" }}</span>
               <span class="vh-sb__label">{{ item.label }}</span>
               {% if item.badge %}
                 <span class="vh-sb__badge {% if item.badge == 'dot' %}vh-sb__badge--dot{% endif %}">
@@ -89,6 +65,7 @@
     <div class="vh-sb__mini" onclick="if(typeof bootstrap !== 'undefined') { const modal = document.getElementById('feedbackModal'); if(modal) new bootstrap.Modal(modal).show(); }" style="cursor: pointer;">反馈</div>
 
     {% block sidebar_bottom_extra %}{% endblock %}
+  </div>
   </div>
 </aside>
 
