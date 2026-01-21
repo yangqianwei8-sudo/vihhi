@@ -1,11 +1,22 @@
 {% load static %}
+{% comment %}
+  侧边栏样式引入
+  注意：sidebar_v2_fixed.css 依赖 --navbar-height 变量，需确保已引入 core/variables.css
+  通常通过 common.css 或 two_column_layout_base.html 中的 base_styles 块引入
+  样式按需加载，只在需要侧边栏的页面加载，避免在不需要侧边栏的页面也加载样式
+{% endcomment %}
+<link rel="stylesheet" href="{% static 'css/components/sidebar_v2_fixed.css' %}">
 
 <aside class="vh-sb" aria-label="左侧栏（全屏固定）">
   <div class="vh-sb__top">
     <div class="vh-sb__topInner">
       <div class="vh-sb__titleWrap">
-        <div class="vh-sb__title">{{ sidebar_title|default:"计划管理" }}</div>
-        <div class="vh-sb__sub">{{ sidebar_subtitle|default:"Plan Management" }}</div>
+        {% if sidebar_title %}
+          <div class="vh-sb__title">{{ sidebar_title }}</div>
+        {% endif %}
+        {% if sidebar_subtitle %}
+          <div class="vh-sb__sub">{{ sidebar_subtitle }}</div>
+        {% endif %}
       </div>
 
       {% block sidebar_top_extra %}{% endblock %}
@@ -113,7 +124,3 @@
     {% block sidebar_bottom_extra %}{% endblock %}
   </div>
 </aside>
-
-{% block sidebar_feedback_modal %}
-  {% include 'system_management/feedback_form_modal.html' %}
-{% endblock %}
