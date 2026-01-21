@@ -1292,3 +1292,63 @@ class PlanDecision(models.Model):
         decision_text = self.get_decision_display() if self.decision else '待处理'
         return f"{self.plan.plan_number} - {self.get_request_type_display()} - {decision_text}"
 
+
+class ApprovalNotification(models.Model):
+    """审批通知模型"""
+    
+    EVENT_CHOICES = [
+        ('submit', '提交审批'),
+        ('approve', '审批通过'),
+        ('reject', '审批驳回'),
+        ('cancel', '取消审批'),
+        ('draft_timeout', '草稿超时'),
+        ('approval_timeout', '审批超时'),
+        ('company_goal_published', '公司目标发布'),
+        ('personal_goal_published', '个人目标发布'),
+        ('goal_accepted', '目标被接收'),
+        ('company_plan_published', '公司计划发布'),
+        ('personal_plan_published', '个人计划发布'),
+        ('plan_accepted', '计划被接收'),
+    ]
+    
+    OBJECT_TYPE_CHOICES = [
+        ('plan', '计划'),
+        ('goal', '目标'),
+    ]
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='approval_notifications',
+        verbose_name='接收人'
+    )
+    title = models.CharField(max_length=200, verbose_name='通知标题')
+    content = models.TextField(verbose_name='通知内容')
+    object_type = models.CharField(
+        max_length=20,
+        choices=OBJECT_TYPE_CHOICES,
+        verbose_name='对象类型'
+    )
+    object_id = models.CharField(max_length=50, verbose_name='对象ID')
+    event = models.CharField(
+        max_length=50,  # 增加长度以支持 personal_goal_published 等长事件名
+        choices=EVENT_CHOICES,
+        verbose_name='事件类型'
+    )
+    is_read = models.BooleanField(default=False, verbose_name='是否已读')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    
+    class Meta:
+        db_table = 'plan_approval_notification'
+        verbose_name = '审批通知'
+        verbose_name_plural = '审批通知'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read'], name='plan_approv_user_id_fdf6fe_idx'),
+            models.Index(fields=['-created_at'], name='plan_approv_created_ef6d5d_idx'),
+            models.Index(fields=['object_type', 'object_id'], name='plan_approv_object__3b2b49_idx'),
+        ]
+    
+    def __str__(self):
+        return f"{self.title} - {self.user.username}"
+

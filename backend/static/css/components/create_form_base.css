@@ -5,34 +5,7 @@
 @import url('../common.css');
 
 /* ============================================
-   1. 布局容器样式
-   ============================================ */
-
-/* 移除顶部横线，修复滚动条问题 */
-.module-content-wrapper,
-.content_inner {
-  border-top: none !important;
-  overflow: visible !important;
-}
-
-.module-content-wrapper::before,
-.module-content-wrapper::after {
-  display: none !important;
-  content: none !important;
-}
-
-/* 修复双滚动条问题 */
-.two-col-main {
-  overflow-x: hidden !important;
-}
-
-.two-col-content {
-  overflow-x: hidden !important;
-}
-
-
-/* ============================================
-   2. 表单行布局（每行5个字段）
+   表单行布局（每行5个字段）
    ============================================ */
 
 /* 每行字段自动适应布局 - 强制排满整行，每排必须5个字段 */
@@ -53,22 +26,17 @@
   margin-bottom: var(--spacing-md) !important;
 }
 
-.form-row-5.row > *,
-.row.form-row-5 > * {
-  padding-left: 4px !important;
-  padding-right: 4px !important;
-}
-
 /* 最终保障：使用属性选择器确保所有包含 form-row-5 类的元素都有统一的行距 */
 [class*="form-row-5"]:not(.col-5-fields):not(.form-field-wrapper) {
   margin-bottom: var(--spacing-md) !important;
 }
 
 /* ============================================
-   3. 字段宽度和间距
+   字段宽度和间距
    ============================================ */
 
 /* 字段自动适应宽度，每排必须5个字段，每个占20%宽度 */
+/* 使用 box-sizing: border-box，padding 包含在宽度内，每个字段平均分布 */
 .col-5-fields {
   flex: 0 0 20% !important;
   max-width: 20% !important;
@@ -93,137 +61,31 @@
   margin-bottom: var(--spacing-md);
 }
 
-/* 确保空占位字段不影响行高 */
-.col-5-fields.form-field-wrapper:empty {
-  min-height: 0;
-  height: 0;
-  padding: 0;
-  margin: 0;
+/* 确保空占位字段不占用空间（隐藏字段占位） */
+.col-5-fields.form-field-wrapper:empty,
+.col-5-fields:empty {
+  min-height: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  flex: 0 0 20% !important;
+  max-width: 20% !important;
+  overflow: hidden !important;
 }
 
 /* 多行文本字段和占据整行的字段 - 仅在 form-row-5 上下文中应用 */
 .form-row-5 .col-12,
 .row.form-row-5 .col-12 {
-  flex: 0 0 100%;
-  max-width: 100%;
+  flex: 0 0 100% !important;
+  max-width: 100% !important;
   padding-left: 4px !important;
-  padding-right: 4px;
+  padding-right: 4px !important;
   margin-bottom: 0;
+  box-sizing: border-box !important;
 }
 
 /* ============================================
-   4. 表单控件扩展样式
-   ============================================ */
-
-/* 多选字段样式 */
-select[multiple].form-select {
-  min-height: 120px;
-  padding: var(--spacing-sm);
-}
-
-select[multiple].form-select option {
-  padding: 6px var(--spacing-sm);
-}
-
-/* 文本域字段样式 */
-textarea.form-control {
-  resize: vertical;
-}
-
-/* ============================================
-   5. 表单卡片样式
-   ============================================ */
-
-.form-card {
-  background: var(--vh-card-bg);
-  border: 1px solid var(--vh-border);
-  margin-bottom: var(--spacing-lg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.form-card-header {
-  background: var(--vh-surface);
-  border-bottom: 1px solid var(--vh-border);
-  padding: var(--spacing-md) var(--spacing-lg);
-}
-
-.form-card-title {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--vh-text);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.form-card-title i {
-  color: var(--vh-text-muted);
-}
-
-.form-card-body {
-  padding: var(--spacing-lg);
-}
-
-/* ============================================
-   6. 表单提示和帮助文本
-   ============================================ */
-
-/* 错误提示样式扩展 */
-.text-danger.small {
-  font-size: var(--font-size-sm);
-  margin-top: var(--spacing-xs);
-}
-
-/* ============================================
-   7. 表单操作区域扩展
-   ============================================ */
-
-/* 表单操作区域左右分布布局 */
-.form-actions-left,
-.form-actions-right {
-  display: flex;
-  gap: var(--spacing-md);
-  align-items: center;
-}
-
-/* ============================================
-   8. 按钮扩展样式
-   ============================================ */
-
-/* 草稿按钮样式 */
-.btn-draft {
-  background-color: var(--vh-primary);
-  color: #FFFFFF;
-  border: 1px solid var(--vh-primary);
-}
-
-.btn-draft:hover {
-  background-color: var(--vh-accent);
-  color: #FFFFFF;
-  border-color: var(--vh-accent);
-}
-
-/* ============================================
-   9. 表单分组标题
-   ============================================ */
-
-.form-section-header {
-  margin-top: var(--spacing-lg);
-  margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--vh-border);
-}
-
-.form-section-header h3 {
-  font-size: var(--font-size-md);
-  font-weight: 600;
-  color: var(--vh-text);
-  margin: 0;
-}
-
-/* ============================================
-   10. 响应式设计
+   响应式设计
    ============================================ */
 
 /* 中等屏幕（平板） */
@@ -233,33 +95,28 @@ textarea.form-control {
   }
   
   .col-5-fields {
-    flex: 0 0 calc(50% - 8px);
-    max-width: calc(50% - 8px);
-  }
-}
-
-/* 小屏幕（手机） */
-@media (max-width: 768px) {
-  .form-card {
-    margin-bottom: var(--spacing-md);
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
   }
   
-  .form-card-header {
-    padding: var(--spacing-sm) var(--spacing-md);
-  }
-  
-  .form-card-body {
-    padding: var(--spacing-md);
-  }
-  
-  .form-card-title {
-    font-size: var(--font-size-md);
+  /* 空占位字段在响应式下也要隐藏 */
+  .col-5-fields.form-field-wrapper:empty,
+  .col-5-fields:empty {
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
   }
 }
 
 @media (max-width: 576px) {
   .col-5-fields {
-    flex: 0 0 100%;
-    max-width: 100%;
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* 空占位字段在响应式下也要隐藏 */
+  .col-5-fields.form-field-wrapper:empty,
+  .col-5-fields:empty {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
   }
 }
