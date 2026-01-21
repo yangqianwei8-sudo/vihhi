@@ -23,39 +23,59 @@
             return;
         }
         
-        // 创建通知组件HTML
-        const notificationHTML = `
-            <div class="notification-dropdown-container">
-                <div class="notification-icon-wrapper" id="notificationIcon">
-                    <span class="notification-icon">🔔</span>
-                    <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
-                </div>
-                <div class="notification-dropdown" id="notificationDropdown" style="display: none;">
-                    <div class="notification-header">
-                        <h6 class="mb-0">系统通知</h6>
-                        <button type="button" class="btn-close btn-close-sm" id="closeNotificationDropdown"></button>
-                    </div>
-                    <div class="notification-list" id="notificationList">
-                        <div class="notification-loading">加载中...</div>
-                    </div>
-                    <div class="notification-footer">
-                        <a href="/administrative/announcement/list/" class="btn btn-sm btn-link">查看全部</a>
+        // 创建通知图标HTML（只在顶部栏显示图标）
+        const notificationIconHTML = `
+            <div class="notification-icon-wrapper" id="notificationIcon">
+                <span class="notification-icon">🔔</span>
+                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+            </div>
+        `;
+        
+        // 创建模态框HTML（添加到body，不在顶部栏）
+        const notificationModalHTML = `
+            <div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-scrollable modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="notificationModalLabel">系统通知</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭" id="closeNotificationModal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="notification-list" id="notificationList">
+                                <div class="notification-loading">加载中...</div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <a href="/administrative/announcements/" class="btn btn-link">查看全部通知</a>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                        </div>
                     </div>
                 </div>
             </div>
         `;
         
-        // 创建容器
-        const container = document.createElement('div');
-        container.innerHTML = notificationHTML;
-        const notificationWidget = container.firstElementChild;
+        // 创建图标容器
+        const iconContainer = document.createElement('div');
+        iconContainer.innerHTML = notificationIconHTML;
+        const notificationIcon = iconContainer.firstElementChild;
         
-        // 添加到导航栏右侧
+        // 创建模态框容器（添加到body）
+        const modalContainer = document.createElement('div');
+        modalContainer.innerHTML = notificationModalHTML;
+        const notificationModal = modalContainer.firstElementChild;
+        
+        // 将模态框添加到body
+        document.body.appendChild(notificationModal);
+        
+        // 将图标添加到导航栏右侧
         if (navbar.classList.contains('navbar-nav')) {
-            // 如果是nav元素，直接添加
-            navbar.appendChild(notificationWidget);
+            // 如果是nav元素，包装在li中
+            const li = document.createElement('li');
+            li.className = 'nav-item';
+            li.appendChild(notificationIcon);
+            navbar.appendChild(li);
         } else {
-            // 如果是navbar容器，查找右侧区域（最后一个navbar-nav，或者没有me-auto类的）
+            // 如果是navbar容器，查找右侧区域
             const allNavs = navbar.querySelectorAll('.navbar-nav');
             let navRight = null;
             
@@ -78,14 +98,14 @@
             }
             
             if (navRight) {
-                // 如果navRight是ul元素，需要将通知组件包装在li中
+                // 如果navRight是ul元素，需要将通知图标包装在li中
                 if (navRight.tagName === 'UL') {
                     const li = document.createElement('li');
                     li.className = 'nav-item';
-                    li.appendChild(notificationWidget);
+                    li.appendChild(notificationIcon);
                     navRight.appendChild(li);
                 } else {
-                    navRight.appendChild(notificationWidget);
+                    navRight.appendChild(notificationIcon);
                 }
             } else {
                 // 创建右侧容器
@@ -93,10 +113,10 @@
                 rightContainer.className = 'navbar-nav ms-auto';
                 rightContainer.style.display = 'flex';
                 rightContainer.style.alignItems = 'center';
-                // 将通知组件包装在li中
+                // 将通知图标包装在li中
                 const li = document.createElement('li');
                 li.className = 'nav-item';
-                li.appendChild(notificationWidget);
+                li.appendChild(notificationIcon);
                 rightContainer.appendChild(li);
                 // 查找navbar-collapse容器
                 const navbarCollapse = navbar.querySelector('.navbar-collapse') || navbar;
@@ -114,23 +134,23 @@
     // 初始化通知功能
     function initNotificationFunctionality() {
         const iconWrapper = document.getElementById('notificationIcon');
-        const dropdown = document.getElementById('notificationDropdown');
+        const modal = document.getElementById('notificationModal');
         const badge = document.getElementById('notificationBadge');
         const list = document.getElementById('notificationList');
-        const closeBtn = document.getElementById('closeNotificationDropdown');
+        const closeBtn = document.getElementById('closeNotificationModal');
         
         console.log('初始化通知功能，查找元素:', {
             iconWrapper: !!iconWrapper,
-            dropdown: !!dropdown,
+            modal: !!modal,
             badge: !!badge,
             list: !!list,
             closeBtn: !!closeBtn
         });
         
-        if (!iconWrapper || !dropdown || !badge || !list) {
+        if (!iconWrapper || !modal || !badge || !list) {
             console.error('通知组件：无法找到必要的DOM元素', {
                 iconWrapper: !!iconWrapper,
-                dropdown: !!dropdown,
+                modal: !!modal,
                 badge: !!badge,
                 list: !!list
             });
@@ -139,10 +159,20 @@
         
         console.log('通知组件元素已找到，开始绑定事件');
         
-        let isOpen = false;
         let notifications = [];
-        let lastToggleTime = 0; // 防抖：记录上次切换时间
-        const TOGGLE_DEBOUNCE_MS = 100; // 防抖时间：100毫秒内只允许切换一次
+        
+        // 使用Bootstrap Modal API
+        let modalInstance = null;
+        try {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                modalInstance = new bootstrap.Modal(modal);
+            }
+        } catch (e) {
+            console.warn('Bootstrap Modal 不可用，将使用手动方式', e);
+        }
+        
+        // 导出 lastToggleTime 到外部作用域，供点击外部关闭事件使用
+        // （通过闭包，点击外部关闭事件可以访问这个变量）
         
         // 加载通知
         function loadNotifications() {
@@ -282,89 +312,78 @@
             return div.innerHTML;
         }
         
-        // 切换下拉菜单
-        function toggleDropdown() {
-            const now = Date.now();
-            // 防抖：如果距离上次切换时间太短，忽略此次调用
-            if (now - lastToggleTime < TOGGLE_DEBOUNCE_MS) {
-                return;
-            }
-            lastToggleTime = now;
+        // 打开模态框
+        function openModal() {
+            console.log('打开通知模态框');
+            // 先加载通知
+            loadNotifications();
             
-            console.log('toggleDropdown 被调用，当前状态:', isOpen);
-            isOpen = !isOpen;
-            console.log('切换后状态:', isOpen);
-            console.log('dropdown 元素:', dropdown);
-            if (dropdown) {
-                if (isOpen) {
-                    dropdown.style.display = 'flex';
-                    dropdown.classList.add('show');
-                } else {
-                    dropdown.style.display = 'none';
-                    dropdown.classList.remove('show');
-                }
-                console.log('下拉菜单显示状态:', dropdown.style.display, 'class:', dropdown.className);
+            // 使用Bootstrap Modal API或手动方式打开
+            if (modalInstance) {
+                modalInstance.show();
             } else {
-                console.error('dropdown 元素不存在！');
+                // 手动方式
+                modal.classList.add('show');
+                modal.style.display = 'block';
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('modal-open');
+                // 添加背景遮罩
+                const backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop fade show';
+                backdrop.id = 'notificationModalBackdrop';
+                document.body.appendChild(backdrop);
+            }
+        }
+        
+        // 关闭模态框
+        function closeModal() {
+            console.log('关闭通知模态框');
+            
+            // 在关闭之前，先移除焦点，避免 aria-hidden 警告
+            const activeElement = document.activeElement;
+            if (activeElement && modal.contains(activeElement)) {
+                // 如果焦点在模态框内，将焦点移到 body
+                activeElement.blur();
+                document.body.focus();
             }
             
-            if (isOpen) {
-                loadNotifications();
+            if (modalInstance) {
+                modalInstance.hide();
+            } else {
+                // 手动方式：先移除焦点，再设置 aria-hidden
+                setTimeout(() => {
+                    modal.classList.remove('show');
+                    modal.style.display = 'none';
+                    modal.setAttribute('aria-hidden', 'true');
+                    document.body.classList.remove('modal-open');
+                    // 移除背景遮罩
+                    const backdrop = document.getElementById('notificationModalBackdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                }, 0);
             }
         }
         
-        // 关闭下拉菜单
-        function closeDropdown() {
-            isOpen = false;
-            if (dropdown) {
-                dropdown.style.display = 'none';
-                dropdown.classList.remove('show');
-            }
-        }
-        
-        // 绑定事件 - 使用多种方式确保事件能触发
-        function handleIconClick(e) {
-            console.log('通知图标点击事件触发', e);
-            // 不要阻止默认行为，只阻止冒泡到document
-            e.stopPropagation();
-            // 不调用 preventDefault，避免阻止正常的点击行为
-            console.log('通知图标被点击，准备切换下拉菜单');
-            try {
-                toggleDropdown();
-            } catch (error) {
-                console.error('调用toggleDropdown时出错:', error);
-            }
-        }
-        
-        // 只使用 click 事件，避免多个事件重复触发
+        // 绑定图标点击事件
         iconWrapper.addEventListener('click', function(e) {
-            e.stopPropagation(); // 阻止事件冒泡到document，防止立即关闭
-            e.preventDefault(); // 阻止默认行为
-            handleIconClick(e);
-        }, false);
+            console.log('通知图标被点击');
+            e.stopPropagation();
+            e.preventDefault();
+            openModal();
+        });
         
+        // 绑定关闭按钮事件
         if (closeBtn) {
             closeBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                closeDropdown();
+                closeModal();
             });
         }
         
-        // 点击外部关闭 - 使用延迟确保不会立即关闭刚打开的菜单
-        document.addEventListener('click', function(e) {
-            // 如果点击的是通知图标或下拉菜单内的元素，不关闭
-            if (iconWrapper.contains(e.target) || (dropdown && dropdown.contains(e.target))) {
-                return;
-            }
-            // 如果菜单是打开的，关闭它
-            if (isOpen) {
-                // 延迟关闭，避免与打开事件冲突
-                setTimeout(function() {
-                    if (isOpen && !iconWrapper.contains(e.target) && (!dropdown || !dropdown.contains(e.target))) {
-                        closeDropdown();
-                    }
-                }, 10);
-            }
+        // 监听模态框关闭事件
+        modal.addEventListener('hidden.bs.modal', function() {
+            console.log('模态框已关闭');
         });
         
         // 页面加载时加载通知
@@ -383,41 +402,34 @@
         const style = document.createElement('style');
         style.id = 'notification-widget-styles';
         style.textContent = `
-            .notification-dropdown-container {
-                position: relative;
-                margin-left: 15px;
-                z-index: 1051;
-            }
-            
             .notification-icon-wrapper {
                 position: relative;
                 cursor: pointer;
                 padding: 8px 12px;
                 border-radius: 4px;
                 transition: background-color 0.2s;
-                z-index: 1052;
                 pointer-events: auto !important;
                 user-select: none;
                 -webkit-user-select: none;
                 -moz-user-select: none;
                 -ms-user-select: none;
+                touch-action: manipulation;
             }
             
             .notification-icon-wrapper:hover {
                 background-color: rgba(255, 255, 255, 0.1);
             }
             
-            /* 移除子元素的 pointer-events: none，允许事件冒泡 */
             .notification-icon-wrapper * {
-                pointer-events: auto;
-                cursor: pointer;
+                pointer-events: auto !important;
+                cursor: pointer !important;
             }
             
             .notification-icon {
                 font-size: 20px;
                 display: inline-block;
-                pointer-events: auto;
-                cursor: pointer;
+                pointer-events: auto !important;
+                cursor: pointer !important;
             }
             
             .notification-badge {
@@ -435,46 +447,10 @@
                 line-height: 1.4;
             }
             
-            .notification-dropdown {
-                position: absolute;
-                top: 100%;
-                right: 0;
-                width: 380px;
-                max-height: 500px;
-                background: white;
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                z-index: 1053 !important;
-                margin-top: 8px;
-                display: none;
-                flex-direction: column;
-            }
-            
-            .notification-dropdown.show {
-                display: flex !important;
-            }
-            
-            .notification-header {
-                padding: 12px 16px;
-                border-bottom: 1px solid #eee;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                background-color: #f8f9fa;
-                border-radius: 8px 8px 0 0;
-            }
-            
-            .notification-header h6 {
-                font-weight: 600;
-                color: #333;
-                margin: 0;
-            }
-            
             .notification-list {
-                max-height: 400px;
+                max-height: 60vh;
                 overflow-y: auto;
-                padding: 8px 0;
+                padding: 0;
             }
             
             .notification-item {

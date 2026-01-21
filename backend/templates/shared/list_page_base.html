@@ -1,6 +1,12 @@
 {% extends "shared/module_base.html" %}
 {% load static %}
 
+{% comment %}
+  列表页面基础模板
+  提供统一的列表页面结构，包括统计卡片、筛选器、表格、分页等模块
+  使用 list_layout.css 样式系统
+{% endcomment %}
+
 {% block module_styles %}
   {{ block.super }}
   <link rel="stylesheet" href="{% static 'css/components/list_layout.css' %}">
@@ -8,48 +14,87 @@
 {% endblock module_styles %}
 
 {% block pm_content %}
-    {% block list_stats_section %}
-    <div class="list-stats-section">
-      {% block list_stats_content %}{% endblock list_stats_content %}
-    </div>
-    {% endblock list_stats_section %}
+  {# 统计卡片区域 - 显示关键指标 #}
+  {% block list_stats_section %}
+    {% block list_stats_content %}
+      {# 子模板可以覆盖此块添加统计卡片 #}
+    {% endblock list_stats_content %}
+  {% endblock list_stats_section %}
 
-    {% block list_filters_section %}
-    <div class="list-filters-section">
-      <form method="get">
-        <div class="row">
-          {% block list_filters_content %}{% endblock list_filters_content %}
-          <div class="col-md-auto d-flex align-items-end">
-            <button type="submit" class="list-btn list-btn-primary">查询</button>
-            <a href="{{ request.path }}" class="list-btn list-btn-outline ms-2">重置</a>
-          </div>
-        </div>
-      </form>
-    </div>
-    {% endblock list_filters_section %}
+  {# 操作栏 - 顶部操作按钮和搜索 #}
+  {% block list_action_bar_section %}
+    {% block list_action_bar_content %}
+      {# 子模板可以覆盖此块添加操作栏 #}
+    {% endblock list_action_bar_content %}
+  {% endblock list_action_bar_section %}
 
-    <div class="list-table-section">
-      <div class="list-table-wrapper">
+  {# 工具栏 - 批量操作栏 #}
+  {% block list_toolbar_section %}
+    {% block list_toolbar_content %}
+      {# 子模板可以覆盖此块添加工具栏和批量操作 #}
+    {% endblock list_toolbar_content %}
+  {% endblock list_toolbar_section %}
+
+  {# 筛选器区域 #}
+  {% block list_filters_section %}
+    {% block list_filters_content %}
+      {# 子模板可以覆盖此块添加筛选器表单 #}
+    {% endblock list_filters_content %}
+  {% endblock list_filters_section %}
+
+  {# 表格区域 #}
+  {% block list_table_section %}
+    <div class="list-table-container">
+      {% block list_table_content %}
         <table class="list-table">
           <thead>
-            <tr>{% block list_table_headers %}{% endblock list_table_headers %}</tr>
+            <tr>
+              {% block list_table_headers %}
+                {# 子模板需要在此定义表头 #}
+              {% endblock list_table_headers %}
+            </tr>
           </thead>
           <tbody>
             {% block list_table_rows %}
-            <tr>
-              <td colspan="100%" class="list-empty-state">暂无数据</td>
-            </tr>
+              {# 默认空状态 #}
+              <tr>
+                <td colspan="100%" class="list-empty">
+                  <div class="list-empty-icon">📋</div>
+                  <div class="list-empty-text">暂无数据</div>
+                  {% block list_empty_hint %}
+                    {# 子模板可以添加空状态提示文字 #}
+                  {% endblock list_empty_hint %}
+                </td>
+              </tr>
             {% endblock list_table_rows %}
           </tbody>
         </table>
-      </div>
+      {% endblock list_table_content %}
     </div>
+  {% endblock list_table_section %}
 
-    {% block list_pagination_section %}
+  {# 加载状态 #}
+  {% block list_loading_section %}
+    {% block list_loading_content %}
+      {# 子模板可以覆盖此块添加加载状态 #}
+    {% endblock list_loading_content %}
+  {% endblock list_loading_section %}
+
+  {# 错误状态 #}
+  {% block list_error_section %}
+    {% block list_error_content %}
+      {# 子模板可以覆盖此块添加错误状态 #}
+    {% endblock list_error_content %}
+  {% endblock list_error_section %}
+
+  {# 分页区域 #}
+  {% block list_pagination_section %}
     {% if page_obj and page_obj.has_other_pages %}
-    <div class="list-pagination-section">
-      {% include "shared/_pagination.html" %}
-    </div>
+      <div class="list-pagination">
+        {% block list_pagination_content %}
+          {% include "shared/_pagination.html" %}
+        {% endblock list_pagination_content %}
+      </div>
     {% endif %}
-    {% endblock list_pagination_section %}
+  {% endblock list_pagination_section %}
 {% endblock pm_content %}

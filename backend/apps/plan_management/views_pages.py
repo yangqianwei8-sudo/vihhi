@@ -2117,6 +2117,10 @@ def strategic_goal_detail(request, goal_id):
                 if goal.level == 'company':
                     from .notifications import notify_company_goal_published
                     notify_company_goal_published(goal)
+                # P2-2: 个人目标发布后，通知目标所有者接收目标
+                elif goal.level == 'personal':
+                    from .notifications import notify_personal_goal_published
+                    notify_personal_goal_published(goal)
                 
                 messages.success(request, '目标已发布')
                 return redirect('plan_pages:strategic_goal_detail', goal_id=goal_id)

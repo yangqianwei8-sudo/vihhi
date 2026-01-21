@@ -1,13 +1,57 @@
-/* ===== 两栏布局样式 - 最小化版本（用于排查问题） ===== */
+/* ===== 两栏布局样式 ===== */
+/* 风格：简洁、美观、大方，灰色黑色为主，卡片直角 */
 
-/* 布局容器 - 最基础设置，添加重置和 !important */
+/* ===== 引入通用左侧栏样式 ===== */
+@import url('sidebar_v2_fixed.css');
+
+/* ===== CSS 变量定义 ===== */
+:root {
+  --two-col-sidebar-width: var(--sidebar-width, 224px);
+  --two-col-navbar-height: var(--navbar-height, 62px); /* 顶部导航栏高度 */
+  --two-col-gap: 8px;
+  --two-col-content-padding: 8px;
+  --two-col-content-padding-bottom: 24px;
+  --two-col-bg: #F5F5F5;
+  --two-col-card-bg: #ffffff;
+  --two-col-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --two-col-card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --two-col-border-color: #E5E5E5;
+  --two-col-text-primary: #1F2937;
+  --two-col-text-secondary: #6B7280;
+  --two-col-text-muted: #9CA3AF;
+  --two-col-transition: all 0.2s ease;
+}
+
+/* ===== Body 滚动控制 ===== */
+/* 当使用 two-column-layout 时，强制禁用 body 的滚动条，只让 .two-col-main 滚动 */
+/* 避免双重滚动条问题：body 和 .two-col-main 不能同时有滚动条 */
+/* 使用多种选择器确保兼容性和优先级 */
+body:has(.two-column-layout) {
+  overflow-y: hidden !important; /* 强制禁用 body 滚动条 */
+  height: 100% !important;
+}
+
+/* 如果浏览器不支持 :has()，使用类名方式 */
+body.two-column-layout-active {
+  overflow-y: hidden !important;
+  height: 100% !important;
+}
+
+/* ===== 顶部导航栏适配 ===== */
+/* 确保顶部导航栏与两栏布局正确配合 */
+.navbar + .two-column-layout,
+body:has(.navbar) .two-column-layout {
+  margin-top: var(--two-col-navbar-height) !important;
+}
+
+/* ===== 布局容器 ===== */
 .two-column-layout {
   display: flex !important;
   flex-direction: row !important;
   align-items: flex-start !important;
-  min-height: calc(100vh - 62px) !important;
-  height: calc(100vh - 62px) !important;
-  margin-top: 62px !important;
+  min-height: calc(100vh - var(--two-col-navbar-height)) !important;
+  height: calc(100vh - var(--two-col-navbar-height)) !important;
+  margin-top: var(--two-col-navbar-height) !important;
   margin-bottom: 0 !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
@@ -16,17 +60,18 @@
   overflow: visible !important;
 }
 
-/* 主内容区 - 最基础设置，添加重置和 !important */
+/* ===== 主内容区 ===== */
+/* 关键：设置 margin-left 确保内容从侧栏右侧开始 */
 .two-col-main {
   flex: 1 1 auto !important;
-  margin-left: calc(var(--sidebar-width, 224px) + 8px) !important;
+  margin-left: calc(var(--two-col-sidebar-width) + var(--two-col-gap)) !important;
   margin-top: 0 !important;
   margin-right: 0 !important;
   margin-bottom: 0 !important;
   padding: 0 !important;
-  min-height: calc(100vh - 62px) !important;
-  height: calc(100vh - 62px) !important;
-  background: #F5F5F5 !important;
+  min-height: calc(100vh - var(--two-col-navbar-height)) !important;
+  height: calc(100vh - var(--two-col-navbar-height)) !important;
+  background: var(--two-col-bg) !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   display: flex !important;
@@ -40,11 +85,30 @@
   visibility: visible !important;
   order: 1 !important;
   align-self: flex-start !important;
+  transition: var(--two-col-transition);
 }
 
-/* 内容区 - 最基础设置 */
+/* 自定义滚动条样式 */
+.two-col-main::-webkit-scrollbar {
+  width: 8px;
+}
+
+.two-col-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.two-col-main::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.two-col-main::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ===== 内容区 ===== */
 .two-col-content {
-  padding: 8px 8px 24px 8px !important;
+  padding: var(--two-col-content-padding) var(--two-col-content-padding) var(--two-col-content-padding-bottom) var(--two-col-content-padding) !important;
   flex: 1 1 auto !important;
   display: flex !important;
   flex-direction: column !important;
@@ -52,4 +116,363 @@
   height: auto !important;
   overflow: visible !important;
   overflow-x: hidden !important;
+  gap: 16px;
+}
+
+/* 内容区变体：无内边距 */
+.two-col-content--no-padding {
+  padding: 0 !important;
+}
+
+/* 内容区变体：紧凑模式 */
+.two-col-content--compact {
+  padding: 4px 4px 12px 4px !important;
+  gap: 8px;
+}
+
+/* 内容区变体：宽松模式 */
+.two-col-content--spacious {
+  padding: 16px 16px 32px 16px !important;
+  gap: 24px;
+}
+
+/* ===== 页面头部样式 ===== */
+.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 {
+  margin-bottom: 24px !important;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--two-col-border-color);
+}
+
+.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child {
+  flex: 1;
+}
+
+.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 h1.h3 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--two-col-text-primary);
+  line-height: 1.4;
+}
+
+.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > :not(h1) {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--two-col-text-secondary);
+  line-height: 1.5;
+}
+
+/* ===== 卡片容器样式 ===== */
+.two-col-card {
+  background: var(--two-col-card-bg);
+  border: 1px solid var(--two-col-border-color);
+  border-radius: 0;
+  box-shadow: var(--two-col-card-shadow);
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: var(--two-col-transition);
+}
+
+.two-col-card:hover {
+  box-shadow: var(--two-col-card-shadow-hover);
+}
+
+.two-col-card-header {
+  padding: 0 0 12px 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--two-col-border-color);
+}
+
+.two-col-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--two-col-text-primary);
+  margin: 0;
+}
+
+.two-col-card-body {
+  padding: 0;
+}
+
+.two-col-card-footer {
+  padding: 12px 0 0 0;
+  margin-top: 12px;
+  border-top: 1px solid var(--two-col-border-color);
+}
+
+/* 卡片变体 */
+.two-col-card--bordered {
+  border: 1px solid var(--two-col-border-color);
+  box-shadow: none;
+}
+
+.two-col-card--flat {
+  border: none;
+  box-shadow: none;
+  background: var(--two-col-card-bg);
+}
+
+.two-col-card--elevated {
+  border: none;
+  box-shadow: var(--two-col-card-shadow-hover);
+}
+
+.two-col-card--compact {
+  padding: 12px;
+}
+
+.two-col-card--spacious {
+  padding: 24px;
+}
+
+/* ===== 间距工具类 ===== */
+.two-col-gap-xs { gap: 4px; }
+.two-col-gap-sm { gap: 8px; }
+.two-col-gap-md { gap: 16px; }
+.two-col-gap-lg { gap: 24px; }
+.two-col-gap-xl { gap: 32px; }
+
+.two-col-mt-xs { margin-top: 4px !important; }
+.two-col-mt-sm { margin-top: 8px !important; }
+.two-col-mt-md { margin-top: 16px !important; }
+.two-col-mt-lg { margin-top: 24px !important; }
+.two-col-mt-xl { margin-top: 32px !important; }
+
+.two-col-mb-xs { margin-bottom: 4px !important; }
+.two-col-mb-sm { margin-bottom: 8px !important; }
+.two-col-mb-md { margin-bottom: 16px !important; }
+.two-col-mb-lg { margin-bottom: 24px !important; }
+.two-col-mb-xl { margin-bottom: 32px !important; }
+
+.two-col-p-xs { padding: 4px !important; }
+.two-col-p-sm { padding: 8px !important; }
+.two-col-p-md { padding: 16px !important; }
+.two-col-p-lg { padding: 24px !important; }
+.two-col-p-xl { padding: 32px !important; }
+
+/* ===== 文本样式工具类 ===== */
+.two-col-text-primary { color: var(--two-col-text-primary) !important; }
+.two-col-text-secondary { color: var(--two-col-text-secondary) !important; }
+.two-col-text-muted { color: var(--two-col-text-muted) !important; }
+
+.two-col-text-xs { font-size: 12px !important; }
+.two-col-text-sm { font-size: 14px !important; }
+.two-col-text-md { font-size: 16px !important; }
+.two-col-text-lg { font-size: 18px !important; }
+.two-col-text-xl { font-size: 20px !important; }
+
+.two-col-text-bold { font-weight: 600 !important; }
+.two-col-text-normal { font-weight: 400 !important; }
+.two-col-text-light { font-weight: 300 !important; }
+
+/* ===== 分隔线样式 ===== */
+.two-col-divider {
+  height: 1px;
+  background: var(--two-col-border-color);
+  border: none;
+  margin: 16px 0;
+}
+
+.two-col-divider--vertical {
+  width: 1px;
+  height: auto;
+  margin: 0 16px;
+}
+
+.two-col-divider--thick {
+  height: 2px;
+}
+
+/* ===== 加载状态样式 ===== */
+.two-col-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--two-col-text-secondary);
+}
+
+.two-col-loading::after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--two-col-border-color);
+  border-top-color: var(--two-col-text-primary);
+  border-radius: 50%;
+  animation: two-col-spin 0.8s linear infinite;
+  margin-left: 8px;
+}
+
+@keyframes two-col-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== 空状态样式 ===== */
+.two-col-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--two-col-text-muted);
+}
+
+.two-col-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.two-col-empty-text {
+  font-size: 14px;
+  color: var(--two-col-text-secondary);
+}
+
+/* ===== 网格布局工具 ===== */
+.two-col-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.two-col-grid--2 { grid-template-columns: repeat(2, 1fr); }
+.two-col-grid--3 { grid-template-columns: repeat(3, 1fr); }
+.two-col-grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+/* ===== Flex 布局工具 ===== */
+.two-col-flex {
+  display: flex;
+}
+
+.two-col-flex--column {
+  flex-direction: column;
+}
+
+.two-col-flex--row {
+  flex-direction: row;
+}
+
+.two-col-flex--center {
+  align-items: center;
+  justify-content: center;
+}
+
+.two-col-flex--between {
+  justify-content: space-between;
+}
+
+.two-col-flex--around {
+  justify-content: space-around;
+}
+
+.two-col-flex--wrap {
+  flex-wrap: wrap;
+}
+
+/* ===== 响应式设计 ===== */
+@media (max-width: 1200px) {
+  .two-col-grid--4 { grid-template-columns: repeat(3, 1fr); }
+  .two-col-grid--3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 992px) {
+  .two-col-grid--4,
+  .two-col-grid--3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .two-col-main {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+  
+  .two-col-content {
+    padding: 8px !important;
+    gap: 12px;
+  }
+  
+  .two-col-grid--4,
+  .two-col-grid--3,
+  .two-col-grid--2 {
+    grid-template-columns: 1fr;
+  }
+  
+  .two-col-card {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  .two-col-content {
+    padding: 4px !important;
+    gap: 8px;
+  }
+  
+  .two-col-card {
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+}
+
+/* ===== 顶部导航栏样式增强 ===== */
+/* 当使用两栏布局时，确保顶部栏样式正确 */
+.two-column-layout ~ .navbar,
+body:has(.two-column-layout) .navbar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 1030 !important;
+  width: 100% !important;
+}
+
+/* 顶部导航栏与侧边栏的配合 */
+/* 注释掉：让导航栏从最左边开始，不再与侧边栏对齐 */
+/* body:has(.two-column-layout) .navbar {
+  padding-left: calc(var(--two-col-sidebar-width) + var(--two-col-gap));
+  transition: padding-left 0.3s ease;
+} */
+
+/* 响应式：移动端顶部栏全宽 */
+@media (max-width: 768px) {
+  body:has(.two-column-layout) .navbar {
+    padding-left: 0 !important;
+  }
+}
+
+/* ===== 打印样式 ===== */
+@media print {
+  .two-col-main {
+    margin-left: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  
+  .two-col-content {
+    padding: 0 !important;
+  }
+  
+  .two-col-card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    page-break-inside: avoid;
+  }
+  
+  /* 打印时隐藏顶部栏 */
+  .navbar {
+    display: none !important;
+  }
+  
+  .two-column-layout {
+    margin-top: 0 !important;
+    min-height: 100vh !important;
+    height: auto !important;
+  }
 }

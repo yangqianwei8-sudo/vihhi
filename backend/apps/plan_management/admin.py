@@ -261,10 +261,17 @@ class StrategicGoalAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
     # 批量操作
     def mark_as_published(self, request, queryset):
         """批量标记为已发布"""
+        from .notifications import notify_company_goal_published, notify_personal_goal_published
+        
         count = 0
         for goal in queryset.filter(status='draft'):
             try:
                 goal.transition_to('published', user=request.user)
+                # P2-2: 发送发布通知
+                if goal.level == 'company':
+                    notify_company_goal_published(goal)
+                elif goal.level == 'personal':
+                    notify_personal_goal_published(goal)
                 count += 1
             except ValueError as e:
                 pass

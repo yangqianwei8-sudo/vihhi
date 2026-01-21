@@ -193,7 +193,6 @@ SCENE_GROUPS = [
         'items': [
             {'label': '生产管理', 'icon': 'fa-industry', 'url_name': 'production_pages:production_management_home', 'permission': 'production_management.view_assigned'},
             {'label': '资源管理', 'icon': 'fa-tools', 'url_name': 'resource_standard_pages:standard_list', 'permission': 'resource_center.view'},
-            {'label': '收发货管理', 'icon': 'fa-truck', 'url_name': 'delivery_pages:report_delivery', 'permission': 'delivery_center.view'},
             {'label': '任务协作', 'icon': 'fa-tasks', 'url_name': 'collaboration_pages:task_board', 'permission': 'task_collaboration.view'},
             {'label': '计划管理', 'icon': 'fa-calendar-alt', 'url_name': 'plan_pages:plan_management_home', 'permission': 'plan_management.view'},
         ]

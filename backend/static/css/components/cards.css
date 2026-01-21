@@ -5,7 +5,22 @@
  */
 
 /* ============================================
-   卡片组件
+   公共工具类
+   ============================================ */
+/* 字体渲染优化 - 全局使用 */
+.card,
+.info-card,
+.info-item,
+.info-label,
+.info-value {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* ============================================
+   基础卡片组件
    ============================================ */
 .card {
     background: var(--vh-card-bg);
@@ -52,7 +67,9 @@
     border-radius: 0 !important;
 }
 
-/* 信息卡片 */
+/* ============================================
+   信息卡片
+   ============================================ */
 .info-card {
     background: var(--info-card-bg);
     background-image: var(--info-card-bg-gradient);
@@ -64,11 +81,6 @@
     transition: all var(--info-animation-duration-base) var(--info-animation-easing);
     position: relative;
     overflow: hidden;
-    /* 字体渲染优化 - 根据样式模板统一方案规定 */
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: "kern" 1, "liga" 1;
 }
 
 /* 信息卡片上移样式 - 用于表单页面紧凑布局 */
@@ -187,7 +199,10 @@
     background: var(--vh-info-soft);
 }
 
-/* 信息网格 */
+/* ============================================
+   信息网格
+   ============================================ */
+
 .info-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -217,11 +232,6 @@
     padding: var(--info-item-padding);
     border-radius: 0 !important;
     transition: var(--info-item-transition);
-    /* 字体渲染优化 - 根据样式模板统一方案规定 */
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: "kern" 1, "liga" 1;
 }
 
 .info-item:hover {
@@ -236,11 +246,6 @@
     line-height: var(--info-label-line-height);
     text-transform: var(--info-label-text-transform);
     margin-bottom: var(--info-label-margin-bottom);
-    /* 字体渲染优化 - 根据样式模板统一方案规定 */
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: "kern" 1, "liga" 1;
 }
 
 .info-value {
@@ -249,11 +254,6 @@
     font-weight: var(--info-value-font-weight);
     line-height: var(--info-value-line-height);
     word-break: var(--info-value-word-break);
-    /* 字体渲染优化 - 根据样式模板统一方案规定 */
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: "kern" 1, "liga" 1;
 }
 
 .info-value-bold {
@@ -285,14 +285,18 @@
     font-size: var(--info-section-title-font-size);
     font-weight: var(--info-section-title-font-weight);
     line-height: var(--info-section-title-line-height);
-    color: #2c3e50;
+    color: var(--vh-text-primary, #2c3e50);
     margin-bottom: 1.5rem;
     padding-bottom: 0.75rem;
-    border-bottom: 2px solid #3498db;
+    border-bottom: 2px solid var(--vh-primary, #3498db);
 }
 
-/* 表单卡片 */
-.form-card {
+/* ============================================
+   表单卡片
+   ============================================ */
+/* 表单卡片基础样式 */
+.form-card,
+.form-section {
     background: var(--vh-card-bg);
     border-radius: 0 !important;
     box-shadow: var(--shadow-md);
@@ -302,12 +306,7 @@
 
 /* 表单区域（表单卡片别名，用于保持一致性） */
 .form-section {
-    background: var(--vh-card-bg);
-    border-radius: 0 !important;
-    box-shadow: var(--shadow-md);
-    padding: var(--spacing-lg);
     margin-bottom: var(--spacing-lg);
-    border: 1px solid var(--vh-border);
 }
 
 /* 当 form-section 嵌套在 form 标签的 form-card 内时，form 作为容器，去掉自己的卡片样式，让 form-section 显示为独立卡片 */
@@ -352,37 +351,23 @@ form.form-card .form-section {
     padding-right: 0;
 }
 
-/* 响应式调整 */
-@media (max-width: 992px) {
-    .form-card,
-    .form-section {
-        padding: var(--spacing-lg);
-    }
-}
-
+/* ============================================
+   响应式设计
+   ============================================ */
 @media (max-width: 768px) {
     .card {
         padding: var(--spacing-md);
-        border-radius: 0;
     }
     
     .form-card,
     .form-section {
         padding: var(--spacing-md);
-        border-radius: 0;
     }
 }
 
 @media (max-width: 576px) {
     .card {
-        padding: var(--spacing-md);
-        border-radius: 0;
         margin-bottom: var(--spacing-md);
-    }
-    
-    .form-card,
-    .form-section {
-        padding: var(--spacing-md);
     }
     
     .info-card {
@@ -398,16 +383,13 @@ form.form-card .form-section {
         margin-right: calc(-1 * var(--spacing-md));
     }
     
-    .info-grid {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-sm);
-    }
-    
+    .info-grid,
     .info-grid-1,
     .info-grid-2,
     .info-grid-3,
     .info-grid-4 {
         grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
     }
     
     .info-card-title::before {
