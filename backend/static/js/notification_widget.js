@@ -125,10 +125,10 @@
         }
         
         // 初始化通知功能
-        // 延迟一下确保DOM完全渲染
+        // 延迟一下确保DOM完全渲染（增加延迟时间，确保所有浏览器都能正确加载）
         setTimeout(function() {
             initNotificationFunctionality();
-        }, 100);
+        }, 300);
     }
     
     // 初始化通知功能
@@ -176,22 +176,96 @@
         
         // 加载通知
         function loadNotifications() {
-            fetch('/api/notifications/', {
+            // 使用正确的API路径：/api/plan/notifications/
+            const apiUrl = '/api/plan/notifications/';
+            
+            // 检查fetch是否可用（兼容旧浏览器）
+            if (typeof fetch === 'undefined') {
+                console.error('通知组件：当前浏览器不支持fetch API');
+                list.innerHTML = '<div class="notification-empty">浏览器不支持，请使用现代浏览器</div>';
+                return;
+            }
+            
+            console.log('通知组件：开始加载通知，URL:', apiUrl);
+            
+            fetch(apiUrl, {
                 method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
                 },
                 credentials: 'same-origin',
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('通知组件：收到响应，状态:', response.status);
+                
+                if (!response.ok) {
+                    // 详细记录错误信息
+                    console.error('通知组件：API返回错误状态', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        url: apiUrl
+                    });
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                // 检查Content-Type
+                const contentType = response.headers.get('Content-Type') || '';
+                if (!contentType.includes('application/json') && !contentType.includes('text/json')) {
+                    console.warn('通知组件：响应Content-Type异常:', contentType);
+                }
+                
+                return response.json();
+            })
             .then(data => {
-                notifications = data.notifications || [];
-                updateBadge(data.unread_count || 0);
+                console.log('通知组件：解析响应数据', {
+                    type: typeof data,
+                    isArray: Array.isArray(data),
+                    hasResults: !!(data && data.results),
+                    hasNotifications: !!(data && data.notifications)
+                });
+                
+                // 处理分页格式：{count: 5, results: [...]} 或数组格式
+                if (data && data.results && Array.isArray(data.results)) {
+                    // 分页格式
+                    notifications = data.results || [];
+                    console.log('通知组件：使用分页格式，通知数:', notifications.length);
+                } else if (Array.isArray(data)) {
+                    // 数组格式
+                    notifications = data;
+                    console.log('通知组件：使用数组格式，通知数:', notifications.length);
+                } else if (data && data.notifications && Array.isArray(data.notifications)) {
+                    // 旧格式兼容
+                    notifications = data.notifications;
+                    console.log('通知组件：使用旧格式，通知数:', notifications.length);
+                } else {
+                    notifications = [];
+                    console.warn('通知组件：无法识别响应格式', data);
+                }
+                
+                // 获取未读数量
+                const unreadCount = notifications.filter(function(n) {
+                    return !n.is_read;
+                }).length;
+                
+                console.log('通知组件：未读通知数:', unreadCount);
+                updateBadge(unreadCount);
                 renderNotifications();
             })
             .catch(error => {
-                console.error('加载通知失败:', error);
-                list.innerHTML = '<div class="notification-empty">加载失败，请刷新页面重试</div>';
+                console.error('通知组件：加载通知失败', {
+                    error: error,
+                    message: error.message,
+                    stack: error.stack,
+                    url: apiUrl
+                });
+                
+                // 显示更详细的错误信息（仅在开发环境）
+                let errorMsg = '加载失败，请刷新页面重试';
+                if (error.message) {
+                    errorMsg += '<br><small>' + escapeHtml(error.message) + '</small>';
+                }
+                list.innerHTML = '<div class="notification-empty">' + errorMsg + '</div>';
             });
         }
         
@@ -214,14 +288,17 @@
             
             const html = notifications.map(notif => {
                 const unreadClass = notif.is_read ? '' : 'unread';
-                const priorityClass = `priority-${notif.priority || 'normal'}`;
-                const timeStr = formatTime(notif.created_time);
+                // 根据事件类型设置图标和优先级
+                const icon = getNotificationIcon(notif.event);
+                const priorityClass = getNotificationPriority(notif.event);
+                // 使用 created_at 字段（序列化器返回的字段名）
+                const timeStr = formatTime(notif.created_at || notif.created_time);
                 
                 return `
                     <div class="notification-item ${unreadClass} ${priorityClass}" 
                          data-id="${notif.id}" 
                          data-url="${notif.url || '#'}">
-                        <div class="notification-icon-item">${notif.icon || '📢'}</div>
+                        <div class="notification-icon-item">${icon}</div>
                         <div class="notification-content">
                             <div class="notification-title">${escapeHtml(notif.title)}</div>
                             <div class="notification-text">${escapeHtml(notif.content)}</div>
@@ -254,20 +331,24 @@
         
         // 标记为已读
         function markAsRead(notificationId) {
-            const formData = new FormData();
-            formData.append('notification_id', notificationId);
-            
-            fetch('/api/notifications/mark-read/', {
+            // 使用正确的API路径：/api/plan/notifications/{id}/mark-read/
+            fetch(`/api/plan/notifications/${notificationId}/mark-read/`, {
                 method: 'POST',
-                body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
                 },
                 credentials: 'same-origin',
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
-                if (data.success) {
+                // API返回格式：{ok: true, id: 4, is_read: true}
+                if (data.ok || data.success) {
                     // 更新本地状态
                     const notif = notifications.find(n => n.id === notificationId);
                     if (notif) {
@@ -283,6 +364,34 @@
             .catch(error => {
                 console.error('标记已读失败:', error);
             });
+        }
+        
+        // 根据事件类型获取图标
+        function getNotificationIcon(event) {
+            const iconMap = {
+                'submit': '📤',
+                'approve': '✅',
+                'reject': '❌',
+                'company_goal_published': '🎯',
+                'personal_goal_published': '📋',
+                'goal_accepted': '✓',
+                'company_plan_published': '📅',
+                'personal_plan_published': '📝',
+                'plan_accepted': '✓',
+                'draft_timeout': '⏰',
+                'approval_timeout': '⏰',
+            };
+            return iconMap[event] || '📢';
+        }
+        
+        // 根据事件类型获取优先级
+        function getNotificationPriority(event) {
+            const priorityMap = {
+                'reject': 'urgent',
+                'approval_timeout': 'important',
+                'draft_timeout': 'important',
+            };
+            return `priority-${priorityMap[event] || 'normal'}`;
         }
         
         // 格式化时间
@@ -557,16 +666,39 @@
         document.head.appendChild(style);
     }
     
-    // 初始化
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            addNotificationStyles();
-            initNotificationWidget();
-        });
-    } else {
+    // 初始化 - 使用更可靠的方式确保在所有浏览器中都能正确加载
+    function init() {
         addNotificationStyles();
-        initNotificationWidget();
+        
+        // 使用多种方式确保初始化
+        function tryInit() {
+            const navbar = document.querySelector('.navbar') || document.querySelector('nav') || document.querySelector('.navbar-nav');
+            if (navbar) {
+                initNotificationWidget();
+            } else if (document.readyState === 'loading') {
+                // DOM还在加载，等待DOMContentLoaded
+                document.addEventListener('DOMContentLoaded', function() {
+                    setTimeout(tryInit, 100);
+                });
+            } else {
+                // DOM已加载但还没找到导航栏，延迟重试
+                setTimeout(tryInit, 200);
+            }
+        }
+        
+        // 立即尝试初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(tryInit, 100);
+            });
+        } else {
+            // DOM已经加载完成
+            setTimeout(tryInit, 100);
+        }
     }
+    
+    // 立即执行初始化
+    init();
 })();
 
 

@@ -1,35 +1,60 @@
-/* ===== Sidebar V2 Fixed · 简洁、美观、大方风格 ===== */
-/* 风格：灰色黑色为主，卡片直角，无彩色图标 */
+/**
+ * Sidebar V2 Fixed - 固定侧边栏组件
+ * 风格：简洁、美观、大方，灰色黑色为主，卡片直角，无彩色图标
+ * 
+ * 使用方式：
+ * 1. 标准方式（推荐）：在模板中先引入 common.css，再引入此文件
+ *    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+ *    <link rel="stylesheet" href="{% static 'css/components/sidebar_v2_fixed.css' %}">
+ *    此时 common.css 已包含 core/variables.css，变量已可用，无需额外引入
+ * 
+ * 2. 独立使用：如果单独使用此文件（不引入 common.css），需要取消下面的注释
+ *    @import url('../core/variables.css'); 
+ */
+/* @import url('../core/variables.css'); */ /* 如果独立使用，取消此注释 */
 
-/* 1) 侧栏：固定在视口，不随页面滚动 */
-.vh-sb{
-  width: 232px;
+/* ===== 组件内部变量定义 ===== */
+:root {
+  --vh-sb-width: 232px;
+  --vh-sb-top-height: 56px;
+  --vh-sb-icon-size: 18px;
+  --vh-sb-child-indent: 40px;
+  --vh-sb-nav-padding-bottom: 80px;
+  --vh-sb-active-bg: #E8E8E8;
+  --vh-sb-bottom-bg: #FAFAFA;
+  --vh-sb-hover-border: #CCCCCC;
+}
+
+/* ===== 主容器 ===== */
+/* 侧栏：固定在视口，不随页面滚动 */
+.vh-sb {
+  width: var(--vh-sb-width, 232px);
   position: fixed;
-  top: var(--navbar-height, 62px); /* 排查：统一使用 CSS 变量，与布局保持一致 */
+  top: var(--navbar-height, 62px);
   bottom: 0;
   left: 0;
-  height: calc(100vh - var(--navbar-height, 62px)); /* 排查：统一高度计算 */
+  height: calc(100vh - var(--navbar-height, 62px));
   display: flex;
   flex-direction: column;
-  background: #FFFFFF;
-  border-right: 1px solid #E0E0E0;
-  box-shadow: 1px 0 2px rgba(0, 0, 0, 0.05);
+  background: var(--vh-bg, #FFFFFF);
+  border-right: 1px solid var(--vh-border, #E0E0E0);
+  box-shadow: var(--shadow-sm, 1px 0 2px rgba(0, 0, 0, 0.05));
   overflow: hidden;
-  z-index: 1020;
-  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+  z-index: var(--z-sticky, 1020);
+  font-family: var(--font-family, "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif);
 }
 
-/* 2) 顶部：严格 56px */
-.vh-sb__top{
-  height: 56px;
-  flex: 0 0 56px;
-  border-bottom: 1px solid #E0E0E0;
-  background: #FFFFFF;
-  /* 排查：检查此区域是否造成额外空白 */
+/* ===== 顶部区域 ===== */
+.vh-sb__top {
+  height: var(--vh-sb-top-height, 56px);
+  flex: 0 0 var(--vh-sb-top-height, 56px);
+  border-bottom: 1px solid var(--vh-border, #E0E0E0);
+  background: var(--vh-bg, #FFFFFF);
 }
-.vh-sb__topInner{
-  height: 56px;
-  padding: 12px 16px;
+
+.vh-sb__topInner {
+  height: var(--vh-sb-top-height, 56px);
+  padding: var(--spacing-sm, 12px) var(--spacing-md, 16px);
   display: flex;
   align-items: center;
   gap: 0;
@@ -40,47 +65,49 @@
 }
 .vh-sb__title{
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--font-size-base, 14px);
   line-height: 1.2;
-  color: #1A1A1A;
+  color: var(--vh-primary, #1A1A1A);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-bottom: 2px;
 }
 .vh-sb__sub{
-  font-size: 11px;
-  color: #666666;
+  font-size: var(--font-size-xs, 11px);
+  color: var(--vh-text-muted, #666666);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
 }
 
-/* 3) 中部：占满剩余高度，禁止滚动 */
-.vh-sb__nav{
+/* ===== 导航区域 ===== */
+/* 中部：占满剩余高度，可滚动 */
+.vh-sb__nav {
   flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px 4px;
-  padding-bottom: 80px;
-  min-height: 0;
+  padding: var(--spacing-sm, 8px) var(--spacing-xs, 4px);
+  padding-bottom: var(--vh-sb-nav-padding-bottom, 80px);
   display: flex;
   flex-direction: column;
 }
 
-/* group */
-.vh-sb__group{
-  margin-bottom: 12px;
+/* ===== 分组样式 ===== */
+.vh-sb__group {
+  margin-bottom: var(--spacing-sm, 12px);
 }
-.vh-sb__group:last-child{
+
+.vh-sb__group:last-child {
   margin-bottom: 0;
 }
 .vh-sb__gtitle{
-  font-size: 11px;
+  font-size: var(--font-size-xs, 11px);
   font-weight: 600;
-  color: #666666;
-  padding: 8px 12px 6px;
+  color: var(--vh-text-muted, #666666);
+  padding: var(--spacing-sm, 8px) var(--spacing-sm, 12px) 6px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   margin-bottom: 2px;
@@ -94,16 +121,16 @@
   align-items: center;
   justify-content: center;
   font-size: 13px;
-  color: #999999 !important;
+  color: var(--vh-text-light, #999999) !important;
   flex: 0 0 auto;
-  transition: filter 0.2s ease;
+  transition: filter var(--transition-base, 0.2s ease);
   font-weight: normal;
   filter: grayscale(100%) brightness(0.6);
 }
 
 .vh-sb__item.is-active .vh-sb__icon,
 .vh-sb__child.is-active .vh-sb__icon{
-  color: #666666 !important;
+  color: var(--vh-text-muted, #666666) !important;
   font-weight: 600;
   filter: grayscale(100%) brightness(0.4);
 }
@@ -111,7 +138,7 @@
 .vh-sb__icon i,
 .vh-sb__icon svg,
 .vh-sb__icon .bi {
-  color: #999999 !important;
+  color: var(--vh-text-light, #999999) !important;
   filter: grayscale(100%) brightness(0.6);
 }
 
@@ -121,7 +148,7 @@
 .vh-sb__child.is-active .vh-sb__icon i,
 .vh-sb__child.is-active .vh-sb__icon svg,
 .vh-sb__child.is-active .vh-sb__icon .bi {
-  color: #666666 !important;
+  color: var(--vh-text-muted, #666666) !important;
   filter: grayscale(100%) brightness(0.4);
 }
 
@@ -139,14 +166,14 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
+  padding: var(--spacing-sm, 8px) var(--spacing-sm, 12px);
   border-radius: 0;
   font-size: 13px;
   line-height: 1.4;
-  color: #333333 !important;
+  color: var(--vh-accent, #333333) !important;
   background: transparent !important;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-base, 0.2s ease);
   margin-bottom: 1px;
   text-decoration: none;
   user-select: none;
@@ -154,13 +181,13 @@
 }
 
 .vh-sb__item:hover {
-  background: #F5F5F5 !important;
-  color: #1A1A1A !important;
+  background: var(--vh-surface, #F5F5F5) !important;
+  color: var(--vh-primary, #1A1A1A) !important;
 }
 
 .vh-sb__item.is-active {
-  background: #E8E8E8 !important;
-  color: #1A1A1A !important;
+  background: #E8E8E8 !important; /* 使用固定值，因为变量中没有完全匹配的 */
+  color: var(--vh-primary, #1A1A1A) !important;
   font-weight: 600;
 }
 
@@ -170,13 +197,13 @@
   flex-direction: row !important;
   align-items: center;
   gap: 10px;
-  padding: 6px 12px 6px 40px !important;
+  padding: 6px var(--spacing-sm, 12px) 6px 40px !important;
   border-radius: 0;
-  font-size: 12px !important;
+  font-size: var(--font-size-sm, 12px) !important;
   line-height: 1.4;
-  color: #666666;
+  color: var(--vh-text-muted, #666666);
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-base, 0.2s ease);
   margin-bottom: 1px;
   text-decoration: none;
   user-select: none;
@@ -185,13 +212,13 @@
 }
 
 .vh-sb__child:hover {
-  background: #F5F5F5;
-  color: #1A1A1A;
+  background: var(--vh-surface, #F5F5F5);
+  color: var(--vh-primary, #1A1A1A);
 }
 
 .vh-sb__child.is-active {
-  background: #E8E8E8;
-  color: #1A1A1A;
+  background: #E8E8E8; /* 使用固定值，因为变量中没有完全匹配的 */
+  color: var(--vh-primary, #1A1A1A);
   font-weight: 600;
 }
 
@@ -199,8 +226,8 @@
 .vh-sb__badge{
   font-size: 10px;
   font-weight: 600;
-  color: #666666;
-  background: #E8E8E8;
+  color: var(--vh-text-muted, #666666);
+  background: #E8E8E8; /* 使用固定值，因为变量中没有完全匹配的 */
   border-radius: 0;
   padding: 2px 6px;
   margin-left: auto;
@@ -211,8 +238,8 @@
 }
 .vh-sb__badge--dot{
   padding: 2px 6px;
-  background: #CCCCCC;
-  color: #333333;
+  background: #CCCCCC; /* 使用固定值，因为变量中没有完全匹配的 */
+  color: var(--vh-accent, #333333);
 }
 
 /* 父菜单项样式 */
@@ -222,15 +249,15 @@
   border: none;
   cursor: pointer;
   text-align: left;
-  padding: 8px 12px;
+  padding: var(--spacing-sm, 8px) var(--spacing-sm, 12px);
 }
 
 .vh-sb__parent .vh-sb__item--parent:hover {
-  background: #F5F5F5;
+  background: var(--vh-surface, #F5F5F5);
 }
 
 .vh-sb__parent .vh-sb__item--parent.is-active {
-  background: #E8E8E8;
+  background: #E8E8E8; /* 使用固定值，因为变量中没有完全匹配的 */
 }
 
 /* 确保子菜单项在容器中垂直排列 */
@@ -248,26 +275,25 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  padding: 12px;
-  border-top: 1px solid #E0E0E0;
+  padding: var(--spacing-sm, 12px);
+  border-top: 1px solid var(--vh-border, #E0E0E0);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  background: #FAFAFA;
+  gap: var(--spacing-xs, 4px);
+  background: #FAFAFA; /* 使用固定值，因为变量中没有完全匹配的 */
   z-index: 10;
 }
 .vh-sb__mini{
-  font-size: 11px;
-  color: #666666;
+  font-size: var(--font-size-xs, 11px);
+  color: var(--vh-text-muted, #666666);
   padding: 6px 10px;
   border-radius: 0;
-  border: 1px solid #E0E0E0;
-  background: #FFFFFF;
+  border: 1px solid var(--vh-border, #E0E0E0);
+  background: var(--vh-bg, #FFFFFF);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-base, 0.2s ease);
   line-height: 1.4;
   text-align: center;
-  /* 重置 button 元素的默认样式 */
   font-family: inherit;
   width: 100%;
   margin: 0;
@@ -280,12 +306,12 @@
   text-decoration: none;
 }
 .vh-sb__mini:hover{ 
-  background: #F5F5F5;
-  color: #1A1A1A;
-  border-color: #CCCCCC;
+  background: var(--vh-surface, #F5F5F5);
+  color: var(--vh-primary, #1A1A1A);
+  border-color: #CCCCCC; /* 使用固定值，因为变量中没有完全匹配的 */
 }
 .vh-sb__mini:focus {
-  outline: 2px solid #666666;
+  outline: 2px solid var(--vh-text-muted, #666666);
   outline-offset: 2px;
 }
 
@@ -304,7 +330,7 @@
 
 .vh-sb__parent .vh-sb__children { 
   display: none !important; 
-  padding-left: 16px; 
+  padding-left: var(--spacing-md, 16px); 
 }
 .vh-sb__parent.is-open .vh-sb__children,
 .vh-sb__parent.is-open > .vh-sb__children { 
@@ -321,14 +347,19 @@
   gap: 8px;
 }
 
-.vh-sb__chev { margin-left: auto; transition: transform 0.15s ease; }
-.vh-sb__parent.is-open .vh-sb__chev { transform: rotate(90deg); }
+.vh-sb__chev { 
+  margin-left: auto; 
+  transition: transform var(--transition-fast, 0.15s ease); 
+}
+.vh-sb__parent.is-open .vh-sb__chev { 
+  transform: rotate(90deg); 
+}
 
 
 
 /* ========== 强制底部固定在底部 ========== */
 .vh-sb {
-  height: calc(100vh - var(--navbar-height, 62px)) !important; /* 排查：统一高度计算 */
+  height: calc(100vh - var(--navbar-height, 62px)) !important;
 }
 
 .vh-sb__nav {

@@ -1,0 +1,210 @@
+{% load static %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>{% block title %}维海生产系统{% endblock title %}</title>
+  <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+
+  <!-- 只引入 common.css，它已经包含了所有必要的样式 -->
+  <link rel="stylesheet" href="{% static 'css/common.css' %}">
+
+  <!-- 自定义样式变量 -->
+  <style>
+    :root {
+      --sidebar-width: {% block sidebar_width %}232px{% endblock sidebar_width %};
+      --navbar-height: 62px; /* 顶部导航栏高度 */
+
+      /* 主题变量 */
+      --vh-bg-primary: #FFFFFF;
+      --vh-bg-secondary: #F5F5F5;
+      --vh-bg-tertiary: #E8E8E8;
+
+      --vh-text-primary: #1A1A1A;
+      --vh-text-secondary: #333333;
+      --vh-text-tertiary: #666666;
+      --vh-text-muted: #999999;
+
+      --vh-border-primary: #000000;
+      --vh-border-secondary: #E0E0E0;
+      --vh-border-tertiary: #CCCCCC;
+
+      --vh-hover-bg: #F5F5F5;
+      --vh-active-bg: #E8E8E8;
+      --vh-selected-bg: #E0E0E0;
+
+      --vh-card-bg: #FFFFFF;
+      --vh-card-border: #E0E0E0;
+      --vh-card-shadow: rgba(0, 0, 0, 0.1);
+
+      --vh-sidebar-bg: #F5F5F5;
+      --vh-sidebar-border: #E0E0E0;
+
+      --vh-divider: #E0E0E0;
+      --vh-overlay: rgba(0, 0, 0, 0.5);
+    }
+
+    /* 确保 body 在有两栏布局时不滚动 */
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    /* 两栏布局容器激活标志 */
+    body.two-column-layout-active {
+      overflow-y: hidden !important;
+      height: 100% !important;
+    }
+
+    /* 统计卡片排版：无论几张卡片，一行排满全部卡片，平均分布 */
+    /* 自动识别统计卡片容器，使用 flexbox 实现平均分布 */
+    .two-col-content .row:has([class*="col"]:first-child) {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      gap: 16px !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      width: 100% !important;
+    }
+
+    .two-col-content .row:has([class*="col"]:first-child) > [class*="col"] {
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      margin-bottom: 0 !important;
+      width: auto !important;
+    }
+
+    /* 兼容性方案：使用类名 stats-cards-auto-layout */
+    .row.stats-cards-auto-layout,
+    .stats-cards-container.row {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      gap: 16px !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      width: 100% !important;
+    }
+
+    .row.stats-cards-auto-layout > *,
+    .stats-cards-container.row > *,
+    .row.stats-cards-auto-layout > [class*="col"],
+    .stats-cards-container.row > [class*="col"] {
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      margin-bottom: 0 !important;
+      width: auto !important;
+    }
+  </style>
+
+  {% block extra_head %}
+    {% block extra_css %}{% endblock extra_css %}
+  {% endblock extra_head %}
+</head>
+
+<body class="two-column-layout-active">
+  <!-- 顶部导航栏 -->
+  {% block top_nav %}
+    {% include "shared/_top_nav.html" %}
+  {% endblock top_nav %}
+
+  <!-- 两栏布局容器 -->
+  <div class="two-column-layout">
+    <!-- 左边栏 -->
+    {% block sidebar %}
+      {% block sidebar_content %}
+        {% include "shared/sidebar_v2_wireframe_fixed.html" %}
+      {% endblock sidebar_content %}
+    {% endblock sidebar %}
+
+    <!-- 主内容区 -->
+    <main class="two-col-main">
+      {% block content %}
+        <div class="two-col-content">
+          {% block page_header %}
+            <div class="d-flex align-items-end justify-content-between">
+              <div>
+                <h1 class="h3">{% block page_title %}{% endblock page_title %}</h1>
+                {% block page_subtitle %}{% endblock page_subtitle %}
+              </div>
+              <div class="d-flex gap-2">
+                {% block page_actions %}{% endblock page_actions %}
+              </div>
+            </div>
+          {% endblock page_header %}
+
+          {% block content_inner %}{% endblock content_inner %}
+        </div>
+      {% endblock content %}
+    </main>
+  </div>
+
+  <!-- JavaScript 资源 -->
+  {% block base_scripts %}
+    <!-- Bootstrap JS 动态加载脚本 -->
+    <script>
+      (function() {
+        var RESOURCE_LOAD_TIMEOUT = 5000;
+        var localBootstrap = {
+          js: '{% static "js/bootstrap.bundle.min.js" %}'
+        };
+        var bootstrapCDNs = {
+          js: [
+            localBootstrap.js,
+            'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
+            'https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'
+          ]
+        };
+        
+        function loadResource(type, urls, index) {
+          index = index || 0;
+          if (index >= urls.length) {
+            console.error('Bootstrap JS 加载失败：所有 CDN 均不可用。');
+            return;
+          }
+          
+          var url = urls[index];
+          var element = document.createElement('script');
+          element.src = url;
+          
+          element.onload = function() {
+            // JS 加载成功
+          };
+          
+          element.onerror = function() {
+            if (this.parentNode) {
+              this.parentNode.removeChild(this);
+            }
+            loadResource(type, urls, index + 1);
+          };
+          
+          document.body.appendChild(element);
+        }
+        
+        // 页面加载完成后检测 Bootstrap JS 是否加载成功
+        window.addEventListener('load', function() {
+          if (!window.bootstrap) {
+            loadResource('js', bootstrapCDNs.js);
+          }
+        });
+      })();
+    </script>
+  {% endblock base_scripts %}
+
+  {% block extra_js %}
+    <!-- 左侧栏子菜单切换脚本 -->
+    <script src="{% static 'js/components/sidebar_submenu_toggle.js' %}"></script>
+  {% endblock extra_js %}
+
+  {% block extra_scripts %}{% endblock extra_scripts %}
+</body>
+</html>
+
