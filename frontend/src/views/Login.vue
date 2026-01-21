@@ -13,23 +13,25 @@
     
     <!-- 右侧登录表单区域 -->
     <div class="login-right">
+      <!-- 小图纸 - 移到填充框外面 -->
+      <div class="logo-mini-wrapper">
+        <div class="logo-mini">
+          <svg viewBox="0 0 48 48" fill="none">
+            <rect width="48" height="48" rx="10" fill="url(#miniGradient)"/>
+            <path d="M24 15L32 23L24 31L16 23L24 15Z" fill="white"/>
+            <defs>
+              <linearGradient id="miniGradient" x1="0" y1="0" x2="48" y2="48">
+                <stop offset="0%" stop-color="#1F2A57"/>
+                <stop offset="100%" stop-color="#0F1E3A"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+      </div>
+      
       <div class="login-container">
         <!-- 顶部Logo -->
         <div class="login-header">
-          <div class="header-logo">
-            <div class="logo-mini">
-              <svg viewBox="0 0 48 48" fill="none">
-                <rect width="48" height="48" rx="10" fill="url(#miniGradient)"/>
-                <path d="M24 15L32 23L24 31L16 23L24 15Z" fill="white"/>
-                <defs>
-                  <linearGradient id="miniGradient" x1="0" y1="0" x2="48" y2="48">
-                    <stop offset="0%" stop-color="#1F2A57"/>
-                    <stop offset="100%" stop-color="#0F1E3A"/>
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
-          </div>
           <h2 class="welcome-title">维海星图</h2>
           <p class="welcome-subtitle">请登录您的账号以继续使用系统</p>
         </div>
@@ -52,9 +54,6 @@
                 class="login-input"
                 clearable
               >
-                <template #prefix>
-                  <el-icon class="input-icon"><User /></el-icon>
-                </template>
               </el-input>
             </div>
           </el-form-item>
@@ -71,9 +70,6 @@
                 class="login-input"
                 clearable
               >
-                <template #prefix>
-                  <el-icon class="input-icon"><Lock /></el-icon>
-                </template>
               </el-input>
             </div>
           </el-form-item>
@@ -138,13 +134,11 @@
 <script>
 import { login } from '../api/system'
 import { ElMessage } from 'element-plus'
-import { User, Lock, InfoFilled, Right } from '@element-plus/icons-vue'
+import { InfoFilled, Right } from '@element-plus/icons-vue'
 
 export default {
   name: 'Login',
   components: {
-    User,
-    Lock,
     InfoFilled,
     Right
   },
@@ -333,34 +327,6 @@ export default {
   padding: 40px;
 }
 
-.brand-title {
-  font-size: 72px;
-  font-weight: 700;
-  margin: 0;
-  letter-spacing: 6px;
-  color: #ffffff;
-  text-shadow: 
-    0 4px 20px rgba(0, 0, 0, 0.4),
-    0 0 40px rgba(255, 255, 255, 0.2),
-    0 0 60px rgba(255, 255, 255, 0.1);
-  animation: titleGlow 4s ease-in-out infinite;
-  position: relative;
-  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
-}
-
-.brand-title::after {
-  content: '';
-  position: absolute;
-  bottom: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-  border-radius: 2px;
-  animation: underlineGlow 4s ease-in-out infinite;
-}
-
 .brand-slogan {
   font-size: 21px;
   font-weight: 600;
@@ -462,34 +428,6 @@ export default {
   }
 }
 
-@keyframes titleGlow {
-  0%, 100% {
-    text-shadow: 
-      0 4px 20px rgba(0, 0, 0, 0.4),
-      0 0 40px rgba(255, 255, 255, 0.2),
-      0 0 60px rgba(255, 255, 255, 0.1);
-    transform: scale(1);
-  }
-  50% {
-    text-shadow: 
-      0 4px 20px rgba(0, 0, 0, 0.4),
-      0 0 60px rgba(255, 255, 255, 0.3),
-      0 0 80px rgba(255, 255, 255, 0.2);
-    transform: scale(1.02);
-  }
-}
-
-@keyframes underlineGlow {
-  0%, 100% {
-    opacity: 0.6;
-    width: 60px;
-  }
-  50% {
-    opacity: 1;
-    width: 100px;
-  }
-}
-
 /* 粒子效果 */
 .particles {
   position: absolute;
@@ -531,6 +469,7 @@ export default {
 .login-right {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px;
@@ -575,19 +514,17 @@ export default {
   }
 }
 
-.login-header {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.header-logo {
+/* 小图纸包装器 - 在填充框外面 */
+.logo-mini-wrapper {
   margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .logo-mini {
   width: 72px;
   height: 72px;
-  margin: 0 auto;
   filter: drop-shadow(0 4px 16px rgba(31, 42, 87, 0.2));
   animation: logoPulse 3s ease-in-out infinite;
   transition: transform 0.3s ease;
@@ -676,17 +613,6 @@ export default {
     inset 0 1px 2px rgba(255, 255, 255, 1);
   background: #ffffff;
   transform: translateY(-2px);
-}
-
-.input-icon {
-  font-size: 18px;
-  color: #6C7BA8;
-  margin-right: 10px;
-  transition: color 0.3s;
-}
-
-.login-input :deep(.el-input.is-focus .input-icon) {
-  color: #1F2A57;
 }
 
 .login-options {
@@ -874,12 +800,6 @@ export default {
 
 /* 响应式设计 */
 @media (max-width: 1024px) {
-  .brand-slogan {
-    font-size: 36px;
-    letter-spacing: 3px;
-    padding: 16px 32px;
-  }
-  
   .login-wrapper {
     flex-direction: column;
   }

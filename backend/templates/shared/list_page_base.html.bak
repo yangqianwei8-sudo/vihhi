@@ -10,11 +10,10 @@
 {% block module_styles %}
   {{ block.super }}
   <link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
-  <link rel="stylesheet" href="{% static 'css/components/list_page_base_v2.css' %}">
+  <!-- list_page_base_v2.css 已废弃，样式已合并到 list-layout.css -->
 {% endblock module_styles %}
 
 {% block pm_content %}
-
   {# 统计卡片区域 - 显示关键指标 #}
   {% block list_stats_section %}
   <div class="list-page-stats">
@@ -43,72 +42,41 @@
   <div class="list-page-filters">
     <div class="list-page-filter-row">
     {% block list_filters_content %}
-  <form id="filterForm" method="get"{% if filter_form_action %} action="{{ filter_form_action }}"{% endif %}>
       {# 子模板可以覆盖此块添加筛选器表单 #}
     {% endblock list_filters_content %}
-  </form>
-    {% block list_filter_actions %}
-    <!-- 筛选和重置按钮 - 自动添加到所有筛选表单 -->
-    <div class="list-page-filter-actions">
-        <button type="submit" form="filterForm" class="btn btn-primary">
-            <i class="bi bi-funnel"></i> 筛选
-        </button>
-        <button type="reset" form="filterForm" class="btn btn-secondary">
-            <i class="bi bi-arrow-counterclockwise"></i> 重置
-        </button>
-    </div>
-    {% endblock list_filter_actions %}
     </div>
   </div>
   {% endblock list_filters_section %}
 
   {# 表格区域 #}
   {% block list_table_section %}
-    {% block list_table_content %}
-      {# 如果提供了 columns 和 data，使用 list_table.html 模板 #}
-      {% if columns and data %}
-        {% include "shared/list_table.html" with 
-          table_id=table_id|default:"dataTable"
-          columns=columns 
-          data=data 
-          show_checkbox=show_checkbox|default:False
-          show_actions=show_actions|default:True
-          action_template=action_template|default:""
-          empty_message=empty_message|default:"暂无数据"
-          show_pagination=False
-          pagination_params=request.GET.dict
-          table_class=table_class|default:""
-          column_settings_btn=column_settings_btn|default:False
-        %}
-      {% else %}
-        {# 否则使用传统的 block 方式（向后兼容） #}
-        <div class="list-table-container">
-          <table class="list-table">
-            <thead>
+    <div class="list-table-container">
+      {% block list_table_content %}
+        <table class="list-table">
+          <thead>
+            <tr>
+              {% block list_table_headers %}
+                {# 子模板需要在此定义表头 #}
+              {% endblock list_table_headers %}
+            </tr>
+          </thead>
+          <tbody>
+            {% block list_table_rows %}
+              {# 默认空状态 #}
               <tr>
-                {% block list_table_headers %}
-                  {# 子模板需要在此定义表头 #}
-                {% endblock list_table_headers %}
+                <td colspan="100%" class="list-empty">
+                  <div class="list-empty-icon">📋</div>
+                  <div class="list-empty-text">暂无数据</div>
+                  {% block list_empty_hint %}
+                    {# 子模板可以添加空状态提示文字 #}
+                  {% endblock list_empty_hint %}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {% block list_table_rows %}
-                {# 默认空状态 #}
-                <tr>
-                  <td colspan="100%" class="list-empty">
-                    <div class="list-empty-icon">📋</div>
-                    <div class="list-empty-text">暂无数据</div>
-                    {% block list_empty_hint %}
-                      {# 子模板可以添加空状态提示文字 #}
-                    {% endblock list_empty_hint %}
-                  </td>
-                </tr>
-              {% endblock list_table_rows %}
-            </tbody>
-          </table>
-        </div>
-      {% endif %}
-    {% endblock list_table_content %}
+            {% endblock list_table_rows %}
+          </tbody>
+        </table>
+      {% endblock list_table_content %}
+    </div>
   {% endblock list_table_section %}
 
   {# 加载状态 #}

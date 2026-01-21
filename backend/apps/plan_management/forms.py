@@ -527,15 +527,13 @@ class PlanForm(forms.ModelForm):
                 'required': True
             }),
             'parent_plan': forms.Select(attrs={'class': 'form-select'}),
-            'content': forms.Textarea(attrs={
+            'content': forms.TextInput(attrs={
                 'class': 'form-control',
-                'rows': '6',
                 'placeholder': '请输入计划内容',
                 'maxlength': '5000'
             }),
-            'plan_objective': forms.Textarea(attrs={
+            'plan_objective': forms.TextInput(attrs={
                 'class': 'form-control',
-                'rows': '4',
                 'placeholder': '请输入计划目标',
                 'maxlength': '1000'
             }),
@@ -627,13 +625,14 @@ class PlanForm(forms.ModelForm):
         # 关联战略目标为必填
         self.fields['related_goal'].required = True
         
-        # 设置父计划查询集（排除自己和自己的下级计划）
+        # 设置父计划查询集（只显示公司计划，排除自己和自己的下级计划）
+        base_queryset = Plan.objects.filter(level='company')  # 只显示公司计划
         if self.instance and self.instance.pk:
             exclude_ids = [self.instance.pk]
             exclude_ids.extend([p.pk for p in self.instance.get_all_descendants()])
-            self.fields['parent_plan'].queryset = Plan.objects.exclude(pk__in=exclude_ids)
+            self.fields['parent_plan'].queryset = base_queryset.exclude(pk__in=exclude_ids)
         else:
-            self.fields['parent_plan'].queryset = Plan.objects.all()
+            self.fields['parent_plan'].queryset = base_queryset
         
         # 设置关联项目字段：从商机中获取项目信息
         # 获取所有有项目名称的商机，提取项目信息作为选项
@@ -881,6 +880,9 @@ class PlanForm(forms.ModelForm):
             end_dt = cleaned_data.get('end_time')
             if end_dt < start_dt:
                 self.add_error('end_time', '结束时间不能早于开始时间。')
+        
+        # 注意：周计划重复检查已在视图层面处理，使用messages.error显示弹窗提示
+        # 此处不再进行验证，避免重复提示
         
         # 验证协作计划：如果选择了协作人员，必须填写协作计划
         if participants and len(participants) > 0:

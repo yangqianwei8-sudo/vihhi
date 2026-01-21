@@ -938,6 +938,61 @@ def plan_create(request):
         # 检查是否是草稿保存
         is_draft = request.POST.get('action') == 'draft'
         form = PlanForm(request.POST, user=request.user, is_draft=is_draft)
+        
+        # 在表单验证前，先检查周计划的重复创建（非草稿模式）
+        if not is_draft:
+            plan_period = request.POST.get('plan_period')
+            responsible_person_id = request.POST.get('responsible_person')
+            start_time_str = request.POST.get('start_time')
+            
+            if plan_period == 'weekly' and responsible_person_id and start_time_str:
+                try:
+                    from django.utils.dateparse import parse_date
+                    from .models import Plan
+                    from datetime import datetime as dt
+                    
+                    responsible_person = User.objects.get(id=int(responsible_person_id))
+                    start_date = parse_date(start_time_str)
+                    
+                    if start_date:
+                        # 计算周的开始日期（周一）和结束日期（周日）
+                        days_since_monday = start_date.weekday()  # 0=Monday, 6=Sunday
+                        week_start = start_date - timedelta(days=days_since_monday)
+                        week_end = week_start + timedelta(days=6)
+                        
+                        # 查询同一用户在同一周内是否已有周计划
+                        week_start_dt = timezone.make_aware(dt.combine(week_start, dt.min.time()))
+                        week_end_dt = timezone.make_aware(dt.combine(week_end, dt.max.time()))
+                        
+                        existing_plans = Plan.objects.filter(
+                            plan_period='weekly',
+                            responsible_person=responsible_person,
+                            status__in=['draft', 'published', 'accepted', 'in_progress']
+                        ).filter(
+                            start_time__lte=week_end_dt,
+                            end_time__gte=week_start_dt
+                        )
+                        
+                        if existing_plans.exists():
+                            existing_plan = existing_plans.first()
+                            messages.error(
+                                request,
+                                f'您在本周（{week_start.strftime("%Y-%m-%d")} 至 {week_end.strftime("%Y-%m-%d")}）已存在周计划（{existing_plan.name}），不能创建第二条周计划。请先完成或取消现有计划。'
+                            )
+                            # 重新渲染表单
+                            context = _context("创建计划", "➕", "创建新的工作计划", request=request)
+                            context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_create')
+                            context['form'] = form
+                            context['page_title'] = "创建计划"
+                            context['submit_text'] = "创建"
+                            context['cancel_url_name'] = 'plan_pages:plan_list'
+                            context['form_js_file'] = 'js/plan_form_date_calculator.js'
+                            context['form_page_subtitle_text'] = '请填写计划基本信息'
+                            return render(request, "plan_management/plan_form.html", context)
+                except (ValueError, User.DoesNotExist, TypeError):
+                    # 如果解析失败，继续表单验证
+                    pass
+        
         if form.is_valid():
             plan = form.save(commit=False)
             plan.created_by = request.user

@@ -86,7 +86,29 @@
   <div class="vh-sb__bottom">
     <div class="vh-sb__mini">帮助</div>
     <div class="vh-sb__mini">设置</div>
-    <div class="vh-sb__mini" onclick="if(typeof bootstrap !== 'undefined') { const modal = document.getElementById('feedbackModal'); if(modal) new bootstrap.Modal(modal).show(); }" style="cursor: pointer;">反馈</div>
+    <div class="vh-sb__mini" onclick="(function() {
+  try {
+    const modal = document.getElementById('feedbackModal');
+    if (!modal) {
+      console.error('反馈模态框未找到，请检查页面是否包含反馈表单模板');
+      alert('反馈功能暂时不可用，请刷新页面后重试');
+      return;
+    }
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      const bsModal = new bootstrap.Modal(modal);
+      bsModal.show();
+    } else if (typeof $ !== 'undefined' && $.fn.modal) {
+      // jQuery Bootstrap 3 兼容
+      $(modal).modal('show');
+    } else {
+      console.error('Bootstrap未加载，无法打开反馈弹窗');
+      alert('页面资源加载异常，请刷新页面后重试');
+    }
+  } catch (e) {
+    console.error('打开反馈弹窗时出错：', e);
+    alert('打开反馈功能时出错，请刷新页面后重试');
+  }
+})();" style="cursor: pointer;">反馈</div>
 
     {% block sidebar_bottom_extra %}{% endblock %}
   </div>

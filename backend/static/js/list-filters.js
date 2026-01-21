@@ -34,6 +34,13 @@
         formId: 'filterForm',
         debounceDelay: 500,
         autoSubmit: true,
+        // 文本输入字段ID列表（可配置）
+        textInputIds: ['filter_industry', 'filter_company_email', 'filter_legal_representative'],
+        // 下拉框字段名列表（可配置）
+        selectFieldNames: ['region', 'department', 'responsible_user'],
+        // 日期范围字段名
+        dateStartFieldName: 'created_time_start',
+        dateEndFieldName: 'created_time_end',
         // 筛选字段设置功能配置（可选）
         enableFieldsSettings: false,
         fieldsSettingsStorageKey: 'filter_fields_settings',
@@ -52,6 +59,8 @@
         constructor(config = {}) {
             this.config = { ...DEFAULT_CONFIG, ...config };
             this.debounceTimers = {};
+            // 事件监听器引用（用于清理）
+            this.eventListeners = new Map();
             // 筛选字段设置相关属性
             this.filterFields = [];
             this.draggedRow = null;
@@ -62,27 +71,23 @@
          * 初始化筛选功能
          */
         init() {
-            // 等待DOM加载完成
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => {
-                    this.setupFilterButtons();
-                    this.setupSelects();
-                    this.setupTextInputs();
-                    this.setupDateRange();
-                    // 如果启用了筛选字段设置功能，初始化它
-                    if (this.config.enableFieldsSettings) {
-                        this.initFieldsSettings();
-                    }
-                });
-            } else {
+            const initAll = () => {
                 this.setupFilterButtons();
                 this.setupSelects();
                 this.setupTextInputs();
                 this.setupDateRange();
+                this.setupResetButton();
                 // 如果启用了筛选字段设置功能，初始化它
                 if (this.config.enableFieldsSettings) {
                     this.initFieldsSettings();
                 }
+            };
+
+            // 等待DOM加载完成
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initAll);
+            } else {
+                initAll();
             }
         }
 
@@ -91,14 +96,30 @@
          */
         setupFilterButtons() {
             document.querySelectorAll('.filter-btn').forEach(btn => {
-                // 移除旧的事件监听器（如果存在）
-                const newBtn = btn.cloneNode(true);
-                btn.parentNode.replaceChild(newBtn, btn);
+                // 使用 data 属性标记已处理，避免重复绑定
+                if (btn.hasAttribute('data-list-filters-bound')) {
+                    return;
+                }
+                btn.setAttribute('data-list-filters-bound', 'true');
                 
-                newBtn.addEventListener('click', (e) => {
+                const handler = (e) => {
                     this.handleFilterButtonClick(e.currentTarget);
-                });
+                };
+                
+                btn.addEventListener('click', handler);
+                // 保存监听器引用以便后续清理
+                this._storeEventListener(btn, 'click', handler);
             });
+        }
+
+        /**
+         * 存储事件监听器引用（用于清理）
+         */
+        _storeEventListener(element, event, handler) {
+            const key = `${element}_${event}`;
+            if (!this.eventListeners.has(key)) {
+                this.eventListeners.set(key, { element, event, handler });
+            }
         }
 
         /**
@@ -174,47 +195,15 @@
          */
         applyDateRange(range) {
             const today = new Date();
-            const startInput = document.querySelector('input[name="created_time_start"]');
-            const endInput = document.querySelector('input[name="created_time_end"]');
+            const startInput = document.querySelector(`input[name="${this.config.dateStartFieldName}"]`);
+            const endInput = document.querySelector(`input[name="${this.config.dateEndFieldName}"]`);
             
-            let startDate, endDate;
-            
-            switch(range) {
-                case 'today':
-                    startDate = endDate = today.toISOString().split('T')[0];
-                    break;
-                case 'yesterday':
-                    const yesterday = new Date(today);
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    startDate = endDate = yesterday.toISOString().split('T')[0];
-                    break;
-                case 'this_week':
-                    const weekStart = new Date(today);
-                    weekStart.setDate(today.getDate() - today.getDay());
-                    startDate = weekStart.toISOString().split('T')[0];
-                    endDate = today.toISOString().split('T')[0];
-                    break;
-                case 'last_week':
-                    const lastWeekStart = new Date(today);
-                    lastWeekStart.setDate(today.getDate() - today.getDay() - 7);
-                    const lastWeekEnd = new Date(today);
-                    lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
-                    startDate = lastWeekStart.toISOString().split('T')[0];
-                    endDate = lastWeekEnd.toISOString().split('T')[0];
-                    break;
-                case 'this_month':
-                    startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-                    endDate = today.toISOString().split('T')[0];
-                    break;
-                case 'last_month':
-                    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-                    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-                    startDate = lastMonth.toISOString().split('T')[0];
-                    endDate = lastMonthEnd.toISOString().split('T')[0];
-                    break;
-                default:
-                    return;
+            const dateRange = this._calculateDateRange(range, today);
+            if (!dateRange) {
+                return;
             }
+            
+            const { startDate, endDate } = dateRange;
             
             if (startInput && startDate) {
                 startInput.value = startDate;
@@ -222,6 +211,54 @@
             if (endInput && endDate) {
                 endInput.value = endDate;
             }
+        }
+
+        /**
+         * 计算日期范围（工具方法）
+         */
+        _calculateDateRange(range, today) {
+            const formatDate = (date) => date.toISOString().split('T')[0];
+            
+            let startDate, endDate;
+            
+            switch(range) {
+                case 'today':
+                    startDate = endDate = formatDate(today);
+                    break;
+                case 'yesterday':
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    startDate = endDate = formatDate(yesterday);
+                    break;
+                case 'this_week':
+                    const weekStart = new Date(today);
+                    weekStart.setDate(today.getDate() - today.getDay());
+                    startDate = formatDate(weekStart);
+                    endDate = formatDate(today);
+                    break;
+                case 'last_week':
+                    const lastWeekStart = new Date(today);
+                    lastWeekStart.setDate(today.getDate() - today.getDay() - 7);
+                    const lastWeekEnd = new Date(today);
+                    lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
+                    startDate = formatDate(lastWeekStart);
+                    endDate = formatDate(lastWeekEnd);
+                    break;
+                case 'this_month':
+                    startDate = formatDate(new Date(today.getFullYear(), today.getMonth(), 1));
+                    endDate = formatDate(today);
+                    break;
+                case 'last_month':
+                    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+                    startDate = formatDate(lastMonth);
+                    endDate = formatDate(lastMonthEnd);
+                    break;
+                default:
+                    return null;
+            }
+            
+            return { startDate, endDate };
         }
 
         /**
@@ -241,94 +278,63 @@
          * 设置下拉框事件
          */
         setupSelects() {
-            // 通用下拉框处理（region, department, responsible_user等）
-            document.querySelectorAll('select[name="region"], select[name="department"], select[name="responsible_user"]').forEach(select => {
-                select.addEventListener('change', (e) => {
+            // 通用下拉框处理（通过 name 属性）
+            const selectors = this.config.selectFieldNames.map(name => `select[name="${name}"]`).join(', ');
+            document.querySelectorAll(selectors).forEach(select => {
+                // 避免重复绑定
+                if (select.hasAttribute('data-list-filters-bound')) {
+                    return;
+                }
+                select.setAttribute('data-list-filters-bound', 'true');
+                
+                const handler = (e) => {
                     this.handleSelectChange(e.currentTarget);
-                });
+                };
+                select.addEventListener('change', handler);
+                this._storeEventListener(select, 'change', handler);
             });
 
-            // 地区下拉框特殊处理
-            const regionSelect = document.getElementById('regionSelect');
-            if (regionSelect) {
-                regionSelect.addEventListener('change', (e) => {
-                    this.handleRegionSelectChange(e.currentTarget);
-                });
-            }
+            // 特殊处理：通过 ID 查找的下拉框（如 regionSelect）
+            const specialSelects = [
+                { id: 'regionSelect', fieldName: 'region' },
+                // 可以扩展更多特殊处理的下拉框
+            ];
 
-            // 部门下拉框特殊处理
-            const departmentSelect = document.querySelector('select[name="department"]');
-            if (departmentSelect) {
-                departmentSelect.addEventListener('change', (e) => {
-                    this.handleDepartmentSelectChange(e.currentTarget);
-                });
-            }
-
-            // 负责人下拉框特殊处理
-            const responsibleUserSelect = document.querySelector('select[name="responsible_user"]');
-            if (responsibleUserSelect) {
-                responsibleUserSelect.addEventListener('change', (e) => {
-                    this.handleResponsibleUserSelectChange(e.currentTarget);
-                });
-            }
+            specialSelects.forEach(({ id, fieldName }) => {
+                const select = document.getElementById(id);
+                if (select && !select.hasAttribute('data-list-filters-bound')) {
+                    select.setAttribute('data-list-filters-bound', 'true');
+                    const handler = (e) => {
+                        this.handleSelectFieldChange(e.currentTarget, fieldName);
+                    };
+                    select.addEventListener('change', handler);
+                    this._storeEventListener(select, 'change', handler);
+                }
+            });
         }
 
         /**
          * 处理下拉框变化（通用）
          */
         handleSelectChange(select) {
-            const group = select.closest('.filter-buttons');
-            const allBtn = group ? group.querySelector('.filter-btn[data-value=""]') : null;
-            
-            if (allBtn && select.value === '') {
-                // 选择"全部"时，激活"全部"按钮
-                if (group) {
-                    group.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            // 从 select 的 name 属性获取字段名
+            const fieldName = select.name;
+            if (fieldName) {
+                this.handleSelectFieldChange(select, fieldName);
+            } else {
+                // 如果没有 name 属性，只更新按钮状态
+                this.updateAllButtonState(select);
+                if (this.config.autoSubmit) {
+                    this.submitForm();
                 }
-                allBtn.classList.add('active');
-            } else if (allBtn && select.value !== '') {
-                // 选择具体值时，取消"全部"按钮的激活状态
-                allBtn.classList.remove('active');
-            }
-            
-            if (this.config.autoSubmit) {
-                this.submitForm();
             }
         }
 
         /**
-         * 处理地区下拉框变化
+         * 处理指定字段的下拉框变化（统一处理方法）
          */
-        handleRegionSelectChange(select) {
-            const hiddenInput = document.getElementById('filter_region');
-            if (hiddenInput) {
-                hiddenInput.value = select.value;
-            }
-            this.updateAllButtonState(select);
-            if (this.config.autoSubmit) {
-                this.submitForm();
-            }
-        }
-
-        /**
-         * 处理部门下拉框变化
-         */
-        handleDepartmentSelectChange(select) {
-            const hiddenInput = document.getElementById('filter_department');
-            if (hiddenInput) {
-                hiddenInput.value = select.value;
-            }
-            this.updateAllButtonState(select);
-            if (this.config.autoSubmit) {
-                this.submitForm();
-            }
-        }
-
-        /**
-         * 处理负责人下拉框变化
-         */
-        handleResponsibleUserSelectChange(select) {
-            const hiddenInput = document.getElementById('filter_responsible_user');
+        handleSelectFieldChange(select, fieldName) {
+            const hiddenInput = document.getElementById(`filter_${fieldName}`);
             if (hiddenInput) {
                 hiddenInput.value = select.value;
             }
@@ -365,21 +371,24 @@
          * 设置文本输入框事件（防抖）
          */
         setupTextInputs() {
-            // 支持的文本输入字段（可根据需要扩展）
-            const textInputIds = ['filter_industry', 'filter_company_email', 'filter_legal_representative'];
-            
-            textInputIds.forEach(inputId => {
+            this.config.textInputIds.forEach(inputId => {
                 const input = document.getElementById(inputId);
-                if (input) {
+                if (input && !input.hasAttribute('data-list-filters-bound')) {
+                    input.setAttribute('data-list-filters-bound', 'true');
+                    
                     // 输入事件（防抖）
-                    input.addEventListener('input', (e) => {
+                    const inputHandler = (e) => {
                         this.handleTextInput(e.currentTarget);
-                    });
+                    };
+                    input.addEventListener('input', inputHandler);
+                    this._storeEventListener(input, 'input', inputHandler);
                     
                     // 失去焦点时立即提交
-                    input.addEventListener('blur', (e) => {
+                    const blurHandler = (e) => {
                         this.handleTextInputBlur(e.currentTarget);
-                    });
+                    };
+                    input.addEventListener('blur', blurHandler);
+                    this._storeEventListener(input, 'blur', blurHandler);
                 }
             });
         }
@@ -408,11 +417,10 @@
             }
             
             // 防抖：延迟提交表单
-            if (this.debounceTimers[inputId]) {
-                clearTimeout(this.debounceTimers[inputId]);
-            }
+            this._clearDebounceTimer(inputId);
             
             this.debounceTimers[inputId] = setTimeout(() => {
+                delete this.debounceTimers[inputId];
                 if (this.config.autoSubmit) {
                     this.submitForm();
                 }
@@ -426,9 +434,7 @@
             const inputId = input.id;
             
             // 清除防抖定时器
-            if (this.debounceTimers[inputId]) {
-                clearTimeout(this.debounceTimers[inputId]);
-            }
+            this._clearDebounceTimer(inputId);
             
             // 立即提交表单
             if (this.config.autoSubmit) {
@@ -437,27 +443,48 @@
         }
 
         /**
+         * 清除防抖定时器（工具方法）
+         */
+        _clearDebounceTimer(inputId) {
+            if (this.debounceTimers[inputId]) {
+                clearTimeout(this.debounceTimers[inputId]);
+                delete this.debounceTimers[inputId];
+            }
+        }
+
+        /**
+         * 清理所有防抖定时器
+         */
+        _clearAllDebounceTimers() {
+            Object.keys(this.debounceTimers).forEach(inputId => {
+                this._clearDebounceTimer(inputId);
+            });
+        }
+
+        /**
          * 设置日期范围相关事件
          */
         setupDateRange() {
             // 自定义日期范围输入框变化时提交表单
-            const startInput = document.querySelector('input[name="created_time_start"]');
-            const endInput = document.querySelector('input[name="created_time_end"]');
+            const startInput = document.querySelector(`input[name="${this.config.dateStartFieldName}"]`);
+            const endInput = document.querySelector(`input[name="${this.config.dateEndFieldName}"]`);
             
-            if (startInput) {
-                startInput.addEventListener('change', () => {
-                    if (this.config.autoSubmit) {
-                        this.submitForm();
-                    }
-                });
+            const changeHandler = () => {
+                if (this.config.autoSubmit) {
+                    this.submitForm();
+                }
+            };
+            
+            if (startInput && !startInput.hasAttribute('data-list-filters-bound')) {
+                startInput.setAttribute('data-list-filters-bound', 'true');
+                startInput.addEventListener('change', changeHandler);
+                this._storeEventListener(startInput, 'change', changeHandler);
             }
             
-            if (endInput) {
-                endInput.addEventListener('change', () => {
-                    if (this.config.autoSubmit) {
-                        this.submitForm();
-                    }
-                });
+            if (endInput && !endInput.hasAttribute('data-list-filters-bound')) {
+                endInput.setAttribute('data-list-filters-bound', 'true');
+                endInput.addEventListener('change', changeHandler);
+                this._storeEventListener(endInput, 'change', changeHandler);
             }
         }
 
@@ -474,6 +501,35 @@
         }
 
         /**
+         * 设置重置按钮事件
+         */
+        setupResetButton() {
+            const form = document.getElementById(this.config.formId);
+            if (form) {
+                // 查找表单内的重置按钮
+                const resetBtn = form.querySelector('button[type="reset"]');
+                if (resetBtn && !resetBtn.hasAttribute('data-list-filters-handled')) {
+                    resetBtn.setAttribute('data-list-filters-handled', 'true');
+                    resetBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.reset();
+                    });
+                }
+                
+                // 也查找通过 form 属性关联的重置按钮（在表单外部）
+                const externalResetBtn = document.querySelector(`button[type="reset"][form="${this.config.formId}"]`);
+                if (externalResetBtn && !externalResetBtn.hasAttribute('data-list-filters-handled')) {
+                    externalResetBtn.setAttribute('data-list-filters-handled', 'true');
+                    externalResetBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.reset();
+                    });
+                }
+            }
+        }
+
+
+        /**
          * 手动提交表单（供外部调用）
          */
         submit() {
@@ -486,7 +542,11 @@
         reset() {
             const form = document.getElementById(this.config.formId);
             if (form) {
+                // 清除所有防抖定时器
+                this._clearAllDebounceTimers();
+                
                 form.reset();
+                
                 // 重置所有筛选按钮状态
                 document.querySelectorAll('.filter-btn').forEach(btn => {
                     btn.classList.remove('active');
@@ -494,20 +554,48 @@
                         btn.classList.add('active');
                     }
                 });
+                
                 // 重置隐藏输入框
                 form.querySelectorAll('input[type="hidden"]').forEach(input => {
                     if (input.id && input.id.startsWith('filter_')) {
                         input.value = '';
                     }
                 });
+                
                 // 重置下拉框
                 form.querySelectorAll('select').forEach(select => {
                     select.value = '';
                 });
+                
+                // 隐藏自定义日期范围输入框
+                const customDateRange = document.getElementById('customDateRange');
+                if (customDateRange) {
+                    customDateRange.style.display = 'none';
+                }
+                
                 // 提交表单
                 if (this.config.autoSubmit) {
                     this.submitForm();
                 }
+            }
+        }
+
+        /**
+         * 销毁实例，清理所有事件监听器和定时器
+         */
+        destroy() {
+            // 清理所有防抖定时器
+            this._clearAllDebounceTimers();
+            
+            // 清理所有事件监听器
+            this.eventListeners.forEach(({ element, event, handler }) => {
+                element.removeEventListener(event, handler);
+            });
+            this.eventListeners.clear();
+            
+            // 清理筛选字段设置实例
+            if (this.fieldsSettingsInstance && typeof this.fieldsSettingsInstance.destroy === 'function') {
+                this.fieldsSettingsInstance.destroy();
             }
         }
 
@@ -589,34 +677,20 @@
         return filterForm || filterContainer || filterButtons.length > 0;
     };
     
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            // 只有在页面中存在筛选功能时才自动初始化
-            if (shouldAutoInit()) {
-                // 如果页面中已有配置，自动初始化
-                if (window.listFiltersConfig) {
-                    const instance = new ListFilters(window.listFiltersConfig);
-                    window.listFiltersInstance = instance;
-                } else {
-                    // 使用默认配置初始化
-                    const instance = new ListFilters();
-                    window.listFiltersInstance = instance;
-                }
-            }
-        });
-    } else {
-        // DOM已加载
+    const autoInit = () => {
         // 只有在页面中存在筛选功能时才自动初始化
         if (shouldAutoInit()) {
-            if (window.listFiltersConfig) {
-                const instance = new ListFilters(window.listFiltersConfig);
-                window.listFiltersInstance = instance;
-            } else {
-                // 使用默认配置初始化
-                const instance = new ListFilters();
-                window.listFiltersInstance = instance;
-            }
+            const config = window.listFiltersConfig || {};
+            const instance = new ListFilters(config);
+            window.listFiltersInstance = instance;
         }
+    };
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', autoInit);
+    } else {
+        // DOM已加载，立即初始化
+        autoInit();
     }
 
 })(window);

@@ -1,7 +1,20 @@
 /* ===== 两栏布局样式 ===== */
 /* 风格：简洁、美观、大方，灰色黑色为主，卡片直角 */
 
+/* ===== 引入说明 ===== */
+/* 
+ * 使用方式：
+ * 1. 标准方式（推荐）：在模板中先引入 common.css，再引入此文件
+ *    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+ *    <link rel="stylesheet" href="{% static 'css/components/two_column_layout.css' %}">
+ *    此时 common.css 已包含 core/variables.css，变量已可用，无需额外引入
+ * 
+ * 2. 独立使用：如果单独使用此文件（不引入 common.css），需要取消下面的注释
+ *    @import url('../core/variables.css'); 
+ */
+
 /* ===== 引入通用左侧栏样式 ===== */
+/* 注意：sidebar_v2_fixed.css 依赖 --navbar-height 变量，需确保已引入 core/variables.css */
 @import url('sidebar_v2_fixed.css');
 
 /* ===== CSS 变量定义 ===== */
@@ -99,7 +112,7 @@ body:has(.navbar) .two-column-layout {
 
 .two-col-main::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .two-col-main::-webkit-scrollbar-thumb:hover {
@@ -145,21 +158,43 @@ body:has(.navbar) .two-column-layout {
 
 .two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child {
   flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 h1.h3 {
+/* 主标题样式 */
+.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 h1.h3,
+.two-col-page-title {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
   color: var(--two-col-text-primary);
   line-height: 1.4;
+  display: inline-block;
 }
 
-.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > :not(h1) {
-  margin-top: 8px;
+/* 副标题样式 - 与主标题同一行显示 */
+.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > :not(h1),
+.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > span,
+.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > p,
+.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > small,
+.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > .two-col-page-subtitle,
+.two-col-page-subtitle {
+  margin-top: 0;
+  margin-left: 0;
   font-size: 14px;
   color: var(--two-col-text-secondary);
   line-height: 1.5;
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+/* 副标题特定样式增强 */
+.two-col-page-subtitle {
+  font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 /* ===== 卡片容器样式 ===== */
@@ -298,7 +333,7 @@ body:has(.navbar) .two-column-layout {
   height: 20px;
   border: 2px solid var(--two-col-border-color);
   border-top-color: var(--two-col-text-primary);
-  border-radius: 50%;
+  border-radius: 0;
   animation: two-col-spin 0.8s linear infinite;
   margin-left: 8px;
 }

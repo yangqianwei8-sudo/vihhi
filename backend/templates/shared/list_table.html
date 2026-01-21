@@ -1,0 +1,173 @@
+{% comment %}
+列表页面表格共享模板
+
+使用方法：
+{% include 'shared/list_table.html' with 
+    table_id='myTable'
+    columns=columns 
+    data=page_obj 
+    show_checkbox=True
+    show_actions=True
+    action_template='shared/_partials/table_actions.html'
+    empty_message='暂无数据'
+    show_pagination=True
+    pagination_params=request.GET.dict
+%}
+
+参数说明：
+- table_id: 表格的唯一ID（可选，默认：'dataTable'）
+- columns: 列定义列表
+- data: 数据列表（分页对象或普通列表）
+- show_checkbox: 是否显示复选框列（默认：False）
+- checkbox_name: 复选框的name属性（默认：'item_ids'）
+- show_actions: 是否显示操作列（默认：False）
+- action_template: 操作列的自定义模板路径（可选）
+- empty_message: 空数据提示信息（默认：'暂无数据'）
+- empty_colspan: 空数据行的colspan（自动计算，也可手动指定）
+- show_pagination: 是否显示分页（默认：False）
+- pagination_params: 分页URL参数（字典格式，用于保留筛选条件）
+- table_class: 额外的表格CSS类（可选）
+- column_settings_btn: 是否显示列设置按钮（默认：False）
+{% endcomment %}
+
+{% load static %}
+
+<div class="list-page-table-container">
+    <div class="list-page-table-wrapper">
+        {% if data %}
+        <div class="table-responsive">
+            <table class="list-page-table{% if table_class %} {{ table_class }}{% endif %}" id="{% if table_id %}{{ table_id }}{% else %}dataTable{% endif %}">
+                <thead>
+                    <tr>
+                        {% if show_checkbox %}
+                        <th width="40" class="column-checkbox">
+                            <input type="checkbox" id="selectAll" class="form-check-input">
+                        </th>
+                        {% endif %}
+                        {% for column in columns %}
+                        <th {% if column.width %}width="{{ column.width }}"{% endif %} 
+                            {% if column.class %}class="{{ column.class }}{% if column.sortable %} sortable{% endif %}"{% elif column.sortable %}class="sortable"{% endif %}
+                            {% if column.sortable %}data-sort="{{ column.field }}"{% endif %}
+                            {% if column.style %}style="{{ column.style }}"{% endif %}>
+                            {{ column.name }}
+                            {% if column.sortable %}
+                            <span class="sort-icon">⇅</span>
+                            {% endif %}
+                        </th>
+                        {% endfor %}
+                        {% if show_actions %}
+                        <th width="120" class="column-actions">
+                            操作
+                            {% if column_settings_btn %}
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-2" id="tableColumnSettingsBtn" data-bs-toggle="modal" data-bs-target="#fieldsSettingsModal" title="自定义显示列" style="text-decoration: none; color: #FFC107 !important;">
+                                <i class="bi bi-gear-fill" style="color: #FFC107 !important;"></i>
+                            </button>
+                            {% endif %}
+                        </th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in data %}
+                    <tr data-id="{{ item.id|default:forloop.counter }}">
+                        {% if show_checkbox %}
+                        <td class="column-checkbox">
+                            <input type="checkbox" name="{% if checkbox_name %}{{ checkbox_name }}{% else %}item_ids{% endif %}" 
+                                   value="{{ item.id|default:forloop.counter }}" 
+                                   class="row-checkbox form-check-input">
+                        </td>
+                        {% endif %}
+                        {% for column in columns %}
+                        <td class="{% if column.class %}{{ column.class }}{% endif %}" {% if column.style %}style="{{ column.style }}"{% endif %}>
+                            {% if column.template %}
+                                {% include column.template with item=item column=column %}
+                            {% elif column.field %}
+                                {% with field_value=item|getattr:column.field %}
+                                    {% if column.format == 'date' %}
+                                        {{ field_value|date:"Y-m-d"|default:"未填写" }}
+                                    {% elif column.format == 'datetime' %}
+                                        {{ field_value|date:"Y-m-d H:i"|default:"未填写" }}
+                                    {% elif column.format == 'badge' %}
+                                        <span class="badge bg-primary">{{ field_value|default:"未填写" }}</span>
+                                    {% elif column.format == 'badge-info' %}
+                                        <span class="badge bg-info">{{ field_value|default:"未填写" }}</span>
+                                    {% elif column.format == 'badge-success' %}
+                                        <span class="badge bg-success">{{ field_value|default:"未填写" }}</span>
+                                    {% elif column.format == 'badge-secondary' %}
+                                        <span class="badge bg-secondary">{{ field_value|default:"未填写" }}</span>
+                                    {% elif column.format == 'link' %}
+                                        <a href="{% url column.url_name item.id %}" class="text-decoration-none">{{ field_value|default:"未填写" }}</a>
+                                    {% elif column.format == 'code' %}
+                                        <code>{{ field_value|default:"未填写" }}</code>
+                                    {% elif column.format == 'currency' %}
+                                        ¥{{ field_value|default:"0.00" }}
+                                    {% elif column.format == 'truncate' %}
+                                        {{ field_value|truncatewords:10|default:"未填写" }}
+                                    {% elif column.format == 'boolean' %}
+                                        {% if field_value %}<span class="badge bg-success">是</span>{% else %}<span class="badge bg-secondary">否</span>{% endif %}
+                                    {% else %}
+                                        <span class="{% if column.small %}small{% endif %} {% if column.text_muted %}text-muted{% endif %}">{{ field_value|default:"未填写" }}</span>
+                                    {% endif %}
+                                {% endwith %}
+                            {% else %}
+                                {{ column.name }}
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                        {% if show_actions %}
+                        <td class="column-actions">
+                            {% if action_template %}
+                                {% include action_template with item=item %}
+                            {% else %}
+                                <div class="btn-group btn-group-sm">
+                                    <a href="#" class="btn btn-sm" onclick="viewItem({{ item.id }}); return false;">查看</a>
+                                    <a href="#" class="btn btn-sm" onclick="editItem({{ item.id }}); return false;">编辑</a>
+                                </div>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if empty_colspan %}{{ empty_colspan }}{% else %}{% if show_checkbox %}1{% else %}0{% endif %}{% if show_actions %}1{% else %}0{% endif %}{{ columns|length }}{% endif %}" 
+                            class="text-center text-muted py-4">
+                            {{ empty_message|default:"暂无数据" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info" style="margin: 20px;">{{ empty_message|default:"暂无数据" }}</div>
+        {% endif %}
+    </div>
+</div>
+
+{% if show_pagination and data.has_other_pages %}
+<nav aria-label="分页导航" class="list-page-pagination">
+    <ul class="pagination justify-content-center">
+        {% if data.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ data.previous_page_number }}{% if pagination_params %}{% for key, value in pagination_params.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">上一页</a>
+        </li>
+        {% endif %}
+        {% for num in data.paginator.page_range %}
+        {% if data.number == num %}
+        <li class="page-item active">
+            <span class="page-link">{{ num }}</span>
+        </li>
+        {% elif num > data.number|add:'-3' and num < data.number|add:'3' %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ num }}{% if pagination_params %}{% for key, value in pagination_params.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">{{ num }}</a>
+        </li>
+        {% endif %}
+        {% endfor %}
+        {% if data.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ data.next_page_number }}{% if pagination_params %}{% for key, value in pagination_params.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">下一页</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
