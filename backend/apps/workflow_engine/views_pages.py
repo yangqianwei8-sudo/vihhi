@@ -7,9 +7,111 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import Http404
+from django.urls import reverse
 from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalNode, ApprovalInstance, ApprovalRecord
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.apps.system_management.models import User, Role, Department
+from backend.core.views import _build_full_top_nav, _permission_granted
+
+
+# ==================== 审批引擎模块左侧菜单结构 =====================
+WORKFLOW_ENGINE_MENU = [
+    {
+        'id': 'workflow_management',
+        'label': '流程管理',
+        'icon': '⚙️',
+        'permission': 'workflow_engine.view',
+        'expanded': True,
+        'children': [
+            {
+                'id': 'workflow_list',
+                'label': '流程模板',
+                'url_name': 'workflow_engine:workflow_list',
+                'permission': 'workflow_engine.view',
+                'path_keywords': ['workflow', 'workflows'],
+            },
+        ],
+    },
+    {
+        'id': 'approval_management',
+        'label': '审批管理',
+        'icon': '📋',
+        'permission': 'workflow_engine.view',
+        'expanded': False,
+        'children': [
+            {
+                'id': 'approval_list',
+                'label': '我的审批',
+                'url_name': 'workflow_engine:approval_list',
+                'permission': 'workflow_engine.view',
+                'path_keywords': ['approval', 'approvals'],
+            },
+        ],
+    },
+]
+
+
+def _build_workflow_engine_sidebar_nav(permission_set, request_path=None, user=None):
+    """生成审批引擎模块的左侧菜单导航（分组格式）
+    
+    Args:
+        permission_set: 用户权限集合
+        request_path: 当前请求路径，用于判断激活状态
+        user: 当前用户
+    
+    Returns:
+        list: 分组菜单项列表
+    """
+    sidebar_nav = []
+    
+    for group in WORKFLOW_ENGINE_MENU:
+        # 检查分组权限
+        if group.get('permission') and not _permission_granted(group['permission'], permission_set):
+            continue
+        
+        # 构建子菜单
+        children = []
+        for item in group.get('children', []):
+            # 检查子菜单项权限
+            if item.get('permission') and not _permission_granted(item['permission'], permission_set):
+                continue
+            
+            # 构建URL
+            url = '#'
+            if item.get('url_name'):
+                try:
+                    url = reverse(item['url_name'])
+                except Exception:
+                    pass
+            
+            # 判断是否激活
+            is_active = False
+            if request_path and item.get('path_keywords'):
+                for keyword in item['path_keywords']:
+                    if keyword in request_path:
+                        is_active = True
+                        break
+            
+            children.append({
+                'id': item.get('id', ''),
+                'label': item.get('label', ''),
+                'icon': item.get('icon', ''),
+                'url': url,
+                'active': is_active,
+            })
+        
+        if children:
+            sidebar_nav.append({
+                'id': group.get('id', ''),
+                'label': group.get('label', ''),
+                'icon': group.get('icon', ''),
+                'url': '#',
+                'active': any(child.get('active') for child in children),
+                'expanded': group.get('expanded', False) or any(child.get('active') for child in children),
+                'children': children,
+            })
+    
+    return sidebar_nav
 
 
 def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None):
@@ -24,7 +126,8 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
         context['user'] = request.user
-        # 这里可以添加顶部菜单构建逻辑
+        context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+        context['sidebar_menu'] = _build_workflow_engine_sidebar_nav(permission_set, request.path, request.user)
     return context
 
 

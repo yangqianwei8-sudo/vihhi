@@ -134,6 +134,7 @@ HOME_NAV_STRUCTURE = [
     {'label': '财务管理', 'icon': '💵', 'url_name': 'finance_pages:financial_management_home', 'permission': 'financial_management.view'},
     {'label': '人事管理', 'icon': '👤', 'url_name': 'personnel_pages:personnel_management_home', 'permission': 'personnel_management.view'},
     {'label': '行政管理', 'icon': '🏢', 'url_name': 'admin_pages:administrative_management_home', 'permission': 'administrative_management.view'},
+    {'label': '审批引擎', 'icon': '✅', 'url_name': 'workflow_engine:workflow_list', 'permission': 'workflow_engine.view'},
     {'label': '系统管理', 'icon': '⚙️', 'url_name': 'system_pages:system_settings', 'permission': 'system_management.view'},
     # 注意：权限管理仅保留在Django Admin后台管理中，不添加到前端导航栏
 ]
@@ -1051,3 +1052,95 @@ def test_admin_page(request):
 def django_service_control(request):
     """Django服务控制"""
     return JsonResponse({'status': 'ok'})
+
+
+def _get_current_module_from_path(request_path):
+    """根据请求路径判断当前模块
+    
+    Args:
+        request_path: 请求路径，例如 '/workflow/workflows/'
+    
+    Returns:
+        str: 模块标识，例如 'workflow_engine'，如果无法判断则返回 None
+    """
+    if not request_path:
+        return None
+    
+    # 模块路径映射
+    module_path_map = {
+        'workflow': 'workflow_engine',
+        'production': 'production_management',
+        'customers': 'customer_management',
+        'opportunities': 'customer_management',
+        'contracts': 'customer_management',
+        'business': 'customer_management',
+        'delivery': 'delivery_customer',
+        'settlement': 'settlement_center',
+        'plan': 'plan_management',
+        'litigation': 'litigation_management',
+        'financial': 'financial_management',
+        'personnel': 'personnel_management',
+        'administrative': 'administrative_management',
+        'system-center': 'system_management',
+        'archive': 'archive_management',
+        'collaboration': 'task_collaboration',
+        'resource': 'resource_standard',
+    }
+    
+    # 检查路径是否匹配某个模块
+    for path_prefix, module_name in module_path_map.items():
+        if request_path.startswith(f'/{path_prefix}/'):
+            return module_name
+    
+    return None
+
+
+def _get_sidebar_menu_for_module(module_name, permission_set, request_path=None, user=None):
+    """获取指定模块的侧边栏菜单
+    
+    Args:
+        module_name: 模块标识，例如 'workflow_engine'
+        permission_set: 用户权限集合
+        request_path: 当前请求路径（可选）
+        user: 当前用户（可选）
+    
+    Returns:
+        list: 侧边栏菜单项列表
+    """
+    if not module_name:
+        return []
+    
+    # 模块菜单构建函数映射
+    menu_builders = {
+        'workflow_engine': 'backend.apps.workflow_engine.views_pages._build_workflow_engine_sidebar_nav',
+        'production_management': 'backend.apps.production_management.views_pages._build_production_management_sidebar_nav',
+        'customer_management': None,  # 客户管理模块可能有多个子模块，需要特殊处理
+        'delivery_customer': 'backend.apps.delivery_customer.views_pages._build_delivery_sidebar_nav',
+        'plan_management': 'backend.apps.plan_management.views_pages._build_plan_management_sidebar_nav',
+        'litigation_management': None,  # 待实现
+        'financial_management': None,  # 待实现
+        'personnel_management': 'backend.apps.personnel_management.views_pages._build_personnel_sidebar_nav',
+        'administrative_management': 'backend.apps.administrative_management.views_pages._build_administrative_sidebar_nav',
+        'system_management': None,  # 待实现
+        'archive_management': None,  # 待实现
+        'task_collaboration': None,  # 待实现
+        'resource_standard': None,  # 待实现
+        'settlement_center': None,  # 待实现
+    }
+    
+    # 获取菜单构建函数路径
+    builder_path = menu_builders.get(module_name)
+    if not builder_path:
+        return []
+    
+    # 动态导入并调用菜单构建函数
+    try:
+        module_path, function_name = builder_path.rsplit('.', 1)
+        module = __import__(module_path, fromlist=[function_name])
+        builder_func = getattr(module, function_name)
+        return builder_func(permission_set, request_path, user)
+    except (ImportError, AttributeError, Exception) as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f'获取模块 {module_name} 的侧边栏菜单失败: {e}', exc_info=True)
+        return []

@@ -159,7 +159,7 @@ PLAN_MANAGEMENT_MENU_STRUCTURE = [
             {'id': 'plan_list', 'label': '计划列表', 'icon': '📋', 'url_name': 'plan_pages:plan_list', 'permission': 'plan_management.view'},
             {'id': 'plan_create', 'label': '创建计划', 'icon': '➕', 'url_name': 'plan_pages:plan_create', 'permission': 'plan_management.plan.create'},
             {'id': 'plan_decompose', 'label': '计划分解', 'icon': '📊', 'url_name': 'plan_pages:plan_decompose_entry', 'permission': 'plan_management.view'},
-            {'id': 'plan_approval', 'label': '计划审批', 'icon': '✅', 'url_name': 'plan_pages:plan_approval_list', 'permission': 'plan_management.approve'},
+            {'id': 'plan_track', 'label': '计划跟踪', 'icon': '📈', 'url_name': 'plan_pages:plan_track_entry', 'permission': 'plan_management.view'},
         ]
     },
     {
@@ -172,6 +172,7 @@ PLAN_MANAGEMENT_MENU_STRUCTURE = [
             {'id': 'plan_completion_analysis', 'label': '完成度分析', 'icon': '✅', 'url_name': 'plan_pages:plan_completion_analysis', 'permission': 'plan_management.view_analysis'},
             {'id': 'plan_goal_achievement', 'label': '目标达成分析', 'icon': '🎯', 'url_name': 'plan_pages:plan_goal_achievement', 'permission': 'plan_management.view_analysis'},
             {'id': 'plan_statistics', 'label': '统计报表', 'icon': '📊', 'url_name': 'plan_pages:plan_statistics', 'permission': 'plan_management.view_analysis'},
+            {'id': 'plan_approval', 'label': '计划审批', 'icon': '📝', 'url_name': 'plan_pages:plan_approval_list', 'permission': 'plan_management.approve_plan'},
         ]
     },
 ]
@@ -1601,6 +1602,116 @@ def plan_decompose_entry(request):
         'plan_period_choices': Plan.PLAN_PERIOD_CHOICES,
     })
     return render(request, "plan_management/plan_decompose_entry.html", context)
+
+
+@login_required
+def plan_track_entry(request):
+    """计划跟踪入口页面 - 显示可跟踪的计划列表"""
+    permission_set = get_user_permission_codes(request.user)
+    
+    # 权限检查
+    if not _permission_granted('plan_management.view', permission_set):
+        messages.error(request, '您没有权限跟踪计划执行')
+        return redirect('plan_pages:plan_list')
+    
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '')
+    level_filter = request.GET.get('level', '')
+    plan_period_filter = request.GET.get('plan_period', '')
+    responsible_filter = request.GET.get('responsible_person', '')
+    related_goal_filter = request.GET.get('related_goal', '')
+    
+    # 查询可跟踪的计划（排除已取消的计划）
+    plans = Plan.objects.select_related(
+        'responsible_person', 'responsible_department', 'related_goal'
+    ).exclude(status='cancelled')
+    
+    # 应用筛选
+    if search:
+        plans = plans.filter(
+            Q(plan_number__icontains=search) |
+            Q(name__icontains=search) |
+            Q(responsible_person__username__icontains=search) |
+            Q(responsible_person__full_name__icontains=search)
+        )
+    
+    if status_filter:
+        plans = plans.filter(status=status_filter)
+    else:
+        # 默认显示执行中的计划
+        plans = plans.filter(status='in_progress')
+    
+    if level_filter:
+        plans = plans.filter(level=level_filter)
+    
+    if plan_period_filter:
+        plans = plans.filter(plan_period=plan_period_filter)
+    
+    if responsible_filter:
+        plans = plans.filter(responsible_person_id=responsible_filter)
+    
+    if related_goal_filter:
+        plans = plans.filter(related_goal_id=related_goal_filter)
+    
+    # 排序：优先显示执行中的计划
+    plans = plans.order_by('-status', '-created_time')
+    
+    # 分页
+    page_size = request.GET.get('page_size', '10')
+    try:
+        per_page = int(page_size)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+    
+    paginator = Paginator(plans, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # 统计信息
+    base_plans = Plan.objects.exclude(status='cancelled')
+    total_count = base_plans.count()
+    in_progress_count = base_plans.filter(status='in_progress').count()
+    draft_count = base_plans.filter(status='draft').count()
+    completed_count = base_plans.filter(status='completed').count()
+    
+    # 获取所有用户（用于筛选）
+    all_users = User.objects.filter(is_active=True).order_by('username')
+    
+    # 获取所有战略目标（用于筛选）
+    all_goals = StrategicGoal.objects.filter(
+        status__in=['published', 'in_progress']
+    ).order_by('name')
+    
+    context = _context(
+        "计划跟踪",
+        "📈",
+        "选择要跟踪的计划",
+        request=request,
+    )
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_track')
+    context.update({
+        'page_obj': page_obj,
+        'plans': list(page_obj),
+        'all_users': all_users,
+        'all_goals': all_goals,
+        'search': search,
+        'status_filter': status_filter,
+        'level_filter': level_filter,
+        'plan_period_filter': plan_period_filter,
+        'responsible_filter': responsible_filter,
+        'related_goal_filter': related_goal_filter,
+        'total_count': total_count,
+        'in_progress_count': in_progress_count,
+        'draft_count': draft_count,
+        'completed_count': completed_count,
+        'status_options': Plan.STATUS_CHOICES,
+        'level_choices': Plan.LEVEL_CHOICES,
+        'plan_period_choices': Plan.PLAN_PERIOD_CHOICES,
+    })
+    return render(request, "plan_management/plan_track_entry.html", context)
 
 
 @login_required

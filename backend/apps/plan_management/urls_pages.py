@@ -21,6 +21,7 @@ urlpatterns = [
     path("plans/<int:plan_id>/delete/", views_pages.plan_delete, name="plan_delete"),
     path("plans/decompose/", views_pages.plan_decompose_entry, name="plan_decompose_entry"),
     path("plans/<int:plan_id>/decompose/", views_pages.plan_decompose, name="plan_decompose"),
+    path("plans/track/", views_pages.plan_track_entry, name="plan_track_entry"),
     path("plans/<int:plan_id>/goal-alignment/", views_pages.plan_goal_alignment, name="plan_goal_alignment"),
     path("plans/approval/", views_pages.plan_approval_list, name="plan_approval_list"),
     

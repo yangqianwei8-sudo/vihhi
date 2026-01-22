@@ -54,14 +54,14 @@
             }
             
             link.addEventListener('click', function(e) {
-                // 关键修复：如果点击的是子菜单项，不处理父菜单的折叠逻辑
+                const parent = this.closest('.vh-sb__parent');
+                const children = parent ? parent.querySelector('.vh-sb__children') : null;
+                
+                // 更精确的检查：如果点击发生在子菜单容器内，不处理父菜单的折叠逻辑
                 // 这防止了点击子菜单项时触发父菜单折叠的问题
-                if (e.target.closest('.vh-sb__child')) {
+                if (children && (children.contains(e.target) || e.target.closest('.vh-sb__child'))) {
                     return; // 允许子菜单项正常跳转，不处理父菜单折叠
                 }
-                
-                const parent = this.closest('.vh-sb__parent');
-                const children = parent.querySelector('.vh-sb__children');
                 
                 // 检查是否有子菜单
                 const hasSubmenu = children && children.children.length > 0;

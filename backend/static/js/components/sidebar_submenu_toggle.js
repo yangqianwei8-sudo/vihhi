@@ -55,11 +55,22 @@
 
   // 事件委托：保证点击一定生效
   function handleClick(e) {
+    // 如果点击的是子菜单项（.vh-sb__child），不处理折叠逻辑，允许正常跳转
+    if (e.target.closest('.vh-sb__child')) {
+      return;
+    }
+
     const btn = e.target.closest('[data-sb-toggle]');
     if (!btn) return;
 
     const parentEl = btn.closest('[data-sb-parent]');
     if (!parentEl) return;
+
+    // 检查点击是否发生在子菜单容器内
+    const children = parentEl.querySelector('[data-sb-children]');
+    if (children && children.contains(e.target)) {
+      return; // 点击在子菜单内，不处理折叠
+    }
 
     e.preventDefault();
     e.stopPropagation();

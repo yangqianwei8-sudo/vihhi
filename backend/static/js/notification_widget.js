@@ -17,8 +17,6 @@
             initNotificationWidget.retryCount++;
             if (initNotificationWidget.retryCount < 10) {
                 setTimeout(initNotificationWidget, 500);
-            } else {
-                console.warn('通知组件：无法找到导航栏元素');
             }
             return;
         }
@@ -139,25 +137,9 @@
         const list = document.getElementById('notificationList');
         const closeBtn = document.getElementById('closeNotificationModal');
         
-        console.log('初始化通知功能，查找元素:', {
-            iconWrapper: !!iconWrapper,
-            modal: !!modal,
-            badge: !!badge,
-            list: !!list,
-            closeBtn: !!closeBtn
-        });
-        
         if (!iconWrapper || !modal || !badge || !list) {
-            console.error('通知组件：无法找到必要的DOM元素', {
-                iconWrapper: !!iconWrapper,
-                modal: !!modal,
-                badge: !!badge,
-                list: !!list
-            });
             return;
         }
-        
-        console.log('通知组件元素已找到，开始绑定事件');
         
         let notifications = [];
         
@@ -168,7 +150,7 @@
                 modalInstance = new bootstrap.Modal(modal);
             }
         } catch (e) {
-            console.warn('Bootstrap Modal 不可用，将使用手动方式', e);
+            // Bootstrap Modal 不可用，将使用手动方式
         }
         
         // 导出 lastToggleTime 到外部作用域，供点击外部关闭事件使用
@@ -181,12 +163,9 @@
             
             // 检查fetch是否可用（兼容旧浏览器）
             if (typeof fetch === 'undefined') {
-                console.error('通知组件：当前浏览器不支持fetch API');
                 list.innerHTML = '<div class="notification-empty">浏览器不支持，请使用现代浏览器</div>';
                 return;
             }
-            
-            console.log('通知组件：开始加载通知，URL:', apiUrl);
             
             fetch(apiUrl, {
                 method: 'GET',
@@ -197,50 +176,25 @@
                 credentials: 'same-origin',
             })
             .then(response => {
-                console.log('通知组件：收到响应，状态:', response.status);
-                
                 if (!response.ok) {
-                    // 详细记录错误信息
-                    console.error('通知组件：API返回错误状态', {
-                        status: response.status,
-                        statusText: response.statusText,
-                        url: apiUrl
-                    });
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                // 检查Content-Type
-                const contentType = response.headers.get('Content-Type') || '';
-                if (!contentType.includes('application/json') && !contentType.includes('text/json')) {
-                    console.warn('通知组件：响应Content-Type异常:', contentType);
                 }
                 
                 return response.json();
             })
             .then(data => {
-                console.log('通知组件：解析响应数据', {
-                    type: typeof data,
-                    isArray: Array.isArray(data),
-                    hasResults: !!(data && data.results),
-                    hasNotifications: !!(data && data.notifications)
-                });
-                
                 // 处理分页格式：{count: 5, results: [...]} 或数组格式
                 if (data && data.results && Array.isArray(data.results)) {
                     // 分页格式
                     notifications = data.results || [];
-                    console.log('通知组件：使用分页格式，通知数:', notifications.length);
                 } else if (Array.isArray(data)) {
                     // 数组格式
                     notifications = data;
-                    console.log('通知组件：使用数组格式，通知数:', notifications.length);
                 } else if (data && data.notifications && Array.isArray(data.notifications)) {
                     // 旧格式兼容
                     notifications = data.notifications;
-                    console.log('通知组件：使用旧格式，通知数:', notifications.length);
                 } else {
                     notifications = [];
-                    console.warn('通知组件：无法识别响应格式', data);
                 }
                 
                 // 获取未读数量
@@ -248,19 +202,11 @@
                     return !n.is_read;
                 }).length;
                 
-                console.log('通知组件：未读通知数:', unreadCount);
                 updateBadge(unreadCount);
                 renderNotifications();
             })
             .catch(error => {
-                console.error('通知组件：加载通知失败', {
-                    error: error,
-                    message: error.message,
-                    stack: error.stack,
-                    url: apiUrl
-                });
-                
-                // 显示更详细的错误信息（仅在开发环境）
+                // 显示错误信息
                 let errorMsg = '加载失败，请刷新页面重试';
                 if (error.message) {
                     errorMsg += '<br><small>' + escapeHtml(error.message) + '</small>';
@@ -362,7 +308,7 @@
                 }
             })
             .catch(error => {
-                console.error('标记已读失败:', error);
+                // 标记已读失败，静默处理
             });
         }
         
@@ -423,7 +369,6 @@
         
         // 打开模态框
         function openModal() {
-            console.log('打开通知模态框');
             // 先加载通知
             loadNotifications();
             
@@ -446,8 +391,6 @@
         
         // 关闭模态框
         function closeModal() {
-            console.log('关闭通知模态框');
-            
             // 在关闭之前，先移除焦点，避免 aria-hidden 警告
             const activeElement = document.activeElement;
             if (activeElement && modal.contains(activeElement)) {
@@ -476,7 +419,6 @@
         
         // 绑定图标点击事件
         iconWrapper.addEventListener('click', function(e) {
-            console.log('通知图标被点击');
             e.stopPropagation();
             e.preventDefault();
             openModal();
@@ -492,7 +434,7 @@
         
         // 监听模态框关闭事件
         modal.addEventListener('hidden.bs.modal', function() {
-            console.log('模态框已关闭');
+            // 模态框已关闭
         });
         
         // 页面加载时加载通知
