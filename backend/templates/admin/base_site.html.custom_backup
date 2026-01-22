@@ -1,0 +1,399 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+{# 引入 Admin 自定义样式 - 确保与前端样式完全隔离 #}
+<link rel="stylesheet" href="{% static 'css/admin/admin.css' %}">
+<style>
+    /* Admin 样式隔离 - 阻止前端样式影响 */
+    /* 确保在 admin 页面中，前端样式不会生效 */
+    
+    /* 阻止前端 common.css 等全局样式的影响 */
+    html[data-in-admin="1"] {
+        /* 重置可能被前端样式影响的属性 */
+    }
+    
+    /* 确保 admin 页面只使用 admin 样式 */
+    body.change-list,
+    body.change-form,
+    body.delete-confirmation,
+    body.add-form {
+        /* 确保这些页面使用 admin 样式 */
+    }
+</style>
+{% endblock %}
+
+{% block extrahead %}
+  <script>
+    // 阻止前端 CSS 文件加载（在样式加载之前执行）
+    (function() {
+        'use strict';
+        
+        // 阻止加载前端样式文件
+        function blockFrontendCSS() {
+            // 拦截 link 标签的创建
+            const originalCreateElement = document.createElement;
+            document.createElement = function(tagName) {
+                const element = originalCreateElement.call(document, tagName);
+                if (tagName.toLowerCase() === 'link') {
+                    const originalSetAttribute = element.setAttribute;
+                    element.setAttribute = function(name, value) {
+                        // 阻止加载前端样式文件
+                        if (name === 'href' && value && (
+                            value.includes('css/common.css') ||
+                            value.includes('css/components/') ||
+                            value.includes('css/core/') ||
+                            value.includes('css/layouts/') ||
+                            value.includes('bootstrap.min.css') ||
+                            value.includes('bootstrap-icons') ||
+                            (value.includes('.css') && !value.includes('admin/css') && !value.includes('css/admin'))
+                        )) {
+                            // 检查是否在 admin 页面
+                            if (window.location.pathname.startsWith('/admin/') || 
+                                document.documentElement.dataset.inAdmin === '1') {
+                                console.warn('[Admin] 阻止加载前端样式文件:', value);
+                                return; // 不设置 href 属性，阻止加载
+                            }
+                        }
+                        return originalSetAttribute.call(this, name, value);
+                    };
+                }
+                return element;
+            };
+        }
+        
+        // 移除已加载的前端样式文件
+        function removeFrontendCSS() {
+            const links = document.querySelectorAll('link[rel="stylesheet"]');
+            links.forEach(function(link) {
+                const href = link.getAttribute('href') || '';
+                // 在 admin 页面中，移除前端样式（保留 admin 样式）
+                if ((window.location.pathname.startsWith('/admin/') || 
+                     document.documentElement.dataset.inAdmin === '1') &&
+                    (href.includes('css/common.css') ||
+                     href.includes('css/components/') ||
+                     href.includes('css/core/') ||
+                     href.includes('css/layouts/') ||
+                     href.includes('bootstrap.min.css') ||
+                     href.includes('bootstrap-icons')) &&
+                    !href.includes('admin/css') &&
+                    !href.includes('css/admin')) {
+                    console.warn('[Admin] 移除前端样式文件:', href);
+                    link.remove();
+                }
+            });
+        }
+        
+        // 立即执行
+        blockFrontendCSS();
+        removeFrontendCSS();
+        
+        // DOM 加载后执行
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                removeFrontendCSS();
+            });
+        } else {
+            removeFrontendCSS();
+        }
+        
+        // 使用 MutationObserver 监听新添加的 link 标签
+        if (typeof MutationObserver !== 'undefined') {
+            const observer = new MutationObserver(function(mutations) {
+                removeFrontendCSS();
+            });
+            
+            if (document.head) {
+                observer.observe(document.head, {
+                    childList: true,
+                    subtree: true
+                });
+            } else {
+                const headObserver = new MutationObserver(function(mutations) {
+                    if (document.head) {
+                        observer.observe(document.head, {
+                            childList: true,
+                            subtree: true
+                        });
+                        headObserver.disconnect();
+                    }
+                });
+                headObserver.observe(document.documentElement, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        }
+        
+        // 延迟执行（确保捕获所有动态加载的样式）
+        setTimeout(removeFrontendCSS, 100);
+        setTimeout(removeFrontendCSS, 500);
+        setTimeout(removeFrontendCSS, 1000);
+    })();
+  </script>
+  <script>
+    // 立即移除业务系统的导航栏和侧边栏
+    (function() {
+        'use strict';
+        
+        // 立即检查并移除
+        function immediateRemove() {
+            // 移除 navbar
+            var navbars = document.querySelectorAll("nav.navbar, .navbar");
+            for (var i = 0; i < navbars.length; i++) {
+                var navbar = navbars[i];
+                if (navbar.id !== "header" && !navbar.closest("#header")) {
+                    navbar.remove();
+                }
+            }
+            
+            // 移除侧边栏
+            var sidebars = document.querySelectorAll(".vh-sb, .workspace-nav, .workspace-sidebar, .sidebar-nav, .module-sidebar, aside[class*='sidebar'], aside[class*='vh-sb']");
+            for (var i = 0; i < sidebars.length; i++) {
+                sidebars[i].remove();
+            }
+            
+            // 移除 #app 元素
+            var appElement = document.getElementById('app');
+            if (appElement) {
+                appElement.remove();
+            }
+        }
+        
+        // 立即执行（如果 DOM 已加载）
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            immediateRemove();
+        }
+        
+        // DOM 加载完成后执行
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', immediateRemove);
+        } else {
+            immediateRemove();
+        }
+        
+        // 使用 MutationObserver 监听 DOM 变化（立即开始监听）
+        if (typeof MutationObserver !== 'undefined') {
+            var observer = new MutationObserver(function(mutations) {
+                immediateRemove();
+            });
+            
+            // 立即开始观察（如果 body 存在）
+            if (document.body) {
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            } else {
+                // 如果 body 不存在，等待它出现
+                var bodyObserver = new MutationObserver(function(mutations) {
+                    if (document.body) {
+                        observer.observe(document.body, {
+                            childList: true,
+                            subtree: true
+                        });
+                        bodyObserver.disconnect();
+                    }
+                });
+                bodyObserver.observe(document.documentElement, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        }
+    })();
+  </script>
+  <script>
+    // 硬禁用业务前端系统
+    window.__DISABLE_BUSINESS_APP__ = true;
+    document.documentElement.dataset.inAdmin = "1";
+    
+    // 阻止前端 Vue 应用的脚本加载
+    (function() {
+        const originalCreateElement = document.createElement;
+        document.createElement = function(tagName) {
+            const element = originalCreateElement.call(document, tagName);
+            if (tagName.toLowerCase() === 'script') {
+                const originalSetAttribute = element.setAttribute;
+                element.setAttribute = function(name, value) {
+                    // 阻止加载前端 Vue 应用的 JS 文件
+                    if (name === 'src' && value && (
+                        value.includes('app.js') ||
+                        value.includes('chunk-vendors') ||
+                        value.includes('main.js') ||
+                        value.includes('/js/app.') ||
+                        value.includes('/static/js/app.')
+                    )) {
+                        console.warn('[Admin] 阻止加载前端 Vue 应用:', value);
+                        return; // 不设置 src 属性，阻止加载
+                    }
+                    return originalSetAttribute.call(this, name, value);
+                };
+            }
+            return element;
+        };
+    })();
+    
+    // 移除已加载的前端 Vue 应用脚本
+    (function() {
+        function removeVueScripts() {
+            const scripts = document.querySelectorAll('script[src]');
+            scripts.forEach(function(script) {
+                const src = script.getAttribute('src') || '';
+                if (src.includes('app.js') ||
+                    src.includes('chunk-vendors') ||
+                    src.includes('main.js') ||
+                    src.includes('/js/app.') ||
+                    src.includes('/static/js/app.')) {
+                    console.warn('[Admin] 移除前端 Vue 应用脚本:', src);
+                    script.remove();
+                }
+            });
+            
+            // 移除 #app 元素（如果存在）
+            const appElement = document.getElementById('app');
+            if (appElement) {
+                console.warn('[Admin] 移除 #app 元素');
+                appElement.remove();
+
+            
+            }
+        }
+        
+        // 立即执行
+        removeVueScripts();
+        
+        // DOM 加载后执行
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', removeVueScripts);
+        } else {
+            removeVueScripts();
+        }
+        
+        // 延迟执行
+        setTimeout(removeVueScripts, 100);
+        setTimeout(removeVueScripts, 500);
+        setTimeout(removeVueScripts, 1000);
+    })();
+  </script>
+
+{{ block.super }}
+<script>
+// #region agent log
+(function() {
+    'use strict';
+    function logHeaderInfo() {
+        const header = document.getElementById('header');
+        if (!header) {
+            fetch('http://localhost:7242/ingest/e86d1c26-07f6-4bed-9c08-f59bc946e9f7', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    location: 'base_site.html:header-diagnostic',
+                    message: 'Header element not found',
+                    data: {path: window.location.pathname},
+                    timestamp: Date.now(),
+                    sessionId: 'debug-session',
+                    runId: 'run1',
+                    hypothesisId: 'A'
+                })
+            }).catch(() => {});
+            return;
+        }
+        
+        const computedStyle = window.getComputedStyle(header);
+        const rect = header.getBoundingClientRect();
+        const bodyStyle = window.getComputedStyle(document.body);
+        
+        const info = {
+            headerTop: rect.top,
+            headerPosition: computedStyle.position,
+            headerTopValue: computedStyle.top,
+            bodyPaddingTop: bodyStyle.paddingTop,
+            bodyMarginTop: bodyStyle.marginTop,
+            htmlPaddingTop: window.getComputedStyle(document.documentElement).paddingTop,
+            htmlMarginTop: window.getComputedStyle(document.documentElement).marginTop,
+            path: window.location.pathname
+        };
+        
+        fetch('http://localhost:7242/ingest/e86d1c26-07f6-4bed-9c08-f59bc946e9f7', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                location: 'base_site.html:header-diagnostic',
+                message: 'Header position diagnostic',
+                data: info,
+                timestamp: Date.now(),
+                sessionId: 'debug-session',
+                runId: 'run1',
+                hypothesisId: 'A'
+            })
+        }).catch(() => {});
+        
+        // 如果 header 不在顶部，强制修复
+        if (rect.top > 1) {
+            document.body.style.paddingTop = '0';
+            document.body.style.marginTop = '0';
+            document.documentElement.style.paddingTop = '0';
+            document.documentElement.style.marginTop = '0';
+            header.style.top = '0';
+            header.style.marginTop = '0';
+            header.style.paddingTop = '0';
+        }
+    }
+    
+    // 立即执行
+    logHeaderInfo();
+    
+    // DOM 加载后执行
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', logHeaderInfo);
+    } else {
+        logHeaderInfo();
+    }
+    
+    // 延迟执行
+    setTimeout(logHeaderInfo, 100);
+    setTimeout(logHeaderInfo, 500);
+})();
+// #endregion
+</script>
+<script>
+    // 给 admin 页面打标记，供 CSS/JS 统一识别
+    // 这个标记用于强制隐藏业务导航（兜底保护）
+    (function() {
+        if (document.documentElement) {
+            document.documentElement.dataset.inAdmin = "1";
+        } else {
+            // 如果 documentElement 还没准备好，延迟执行
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", function() {
+                    if (document.documentElement) {
+                        document.documentElement.dataset.inAdmin = "1";
+                    }
+                });
+            } else {
+                // DOM 已加载，立即设置
+                setTimeout(function() {
+                    if (document.documentElement) {
+                        document.documentElement.dataset.inAdmin = "1";
+                    }
+                }, 0);
+            }
+        }
+    })();
+</script>
+{% endblock %}

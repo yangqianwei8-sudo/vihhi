@@ -550,14 +550,15 @@ class PlanForm(forms.ModelForm):
                 attrs={
                     'class': 'form-control',
                     'type': 'date',
-                    'placeholder': '请选择计划结束日期'
+                    'placeholder': '系统自动计算',
+                    'readonly': True,
+                    'style': 'background-color: #e9ecef; cursor: not-allowed;'
                 }
             ),
             'responsible_person': forms.Select(attrs={'class': 'form-select'}),
             'responsible_department': forms.Select(attrs={'class': 'form-select'}),
-            'collaboration_plan': forms.Textarea(attrs={
+            'collaboration_plan': forms.TextInput(attrs={
                 'class': 'form-control',
-                'rows': '4',
                 'placeholder': '请输入协作计划内容',
                 'maxlength': '2000'
             }),
@@ -574,6 +575,10 @@ class PlanForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         # 获取is_draft参数，判断是否是草稿模式
         self.is_draft = kwargs.pop('is_draft', False)
+        # 获取has_formset_data参数，判断详细信息表格是否有数据
+        has_formset_data = kwargs.pop('has_formset_data', False)
+        # 保存到实例变量，供 clean() 方法使用
+        self._has_formset_data = has_formset_data
         # 从POST数据中检查action参数
         if 'data' in kwargs and hasattr(kwargs['data'], 'get'):
             action = kwargs['data'].get('action', '')
@@ -588,6 +593,24 @@ class PlanForm(forms.ModelForm):
         # 设置负责人和协作人员查询集
         self.fields['responsible_person'].queryset = User.objects.filter(is_active=True)
         self.fields['participants'].queryset = User.objects.filter(is_active=True)
+        
+        # 设置用户字段的显示格式，只显示姓名（避免显示为"username - full_name"）
+        def label_from_instance(obj):
+            # 优先使用 get_full_name()，如果没有则使用 first_name，最后使用 username
+            if hasattr(obj, 'get_full_name'):
+                full_name = obj.get_full_name().strip()
+                if full_name:
+                    return full_name
+            if hasattr(obj, 'first_name') and obj.first_name:
+                return obj.first_name.strip()
+            if hasattr(obj, 'last_name') and obj.last_name:
+                return obj.last_name.strip()
+            if hasattr(obj, 'username'):
+                return obj.username
+            return str(obj)
+        # 应用到负责人和协作人员字段
+        self.fields['responsible_person'].label_from_instance = label_from_instance
+        self.fields['participants'].label_from_instance = label_from_instance
         
         # 设置部门查询集
         self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
@@ -622,8 +645,9 @@ class PlanForm(forms.ModelForm):
         else:
             # 如果没有传入用户，返回空查询集
             self.fields['related_goal'].queryset = StrategicGoal.objects.none()
-        # 关联战略目标为必填
-        self.fields['related_goal'].required = True
+        # 关联战略目标为必填（除非详细信息表格有数据或草稿模式）
+        if not (has_formset_data or self.is_draft):
+            self.fields['related_goal'].required = True
         
         # 设置父计划查询集（只显示公司计划，排除自己和自己的下级计划）
         base_queryset = Plan.objects.filter(level='company')  # 只显示公司计划
@@ -668,6 +692,11 @@ class PlanForm(forms.ModelForm):
                     seen_projects.add(project_name)
         
         # 将 related_project 改为 ChoiceField，使用商机中的项目数据
+        # 先保存编辑时的初始值（如果存在）
+        related_project_initial = None
+        if self.instance and self.instance.pk and hasattr(self.instance, 'related_project'):
+            related_project_initial = self.instance.related_project
+        
         self.fields['related_project'] = forms.ChoiceField(
             choices=project_choices,
             required=False,
@@ -675,6 +704,10 @@ class PlanForm(forms.ModelForm):
             label='关联项目',
             help_text='项目信息来源于商机管理'
         )
+        
+        # 如果是编辑，恢复关联项目的初始值
+        if related_project_initial:
+            self.fields['related_project'].initial = related_project_initial
         
         # 计划编号字段处理：完全由系统自动生成，但必须显示
         # 新建和编辑时都显示，但都是只读的
@@ -687,24 +720,31 @@ class PlanForm(forms.ModelForm):
             # 新建时：显示提示信息
             self.fields['plan_number'].widget.attrs['placeholder'] = '系统将自动生成'
         
-        # 如果是草稿模式，将必填字段设置为非必填
-        if self.is_draft:
-            # 草稿模式下，允许字段为空
+        # 如果是草稿模式，或者详细信息表格有数据，将基本信息表单的必填字段设置为非必填
+        # 因为基本信息表单只作为默认值提供者，详细信息表格才是主要数据源
+        if self.is_draft or has_formset_data:
+            # 草稿模式或详细信息表格有数据时，基本信息表单的字段允许为空
             if 'name' in self.fields:
                 self.fields['name'].required = False
             if 'related_goal' in self.fields:
                 self.fields['related_goal'].required = False
+            if 'content' in self.fields:
+                self.fields['content'].required = False
+            if 'plan_objective' in self.fields:
+                self.fields['plan_objective'].required = False
             if 'plan_period' in self.fields:
                 self.fields['plan_period'].required = False
             if 'start_time' in self.fields:
                 self.fields['start_time'].required = False
             if 'end_time' in self.fields:
                 self.fields['end_time'].required = False
+            
             # 草稿模式下，所属部门和负责人也允许为空（虽然通常有默认值）
-            if 'responsible_department' in self.fields:
-                self.fields['responsible_department'].required = False
-            if 'responsible_person' in self.fields:
-                self.fields['responsible_person'].required = False
+            if self.is_draft:
+                if 'responsible_department' in self.fields:
+                    self.fields['responsible_department'].required = False
+                if 'responsible_person' in self.fields:
+                    self.fields['responsible_person'].required = False
         
         # 如果是编辑，设置初始值
         if self.instance and self.instance.pk:
@@ -716,6 +756,10 @@ class PlanForm(forms.ModelForm):
                 self.fields['end_time'].initial = self.instance.end_time.date()
         else:
             # 新建时，设置默认值
+            
+            # 设置计划层级默认为个人计划
+            if 'level' in self.fields:
+                self.fields['level'].initial = 'personal'
             
             # 设置开始日期默认为当天
             today = date.today()
@@ -795,8 +839,10 @@ class PlanForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         
-        # 如果是草稿模式，跳过大部分验证，只做基本的数据处理
-        if self.is_draft:
+        # 如果是草稿模式，或者详细信息表格有数据，跳过大部分验证
+        # 因为基本信息表单只作为默认值提供者，详细信息表格才是主要数据源
+        has_formset_data = getattr(self, '_has_formset_data', False)
+        if self.is_draft or has_formset_data:
             # 处理 disabled 字段：如果字段被禁用，从 initial 值获取
             if not self.instance or not self.instance.pk:
                 # 新建时，如果字段被禁用，使用 initial 值
@@ -808,7 +854,7 @@ class PlanForm(forms.ModelForm):
                     if self.fields['responsible_department'].widget.attrs.get('disabled'):
                         if not cleaned_data.get('responsible_department') and self.fields['responsible_department'].initial:
                             cleaned_data['responsible_department'] = self.fields['responsible_department'].initial
-            # 草稿模式下，如果有日期数据，仍然需要转换格式
+            # 草稿模式或详细信息表格有数据时，如果有日期数据，仍然需要转换格式
             start_time = cleaned_data.get('start_time')
             end_time = cleaned_data.get('end_time')
             if start_time:
@@ -1121,4 +1167,168 @@ class PlanAdjustmentForm(forms.ModelForm):
             instance.save()
         
         return instance
+
+
+class PlanItemForm(forms.ModelForm):
+    """计划项表单（用于 FormSet，详细信息区域的计划列表）"""
+    
+    class Meta:
+        model = Plan
+        fields = ['name', 'related_goal', 'related_project', 'content', 'plan_objective', 'collaboration_plan', 'start_time', 'end_time']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control form-control-sm',
+                'placeholder': '请输入计划名称',
+                'maxlength': '200'
+            }),
+            'related_goal': forms.Select(attrs={
+                'class': 'form-select form-select-sm',
+            }),
+            'related_project': forms.TextInput(attrs={
+                'class': 'form-control form-control-sm',
+                'placeholder': '请输入关联项目',
+                'maxlength': '200'
+            }),
+            'content': forms.Textarea(attrs={
+                'class': 'form-control form-control-sm',
+                'placeholder': '请输入计划内容',
+                'rows': 2,
+                'maxlength': '5000'
+            }),
+            'plan_objective': forms.Textarea(attrs={
+                'class': 'form-control form-control-sm',
+                'placeholder': '请输入计划目标',
+                'rows': 2,
+                'maxlength': '1000'
+            }),
+            'collaboration_plan': forms.Textarea(attrs={
+                'class': 'form-control form-control-sm',
+                'placeholder': '请输入协作计划',
+                'rows': 2,
+                'maxlength': '2000'
+            }),
+            'start_time': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'class': 'form-control form-control-sm',
+                    'type': 'date',
+                }
+            ),
+            'end_time': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'class': 'form-control form-control-sm',
+                    'type': 'date',
+                    'readonly': True,
+                    'style': 'background-color: #e9ecef; cursor: not-allowed;'
+                }
+            ),
+        }
+    
+    participants = forms.ModelMultipleChoiceField(
+        queryset=User.objects.filter(is_active=True),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-select form-select-sm'}),
+        label='协作人员'
+    )
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        # 设置负责人和协作人员查询集
+        if user:
+            self.fields['participants'].queryset = User.objects.filter(is_active=True)
+        # 设置关联战略目标查询集（与 PlanForm 保持一致）
+        if 'related_goal' in self.fields:
+            if user:
+                self.fields['related_goal'].queryset = StrategicGoal.objects.filter(
+                    status__in=['published', 'in_progress'],
+                    responsible_person=user
+                )
+            else:
+                self.fields['related_goal'].queryset = StrategicGoal.objects.none()
+        # 设置字段必填性：除协作计划、协作人员、关联项目外，其他字段都为必填
+        # 注意：如果该行被标记为删除（DELETE），则不需要验证
+        # 但如果填写了该行，则除了以下字段外，其他字段必须填写
+        optional_fields = ['collaboration_plan', 'participants', 'related_project', 'DELETE']
+        for field_name, field in self.fields.items():
+            if field_name not in optional_fields:
+                field.required = True
+        
+        # 设置协作人员字段的显示格式，只显示姓名（避免显示为"username - full_name"）
+        if 'participants' in self.fields:
+            def label_from_instance(obj):
+                # 优先使用 get_full_name()，如果没有则使用 first_name，最后使用 username
+                # 这样可以避免显示为"username - full_name"的格式
+                if hasattr(obj, 'get_full_name'):
+                    full_name = obj.get_full_name().strip()
+                    if full_name:
+                        return full_name
+                if hasattr(obj, 'first_name') and obj.first_name:
+                    return obj.first_name.strip()
+                if hasattr(obj, 'last_name') and obj.last_name:
+                    return obj.last_name.strip()
+                if hasattr(obj, 'username'):
+                    return obj.username
+                return str(obj)
+            self.fields['participants'].label_from_instance = label_from_instance
+    
+    def clean(self):
+        """自定义验证：如果该行未被删除，则除协作计划、协作人员、关联项目外，其他字段必填"""
+        cleaned_data = super().clean()
+        
+        # 如果该行被标记为删除，则不需要验证
+        if cleaned_data.get('DELETE'):
+            return cleaned_data
+        
+        # 检查整行是否为空（如果所有必填字段都为空，则视为空行，不需要验证）
+        optional_fields = ['collaboration_plan', 'participants', 'related_project', 'DELETE', 'id']
+        has_any_data = False
+        
+        for field_name, value in cleaned_data.items():
+            if field_name not in optional_fields:
+                if value:
+                    if isinstance(value, str) and value.strip():
+                        has_any_data = True
+                        break
+                    elif not isinstance(value, str):
+                        has_any_data = True
+                        break
+        
+        # 如果整行都是空的，不需要验证（FormSet 会自动忽略空行）
+        if not has_any_data:
+            return cleaned_data
+        
+        # 如果填写了任何字段，则所有必填字段都必须填写
+        required_fields = {
+            'name': '计划名称',
+            'related_goal': '关联战略目标',
+            'content': '计划内容',
+            'plan_objective': '计划目标',
+            'start_time': '开始时间',
+            'end_time': '结束时间',
+        }
+        
+        errors = {}
+        for field_name, field_label in required_fields.items():
+            if field_name in self.fields and field_name not in optional_fields:
+                value = cleaned_data.get(field_name)
+                if not value or (isinstance(value, str) and not value.strip()):
+                    errors[field_name] = self.error_class([f'{field_label}为必填项'])
+        
+        if errors:
+            raise forms.ValidationError(errors)
+        
+        return cleaned_data
+
+
+from django.forms import formset_factory
+
+PlanItemFormSet = formset_factory(
+    PlanItemForm,
+    extra=1,
+    can_delete=True,
+    min_num=0,
+    validate_min=False,
+)
 

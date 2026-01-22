@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block module_styles %}
+  {{ block.super }}
 <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.css" rel="stylesheet">
 <style>
   .pm-home-wrap { padding: 0; }
@@ -73,13 +74,13 @@
 
   <div class="pm-stats-row">
     <div class="pm-warning-card">
-      <div class="pm-card-title">风险预警{% if stale_documents_count %}<span style="font-size: 12px; color: #333333; margin-left: 8px;">(未更新 {{ stale_documents_count|default:0 }})</span>{% endif %}</div>
+      <div class="pm-card-title">风险预警{% if stale_archives_count or overdue_borrows_count %}<span style="font-size: 12px; color: #333333; margin-left: 8px;">(未更新 {{ stale_archives_count|default:0 }} | 逾期 {{ overdue_borrows_count|default:0 }})</span>{% endif %}</div>
       {% if risk_warnings %}
       <ul class="pm-warning-list">
         {% for warning in risk_warnings %}
         <li class="pm-warning-item">
           <div class="pm-item-title"><a href="{{ warning.url }}" class="pm-item-link">{{ warning.title }}</a></div>
-          <div class="pm-item-meta">负责人：{{ warning.responsible }} | {{ warning.days }} 天未更新</div>
+          <div class="pm-item-meta">负责人：{{ warning.responsible }}{% if warning.days %} | {{ warning.days }} 天未更新{% endif %}</div>
         </li>
         {% endfor %}
       </ul>
@@ -91,8 +92,8 @@
       <ul class="pm-todo-list">
         {% for item in todo_items %}
         <li class="pm-todo-item">
-          <div class="pm-item-title"><a href="{{ item.url }}" class="pm-item-link">{{ item.title }}</a>{% if item.document_number %}<span style="font-size: 11px; color: #999; margin-left: 8px;">({{ item.document_number }})</span>{% endif %}</div>
-          <div class="pm-item-meta">{% if item.type == 'review' %}<strong>待审核</strong> | 审核人：{{ item.responsible }}{% elif item.type == 'send' %}<strong>待发出</strong> | 创建人：{{ item.responsible }}{% endif %}</div>
+          <div class="pm-item-title"><a href="{{ item.url }}" class="pm-item-link">{{ item.title }}</a>{% if item.archive_number %}<span style="font-size: 11px; color: #999; margin-left: 8px;">({{ item.archive_number }})</span>{% endif %}</div>
+          <div class="pm-item-meta">{% if item.type == 'archive' %}<strong>待归档</strong> | 申请人：{{ item.responsible }}{% elif item.type == 'borrow' %}<strong>待审批</strong> | 借阅人：{{ item.responsible }}{% endif %}</div>
         </li>
         {% endfor %}
       </ul>
@@ -105,18 +106,18 @@
       <div class="pm-card-title">{% if my_work.summary_url %}<a href="{{ my_work.summary_url }}" style="color: inherit; text-decoration: none;">我的工作</a>{% else %}我的工作{% endif %}</div>
       {% if my_work %}
       <div class="pm-work-section">
-        <div class="pm-work-section-title">我创建的发文 ({{ my_work.my_documents_count|default:0 }})</div>
-        {% if my_work.my_documents %}<ul class="pm-work-list">{% for doc in my_work.my_documents %}<li class="pm-work-item"><a href="{{ doc.url }}" class="pm-work-item-title">{{ doc.title }}</a><span class="pm-work-item-meta">{{ doc.status }}</span></li>{% endfor %}</ul>{% else %}<div class="pm-empty" style="padding: 20px;">暂无数据</div>{% endif %}
+        <div class="pm-work-section-title">我申请的项目归档 ({{ my_work.my_archives_count|default:0 }})</div>
+        {% if my_work.my_archives %}<ul class="pm-work-list">{% for archive in my_work.my_archives %}<li class="pm-work-item"><a href="{{ archive.url }}" class="pm-work-item-title">{{ archive.title }}</a><span class="pm-work-item-meta">{{ archive.status }}</span></li>{% endfor %}</ul>{% else %}<div class="pm-empty" style="padding: 20px;">暂无数据</div>{% endif %}
       </div>
       <div class="pm-work-section">
-        <div class="pm-work-section-title">我审核的发文 ({{ my_work.reviewed_documents_count|default:0 }})</div>
-        {% if my_work.reviewed_documents %}<ul class="pm-work-list">{% for doc in my_work.reviewed_documents %}<li class="pm-work-item"><a href="{{ doc.url }}" class="pm-work-item-title">{{ doc.title }}</a><span class="pm-work-item-meta">{{ doc.status }}</span></li>{% endfor %}</ul>{% else %}<div class="pm-empty" style="padding: 20px;">暂无数据</div>{% endif %}
+        <div class="pm-work-section-title">我借阅的档案 ({{ my_work.my_borrows_count|default:0 }})</div>
+        {% if my_work.my_borrows %}<ul class="pm-work-list">{% for borrow in my_work.my_borrows %}<li class="pm-work-item"><a href="{{ borrow.url }}" class="pm-work-item-title">{{ borrow.title }}</a><span class="pm-work-item-meta">{{ borrow.status }}</span></li>{% endfor %}</ul>{% else %}<div class="pm-empty" style="padding: 20px;">暂无数据</div>{% endif %}
       </div>
       {% else %}<div class="pm-empty">暂无数据</div>{% endif %}
     </div>
     <div class="pm-activities-card">
       <div class="pm-card-title">最近活动</div>
-      {% if recent_activities %}<ul class="pm-activity-list">{% for doc in recent_activities.recent_documents %}<li class="pm-activity-item"><div class="pm-activity-title"><a href="{{ doc.url }}" class="pm-item-link">📤 {{ doc.title }}</a></div><div class="pm-activity-meta">{{ doc.creator }} 创建于 {{ doc.time|date:"Y-m-d H:i" }}</div></li>{% endfor %}{% for doc in recent_activities.recent_updates %}<li class="pm-activity-item"><div class="pm-activity-title"><a href="{{ doc.url }}" class="pm-item-link">🔄 {{ doc.title }}</a></div><div class="pm-activity-meta">{{ doc.updater }} 更新于 {{ doc.time|date:"Y-m-d H:i" }}</div></li>{% endfor %}</ul>{% else %}<div class="pm-empty">暂无活动记录</div>{% endif %}
+      {% if recent_activities %}<ul class="pm-activity-list">{% for archive in recent_activities.recent_archives %}<li class="pm-activity-item"><div class="pm-activity-title"><a href="{{ archive.url }}" class="pm-item-link">📁 {{ archive.title }}</a></div><div class="pm-activity-meta">{{ archive.creator }} 创建于 {{ archive.time|date:"Y-m-d H:i" }}</div></li>{% endfor %}{% for borrow in recent_activities.recent_borrows %}<li class="pm-activity-item"><div class="pm-activity-title"><a href="{{ borrow.url }}" class="pm-item-link">📖 {{ borrow.title }}</a></div><div class="pm-activity-meta">{{ borrow.creator }} 创建于 {{ borrow.time|date:"Y-m-d H:i" }}</div></li>{% endfor %}</ul>{% else %}<div class="pm-empty">暂无活动记录</div>{% endif %}
     </div>
   </div>
 </div>

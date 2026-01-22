@@ -39,8 +39,6 @@
 
 {% block module_styles %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'css/components/create_form_base.css' %}">
-
 {% endblock module_styles %}
 
 {% block pm_title %}{% block form_title %}创建表单{% endblock form_title %}{% endblock pm_title %}
@@ -260,12 +258,24 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // 表单验证
   form.addEventListener('submit', function(e) {
+    // #region agent log
+    fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create_form_base.html:262',message:'父模板表单提交事件触发',data:{submitterName:e.submitter?.name,submitterValue:e.submitter?.value,defaultPrevented:e.defaultPrevented,formAction:form.action,formMethod:form.method},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     const clickedButton = e.submitter;
     const isDraft = clickedButton && clickedButton.name === 'action' && clickedButton.value === 'draft';
+    
+    // #region agent log
+    fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create_form_base.html:267',message:'父模板判断是否为草稿',data:{isDraft:isDraft},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     
     if (!isDraft) {
       const requiredFields = form.querySelectorAll('[required]');
       let hasError = false;
+      
+      // #region agent log
+      fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create_form_base.html:272',message:'父模板检查必填字段',data:{requiredFieldsCount:requiredFields.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       
       requiredFields.forEach(function(field) {
         if (field.hasAttribute('disabled')) return;
@@ -277,15 +287,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
       
+      // #region agent log
+      fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create_form_base.html:283',message:'父模板验证结果',data:{hasError:hasError},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      
       if (hasError) {
+        // #region agent log
+        fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create_form_base.html:286',message:'父模板阻止表单提交 - 必填字段验证失败',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         e.preventDefault();
         const firstError = form.querySelector('.is-invalid');
         if (firstError) {
           firstError.focus();
           firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+        return false;
       }
     }
+    
+    // #region agent log
+    fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create_form_base.html:295',message:'父模板提交事件处理完成',data:{defaultPrevented:e.defaultPrevented,willSubmit:!e.defaultPrevented},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
   });
 });
 </script>

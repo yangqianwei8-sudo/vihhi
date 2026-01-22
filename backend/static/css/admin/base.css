@@ -2,6 +2,35 @@
 
 @import url('./variables.css');
 
+/* ========== 样式隔离 - 确保前端样式不影响 Admin ========== */
+/* 在 admin 页面中，阻止前端样式的影响 */
+html[data-in-admin="1"],
+html[data-in-admin="1"] body,
+body.change-list,
+body.change-form,
+body.delete-confirmation,
+body.add-form {
+    /* 重置可能被前端样式影响的属性 */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+/* 确保 admin 页面不继承前端样式的全局设置 */
+html[data-in-admin="1"] * {
+    /* 确保前端样式不会意外覆盖 admin 样式 */
+    box-sizing: border-box;
+}
+
+/* 阻止前端样式中的全局选择器影响 admin */
+html[data-in-admin="1"] .workspace,
+html[data-in-admin="1"] .workspace-content,
+html[data-in-admin="1"] .customer-content,
+html[data-in-admin="1"] .app-wrapper {
+    /* 这些是前端专用的容器，在 admin 中不应该存在 */
+    display: none !important;
+}
+
+/* ========== 样式隔离结束 ========== */
+
 /* 全局重置 */
 * {
     box-sizing: border-box;

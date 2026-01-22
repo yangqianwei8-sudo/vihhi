@@ -1633,4 +1633,4 @@ def settlement_home(request):
     # 合并所有数据
     page_context.update(context)
     
-    return render(request, "settlement_management/home.html", page_context)
+    return render(request, "settlement_management/settlement_management_home.html", page_context)

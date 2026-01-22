@@ -101,8 +101,8 @@
   try {
     const modal = document.getElementById('feedbackModal');
     if (!modal) {
-      console.error('反馈模态框未找到，请检查页面是否包含反馈表单模板');
-      alert('反馈功能暂时不可用，请刷新页面后重试');
+      // 静默处理：如果模态框不存在，说明当前页面不支持反馈功能
+      // 不显示错误提示，避免干扰用户
       return;
     }
     if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -112,12 +112,18 @@
       // jQuery Bootstrap 3 兼容
       $(modal).modal('show');
     } else {
-      console.error('Bootstrap未加载，无法打开反馈弹窗');
-      alert('页面资源加载异常，请刷新页面后重试');
+      // Bootstrap 未加载，等待一下再试
+      setTimeout(function() {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+          const bsModal = new bootstrap.Modal(modal);
+          bsModal.show();
+        } else {
+          console.warn('Bootstrap未加载，无法打开反馈弹窗');
+        }
+      }, 500);
     }
   } catch (e) {
-    console.error('打开反馈弹窗时出错：', e);
-    alert('打开反馈功能时出错，请刷新页面后重试');
+    console.warn('打开反馈弹窗时出错：', e);
   }
 })();" style="cursor: pointer;">反馈</div>
 

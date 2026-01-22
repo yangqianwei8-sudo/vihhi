@@ -33,7 +33,7 @@
 - detail_system_info_card: 系统信息卡片
 
 布局说明：
-- form-row-5: 使用 CSS Grid 布局，自动排列为5列（响应式调整）
+- form-row-5: 使用继承的 flex 布局，自动排列为5列（响应式调整）
 - row: 使用 Bootstrap row，配合 col-12 用于多行文本字段
 - 所有卡片使用直角设计（border-radius: 0）
 - 所有样式使用黑白灰主题
@@ -56,18 +56,20 @@
   {#    {% extends "shared/detail_base.html" %} #}
 
 2. 覆盖标题：
-   - form-row-5: 5列网格布局，自动响应式
+   - form-row-5: 5列 flex 布局，自动响应式（继承自 create_form_base.css）
    - row + col-12: 多行文本字段
    - 所有字段必须在 detail_basic_info_card block 内
 
 5. 样式说明：
    - 黑白灰主题，直角设计
    - 使用 CSS 变量定义颜色
-   - form-row-5 强制使用 grid 布局（!important）
+   - form-row-5 使用继承的 flex 布局样式
 #}
 
 {% block module_styles %}
   {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/common.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components/create_form_base.css' %}">
   <style>
     /* ==================== 黑白灰主题样式 ==================== */
     
@@ -144,6 +146,10 @@
       color: var(--color-black);
       line-height: 1.5;
       min-height: 20px;
+      background: var(--color-lightest);
+      padding: 8px 12px;
+      border: 1px solid var(--color-lighter);
+      border-radius: 0;
     }
     
     /* 多行文本样式 */
@@ -156,50 +162,6 @@
       border-radius: 0;
     }
     
-    /* 黑白灰徽章样式 */
-    .badge-status {
-      padding: 4px 8px;
-      border-radius: 0;
-      font-size: 12px;
-      font-weight: 500;
-      border: 1px solid transparent;
-    }
-    
-    .badge-draft { 
-      background-color: var(--color-lighter);
-      color: var(--color-gray-dark);
-      border-color: var(--color-light);
-    }
-    .badge-pending { 
-      background-color: var(--color-light);
-      color: var(--color-dark);
-      border-color: var(--color-gray-light);
-    }
-    .badge-approved { 
-      background-color: var(--color-white);
-      color: var(--color-dark);
-      border: 1px solid var(--color-gray);
-    }
-    .badge-rejected { 
-      background-color: var(--color-gray-light);
-      color: var(--color-white);
-      border-color: var(--color-gray);
-    }
-    .badge-active { 
-      background-color: var(--color-lighter);
-      color: var(--color-dark);
-      border: 1px solid var(--color-dark);
-    }
-    .badge-inactive { 
-      background-color: var(--color-lightest);
-      color: var(--color-gray);
-      border: 1px solid var(--color-light);
-    }
-    .badge-completed { 
-      background-color: var(--color-white);
-      color: var(--color-dark);
-      border: 1px solid var(--color-black);
-    }
     
     /* 操作按钮栏 */
     .detail-actions-bar {
@@ -390,20 +352,7 @@
       letter-spacing: 0.5px;
     }
     
-    /* 网格布局 */
-    .form-row-5 {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 16px;
-    }
-    
     /* 响应式调整 */
-    @media (max-width: 1200px) {
-      .form-row-5 {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-    
     @media (max-width: 768px) {
       .detail-card-wrapper {
         margin-bottom: 16px;
@@ -421,16 +370,6 @@
       
       .detail-actions-bar {
         padding: 12px;
-      }
-      
-      .form-row-5 {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-    
-    @media (max-width: 576px) {
-      .form-row-5 {
-        grid-template-columns: 1fr;
       }
     }
     
@@ -466,8 +405,7 @@
       {% block detail_edit_button %}
       {% if can_edit %}
       <a href="{% block detail_edit_url %}#{% endblock %}" class="btn btn-light">
-        <i class="fas fa-edit"></i>
-        编辑
+        <i class="fas fa-edit"></i> 编辑
       </a>
       {% endif %}
       {% endblock detail_edit_button %}
@@ -475,8 +413,7 @@
       {% block detail_delete_button %}
       {% if can_delete %}
       <button type="button" class="btn btn-gray" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal">
-        <i class="fas fa-trash"></i>
-        删除
+        <i class="fas fa-trash"></i> 删除
       </button>
       {% endif %}
       {% endblock detail_delete_button %}
@@ -484,8 +421,7 @@
       {% block detail_approval_button_header %}
       {% if can_approve %}
       <a href="{% block detail_approval_url %}#{% endblock %}" class="btn btn-outline-black">
-        <i class="fas fa-check-circle"></i>
-        审批
+        <i class="fas fa-check-circle"></i> 审批
       </a>
       {% endif %}
       {% endblock detail_approval_button_header %}
@@ -497,18 +433,18 @@
   </div>
 
 
-{# ==================== 卡片1：基本信息 ==================== #}
+{# ==================== 卡片1：表单信息 ==================== #}
 {% block detail_basic_info_card %}
 <div class="detail-card-wrapper detail-card-wrapper-basic-info">
   <div class="detail-card detail-card-basic-info">
   <div class="detail-card-header">
     <h3 class="detail-card-title">
       <i class="fas fa-info-circle"></i>
-      基本信息
+      表单信息
     </h3>
   </div>
   <div class="detail-card-body">
-    {# 第一排：计划编号、计划名称、计划层级、计划周期、计划状态（5个字段） #}
+    {# 第一排：计划编号、计划名称、计划层级、计划周期（4个字段，计划状态已移至状态信息卡片） #}
     <div class="form-row-5 mb-3">
       {% block detail_basic_info_row1 %}
       {# 计划编号 #}
@@ -547,19 +483,8 @@
           </div>
         </div>
       </div>
-      {# 计划状态 #}
-      <div class="col-5-fields detail-field-wrapper">
-        <div class="detail-field">
-          <label class="detail-field-label">计划状态</label>
-          <div class="detail-field-value">
-            {% if object.status %}
-              <span class="badge badge-status badge-{{ object.status }}">
-                {{ object.get_status_display|default:object.status }}
-              </span>
-            {% else %}N/A{% endif %}
-          </div>
-        </div>
-      </div>
+      {# 空占位符，移除计划状态（状态信息已在状态信息卡片中显示） #}
+      <div class="col-5-fields detail-field-wrapper"></div>
       {% endblock detail_basic_info_row1 %}
     </div>
     

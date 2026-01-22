@@ -11,6 +11,174 @@
   <!-- 只引入 common.css，它已经包含了所有必要的样式 -->
   <link rel="stylesheet" href="{% static 'css/common.css' %}">
 
+  <!-- Bootstrap CDN 备用加载脚本（完全动态加载，修复 SSL 错误） -->
+  <script>
+    // Bootstrap CDN 备用加载脚本（完全动态加载，修复 SSL 错误）
+    (function() {
+      var bootstrapCDNs = {
+        css: [
+          '{% static "css/bootstrap.min.css" %}',
+          'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
+          'https://unpkg.com/bootstrap@5.3.0/dist/css/bootstrap.min.css',
+          'https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css',
+          'https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css',
+          'https://cdn.staticfile.org/bootstrap/5.3.0/css/bootstrap.min.css'
+        ],
+        icons: [
+          '{% static "css/bootstrap-icons.min.css" %}',
+          'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css',
+          'https://unpkg.com/bootstrap-icons@1.11.0/font/bootstrap-icons.css',
+          'https://cdn.bootcdn.net/ajax/libs/bootstrap-icons/1.11.0/font/bootstrap-icons.min.css',
+          'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.0/font/bootstrap-icons.min.css',
+          'https://cdn.staticfile.org/bootstrap-icons/1.11.0/font/bootstrap-icons.min.css'
+        ],
+        js: [
+          '{% static "js/bootstrap.bundle.min.js" %}',
+          'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
+          'https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
+          'https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js',
+          'https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js',
+          'https://cdn.staticfile.org/bootstrap/5.3.0/js/bootstrap.bundle.min.js'
+        ]
+      };
+      
+      // 检测资源是否真正加载成功
+      function checkResourceLoaded(url, type) {
+        return new Promise(function(resolve, reject) {
+          if (type === 'css' || type === 'icons') {
+            // 对于 CSS，检查样式表是否已加载
+            var sheets = document.styleSheets;
+            for (var i = 0; i < sheets.length; i++) {
+              try {
+                if (sheets[i].href && (sheets[i].href.indexOf('bootstrap') !== -1 || sheets[i].href === url)) {
+                  resolve(true);
+                  return;
+                }
+              } catch (e) {
+                // 跨域样式表可能无法访问
+              }
+            }
+            // 尝试通过 fetch 检测（使用 no-cors 模式避免 CORS 问题）
+            fetch(url, {method: 'HEAD', mode: 'no-cors'})
+              .then(function() { resolve(true); })
+              .catch(function() { 
+                // 即使 fetch 失败，也可能是因为 CORS，所以检查样式表数量
+                setTimeout(function() {
+                  var newSheetsCount = document.styleSheets.length;
+                  if (newSheetsCount > sheets.length) {
+                    resolve(true);
+                  } else {
+                    reject(false);
+                  }
+                }, 1000);
+              });
+          } else {
+            // 对于 JS，检查全局对象
+            if (window.bootstrap) {
+              resolve(true);
+            } else {
+              reject(false);
+            }
+          }
+        });
+      }
+      
+      function loadResource(type, urls, index) {
+        index = index || 0;
+        if (index >= urls.length) {
+          console.error('Bootstrap ' + type + ' 加载失败：所有 CDN 均不可用。请检查网络连接或联系管理员。');
+          return;
+        }
+        
+        var url = urls[index];
+        var element;
+        
+        if (type === 'css' || type === 'icons') {
+          element = document.createElement('link');
+          element.rel = 'stylesheet';
+          element.href = url;
+          
+          element.onload = function() {
+            // 验证资源是否真正可用
+            setTimeout(function() {
+              checkResourceLoaded(url, type).catch(function() {
+                // 验证失败，但 onload 已触发，可能是误报
+              });
+            }, 100);
+          };
+          
+          element.onerror = function() {
+            if (this.parentNode) {
+              this.parentNode.removeChild(this);
+            }
+            loadResource(type, urls, index + 1);
+          };
+          
+          document.head.appendChild(element);
+          
+          // 主动检测：如果 5 秒后资源仍未加载，尝试备用 CDN
+          setTimeout(function() {
+            if (element.parentNode) {
+              checkResourceLoaded(url, type)
+                .then(function() {
+                  // 资源已加载成功
+                })
+                .catch(function() {
+                  // 资源未加载，切换到备用 CDN
+                  if (element.parentNode) {
+                    element.parentNode.removeChild(element);
+                    loadResource(type, urls, index + 1);
+                  }
+                });
+            }
+          }, 5000);
+          
+        } else if (type === 'js') {
+          element = document.createElement('script');
+          element.src = url;
+          
+          element.onload = function() {
+            // JS 加载成功
+          };
+          
+          element.onerror = function() {
+            if (this.parentNode) {
+              this.parentNode.removeChild(this);
+            }
+            loadResource(type, urls, index + 1);
+          };
+          
+          // JS 可以添加到 head 或 body，优先添加到 head（在 head 中执行时）
+          // 如果 body 已存在且不在 head 中执行，添加到 body；否则添加到 head
+          if (document.body && document.readyState !== 'loading') {
+            document.body.appendChild(element);
+          } else {
+            document.head.appendChild(element);
+          }
+        }
+      }
+      
+      // 立即加载 CSS、Icons 和 JS（不等待 window.load），确保资源尽早加载
+      // 注意：如果 common.css 已包含 Bootstrap 样式，这些加载会被忽略或作为备用
+      loadResource('css', bootstrapCDNs.css);
+      loadResource('icons', bootstrapCDNs.icons);
+      loadResource('js', bootstrapCDNs.js);
+      
+      // 监听全局错误事件，捕获 SSL 错误
+      window.addEventListener('error', function(e) {
+        if (e.filename && e.filename.indexOf('bootstrap') !== -1) {
+          // SSL 错误或其他错误，备用 CDN 会自动处理
+        }
+      }, true);
+      
+      // 将 loadResource 函数暴露到全局，供底部脚本使用
+      window.loadBootstrapResource = function(type, urls, index) {
+        loadResource(type, urls, index);
+      };
+      window.bootstrapCDNs = bootstrapCDNs;
+    })();
+  </script>
+
   <!-- 自定义样式变量 -->
   <style>
     :root {
@@ -44,6 +212,29 @@
 
       --vh-divider: #E0E0E0;
       --vh-overlay: rgba(0, 0, 0, 0.5);
+    }
+
+    /* 主标题下划线样式 */
+    .page-title-underline {
+      width: 100% !important;
+      height: 1px !important;
+      background-color: var(--vh-border-primary, #000000) !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    /* 主标题和副标题与左边栏的距离 */
+    .two-col-content > .d-flex.align-items-end.justify-content-between {
+      padding-left: 8px !important;
+    }
+    
+    /* 下划线样式 - 使用后代选择器，因为下划线在 page_header block 内部 */
+    .two-col-content .page-title-underline {
+      margin-left: 8px !important;
+      width: calc(100% - 8px) !important;
     }
 
     /* 确保 body 在有两栏布局时不滚动 */
@@ -131,7 +322,7 @@
         <div class="two-col-content">
           {% block page_header %}
             <div class="d-flex align-items-end justify-content-between">
-              <div>
+              <div style="flex: 1; min-width: 0;">
                 <h1 class="h3">{% block page_title %}{% endblock page_title %}</h1>
                 {% block page_subtitle %}{% endblock page_subtitle %}
               </div>
@@ -139,6 +330,8 @@
                 {% block page_actions %}{% endblock page_actions %}
               </div>
             </div>
+            <!-- 主标题下划线 -->
+            <div class="page-title-underline"></div>
           {% endblock page_header %}
 
           {% block content_inner %}{% endblock content_inner %}
@@ -149,52 +342,87 @@
 
   <!-- JavaScript 资源 -->
   {% block base_scripts %}
-    <!-- Bootstrap JS 动态加载脚本 -->
+    <!-- Bootstrap JS 动态加载脚本（使用完善的资源检测和备用 CDN） -->
     <script>
       (function() {
-        var RESOURCE_LOAD_TIMEOUT = 5000;
-        var localBootstrap = {
-          js: '{% static "js/bootstrap.bundle.min.js" %}'
-        };
-        var bootstrapCDNs = {
+        // 如果 head 中的脚本已暴露函数，使用它；否则使用本地实现
+        var loadResource = window.loadBootstrapResource;
+        var bootstrapCDNs = window.bootstrapCDNs || {
           js: [
-            localBootstrap.js,
+            '{% static "js/bootstrap.bundle.min.js" %}',
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
-            'https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'
+            'https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
+            'https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js',
+            'https://cdn.staticfile.org/bootstrap/5.3.0/js/bootstrap.bundle.min.js'
           ]
         };
         
-        function loadResource(type, urls, index) {
-          index = index || 0;
-          if (index >= urls.length) {
-            console.error('Bootstrap JS 加载失败：所有 CDN 均不可用。');
-            return;
-          }
-          
-          var url = urls[index];
-          var element = document.createElement('script');
-          element.src = url;
-          
-          element.onload = function() {
-            // JS 加载成功
-          };
-          
-          element.onerror = function() {
-            if (this.parentNode) {
-              this.parentNode.removeChild(this);
+        // 如果 head 中已暴露函数，直接使用
+        if (loadResource) {
+          // 延迟检测 Bootstrap JS 是否加载成功（给本地文件加载时间）
+          // 先等待一段时间，如果仍未加载，再尝试备用 CDN
+          setTimeout(function() {
+            if (!window.bootstrap) {
+              console.warn('检测到 Bootstrap JS 未加载，尝试加载备用 CDN...');
+              loadResource('js', bootstrapCDNs.js);
             }
-            loadResource(type, urls, index + 1);
-          };
+          }, 2000); // 等待 2 秒，给本地文件加载时间
           
-          document.body.appendChild(element);
-        }
-        
-        // 页面加载完成后检测 Bootstrap JS 是否加载成功
-        window.addEventListener('load', function() {
-          if (!window.bootstrap) {
-            loadResource('js', bootstrapCDNs.js);
+          // 页面加载完成后再次检测（作为备用检查）
+          window.addEventListener('load', function() {
+            setTimeout(function() {
+              if (!window.bootstrap) {
+                console.warn('页面加载完成后检测到 Bootstrap JS 未加载，尝试加载备用 CDN...');
+                loadResource('js', bootstrapCDNs.js);
+              }
+            }, 1000);
+          });
+        } else {
+          // 备用实现（如果 head 脚本未执行）
+          function loadBootstrapJS(urls, index) {
+            index = index || 0;
+            if (index >= urls.length) {
+              console.error('Bootstrap JS 加载失败：所有 CDN 均不可用。请检查网络连接或联系管理员。');
+              return;
+            }
+            
+            var url = urls[index];
+            var element = document.createElement('script');
+            element.src = url;
+            
+            element.onload = function() {
+              // JS 加载成功
+            };
+            
+            element.onerror = function() {
+              if (this.parentNode) {
+                this.parentNode.removeChild(this);
+              }
+              loadBootstrapJS(urls, index + 1);
+            };
+            
+            document.body.appendChild(element);
           }
-        });
+          
+          // 延迟检测 Bootstrap JS 是否加载成功（给本地文件加载时间）
+          setTimeout(function() {
+            if (!window.bootstrap) {
+              console.warn('检测到 Bootstrap JS 未加载，尝试加载备用 CDN...');
+              loadBootstrapJS(bootstrapCDNs.js);
+            }
+          }, 2000); // 等待 2 秒，给本地文件加载时间
+          
+          // 页面加载完成后再次检测（作为备用检查）
+          window.addEventListener('load', function() {
+            setTimeout(function() {
+              if (!window.bootstrap) {
+                console.warn('页面加载完成后检测到 Bootstrap JS 未加载，尝试加载备用 CDN...');
+                loadBootstrapJS(bootstrapCDNs.js);
+              }
+            }, 1000);
+          });
+        }
       })();
     </script>
   {% endblock base_scripts %}
@@ -203,6 +431,11 @@
     <!-- 左侧栏子菜单切换脚本 -->
     <script src="{% static 'js/components/sidebar_submenu_toggle.js' %}"></script>
   {% endblock extra_js %}
+
+  {% if notification_widget_enabled %}
+    <!-- 通知组件脚本 -->
+    <script src="{% static 'js/notification_widget.js' %}"></script>
+  {% endif %}
 
   {% block extra_scripts %}{% endblock extra_scripts %}
 </body>

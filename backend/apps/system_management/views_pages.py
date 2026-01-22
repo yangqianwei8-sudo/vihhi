@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth import logout
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.http import JsonResponse
@@ -232,8 +232,15 @@ def data_dictionary(request):
 
 
 @login_required
-@permission_required("system_management.manage_users", raise_exception=True)
 def permission_matrix(request):
+    """权限矩阵页面"""
+    # 检查业务权限：系统管理权限
+    from backend.apps.system_management.services import user_has_permission
+    if not (request.user.is_superuser or request.user.is_staff or 
+            user_has_permission(request.user, 'system_management.user.manage', 'system_management.manage')):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied('您没有权限访问此页面。')
+    
     roles = (
         Role.objects.prefetch_related("custom_permissions")
         .filter(is_active=True)

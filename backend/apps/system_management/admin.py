@@ -21,7 +21,7 @@ class RoleAdmin(BaseModelAdmin):
     list_filter = ('is_active', 'created_time')
     search_fields = ('name', 'code', 'description')
     ordering = ('-created_time',)
-    filter_horizontal = ('custom_permissions', 'permissions')
+    filter_horizontal = ('custom_permissions',)
     readonly_fields = ('created_time',)
     
     class Media:
@@ -34,18 +34,8 @@ class RoleAdmin(BaseModelAdmin):
         ('基本信息', {
             'fields': ('name', 'code', 'description', 'is_active')
         }),
-        ('Django 权限', {
-            'fields': ('permissions',),
-            'description': 'Django 框架的内置权限（如 add_user, change_user 等）'
-        }),
         ('业务权限', {
             'fields': ('custom_permissions',),
-            'description': '业务系统的自定义权限（如 customer_management.client.view_all 等）。<br>'
-                          '<strong>客户管理权限推荐配置：</strong><br>'
-                          '• 商务经理：<code>customer_management.client.view_assigned</code>（查看本人负责）<br>'
-                          '• 部门经理：<code>customer_management.client.view_department</code>（查看本部门）<br>'
-                          '• 总经理：<code>customer_management.client.view_all</code>（查看全部）<br><br>'
-                          '<strong>提示：</strong>在权限选择器的搜索框中输入 <code>customer_management.client</code> 可以快速筛选客户管理权限'
         }),
         # 时间信息会自动添加，无需手动定义
     )
@@ -58,12 +48,8 @@ class RoleAdmin(BaseModelAdmin):
             kwargs['queryset'] = PermissionItem.objects.filter(
                 is_active=True
             ).order_by('module', 'code')
-            # 添加搜索提示
-            kwargs['help_text'] = (
-                '提示：在搜索框中输入权限代码或名称可以快速查找。'
-                '例如：输入 "customer_management.client" 可以筛选所有客户管理权限；'
-                '输入 "view_assigned" 可以查找"查看本人负责"权限。'
-            )
+            # 隐藏字段标签，避免重复显示"业务权限："
+            kwargs['label'] = ''
         return super().formfield_for_manytomany(db_field, request, **kwargs)
     
     def user_count(self, obj):
@@ -160,7 +146,7 @@ class UserAdmin(DjangoUserAdmin):
     ordering = ('-date_joined',)
     list_per_page = 50
     date_hierarchy = 'date_joined'
-    filter_horizontal = ('roles', 'groups', 'user_permissions')
+    filter_horizontal = ('roles',)
     raw_id_fields = ('department',)
     readonly_fields = ('last_login', 'date_joined', 'created_time', 'updated_time')
     
@@ -175,7 +161,7 @@ class UserAdmin(DjangoUserAdmin):
             'fields': ('department', 'position', 'user_type', 'client_type')
         }),
         ('权限信息', {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'roles')
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'roles')
         }),
         ('其他信息', {
             'fields': ('profile_completed', 'notification_preferences')
@@ -298,8 +284,9 @@ class UserAdmin(DjangoUserAdmin):
         # 员工用户（is_staff=True）也可以删除用户
         if request.user.is_staff:
             return True
-        # 其他情况需要检查是否有delete_user权限
-        return request.user.has_perm('system_management.delete_user')
+        # 其他情况需要检查是否有系统管理权限
+        from backend.apps.system_management.services import user_has_permission
+        return user_has_permission(request.user, 'system_management.user.delete', 'system_management.user.manage')
 
 
 @admin.register(RegistrationRequest)

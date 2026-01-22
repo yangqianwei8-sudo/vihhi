@@ -4,6 +4,23 @@
 {% block module_styles %}
 {{ block.super }}
 <style>
+  /* 计划卡片样式 */
+  .plan-item-card {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6 !important;
+  }
+  
+  .plan-item-card h5 {
+    color: #495057;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  
+  .plan-item-card .form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+  
   /* 表单页面移动端优化 */
   @media (max-width: 768px) {
     .form-row {
@@ -182,9 +199,6 @@
           {% if form.plan_number.errors %}
           <div class="text-danger small">{{ form.plan_number.errors }}</div>
           {% endif %}
-          {% if form.plan_number.help_text %}
-          <div class="form-text">{{ form.plan_number.help_text }}</div>
-          {% endif %}
         </div>
         {% endif %}
         
@@ -200,9 +214,6 @@
             {{ form.level }}
             {% if form.level.errors %}
             <div class="text-danger small">{{ form.level.errors }}</div>
-            {% endif %}
-            {% if form.level.help_text %}
-            <div class="form-text">{{ form.level.help_text }}</div>
             {% endif %}
           </div>
           {% endif %}
@@ -247,7 +258,7 @@
         {% if form.end_time %}
         <div class="col-5-fields form-field-wrapper">
           <label for="{{ form.end_time.id_for_label }}" class="form-label">
-            {{ form.end_time.label }}
+            {{ form.end_time.label }}（系统自动计算）
             {% if form.end_time.field.required %}<span class="text-danger">*</span>{% endif %}
           </label>
           {{ form.end_time }}
@@ -256,6 +267,8 @@
           {% endif %}
           {% if form.end_time.help_text %}
           <div class="form-text">{{ form.end_time.help_text }}</div>
+          {% else %}
+          <div class="form-text text-muted">根据开始时间和计划周期自动计算</div>
           {% endif %}
         </div>
         {% endif %}
@@ -268,178 +281,819 @@
   </div>
 {% endblock form_basic_info_card %}
 
-{# 其他表单字段 #}
-{% block form_fields %}
-  {# 详细信息区域第二排：计划名称、关联战略目标、父计划、关联项目 #}
-  <div class="row mb-3 form-row-5">
-    {% if form.name %}
-    <div class="col-5-fields form-field-wrapper">
-      <label for="{{ form.name.id_for_label }}" class="form-label">
-        {{ form.name.label }}
-        {% if form.name.field.required %}<span class="text-danger">*</span>{% endif %}
-      </label>
-      {{ form.name }}
-      {% if form.name.errors %}
-      <div class="text-danger small">{{ form.name.errors }}</div>
-      {% endif %}
-      {% if form.name.help_text %}
-      <div class="form-text">{{ form.name.help_text }}</div>
+{# 覆盖详细信息卡片，仅包含 FormSet（创建模式） #}
+{% block form_other_fields_card %}
+  <div class="form-card form-card-other-fields">
+    <div class="form-card-header">
+      <h3 class="form-card-title">
+        <i class="fas fa-list-alt"></i>
+        详细信息
+      </h3>
+    </div>
+    <div class="form-card-body">
+      {# 计划列表 FormSet - 使用普通字段形式（仅创建模式显示） #}
+      {% if formset and not plan %}
+      <div class="mt-4 pt-4 border-top">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0">计划列表</h5>
+          <button type="button" class="btn btn-sm btn-primary" onclick="addPlanItem()">
+            <i class="fas fa-plus"></i> 增加计划
+          </button>
+        </div>
+        <div id="planItemsContainer">
+        {% if formset %}
+        {{ formset.management_form }}
+        {% if formset.non_form_errors %}
+        <div class="alert alert-danger">
+          {{ formset.non_form_errors }}
+        </div>
+        {% endif %}
+        {% for planitem_form in formset %}
+        <div class="plan-item-card mb-4 p-3 border rounded" data-form-index="{{ forloop.counter0 }}">
+          {{ planitem_form.id }}
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">计划 {{ forloop.counter }}</h5>
+            <button type="button" class="btn btn-sm btn-dark" onclick="removePlanItem(this)" title="删除">
+              <i class="fas fa-trash"></i> 删除
+            </button>
+          </div>
+          {# 第一行：计划名称、关联战略目标、关联项目、开始时间、结束时间（5个字段） #}
+          <div class="row mb-3 form-row-5">
+            <div class="col-5-fields form-field-wrapper">
+              <label for="{{ planitem_form.name.id_for_label }}" class="form-label">
+                计划名称 <span class="text-danger">*</span>
+              </label>
+              {{ planitem_form.name }}
+              {% if planitem_form.name.errors %}
+              <div class="text-danger small">{{ planitem_form.name.errors }}</div>
+              {% endif %}
+              {% if planitem_form.non_field_errors %}
+              <div class="text-danger small">{{ planitem_form.non_field_errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-5-fields form-field-wrapper">
+              <label for="{{ planitem_form.related_goal.id_for_label }}" class="form-label">
+                关联战略目标 <span class="text-danger">*</span>
+              </label>
+              {{ planitem_form.related_goal }}
+              {% if planitem_form.related_goal.errors %}
+              <div class="text-danger small">{{ planitem_form.related_goal.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-5-fields form-field-wrapper">
+              <label for="{{ planitem_form.related_project.id_for_label }}" class="form-label">
+                关联项目
+              </label>
+              {{ planitem_form.related_project }}
+              {% if planitem_form.related_project.errors %}
+              <div class="text-danger small">{{ planitem_form.related_project.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-5-fields form-field-wrapper">
+              <label for="{{ planitem_form.start_time.id_for_label }}" class="form-label">
+                开始时间 <span class="text-danger">*</span>
+              </label>
+              {{ planitem_form.start_time }}
+              {% if planitem_form.start_time.errors %}
+              <div class="text-danger small">{{ planitem_form.start_time.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-5-fields form-field-wrapper">
+              <label for="{{ planitem_form.end_time.id_for_label }}" class="form-label">
+                结束时间（系统自动计算） <span class="text-danger">*</span>
+              </label>
+              {{ planitem_form.end_time }}
+              {% if planitem_form.end_time.errors %}
+              <div class="text-danger small">{{ planitem_form.end_time.errors }}</div>
+              {% endif %}
+              <div class="form-text text-muted small">根据开始时间和计划周期自动计算</div>
+            </div>
+          </div>
+          
+          {# 计划内容：多行文本字段，占据整行 #}
+          <div class="row mb-3">
+            <div class="col-12 form-field-wrapper">
+              <label for="{{ planitem_form.content.id_for_label }}" class="form-label">
+                计划内容 <span class="text-danger">*</span>
+              </label>
+              {{ planitem_form.content }}
+              {% if planitem_form.content.errors %}
+              <div class="text-danger small">{{ planitem_form.content.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          {# 计划目标：多行文本字段，占据整行 #}
+          <div class="row mb-3">
+            <div class="col-12 form-field-wrapper">
+              <label for="{{ planitem_form.plan_objective.id_for_label }}" class="form-label">
+                计划目标 <span class="text-danger">*</span>
+              </label>
+              {{ planitem_form.plan_objective }}
+              {% if planitem_form.plan_objective.errors %}
+              <div class="text-danger small">{{ planitem_form.plan_objective.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          {# 协作计划：多行文本字段，占据整行 #}
+          <div class="row mb-3">
+            <div class="col-12 form-field-wrapper">
+              <label for="{{ planitem_form.collaboration_plan.id_for_label }}" class="form-label">
+                协作计划
+              </label>
+              {{ planitem_form.collaboration_plan }}
+              {% if planitem_form.collaboration_plan.errors %}
+              <div class="text-danger small">{{ planitem_form.collaboration_plan.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          {# 协作人员：多选字段，占据整行 #}
+          <div class="row mb-3">
+            <div class="col-12 form-field-wrapper">
+              <label for="{{ planitem_form.participants.id_for_label }}" class="form-label">
+                协作人员
+              </label>
+              {{ planitem_form.participants }}
+              {% if planitem_form.participants.errors %}
+              <div class="text-danger small">{{ planitem_form.participants.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+          {{ planitem_form.DELETE }}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle"></i>
+          计划列表功能未启用
+        </div>
+        {% endif %}
+        </div>
+      </div>
       {% endif %}
     </div>
-    {% endif %}
-    {% if form.related_goal %}
-    <div class="col-5-fields form-field-wrapper">
-      <label for="{{ form.related_goal.id_for_label }}" class="form-label">
-        {{ form.related_goal.label }}
-        {% if form.related_goal.field.required %}<span class="text-danger">*</span>{% endif %}
-      </label>
-      {{ form.related_goal }}
-      {% if form.related_goal.errors %}
-      <div class="text-danger small">{{ form.related_goal.errors }}</div>
-      {% endif %}
-      {% if form.related_goal.help_text %}
-      <div class="form-text">{{ form.related_goal.help_text }}</div>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    {% if form.parent_plan %}
-    <div class="col-5-fields form-field-wrapper">
-      <label for="{{ form.parent_plan.id_for_label }}" class="form-label">
-        {{ form.parent_plan.label }}
-        {% if form.parent_plan.field.required %}<span class="text-danger">*</span>{% endif %}
-      </label>
-      {{ form.parent_plan }}
-      {% if form.parent_plan.errors %}
-      <div class="text-danger small">{{ form.parent_plan.errors }}</div>
-      {% endif %}
-      {% if form.parent_plan.help_text %}
-      <div class="form-text">{{ form.parent_plan.help_text }}</div>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    {% if form.related_project %}
-    <div class="col-5-fields form-field-wrapper">
-      <label for="{{ form.related_project.id_for_label }}" class="form-label">
-        {{ form.related_project.label }}
-        {% if form.related_project.field.required %}<span class="text-danger">*</span>{% endif %}
-      </label>
-      {{ form.related_project }}
-      {% if form.related_project.errors %}
-      <div class="text-danger small">{{ form.related_project.errors }}</div>
-      {% endif %}
-      {% if form.related_project.help_text %}
-      <div class="form-text">{{ form.related_project.help_text }}</div>
-      {% endif %}
-    </div>
-    {% endif %}
-    {# 空占位符，凑满5个字段 #}
-    <div class="col-5-fields form-field-wrapper"></div>
-    <div class="col-5-fields form-field-wrapper"></div>
   </div>
+{% endblock form_other_fields_card %}
 
-  {# 第四排：计划内容、计划目标 #}
-  <div class="row mb-3 form-row-5">
-    {% if form.content %}
-    <div class="col-5-fields form-field-wrapper">
-      <label for="{{ form.content.id_for_label }}" class="form-label">
-        {{ form.content.label }}
-        {% if form.content.field.required %}<span class="text-danger">*</span>{% endif %}
-      </label>
-      {{ form.content }}
-      {% if form.content.errors %}
-      <div class="text-danger small">{{ form.content.errors }}</div>
-      {% endif %}
-      {% if form.content.help_text %}
-      <div class="form-text">{{ form.content.help_text }}</div>
-      {% endif %}
+{# 周计划重复创建错误提示模态框 #}
+{% if weekly_plan_error %}
+<div class="modal fade" id="weeklyPlanErrorModal" tabindex="-1" aria-labelledby="weeklyPlanErrorModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="weeklyPlanErrorModalLabel">
+          <i class="fas fa-exclamation-triangle"></i> 周计划创建失败
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">{{ weekly_plan_error }}</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">我知道了</button>
+      </div>
     </div>
-    {% endif %}
-
-    {% if form.plan_objective %}
-    <div class="col-5-fields form-field-wrapper">
-      <label for="{{ form.plan_objective.id_for_label }}" class="form-label">
-        {{ form.plan_objective.label }}
-        {% if form.plan_objective.field.required %}<span class="text-danger">*</span>{% endif %}
-      </label>
-      {{ form.plan_objective }}
-      {% if form.plan_objective.errors %}
-      <div class="text-danger small">{{ form.plan_objective.errors }}</div>
-      {% endif %}
-      {% if form.plan_objective.help_text %}
-      <div class="form-text">{{ form.plan_objective.help_text }}</div>
-      {% endif %}
-    </div>
-    {% endif %}
-    {# 空占位符，凑满5个字段 #}
-    <div class="col-5-fields form-field-wrapper"></div>
-    <div class="col-5-fields form-field-wrapper"></div>
-    <div class="col-5-fields form-field-wrapper"></div>
   </div>
+</div>
+{% endif %}
 
-  {# 第五排：协作计划、协作人员 #}
-  <div class="row mb-3 form-row-5">
-    {% if form.collaboration_plan %}
-    <div class="col-5-fields form-field-wrapper">
-      <label for="{{ form.collaboration_plan.id_for_label }}" class="form-label">
-        {{ form.collaboration_plan.label }}
-        {% if form.collaboration_plan.field.required %}<span class="text-danger">*</span>{% endif %}
-      </label>
-      {{ form.collaboration_plan }}
-      {% if form.collaboration_plan.errors %}
-      <div class="text-danger small">{{ form.collaboration_plan.errors }}</div>
-      {% endif %}
-      {% if form.collaboration_plan.help_text %}
-      <div class="form-text">{{ form.collaboration_plan.help_text }}</div>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    {% if form.participants %}
-    <div class="col-5-fields form-field-wrapper">
-      <label for="{{ form.participants.id_for_label }}" class="form-label">
-        {{ form.participants.label }}
-        {% if form.participants.field.required %}<span class="text-danger">*</span>{% endif %}
-      </label>
-      {{ form.participants }}
-      {% if form.participants.errors %}
-      <div class="text-danger small">{{ form.participants.errors }}</div>
-      {% endif %}
-      {% if form.participants.help_text %}
-      <div class="form-text">{{ form.participants.help_text }}</div>
-      {% endif %}
-    </div>
-    {% endif %}
-    {# 空占位符，凑满5个字段 #}
-    <div class="col-5-fields form-field-wrapper"></div>
-    <div class="col-5-fields form-field-wrapper"></div>
-    <div class="col-5-fields form-field-wrapper"></div>
-  </div>
-
-{% endblock %}
-
-{# 暂存草稿按钮 #}
-{% block form_draft_actions %}
-  <button type="submit" name="action" value="draft" class="btn btn-draft">暂存草稿</button>
-{% endblock %}
-
-{# 表单操作按钮 #}
-{% block form_actions %}
-  <button type="submit" class="btn btn-primary">{{ submit_text|default:"创建" }}</button>
-  {% if cancel_url %}
-    <a href="{{ cancel_url }}" class="btn btn-secondary">取消</a>
-  {% elif cancel_url_name %}
-    <a href="{% url cancel_url_name %}" class="btn btn-secondary">取消</a>
-  {% else %}
-    <a href="{% url 'plan_pages:plan_list' %}" class="btn btn-secondary">取消</a>
-  {% endif %}
-{% endblock %}
-
-{# 额外的 JavaScript #}
+  {# 额外的 JavaScript #}
 {% block module_extra_js %}
   {{ block.super }}
   {% if form_js_file %}
   <script src="{% static form_js_file %}"></script>
+  {% endif %}
+  
+  {# 表单提交前验证 #}
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // #region agent log
+    fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:417',message:'DOMContentLoaded - 开始初始化表单提交监听器',data:{formId:'createForm'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+    
+    const form = document.getElementById('createForm');
+    
+    // #region agent log
+    fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:420',message:'表单元素查找结果',data:{formFound:!!form,formId:form?form.id:'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+    
+    if (!form) {
+      // #region agent log
+      fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:424',message:'表单未找到，退出',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      return;
+    }
+    
+    form.addEventListener('submit', function(e) {
+      // #region agent log
+      fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:428',message:'表单提交事件触发',data:{submitterName:e.submitter?.name,submitterValue:e.submitter?.value,defaultPrevented:e.defaultPrevented},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
+      const clickedButton = e.submitter;
+      const isDraft = clickedButton && clickedButton.name === 'action' && clickedButton.value === 'draft';
+      
+      // #region agent log
+      fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:432',message:'判断是否为草稿模式',data:{isDraft:isDraft,buttonName:clickedButton?.name,buttonValue:clickedButton?.value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
+      // 如果不是草稿模式，进行前端验证
+      if (!isDraft) {
+        const errors = [];
+        
+        // 检查详细信息卡片中的必填字段
+        const formsetCards = document.querySelectorAll('#planItemsContainer .plan-item-card');
+        
+        // 检查详细信息卡片是否有数据
+        let hasFormsetData = false;
+        formsetCards.forEach(function(card) {
+          const deleteCheckbox = card.querySelector('input[type="checkbox"][name*="DELETE"]');
+          if (deleteCheckbox && deleteCheckbox.checked) {
+            return; // 跳过被标记为删除的卡片
+          }
+          const nameField = card.querySelector('input[name*="name"]');
+          const goalField = card.querySelector('select[name*="related_goal"]');
+          const contentField = card.querySelector('textarea[name*="content"]');
+          if ((nameField && nameField.value.trim()) || 
+              (goalField && goalField.value) || 
+              (contentField && contentField.value.trim())) {
+            hasFormsetData = true;
+          }
+        });
+        
+        // 如果详细信息卡片没有数据，检查基本信息表单的必填字段
+        if (!hasFormsetData) {
+          const basicNameField = form.querySelector('input[name="name"]');
+          const basicGoalField = form.querySelector('select[name="related_goal"]');
+          const basicContentField = form.querySelector('input[name="content"], textarea[name="content"]');
+          const basicObjectiveField = form.querySelector('input[name="plan_objective"], textarea[name="plan_objective"]');
+          
+          const basicErrors = [];
+          if (!basicNameField || !basicNameField.value.trim()) basicErrors.push('计划名称');
+          if (!basicGoalField || !basicGoalField.value) basicErrors.push('关联战略目标');
+          if (!basicContentField || !basicContentField.value.trim()) basicErrors.push('计划内容');
+          if (!basicObjectiveField || !basicObjectiveField.value.trim()) basicErrors.push('计划目标');
+          
+          if (basicErrors.length > 0) {
+            errors.push('基本信息区域缺少必填字段：' + basicErrors.join('、'));
+          }
+        }
+        
+        // #region agent log
+        fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:451',message:'检查详细信息卡片',data:{cardsCount:formsetCards.length,hasFormsetData:hasFormsetData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        
+        formsetCards.forEach(function(card, index) {
+          const deleteCheckbox = card.querySelector('input[type="checkbox"][name*="DELETE"]');
+          if (deleteCheckbox && deleteCheckbox.checked) {
+            return; // 跳过被标记为删除的卡片
+          }
+          
+          // 检查必填字段
+          const nameField = card.querySelector('input[name*="name"]');
+          const goalField = card.querySelector('select[name*="related_goal"]');
+          const contentField = card.querySelector('textarea[name*="content"]');
+          const objectiveField = card.querySelector('textarea[name*="plan_objective"]');
+          const startTimeField = card.querySelector('input[name*="start_time"]');
+          const endTimeField = card.querySelector('input[name*="end_time"]');
+          
+          const cardErrors = [];
+          if (!nameField || !nameField.value.trim()) cardErrors.push('计划名称');
+          if (!goalField || !goalField.value) cardErrors.push('关联战略目标');
+          if (!contentField || !contentField.value.trim()) cardErrors.push('计划内容');
+          if (!objectiveField || !objectiveField.value.trim()) cardErrors.push('计划目标');
+          if (!startTimeField || !startTimeField.value) cardErrors.push('开始时间');
+          if (!endTimeField || !endTimeField.value) cardErrors.push('结束时间');
+          
+          // 检查是否有任何字段被填写（判断是否为空卡片）
+          const hasAnyData = (nameField && nameField.value.trim()) ||
+                            (goalField && goalField.value) ||
+                            (contentField && contentField.value.trim()) ||
+                            (objectiveField && objectiveField.value.trim()) ||
+                            (startTimeField && startTimeField.value) ||
+                            (endTimeField && endTimeField.value);
+          
+          // #region agent log
+          fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:465',message:'检查卡片验证',data:{cardIndex:index,hasAnyData:hasAnyData,cardErrorsCount:cardErrors.length,cardErrors:cardErrors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          
+          if (hasAnyData && cardErrors.length > 0) {
+            errors.push('计划 ' + (index + 1) + ' 缺少必填字段：' + cardErrors.join('、'));
+          }
+        });
+        
+        // #region agent log
+        fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:470',message:'卡片验证完成',data:{errorsCount:errors.length,errors:errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        
+        if (errors.length > 0) {
+          // #region agent log
+          fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:507',message:'阻止表单提交 - 表格验证失败',data:{errors:errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          e.preventDefault();
+          alert('❌ 表单验证失败\\n\\n' + errors.join('\\n') + '\\n\\n请填写完整后重新提交。');
+          return false;
+        }
+      }
+      
+      // #region agent log
+      fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:515',message:'子模板表单提交验证通过，允许提交',data:{isDraft:isDraft,defaultPrevented:e.defaultPrevented,formAction:form.action,formMethod:form.method,submitterName:e.submitter?.name,submitterValue:e.submitter?.value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+    });
+    
+    // 监听表单实际提交（使用捕获阶段，在所有其他监听器之前）
+    form.addEventListener('submit', function(e) {
+      // #region agent log
+      fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:521',message:'捕获阶段 - 表单提交检查',data:{defaultPrevented:e.defaultPrevented,formAction:form.action,formMethod:form.method,willActuallySubmit:!e.defaultPrevented,eventPhase:e.eventPhase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+    }, true);
+    
+    // 监听表单提交后的情况（如果提交成功，页面会跳转，这个可能不会执行）
+    window.addEventListener('beforeunload', function(e) {
+      // #region agent log
+      fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:528',message:'页面即将卸载（可能提交成功）',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+    });
+    
+    // #region agent log
+    fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:483',message:'表单提交监听器已绑定',data:{formAction:form.action,formMethod:form.method,formId:form.id,hasAction:!!form.action},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+    
+    // 检查表单的 action 属性
+    // #region agent log
+    fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:487',message:'表单属性检查',data:{action:form.action,method:form.method,enctype:form.enctype,hasAction:form.hasAttribute('action'),actionAttr:form.getAttribute('action')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
+    
+    // 如果没有 action，设置默认值
+    if (!form.action || form.action === '' || form.action === window.location.href) {
+      // #region agent log
+      fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:492',message:'表单 action 为空，设置为当前 URL',data:{currentUrl:window.location.href},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
+      form.action = window.location.href;
+    }
+  });
+  </script>
+  
+  {# 检查并显示错误消息（页面加载后） #}
+  <script>
+  (function() {
+    function checkAndShowErrors() {
+      const errorMessages = [];
+      let hasErrors = false;
+      
+      // 1. 检查所有 .alert-danger 元素（Django messages）
+      const alertElements = document.querySelectorAll('.alert-danger, .alert.alert-error');
+      alertElements.forEach(function(alert) {
+        const text = alert.textContent.trim();
+        // 过滤掉只包含空白、星号或特殊字符的文本
+        if (text && text.length > 0 && !/^[\s\*\-]+$/.test(text)) {
+          errorMessages.push(text);
+          hasErrors = true;
+        }
+      });
+      
+      // 2. 检查表单非字段错误
+      const nonFieldErrors = document.querySelectorAll('.non-field-errors, form .alert-danger');
+      nonFieldErrors.forEach(function(error) {
+        const text = error.textContent.trim();
+        if (text && text.length > 0 && !/^[\s\*\-]+$/.test(text) && !errorMessages.includes(text)) {
+          errorMessages.push(text);
+          hasErrors = true;
+        }
+      });
+      
+      // 3. 检查 FormSet 非表单错误
+      const formsetNonFormErrors = document.querySelectorAll('#planItemsContainer ~ .alert-danger, .form-card-other-fields .alert-danger');
+      formsetNonFormErrors.forEach(function(error) {
+        const text = error.textContent.trim();
+        if (text && text.length > 0 && !/^[\s\*\-]+$/.test(text) && !errorMessages.includes(text)) {
+          errorMessages.push(text);
+          hasErrors = true;
+        }
+      });
+      
+      // 4. 检查详细信息卡片是否存在
+      // 如果详细信息卡片存在（有容器元素），则认为详细信息卡片功能已启用
+      // 基本信息表单只作为默认值提供者，不需要检查必填字段
+      const planItemsContainer = document.querySelector('#planItemsContainer');
+      const hasFormsetContainer = !!planItemsContainer;
+      
+      // 5. 检查详细信息卡片中的字段错误
+      const cardErrorFields = [];
+      let hasFormsetData = false;
+      // 获取卡片（只查询一次，供两个地方使用）
+      const cards = document.querySelectorAll('#planItemsContainer .plan-item-card');
+      
+      // 先检查卡片中的字段错误
+      cards.forEach(function(card, cardIndex) {
+        const deleteCheckbox = card.querySelector('input[type="checkbox"][name*="DELETE"]');
+        if (deleteCheckbox && deleteCheckbox.checked) {
+          return; // 跳过被删除的卡片
+        }
+        
+        const errors = card.querySelectorAll('.text-danger');
+        errors.forEach(function(error) {
+          const text = error.textContent.trim();
+          if (text && text.length > 0 && !/^[\s\*\-]+$/.test(text)) {
+            // 找到对应的字段标签
+            const fieldWrapper = error.closest('.form-field-wrapper');
+            if (fieldWrapper) {
+              const label = fieldWrapper.querySelector('label');
+              if (label) {
+                const fieldName = label.textContent.trim().replace(/\s*\*$/, '').replace(/\s*$/, '');
+                if (fieldName && fieldName !== '*') {
+                  cardErrorFields.push('计划' + (cardIndex + 1) + ' ' + fieldName + ': ' + text);
+                  hasErrors = true;
+                }
+              }
+            }
+          }
+        });
+      });
+      
+      if (cardErrorFields.length > 0) {
+        errorMessages.push('详细信息：\\n' + cardErrorFields.join('\\n'));
+      }
+      
+      // 再检查卡片是否有数据（用于判断是否需要检查基本信息表单）
+      if (hasFormsetContainer) {
+        cards.forEach(function(card) {
+          const deleteCheckbox = card.querySelector('input[type="checkbox"][name*="DELETE"]');
+          if (deleteCheckbox && deleteCheckbox.checked) {
+            return; // 跳过被标记为删除的卡片
+          }
+          const nameField = card.querySelector('input[name*="name"]');
+          const goalField = card.querySelector('select[name*="related_goal"]');
+          const contentField = card.querySelector('textarea[name*="content"]');
+          const objectiveField = card.querySelector('textarea[name*="plan_objective"]');
+          const startTimeField = card.querySelector('input[name*="start_time"]');
+          const endTimeField = card.querySelector('input[name*="end_time"]');
+          if ((nameField && nameField.value.trim()) || 
+              (goalField && goalField.value) || 
+              (contentField && contentField.value.trim()) ||
+              (objectiveField && objectiveField.value.trim()) ||
+              (startTimeField && startTimeField.value) ||
+              (endTimeField && endTimeField.value)) {
+            hasFormsetData = true;
+            return; // 找到数据后立即退出循环
+          }
+        });
+      }
+      
+      // #region agent log
+      fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'plan_form.html:682',message:'checkAndShowErrors - 检查详细信息卡片数据',data:{hasFormsetContainer:hasFormsetContainer,cardsCount:cards.length,hasFormsetData:hasFormsetData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+      // #endregion
+      
+      // 6. 检查基本信息表单字段错误
+      // 如果详细信息卡片存在，则跳过基本信息表单的检查（因为基本信息表单只作为默认值提供者）
+      const basicErrorFields = [];
+      if (!hasFormsetContainer) {
+        const basicFormFields = document.querySelectorAll('.form-card-basic-info .form-field-wrapper');
+        basicFormFields.forEach(function(wrapper) {
+          const errorDiv = wrapper.querySelector('.text-danger.small, .text-danger');
+          if (errorDiv) {
+            const text = errorDiv.textContent.trim();
+            if (text && text.length > 0 && !/^[\s\*\-]+$/.test(text)) {
+              const label = wrapper.querySelector('label');
+              if (label) {
+                const fieldName = label.textContent.trim().replace(/\s*\*$/, '').replace(/\s*$/, '');
+                if (fieldName && fieldName !== '*') {
+                  basicErrorFields.push(fieldName + ': ' + text);
+                  hasErrors = true;
+                }
+              }
+            }
+          }
+          
+          // 检查必填字段是否为空
+          const field = wrapper.querySelector('input, select, textarea');
+          if (field && !field.disabled && field.type !== 'hidden') {
+            const label = wrapper.querySelector('label');
+            if (label) {
+              // 检查字段是否必填（通过检查标签中是否有必填标记）
+              const requiredMark = label.querySelector('.text-danger');
+              const isRequired = (requiredMark && requiredMark.textContent.trim() === '*') ||
+                               field.hasAttribute('required') ||
+                               (field.validity && field.validity.valueMissing);
+              
+              if (isRequired) {
+                const isEmpty = !field.value || (typeof field.value === 'string' && !field.value.trim());
+                if (isEmpty) {
+                  const fieldName = label.textContent.trim().replace(/\s*\*$/, '').replace(/\s*$/, '');
+                  if (fieldName && fieldName !== '*' && !basicErrorFields.some(function(e) { return e.startsWith(fieldName); })) {
+                    basicErrorFields.push(fieldName + ': 此字段为必填项，请填写');
+                    hasErrors = true;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+      
+      if (basicErrorFields.length > 0) {
+        errorMessages.push('基本信息：\\n' + basicErrorFields.join('\\n'));
+      }
+      
+      // 如果有错误消息，弹出提示
+      if (hasErrors) {
+        let errorText = '';
+        if (errorMessages.length > 0) {
+          errorText = errorMessages.join('\\n\\n');
+        } else {
+          // 如果检测到错误但没有收集到具体信息，提示用户查看页面
+          errorText = '检测到表单验证错误，请检查页面中标记为红色的字段。';
+        }
+        
+        setTimeout(function() {
+          alert('❌ 表单验证失败\\n\\n' + errorText + '\\n\\n请检查并修正后重新提交。');
+        }, 300);
+      }
+    }
+    
+    // 在 DOM 加载完成后执行
+    function runCheck() {
+      checkAndShowErrors();
+    }
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', runCheck);
+    } else {
+      setTimeout(runCheck, 500);
+    }
+    
+    // 也监听 window.load 事件
+    window.addEventListener('load', function() {
+      setTimeout(checkAndShowErrors, 300);
+    });
+  })();
+  </script>
+  
+  {# 计划列表 Formset 动态添加/删除功能 #}
+  {% if formset %}
+  <script>
+  let planItemFormCount = {{ formset.total_form_count }};
+  const planItemFormPrefix = 'planitems';
+  
+  function updatePlanItemFormIndexes() {
+    const container = document.getElementById('planItemsContainer');
+    if (!container) return;
+    
+    const cards = container.querySelectorAll('.plan-item-card');
+    cards.forEach((card, index) => {
+      card.dataset.formIndex = index;
+      // 更新标题
+      const title = card.querySelector('h5');
+      if (title) {
+        title.textContent = '计划 ' + (index + 1);
+      }
+      // 更新所有输入字段的 name 和 id
+      card.querySelectorAll('input, select, textarea').forEach(field => {
+        if (field.name && field.name.includes(planItemFormPrefix)) {
+          const fieldName = field.name.split('-').slice(2).join('-');
+          field.name = `${planItemFormPrefix}-${index}-${fieldName}`;
+          if (field.id) {
+            field.id = `id_${planItemFormPrefix}-${index}-${fieldName}`;
+          }
+        }
+      });
+    });
+    
+    // 更新 management form 的 TOTAL_FORMS
+    const totalFormsInput = document.querySelector(`input[name="${planItemFormPrefix}-TOTAL_FORMS"]`);
+    if (totalFormsInput) {
+      totalFormsInput.value = cards.length;
+    }
+  }
+  
+  function addPlanItem() {
+    const container = document.getElementById('planItemsContainer');
+    if (!container) return;
+    
+    const newCard = document.createElement('div');
+    newCard.className = 'plan-item-card mb-4 p-3 border rounded';
+    newCard.dataset.formIndex = planItemFormCount;
+    
+    // 获取关联战略目标的选项（从现有行中复制）
+    const existingGoalSelect = container.querySelector('select[name*="related_goal"]');
+    let goalOptions = '<option value="">---------</option>';
+    if (existingGoalSelect) {
+      existingGoalSelect.querySelectorAll('option').forEach(option => {
+        goalOptions += `<option value="${option.value}">${option.text}</option>`;
+      });
+    }
+    
+    // 获取协作人员的选项（从现有行中复制）
+    // 注意：由于 User 模型的 __str__ 返回 "username - full_name" 格式
+    // 我们需要从 option.text 中提取姓名部分，或者使用 option 的 data 属性
+    const existingParticipantsSelect = container.querySelector('select[name*="participants"]');
+    let participantsOptions = '';
+    if (existingParticipantsSelect) {
+      existingParticipantsSelect.querySelectorAll('option').forEach(option => {
+        // 如果选项文本包含 " - "，只取后面的部分（full_name）
+        let displayText = option.text;
+        if (displayText.includes(' - ')) {
+          displayText = displayText.split(' - ')[1] || displayText.split(' - ')[0];
+        }
+        participantsOptions += `<option value="${option.value}">${displayText}</option>`;
+      });
+    }
+    
+    newCard.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">计划 ${planItemFormCount + 1}</h5>
+        <button type="button" class="btn btn-sm btn-dark" onclick="removePlanItem(this)" title="删除">
+          <i class="fas fa-trash"></i> 删除
+        </button>
+      </div>
+      <div class="row mb-3 form-row-5">
+        <div class="col-5-fields form-field-wrapper">
+          <label class="form-label">计划名称 <span class="text-danger">*</span></label>
+          <input type="text" name="${planItemFormPrefix}-${planItemFormCount}-name" 
+                 class="form-control" 
+                 placeholder="请输入计划名称" maxlength="200" 
+                 id="id_${planItemFormPrefix}-${planItemFormCount}-name">
+        </div>
+        <div class="col-5-fields form-field-wrapper">
+          <label class="form-label">关联战略目标 <span class="text-danger">*</span></label>
+          <select name="${planItemFormPrefix}-${planItemFormCount}-related_goal" 
+                  class="form-select" 
+                  id="id_${planItemFormPrefix}-${planItemFormCount}-related_goal">
+            ${goalOptions}
+          </select>
+        </div>
+        <div class="col-5-fields form-field-wrapper">
+          <label class="form-label">关联项目</label>
+          <input type="text" name="${planItemFormPrefix}-${planItemFormCount}-related_project" 
+                 class="form-control" 
+                 placeholder="请输入关联项目" maxlength="200" 
+                 id="id_${planItemFormPrefix}-${planItemFormCount}-related_project">
+        </div>
+        <div class="col-5-fields form-field-wrapper">
+          <label class="form-label">开始时间 <span class="text-danger">*</span></label>
+          <input type="date" name="${planItemFormPrefix}-${planItemFormCount}-start_time" 
+                 class="form-control" 
+                 id="id_${planItemFormPrefix}-${planItemFormCount}-start_time">
+        </div>
+        <div class="col-5-fields form-field-wrapper">
+          <label class="form-label">结束时间（系统自动计算） <span class="text-danger">*</span></label>
+          <input type="date" name="${planItemFormPrefix}-${planItemFormCount}-end_time" 
+                 class="form-control" 
+                 id="id_${planItemFormPrefix}-${planItemFormCount}-end_time"
+                 readonly
+                 style="background-color: #e9ecef; cursor: not-allowed;">
+          <div class="form-text text-muted small">根据开始时间和计划周期自动计算</div>
+        </div>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-12 form-field-wrapper">
+          <label class="form-label">计划内容 <span class="text-danger">*</span></label>
+          <textarea name="${planItemFormPrefix}-${planItemFormCount}-content" 
+                    class="form-control" 
+                    rows="2" placeholder="请输入计划内容" maxlength="5000" 
+                    id="id_${planItemFormPrefix}-${planItemFormCount}-content"></textarea>
+        </div>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-12 form-field-wrapper">
+          <label class="form-label">计划目标 <span class="text-danger">*</span></label>
+          <textarea name="${planItemFormPrefix}-${planItemFormCount}-plan_objective" 
+                    class="form-control" 
+                    rows="2" placeholder="请输入计划目标" maxlength="1000" 
+                    id="id_${planItemFormPrefix}-${planItemFormCount}-plan_objective"></textarea>
+        </div>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-12 form-field-wrapper">
+          <label class="form-label">协作计划</label>
+          <textarea name="${planItemFormPrefix}-${planItemFormCount}-collaboration_plan" 
+                    class="form-control" 
+                    rows="2" placeholder="请输入协作计划" maxlength="2000" 
+                    id="id_${planItemFormPrefix}-${planItemFormCount}-collaboration_plan"></textarea>
+        </div>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-12 form-field-wrapper">
+          <label class="form-label">协作人员</label>
+          <select name="${planItemFormPrefix}-${planItemFormCount}-participants" 
+                  class="form-select" 
+                  multiple 
+                  size="3"
+                  id="id_${planItemFormPrefix}-${planItemFormCount}-participants">
+            ${participantsOptions}
+          </select>
+        </div>
+      </div>
+      <input type="checkbox" name="${planItemFormPrefix}-${planItemFormCount}-DELETE" 
+             id="id_${planItemFormPrefix}-${planItemFormCount}-DELETE" 
+             style="display: none;">
+    `;
+    
+    container.appendChild(newCard);
+    planItemFormCount++;
+    updatePlanItemFormIndexes();
+    
+    // 为新添加的开始时间字段添加事件监听，自动计算结束时间
+    const newStartTimeInput = newCard.querySelector('input[name*="start_time"]');
+    const newEndTimeInput = newCard.querySelector('input[name*="end_time"]');
+    const planPeriodSelect = document.getElementById('id_plan_period');
+    
+    if (newStartTimeInput && newEndTimeInput && planPeriodSelect) {
+      newStartTimeInput.addEventListener('change', function() {
+        const startDate = this.value;
+        const planPeriod = planPeriodSelect.value;
+        if (startDate && planPeriod) {
+          // 使用日期计算器计算结束时间
+          const startDateObj = new Date(startDate);
+          if (!isNaN(startDateObj.getTime())) {
+            let endDate = new Date(startDateObj);
+            switch(planPeriod) {
+              case 'yearly':
+                endDate.setFullYear(endDate.getFullYear() + 1);
+                endDate.setDate(endDate.getDate() - 1);
+                break;
+              case 'quarterly':
+                endDate.setMonth(endDate.getMonth() + 3);
+                endDate.setDate(endDate.getDate() - 1);
+                break;
+              case 'monthly':
+                endDate.setMonth(endDate.getMonth() + 1);
+                endDate.setDate(endDate.getDate() - 1);
+                break;
+              case 'weekly':
+                endDate.setDate(endDate.getDate() + 6);
+                break;
+              case 'daily':
+                // endDate 保持不变
+                break;
+            }
+            const year = endDate.getFullYear();
+            const month = String(endDate.getMonth() + 1).padStart(2, '0');
+            const day = String(endDate.getDate()).padStart(2, '0');
+            newEndTimeInput.value = `${year}-${month}-${day}`;
+          }
+        }
+      });
+      
+      // 如果开始时间已有值，立即计算结束时间
+      if (newStartTimeInput.value && planPeriodSelect.value) {
+        newStartTimeInput.dispatchEvent(new Event('change'));
+      }
+    }
+  }
+  
+  function removePlanItem(btn) {
+    const card = btn.closest('.plan-item-card');
+    if (card) {
+      // 查找该卡片的 DELETE 复选框并标记为删除
+      const deleteCheckbox = card.querySelector('input[type="checkbox"][name*="DELETE"]');
+      if (deleteCheckbox) {
+        deleteCheckbox.checked = true;
+        // 隐藏该卡片而不是删除，这样表单提交时会正确处理
+        card.style.display = 'none';
+      } else {
+        // 如果没有 DELETE 字段，直接删除卡片
+        card.remove();
+      }
+      updatePlanItemFormIndexes();
+    }
+  }
+  
+  // 初始化时更新索引
+  document.addEventListener('DOMContentLoaded', function() {
+    updatePlanItemFormIndexes();
+  });
+  </script>
+  {% endif %}
+  
+  {# 显示周计划重复创建错误模态框 #}
+  {% if weekly_plan_error %}
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const modalElement = document.getElementById('weeklyPlanErrorModal');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  });
+  </script>
+  {% endif %}
+  
+  {# 显示周计划重复创建错误模态框 #}
+  {% if weekly_plan_error %}
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const modalElement = document.getElementById('weeklyPlanErrorModal');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  });
+  </script>
   {% endif %}
 {% endblock %}

@@ -77,7 +77,6 @@ class Role(models.Model):
     """角色表"""
     name = models.CharField(max_length=100, verbose_name='角色名称')
     code = models.CharField(max_length=50, unique=True, verbose_name='角色编码')
-    permissions = models.ManyToManyField('auth.Permission', blank=True, verbose_name='权限')
     custom_permissions = models.ManyToManyField(
         'permission_management.PermissionItem',
         blank=True,

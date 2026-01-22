@@ -1531,7 +1531,7 @@ def customer_management_home(request):
             context['full_top_nav'] = []
             context['sidebar_nav'] = []
         
-        return render(request, "customer_management/home.html", context)
+        return render(request, "customer_management/customer_management_home.html", context)
     except Exception as e:
         logger.exception('customer_management_home 视图函数执行失败: %s', str(e))
         # 返回一个简单的错误页面，而不是让Django返回500/503错误
@@ -1562,7 +1562,7 @@ def customer_management_home(request):
                 context['full_top_nav'] = []
                 context['sidebar_nav'] = []
             
-            return render(request, "customer_management/home.html", context)
+            return render(request, "customer_management/customer_management_home.html", context)
         except Exception as inner_e:
             logger.exception('渲染错误页面也失败: %s', str(inner_e))
             # 如果连错误页面都渲染不了，重定向到首页

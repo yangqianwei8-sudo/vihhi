@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block module_styles %}
-{{ block.super }}
+  {{ block.super }}
 <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.css" rel="stylesheet">
 <style>
   .pm-home-wrap {
@@ -300,11 +300,6 @@
 
 {% block module_extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-
-});
-</script>
 {% endblock %}
 
 {% block module_home_custom_content %}
@@ -318,7 +313,6 @@ document.addEventListener('DOMContentLoaded', function() {
     </a>
     {% endfor %}
   </div>
-
   {% endif %}
 
   {% if core_cards %}
@@ -341,9 +335,9 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="pm-warning-card">
       <div class="pm-card-title">
         风险预警
-        {% if overdue_opportunities_count or stale_opportunities_count %}
+        {% if stale_projects_count %}
         <span style="font-size: 12px; color: #333333; margin-left: 8px;">
-          (逾期 {{ overdue_opportunities_count|default:0 }} | 未更新 {{ stale_opportunities_count|default:0 }})
+          (未更新 {{ stale_projects_count|default:0 }})
         </span>
         {% endif %}
       </div>
@@ -355,9 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <a href="{{ warning.url }}" class="pm-item-link">{{ warning.title }}</a>
           </div>
           <div class="pm-item-meta">
-            {% if warning.type == 'overdue' %}
-            负责人：{{ warning.responsible }} | 逾期 {{ warning.days }} 天
-            {% elif warning.type == 'stale' %}
+            {% if warning.type == 'stale' %}
             负责人：{{ warning.responsible }} | {{ warning.days }} 天未更新
             {% endif %}
           </div>
@@ -371,14 +363,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <div class="pm-todo-card">
       <div class="pm-card-title">
-        {% if todo_summary_url %}
-          <a href="{{ todo_summary_url }}" style="color: inherit; text-decoration: none;">待办事项</a>
-        {% else %}
-          待办事项
-        {% endif %}
-        {% if pending_approval_count or upcoming_deadline_count or stale_contracts_count %}
+        待办事项
+        {% if pending_approval_count %}
         <span style="font-size: 12px; color: #333333; margin-left: 8px;">
-          (待审批 {{ pending_approval_count|default:0 }} | 即将到期 {{ upcoming_deadline_count|default:0 }} | 需更新 {{ stale_contracts_count|default:0 }})
+          (待接收 {{ pending_approval_count|default:0 }})
         </span>
         {% endif %}
       </div>
@@ -388,42 +376,20 @@ document.addEventListener('DOMContentLoaded', function() {
         <li class="pm-todo-item">
           <div class="pm-item-title">
             <a href="{{ item.url }}" class="pm-item-link">{{ item.title }}</a>
-            {% if item.plan_number or item.goal_number %}
+            {% if item.project_number %}
             <span style="font-size: 11px; color: #999; margin-left: 8px;">
-              ({% if item.plan_number %}{{ item.plan_number }}{% elif item.goal_number %}{{ item.goal_number }}{% endif %})
+              ({{ item.project_number }})
             </span>
             {% endif %}
           </div>
           <div class="pm-item-meta">
-            {% if item.type == 'approval' %}
+            {% if item.type == 'receive' %}
             <div style="margin-bottom: 4px;">
-              <strong>{{ item.request_type }}</strong> |
-              {% if item.plan_type %}{{ item.plan_type }} | {% endif %}
-              申请人：{{ item.requested_by }} | {{ item.time|date:"Y-m-d H:i" }}
+              <strong>待接收</strong> | 负责人：{{ item.responsible }}
             </div>
-            <div style="font-size: 12px; color: #666;">
-              负责人：{{ item.responsible }}{% if item.department %} | 部门：{{ item.department }}{% endif %}
-              {% if item.related_goal %} | 关联目标：{{ item.related_goal }}{% endif %}
-            </div>
-            {% elif item.type == 'deadline' %}
+            {% elif item.type == 'configure' %}
             <div style="margin-bottom: 4px;">
-              <strong>{{ item.deadline }} 到期</strong>（剩余 {{ item.days_left }} 天）
-              {% if item.progress is not None %} | 进度：{{ item.progress }}%{% endif %}
-            </div>
-            <div style="font-size: 12px; color: #666;">
-              负责人：{{ item.responsible }}{% if item.department %} | 部门：{{ item.department }}{% endif %}
-              {% if item.plan_type %} | {{ item.plan_type }}{% endif %}
-              {% if item.related_goal %} | 关联目标：{{ item.related_goal }}{% endif %}
-            </div>
-            {% elif item.type == 'goal_update' %}
-            <div style="margin-bottom: 4px;">
-              <strong>{{ item.days }} 天未更新</strong>
-              {% if item.status %} | 状态：{{ item.status }}{% endif %}
-              {% if item.completion_rate is not None %} | 完成率：{{ item.completion_rate }}%{% endif %}
-            </div>
-            <div style="font-size: 12px; color: #666;">
-              负责人：{{ item.responsible }}{% if item.department %} | 部门：{{ item.department }}{% endif %}
-              {% if item.goal_type %} | {{ item.goal_type }}{% endif %}
+              <strong>待配置团队</strong> | 负责人：{{ item.responsible }}
             </div>
             {% endif %}
           </div>
@@ -451,14 +417,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
       <div class="pm-work-section">
         <div class="pm-work-section-title">
-          我负责的商机 ({{ my_work.my_opportunities_count|default:0 }})
+          我负责的项目 ({{ my_work.my_plans_count|default:0 }})
         </div>
-        {% if my_work.my_opportunities %}
+        {% if my_work.my_plans %}
         <ul class="pm-work-list">
-          {% for opportunity in my_work.my_opportunities %}
+          {% for plan in my_work.my_plans %}
           <li class="pm-work-item">
-            <a href="{{ opportunity.url }}" class="pm-work-item-title">{{ opportunity.title }}</a>
-            <span class="pm-work-item-meta">{{ opportunity.status }} | {{ opportunity.status }}%</span>
+            <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
+            <span class="pm-work-item-meta">{{ plan.status }}</span>
           </li>
           {% endfor %}
         </ul>
@@ -469,32 +435,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
       <div class="pm-work-section">
         <div class="pm-work-section-title">
-          我负责的合同 ({{ my_work.my_contracts_count|default:0 }})
+          我参与的项目 ({{ my_work.participating_plans_count|default:0 }})
         </div>
-        {% if my_work.my_contracts %}
+        {% if my_work.participating_plans %}
         <ul class="pm-work-list">
-          {% for contract in my_work.my_contracts %}
+          {% for plan in my_work.participating_plans %}
           <li class="pm-work-item">
-            <a href="{{ contract.url }}" class="pm-work-item-title">{{ contract.title }}</a>
-            <span class="pm-work-item-meta">{{ contract.status }} | {{ contract.status }}%</span>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-        {% endif %}
-      </div>
-
-      <div class="pm-work-section">
-        <div class="pm-work-section-title">
-          我参与的合同 ({{ my_work.participating_contracts_count|default:0 }})
-        </div>
-        {% if my_work.participating_contracts %}
-        <ul class="pm-work-list">
-          {% for contract in my_work.participating_contracts %}
-          <li class="pm-work-item">
-            <a href="{{ opportunity.url }}" class="pm-work-item-title">{{ opportunity.title }}</a>
-            <span class="pm-work-item-meta">{{ contract.role }} | {{ opportunity.status }}%</span>
+            <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
+            <span class="pm-work-item-meta">{{ plan.role }}</span>
           </li>
           {% endfor %}
         </ul>
@@ -513,35 +461,13 @@ document.addEventListener('DOMContentLoaded', function() {
       {% if recent_activities %}
       <ul class="pm-activity-list">
 
-        {% for opportunity in recent_activities.recent_opportunities %}
+        {% for plan in recent_activities.recent_plans %}
         <li class="pm-activity-item">
           <div class="pm-activity-title">
-            <a href="{{ opportunity.url }}" class="pm-item-link">📋 {{ opportunity.title }}</a>
+            <a href="{{ plan.url }}" class="pm-item-link">📋 {{ plan.title }}</a>
           </div>
           <div class="pm-activity-meta">
-            {{ opportunity.creator }} 创建于 {{ opportunity.time|date:"Y-m-d H:i" }}
-          </div>
-        </li>
-        {% endfor %}
-
-        {% for contract in recent_activities.recent_contracts %}
-        <li class="pm-activity-item">
-          <div class="pm-activity-title">
-            <a href="{{ contract.url }}" class="pm-item-link">🎯 {{ contract.title }}</a>
-          </div>
-          <div class="pm-activity-meta">
-            {{ contract.creator }} 更新于 {{ contract.time|date:"Y-m-d H:i" }} | 完成率 {{ contract.status }}%
-          </div>
-        </li>
-        {% endfor %}
-
-        {% for quotation in recent_activities.recent_quotations %}
-        <li class="pm-activity-item">
-          <div class="pm-activity-title">
-            <a href="{{ quotation.url }}" class="pm-item-link">✅ {{ quotation.title }}</a>
-          </div>
-          <div class="pm-activity-meta">
-            {{ quotation.creator }} {{ quotation.status }} | {{ quotation.time|date:"Y-m-d H:i" }}
+            {{ plan.creator }} 创建于 {{ plan.time|date:"Y-m-d H:i" }}
           </div>
         </li>
         {% endfor %}

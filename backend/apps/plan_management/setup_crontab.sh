@@ -18,6 +18,7 @@ DAILY_CRON="0 9 * * * cd $PROJECT_DIR && $VENV_PYTHON manage.py send_daily_plan_
 WEEKLY_CRON="0 9 * * 5 cd $PROJECT_DIR && $VENV_PYTHON manage.py send_weekly_plan_reminder >> $LOG_DIR/weekly_plan_reminder.log 2>&1"
 MONTHLY_CRON="0 9 28 * * cd $PROJECT_DIR && $VENV_PYTHON manage.py send_monthly_plan_reminder >> $LOG_DIR/monthly_plan_reminder.log 2>&1"
 QUARTERLY_CRON="0 9 15 3,6,9,12 * cd $PROJECT_DIR && $VENV_PYTHON manage.py send_quarterly_plan_reminder >> $LOG_DIR/quarterly_plan_reminder.log 2>&1"
+OVERDUE_CHECK_CRON="30 18 * * * cd $PROJECT_DIR && $VENV_PYTHON manage.py check_weekly_plan_overdue >> $LOG_DIR/weekly_plan_overdue.log 2>&1"
 
 echo "将添加以下 crontab 条目："
 echo ""
@@ -32,6 +33,9 @@ echo "$MONTHLY_CRON"
 echo ""
 echo "# 季度工作计划提醒（每季度最后一个月15日9点：3月、6月、9月、12月）"
 echo "$QUARTERLY_CRON"
+echo ""
+echo "# 周计划逾期检查（每天18:30执行，检查当天逾期的周计划）"
+echo "$OVERDUE_CHECK_CRON"
 echo ""
 
 read -p "确认添加？(y/n): " confirm
@@ -65,8 +69,13 @@ if echo "$CURRENT_CRONTAB" | grep -q "send_quarterly_plan_reminder"; then
     CURRENT_CRONTAB=$(echo "$CURRENT_CRONTAB" | grep -v "send_quarterly_plan_reminder")
 fi
 
+if echo "$CURRENT_CRONTAB" | grep -q "check_weekly_plan_overdue"; then
+    echo "⚠️  检测到已存在 check_weekly_plan_overdue 任务，将替换"
+    CURRENT_CRONTAB=$(echo "$CURRENT_CRONTAB" | grep -v "check_weekly_plan_overdue")
+fi
+
 # 添加新条目
-(crontab -l 2>/dev/null | grep -v "send_daily_plan_reminder" | grep -v "send_weekly_plan_reminder" | grep -v "send_monthly_plan_reminder" | grep -v "send_quarterly_plan_reminder"; echo ""; echo "# 计划管理提醒任务"; echo "$DAILY_CRON"; echo "$WEEKLY_CRON"; echo "$MONTHLY_CRON"; echo "$QUARTERLY_CRON") | crontab -
+(crontab -l 2>/dev/null | grep -v "send_daily_plan_reminder" | grep -v "send_weekly_plan_reminder" | grep -v "send_monthly_plan_reminder" | grep -v "send_quarterly_plan_reminder" | grep -v "check_weekly_plan_overdue"; echo ""; echo "# 计划管理提醒任务"; echo "$DAILY_CRON"; echo "$WEEKLY_CRON"; echo "$MONTHLY_CRON"; echo "$QUARTERLY_CRON"; echo "$OVERDUE_CHECK_CRON") | crontab -
 
 echo ""
 echo "✅ Crontab 任务已添加！"
@@ -79,18 +88,21 @@ echo "  tail -f $LOG_DIR/daily_plan_reminder.log     # 日提醒日志"
 echo "  tail -f $LOG_DIR/weekly_plan_reminder.log     # 周提醒日志"
 echo "  tail -f $LOG_DIR/monthly_plan_reminder.log    # 月度提醒日志"
 echo "  tail -f $LOG_DIR/quarterly_plan_reminder.log   # 季度提醒日志"
+echo "  tail -f $LOG_DIR/weekly_plan_overdue.log      # 周计划逾期检查日志"
 echo ""
 echo "测试执行："
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py send_daily_plan_reminder --test"
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py send_weekly_plan_reminder --test"
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py send_monthly_plan_reminder --test"
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py send_quarterly_plan_reminder --test"
+echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py check_weekly_plan_overdue --dry-run"
 echo ""
 echo "试运行（不实际发送）："
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py send_daily_plan_reminder --dry-run"
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py send_weekly_plan_reminder --dry-run"
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py send_monthly_plan_reminder --dry-run"
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py send_quarterly_plan_reminder --dry-run"
+echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py check_weekly_plan_overdue --dry-run"
 echo ""
 echo "删除任务："
 echo "  crontab -e  # 然后删除相关行"

@@ -17,11 +17,11 @@
     <div class="detail-card-header">
       <h3 class="detail-card-title">
         <i class="fas fa-info-circle"></i>
-        基本信息
+        表单信息
       </h3>
     </div>
     <div class="detail-card-body">
-{# 第一排：计划编号、计划名称、计划层级、计划周期、计划状态（5个字段） #}
+{# 第一排：计划编号、计划名称、计划层级、计划周期（4个字段，计划状态已移至状态信息卡片） #}
     <div class="form-row-5 mb-3">
       {% block detail_basic_info_row1 %}
   {# 计划编号 #}
@@ -60,17 +60,8 @@
       </div>
     </div>
   </div>
-  {# 计划状态 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">计划状态</label>
-      <div class="detail-field-value">
-        <span class="badge badge-status badge-{{ plan.status }}">
-          {{ plan.get_status_display|default:plan.status }}
-        </span>
-      </div>
-    </div>
-  </div>
+  {# 空占位符，移除计划状态（状态信息已在状态信息卡片中显示） #}
+  <div class="col-5-fields detail-field-wrapper"></div>
   {% endblock detail_basic_info_row1 %}
     </div>
 
@@ -672,54 +663,6 @@
     padding: 8px;
     background: #FFFFFF;
   }
-  /* 每排5个字段的布局 */
-  .detail-section-body .row {
-    display: flex;
-    flex-wrap: wrap;
-    margin: 0 -8px;
-  }
-  
-  .col-5-fields {
-    flex: 0 0 calc(20% - 16px);
-    max-width: calc(20% - 16px);
-    padding: 0 8px;
-    margin-bottom: 16px;
-  }
-  
-  .col-12-fields {
-    flex: 0 0 100%;
-    max-width: 100%;
-    padding: 0 8px;
-    margin-bottom: 16px;
-  }
-  
-  @media (max-width: 1200px) {
-    .col-5-fields {
-      flex: 0 0 calc(25% - 16px);
-      max-width: calc(25% - 16px);
-    }
-  }
-  
-  @media (max-width: 992px) {
-    .col-5-fields {
-      flex: 0 0 calc(33.333% - 16px);
-      max-width: calc(33.333% - 16px);
-    }
-  }
-  
-  @media (max-width: 768px) {
-    .col-5-fields {
-      flex: 0 0 calc(50% - 16px);
-      max-width: calc(50% - 16px);
-    }
-  }
-  
-  @media (max-width: 576px) {
-    .col-5-fields {
-      flex: 0 0 100%;
-      max-width: 100%;
-    }
-  }
   
   .badge-status {
     padding: 5px 12px;
@@ -951,40 +894,6 @@
   .detail-section-title,
   .detail-subsection-title {
     font-size: 16px !important;
-  }
-  
-  /* 修复：form-row-5 使用 grid 布局，子元素不应使用 flex */
-  .form-row-5 {
-    display: grid !important;
-    grid-template-columns: repeat(5, 1fr) !important;
-    gap: 16px !important;
-  }
-  
-  .form-row-5 .col-5-fields {
-    flex: none !important;
-    max-width: none !important;
-    width: auto !important;
-    padding: 0 !important;
-    margin-bottom: 0 !important;
-  }
-  
-  /* 响应式调整 */
-  @media (max-width: 1200px) {
-    .form-row-5 {
-      grid-template-columns: repeat(3, 1fr) !important;
-    }
-  }
-  
-  @media (max-width: 768px) {
-    .form-row-5 {
-      grid-template-columns: repeat(2, 1fr) !important;
-    }
-  }
-  
-  @media (max-width: 576px) {
-    .form-row-5 {
-      grid-template-columns: 1fr !important;
-    }
   }
 
 </style>

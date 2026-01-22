@@ -2820,7 +2820,7 @@ def production_management_home(request):
     # 构建上下文
     context = _with_nav(context, permission_set, 'production_home', request.user, request=request)
     
-    return render(request, "production_management/home.html", context)
+    return render(request, "production_management/production_management_home.html", context)
 
 
 @login_required

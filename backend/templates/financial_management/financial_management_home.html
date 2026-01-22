@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block module_styles %}
+  {{ block.super }}
 <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.css" rel="stylesheet">
 <style>
   .pm-home-wrap { padding: 0; }
@@ -73,13 +74,13 @@
 
   <div class="pm-stats-row">
     <div class="pm-warning-card">
-      <div class="pm-card-title">风险预警{% if stale_documents_count %}<span style="font-size: 12px; color: #333333; margin-left: 8px;">(未更新 {{ stale_documents_count|default:0 }})</span>{% endif %}</div>
+      <div class="pm-card-title">风险预警{% if stale_vouchers_count or over_budget_count %}<span style="font-size: 12px; color: #333333; margin-left: 8px;">(待审核凭证 {{ stale_vouchers_count|default:0 }} | 预算超支 {{ over_budget_count|default:0 }})</span>{% endif %}</div>
       {% if risk_warnings %}
       <ul class="pm-warning-list">
         {% for warning in risk_warnings %}
         <li class="pm-warning-item">
           <div class="pm-item-title"><a href="{{ warning.url }}" class="pm-item-link">{{ warning.title }}</a></div>
-          <div class="pm-item-meta">负责人：{{ warning.responsible }} | {{ warning.days }} 天未更新</div>
+          <div class="pm-item-meta">负责人：{{ warning.responsible }}{% if warning.days is not None %} | {{ warning.days }} 天未处理{% endif %}</div>
         </li>
         {% endfor %}
       </ul>
@@ -91,8 +92,8 @@
       <ul class="pm-todo-list">
         {% for item in todo_items %}
         <li class="pm-todo-item">
-          <div class="pm-item-title"><a href="{{ item.url }}" class="pm-item-link">{{ item.title }}</a>{% if item.document_number %}<span style="font-size: 11px; color: #999; margin-left: 8px;">({{ item.document_number }})</span>{% endif %}</div>
-          <div class="pm-item-meta">{% if item.type == 'review' %}<strong>待审核</strong> | 审核人：{{ item.responsible }}{% elif item.type == 'send' %}<strong>待发出</strong> | 创建人：{{ item.responsible }}{% endif %}</div>
+          <div class="pm-item-title"><a href="{{ item.url }}" class="pm-item-link">{{ item.title }}</a>{% if item.voucher_number %}<span style="font-size: 11px; color: #999; margin-left: 8px;">({{ item.voucher_number }})</span>{% elif item.invoice_number %}<span style="font-size: 11px; color: #999; margin-left: 8px;">({{ item.invoice_number }})</span>{% endif %}</div>
+          <div class="pm-item-meta">{% if item.type == 'voucher' %}<strong>待审核凭证</strong> | 制单人：{{ item.responsible }}{% elif item.type == 'invoice' %}<strong>待认证发票</strong> | 创建人：{{ item.responsible }}{% endif %}</div>
         </li>
         {% endfor %}
       </ul>
@@ -105,18 +106,18 @@
       <div class="pm-card-title">{% if my_work.summary_url %}<a href="{{ my_work.summary_url }}" style="color: inherit; text-decoration: none;">我的工作</a>{% else %}我的工作{% endif %}</div>
       {% if my_work %}
       <div class="pm-work-section">
-        <div class="pm-work-section-title">我创建的发文 ({{ my_work.my_documents_count|default:0 }})</div>
-        {% if my_work.my_documents %}<ul class="pm-work-list">{% for doc in my_work.my_documents %}<li class="pm-work-item"><a href="{{ doc.url }}" class="pm-work-item-title">{{ doc.title }}</a><span class="pm-work-item-meta">{{ doc.status }}</span></li>{% endfor %}</ul>{% else %}<div class="pm-empty" style="padding: 20px;">暂无数据</div>{% endif %}
+        <div class="pm-work-section-title">我创建的凭证 ({{ my_work.my_vouchers_count|default:0 }})</div>
+        {% if my_work.my_vouchers %}<ul class="pm-work-list">{% for voucher in my_work.my_vouchers %}<li class="pm-work-item"><a href="{{ voucher.url }}" class="pm-work-item-title">{{ voucher.title }}</a><span class="pm-work-item-meta">{{ voucher.status }}</span></li>{% endfor %}</ul>{% else %}<div class="pm-empty" style="padding: 20px;">暂无数据</div>{% endif %}
       </div>
       <div class="pm-work-section">
-        <div class="pm-work-section-title">我审核的发文 ({{ my_work.reviewed_documents_count|default:0 }})</div>
-        {% if my_work.reviewed_documents %}<ul class="pm-work-list">{% for doc in my_work.reviewed_documents %}<li class="pm-work-item"><a href="{{ doc.url }}" class="pm-work-item-title">{{ doc.title }}</a><span class="pm-work-item-meta">{{ doc.status }}</span></li>{% endfor %}</ul>{% else %}<div class="pm-empty" style="padding: 20px;">暂无数据</div>{% endif %}
+        <div class="pm-work-section-title">我创建的发票 ({{ my_work.my_invoices_count|default:0 }})</div>
+        {% if my_work.my_invoices %}<ul class="pm-work-list">{% for invoice in my_work.my_invoices %}<li class="pm-work-item"><a href="{{ invoice.url }}" class="pm-work-item-title">{{ invoice.title }}</a><span class="pm-work-item-meta">{{ invoice.status }}</span></li>{% endfor %}</ul>{% else %}<div class="pm-empty" style="padding: 20px;">暂无数据</div>{% endif %}
       </div>
       {% else %}<div class="pm-empty">暂无数据</div>{% endif %}
     </div>
     <div class="pm-activities-card">
       <div class="pm-card-title">最近活动</div>
-      {% if recent_activities %}<ul class="pm-activity-list">{% for doc in recent_activities.recent_documents %}<li class="pm-activity-item"><div class="pm-activity-title"><a href="{{ doc.url }}" class="pm-item-link">📤 {{ doc.title }}</a></div><div class="pm-activity-meta">{{ doc.creator }} 创建于 {{ doc.time|date:"Y-m-d H:i" }}</div></li>{% endfor %}{% for doc in recent_activities.recent_updates %}<li class="pm-activity-item"><div class="pm-activity-title"><a href="{{ doc.url }}" class="pm-item-link">🔄 {{ doc.title }}</a></div><div class="pm-activity-meta">{{ doc.updater }} 更新于 {{ doc.time|date:"Y-m-d H:i" }}</div></li>{% endfor %}</ul>{% else %}<div class="pm-empty">暂无活动记录</div>{% endif %}
+      {% if recent_activities %}<ul class="pm-activity-list">{% for voucher in recent_activities.recent_vouchers %}<li class="pm-activity-item"><div class="pm-activity-title"><a href="{{ voucher.url }}" class="pm-item-link">📝 {{ voucher.title }}</a></div><div class="pm-activity-meta">{{ voucher.creator }} 创建于 {{ voucher.time|date:"Y-m-d H:i" }}</div></li>{% endfor %}{% for flow in recent_activities.recent_fund_flows %}<li class="pm-activity-item"><div class="pm-activity-title"><a href="{{ flow.url }}" class="pm-item-link">💳 {{ flow.title }}</a></div><div class="pm-activity-meta">{{ flow.creator }} 创建于 {{ flow.time|date:"Y-m-d H:i" }}</div></li>{% endfor %}</ul>{% else %}<div class="pm-empty">暂无活动记录</div>{% endif %}
     </div>
   </div>
 </div>

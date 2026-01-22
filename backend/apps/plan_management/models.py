@@ -630,6 +630,29 @@ class Plan(models.Model):
         help_text='百分比，0-100'
     )
     
+    # 风险预警（周计划专用）
+    is_overdue = models.BooleanField(default=False, db_index=True, verbose_name='是否逾期', help_text='周计划提交是否逾期')
+    overdue_days = models.IntegerField(default=0, verbose_name='逾期天数', help_text='周计划逾期天数')
+    risk_level = models.CharField(
+        max_length=20,
+        choices=[
+            ('low', '低风险'),
+            ('medium', '中风险'),
+            ('high', '高风险'),
+            ('critical', '严重风险'),
+        ],
+        default='low',
+        blank=True,
+        verbose_name='风险等级',
+        help_text='周计划逾期风险等级'
+    )
+    submission_deadline = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='提交截止时间',
+        help_text='周计划提交截止时间（每周五18:00）'
+    )
+    
     # 系统字段
     created_by = models.ForeignKey(
         User,
@@ -658,6 +681,8 @@ class Plan(models.Model):
             models.Index(fields=['related_goal']),
             models.Index(fields=['start_time', 'end_time']),
             models.Index(fields=['parent_plan']),
+            models.Index(fields=['is_overdue', 'risk_level']),
+            models.Index(fields=['plan_period', 'is_overdue']),
         ]
     
     def __str__(self):
@@ -748,6 +773,15 @@ class Plan(models.Model):
         # 自动计算对齐度（如果未设置）
         if self.alignment_score == 0:
             self.alignment_score = self.calculate_alignment_score()
+        
+        # 周计划：自动计算提交截止时间（每周五18:00）
+        if self.plan_period == 'weekly' and self.start_time:
+            if not self.submission_deadline:
+                self.submission_deadline = self.calculate_weekly_submission_deadline()
+        
+        # 检查周计划是否逾期
+        if self.plan_period == 'weekly':
+            self.check_overdue_status()
         
         # P1: 状态变更必须通过裁决器，不在 save() 中直接设置
         # 新建计划默认状态为 draft（由数据库默认值或表单设置）
@@ -851,6 +885,90 @@ class Plan(models.Model):
             descendants.append(child)
             descendants.extend(child.get_all_descendants())
         return descendants
+    
+    def calculate_weekly_submission_deadline(self):
+        """
+        计算周计划的提交截止时间（每周五18:00）
+        
+        规则：
+        - 如果计划开始时间是周一，则截止时间是当周周五18:00
+        - 如果计划开始时间是其他时间，则截止时间是下一个周五18:00
+        """
+        if self.plan_period != 'weekly' or not self.start_time:
+            return None
+        
+        from datetime import timedelta
+        
+        start_date = self.start_time.date()
+        # 获取计划开始日期所在周的周一
+        days_since_monday = start_date.weekday()  # 0=Monday, 6=Sunday
+        monday = start_date - timedelta(days=days_since_monday)
+        # 计算当周周五
+        friday = monday + timedelta(days=4)  # Monday + 4 days = Friday
+        
+        # 周五18:00
+        from datetime import datetime as dt
+        deadline = timezone.make_aware(
+            dt.combine(friday, dt.min.time().replace(hour=18, minute=0))
+        )
+        
+        return deadline
+    
+    def check_overdue_status(self):
+        """
+        检查周计划是否逾期提交
+        
+        规则：
+        - 只有周计划（plan_period='weekly'）才检查逾期
+        - 如果计划状态是 draft 或 published，且已过截止时间，则标记为逾期
+        - 如果计划状态是 accepted 或 in_progress，且已过截止时间，则标记为逾期
+        """
+        if self.plan_period != 'weekly' or not self.submission_deadline:
+            return
+        
+        now = timezone.now()
+        
+        # 判断是否逾期：状态为 draft 或 published，且已过截止时间
+        # 或者状态为 accepted/in_progress，但创建时间在截止时间之后（逾期提交）
+        is_overdue = False
+        
+        if self.status in ['draft', 'published']:
+            # 草稿或已发布状态，如果已过截止时间，则逾期
+            if now > self.submission_deadline:
+                is_overdue = True
+        elif self.status in ['accepted', 'in_progress']:
+            # 已接收或执行中状态，如果创建时间在截止时间之后，则逾期提交
+            if self.created_time and self.created_time > self.submission_deadline:
+                is_overdue = True
+        
+        if is_overdue:
+            # 计算逾期天数
+            if self.status in ['draft', 'published']:
+                # 从截止时间开始计算
+                delta = now - self.submission_deadline
+            else:
+                # 从创建时间开始计算（创建时间在截止时间之后）
+                delta = self.created_time - self.submission_deadline
+            
+            overdue_days = delta.days
+            
+            # 计算风险等级
+            if overdue_days <= 1:
+                risk_level = 'low'
+            elif overdue_days <= 3:
+                risk_level = 'medium'
+            elif overdue_days <= 7:
+                risk_level = 'high'
+            else:
+                risk_level = 'critical'
+            
+            self.is_overdue = True
+            self.overdue_days = overdue_days
+            self.risk_level = risk_level
+        else:
+            self.is_overdue = False
+            self.overdue_days = 0
+            self.risk_level = 'low'
     
     @property
     def plan_type(self):
@@ -1309,6 +1427,8 @@ class ApprovalNotification(models.Model):
         ('company_plan_published', '公司计划发布'),
         ('personal_plan_published', '个人计划发布'),
         ('plan_accepted', '计划被接收'),
+        ('weekly_plan_reminder', '周计划提醒'),
+        ('weekly_plan_overdue', '周计划逾期'),
     ]
     
     OBJECT_TYPE_CHOICES = [

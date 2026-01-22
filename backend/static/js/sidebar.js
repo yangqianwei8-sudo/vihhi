@@ -54,6 +54,12 @@
             }
             
             link.addEventListener('click', function(e) {
+                // 关键修复：如果点击的是子菜单项，不处理父菜单的折叠逻辑
+                // 这防止了点击子菜单项时触发父菜单折叠的问题
+                if (e.target.closest('.vh-sb__child')) {
+                    return; // 允许子菜单项正常跳转，不处理父菜单折叠
+                }
+                
                 const parent = this.closest('.vh-sb__parent');
                 const children = parent.querySelector('.vh-sb__children');
                 

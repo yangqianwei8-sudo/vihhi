@@ -820,7 +820,7 @@ def financial_home(request):
     # 合并所有数据
     page_context.update(context)
     
-    return render(request, "financial_management/home.html", page_context)
+    return render(request, "financial_management/financial_management_home.html", page_context)
 
 
 @login_required
