@@ -83,7 +83,13 @@
       <td>{{ vehicle.get_vehicle_type_display }}</td>
       <td>{{ vehicle.get_fuel_type_display }}</td>
       <td>{{ vehicle.current_mileage|default:"0" }} km</td>
-      <td>{{ vehicle.driver.get_full_name|default:vehicle.driver.username|default:"-" }}</td>
+      <td>
+        {% if vehicle.driver %}
+          {{ vehicle.driver.get_full_name|default:vehicle.driver.username }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
       <td>
         {% if vehicle.status == 'available' %}
         <span class="badge bg-success">可用</span>

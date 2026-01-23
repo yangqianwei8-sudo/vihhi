@@ -89,9 +89,18 @@
         {% if announcement.is_popup %}
         <span class="badge bg-warning me-1">弹窗</span>
         {% endif %}
+        {% if announcement.type == 'team_notification' %}
+        <span class="badge bg-info me-1">团队通知</span>
+        {% endif %}
         {{ announcement.title }}
       </td>
-      <td>{{ announcement.get_category_display }}</td>
+      <td>
+        {% if announcement.type == 'announcement' %}
+        {{ announcement.get_category_display }}
+        {% else %}
+        {{ announcement.category|default:"-" }}
+        {% endif %}
+      </td>
       <td>
         {% if announcement.priority == 'urgent' %}
         <span class="badge bg-danger">紧急</span>
@@ -101,9 +110,21 @@
         <span class="badge bg-info">普通</span>
         {% endif %}
       </td>
-      <td>{{ announcement.get_target_scope_display }}</td>
+      <td>
+        {% if announcement.type == 'announcement' %}
+        {{ announcement.get_target_scope_display }}
+        {% else %}
+        指定用户
+        {% endif %}
+      </td>
       <td>{{ announcement.publish_date|date:"Y-m-d" }}</td>
-      <td>{{ announcement.publisher.get_full_name|default:announcement.publisher.username }}</td>
+      <td>
+        {% if announcement.publisher %}
+        {{ announcement.publisher.get_full_name|default:announcement.publisher.username }}
+        {% else %}
+        <span class="text-muted">系统</span>
+        {% endif %}
+      </td>
       <td>{{ announcement.view_count }}</td>
       <td>
         {% if announcement.is_top %}
@@ -113,14 +134,23 @@
         {% endif %}
       </td>
       <td>
-        {% if announcement.is_active %}
-        <span class="badge bg-success">生效</span>
+        {% if announcement.type == 'team_notification' %}
+          {% if announcement.is_read %}
+          <span class="badge bg-secondary">已读</span>
+          {% else %}
+          <span class="badge bg-success">未读</span>
+          {% endif %}
         {% else %}
-        <span class="badge bg-secondary">失效</span>
+          {% if announcement.is_active %}
+          <span class="badge bg-success">生效</span>
+          {% else %}
+          <span class="badge bg-secondary">失效</span>
+          {% endif %}
         {% endif %}
       </td>
       <td>
         <div class="list-page-table-actions">
+          {% if announcement.type == 'announcement' %}
           <a href="{% url 'admin_pages:announcement_detail' announcement.id %}" class="action-view" title="查看详情">
             <i class="bi bi-eye"></i>
           </a>
@@ -128,6 +158,10 @@
           <a href="{% url 'admin_pages:announcement_update' announcement.id %}" class="action-edit" title="编辑">
             <i class="bi bi-pencil"></i>
           </a>
+          {% else %}
+          {# 项目团队通知只能查看，不能编辑 #}
+          <span class="text-muted" title="项目团队通知">📢</span>
+          {% endif %}
         </div>
       </td>
     </tr>

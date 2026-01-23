@@ -1262,60 +1262,10 @@ def plan_create(request):
                         
                         created_plans.append(plan_item)
             
-            # 处理审批流程配置
-            workflow_template_id = request.POST.get('workflow_template', '').strip()
-            if workflow_template_id and not is_draft:
-                try:
-                    from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalNode
-                    from backend.apps.workflow_engine.services import ApprovalEngine
-                    
-                    workflow_template = WorkflowTemplate.objects.get(
-                        id=int(workflow_template_id),
-                        status='active',
-                        applicable_models__contains=['plan']
-                    )
-                    
-                    # 检查工作流模板是否有节点配置
-                    node_count = workflow_template.nodes.count()
-                    if node_count == 0:
-                        logging.warning(f'工作流模板 {workflow_template.name} 没有配置节点')
-                        messages.warning(request, f'选择的审批流程模板未配置节点，请先在后台配置审批节点后再使用')
-                    else:
-                        # 为每个创建的计划启动审批流程
-                        success_count = 0
-                        for plan in created_plans:
-                            try:
-                                instance = ApprovalEngine.start_approval(
-                                    workflow=workflow_template,
-                                    content_object=plan,
-                                    applicant=request.user,
-                                    comment=f'创建计划：{plan.name}'
-                                )
-                                success_count += 1
-                                logging.info(f'计划 {plan.plan_number} 的审批流程已启动，审批实例: {instance.instance_number}')
-                            except Exception as e:
-                                logging.error(f'启动计划 {plan.id} 的审批流程失败: {str(e)}', exc_info=True)
-                                messages.warning(request, f'计划 {plan.name} 的审批流程启动失败: {str(e)}，请手动提交审批')
-                        
-                        if success_count > 0:
-                            messages.info(request, f'{success_count} 个计划已自动提交审批')
-                except ValueError as e:
-                    logging.warning(f'审批流程ID格式错误: {str(e)}')
-                    messages.warning(request, '审批流程配置无效，请重新选择')
-                except WorkflowTemplate.DoesNotExist:
-                    logging.warning(f'审批流程模板不存在: {workflow_template_id}')
-                    messages.warning(request, '选择的审批流程不存在或已停用，请重新选择')
-                except Exception as e:
-                    logging.error(f'处理审批流程配置时发生错误: {str(e)}', exc_info=True)
-                    messages.warning(request, f'审批流程配置处理失败: {str(e)}')
-            
             if is_draft:
                 messages.success(request, f'计划已暂存为草稿（共 {len(created_plans)} 个计划）')
             else:
-                if workflow_template_id:
-                    messages.success(request, f'成功创建 {len(created_plans)} 个计划，已自动提交审批')
-                else:
-                    messages.success(request, f'成功创建 {len(created_plans)} 个计划')
+                messages.success(request, f'成功创建 {len(created_plans)} 个计划')
             # 跳转到第一个计划的详情页（如果有）
             if created_plans:
                 return redirect('plan_pages:plan_detail', plan_id=created_plans[0].id)
@@ -1504,8 +1454,7 @@ def plan_detail(request, plan_id):
     context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_list')
     
     # P1: 权限判断（围绕 decision 的裁决）
-    # 允许草稿和已取消状态的计划提交审批
-    can_submit_approval = (_permission_granted('plan_management.plan.create', permission_set) or plan.responsible_person == request.user) and plan.status in ['draft', 'cancelled']
+    can_submit_approval = False
     can_request_cancel = (_permission_granted('plan_management.plan.create', permission_set) or plan.responsible_person == request.user) and plan.status == 'in_progress'
     
     # 检查是否存在 pending 的决策（同时检查审批引擎和 PlanDecision）
@@ -1550,6 +1499,11 @@ def plan_detail(request, plan_id):
     pending_decisions = PlanDecision.objects.filter(plan=plan, decided_at__isnull=True).order_by('-requested_at')
     
     can_approve = _permission_granted('plan_management.approve_plan', permission_set) or request.user.is_superuser
+    
+    # P1: 权限判断（围绕 decision 的裁决）
+    # 允许草稿和已取消状态的计划提交审批
+    can_submit_approval = (_permission_granted('plan_management.plan.create', permission_set) or plan.responsible_person == request.user) and plan.status in ['draft', 'cancelled']
+    can_request_cancel = (_permission_granted('plan_management.plan.create', permission_set) or plan.responsible_person == request.user) and plan.status == 'in_progress'
     
     # 检查是否可以申请调整
     can_manage = _permission_granted('plan_management.plan.manage', permission_set) or request.user.is_superuser
@@ -3869,10 +3823,11 @@ def plan_statistics(request):
 
 # ==================== P1 决策接口（围绕 decision 的裁决） ====================
 
-@login_required
 @require_http_methods(["POST"])
-def plan_request_start(request, plan_id):
-    """发起启动计划请求（提交审批）"""
+@login_required
+def plan_submit_approval(request, plan_id):
+    """提交计划启动审批（使用通用审批服务）"""
+    import logging
     logger = logging.getLogger(__name__)
     permission_set = get_user_permission_codes(request.user)
     plan = get_object_or_404(Plan, id=plan_id)
@@ -3888,26 +3843,20 @@ def plan_request_start(request, plan_id):
         messages.error(request, f'只有草稿或已取消状态的计划可以提交审批，当前状态：{plan.get_status_display()}')
         return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
-    # 检查是否已存在 pending 的 start 请求（同时检查审批引擎和 PlanDecision）
+    # 检查是否已存在待审批的实例
     from django.contrib.contenttypes.models import ContentType
     from backend.apps.workflow_engine.models import ApprovalInstance
-    from backend.apps.plan_management.services.plan_approval import PlanApprovalService
+    from backend.apps.plan_management.services.plan_approval_v2 import PlanStartApprovalService
     
     plan_content_type = ContentType.objects.get_for_model(Plan)
     existing_pending_approval = ApprovalInstance.objects.filter(
         content_type=plan_content_type,
         object_id=plan.id,
-        workflow__code=PlanApprovalService.PLAN_START_WORKFLOW_CODE,
+        workflow__code='plan_start_approval',
         status__in=['pending', 'in_progress']
     ).exists()
     
-    existing_pending_decision = PlanDecision.objects.filter(
-        plan=plan,
-        request_type='start',
-        decided_at__isnull=True
-    ).exists()
-    
-    if existing_pending_approval or existing_pending_decision:
+    if existing_pending_approval:
         messages.warning(request, '该计划已有待处理的启动请求')
         return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
@@ -3934,33 +3883,23 @@ def plan_request_start(request, plan_id):
             messages.error(request, f'状态变更记录失败: {str(e)}')
             return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
-    # 优先使用审批引擎
+    # 使用通用审批服务提交审批
     try:
-        from backend.apps.plan_management.services.plan_decisions import request_start, PlanDecisionError
+        service = PlanStartApprovalService()
+        comment = request.POST.get('comment', '')
         
-        # 检查验收标准
-        if not plan.acceptance_criteria or not plan.acceptance_criteria.strip():
-            messages.error(request, '提交审批前必须填写验收标准，明确说明如何判定计划完成。请在计划编辑页面填写验收标准。')
-            return redirect('plan_pages:plan_detail', plan_id=plan_id)
+        instance = service.submit_approval(
+            obj=plan,
+            applicant=request.user,
+            comment=comment or f'申请启动计划：{plan.plan_number} - {plan.name}'
+        )
         
-        decision = request_start(plan, request.user, request.POST.get('reason', ''))
-        
-        # 检查是否成功创建了审批实例
-        from backend.apps.workflow_engine.models import ApprovalInstance
-        from django.contrib.contenttypes.models import ContentType
-        plan_content_type = ContentType.objects.get_for_model(Plan)
-        approval_instance = ApprovalInstance.objects.filter(
-            content_type=plan_content_type,
-            object_id=plan.id,
-            status__in=['pending', 'in_progress']
-        ).first()
-        
-        if approval_instance:
-            messages.success(request, f'已提交审批请求，审批实例编号：{approval_instance.instance_number}')
+        if instance:
+            messages.success(request, f'已提交审批请求，审批实例编号：{instance.instance_number}')
         else:
-            messages.info(request, '已提交审批请求，正在等待审批')
+            messages.warning(request, '审批流程未配置，请联系管理员配置审批流程')
             
-    except PlanDecisionError as e:
+    except ValueError as e:
         # 业务规则错误（如验收标准未填写、状态不允许等）
         messages.error(request, str(e))
         logger.warning(f'提交审批请求失败（业务规则）: {str(e)}, plan_id={plan_id}, user={request.user.username}')
@@ -3971,6 +3910,62 @@ def plan_request_start(request, plan_id):
         logger.error(f'提交审批请求失败（系统错误）: {str(e)}, plan_id={plan_id}, user={request.user.username}', exc_info=True)
     
     return redirect('plan_pages:plan_detail', plan_id=plan_id)
+
+
+@require_http_methods(["POST"])
+@login_required
+def plan_update_acceptance_criteria(request, plan_id):
+    """快速更新计划验收标准（AJAX接口）"""
+    from django.http import JsonResponse
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    permission_set = get_user_permission_codes(request.user)
+    plan = get_object_or_404(Plan, id=plan_id)
+    
+    # 权限检查：plan_management.plan.create 或负责人
+    can_edit = _permission_granted('plan_management.plan.create', permission_set) or plan.responsible_person == request.user
+    if not can_edit:
+        return JsonResponse({'success': False, 'error': '您没有权限编辑此计划'}, status=403)
+    
+    # 检查状态：允许草稿和已取消状态的计划编辑验收标准
+    if plan.status not in ['draft', 'cancelled']:
+        return JsonResponse({'success': False, 'error': f'只有草稿或已取消状态的计划可以编辑验收标准，当前状态：{plan.get_status_display()}'}, status=400)
+    
+    # 检查是否已存在待审批的实例
+    from django.contrib.contenttypes.models import ContentType
+    from backend.apps.workflow_engine.models import ApprovalInstance
+    
+    plan_content_type = ContentType.objects.get_for_model(Plan)
+    existing_pending_approval = ApprovalInstance.objects.filter(
+        content_type=plan_content_type,
+        object_id=plan.id,
+        workflow__code='plan_start_approval',
+        status__in=['pending', 'in_progress']
+    ).exists()
+    
+    if existing_pending_approval:
+        return JsonResponse({'success': False, 'error': '该计划已有待处理的启动请求，不能修改验收标准'}, status=400)
+    
+    # 获取验收标准
+    acceptance_criteria = request.POST.get('acceptance_criteria', '').strip()
+    
+    if not acceptance_criteria:
+        return JsonResponse({'success': False, 'error': '验收标准不能为空'}, status=400)
+    
+    # 更新验收标准
+    try:
+        plan.acceptance_criteria = acceptance_criteria
+        plan.save(update_fields=['acceptance_criteria'])
+        
+        return JsonResponse({
+            'success': True,
+            'message': '验收标准已更新',
+            'acceptance_criteria': acceptance_criteria
+        })
+    except Exception as e:
+        logger.error(f'更新验收标准失败: {str(e)}, plan_id={plan_id}, user={request.user.username}', exc_info=True)
+        return JsonResponse({'success': False, 'error': f'更新失败: {str(e)}'}, status=500)
 
 
 @login_required

@@ -729,6 +729,7 @@ class PlanForm(forms.ModelForm):
         
         # 如果是草稿模式，或者详细信息表格有数据，将基本信息表单的必填字段设置为非必填
         # 因为基本信息表单只作为默认值提供者，详细信息表格才是主要数据源
+        # 注意：验收标准字段保持必填，因为提交审批时需要验收标准
         if self.is_draft or has_formset_data:
             # 草稿模式或详细信息表格有数据时，基本信息表单的字段允许为空
             if 'name' in self.fields:
@@ -737,6 +738,9 @@ class PlanForm(forms.ModelForm):
                 self.fields['related_goal'].required = False
             if 'content' in self.fields:
                 self.fields['content'].required = False
+            # 验收标准保持必填，即使草稿模式也需要填写（提交审批时必需）
+            # if 'acceptance_criteria' in self.fields:
+            #     self.fields['acceptance_criteria'].required = True
             if 'plan_objective' in self.fields:
                 self.fields['plan_objective'].required = False
             if 'plan_period' in self.fields:

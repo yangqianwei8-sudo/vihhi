@@ -39,7 +39,13 @@ class User(AbstractUser):
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return f"{self.username} - {self.get_full_name()}"
+        """返回用户显示名称，优先显示全名，避免重复"""
+        full_name = self.get_full_name()
+        if full_name and full_name.strip():
+            # 如果全名存在且不为空，只显示全名
+            return full_name
+        # 如果全名不存在，显示用户名
+        return self.username
 
     def get_notification_preferences(self):
         default_prefs = {

@@ -18,100 +18,138 @@
 {% endcomment %}
 {% load static %}
 
-{% block list_page_title %}用品分类管理{% endblock %}
+{# 操作栏 - 顶部操作按钮 #}
+{% block list_action_bar_content %}
+<div class="list-page-action-bar">
+  <div class="list-page-action-bar-left">
+    {# 可以添加搜索框等 #}
+  </div>
+  <div class="list-page-action-bar-right">
+    {% if can_create %}
+    <a href="{% url 'admin_pages:supply_category_create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> 创建分类
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock list_action_bar_content %}
 
-{% block list_page_actions %}
-{% if can_create %}
-<a href="{% url 'admin_pages:supply_category_create' %}" class="btn btn-primary">
-    <i class="bi bi-plus-circle"></i> 创建分类
-</a>
-{% endif %}
-{% endblock %}
+{# 筛选器区域 #}
+{% block list_filters_content %}
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">搜索</label>
+    <input type="text" name="search" class="form-control" placeholder="搜索分类名称、编码、描述..." value="{{ search }}">
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">状态</label>
+    <select name="is_active" class="form-select">
+      <option value="">全部状态</option>
+      <option value="true" {% if is_active == 'true' %}selected{% endif %}>启用</option>
+      <option value="false" {% if is_active == 'false' %}selected{% endif %}>停用</option>
+    </select>
+  </div>
+{% endblock list_filters_content %}
 
-{% block search_placeholder %}搜索分类名称、编码、描述...{% endblock %}
-
-{% block reset_url %}{% url 'admin_pages:supply_category_list' %}{% endblock %}
-
-<!-- 表格复选框列 -->
-{% block list_page_table_checkbox_header %}
-<th style="width: 40px;">
+{# 表格表头 #}
+{% block list_table_headers %}
+  <th style="width: 40px;">
     <input type="checkbox" id="selectAll" title="全选/取消全选">
-</th>
-{% endblock %}
+  </th>
+  <th>分类编码</th>
+  <th>分类名称</th>
+  <th>父分类</th>
+  <th>排序顺序</th>
+  <th>描述</th>
+  <th>状态</th>
+  <th>操作</th>
+{% endblock list_table_headers %}
 
-{% block list_page_table_headers %}
-<th style="width: 10%;">分类编码</th>
-<th style="width: 20%;">分类名称</th>
-<th style="width: 15%;">父分类</th>
-<th style="width: 8%;">排序顺序</th>
-<th style="width: 20%;">描述</th>
-<th style="width: 8%;">状态</th>
-{% endblock %}
-
-{% block list_page_table_checkbox_cell %}
-<td>
-    <input type="checkbox" class="row-checkbox" value="{{ item.id }}" title="选择此项">
-</td>
-{% endblock %}
-
-{% block list_page_table_row_content %}
-<td><code>{{ item.code }}</code></td>
-<td>
-    {% if item.parent %}
+{# 表格行 #}
+{% block list_table_rows %}
+  {% if page_obj %}
+    {% for category in page_obj %}
+    <tr>
+      <td>
+        <input type="checkbox" class="row-checkbox" value="{{ category.id }}" title="选择此项">
+      </td>
+      <td><code>{{ category.code }}</code></td>
+      <td>
+        {% if category.parent %}
         <span class="text-muted">└─</span>
-    {% endif %}
-    {{ item.name }}
-</td>
-<td>
-    {% if item.parent %}
-        <a href="?parent_id={{ item.parent.id }}" class="text-decoration-none">
-            {{ item.parent.name }}
-        </a>
-    {% else %}
-        <span class="text-muted">-</span>
-    {% endif %}
-</td>
-<td>{{ item.sort_order }}</td>
-<td>
-    {% if item.description %}
-        {{ item.description|truncatewords:10 }}
-    {% else %}
-        <span class="text-muted">-</span>
-    {% endif %}
-</td>
-<td>
-    {% if item.is_active %}
-        <span class="badge bg-success">启用</span>
-    {% else %}
-        <span class="badge bg-secondary">停用</span>
-    {% endif %}
-</td>
-<td>
-    <div class="list-page-table-actions">
-        <a href="{% url 'admin_pages:supply_category_update' category_id=item.id %}" class="action-edit" title="编辑">
-            <i class="bi bi-pencil"></i>
-        </a>
-        {% if not item.children.exists and not item.supplies.exists %}
-        <span class="action-separator">|</span>
-        <a href="{% url 'admin_pages:supply_category_delete' category_id=item.id %}" class="action-delete" title="删除" onclick="return confirm('确定要删除分类 {{ item.name }} 吗？此操作不可撤销。');">
-            <i class="bi bi-trash"></i>
-        </a>
         {% endif %}
-    </div>
-</td>
-{% endblock %}
+        {{ category.name }}
+      </td>
+      <td>
+        {% if category.parent %}
+        <a href="?parent_id={{ category.parent.id }}" class="text-decoration-none">
+          {{ category.parent.name }}
+        </a>
+        {% else %}
+        <span class="text-muted">-</span>
+        {% endif %}
+      </td>
+      <td>{{ category.sort_order }}</td>
+      <td>
+        {% if category.description %}
+        {{ category.description|truncatewords:10 }}
+        {% else %}
+        <span class="text-muted">-</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if category.is_active %}
+        <span class="badge bg-success">启用</span>
+        {% else %}
+        <span class="badge bg-secondary">停用</span>
+        {% endif %}
+      </td>
+      <td>
+        <div class="list-page-table-actions">
+          <a href="{% url 'admin_pages:supply_category_update' category_id=category.id %}" class="action-edit" title="编辑">
+            <i class="bi bi-pencil"></i>
+          </a>
+          {% if not category.children.exists and not category.supplies.exists %}
+          <span class="action-separator">|</span>
+          <a href="{% url 'admin_pages:supply_category_delete' category_id=category.id %}" class="action-delete" title="删除" onclick="return confirm('确定要删除分类 {{ category.name }} 吗？此操作不可撤销。');">
+            <i class="bi bi-trash"></i>
+          </a>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+    {% empty %}
+    {# 空状态 - 当 page_obj 存在但没有数据时显示 #}
+    <tr>
+      <td colspan="8" class="list-empty">
+        <div class="list-empty-icon">📁</div>
+        <div class="list-empty-text">暂无数据</div>
+        {% block list_empty_hint %}
+        <div class="list-empty-hint">
+          当前筛选条件下没有找到分类，请调整筛选条件或创建新分类。
+        </div>
+        {% endblock list_empty_hint %}
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+    {# 空状态 - 当 page_obj 不存在时显示 #}
+    <tr>
+      <td colspan="8" class="list-empty">
+        <div class="list-empty-icon">📁</div>
+        <div class="list-empty-text">暂无数据</div>
+        <div class="list-empty-hint">
+          当前筛选条件下没有找到分类，请调整筛选条件或创建新分类。
+        </div>
+      </td>
+    </tr>
+  {% endif %}
+{% endblock list_table_rows %}
 
-{% block empty_colspan %}8{% endblock %}
-
-{% block empty_table_message %}暂无数据{% endblock %}
-
-{% block empty_message %}暂无数据{% endblock %}
-
-{% block empty_create_url %}{% url 'admin_pages:supply_category_create' %}{% endblock %}
-
-{% block list_page_batch_delete_js %}
-// 批量删除功能
+{# 批量操作 JavaScript #}
+{% block extra_js %}
+<script>
 document.addEventListener('DOMContentLoaded', function() {
+    // 批量删除功能
     const batchDeleteBtn = document.getElementById('batchDeleteBtn');
     if (batchDeleteBtn) {
         batchDeleteBtn.addEventListener('click', function() {
@@ -151,12 +189,8 @@ document.addEventListener('DOMContentLoaded', function() {
             form.submit();
         });
     }
-});
-{% endblock %}
 
-{% block list_page_batch_export_js %}
-// 批量导出功能
-document.addEventListener('DOMContentLoaded', function() {
+    // 批量导出功能
     const batchExportBtn = document.getElementById('batchExportBtn');
     if (batchExportBtn) {
         batchExportBtn.addEventListener('click', function() {
@@ -172,64 +206,53 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = url;
         });
     }
-});
-{% endblock %}
 
-{% block list_page_batch_dropdown_items %}
-<li><a class="dropdown-item" href="#" id="batchStatusActiveBtn"><i class="bi bi-check-circle"></i> 批量设为启用</a></li>
-<li><a class="dropdown-item" href="#" id="batchStatusInactiveBtn"><i class="bi bi-x-circle"></i> 批量设为停用</a></li>
-<li><hr class="dropdown-divider"></li>
-<li><a class="dropdown-item" href="#" id="batchPrintBtn"><i class="bi bi-printer"></i> 打印选中</a></li>
-{% endblock %}
+    // 批量状态更新功能
+    function batchUpdateStatus(isActive) {
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        if (checked.length === 0) {
+            showError('请先选择要操作的数据');
+            return;
+        }
+        
+        const statusLabel = isActive ? '启用' : '停用';
+        if (!confirm(`确定要将选中的 ${checked.length} 个分类状态更新为"${statusLabel}"吗？`)) {
+            return;
+        }
+        
+        const ids = Array.from(checked).map(cb => cb.value);
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "admin_pages:supply_category_list" %}';
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        const statusInput = document.createElement('input');
+        statusInput.type = 'hidden';
+        statusInput.name = 'batch_is_active';
+        statusInput.value = isActive ? 'true' : 'false';
+        form.appendChild(statusInput);
+        
+        ids.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'update_ids';
+            input.value = id;
+            form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 
-{% block list_page_custom_js %}
-// 批量状态更新功能
-function batchUpdateStatus(isActive) {
-    const checked = document.querySelectorAll('.row-checkbox:checked');
-    if (checked.length === 0) {
-        showError('请先选择要操作的数据');
-        return;
-    }
-    
-    const statusLabel = isActive ? '启用' : '停用';
-    if (!confirm(`确定要将选中的 ${checked.length} 个分类状态更新为"${statusLabel}"吗？`)) {
-        return;
-    }
-    
-    const ids = Array.from(checked).map(cb => cb.value);
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{% url "admin_pages:supply_category_list" %}';
-    
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (csrfToken) {
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrfmiddlewaretoken';
-        csrfInput.value = csrfToken.value;
-        form.appendChild(csrfInput);
-    }
-    
-    const statusInput = document.createElement('input');
-    statusInput.type = 'hidden';
-    statusInput.name = 'batch_is_active';
-    statusInput.value = isActive ? 'true' : 'false';
-    form.appendChild(statusInput);
-    
-    ids.forEach(id => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'update_ids';
-        input.value = id;
-        form.appendChild(input);
-    });
-    
-    document.body.appendChild(form);
-    form.submit();
-}
-
-// 绑定批量状态更新按钮
-document.addEventListener('DOMContentLoaded', function() {
+    // 绑定批量状态更新按钮
     const batchStatusActiveBtn = document.getElementById('batchStatusActiveBtn');
     const batchStatusInactiveBtn = document.getElementById('batchStatusInactiveBtn');
     
@@ -247,4 +270,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-{% endblock %}
+</script>
+{% endblock extra_js %}

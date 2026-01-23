@@ -1,0 +1,194 @@
+/* Admin 后台管理系统 - 核心功能样式（最小化版本） */
+/* 只保留必要的功能样式，移除所有美化样式，使用 Django 原生样式 */
+
+/* ========== 1. 样式隔离 - 防止前端样式影响 admin ========== */
+/* 这是最重要的样式，必须保留 */
+html[data-in-admin="1"] .vh-sb,
+html[data-in-admin="1"] .workspace-nav,
+html[data-in-admin="1"] .workspace-sidebar,
+html[data-in-admin="1"] .sidebar-nav,
+html[data-in-admin="1"] .module-sidebar,
+html[data-in-admin="1"] .topbar,
+html[data-in-admin="1"] .top-nav,
+html[data-in-admin="1"] .full-top-nav,
+html[data-in-admin="1"] [class*="sidebar"],
+html[data-in-admin="1"] [class*="topbar"],
+html[data-in-admin="1"] [class*="workspace-nav"],
+html[data-in-admin="1"] [id*="sidebar"],
+html[data-in-admin="1"] [id*="topbar"],
+html[data-in-admin="1"] .navbar,
+html[data-in-admin="1"] .navbar-expand-lg,
+html[data-in-admin="1"] .navbar-dark,
+html[data-in-admin="1"] nav.navbar,
+html[data-in-admin="1"] nav[class*="navbar"],
+html[data-in-admin="1"] .container-fluid:has(.navbar),
+html[data-in-admin="1"] body > nav.navbar,
+html[data-in-admin="1"] body > .navbar,
+html[data-in-admin="1"] .workspace,
+html[data-in-admin="1"] .workspace-content,
+html[data-in-admin="1"] .app-wrapper {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+    pointer-events: none !important;
+}
+
+/* 额外保护：直接针对 body 的直接子元素中的 navbar */
+body[class*="admin"] > nav.navbar,
+body[class*="admin"] > .navbar,
+body.change-list > nav.navbar,
+body.change-list > .navbar,
+body.change-form > nav.navbar,
+body.change-form > .navbar {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+    pointer-events: none !important;
+}
+
+/* 最强制规则：在 admin 页面隐藏所有业务系统的 navbar */
+body:has(#header) nav.navbar:not(#header):not(#header *),
+body:has(#header) > nav.navbar:not(#header),
+body:has(#header) .navbar:not(#header):not(#header *) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+    pointer-events: none !important;
+}
+
+/* ========== 2. Changelist 布局 - 确保过滤器在右侧 ========== */
+/* 确保 changelist 使用 flex 布局 */
+#content #changelist.module.filtered,
+#content #changelist.module,
+#content #changelist,
+body #content #changelist.module.filtered,
+body #content #changelist.module,
+body #content #changelist,
+html body #content #changelist.module.filtered,
+html body #content #changelist.module,
+html body #content #changelist {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow: visible !important;
+    gap: 0 !important;
+}
+
+/* 表单容器占据左侧空间 */
+#content #changelist .changelist-form-container,
+body #content #changelist .changelist-form-container,
+html body #content #changelist .changelist-form-container {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    max-width: calc(100% - 270px) !important;
+    order: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* 过滤器显示在右侧 */
+#content #changelist-filter,
+body #content #changelist-filter,
+html body #content #changelist-filter {
+    flex: 0 0 240px !important;
+    min-width: 240px !important;
+    max-width: 240px !important;
+    order: 2 !important;
+    margin-left: 30px !important;
+    margin-right: 0 !important;
+    position: relative !important;
+    align-self: flex-start !important;
+}
+
+/* ========== 3. 权限选择器布局 ========== */
+/* 确保权限选择器使用 flex 布局 */
+.selector {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 20px;
+    box-sizing: border-box;
+}
+
+/* 权限选择器左右两侧固定宽度 */
+body.change-form #content .selector .selector-available,
+body.change-form #content .selector .selector-chosen,
+body.add-form #content .selector .selector-available,
+body.add-form #content .selector .selector-chosen,
+#content .selector .selector-available,
+#content .selector .selector-chosen,
+.selector .selector-available,
+.selector .selector-chosen {
+    flex: 0 0 700px !important;
+    min-width: 700px !important;
+    width: 700px !important;
+    max-width: 700px !important;
+    box-sizing: border-box;
+}
+
+/* 响应式：移动端权限选择器 */
+@media (max-width: 768px) {
+    .selector {
+        flex-direction: column;
+    }
+    
+    .selector .selector-available,
+    .selector .selector-chosen,
+    #content .selector-available,
+    #content .selector-chosen,
+    body.change-form .selector-available,
+    body.change-form .selector-chosen {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex: 1 1 100% !important;
+        margin-bottom: 20px;
+    }
+}
+
+/* ========== 4. 工作流模板表单布局 ========== */
+/* 适用范围字段集布局 */
+.fieldset-scope {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.field-applicable_models {
+    flex: 0 0 350px;
+}
+
+.field-form_filter_conditions {
+    flex: 1 1 auto;
+    min-width: 300px;
+}
+
+/* 响应式：移动端工作流模板表单 */
+@media (max-width: 768px) {
+    .fieldset-scope {
+        flex-direction: column;
+    }
+    
+    .field-applicable_models,
+    .field-form_filter_conditions {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+}
+

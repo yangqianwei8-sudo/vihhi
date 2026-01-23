@@ -108,11 +108,19 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'path_keywords': ['affair'],
                 'icon': 'bi-list-task',
             },
+            {
+                'id': 'affair_create',
+                'label': '创建事务',
+                'url_name': 'admin_pages:affair_create',
+                'permission': None,
+                'path_keywords': ['affairs/create'],
+                'icon': 'bi-plus-circle',
+            },
         ],
     },
     {
         'id': 'supplies',
-        'label': '办公用品管理',
+        'label': '办公用品',
         'icon': '📦',
         'permission': 'administrative_management.supplies.view',
         'expanded': False,
@@ -126,6 +134,14 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'icon': 'bi-box',
             },
             {
+                'id': 'supply_create',
+                'label': '创建用品',
+                'url_name': 'admin_pages:supply_create',
+                'permission': 'administrative_management.supply.create',
+                'path_keywords': ['supplies/create'],
+                'icon': 'bi-plus-circle',
+            },
+            {
                 'id': 'supply_category',
                 'label': '用品分类',
                 'url_name': 'admin_pages:supply_category_list',
@@ -133,6 +149,23 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'path_keywords': ['supplies/categories', 'category'],
                 'icon': 'bi-tags',
             },
+            {
+                'id': 'supply_category_create',
+                'label': '创建分类',
+                'url_name': 'admin_pages:supply_category_create',
+                'permission': 'administrative_management.supplies.manage',
+                'path_keywords': ['supplies/categories/create'],
+                'icon': 'bi-plus-circle',
+            },
+        ],
+    },
+    {
+        'id': 'supply_purchase_group',
+        'label': '用品采购',
+        'icon': '🛒',
+        'permission': 'administrative_management.supplies.view',
+        'expanded': False,
+        'children': [
             {
                 'id': 'supply_purchase',
                 'label': '采购管理',
@@ -142,6 +175,23 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'icon': 'bi-cart',
             },
             {
+                'id': 'supply_purchase_create',
+                'label': '创建采购',
+                'url_name': 'admin_pages:supply_purchase_create',
+                'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['supplies/purchases/create'],
+                'icon': 'bi-plus-circle',
+            },
+        ],
+    },
+    {
+        'id': 'supply_request_group',
+        'label': '用品领用',
+        'icon': '🎒',
+        'permission': 'administrative_management.supplies.view',
+        'expanded': False,
+        'children': [
+            {
                 'id': 'supply_request',
                 'label': '领用管理',
                 'url_name': 'admin_pages:supply_request_list',
@@ -149,6 +199,23 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'path_keywords': ['supplies/requests', 'request'],
                 'icon': 'bi-handbag',
             },
+            {
+                'id': 'supply_request_create',
+                'label': '创建领用',
+                'url_name': 'admin_pages:supply_request_create',
+                'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['supplies/requests/create'],
+                'icon': 'bi-plus-circle',
+            },
+        ],
+    },
+    {
+        'id': 'inventory',
+        'label': '库存管理',
+        'icon': '📊',
+        'permission': 'administrative_management.supplies.view',
+        'expanded': False,
+        'children': [
             {
                 'id': 'inventory_check',
                 'label': '库存盘点',
@@ -158,12 +225,28 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'icon': 'bi-clipboard-check',
             },
             {
+                'id': 'inventory_check_create',
+                'label': '创建盘点',
+                'url_name': 'admin_pages:inventory_check_create',
+                'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['supplies/inventory/checks/create'],
+                'icon': 'bi-plus-circle',
+            },
+            {
                 'id': 'inventory_adjust',
                 'label': '库存调整',
                 'url_name': 'admin_pages:inventory_adjust_list',
                 'permission': 'administrative_management.supplies.view',
                 'path_keywords': ['supplies/inventory/adjusts', 'inventory_adjust'],
                 'icon': 'bi-arrow-left-right',
+            },
+            {
+                'id': 'inventory_adjust_create',
+                'label': '创建调整',
+                'url_name': 'admin_pages:inventory_adjust_create',
+                'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['supplies/inventory/adjusts/create'],
+                'icon': 'bi-plus-circle',
             },
         ],
     },
@@ -183,6 +266,14 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'icon': 'bi-door-open',
             },
             {
+                'id': 'meeting_room_create',
+                'label': '创建会议室',
+                'url_name': 'admin_pages:meeting_room_create',
+                'permission': 'administrative_management.meeting_room.create',
+                'path_keywords': ['meeting-rooms/create'],
+                'icon': 'bi-plus-circle',
+            },
+            {
                 'id': 'meeting_room_booking',
                 'label': '会议室预订',
                 'url_name': 'admin_pages:meeting_room_booking_list',
@@ -191,12 +282,28 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'icon': 'bi-calendar-check',
             },
             {
+                'id': 'meeting_room_booking_create',
+                'label': '创建预订',
+                'url_name': 'admin_pages:meeting_room_booking_create',
+                'permission': 'administrative_management.meeting_room.view',
+                'path_keywords': ['meeting-rooms/bookings/create'],
+                'icon': 'bi-plus-circle',
+            },
+            {
                 'id': 'meeting_list',
                 'label': '会议安排',
                 'url_name': 'admin_pages:meeting_list',
                 'permission': 'administrative_management.meeting_room.view',
                 'path_keywords': ['meetings', 'meeting'],
                 'icon': 'bi-people',
+            },
+            {
+                'id': 'meeting_create',
+                'label': '创建会议',
+                'url_name': 'admin_pages:meeting_create',
+                'permission': 'administrative_management.meeting.manage',
+                'path_keywords': ['meetings/create'],
+                'icon': 'bi-plus-circle',
             },
         ],
     },
@@ -216,12 +323,28 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'icon': 'bi-car-front',
             },
             {
+                'id': 'vehicle_create',
+                'label': '创建车辆',
+                'url_name': 'admin_pages:vehicle_create',
+                'permission': 'administrative_management.vehicle.create',
+                'path_keywords': ['vehicles/create'],
+                'icon': 'bi-plus-circle',
+            },
+            {
                 'id': 'vehicle_booking',
                 'label': '用车申请',
                 'url_name': 'admin_pages:vehicle_booking_list',
                 'permission': 'administrative_management.vehicle.view',
                 'path_keywords': ['vehicles/bookings', 'booking'],
                 'icon': 'bi-calendar-event',
+            },
+            {
+                'id': 'vehicle_booking_create',
+                'label': '创建申请',
+                'url_name': 'admin_pages:vehicle_booking_create',
+                'permission': 'administrative_management.vehicle.view',
+                'path_keywords': ['vehicles/bookings/create'],
+                'icon': 'bi-plus-circle',
             },
         ],
     },
@@ -239,6 +362,14 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'permission': 'administrative_management.asset.view',
                 'path_keywords': ['asset'],
                 'icon': 'bi-building',
+            },
+            {
+                'id': 'asset_create',
+                'label': '创建资产',
+                'url_name': 'admin_pages:asset_create',
+                'permission': 'administrative_management.asset.create',
+                'path_keywords': ['assets/create'],
+                'icon': 'bi-plus-circle',
             },
             {
                 'id': 'asset_transfer',
@@ -314,6 +445,14 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'path_keywords': ['reception'],
                 'icon': 'bi-person-heart',
             },
+            {
+                'id': 'reception_create',
+                'label': '创建接待',
+                'url_name': 'admin_pages:reception_create',
+                'permission': 'administrative_management.reception.create',
+                'path_keywords': ['receptions/create'],
+                'icon': 'bi-plus-circle',
+            },
         ],
     },
     {
@@ -332,12 +471,28 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'icon': 'bi-airplane',
             },
             {
+                'id': 'travel_create',
+                'label': '创建差旅',
+                'url_name': 'admin_pages:travel_create',
+                'permission': 'administrative_management.travel.create',
+                'path_keywords': ['travels/create'],
+                'icon': 'bi-plus-circle',
+            },
+            {
                 'id': 'expense_management',
                 'label': '报销管理',
                 'url_name': 'admin_pages:expense_management',
                 'permission': 'administrative_management.travel.view',
                 'path_keywords': ['expenses', 'expense'],
                 'icon': 'bi-receipt',
+            },
+            {
+                'id': 'expense_create',
+                'label': '创建报销',
+                'url_name': 'admin_pages:expense_create',
+                'permission': 'administrative_management.expense.create',
+                'path_keywords': ['expenses/create'],
+                'icon': 'bi-plus-circle',
             },
         ],
     },
@@ -357,6 +512,14 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'icon': 'bi-truck',
             },
             {
+                'id': 'supplier_create',
+                'label': '创建供应商',
+                'url_name': 'admin_pages:supplier_create',
+                'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['suppliers/create'],
+                'icon': 'bi-plus-circle',
+            },
+            {
                 'id': 'purchase_contract',
                 'label': '采购合同',
                 'url_name': 'admin_pages:purchase_contract_list',
@@ -365,12 +528,28 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'icon': 'bi-file-earmark-text',
             },
             {
+                'id': 'purchase_contract_create',
+                'label': '创建合同',
+                'url_name': 'admin_pages:purchase_contract_create',
+                'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['purchases/contracts/create'],
+                'icon': 'bi-plus-circle',
+            },
+            {
                 'id': 'purchase_payment',
                 'label': '采购付款',
                 'url_name': 'admin_pages:purchase_payment_list',
                 'permission': 'administrative_management.supplies.view',
                 'path_keywords': ['purchases/payments', 'payment'],
                 'icon': 'bi-credit-card',
+            },
+            {
+                'id': 'purchase_payment_create',
+                'label': '创建付款',
+                'url_name': 'admin_pages:purchase_payment_create',
+                'permission': 'administrative_management.supplies.view',
+                'path_keywords': ['purchases/payments/create'],
+                'icon': 'bi-plus-circle',
             },
         ],
     },
@@ -388,6 +567,14 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'permission': None,
                 'path_keywords': ['announcements', 'announcement'],
                 'icon': 'bi-megaphone',
+            },
+            {
+                'id': 'announcement_create',
+                'label': '创建公告',
+                'url_name': 'admin_pages:announcement_create',
+                'permission': None,
+                'path_keywords': ['announcements/create'],
+                'icon': 'bi-plus-circle',
             },
         ],
     },
@@ -4206,24 +4393,140 @@ def announcement_management(request):
     
     # 获取公告列表
     try:
-        announcements = Announcement.objects.select_related('publisher').order_by('-is_top', '-publish_date', '-publish_time')
+        # 管理页面：显示本人收到的所有通知（包括 Announcement 和 ProjectTeamNotification）
+        user = request.user
+        
+        # 1. 获取 Announcement 类型的公告（根据发布范围过滤），不检查过期日期
+        all_announcements = Announcement.objects.select_related('publisher').prefetch_related('target_departments', 'target_roles', 'target_users').all()
+        
+        # 获取用户的部门和角色信息
+        user_departments = []
+        user_roles = []
+        if hasattr(user, 'department') and user.department:
+            user_departments.append(user.department)
+        if hasattr(user, 'roles'):
+            user_roles = list(user.roles.all())
+        
+        # 根据发布范围过滤，只显示用户可见的公告（使用 Python 过滤，与通知中心逻辑一致）
+        filtered_announcements = []
+        for ann in all_announcements:
+            if ann.target_scope == 'all':
+                filtered_announcements.append(ann)
+            elif ann.target_scope == 'department' and user_departments:
+                if any(dept in ann.target_departments.all() for dept in user_departments):
+                    filtered_announcements.append(ann)
+            elif ann.target_scope == 'specific_roles' and user_roles:
+                if any(role in ann.target_roles.all() for role in user_roles):
+                    filtered_announcements.append(ann)
+            elif ann.target_scope == 'specific_users':
+                if user in ann.target_users.all():
+                    filtered_announcements.append(ann)
+        
+        # 2. 获取 ProjectTeamNotification 类型的通知（直接发送给用户的）
+        from backend.apps.production_management.models import ProjectTeamNotification
+        team_notifications = ProjectTeamNotification.objects.filter(recipient=user).select_related('project', 'operator').all()
+        
+        # 创建一个统一的通知列表（包含所有类型的通知）
+        all_notifications = []
+        
+        # 添加 Announcement 类型的通知
+        for ann in filtered_announcements:
+            all_notifications.append({
+                'type': 'announcement',
+                'id': ann.id,
+                'title': ann.title,
+                'content': ann.content,
+                'category': ann.category,
+                'priority': ann.priority,
+                'publish_date': ann.publish_date,
+                'publish_time': ann.publish_time,
+                'publisher': ann.publisher,
+                'is_top': ann.is_top,
+                'is_active': ann.is_active,
+                'view_count': ann.view_count,
+                'target_scope': ann.target_scope,
+                'obj': ann,  # 保存原始对象，用于后续操作
+            })
+        
+        # 添加 ProjectTeamNotification 类型的通知
+        for notif in team_notifications:
+            all_notifications.append({
+                'type': 'team_notification',
+                'id': notif.id,
+                'title': notif.title,
+                'content': notif.message,
+                'category': notif.category,
+                'priority': 'normal',
+                'publish_date': notif.created_time.date(),
+                'publish_time': notif.created_time,
+                'publisher': notif.operator,
+                'is_top': False,
+                'is_active': not notif.is_read,  # 未读视为活跃
+                'view_count': 0,
+                'target_scope': 'specific_users',
+                'is_read': notif.is_read,
+                'obj': notif,  # 保存原始对象，用于后续操作
+            })
         
         # 应用筛选条件
         if search:
-            announcements = announcements.filter(
-                Q(title__icontains=search) |
-                Q(content__icontains=search)
-            )
+            all_notifications = [n for n in all_notifications if search.lower() in n['title'].lower() or search.lower() in n['content'].lower()]
+        
         if category:
-            announcements = announcements.filter(category=category)
+            all_notifications = [n for n in all_notifications if n.get('category') == category]
+        
         if priority:
-            announcements = announcements.filter(priority=priority)
+            all_notifications = [n for n in all_notifications if n.get('priority') == priority]
+        
+        # 处理状态筛选：默认显示所有状态的公告（包括失效的）
         if is_active == 'true':
-            announcements = announcements.filter(is_active=True)
+            all_notifications = [n for n in all_notifications if n.get('is_active', True)]
         elif is_active == 'false':
-            announcements = announcements.filter(is_active=False)
+            all_notifications = [n for n in all_notifications if not n.get('is_active', True)]
+        
         if is_top == 'true':
-            announcements = announcements.filter(is_top=True)
+            all_notifications = [n for n in all_notifications if n.get('is_top', False)]
+        
+        # 排序：按置顶、发布时间排序
+        def get_sort_key(notif):
+            is_top = notif.get('is_top', False)
+            publish_time = notif.get('publish_time')
+            if publish_time:
+                if hasattr(publish_time, 'timestamp'):
+                    time_key = publish_time.timestamp()
+                else:
+                    time_key = 0
+            else:
+                time_key = 0
+            return (-is_top, -time_key)
+        
+        all_notifications.sort(key=get_sort_key)
+        
+        # 创建一个简单的包装类，让模板可以像访问对象属性一样访问数据
+        class NotificationWrapper:
+            def __init__(self, data):
+                self._data = data
+                self.type = data.get('type')
+                self.obj = data.get('obj')
+            
+            def __getattr__(self, name):
+                if name in self._data:
+                    return self._data[name]
+                # 对于 Announcement 对象，尝试从原始对象获取
+                if self.obj and hasattr(self.obj, name):
+                    return getattr(self.obj, name)
+                # 提供默认值
+                if name == 'is_popup':
+                    return False
+                if name == 'get_category_display':
+                    return lambda: self._data.get('category', '')
+                if name == 'get_target_scope_display':
+                    scope_map = {'all': '全部', 'department': '指定部门', 'specific_roles': '指定角色', 'specific_users': '指定用户'}
+                    return lambda: scope_map.get(self._data.get('target_scope', ''), '')
+                return None
+        
+        # 将字典转换为包装对象
+        wrapped_notifications = [NotificationWrapper(n) for n in all_notifications]
         
         # 分页
         page_size = request.GET.get('page_size', '10')
@@ -4233,9 +4536,14 @@ def announcement_management(request):
                 per_page = 10
         except (ValueError, TypeError):
             per_page = 10
-        paginator = Paginator(announcements, per_page)
+        
+        from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+        paginator = Paginator(wrapped_notifications, per_page)
         page_number = request.GET.get('page', 1)
-        page_obj = paginator.get_page(page_number)
+        try:
+            page_obj = paginator.get_page(page_number)
+        except (EmptyPage, PageNotAnInteger):
+            page_obj = paginator.get_page(1)
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
