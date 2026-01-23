@@ -17,6 +17,14 @@ from backend.core.views import _build_full_top_nav, _permission_granted
 # ==================== 审批引擎模块左侧菜单结构 =====================
 WORKFLOW_ENGINE_MENU = [
     {
+        'id': 'workflow_home',
+        'label': '审批引擎首页',
+        'icon': '🏠',
+        'url_name': 'workflow_engine:workflow_home_alt',
+        'permission': 'workflow_engine.view',
+        'path_keywords': ['home'],
+    },
+    {
         'id': 'workflow_management',
         'label': '流程管理',
         'icon': '⚙️',
@@ -26,6 +34,7 @@ WORKFLOW_ENGINE_MENU = [
             {
                 'id': 'workflow_list',
                 'label': '流程模板',
+                'icon': '📄',
                 'url_name': 'workflow_engine:workflow_list',
                 'permission': 'workflow_engine.view',
                 'path_keywords': ['workflow', 'workflows'],
@@ -42,6 +51,7 @@ WORKFLOW_ENGINE_MENU = [
             {
                 'id': 'approval_list',
                 'label': '我的审批',
+                'icon': '✅',
                 'url_name': 'workflow_engine:approval_list',
                 'permission': 'workflow_engine.view',
                 'path_keywords': ['approval', 'approvals'],
@@ -67,6 +77,38 @@ def _build_workflow_engine_sidebar_nav(permission_set, request_path=None, user=N
     for group in WORKFLOW_ENGINE_MENU:
         # 检查分组权限
         if group.get('permission') and not _permission_granted(group['permission'], permission_set):
+            continue
+        
+        # 如果是独立菜单项（没有children），直接添加
+        if not group.get('children'):
+            # 构建URL
+            url = '#'
+            if group.get('url_name'):
+                try:
+                    url = reverse(group['url_name'])
+                except Exception:
+                    pass
+            
+            # 判断是否激活
+            is_active = False
+            if request_path:
+                # 检查是否有path_keywords匹配
+                if group.get('path_keywords'):
+                    for keyword in group['path_keywords']:
+                        if keyword in request_path:
+                            is_active = True
+                            break
+                # 如果没有path_keywords，检查URL是否匹配
+                elif url != '#' and request_path.endswith(url.rstrip('/')):
+                    is_active = True
+            
+            sidebar_nav.append({
+                'id': group.get('id', ''),
+                'label': group.get('label', ''),
+                'icon': group.get('icon', ''),
+                'url': url,
+                'active': is_active,
+            })
             continue
         
         # 构建子菜单
@@ -128,7 +170,219 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
         context['user'] = request.user
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         context['sidebar_menu'] = _build_workflow_engine_sidebar_nav(permission_set, request.path, request.user)
+        # 设置侧边栏标题和副标题
+        context['sidebar_title'] = '审批引擎'
+        context['sidebar_subtitle'] = 'Workflow Engine'
     return context
+
+
+@login_required
+def workflow_home(request):
+    """
+    审批引擎首页 - 数据展示中心
+    
+    首页结构：
+    1. 核心指标卡片：流程模板、待审批、我的申请
+    2. 状态分布统计：流程状态分布、审批状态分布
+    3. 待办事项：待我审批、我的申请
+    4. 最近活动：最近审批记录
+    """
+    permission_codes = get_user_permission_codes(request.user)
+    
+    # 权限检查
+    if not _permission_granted('workflow_engine.view', permission_codes):
+        messages.error(request, '您没有权限访问审批引擎')
+        return redirect('admin:index')
+    
+    context = {}
+    
+    try:
+        from .services import ApprovalEngine
+        from django.db.models import Count, Q
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # ========== 核心指标卡片 ==========
+        # 流程模板统计
+        workflow_total = WorkflowTemplate.objects.count()
+        workflow_active = WorkflowTemplate.objects.filter(status='active').count()
+        workflow_draft = WorkflowTemplate.objects.filter(status='draft').count()
+        
+        # 待我审批统计
+        pending_approvals = ApprovalEngine.get_pending_approvals(request.user)
+        pending_count = len(pending_approvals)
+        
+        # 我的申请统计
+        my_applications = ApprovalEngine.get_my_applications(request.user)
+        my_applications_pending = [a for a in my_applications if a.status == 'pending']
+        my_applications_approved = [a for a in my_applications if a.status == 'approved']
+        my_applications_rejected = [a for a in my_applications if a.status == 'rejected']
+        
+        core_cards = [
+            {
+                'label': '流程模板',
+                'icon': '⚙️',
+                'value': str(workflow_total),
+                'subvalue': f'启用 {workflow_active} | 草稿 {workflow_draft}',
+                'url': reverse('workflow_engine:workflow_list'),
+                'variant': 'primary' if workflow_total > 0 else 'secondary'
+            },
+            {
+                'label': '待我审批',
+                'icon': '📋',
+                'value': str(pending_count),
+                'subvalue': f'待处理审批 {pending_count} 项',
+                'url': reverse('workflow_engine:approval_list') + '?status=pending',
+                'variant': 'primary' if pending_count > 0 else 'secondary'
+            },
+            {
+                'label': '我的申请',
+                'icon': '📝',
+                'value': str(len(my_applications)),
+                'subvalue': f'待审批 {len(my_applications_pending)} | 已通过 {len(my_applications_approved)} | 已驳回 {len(my_applications_rejected)}',
+                'url': reverse('workflow_engine:approval_list') + '?status=my',
+                'variant': 'primary' if len(my_applications) > 0 else 'secondary'
+            },
+        ]
+        
+        context['core_cards'] = core_cards
+        
+        # ========== 状态分布统计 ==========
+        # 流程状态分布
+        workflow_status_dist = {}
+        workflow_status_rows = WorkflowTemplate.objects.values('status').annotate(count=Count('id'))
+        status_label_map = dict(WorkflowTemplate.STATUS_CHOICES)
+        
+        for row in workflow_status_rows:
+            code = row['status']
+            cnt = row['count']
+            workflow_status_dist[str(code)] = {
+                'label': status_label_map.get(code, str(code)),
+                'count': cnt
+            }
+        # 转换为 JSON 字符串供模板使用
+        import json
+        context['workflow_status_dist'] = json.dumps(workflow_status_dist) if workflow_status_dist else None
+        
+        # 审批状态分布（我的申请）
+        approval_status_dist = {}
+        if my_applications:
+            status_counts = {}
+            for app in my_applications:
+                status = app.status
+                status_counts[status] = status_counts.get(status, 0) + 1
+            
+            status_label_map = {
+                'pending': '待审批',
+                'approved': '已通过',
+                'rejected': '已驳回',
+                'cancelled': '已取消',
+            }
+            
+            for status, count in status_counts.items():
+                approval_status_dist[status] = {
+                    'label': status_label_map.get(status, status),
+                    'count': count
+                }
+        # 转换为 JSON 字符串供模板使用
+        import json
+        context['approval_status_dist'] = json.dumps(approval_status_dist) if approval_status_dist else None
+        
+        # ========== 待办事项 ==========
+        # 待我审批（前5条）
+        todo_items = []
+        for approval in pending_approvals[:5]:
+            content_type_name = '未知'
+            if approval.content_type:
+                content_type_name = approval.content_type.model
+            todo_items.append({
+                'title': f'{approval.workflow.name} - {content_type_name}',
+                'type': 'approval',
+                'url': reverse('workflow_engine:approval_detail', args=[approval.id]),
+                'time': approval.created_time,
+                'instance_number': approval.instance_number,
+            })
+        context['todo_items'] = todo_items
+        context['pending_approval_count'] = pending_count
+        
+        # ========== 我的申请（待审批）==========
+        my_pending_items = []
+        for app in my_applications_pending[:5]:
+            content_type_name = '未知'
+            if app.content_type:
+                content_type_name = app.content_type.model
+            my_pending_items.append({
+                'title': f'{app.workflow.name} - {content_type_name}',
+                'type': 'my_application',
+                'url': reverse('workflow_engine:approval_detail', args=[app.id]),
+                'time': app.created_time,
+                'instance_number': app.instance_number,
+                'status': app.get_status_display() if hasattr(app, 'get_status_display') else app.status,
+            })
+        context['my_pending_items'] = my_pending_items
+        context['my_pending_count'] = len(my_applications_pending)
+        
+        # ========== 最近活动 ==========
+        recent_activities = {}
+        
+        # 最近审批记录（所有审批实例，按时间排序）
+        recent_approvals = ApprovalInstance.objects.all().select_related(
+            'workflow', 'applicant', 'content_type'
+        ).order_by('-created_time')[:10]
+        
+        recent_activities['recent_approvals'] = []
+        for approval in recent_approvals:
+            content_type_name = '未知'
+            if approval.content_type:
+                content_type_name = approval.content_type.model
+            
+            # 获取最新审批记录
+            latest_record = approval.records.order_by('-approval_time', '-created_time').first()
+            approver_name = latest_record.approver.get_full_name() if latest_record and latest_record.approver else '待审批'
+            result = latest_record.get_result_display() if latest_record and hasattr(latest_record, 'get_result_display') else (latest_record.result if latest_record else '待审批')
+            
+            recent_activities['recent_approvals'].append({
+                'title': f'{approval.workflow.name} - {content_type_name}',
+                'approver': approver_name,
+                'result': result,
+                'time': latest_record.approval_time if latest_record and latest_record.approval_time else approval.created_time,
+                'url': reverse('workflow_engine:approval_detail', args=[approval.id]),
+                'instance_number': approval.instance_number,
+            })
+        
+        context['recent_activities'] = recent_activities
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception('获取统计数据失败: %s', str(e))
+        # 设置默认值避免模板错误
+        context.setdefault('core_cards', [])
+        context.setdefault('workflow_status_dist', None)
+        context.setdefault('approval_status_dist', None)
+        context.setdefault('todo_items', [])
+        context.setdefault('my_pending_items', [])
+        context.setdefault('pending_approval_count', 0)
+        context.setdefault('my_pending_count', 0)
+        context.setdefault('recent_activities', {})
+    
+    # 构建页面上下文
+    page_context = _context(
+        page_title="审批引擎",
+        page_icon="⚙️",
+        description="数据展示中心 - 集中展示审批流程的关键指标、状态和待办事项",
+        summary_cards=[],
+        sections=[],
+        request=request,
+    )
+    
+    # 合并所有数据
+    page_context.update(context)
+    
+    # 添加 sidebar_nav（如果 _context 中已设置，这里可以覆盖或保留）
+    page_context['sidebar_menu'] = _build_workflow_engine_sidebar_nav(permission_codes, request_path=request.path, user=request.user)
+    
+    return render(request, "workflow_engine/workflow_home.html", page_context)
 
 
 @login_required
@@ -164,13 +418,14 @@ def workflow_list(request):
     page_obj = paginator.get_page(page_number)
     
     context = _context(
-        "审批流程管理",
+        "审批引擎 ----流程模板",
         "⚙️",
         "配置和管理审批流程模板",
         request=request,
     )
     context.update({
         'workflows': page_obj,
+        'page_obj': page_obj,  # 为了兼容性，同时传递 page_obj
         'search': search,
         'selected_status': status,
         'status_choices': WorkflowTemplate.STATUS_CHOICES,
@@ -426,22 +681,43 @@ def node_delete(request, node_id):
 def approval_list(request):
     """我的审批列表"""
     from .services import ApprovalEngine
+    from django.core.paginator import Paginator
+    
+    # 获取标签页参数
+    tab = request.GET.get('tab', 'pending')
+    per_page = request.GET.get('per_page', 20)
     
     # 待我审批
     pending_approvals = ApprovalEngine.get_pending_approvals(request.user)
     
-    # 我的申请
+    # 我的申请（历史审批）- 使用QuerySet过滤，支持分页
     my_applications = ApprovalEngine.get_my_applications(request.user)
+    historical_approvals = my_applications.exclude(status='pending')
+    
+    # 根据标签页选择数据
+    if tab == 'historical':
+        items = historical_approvals
+    else:
+        items = pending_approvals
+    
+    # 分页
+    paginator = Paginator(items, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
     
     context = _context(
-        "我的审批",
+        "审批引擎 ----我的审批列表",
         "📋",
         "查看待审批和我的申请",
         request=request,
     )
     context.update({
+        'tab': tab,
         'pending_approvals': pending_approvals,
-        'my_applications': my_applications,
+        'historical_approvals': historical_approvals,
+        'page_obj': page_obj,
+        'pending_count': pending_approvals.count(),
+        'historical_count': historical_approvals.count(),
     })
     
     return render(request, 'workflow_engine/approval_list.html', context)

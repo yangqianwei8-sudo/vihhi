@@ -102,6 +102,13 @@ urlpatterns = [
     path("seals/create/", views_pages.seal_create, name="seal_create"),
     path("seals/<int:seal_id>/", views_pages.seal_detail, name="seal_detail"),
     path("seals/<int:seal_id>/edit/", views_pages.seal_update, name="seal_update"),
+    path("seals/borrowings/create/", views_pages.seal_borrowing_create, name="seal_borrowing_create"),
+    path("seals/borrowings/return/", views_pages.seal_borrowing_return_list, name="seal_borrowing_return_list"),
+    path("seals/borrowings/<int:borrowing_id>/return/", views_pages.seal_borrowing_return, name="seal_borrowing_return"),
+    # 用印管理
+    path("seals/usages/create/", views_pages.seal_usage_create, name="seal_usage_create"),
+    path("seals/usages/", views_pages.seal_usage_list, name="seal_usage_list"),
+    path("seals/usages/<int:usage_id>/", views_pages.seal_usage_detail, name="seal_usage_detail"),
     
     # 固定资产
     path("assets/", views_pages.asset_management, name="asset_management"),

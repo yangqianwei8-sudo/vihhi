@@ -2,7 +2,7 @@ from django import forms
 from .models import (
     OfficeSupply, SupplyPurchase, SupplyCategory, MeetingRoom, MeetingRoomBooking, Meeting, MeetingRecord, MeetingResolution,
     Vehicle, VehicleBooking, ReceptionRecord,
-    Announcement, Seal, FixedAsset, ExpenseReimbursement, ExpenseItem,
+    Announcement, Seal, SealBorrowing, SealUsage, FixedAsset, ExpenseReimbursement, ExpenseItem,
     AdministrativeAffair, AffairProgressRecord, TravelApplication,
     Supplier, PurchaseContract, PurchasePayment,
     InventoryCheck, InventoryCheckItem, InventoryAdjust, InventoryAdjustItem
@@ -493,6 +493,236 @@ class SealForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['keeper'].queryset = User.objects.filter(is_active=True).order_by('username')
+
+
+class SealBorrowingForm(forms.ModelForm):
+    """印章借用表单"""
+    
+    # 固定字段：所属部门、负责人、表单编号（必须字段）
+    responsible_department = forms.ModelChoiceField(
+        queryset=Department.objects.none(),
+        required=True,
+        label='所属部门',
+        widget=forms.Select(attrs={'class': 'form-select', 'disabled': True})
+    )
+    responsible_person = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        required=True,
+        label='负责人',
+        widget=forms.Select(attrs={'class': 'form-select', 'disabled': True})
+    )
+    form_number = forms.CharField(
+        required=False,
+        label='借用单号',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'readonly': True,
+            'placeholder': '系统自动生成'
+        })
+    )
+    
+    class Meta:
+        model = SealBorrowing
+        fields = [
+            # 固定字段（前三个）：所属部门、负责人、表单编号
+            'responsible_department', 'responsible_person', 'form_number',
+            # 其他字段
+            'seal', 'borrower', 'borrowing_date', 'borrowing_reason',
+            'expected_return_date', 'notes'
+        ]
+        widgets = {
+            'seal': forms.Select(attrs={'class': 'form-select'}),
+            'borrower': forms.Select(attrs={'class': 'form-select'}),
+            'borrowing_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'borrowing_reason': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '请填写借用事由'
+            }),
+            'expected_return_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': '备注信息（可选）'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        initial = kwargs.get('initial', {})
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # 设置固定字段的查询集和初始值
+        self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
+        self.fields['responsible_person'].queryset = User.objects.filter(is_active=True)
+        
+        # 设置默认值：所属部门为当前用户所在部门，负责人为当前用户
+        if user:
+            if user.department:
+                self.fields['responsible_department'].initial = user.department
+            self.fields['responsible_person'].initial = user
+        
+        # 表单编号：使用 borrowing_number 的值，如果存在
+        if self.instance and self.instance.pk:
+            self.fields['form_number'].initial = self.instance.borrowing_number
+        else:
+            self.fields['form_number'].initial = '系统将自动生成'
+        
+        # 只显示可用的印章
+        self.fields['seal'].queryset = Seal.objects.filter(
+            is_active=True,
+            status='available'
+        ).order_by('seal_name')
+        self.fields['borrower'].queryset = User.objects.filter(is_active=True).order_by('username')
+        # 设置默认借用人为当前用户
+        if not self.instance.pk and 'borrower' in initial:
+            self.fields['borrower'].initial = initial['borrower']
+        elif user and not self.instance.pk:
+            self.fields['borrower'].initial = user
+    
+    def save(self, commit=True):
+        # 固定字段不保存到模型（因为模型中没有这些字段）
+        # 只保存其他字段
+        instance = super().save(commit=False)
+        if commit:
+            instance.save()
+        return instance
+
+
+class SealUsageForm(forms.ModelForm):
+    """用印申请表单"""
+    
+    # 固定字段：所属部门、负责人、表单编号（必须字段）
+    responsible_department = forms.ModelChoiceField(
+        queryset=Department.objects.none(),
+        required=True,
+        label='所属部门',
+        widget=forms.Select(attrs={'class': 'form-select', 'disabled': True})
+    )
+    responsible_person = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        required=True,
+        label='负责人',
+        widget=forms.Select(attrs={'class': 'form-select', 'disabled': True})
+    )
+    form_number = forms.CharField(
+        required=False,
+        label='用印单号',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'readonly': True,
+            'placeholder': '系统自动生成'
+        })
+    )
+    
+    class Meta:
+        model = SealUsage
+        fields = [
+            # 固定字段（前三个）：所属部门、负责人、表单编号
+            'responsible_department', 'responsible_person', 'form_number',
+            # 其他字段
+            'seal', 'usage_type', 'usage_date', 'usage_time',
+            'usage_reason', 'usage_count', 'document_name', 'document_file',
+            'used_by', 'witness', 'notes'
+        ]
+        widgets = {
+            'seal': forms.Select(attrs={'class': 'form-select'}),
+            'usage_type': forms.Select(attrs={'class': 'form-select'}),
+            'usage_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'usage_time': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local'
+            }),
+            'usage_reason': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': '请详细说明用印事由'
+            }),
+            'usage_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'value': 1,
+                'placeholder': '用印数量'
+            }),
+            'document_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '文件名称（可选）'
+            }),
+            'document_file': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.doc,.docx,.jpg,.png'
+            }),
+            'used_by': forms.Select(attrs={'class': 'form-select'}),
+            'witness': forms.Select(attrs={'class': 'form-select'}),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '备注信息（可选）'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # 设置固定字段的查询集和初始值
+        self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
+        self.fields['responsible_person'].queryset = User.objects.filter(is_active=True)
+        
+        if user:
+            # 设置默认值
+            if user.department:
+                self.fields['responsible_department'].initial = user.department
+            self.fields['responsible_person'].initial = user
+        
+        # 设置表单编号
+        if self.instance and self.instance.pk:
+            self.fields['form_number'].initial = self.instance.usage_number
+        else:
+            self.fields['form_number'].initial = '系统将自动生成'
+        
+        # 只显示可用状态的印章
+        self.fields['seal'].queryset = Seal.objects.filter(
+            status='available',
+            is_active=True
+        ).order_by('seal_name')
+        
+        # 用印人：默认为当前用户
+        if user:
+            self.fields['used_by'].queryset = User.objects.filter(is_active=True).order_by('username')
+            if not self.instance.pk:  # 新建时设置默认值
+                self.fields['used_by'].initial = user
+        else:
+            self.fields['used_by'].queryset = User.objects.filter(is_active=True).order_by('username')
+        
+        # 见证人：可选
+        self.fields['witness'].queryset = User.objects.filter(is_active=True).order_by('username')
+        self.fields['witness'].required = False
+        
+        # 设置必填字段
+        self.fields['seal'].required = True
+        self.fields['usage_type'].required = True
+        self.fields['usage_date'].required = True
+        self.fields['usage_time'].required = True
+        self.fields['usage_reason'].required = True
+        self.fields['used_by'].required = True
+    
+    def save(self, commit=True):
+        # 固定字段不保存到模型（因为模型中没有这些字段）
+        # 只保存其他字段
+        instance = super().save(commit=False)
+        if commit:
+            instance.save()
+        return instance
 
 
 class FixedAssetForm(forms.ModelForm):

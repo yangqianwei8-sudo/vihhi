@@ -1,118 +1,157 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/create_form_base.html" %}
+{% load static %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+{% block form_title %}创建印章{% endblock form_title %}
+{% block form_subtitle %}请填写印章信息{% endblock form_subtitle %}
 
-{% block breadcrumb_items %}
-{% if is_create %}
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:seal_management' %}">印章</a></li>
-<li class="breadcrumb-item active" aria-current="page">新增</li>
-{% else %}
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:seal_management' %}">印章</a></li>
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:seal_detail' seal.id %}">{{ seal.seal_number }}</a></li>
-<li class="breadcrumb-item active" aria-current="page">编辑</li>
-{% endif %}
-{% endblock %}
+{% block form_header_actions %}
+  <a href="{% url 'admin_pages:seal_management' %}" class="btn btn-secondary">
+    返回列表
+  </a>
+{% endblock form_header_actions %}
 
-{% block extra_css %}
-<style>
-    .btn-submit {
-        padding: 12px 32px;
-        font-size: var(--font-size-md);
-        font-weight: 600;
-    }
-</style>
-{% endblock %}
+{# 第一排额外字段：印章编号、印章名称、印章类型、保管人、存放位置（5个字段） #}
+{% block form_first_row_extra_fields %}
+  {# 印章编号 #}
+  <div class="col-5-fields form-field-wrapper">
+    <label for="{{ form.seal_number.id_for_label }}" class="form-label">
+      {{ form.seal_number.label }}
+      {% if form.seal_number.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.seal_number }}
+    {% if form.seal_number.errors %}
+    <div class="text-danger small">{{ form.seal_number.errors }}</div>
+    {% endif %}
+    {% if form.seal_number.help_text %}
+    <div class="form-text">{{ form.seal_number.help_text }}</div>
+    {% else %}
+    <div class="form-text text-muted">留空自动生成</div>
+    {% endif %}
+  </div>
 
-{% block content %}
-<div class="container-fluid py-4">
-    <div class="center-hero">
-        <h1 class="hero-title">{{ page_title }}</h1>
-        <p class="hero-subtitle">{{ description }}</p>
+  {# 印章名称 #}
+  <div class="col-5-fields form-field-wrapper">
+    <label for="{{ form.seal_name.id_for_label }}" class="form-label">
+      {{ form.seal_name.label }}
+      {% if form.seal_name.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.seal_name }}
+    {% if form.seal_name.errors %}
+    <div class="text-danger small">{{ form.seal_name.errors }}</div>
+    {% endif %}
+    {% if form.seal_name.help_text %}
+    <div class="form-text">{{ form.seal_name.help_text }}</div>
+    {% endif %}
+  </div>
+
+  {# 印章类型 #}
+  <div class="col-5-fields form-field-wrapper">
+    <label for="{{ form.seal_type.id_for_label }}" class="form-label">
+      {{ form.seal_type.label }}
+      {% if form.seal_type.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.seal_type }}
+    {% if form.seal_type.errors %}
+    <div class="text-danger small">{{ form.seal_type.errors }}</div>
+    {% endif %}
+    {% if form.seal_type.help_text %}
+    <div class="form-text">{{ form.seal_type.help_text }}</div>
+    {% endif %}
+  </div>
+
+  {# 保管人 #}
+  <div class="col-5-fields form-field-wrapper">
+    <label for="{{ form.keeper.id_for_label }}" class="form-label">
+      {{ form.keeper.label }}
+      {% if form.keeper.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.keeper }}
+    {% if form.keeper.errors %}
+    <div class="text-danger small">{{ form.keeper.errors }}</div>
+    {% endif %}
+    {% if form.keeper.help_text %}
+    <div class="form-text">{{ form.keeper.help_text }}</div>
+    {% endif %}
+  </div>
+
+  {# 存放位置 #}
+  <div class="col-5-fields form-field-wrapper">
+    <label for="{{ form.storage_location.id_for_label }}" class="form-label">
+      {{ form.storage_location.label }}
+      {% if form.storage_location.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.storage_location }}
+    {% if form.storage_location.errors %}
+    <div class="text-danger small">{{ form.storage_location.errors }}</div>
+    {% endif %}
+    {% if form.storage_location.help_text %}
+    <div class="form-text">{{ form.storage_location.help_text }}</div>
+    {% endif %}
+  </div>
+{% endblock form_first_row_extra_fields %}
+
+{# 其他字段区域 #}
+{% block form_fields %}
+  {# 状态 #}
+  <div class="row mb-3 form-row-5">
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.status.id_for_label }}" class="form-label">
+        {{ form.status.label }}
+        {% if form.status.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.status }}
+      {% if form.status.errors %}
+      <div class="text-danger small">{{ form.status.errors }}</div>
+      {% endif %}
+      {% if form.status.help_text %}
+      <div class="form-text">{{ form.status.help_text }}</div>
+      {% endif %}
     </div>
+    {# 占位字段，凑满5个 #}
+    <div class="col-5-fields form-field-wrapper"></div>
+    <div class="col-5-fields form-field-wrapper"></div>
+    <div class="col-5-fields form-field-wrapper"></div>
+    <div class="col-5-fields form-field-wrapper"></div>
+  </div>
 
-    <form method="post">
-        {% csrf_token %}
+  {# 描述（多行文本，占整行） #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.description.id_for_label }}" class="form-label">
+        {{ form.description.label }}
+        {% if form.description.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.description }}
+      {% if form.description.errors %}
+      <div class="text-danger small">{{ form.description.errors }}</div>
+      {% endif %}
+      {% if form.description.help_text %}
+      <div class="form-text">{{ form.description.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
 
-        <div class="form-card">
-            <h5>印章信息</h5>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label required">印章编号</label>
-                    {{ form.seal_number }}
-                    {% if form.seal_number.errors %}
-                    <div class="text-danger small mt-1">{{ form.seal_number.errors }}</div>
-                    {% endif %}
-                    <small class="text-muted">留空自动生成</small>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label required">印章名称</label>
-                    {{ form.seal_name }}
-                    {% if form.seal_name.errors %}
-                    <div class="text-danger small mt-1">{{ form.seal_name.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label required">印章类型</label>
-                    {{ form.seal_type }}
-                    {% if form.seal_type.errors %}
-                    <div class="text-danger small mt-1">{{ form.seal_type.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label required">保管人</label>
-                    {{ form.keeper }}
-                    {% if form.keeper.errors %}
-                    <div class="text-danger small mt-1">{{ form.keeper.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">存放位置</label>
-                    {{ form.storage_location }}
-                    {% if form.storage_location.errors %}
-                    <div class="text-danger small mt-1">{{ form.storage_location.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label required">状态</label>
-                    {{ form.status }}
-                    {% if form.status.errors %}
-                    <div class="text-danger small mt-1">{{ form.status.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-12">
-                    <label class="form-label">描述</label>
-                    {{ form.description }}
-                    {% if form.description.errors %}
-                    <div class="text-danger small mt-1">{{ form.description.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-12">
-                    <div class="form-check">
-                        {{ form.is_active }}
-                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                            是否启用
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger">
-            {{ form.non_field_errors }}
-        </div>
+  {# 是否启用（复选框） #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <div class="form-check">
+        {{ form.is_active }}
+        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+          {{ form.is_active.label|default:"是否启用" }}
+        </label>
+        {% if form.is_active.errors %}
+        <div class="text-danger small">{{ form.is_active.errors }}</div>
         {% endif %}
+        {% if form.is_active.help_text %}
+        <div class="form-text">{{ form.is_active.help_text }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock form_fields %}
 
-        <div class="d-flex justify-content-between align-items-center mt-4">
-            <a href="{% if is_create %}{% url 'admin_pages:seal_management' %}{% else %}{% url 'admin_pages:seal_detail' seal.id %}{% endif %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> 取消
-            </a>
-            <div>
-                <button type="submit" class="btn btn-primary btn-submit">
-                    <i class="bi bi-check-circle"></i> 保存
-                </button>
-            </div>
-        </div>
-    </form>
-</div>
-{% endblock %}
+{# 自定义按钮文字 #}
+{% block form_actions %}
+  <button type="submit" class="btn btn-primary" id="submitButton">创建</button>
+  <a href="{% url 'admin_pages:seal_management' %}" class="btn btn-secondary">取消</a>
+{% endblock form_actions %}

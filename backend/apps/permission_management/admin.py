@@ -61,6 +61,7 @@ class PermissionItemAdmin(LinkAdminMixin, BaseModelAdmin):
             '诉讼管理': '#c0392b',
             '财务管理': '#16a085',
             '行政管理': '#7f8c8d',
+            '审批引擎': '#00b894',
         }
         color = colors.get(obj.module, '#95a5a6')
         module_name = obj.module

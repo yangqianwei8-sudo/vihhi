@@ -134,7 +134,7 @@ HOME_NAV_STRUCTURE = [
     {'label': '财务管理', 'icon': '💵', 'url_name': 'finance_pages:financial_management_home', 'permission': 'financial_management.view'},
     {'label': '人事管理', 'icon': '👤', 'url_name': 'personnel_pages:personnel_management_home', 'permission': 'personnel_management.view'},
     {'label': '行政管理', 'icon': '🏢', 'url_name': 'admin_pages:administrative_management_home', 'permission': 'administrative_management.view'},
-    {'label': '审批引擎', 'icon': '✅', 'url_name': 'workflow_engine:workflow_list', 'permission': 'workflow_engine.view'},
+    {'label': '审批引擎', 'icon': '✅', 'url_name': 'workflow_engine:workflow_home', 'permission': 'workflow_engine.view'},
     {'label': '系统管理', 'icon': '⚙️', 'url_name': 'system_pages:system_settings', 'permission': 'system_management.view'},
     # 注意：权限管理仅保留在Django Admin后台管理中，不添加到前端导航栏
 ]
@@ -468,7 +468,7 @@ def home(request):
                 stats_cards.append({
                     'label': '待审批',
                     'value': approval_stats['my_pending'],
-                    'url': '#',
+                    'url': reverse('workflow_engine:approval_list') + '?status=pending',
                     'variant': 'danger'
                 })
             
@@ -546,7 +546,7 @@ def home(request):
                 'icon': '📝',
                 'value': str(approval_stats['my_pending']),
                 'subvalue': '需要您审批的事项',
-                'url': '#',
+                'url': reverse('workflow_engine:approval_list') + '?status=pending',
                 'variant': 'danger'
             })
         

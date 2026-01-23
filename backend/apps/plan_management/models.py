@@ -532,11 +532,11 @@ class Plan(models.Model):
     # 计划内容
     content = models.TextField(max_length=5000, verbose_name='计划内容', help_text='支持富文本')
     plan_objective = models.TextField(max_length=1000, verbose_name='计划目标')
-    acceptance_criteria = models.TextField(
+    acceptance_criteria = models.CharField(
         max_length=2000,
-        blank=True,
+        blank=False,
         verbose_name='验收标准',
-        help_text='明确说明如何判定计划完成，提交审批前必填'
+        help_text='明确说明如何判定计划完成'
     )
     
     # 时间信息
@@ -1429,11 +1429,24 @@ class ApprovalNotification(models.Model):
         ('plan_accepted', '计划被接收'),
         ('weekly_plan_reminder', '周计划提醒'),
         ('weekly_plan_overdue', '周计划逾期'),
+        ('goal_creation', '目标创建待办'),
+        ('goal_progress_update', '目标进度更新待办'),
+        ('plan_creation', '计划创建待办'),
+        ('daily_plan_reminder', '日计划提醒'),
+        ('plan_progress_update', '计划进度更新待办'),
+        ('progress_update_notify_supervisor', '进度更新通知上级'),
+        ('todo_overdue', '待办事项逾期'),
+        ('work_summary_generated', '工作总结生成'),
+        ('work_summary_supervisor', '工作总结上级通知'),
+        ('daily_notification', '每日通知'),
     ]
     
     OBJECT_TYPE_CHOICES = [
         ('plan', '计划'),
         ('goal', '目标'),
+        ('todo', '待办'),
+        ('summary', '总结'),
+        ('notification', '通知'),
     ]
     
     user = models.ForeignKey(
@@ -1471,4 +1484,124 @@ class ApprovalNotification(models.Model):
     
     def __str__(self):
         return f"{self.title} - {self.user.username}"
+
+
+class TodoTask(models.Model):
+    """待办事项模型"""
+    
+    TASK_TYPE_CHOICES = [
+        ('goal_creation', '目标创建'),
+        ('goal_decomposition', '目标分解'),
+        ('goal_progress_update', '目标进度更新'),
+        ('plan_creation', '计划创建'),
+        ('plan_decomposition_weekly', '周计划分解'),
+        ('plan_decomposition_daily', '日计划分解'),
+        ('plan_progress_update', '计划进度更新'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', '待处理'),
+        ('completed', '已完成'),
+        ('overdue', '已逾期'),
+        ('cancelled', '已取消'),
+    ]
+    
+    OBJECT_TYPE_CHOICES = [
+        ('goal', '目标'),
+        ('plan', '计划'),
+        ('todo', '待办'),
+    ]
+    
+    task_type = models.CharField(max_length=50, choices=TASK_TYPE_CHOICES, verbose_name='待办类型')
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='todo_tasks',
+        verbose_name='负责人'
+    )
+    title = models.CharField(max_length=200, verbose_name='待办标题')
+    description = models.TextField(blank=True, verbose_name='待办描述')
+    related_object_type = models.CharField(
+        max_length=20,
+        choices=OBJECT_TYPE_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name='关联对象类型'
+    )
+    related_object_id = models.CharField(max_length=50, null=True, blank=True, verbose_name='关联对象ID')
+    deadline = models.DateTimeField(verbose_name='截止时间')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='状态')
+    is_overdue = models.BooleanField(default=False, verbose_name='是否逾期')
+    overdue_days = models.IntegerField(default=0, verbose_name='逾期天数')
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name='完成时间')
+    auto_generated = models.BooleanField(default=True, verbose_name='是否系统自动生成')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'plan_todo_task'
+        verbose_name = '待办事项'
+        verbose_name_plural = '待办事项'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status'], name='plan_todo_user_status_idx'),
+            models.Index(fields=['deadline'], name='plan_todo_deadline_idx'),
+            models.Index(fields=['related_object_type', 'related_object_id'], name='plan_todo_object_idx'),
+            models.Index(fields=['task_type', 'status'], name='plan_todo_type_status_idx'),
+        ]
+    
+    def __str__(self):
+        return f"{self.title} - {self.user.username}"
+    
+    def check_overdue(self):
+        """检查并更新逾期状态"""
+        if self.status in ['completed', 'cancelled']:
+            return False
+        
+        now = timezone.now()
+        if now > self.deadline:
+            self.is_overdue = True
+            self.overdue_days = (now.date() - self.deadline.date()).days
+            if self.status == 'pending':
+                self.status = 'overdue'
+            return True
+        return False
+
+
+class WorkSummary(models.Model):
+    """工作总结模型"""
+    
+    SUMMARY_TYPE_CHOICES = [
+        ('weekly', '周报'),
+        ('monthly', '月报'),
+    ]
+    
+    summary_type = models.CharField(max_length=20, choices=SUMMARY_TYPE_CHOICES, verbose_name='总结类型')
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='work_summaries',
+        verbose_name='员工'
+    )
+    period_start = models.DateField(verbose_name='周期开始日期')
+    period_end = models.DateField(verbose_name='周期结束日期')
+    goal_progress_summary = models.JSONField(default=dict, verbose_name='目标进度汇总')
+    plan_completion_summary = models.JSONField(default=dict, verbose_name='计划完成汇总')
+    achievements = models.JSONField(default=list, verbose_name='成就亮点')
+    risk_items = models.JSONField(default=list, verbose_name='风险项')
+    sent_to_supervisor = models.BooleanField(default=False, verbose_name='是否已发送给上级')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    
+    class Meta:
+        db_table = 'plan_work_summary'
+        verbose_name = '工作总结'
+        verbose_name_plural = '工作总结'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'summary_type'], name='plan_work_user_type_idx'),
+            models.Index(fields=['period_start', 'period_end'], name='plan_work_period_idx'),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_summary_type_display()} - {self.user.username} ({self.period_start} ~ {self.period_end})"
 

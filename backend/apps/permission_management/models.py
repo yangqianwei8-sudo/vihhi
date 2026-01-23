@@ -24,6 +24,7 @@ class PermissionItem(models.Model):
         ('诉讼管理', '诉讼管理'),
         ('财务管理', '财务管理'),
         ('行政管理', '行政管理'),
+        ('审批引擎', '审批引擎'),
     ]
     
     module = models.CharField(max_length=100, choices=MODULE_CHOICES, verbose_name='功能模块')

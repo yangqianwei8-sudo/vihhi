@@ -30,6 +30,9 @@ from .models import (
     PlanDecision,
     PlanAdjustment,
     PlanInactivityLog,
+    TodoTask,
+    WorkSummary,
+    ApprovalNotification,
 )
 
 
@@ -1209,3 +1212,287 @@ class PlanInactivityLogAdmin(ReadOnlyAdminMixin, BaseModelAdmin):
             color_map
         )
     reason_badge.short_description = '不作为原因'
+
+
+# ==================== 待办事项管理 ====================
+
+@admin.register(TodoTask)
+class TodoTaskAdmin(BaseModelAdmin):
+    """待办事项管理"""
+    
+    list_display = (
+        'title',
+        'user_link',
+        'task_type_display',
+        'status_display',
+        'deadline',
+        'is_overdue_badge',
+        'auto_generated_badge',
+        'created_at',
+    )
+    
+    list_filter = (
+        'task_type',
+        'status',
+        'is_overdue',
+        'auto_generated',
+        'created_at',
+    )
+    
+    search_fields = (
+        'title',
+        'description',
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+    )
+    
+    readonly_fields = (
+        'created_at',
+        'updated_at',
+    )
+    
+    fieldsets = (
+        ('基本信息', {
+            'fields': ('task_type', 'user', 'title', 'description')
+        }),
+        ('关联信息', {
+            'fields': ('related_object_type', 'related_object_id')
+        }),
+        ('时间信息', {
+            'fields': ('deadline', 'completed_at', 'created_at', 'updated_at')
+        }),
+        ('状态信息', {
+            'fields': ('status', 'is_overdue', 'overdue_days', 'auto_generated')
+        }),
+    )
+    
+    def user_link(self, obj):
+        """用户链接"""
+        if obj.user:
+            url = reverse('admin:system_management_user_change', args=[obj.user.id])
+            return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name() or obj.user.username)
+        return '-'
+    user_link.short_description = '负责人'
+    
+    def task_type_display(self, obj):
+        """待办类型显示"""
+        return obj.get_task_type_display()
+    task_type_display.short_description = '待办类型'
+    
+    def status_display(self, obj):
+        """状态显示"""
+        color_map = {
+            'pending': '#007bff',
+            'completed': '#28a745',
+            'overdue': '#dc3545',
+            'cancelled': '#6c757d',
+        }
+        color = color_map.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            obj.get_status_display()
+        )
+    status_display.short_description = '状态'
+    
+    def is_overdue_badge(self, obj):
+        """逾期标记"""
+        if obj.is_overdue:
+            return format_html(
+                '<span style="color: #dc3545; font-weight: bold;">逾期 {} 天</span>',
+                obj.overdue_days
+            )
+        return format_html('<span style="color: #28a745;">正常</span>')
+    is_overdue_badge.short_description = '逾期状态'
+    
+    def auto_generated_badge(self, obj):
+        """自动生成标记"""
+        if obj.auto_generated:
+            return format_html('<span style="color: #17a2b8;">系统生成</span>')
+        return format_html('<span style="color: #6c757d;">手动创建</span>')
+    auto_generated_badge.short_description = '生成方式'
+    
+    actions = ['mark_as_completed', 'mark_as_cancelled']
+    
+    def mark_as_completed(self, request, queryset):
+        """批量标记为已完成"""
+        from .services.todo_service import mark_todo_completed
+        count = 0
+        for todo in queryset:
+            if mark_todo_completed(todo, request.user):
+                count += 1
+        messages.success(request, f'成功标记 {count} 个待办为已完成')
+    mark_as_completed.short_description = '标记为已完成'
+    
+    def mark_as_cancelled(self, request, queryset):
+        """批量标记为已取消"""
+        updated = queryset.filter(status__in=['pending', 'overdue']).update(
+            status='cancelled',
+            updated_at=timezone.now()
+        )
+        messages.success(request, f'成功取消 {updated} 个待办')
+    mark_as_cancelled.short_description = '标记为已取消'
+
+
+# ==================== 工作总结管理 ====================
+
+@admin.register(WorkSummary)
+class WorkSummaryAdmin(ReadOnlyAdminMixin, BaseModelAdmin):
+    """工作总结管理（只读）"""
+    
+    list_display = (
+        'summary_type_display',
+        'user_link',
+        'period_display',
+        'sent_to_supervisor_badge',
+        'created_at',
+    )
+    
+    list_filter = (
+        'summary_type',
+        'sent_to_supervisor',
+        'created_at',
+    )
+    
+    search_fields = (
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+    )
+    
+    readonly_fields = (
+        'summary_type',
+        'user',
+        'period_start',
+        'period_end',
+        'goal_progress_summary',
+        'plan_completion_summary',
+        'achievements',
+        'risk_items',
+        'sent_to_supervisor',
+        'created_at',
+    )
+    
+    fieldsets = (
+        ('基本信息', {
+            'fields': ('summary_type', 'user', 'period_start', 'period_end', 'created_at')
+        }),
+        ('汇总内容', {
+            'fields': ('goal_progress_summary', 'plan_completion_summary', 'achievements', 'risk_items')
+        }),
+        ('发送状态', {
+            'fields': ('sent_to_supervisor',)
+        }),
+    )
+    
+    def summary_type_display(self, obj):
+        """总结类型显示"""
+        return obj.get_summary_type_display()
+    summary_type_display.short_description = '总结类型'
+    
+    def user_link(self, obj):
+        """用户链接"""
+        if obj.user:
+            url = reverse('admin:system_management_user_change', args=[obj.user.id])
+            return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name() or obj.user.username)
+        return '-'
+    user_link.short_description = '员工'
+    
+    def period_display(self, obj):
+        """周期显示"""
+        return f"{obj.period_start.strftime('%Y-%m-%d')} ~ {obj.period_end.strftime('%Y-%m-%d')}"
+    period_display.short_description = '周期'
+    
+    def sent_to_supervisor_badge(self, obj):
+        """发送状态标记"""
+        if obj.sent_to_supervisor:
+            return format_html('<span style="color: #28a745;">已发送</span>')
+        return format_html('<span style="color: #ffc107;">未发送</span>')
+    sent_to_supervisor_badge.short_description = '发送状态'
+
+
+# ==================== 审批通知管理 ====================
+
+@admin.register(ApprovalNotification)
+class ApprovalNotificationAdmin(BaseModelAdmin):
+    """审批通知管理"""
+    
+    list_display = (
+        'title',
+        'user_link',
+        'event_display',
+        'object_type_display',
+        'is_read_badge',
+        'created_at',
+    )
+    
+    list_filter = (
+        'event',
+        'object_type',
+        'is_read',
+        'created_at',
+    )
+    
+    search_fields = (
+        'title',
+        'content',
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+    )
+    
+    readonly_fields = (
+        'created_at',
+    )
+    
+    fieldsets = (
+        ('基本信息', {
+            'fields': ('user', 'title', 'content')
+        }),
+        ('关联信息', {
+            'fields': ('object_type', 'object_id', 'event')
+        }),
+        ('状态信息', {
+            'fields': ('is_read', 'created_at')
+        }),
+    )
+    
+    def user_link(self, obj):
+        """用户链接"""
+        if obj.user:
+            url = reverse('admin:system_management_user_change', args=[obj.user.id])
+            return format_html('<a href="{}">{}</a>', url, obj.user.get_full_name() or obj.user.username)
+        return '-'
+    user_link.short_description = '接收人'
+    
+    def event_display(self, obj):
+        """事件类型显示"""
+        return obj.get_event_display()
+    event_display.short_description = '事件类型'
+    
+    def object_type_display(self, obj):
+        """对象类型显示"""
+        return obj.get_object_type_display()
+    object_type_display.short_description = '对象类型'
+    
+    def is_read_badge(self, obj):
+        """已读状态标记"""
+        if obj.is_read:
+            return format_html('<span style="color: #6c757d;">已读</span>')
+        return format_html('<span style="color: #007bff; font-weight: bold;">未读</span>')
+    is_read_badge.short_description = '已读状态'
+    
+    actions = ['mark_as_read', 'mark_as_unread']
+    
+    def mark_as_read(self, request, queryset):
+        """批量标记为已读"""
+        updated = queryset.update(is_read=True)
+        messages.success(request, f'成功标记 {updated} 条通知为已读')
+    mark_as_read.short_description = '标记为已读'
+    
+    def mark_as_unread(self, request, queryset):
+        """批量标记为未读"""
+        updated = queryset.update(is_read=False)
+        messages.success(request, f'成功标记 {updated} 条通知为未读')
+    mark_as_unread.short_description = '标记为未读'

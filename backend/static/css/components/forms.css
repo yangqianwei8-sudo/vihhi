@@ -1,240 +1,175 @@
 /**
  * 表单组件样式
  * 维海科技信息化管理平台
- * 版本: 3.0
+ * 版本: 1.0
+ * 
+ * 包含：
+ * - 表单字段布局（5列布局系统）
+ * - 表单字段包装器
+ * - 表单行容器
+ * - 响应式设计
  */
 
 /* ============================================
-   表单输入文本颜色 - 根据样式模板统一方案规定
-   所有表单输入元素的文本颜色统一设置为主题深蓝色 var(--vh-primary)
+   表单字段布局系统
    ============================================ */
-input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
-select,
-textarea {
-    color: var(--vh-primary); /* 主题深蓝色 - 与系统主题保持一致 */
-    font-size: var(--font-size-base);
-    font-family: inherit;
-    line-height: 1.5;
+
+/* 5列字段行容器 */
+.form-row-5 {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: calc(var(--spacing-sm, 8px) * -0.5);
+  margin-right: calc(var(--spacing-sm, 8px) * -0.5);
+  margin-bottom: var(--spacing-md, 16px);
+}
+
+/* 5列字段（每列占20%） */
+.col-5-fields {
+  flex: 0 0 20%;
+  max-width: 20%;
+  min-width: 0;
+  padding-left: calc(var(--spacing-sm, 8px) * 0.5);
+  padding-right: calc(var(--spacing-sm, 8px) * 0.5);
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+/* 全宽字段（占整行） */
+.col-12-fields {
+  flex: 0 0 100%;
+  max-width: 100%;
+  padding-left: calc(var(--spacing-sm, 8px) * 0.5);
+  padding-right: calc(var(--spacing-sm, 8px) * 0.5);
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+/* 表单字段包装器 */
+.form-field-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: var(--spacing-md, 16px);
+}
+
+/* 字段包装器内的标签样式 */
+.form-field-wrapper .form-label {
+  margin-bottom: var(--spacing-xs, 4px);
+  font-weight: 500;
+  color: var(--vh-text, #000000);
+  font-size: var(--font-size-base, 14px);
+}
+
+/* 字段包装器内的表单控件 */
+.form-field-wrapper .form-control,
+.form-field-wrapper .form-select {
+  width: 100%;
+}
+
+/* 字段包装器内的错误提示 */
+.form-field-wrapper .text-danger {
+  margin-top: var(--spacing-xs, 4px);
+  font-size: var(--font-size-sm, 12px);
+}
+
+/* 字段包装器内的帮助文本 */
+.form-field-wrapper .form-text {
+  margin-top: var(--spacing-xs, 4px);
+  font-size: var(--font-size-sm, 12px);
+  color: var(--vh-text-muted, #666666);
 }
 
 /* ============================================
-   表单组件
+   响应式设计
    ============================================ */
-.form-group {
-    margin-bottom: var(--spacing-lg);
+
+/* 中等屏幕（≤992px）：3列布局 */
+@media (max-width: 992px) {
+  .col-5-fields {
+    flex: 0 0 33.333333%;
+    max-width: 33.333333%;
+  }
+  
+  .form-row-5 {
+    margin-left: calc(var(--spacing-sm, 8px) * -0.5);
+    margin-right: calc(var(--spacing-sm, 8px) * -0.5);
+  }
 }
 
-.form-label {
-    font-weight: 500;
-    color: var(--vh-text);
-    margin-bottom: var(--spacing-sm);
-    font-size: var(--font-size-base);
-    display: block;
+/* 小屏幕（≤768px）：2列布局 */
+@media (max-width: 768px) {
+  .col-5-fields {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+  
+  .form-field-wrapper {
+    margin-bottom: var(--spacing-sm, 8px);
+  }
 }
 
-.form-label.required::after {
-    content: " *";
-    color: var(--vh-accent);
-}
-
-.form-control,
-.form-select {
-    border: 1px solid var(--vh-border);
-    border-radius: 0;
-    padding: 10px 14px;
-    font-size: var(--font-size-base);
-    color: var(--vh-primary); /* 主题深蓝色 - 与系统主题保持一致 */
-    transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
-    width: 100%;
-    background-color: #fff;
-}
-
-.form-control:hover,
-.form-select:hover {
-    border-color: var(--vh-primary-muted);
-}
-
-.form-control:focus,
-.form-select:focus {
-    border-color: var(--vh-primary);
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(31, 42, 87, 0.1);
-}
-
-.form-control.is-valid {
-    border-color: var(--vh-success);
-}
-
-.form-control.is-invalid {
-    border-color: var(--vh-error);
-}
-
-/* readonly 和 disabled 字段也使用主题深蓝色 */
-.form-control[readonly],
-.form-control:disabled,
-.form-select[readonly],
-.form-select:disabled,
-textarea[readonly],
-textarea:disabled {
-    color: var(--vh-primary);
-    background-color: #f5f5f5;
-    cursor: not-allowed;
-}
-
-/* ============================================
-   小尺寸表单控件 (form-control-sm)
-   与 form-control 保持一致，但尺寸稍小
-   ============================================ */
-.form-control-sm,
-.form-select-sm {
-    padding: 8px 12px;
-    font-size: calc(var(--font-size-base) * 0.875);
-    line-height: 1.4;
-    border: 1px solid var(--vh-border);
-    border-radius: 0;
-    color: var(--vh-primary);
-    transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
-    width: 100%;
-    background-color: #fff;
-}
-
-.form-control-sm:hover,
-.form-select-sm:hover {
-    border-color: var(--vh-primary-muted);
-}
-
-.form-control-sm:focus,
-.form-select-sm:focus {
-    border-color: var(--vh-primary);
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(31, 42, 87, 0.1);
-}
-
-.form-control-sm.is-valid {
-    border-color: var(--vh-success);
-}
-
-.form-control-sm.is-invalid {
-    border-color: var(--vh-error);
-}
-
-.form-control-sm[readonly],
-.form-control-sm:disabled,
-.form-select-sm[readonly],
-.form-select-sm:disabled {
-    color: var(--vh-primary);
-    background-color: #f5f5f5;
-    cursor: not-allowed;
-}
-
-
-
-
-.invalid-feedback {
-    color: var(--vh-error);
-    font-size: var(--font-size-sm);
-    margin-top: var(--spacing-xs);
-    display: block;
-}
-
-.form-text {
-    color: var(--vh-text-muted);
-    font-size: var(--font-size-sm);
-    margin-top: var(--spacing-xs);
-}
-
-.form-row {
-    display: flex;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
-}
-
-.form-row .form-group {
-    flex: 1;
-    min-width: 0;
-}
-
-.form-actions {
-    display: flex;
-    gap: var(--spacing-md);
-    justify-content: flex-end;
-    margin-top: var(--spacing-xl);
-    padding-top: var(--spacing-lg);
-    border-top: 1px solid var(--vh-border);
-}
-
-.input-group {
-    display: flex;
-    align-items: stretch;
-}
-
-.input-group-prepend,
-.input-group-append {
-    display: flex;
-    align-items: center;
-    padding: 10px 14px;
-    background: var(--vh-surface);
-    border: 1px solid var(--vh-border);
-    border-radius: 0;
-    color: var(--vh-text-muted);
-}
-
-.input-group-prepend {
-    border-right: none;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-}
-
-.input-group-append {
-    border-left: none;
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-}
-
-.input-group .form-control {
-    border-radius: 0;
-}
-
-.input-group .form-control:first-child {
-    border-top-left-radius: var(--radius-md);
-    border-bottom-left-radius: var(--radius-md);
-}
-
-.input-group .form-control:last-child {
-    border-top-right-radius: var(--radius-md);
-    border-bottom-right-radius: var(--radius-md);
-}
-
-/* 响应式调整 */
+/* 超小屏幕（≤576px）：单列布局 */
 @media (max-width: 576px) {
-    .form-row {
-        flex-direction: column;
-    }
-    
-    .form-row .form-group {
-        min-width: 100%;
-    }
-    
-    .form-actions {
-        flex-direction: column;
-        gap: var(--spacing-sm);
-    }
-    
-    .form-actions .btn {
-        width: 100%;
-    }
-    
-    .input-group {
-        flex-direction: column;
-    }
-    
-    .input-group-prepend,
-    .input-group-append {
-        border-radius: 0;
-        border: 1px solid var(--vh-border);
-    }
-    
-    .input-group .form-control {
-        border-radius: 0;
-    }
+  .col-5-fields {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  
+  .form-row-5 {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  
+  .col-5-fields,
+  .col-12-fields {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  
+  .form-field-wrapper {
+    margin-bottom: var(--spacing-sm, 8px);
+  }
+}
+
+/* ============================================
+   表单卡片内的字段布局
+   ============================================ */
+
+/* 确保表单卡片内的字段布局正常 */
+.form-card .form-row-5,
+.form-section .form-row-5 {
+  margin-left: calc(var(--spacing-sm, 8px) * -0.5);
+  margin-right: calc(var(--spacing-sm, 8px) * -0.5);
+}
+
+/* 表单卡片内的字段包装器间距调整 */
+.form-card .form-field-wrapper:last-child,
+.form-section .form-field-wrapper:last-child {
+  margin-bottom: 0;
+}
+
+/* ============================================
+   兼容性处理
+   ============================================ */
+
+/* 确保与 Bootstrap 的 row 类兼容 */
+.row.form-row-5 {
+  margin-left: calc(var(--spacing-sm, 8px) * -0.5);
+  margin-right: calc(var(--spacing-sm, 8px) * -0.5);
+}
+
+/* 确保与 Bootstrap 的 col 类不冲突 */
+.row.form-row-5 > .col-5-fields {
+  flex: 0 0 20%;
+  max-width: 20%;
+  padding-left: calc(var(--spacing-sm, 8px) * 0.5);
+  padding-right: calc(var(--spacing-sm, 8px) * 0.5);
+}
+
+/* 确保 col-12 在 form-row-5 内也能正确显示（全宽） */
+.row.form-row-5 > .col-12 {
+  flex: 0 0 100%;
+  max-width: 100%;
+  padding-left: calc(var(--spacing-sm, 8px) * 0.5);
+  padding-right: calc(var(--spacing-sm, 8px) * 0.5);
 }

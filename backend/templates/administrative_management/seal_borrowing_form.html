@@ -1,0 +1,121 @@
+{% extends "shared/create_form_base.html" %}
+{% load static %}
+
+{% block form_title %}申请借用印章{% endblock form_title %}
+{% block form_subtitle %}请填写印章借用申请信息{% endblock form_subtitle %}
+
+{% block form_header_actions %}
+  <a href="{% url 'admin_pages:seal_management' %}" class="btn btn-secondary">
+    返回列表
+  </a>
+{% endblock form_header_actions %}
+
+{# 第一排额外字段：借用人、印章、借用日期、预计归还日期（4个字段，加上1个占位凑满5个） #}
+{% block form_first_row_extra_fields %}
+  {# 借用人 #}
+  <div class="col-5-fields form-field-wrapper">
+    <label for="{{ form.borrower.id_for_label }}" class="form-label">
+      {{ form.borrower.label }}
+      {% if form.borrower.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.borrower }}
+    {% if form.borrower.errors %}
+    <div class="text-danger small">{{ form.borrower.errors }}</div>
+    {% endif %}
+    {% if form.borrower.help_text %}
+    <div class="form-text">{{ form.borrower.help_text }}</div>
+    {% endif %}
+  </div>
+
+  {# 印章 #}
+  <div class="col-5-fields form-field-wrapper">
+    <label for="{{ form.seal.id_for_label }}" class="form-label">
+      {{ form.seal.label }}
+      {% if form.seal.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.seal }}
+    {% if form.seal.errors %}
+    <div class="text-danger small">{{ form.seal.errors }}</div>
+    {% endif %}
+    {% if form.seal.help_text %}
+    <div class="form-text">{{ form.seal.help_text }}</div>
+    {% endif %}
+  </div>
+
+  {# 借用日期 #}
+  <div class="col-5-fields form-field-wrapper">
+    <label for="{{ form.borrowing_date.id_for_label }}" class="form-label">
+      {{ form.borrowing_date.label }}
+      {% if form.borrowing_date.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.borrowing_date }}
+    {% if form.borrowing_date.errors %}
+    <div class="text-danger small">{{ form.borrowing_date.errors }}</div>
+    {% endif %}
+    {% if form.borrowing_date.help_text %}
+    <div class="form-text">{{ form.borrowing_date.help_text }}</div>
+    {% endif %}
+  </div>
+
+  {# 预计归还日期 #}
+  <div class="col-5-fields form-field-wrapper">
+    <label for="{{ form.expected_return_date.id_for_label }}" class="form-label">
+      {{ form.expected_return_date.label }}
+      {% if form.expected_return_date.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.expected_return_date }}
+    {% if form.expected_return_date.errors %}
+    <div class="text-danger small">{{ form.expected_return_date.errors }}</div>
+    {% endif %}
+    {% if form.expected_return_date.help_text %}
+    <div class="form-text">{{ form.expected_return_date.help_text }}</div>
+    {% endif %}
+  </div>
+
+  {# 占位字段，凑满5个 #}
+  <div class="col-5-fields form-field-wrapper"></div>
+{% endblock form_first_row_extra_fields %}
+
+{# 其他字段区域 #}
+{% block form_fields %}
+
+  {# 借用事由（多行文本，占整行） #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.borrowing_reason.id_for_label }}" class="form-label">
+        {{ form.borrowing_reason.label }}
+        {% if form.borrowing_reason.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.borrowing_reason }}
+      {% if form.borrowing_reason.errors %}
+      <div class="text-danger small">{{ form.borrowing_reason.errors }}</div>
+      {% endif %}
+      {% if form.borrowing_reason.help_text %}
+      <div class="form-text">{{ form.borrowing_reason.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# 备注（多行文本，占整行） #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.notes.id_for_label }}" class="form-label">
+        {{ form.notes.label }}
+        {% if form.notes.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.notes }}
+      {% if form.notes.errors %}
+      <div class="text-danger small">{{ form.notes.errors }}</div>
+      {% endif %}
+      {% if form.notes.help_text %}
+      <div class="form-text">{{ form.notes.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock form_fields %}
+
+{# 自定义按钮文字 #}
+{% block form_actions %}
+  <button type="submit" class="btn btn-primary" id="submitButton">提交申请</button>
+  <a href="{% url 'admin_pages:seal_management' %}" class="btn btn-secondary">取消</a>
+{% endblock form_actions %}

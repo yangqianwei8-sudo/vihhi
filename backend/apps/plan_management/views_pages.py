@@ -338,7 +338,107 @@ def plan_management_home(request):
         # ========== 第三行：待办 & 风险 ==========
         # 我的待办（左）
         user_todos = get_user_todos(request.user)
-        context['user_todos'] = user_todos[:5]  # 首页显示前5条
+        
+        # 按类型分类待办事项（本周待办、本月待办、今日待办）
+        from django.utils import timezone
+        from datetime import datetime, timedelta
+        
+        now = timezone.now()
+        today = now.date()
+        week_start = today - timedelta(days=today.weekday())  # 本周一
+        week_end = week_start + timedelta(days=6)  # 本周日
+        month_start = today.replace(day=1)  # 本月1日
+        next_month = month_start + timedelta(days=32)
+        month_end = (next_month.replace(day=1) - timedelta(days=1))  # 本月最后一天
+        
+        todo_items = []
+        weekly_todos = []
+        monthly_todos = []
+        daily_todos = []
+        
+        for todo in user_todos:
+            todo_item = {
+                'title': todo.get('title', ''),
+                'description': todo.get('description', ''),
+                'url': todo.get('url', '#'),
+                'type': todo.get('type', ''),
+                'priority': todo.get('priority', 'medium'),
+                'deadline': todo.get('deadline'),
+                'is_overdue': todo.get('is_overdue', False),
+                'overdue_days': todo.get('overdue_days', 0),
+            }
+            
+            # 根据待办类型设置显示信息
+            if todo.get('is_db_todo'):
+                # 数据库待办事项
+                todo_item['type'] = 'db_todo'
+                deadline = todo.get('deadline')
+                if deadline:
+                    if isinstance(deadline, str):
+                        try:
+                            from django.utils.dateparse import parse_datetime
+                            deadline = parse_datetime(deadline)
+                        except:
+                            try:
+                                from datetime import datetime
+                                deadline = datetime.fromisoformat(deadline.replace('Z', '+00:00'))
+                            except:
+                                deadline = None
+                    
+                    if deadline and hasattr(deadline, 'date'):
+                        deadline_date = deadline.date() if hasattr(deadline, 'date') else deadline
+                        days_left = (deadline_date - today).days
+                        
+                        if todo.get('is_overdue'):
+                            todo_item['meta'] = f'已逾期 {todo.get("overdue_days", 0)} 天'
+                        elif days_left >= 0:
+                            todo_item['meta'] = f'剩余 {days_left} 天'
+                        else:
+                            todo_item['meta'] = f'已逾期 {abs(days_left)} 天'
+                        
+                        # 分类到对应的卡片
+                        if deadline_date == today:
+                            daily_todos.append(todo_item)
+                        elif week_start <= deadline_date <= week_end:
+                            weekly_todos.append(todo_item)
+                        elif month_start <= deadline_date <= month_end:
+                            monthly_todos.append(todo_item)
+                        else:
+                            todo_items.append(todo_item)  # 其他待办
+                    else:
+                        todo_items.append(todo_item)
+                else:
+                    todo_items.append(todo_item)
+            else:
+                # 查询生成的待办事项
+                if todo.get('object'):
+                    obj = todo['object']
+                    if hasattr(obj, 'get_full_name'):
+                        todo_item['responsible'] = obj.get_full_name() or obj.username
+                    elif hasattr(obj, 'username'):
+                        todo_item['responsible'] = obj.username
+                    else:
+                        todo_item['responsible'] = '系统'
+                
+                # 根据待办类型分类
+                todo_type = todo.get('type', '')
+                if todo_type in ['plan_decomposition_daily', 'plan_today']:
+                    daily_todos.append(todo_item)
+                elif todo_type in ['plan_decomposition_weekly', 'plan_creation']:
+                    weekly_todos.append(todo_item)
+                elif todo_type in ['plan_creation', 'goal_creation']:
+                    monthly_todos.append(todo_item)
+                else:
+                    todo_items.append(todo_item)
+        
+        # 合并所有待办，优先显示今日、本周、本月
+        all_todo_items = daily_todos[:3] + weekly_todos[:3] + monthly_todos[:3] + todo_items[:5]
+        
+        context['todo_items'] = all_todo_items[:10]  # 最多显示10条
+        context['daily_todos_count'] = len(daily_todos)
+        context['weekly_todos_count'] = len(weekly_todos)
+        context['monthly_todos_count'] = len(monthly_todos)
+        context['user_todos'] = user_todos[:5]  # 保留旧字段以兼容
         context['user_todos_count'] = len(user_todos)
         
         # 风险提醒（右）
@@ -391,14 +491,24 @@ def plan_management_home(request):
     goal_fields = {f.name for f in StrategicGoal._meta.get_fields()}
     
     # ========== 计划状态分布（用于图表）==========
+    # 个人计划：owner = request.user 或 responsible_person = request.user 或 created_by = request.user
+    # （兼容旧数据：有些个人计划的 owner 可能为 None）
+    from django.db.models import Q
     plan_filter_kwargs = {}
     if 'level' in plan_fields:
         plan_filter_kwargs['level'] = 'personal'
-    if 'owner' in plan_fields:
-        plan_filter_kwargs['owner'] = request.user
     
-    user_plans_qs = Plan.objects.filter(**plan_filter_kwargs) if plan_filter_kwargs else Plan.objects.none()
-    plan_status_rows = user_plans_qs.values('status').annotate(count=Count('id')) if plan_filter_kwargs else []
+    # 构建查询条件：owner、responsible_person 或 created_by 是当前用户
+    user_plan_conditions = Q()
+    if 'owner' in plan_fields:
+        user_plan_conditions |= Q(owner=request.user)
+    if 'responsible_person' in plan_fields:
+        user_plan_conditions |= Q(responsible_person=request.user)
+    if 'created_by' in plan_fields:
+        user_plan_conditions |= Q(created_by=request.user)
+    
+    user_plans_qs = Plan.objects.filter(**plan_filter_kwargs).filter(user_plan_conditions) if plan_filter_kwargs and user_plan_conditions else Plan.objects.none()
+    plan_status_rows = user_plans_qs.values('status').annotate(count=Count('id')) if plan_filter_kwargs and user_plan_conditions else []
     
     # 兼容：拿到"状态码 -> 显示名"的映射
     plan_status_label_map = {}
@@ -421,14 +531,23 @@ def plan_management_home(request):
     context['plan_status_dist'] = plan_status_dist or None
     
     # ========== 目标状态分布（用于图表）==========
+    # 个人目标：owner = request.user 或 responsible_person = request.user 或 created_by = request.user
+    # （兼容旧数据：有些个人目标的 owner 可能为 None）
     goal_filter_kwargs = {}
     if 'level' in goal_fields:
         goal_filter_kwargs['level'] = 'personal'
-    if 'owner' in goal_fields:
-        goal_filter_kwargs['owner'] = request.user
     
-    user_goals_qs = StrategicGoal.objects.filter(**goal_filter_kwargs) if goal_filter_kwargs else StrategicGoal.objects.none()
-    goal_status_rows = user_goals_qs.values('status').annotate(count=Count('id')) if goal_filter_kwargs else []
+    # 构建查询条件：owner、responsible_person 或 created_by 是当前用户
+    user_goal_conditions = Q()
+    if 'owner' in goal_fields:
+        user_goal_conditions |= Q(owner=request.user)
+    if 'responsible_person' in goal_fields:
+        user_goal_conditions |= Q(responsible_person=request.user)
+    if 'created_by' in goal_fields:
+        user_goal_conditions |= Q(created_by=request.user)
+    
+    user_goals_qs = StrategicGoal.objects.filter(**goal_filter_kwargs).filter(user_goal_conditions) if goal_filter_kwargs and user_goal_conditions else StrategicGoal.objects.none()
+    goal_status_rows = user_goals_qs.values('status').annotate(count=Count('id')) if goal_filter_kwargs and user_goal_conditions else []
     
     goal_status_label_map = {}
     try:
@@ -1028,6 +1147,23 @@ def plan_create(request):
                             context['form_js_file'] = 'js/plan_form_date_calculator.js'
                             context['form_page_subtitle_text'] = '请填写计划基本信息'
                             context['weekly_plan_error'] = error_message  # 传递错误信息给模板
+                            # 查询适用于计划的审批流程模板
+                            from backend.apps.workflow_engine.models import WorkflowTemplate
+                            available_workflows = WorkflowTemplate.objects.filter(
+                                status='active',
+                                applicable_models__contains=['plan']
+                            ).order_by('name')
+                            context['available_workflows'] = available_workflows
+                            import json
+                            context['workflow_details_json'] = json.dumps({str(wf.id): {
+                                'name': wf.name,
+                                'description': wf.description or '',
+                                'allow_withdraw': wf.allow_withdraw,
+                                'allow_reject': wf.allow_reject,
+                                'allow_transfer': wf.allow_transfer,
+                                'timeout_hours': wf.timeout_hours,
+                                'timeout_action': wf.get_timeout_action_display() if wf.timeout_hours else None,
+                            } for wf in available_workflows})
                             return render(request, "plan_management/plan_form.html", context)
                 except (ValueError, User.DoesNotExist, TypeError):
                     # 如果解析失败，继续表单验证
@@ -1126,10 +1262,60 @@ def plan_create(request):
                         
                         created_plans.append(plan_item)
             
+            # 处理审批流程配置
+            workflow_template_id = request.POST.get('workflow_template', '').strip()
+            if workflow_template_id and not is_draft:
+                try:
+                    from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalNode
+                    from backend.apps.workflow_engine.services import ApprovalEngine
+                    
+                    workflow_template = WorkflowTemplate.objects.get(
+                        id=int(workflow_template_id),
+                        status='active',
+                        applicable_models__contains=['plan']
+                    )
+                    
+                    # 检查工作流模板是否有节点配置
+                    node_count = workflow_template.nodes.count()
+                    if node_count == 0:
+                        logging.warning(f'工作流模板 {workflow_template.name} 没有配置节点')
+                        messages.warning(request, f'选择的审批流程模板未配置节点，请先在后台配置审批节点后再使用')
+                    else:
+                        # 为每个创建的计划启动审批流程
+                        success_count = 0
+                        for plan in created_plans:
+                            try:
+                                instance = ApprovalEngine.start_approval(
+                                    workflow=workflow_template,
+                                    content_object=plan,
+                                    applicant=request.user,
+                                    comment=f'创建计划：{plan.name}'
+                                )
+                                success_count += 1
+                                logging.info(f'计划 {plan.plan_number} 的审批流程已启动，审批实例: {instance.instance_number}')
+                            except Exception as e:
+                                logging.error(f'启动计划 {plan.id} 的审批流程失败: {str(e)}', exc_info=True)
+                                messages.warning(request, f'计划 {plan.name} 的审批流程启动失败: {str(e)}，请手动提交审批')
+                        
+                        if success_count > 0:
+                            messages.info(request, f'{success_count} 个计划已自动提交审批')
+                except ValueError as e:
+                    logging.warning(f'审批流程ID格式错误: {str(e)}')
+                    messages.warning(request, '审批流程配置无效，请重新选择')
+                except WorkflowTemplate.DoesNotExist:
+                    logging.warning(f'审批流程模板不存在: {workflow_template_id}')
+                    messages.warning(request, '选择的审批流程不存在或已停用，请重新选择')
+                except Exception as e:
+                    logging.error(f'处理审批流程配置时发生错误: {str(e)}', exc_info=True)
+                    messages.warning(request, f'审批流程配置处理失败: {str(e)}')
+            
             if is_draft:
                 messages.success(request, f'计划已暂存为草稿（共 {len(created_plans)} 个计划）')
             else:
-                messages.success(request, f'成功创建 {len(created_plans)} 个计划')
+                if workflow_template_id:
+                    messages.success(request, f'成功创建 {len(created_plans)} 个计划，已自动提交审批')
+                else:
+                    messages.success(request, f'成功创建 {len(created_plans)} 个计划')
             # 跳转到第一个计划的详情页（如果有）
             if created_plans:
                 return redirect('plan_pages:plan_detail', plan_id=created_plans[0].id)
@@ -1167,10 +1353,40 @@ def plan_create(request):
             context['cancel_url_name'] = 'plan_pages:plan_list'
             context['form_js_file'] = 'js/plan_form_date_calculator.js'
             context['form_page_subtitle_text'] = '请填写计划基本信息'
+            # 查询适用于计划的审批流程模板
+            from backend.apps.workflow_engine.models import WorkflowTemplate
+            available_workflows = WorkflowTemplate.objects.filter(
+                status='active',
+                applicable_models__contains=['plan']
+            ).order_by('name')
+            context['available_workflows'] = available_workflows
+            import json
+            context['workflow_details_json'] = json.dumps({str(wf.id): {
+                'name': wf.name,
+                'description': wf.description or '',
+                'allow_withdraw': wf.allow_withdraw,
+                'allow_reject': wf.allow_reject,
+                'allow_transfer': wf.allow_transfer,
+                'timeout_hours': wf.timeout_hours,
+                'timeout_action': wf.get_timeout_action_display() if wf.timeout_hours else None,
+            } for wf in available_workflows})
             return render(request, "plan_management/plan_form.html", context)
     else:
-        form = PlanForm(user=request.user)
+        # GET 请求：从 URL 参数中读取 plan_period（用于待办事项跳转）
+        plan_period_from_url = request.GET.get('plan_period', '').strip()
+        initial_data = {}
+        if plan_period_from_url:
+            initial_data['plan_period'] = plan_period_from_url
+        
+        form = PlanForm(user=request.user, initial=initial_data)
         formset = PlanItemFormSet(prefix='planitems', form_kwargs={'user': request.user})
+    
+    # 查询适用于计划的审批流程模板
+    from backend.apps.workflow_engine.models import WorkflowTemplate
+    available_workflows = WorkflowTemplate.objects.filter(
+        status='active',
+        applicable_models__contains=['plan']
+    ).order_by('name')
     
     context = _context("创建计划", "➕", "创建新的工作计划", request=request)
     context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_create')
@@ -1181,6 +1397,17 @@ def plan_create(request):
     context['cancel_url_name'] = 'plan_pages:plan_list'
     context['form_js_file'] = 'js/plan_form_date_calculator.js'
     context['form_page_subtitle_text'] = '请填写计划基本信息'
+    context['available_workflows'] = available_workflows
+    import json
+    context['workflow_details_json'] = json.dumps({str(wf.id): {
+        'name': wf.name,
+        'description': wf.description or '',
+        'allow_withdraw': wf.allow_withdraw,
+        'allow_reject': wf.allow_reject,
+        'allow_transfer': wf.allow_transfer,
+        'timeout_hours': wf.timeout_hours,
+        'timeout_action': wf.get_timeout_action_display() if wf.timeout_hours else None,
+    } for wf in available_workflows})
     return render(request, "plan_management/plan_form.html", context)
 
 
@@ -1281,12 +1508,47 @@ def plan_detail(request, plan_id):
     can_submit_approval = (_permission_granted('plan_management.plan.create', permission_set) or plan.responsible_person == request.user) and plan.status in ['draft', 'cancelled']
     can_request_cancel = (_permission_granted('plan_management.plan.create', permission_set) or plan.responsible_person == request.user) and plan.status == 'in_progress'
     
-    # 检查是否存在 pending 的决策
-    has_pending_start = PlanDecision.objects.filter(plan=plan, request_type='start', decided_at__isnull=True).exists()
-    has_pending_cancel = PlanDecision.objects.filter(plan=plan, request_type='cancel', decided_at__isnull=True).exists()
+    # 检查是否存在 pending 的决策（同时检查审批引擎和 PlanDecision）
+    from django.contrib.contenttypes.models import ContentType
+    from backend.apps.workflow_engine.models import ApprovalInstance
+    from backend.apps.plan_management.services.plan_approval import PlanApprovalService
+    
+    plan_content_type = ContentType.objects.get_for_model(Plan)
+    
+    # 检查审批引擎中的待审批实例
+    has_pending_start_approval = ApprovalInstance.objects.filter(
+        content_type=plan_content_type,
+        object_id=plan.id,
+        workflow__code=PlanApprovalService.PLAN_START_WORKFLOW_CODE,
+        status__in=['pending', 'in_progress']
+    ).exists()
+    
+    has_pending_cancel_approval = ApprovalInstance.objects.filter(
+        content_type=plan_content_type,
+        object_id=plan.id,
+        workflow__code=PlanApprovalService.PLAN_CANCEL_WORKFLOW_CODE,
+        status__in=['pending', 'in_progress']
+    ).exists()
+    
+    # 检查 PlanDecision（向后兼容）
+    has_pending_start_decision = PlanDecision.objects.filter(plan=plan, request_type='start', decided_at__isnull=True).exists()
+    has_pending_cancel_decision = PlanDecision.objects.filter(plan=plan, request_type='cancel', decided_at__isnull=True).exists()
+    
+    # 合并结果（任一方式有 pending 都算有 pending）
+    has_pending_start = has_pending_start_approval or has_pending_start_decision
+    has_pending_cancel = has_pending_cancel_approval or has_pending_cancel_decision
     
     # 获取待审批的决策列表（用于审批人）
+    # 优先显示审批引擎的审批实例
+    pending_approval_instances = ApprovalInstance.objects.filter(
+        content_type=plan_content_type,
+        object_id=plan.id,
+        status__in=['pending', 'in_progress']
+    ).order_by('-created_time')
+    
+    # 向后兼容：也显示 PlanDecision
     pending_decisions = PlanDecision.objects.filter(plan=plan, decided_at__isnull=True).order_by('-requested_at')
+    
     can_approve = _permission_granted('plan_management.approve_plan', permission_set) or request.user.is_superuser
     
     # 检查是否可以申请调整
@@ -1361,11 +1623,18 @@ def plan_detail(request, plan_id):
             not has_pending_start and 
             not has_pending_cancel
         ),
-        'can_delete': _permission_granted('plan_management.plan.manage', permission_set) and plan.status == 'draft',
+        'can_delete': (
+            _permission_granted('plan_management.plan.manage', permission_set) and 
+            plan.status == 'draft' and
+            plan.get_child_plans_count() == 0 and
+            not pending_decisions.exists() and
+            not pending_approval_instances.exists()
+        ),
         # P1 新增权限
         'can_submit_approval': can_submit_approval and not has_pending_start,
         'can_request_cancel': can_request_cancel and not has_pending_cancel,
-        'pending_decisions': pending_decisions,
+        'pending_decisions': pending_decisions,  # 向后兼容
+        'pending_approval_instances': pending_approval_instances,  # 审批引擎的审批实例
         'can_approve': can_approve,
         # 计划调整申请权限
         'can_request_adjustment': can_request_adjustment and not has_pending_adjustment,
@@ -1384,7 +1653,19 @@ def plan_edit(request, plan_id):
     plan = get_object_or_404(Plan, id=plan_id)
     
     # 检查是否有待审批的决策（提交审批后不能编辑）
+    # 同时检查审批引擎和 PlanDecision
+    from django.contrib.contenttypes.models import ContentType
+    from backend.apps.workflow_engine.models import ApprovalInstance
+    from backend.apps.plan_management.services.plan_approval import PlanApprovalService
+    
+    plan_content_type = ContentType.objects.get_for_model(Plan)
+    has_pending_approval = ApprovalInstance.objects.filter(
+        content_type=plan_content_type,
+        object_id=plan.id,
+        status__in=['pending', 'in_progress']
+    ).exists()
     has_pending_decision = PlanDecision.objects.filter(plan=plan, decided_at__isnull=True).exists()
+    has_pending_decision = has_pending_approval or has_pending_decision
     
     # 检查是否可以编辑：允许草稿和已取消状态的计划编辑
     # 负责人可以编辑自己负责的草稿计划，或者有管理权限的用户可以编辑
@@ -1823,7 +2104,7 @@ def plan_goal_alignment(request, plan_id):
 def plan_approval_list(request):
     """
     P2: 计划审批列表（v2）
-    展示所有待裁决 PlanDecision（decided_at is null）
+    展示所有待审批的审批请求（包括审批引擎和 PlanDecision）
     应用公司数据隔离：只显示与当前用户同一公司的计划的审批请求
     """
     permission_set = get_user_permission_codes(request.user)
@@ -1837,6 +2118,42 @@ def plan_approval_list(request):
     date_from = request.GET.get('date_from', '').strip()
     date_to = request.GET.get('date_to', '').strip()
     
+    # 获取审批引擎的审批实例
+    from django.contrib.contenttypes.models import ContentType
+    from backend.apps.workflow_engine.models import ApprovalInstance
+    from backend.apps.plan_management.services.plan_approval import PlanApprovalService
+    
+    plan_content_type = ContentType.objects.get_for_model(Plan)
+    
+    pending_approval_instances = ApprovalInstance.objects.filter(
+        content_type=plan_content_type,
+        status__in=['pending', 'in_progress'],
+        workflow__code__in=[
+            PlanApprovalService.PLAN_START_WORKFLOW_CODE,
+            PlanApprovalService.PLAN_CANCEL_WORKFLOW_CODE
+        ]
+    ).select_related("workflow", "applicant", "current_node")
+    
+    # 应用公司数据隔离
+    if not request.user.is_superuser:
+        company_id = None
+        try:
+            profile = request.user.profile
+            if profile:
+                company_id = getattr(profile, 'company_id', None)
+                if company_id is None and hasattr(profile, 'department') and profile.department:
+                    company_id = getattr(profile.department, 'company_id', None)
+        except AttributeError:
+            pass
+        
+        if company_id:
+            # 过滤只显示同一公司的计划的审批实例
+            plan_ids = Plan.objects.filter(
+                Q(company_id=company_id) | Q(company__isnull=True)
+            ).values_list('id', flat=True)
+            pending_approval_instances = pending_approval_instances.filter(object_id__in=plan_ids)
+    
+    # PlanDecision（向后兼容）
     pending_decisions = (
         PlanDecision.objects
         .filter(decided_at__isnull=True)
@@ -1864,7 +2181,46 @@ def plan_approval_list(request):
                 Q(plan__company_id=company_id) | Q(plan__company__isnull=True)
             )
     
-    # 应用筛选
+    # 应用筛选 - 审批引擎的审批实例
+    if search:
+        # 通过关联的计划进行搜索
+        plan_ids = Plan.objects.filter(
+            Q(plan_number__icontains=search) |
+            Q(name__icontains=search)
+        ).values_list('id', flat=True)
+        pending_approval_instances = pending_approval_instances.filter(object_id__in=plan_ids)
+        
+        # 也可以通过申请人搜索
+        applicant_ids = User.objects.filter(
+            Q(username__icontains=search) |
+            Q(full_name__icontains=search)
+        ).values_list('id', flat=True)
+        pending_approval_instances = pending_approval_instances.filter(applicant_id__in=applicant_ids)
+    
+    if request_type_filter:
+        if request_type_filter == 'start':
+            pending_approval_instances = pending_approval_instances.filter(
+                workflow__code=PlanApprovalService.PLAN_START_WORKFLOW_CODE
+            )
+        elif request_type_filter == 'cancel':
+            pending_approval_instances = pending_approval_instances.filter(
+                workflow__code=PlanApprovalService.PLAN_CANCEL_WORKFLOW_CODE
+            )
+    
+    if status_filter:
+        plan_ids = Plan.objects.filter(status=status_filter).values_list('id', flat=True)
+        pending_approval_instances = pending_approval_instances.filter(object_id__in=plan_ids)
+    
+    if requested_by_filter:
+        pending_approval_instances = pending_approval_instances.filter(applicant_id=requested_by_filter)
+    
+    if date_from:
+        pending_approval_instances = pending_approval_instances.filter(apply_time__date__gte=date_from)
+    
+    if date_to:
+        pending_approval_instances = pending_approval_instances.filter(apply_time__date__lte=date_to)
+    
+    # 应用筛选 - PlanDecision（向后兼容）
     if search:
         pending_decisions = pending_decisions.filter(
             Q(plan__plan_number__icontains=search) |
@@ -1889,9 +2245,12 @@ def plan_approval_list(request):
         pending_decisions = pending_decisions.filter(requested_at__date__lte=date_to)
     
     # 排序
+    pending_approval_instances = pending_approval_instances.order_by("-created_time")
     pending_decisions = pending_decisions.order_by("-requested_at")
     
-    # 分页
+    # 分页 - 合并两种数据源
+    # 注意：由于审批引擎和 PlanDecision 是不同的数据源，这里分别处理
+    # 在实际应用中，可以优先显示审批引擎的审批实例
     page_size = request.GET.get('page_size', '10')
     try:
         per_page = int(page_size)
@@ -1900,11 +2259,24 @@ def plan_approval_list(request):
     except (ValueError, TypeError):
         per_page = 10
     
-    paginator = Paginator(pending_decisions, per_page)
+    # 分别对两种数据源进行分页
+    approval_paginator = Paginator(pending_approval_instances, per_page)
+    decision_paginator = Paginator(pending_decisions, per_page)
     page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
     
-    # 统计信息（基于原始查询，不受筛选影响，但应用公司数据隔离）
+    approval_page_obj = approval_paginator.get_page(page_number)
+    decision_page_obj = decision_paginator.get_page(page_number)
+    
+    # 为了向后兼容，保留 page_obj 指向 PlanDecision 的分页
+    page_obj = decision_page_obj
+    
+    # 统计信息（包括审批引擎和 PlanDecision）
+    # 审批引擎统计
+    approval_stats_base = pending_approval_instances
+    approval_start_count = approval_stats_base.filter(workflow__code=PlanApprovalService.PLAN_START_WORKFLOW_CODE).count()
+    approval_cancel_count = approval_stats_base.filter(workflow__code=PlanApprovalService.PLAN_CANCEL_WORKFLOW_CODE).count()
+    
+    # PlanDecision 统计（向后兼容）
     stats_base = PlanDecision.objects.filter(decided_at__isnull=True)
     if not request.user.is_superuser:
         company_id = None
@@ -1921,14 +2293,19 @@ def plan_approval_list(request):
                 Q(plan__company_id=company_id) | Q(plan__company__isnull=True)
             )
     
-    total_count = stats_base.count()
-    pending_count = stats_base.filter(request_type='start').count()
-    cancel_count = stats_base.filter(request_type='cancel').count()
+    decision_start_count = stats_base.filter(request_type='start').count()
+    decision_cancel_count = stats_base.filter(request_type='cancel').count()
+    
+    # 合并统计
+    total_count = approval_stats_base.count() + stats_base.count()
+    pending_count = approval_start_count + decision_start_count
+    cancel_count = approval_cancel_count + decision_cancel_count
     
     # 获取所有用户（用于筛选）
-    all_users = User.objects.filter(
-        id__in=pending_decisions.values_list('requested_by_id', flat=True).distinct()
-    ).order_by('username')
+    approval_user_ids = pending_approval_instances.values_list('applicant_id', flat=True).distinct()
+    decision_user_ids = pending_decisions.values_list('requested_by_id', flat=True).distinct()
+    all_user_ids = set(approval_user_ids) | set(decision_user_ids)
+    all_users = User.objects.filter(id__in=all_user_ids).order_by('username')
     
     context = _context(
         "计划审批列表",
@@ -1938,8 +2315,10 @@ def plan_approval_list(request):
     )
     context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_approval')
     context.update({
-        "page_obj": page_obj,
-        "pending_decisions": list(page_obj),  # 保持向后兼容
+        "page_obj": page_obj,  # PlanDecision 分页（向后兼容）
+        "approval_page_obj": approval_page_obj,  # 审批引擎分页
+        "pending_decisions": list(page_obj),  # 保持向后兼容（PlanDecision）
+        "pending_approval_instances": list(approval_page_obj),  # 审批引擎的审批实例（分页后）
         "can_approve": can_approve,
         "total_count": total_count,
         "pending_count": pending_count,
@@ -2023,6 +2402,11 @@ def plan_execution_track(request, plan_id):
             record = progress_form.save(commit=False)
             record.recorded_by = request.user
             record.save()
+            
+            # 通知上级进度更新
+            from .notifications import notify_supervisor_progress_update
+            notify_supervisor_progress_update(plan, request.user)
+            
             messages.success(request, '进度更新成功')
             return redirect('plan_pages:plan_execution_track', plan_id=plan_id)
     
@@ -2869,6 +3253,11 @@ def strategic_goal_track(request, goal_id):
             record.recorded_by = request.user
             record.completion_rate = goal.calculate_completion_rate()
             record.save()
+            
+            # 通知上级进度更新
+            from .notifications import notify_supervisor_progress_update
+            notify_supervisor_progress_update(goal, request.user)
+            
             messages.success(request, '进度更新成功')
             return redirect('plan_pages:strategic_goal_track', goal_id=goal_id)
     
@@ -3046,6 +3435,21 @@ def plan_delete(request, plan_id):
             messages.error(request, '该计划有待审批的请求，无法删除')
             return redirect('plan_pages:plan_detail', plan_id=plan_id)
         
+        # 检查是否有待审批的审批实例（审批引擎）
+        from django.contrib.contenttypes.models import ContentType
+        from backend.apps.workflow_engine.models import ApprovalInstance
+        from backend.apps.plan_management.services.plan_approval import PlanApprovalService
+        
+        plan_content_type = ContentType.objects.get_for_model(Plan)
+        pending_approval_instances = ApprovalInstance.objects.filter(
+            content_type=plan_content_type,
+            object_id=plan.id,
+            status__in=['pending', 'in_progress']
+        )
+        if pending_approval_instances.exists():
+            messages.error(request, '该计划有正在进行的审批流程，无法删除')
+            return redirect('plan_pages:plan_detail', plan_id=plan_id)
+        
         # 执行删除
         plan_name = plan.name
         plan.delete()
@@ -3070,6 +3474,19 @@ def plan_delete(request, plan_id):
     if pending_decisions.exists():
         can_delete = False
         delete_warnings.append('该计划有待审批的请求，无法删除')
+    
+    # 检查是否有待审批的审批实例（审批引擎）
+    from django.contrib.contenttypes.models import ContentType
+    from backend.apps.workflow_engine.models import ApprovalInstance
+    plan_content_type = ContentType.objects.get_for_model(Plan)
+    pending_approval_instances = ApprovalInstance.objects.filter(
+        content_type=plan_content_type,
+        object_id=plan.id,
+        status__in=['pending', 'in_progress']
+    )
+    if pending_approval_instances.exists():
+        can_delete = False
+        delete_warnings.append('该计划有正在进行的审批流程，无法删除')
     
     context = _context(
         f"删除计划 - {plan.name}",
@@ -3453,8 +3870,10 @@ def plan_statistics(request):
 # ==================== P1 决策接口（围绕 decision 的裁决） ====================
 
 @login_required
+@require_http_methods(["POST"])
 def plan_request_start(request, plan_id):
     """发起启动计划请求（提交审批）"""
+    logger = logging.getLogger(__name__)
     permission_set = get_user_permission_codes(request.user)
     plan = get_object_or_404(Plan, id=plan_id)
     
@@ -3469,14 +3888,26 @@ def plan_request_start(request, plan_id):
         messages.error(request, f'只有草稿或已取消状态的计划可以提交审批，当前状态：{plan.get_status_display()}')
         return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
-    # 检查是否已存在 pending 的 start 请求
-    existing_pending = PlanDecision.objects.filter(
+    # 检查是否已存在 pending 的 start 请求（同时检查审批引擎和 PlanDecision）
+    from django.contrib.contenttypes.models import ContentType
+    from backend.apps.workflow_engine.models import ApprovalInstance
+    from backend.apps.plan_management.services.plan_approval import PlanApprovalService
+    
+    plan_content_type = ContentType.objects.get_for_model(Plan)
+    existing_pending_approval = ApprovalInstance.objects.filter(
+        content_type=plan_content_type,
+        object_id=plan.id,
+        workflow__code=PlanApprovalService.PLAN_START_WORKFLOW_CODE,
+        status__in=['pending', 'in_progress']
+    ).exists()
+    
+    existing_pending_decision = PlanDecision.objects.filter(
         plan=plan,
         request_type='start',
         decided_at__isnull=True
     ).exists()
     
-    if existing_pending:
+    if existing_pending_approval or existing_pending_decision:
         messages.warning(request, '该计划已有待处理的启动请求')
         return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
@@ -3499,22 +3930,46 @@ def plan_request_start(request, plan_id):
                     change_reason='已取消的计划重新提交审批，状态恢复为草稿'
                 )
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f'记录状态变更日志失败: {e}', exc_info=True)
             messages.error(request, f'状态变更记录失败: {str(e)}')
             return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
-    # 创建决策记录
-    PlanDecision.objects.create(
-        plan=plan,
-        request_type='start',
-        decision=None,
-        requested_by=request.user,
-        reason=request.POST.get('reason', '')
-    )
+    # 优先使用审批引擎
+    try:
+        from backend.apps.plan_management.services.plan_decisions import request_start, PlanDecisionError
+        
+        # 检查验收标准
+        if not plan.acceptance_criteria or not plan.acceptance_criteria.strip():
+            messages.error(request, '提交审批前必须填写验收标准，明确说明如何判定计划完成。请在计划编辑页面填写验收标准。')
+            return redirect('plan_pages:plan_detail', plan_id=plan_id)
+        
+        decision = request_start(plan, request.user, request.POST.get('reason', ''))
+        
+        # 检查是否成功创建了审批实例
+        from backend.apps.workflow_engine.models import ApprovalInstance
+        from django.contrib.contenttypes.models import ContentType
+        plan_content_type = ContentType.objects.get_for_model(Plan)
+        approval_instance = ApprovalInstance.objects.filter(
+            content_type=plan_content_type,
+            object_id=plan.id,
+            status__in=['pending', 'in_progress']
+        ).first()
+        
+        if approval_instance:
+            messages.success(request, f'已提交审批请求，审批实例编号：{approval_instance.instance_number}')
+        else:
+            messages.info(request, '已提交审批请求，正在等待审批')
+            
+    except PlanDecisionError as e:
+        # 业务规则错误（如验收标准未填写、状态不允许等）
+        messages.error(request, str(e))
+        logger.warning(f'提交审批请求失败（业务规则）: {str(e)}, plan_id={plan_id}, user={request.user.username}')
+    except Exception as e:
+        # 其他异常（如数据库错误、审批引擎错误等）
+        error_msg = str(e)
+        messages.error(request, f'提交审批请求失败: {error_msg}')
+        logger.error(f'提交审批请求失败（系统错误）: {str(e)}, plan_id={plan_id}, user={request.user.username}', exc_info=True)
     
-    messages.success(request, '已提交审批请求')
     return redirect('plan_pages:plan_detail', plan_id=plan_id)
 
 
@@ -3535,27 +3990,37 @@ def plan_request_cancel(request, plan_id):
         messages.error(request, f'只有执行中状态的计划可以申请取消，当前状态：{plan.get_status_display()}')
         return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
-    # 检查是否已存在 pending 的 cancel 请求
-    existing_pending = PlanDecision.objects.filter(
+    # 检查是否已存在 pending 的 cancel 请求（同时检查审批引擎和 PlanDecision）
+    from django.contrib.contenttypes.models import ContentType
+    from backend.apps.workflow_engine.models import ApprovalInstance
+    from backend.apps.plan_management.services.plan_approval import PlanApprovalService
+    
+    plan_content_type = ContentType.objects.get_for_model(Plan)
+    existing_pending_approval = ApprovalInstance.objects.filter(
+        content_type=plan_content_type,
+        object_id=plan.id,
+        workflow__code=PlanApprovalService.PLAN_CANCEL_WORKFLOW_CODE,
+        status__in=['pending', 'in_progress']
+    ).exists()
+    
+    existing_pending_decision = PlanDecision.objects.filter(
         plan=plan,
         request_type='cancel',
         decided_at__isnull=True
     ).exists()
     
-    if existing_pending:
+    if existing_pending_approval or existing_pending_decision:
         messages.warning(request, '该计划已有待处理的取消请求')
         return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
-    # 创建决策记录
-    PlanDecision.objects.create(
-        plan=plan,
-        request_type='cancel',
-        decision=None,
-        requested_by=request.user,
-        reason=request.POST.get('reason', '')
-    )
+    # 优先使用审批引擎
+    try:
+        from backend.apps.plan_management.services.plan_decisions import request_cancel
+        decision = request_cancel(plan, request.user, request.POST.get('reason', ''))
+        messages.success(request, '已发起取消审批请求')
+    except Exception as e:
+        messages.error(request, f'发起取消审批请求失败: {str(e)}')
     
-    messages.success(request, '已发起取消审批请求')
     return redirect('plan_pages:plan_detail', plan_id=plan_id)
 
 

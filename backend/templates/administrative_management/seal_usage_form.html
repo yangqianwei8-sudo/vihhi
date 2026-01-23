@@ -1,0 +1,204 @@
+{% extends "shared/create_form_base.html" %}
+{% load static %}
+
+{% block form_title %}申请用印{% endblock form_title %}
+{% block form_subtitle %}请填写用印申请信息{% endblock form_subtitle %}
+
+{% block form_header_actions %}
+  <a href="{% url 'admin_pages:seal_usage_list' %}" class="btn btn-secondary">
+    返回列表
+  </a>
+{% endblock form_header_actions %}
+
+{# 第一排额外字段：留空，不添加额外字段 #}
+{% block form_first_row_extra_fields %}
+  {# 占位字段，凑满5个 #}
+  <div class="col-5-fields form-field-wrapper"></div>
+  <div class="col-5-fields form-field-wrapper"></div>
+{% endblock form_first_row_extra_fields %}
+
+{# 其他字段区域 #}
+{% block form_fields %}
+
+  {# 用印人、印章、用印类型、用印日期、用印时间（5个字段） #}
+  <div class="row mb-3 form-row-5">
+    {# 用印人 #}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.used_by.id_for_label }}" class="form-label">
+        {{ form.used_by.label }}
+        {% if form.used_by.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.used_by }}
+      {% if form.used_by.errors %}
+      <div class="text-danger small">{{ form.used_by.errors }}</div>
+      {% endif %}
+      {% if form.used_by.help_text %}
+      <div class="form-text">{{ form.used_by.help_text }}</div>
+      {% endif %}
+    </div>
+
+    {# 印章 #}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.seal.id_for_label }}" class="form-label">
+        {{ form.seal.label }}
+        {% if form.seal.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.seal }}
+      {% if form.seal.errors %}
+      <div class="text-danger small">{{ form.seal.errors }}</div>
+      {% endif %}
+      {% if form.seal.help_text %}
+      <div class="form-text">{{ form.seal.help_text }}</div>
+      {% endif %}
+    </div>
+
+    {# 用印类型 #}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.usage_type.id_for_label }}" class="form-label">
+        {{ form.usage_type.label }}
+        {% if form.usage_type.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.usage_type }}
+      {% if form.usage_type.errors %}
+      <div class="text-danger small">{{ form.usage_type.errors }}</div>
+      {% endif %}
+      {% if form.usage_type.help_text %}
+      <div class="form-text">{{ form.usage_type.help_text }}</div>
+      {% endif %}
+    </div>
+
+    {# 用印日期 #}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.usage_date.id_for_label }}" class="form-label">
+        {{ form.usage_date.label }}
+        {% if form.usage_date.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.usage_date }}
+      {% if form.usage_date.errors %}
+      <div class="text-danger small">{{ form.usage_date.errors }}</div>
+      {% endif %}
+      {% if form.usage_date.help_text %}
+      <div class="form-text">{{ form.usage_date.help_text }}</div>
+      {% endif %}
+    </div>
+
+    {# 用印时间 #}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.usage_time.id_for_label }}" class="form-label">
+        {{ form.usage_time.label }}
+        {% if form.usage_time.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.usage_time }}
+      {% if form.usage_time.errors %}
+      <div class="text-danger small">{{ form.usage_time.errors }}</div>
+      {% endif %}
+      {% if form.usage_time.help_text %}
+      <div class="form-text">{{ form.usage_time.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# 用印数量 #}
+  <div class="row mb-3">
+    <div class="col-md-6 form-field-wrapper">
+      <label for="{{ form.usage_count.id_for_label }}" class="form-label">
+        {{ form.usage_count.label }}
+        {% if form.usage_count.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.usage_count }}
+      {% if form.usage_count.errors %}
+      <div class="text-danger small">{{ form.usage_count.errors }}</div>
+      {% endif %}
+      {% if form.usage_count.help_text %}
+      <div class="form-text">{{ form.usage_count.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# 用印事由（多行文本，占整行） #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.usage_reason.id_for_label }}" class="form-label">
+        {{ form.usage_reason.label }}
+        {% if form.usage_reason.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.usage_reason }}
+      {% if form.usage_reason.errors %}
+      <div class="text-danger small">{{ form.usage_reason.errors }}</div>
+      {% endif %}
+      {% if form.usage_reason.help_text %}
+      <div class="form-text">{{ form.usage_reason.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# 文件名称和用印文件 #}
+  <div class="row mb-3">
+    <div class="col-md-6 form-field-wrapper">
+      <label for="{{ form.document_name.id_for_label }}" class="form-label">
+        {{ form.document_name.label }}
+        {% if form.document_name.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.document_name }}
+      {% if form.document_name.errors %}
+      <div class="text-danger small">{{ form.document_name.errors }}</div>
+      {% endif %}
+      {% if form.document_name.help_text %}
+      <div class="form-text">{{ form.document_name.help_text }}</div>
+      {% endif %}
+    </div>
+    <div class="col-md-6 form-field-wrapper">
+      <label for="{{ form.document_file.id_for_label }}" class="form-label">
+        {{ form.document_file.label }}
+        {% if form.document_file.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.document_file }}
+      {% if form.document_file.errors %}
+      <div class="text-danger small">{{ form.document_file.errors }}</div>
+      {% endif %}
+      {% if form.document_file.help_text %}
+      <div class="form-text">{{ form.document_file.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# 见证人 #}
+  <div class="row mb-3">
+    <div class="col-md-6 form-field-wrapper">
+      <label for="{{ form.witness.id_for_label }}" class="form-label">
+        {{ form.witness.label }}
+        {% if form.witness.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.witness }}
+      {% if form.witness.errors %}
+      <div class="text-danger small">{{ form.witness.errors }}</div>
+      {% endif %}
+      {% if form.witness.help_text %}
+      <div class="form-text">{{ form.witness.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# 备注（多行文本，占整行） #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.notes.id_for_label }}" class="form-label">
+        {{ form.notes.label }}
+        {% if form.notes.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.notes }}
+      {% if form.notes.errors %}
+      <div class="text-danger small">{{ form.notes.errors }}</div>
+      {% endif %}
+      {% if form.notes.help_text %}
+      <div class="form-text">{{ form.notes.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock form_fields %}
+
+{# 自定义按钮文字 #}
+{% block form_actions %}
+  <button type="submit" class="btn btn-primary" id="submitButton">提交申请</button>
+  <a href="{% url 'admin_pages:seal_usage_list' %}" class="btn btn-secondary">取消</a>
+{% endblock form_actions %}

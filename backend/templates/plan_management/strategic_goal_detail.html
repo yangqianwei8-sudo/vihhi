@@ -359,38 +359,23 @@
 
 {% block detail_modification_history_content %}
   {% if progress_records %}
-  <div class="table-responsive">
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th>记录时间</th>
-          <th>当前值</th>
-          <th>完成率</th>
-          <th>记录人</th>
-          <th>备注</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for record in progress_records %}
-        <tr>
-          <td>{{ record.recorded_time|date:"Y-m-d H:i" }}</td>
-          <td><strong>{{ record.current_value }}</strong>{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</td>
-          <td><strong>{{ record.completion_rate }}%</strong></td>
-          <td>
-            {% if record.recorded_by %}
-              {{ record.recorded_by.get_full_name|default:record.recorded_by.username }}
-            {% else %}
-              -
-            {% endif %}
-          </td>
-          <td>{{ record.notes|default:"-" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="text-muted">暂无进度记录</div>
+    {% for record in progress_records %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ record.recorded_time|date:"Y-m-d H:i" }}</td>
+      <td>
+        {% if record.recorded_by %}
+          {{ record.recorded_by.get_full_name|default:record.recorded_by.username }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>进度值</td>
+      <td>-</td>
+      <td><strong>{{ record.current_value }}</strong>{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %} (完成率: {{ record.completion_rate }}%)</td>
+      <td>{{ record.notes|default:"-" }}</td>
+    </tr>
+    {% endfor %}
   {% endif %}
 {% endblock detail_modification_history_content %}
 
@@ -432,8 +417,6 @@
       </tbody>
     </table>
   </div>
-  {% else %}
-  <div class="text-muted">暂无状态变更记录</div>
   {% endif %}
 {% endblock detail_status_history_content %}
 

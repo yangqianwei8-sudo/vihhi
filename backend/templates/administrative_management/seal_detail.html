@@ -156,18 +156,25 @@
         </div>
     </div>
 
-    {% if seal.status == 'borrowed' %}
+    {% if seal.status == 'borrowed' or current_borrowing %}
     <div class="info-card">
-        <h5>当前借用信息</h5>
-        {% if borrowings and borrowings.0.status == 'borrowed' %}
-        {% with current=borrowings.0 %}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">当前借用信息</h5>
+            {% if current_borrowing and current_borrowing.status in 'borrowed,approved' %}
+            <a href="{% url 'admin_pages:seal_borrowing_return' current_borrowing.id %}" class="btn btn-sm btn-success">
+                <i class="bi bi-box-arrow-in-left"></i> 归还印章
+            </a>
+            {% endif %}
+        </div>
+        {% if current_borrowing %}
+        {% with current=current_borrowing %}
         <div class="info-row">
             <div class="info-item">
                 <span class="info-label">借用日期</span>
-                <span class="info-value">{{ current.borrow_date|date:"Y-m-d" }}</span>
+                <span class="info-value">{{ current.borrowing_date|date:"Y-m-d" }}</span>
             </div>
             <div class="info-item">
-                <span class="info-label">借用时长</span>
+                <span class="info-label">预计归还日期</span>
                 <span class="info-value">{{ current.expected_return_date|date:"Y-m-d" }}</span>
             </div>
             <div class="info-item">
@@ -175,8 +182,8 @@
                 <span class="info-value">{{ current.borrower.get_full_name|default:current.borrower.username }}</span>
             </div>
             <div class="info-item">
-                <span class="info-label">借用用途</span>
-                <span class="info-value">{{ current.purpose|truncatewords:10 }}</span>
+                <span class="info-label">借用事由</span>
+                <span class="info-value">{{ current.borrowing_reason|truncatewords:10 }}</span>
             </div>
         </div>
         {% endwith %}
@@ -191,10 +198,12 @@
         <div class="record-item">
             <div class="d-flex justify-content-between align-items-start">
                 <div style="flex: 1;">
-                    <strong>{{ borrowing.borrow_number }}</strong>
+                    <strong>{{ borrowing.borrowing_number }}</strong>
                     <span class="badge bg-{{ borrowing.status|yesno:'success,warning,info,secondary' }} ms-2">
-                        {% if borrowing.status == 'pending' %}
+                        {% if borrowing.status == 'pending_approval' %}
                         <span class="badge bg-warning">待审批</span>
+                        {% elif borrowing.status == 'approved' %}
+                        <span class="badge bg-info">已批准</span>
                         {% elif borrowing.status == 'borrowed' %}
                         <span class="badge bg-info">已借出</span>
                         {% elif borrowing.status == 'returned' %}
@@ -207,15 +216,15 @@
                     </span>
                     <p class="mb-0 mt-1" style="font-size: 13px; color: #6b7280;">
                         借用人：{{ borrowing.borrower.get_full_name|default:borrowing.borrower.username }} |
-                        借用日期：{{ borrowing.borrow_date|date:"Y-m-d" }} |
+                        借用日期：{{ borrowing.borrowing_date|date:"Y-m-d" }} |
                         预计归还：{{ borrowing.expected_return_date|date:"Y-m-d" }}
                         {% if borrowing.actual_return_date %}
                         | 实际归还：{{ borrowing.actual_return_date|date:"Y-m-d" }}
                         {% endif %}
                     </p>
-                    {% if borrowing.purpose %}
+                    {% if borrowing.borrowing_reason %}
                     <p class="mb-0 mt-1" style="font-size: 12px; color: #9ca3af;">
-                        用途：{{ borrowing.purpose|truncatewords:15 }}
+                        借用事由：{{ borrowing.borrowing_reason|truncatewords:15 }}
                     </p>
                     {% endif %}
                     {% if borrowing.approver %}
@@ -232,9 +241,16 @@
                     </p>
                     {% endif %}
                 </div>
-                <a href="/admin/administrative_management/sealborrowing/{{ borrowing.id }}/" class="btn btn-sm btn-outline-info ms-2">
-                    <i class="bi bi-eye"></i>
-                </a>
+                <div class="d-flex gap-2">
+                    {% if borrowing.status == 'borrowed' or borrowing.status == 'approved' %}
+                    <a href="{% url 'admin_pages:seal_borrowing_return' borrowing.id %}" class="btn btn-sm btn-success">
+                        <i class="bi bi-box-arrow-in-left"></i> 归还
+                    </a>
+                    {% endif %}
+                    <a href="/admin/administrative_management/sealborrowing/{{ borrowing.id }}/" class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </div>
             </div>
         </div>
         {% endfor %}

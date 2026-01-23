@@ -36,7 +36,10 @@
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="notificationModalLabel">系统通知</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭" id="closeNotificationModal"></button>
+                            <div class="notification-header-actions">
+                                <button type="button" class="btn btn-sm btn-link" id="markAllReadBtn" style="font-size: 12px; padding: 4px 8px;">全部已读</button>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭" id="closeNotificationModal"></button>
+                            </div>
                         </div>
                         <div class="modal-body">
                             <div class="notification-list" id="notificationList">
@@ -243,12 +246,19 @@
                 return `
                     <div class="notification-item ${unreadClass} ${priorityClass}" 
                          data-id="${notif.id}" 
-                         data-url="${notif.url || '#'}">
+                         data-url="${notif.url || '#'}"
+                         data-is-read="${notif.is_read ? 'true' : 'false'}">
                         <div class="notification-icon-item">${icon}</div>
                         <div class="notification-content">
-                            <div class="notification-title">${escapeHtml(notif.title)}</div>
+                            <div class="notification-title">
+                                ${escapeHtml(notif.title)}
+                                ${!notif.is_read ? '<span class="notification-unread-dot"></span>' : ''}
+                            </div>
                             <div class="notification-text">${escapeHtml(notif.content)}</div>
                             <div class="notification-time">${timeStr}</div>
+                        </div>
+                        <div class="notification-actions">
+                            ${!notif.is_read ? '<button class="btn-mark-read" title="标记为已读">✓</button>' : ''}
                         </div>
                     </div>
                 `;
@@ -258,21 +268,47 @@
             
             // 绑定点击事件
             list.querySelectorAll('.notification-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    const notifId = this.dataset.id;
-                    const url = this.dataset.url;
-                    
-                    // 标记为已读
-                    if (!notifications.find(n => n.id === notifId)?.is_read) {
+                const notifId = parseInt(item.dataset.id);
+                const url = item.dataset.url;
+                const isRead = item.dataset.isRead === 'true';
+                
+                // 点击通知内容区域跳转
+                const contentArea = item.querySelector('.notification-content');
+                if (contentArea) {
+                    contentArea.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        // 标记为已读
+                        if (!isRead) {
+                            markAsRead(notifId);
+                        }
+                        // 跳转
+                        if (url && url !== '#') {
+                            window.location.href = url;
+                        }
+                    });
+                    contentArea.style.cursor = 'pointer';
+                }
+                
+                // 点击标记已读按钮
+                const markReadBtn = item.querySelector('.btn-mark-read');
+                if (markReadBtn) {
+                    markReadBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        e.preventDefault();
                         markAsRead(notifId);
-                    }
-                    
-                    // 跳转
-                    if (url && url !== '#') {
-                        window.location.href = url;
-                    }
-                });
+                    });
+                }
             });
+            
+            // 绑定全部已读按钮
+            const markAllReadBtn = document.getElementById('markAllReadBtn');
+            if (markAllReadBtn) {
+                markAllReadBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    markAllAsRead();
+                });
+            }
         }
         
         // 标记为已读
@@ -305,6 +341,39 @@
                     // 更新徽章
                     const unreadCount = notifications.filter(n => !n.is_read).length;
                     updateBadge(unreadCount);
+                }
+            })
+            .catch(error => {
+                // 标记已读失败，静默处理
+            });
+        }
+        
+        // 全部标记为已读
+        function markAllAsRead() {
+            fetch('/api/plan/notifications/mark-all-read/', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin',
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.ok || data.success) {
+                    // 更新所有通知为已读
+                    notifications.forEach(n => {
+                        n.is_read = true;
+                    });
+                    // 重新渲染
+                    renderNotifications();
+                    // 更新徽章
+                    updateBadge(0);
                 }
             })
             .catch(error => {
@@ -602,6 +671,41 @@
             
             .notification-item.priority-normal {
                 border-left-color: #0d6efd;
+            }
+            
+            .notification-header-actions {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            
+            .notification-actions {
+                flex-shrink: 0;
+                margin-left: 8px;
+            }
+            
+            .btn-mark-read {
+                background: #0d6efd;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 12px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            
+            .btn-mark-read:hover {
+                background: #0b5ed7;
+            }
+            
+            .notification-unread-dot {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                background: #0d6efd;
+                border-radius: 50%;
+                margin-left: 8px;
             }
         `;
         

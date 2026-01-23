@@ -54,17 +54,29 @@ class ApprovalEngine:
                 status='pending'
             )
             
-            # 获取第一个节点
-            first_node = workflow.nodes.filter(node_type='start').first()
-            if not first_node:
+            # 获取第一个节点（跳过开始节点，直接进入第一个审批节点）
+            start_node = workflow.nodes.filter(node_type='start').first()
+            if start_node:
+                # 获取开始节点的下一个节点（第一个审批节点）
+                first_approval_node = ApprovalEngine._get_next_node(start_node)
+                if first_approval_node:
+                    instance.current_node = first_approval_node
+                    instance.save()
+                    # 创建审批记录（待审批状态）
+                    ApprovalEngine._create_pending_records(instance, first_approval_node)
+                else:
+                    # 如果没有下一个节点，使用开始节点
+                    instance.current_node = start_node
+                    instance.save()
+            else:
+                # 如果没有开始节点，使用第一个节点
                 first_node = workflow.nodes.order_by('sequence').first()
-            
-            if first_node:
-                instance.current_node = first_node
-                instance.save()
-                
-                # 创建审批记录（待审批状态）
-                ApprovalEngine._create_pending_records(instance, first_node)
+                if first_node:
+                    instance.current_node = first_node
+                    instance.save()
+                    # 如果是审批节点，创建审批记录
+                    if first_node.node_type == 'approval':
+                        ApprovalEngine._create_pending_records(instance, first_node)
             
             logger.info(f'启动审批流程: {instance.instance_number}, 申请人: {applicant.username}')
             return instance
@@ -75,7 +87,19 @@ class ApprovalEngine:
         approvers = ApprovalEngine._get_approvers(node, instance)
         
         if not approvers:
-            logger.warning(f'节点 {node.name} 没有找到审批人')
+            # 记录详细的调试信息
+            debug_info = f'节点 {node.name} (ID: {node.id}) 没有找到审批人。'
+            debug_info += f' 审批人类型: {node.approver_type}'
+            if node.approver_type == 'department_manager':
+                if instance.applicant.department:
+                    debug_info += f', 申请人部门: {instance.applicant.department.name}'
+                    if instance.applicant.department.leader:
+                        debug_info += f', 部门负责人: {instance.applicant.department.leader.username}'
+                    else:
+                        debug_info += ', 部门负责人: 未设置'
+                else:
+                    debug_info += ', 申请人没有部门'
+            logger.warning(debug_info)
             return
         
         # 如果是单人审批模式，只创建第一个审批人的记录
@@ -120,11 +144,15 @@ class ApprovalEngine:
             approvers = [instance.applicant]
         elif node.approver_type == 'department_manager':
             if instance.applicant.department:
-                # 查找部门经理（需要根据实际业务逻辑调整）
-                approvers = list(User.objects.filter(
-                    department=instance.applicant.department,
-                    roles__code='department_manager'
-                ).distinct())
+                # 优先使用部门的 leader（部门负责人）
+                if instance.applicant.department.leader:
+                    approvers = [instance.applicant.department.leader]
+                else:
+                    # 如果没有设置部门负责人，则查找角色代码为 department_manager 的用户
+                    approvers = list(User.objects.filter(
+                        department=instance.applicant.department,
+                        roles__code='department_manager'
+                    ).distinct())
         # 其他类型可以根据需要扩展
         
         return approvers if approvers else []
@@ -179,6 +207,8 @@ class ApprovalEngine:
                 instance.current_node = None
                 instance.save()
                 logger.info(f'审批被驳回: {instance.instance_number}')
+                # 调用业务对象状态更新回调
+                ApprovalEngine._update_business_object_status(instance, 'rejected')
                 return True
             
             elif result == 'transferred' and transferred_to:
@@ -213,6 +243,8 @@ class ApprovalEngine:
                         instance.current_node = None
                         instance.save()
                         logger.info(f'审批流程完成: {instance.instance_number}')
+                        # 调用业务对象状态更新回调
+                        ApprovalEngine._update_business_object_status(instance, 'approved')
                     return True
             
             return False
@@ -300,18 +332,24 @@ class ApprovalEngine:
             return True
     
     @staticmethod
-    def get_pending_approvals(user: User) -> List[ApprovalInstance]:
-        """获取用户的待审批列表"""
+    def get_pending_approvals(user: User):
+        """获取用户的待审批列表（返回QuerySet，支持分页）"""
         return ApprovalInstance.objects.filter(
             status='pending',
             records__approver=user,
             records__result='pending'
-        ).distinct()
+        ).distinct().select_related(
+            'workflow', 'applicant', 'current_node', 'content_type'
+        ).prefetch_related('records').order_by('-created_time')
     
     @staticmethod
-    def get_my_applications(user: User) -> List[ApprovalInstance]:
-        """获取用户的申请列表"""
-        return ApprovalInstance.objects.filter(applicant=user).order_by('-created_time')
+    def get_my_applications(user: User):
+        """获取用户的申请列表（返回QuerySet，支持分页）"""
+        return ApprovalInstance.objects.filter(
+            applicant=user
+        ).select_related(
+            'workflow', 'applicant', 'current_node', 'content_type'
+        ).prefetch_related('records').order_by('-created_time')
     
     @staticmethod
     def _send_approval_notification(instance: ApprovalInstance, approver: User, node: ApprovalNode):
@@ -391,4 +429,72 @@ class ApprovalEngine:
         except Exception as e:
             # 通知发送失败不应影响审批流程
             logger.error(f'发送审批通知异常: {str(e)}', exc_info=True)
+    
+    @staticmethod
+    def _update_business_object_status(instance: ApprovalInstance, approval_status: str):
+        """
+        更新业务对象的状态（根据审批结果）
+        
+        Args:
+            instance: 审批实例
+            approval_status: 审批状态 ('approved' 或 'rejected')
+        """
+        try:
+            # 获取关联的业务对象
+            content_obj = instance.content_type.get_object_for_this_type(id=instance.object_id)
+            
+            # 根据业务对象类型更新状态
+            if hasattr(content_obj, 'status'):
+                if approval_status == 'approved':
+                    # 审批通过
+                    # 更新审批人信息
+                    last_record = instance.records.filter(result='approved').order_by('-approval_time').first()
+                    if last_record and hasattr(content_obj, 'approver'):
+                        content_obj.approver = last_record.approver
+                    if hasattr(content_obj, 'approved_time'):
+                        content_obj.approved_time = timezone.now()
+                    
+                    # 根据业务对象类型设置状态
+                    # 印章借用：审批通过后状态变为 'approved'，印章状态变为 'borrowed'
+                    if instance.content_type.model == 'sealborrowing':
+                        content_obj.status = 'approved'
+                        # 更新印章状态
+                        if hasattr(content_obj, 'seal') and content_obj.seal:
+                            if hasattr(content_obj.seal, 'status'):
+                                content_obj.seal.status = 'borrowed'
+                                content_obj.seal.save(update_fields=['status'])
+                    elif instance.content_type.model == 'sealusage':
+                        # 用印申请审批通过，不需要更新状态（用印记录通常不需要状态字段）
+                        # 如果需要，可以在这里添加状态更新逻辑
+                        logger.info(f'用印申请 {content_obj.usage_number} 审批通过')
+                    else:
+                        # 其他业务对象：检查是否有 'approved' 状态
+                        status_choices = dict(getattr(content_obj, 'STATUS_CHOICES', []))
+                        if 'approved' in status_choices:
+                            content_obj.status = 'approved'
+                    
+                    content_obj.save()
+                    logger.info(f'业务对象状态已更新: {instance.content_type.model}#{instance.object_id} -> approved')
+                    
+                elif approval_status == 'rejected':
+                    # 审批驳回
+                    if instance.content_type.model == 'sealborrowing':
+                        content_obj.status = 'rejected'
+                    elif instance.content_type.model == 'sealusage':
+                        # 用印申请审批驳回，不需要更新状态（用印记录通常不需要状态字段）
+                        # 如果需要，可以在这里添加状态更新逻辑
+                        logger.info(f'用印申请 {content_obj.usage_number} 审批驳回')
+                    else:
+                        status_choices = dict(getattr(content_obj, 'STATUS_CHOICES', []))
+                        if 'rejected' in status_choices:
+                            content_obj.status = 'rejected'
+                        elif 'pending_approval' in status_choices:
+                            content_obj.status = 'pending_approval'
+                    
+                    content_obj.save()
+                    logger.info(f'业务对象状态已更新: {instance.content_type.model}#{instance.object_id} -> rejected')
+                        
+        except Exception as e:
+            # 状态更新失败不应影响审批流程
+            logger.error(f'更新业务对象状态异常: {str(e)}', exc_info=True)
 

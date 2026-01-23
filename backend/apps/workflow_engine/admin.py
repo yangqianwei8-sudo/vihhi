@@ -2,8 +2,104 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.db import models
+from django import forms
 from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalNode, ApprovalInstance, ApprovalRecord
 from backend.core.admin_base import BaseModelAdmin, AuditAdminMixin
+
+
+# 定义每个模型对应的需要审批的表单列表
+# 使用表单的主标题名称（用户在页面上看到的标题）
+MODEL_FORM_MAP = {
+    'plan': [
+        ('plan', '创建计划'),
+        ('strategicgoal', '创建战略目标'),
+        ('plandecision', '计划决策'),
+        ('planadjustment', '申请调整'),
+        ('goaladjustment', '目标调整申请'),
+    ],
+    'businesscontract': [
+        ('businesscontract', '创建合同'),
+    ],
+    'businessopportunity': [
+        ('businessopportunity', '创建商机'),
+    ],
+    'project': [
+        ('project', '创建项目'),
+    ],
+    'client': [
+        ('client', '创建客户'),
+    ],
+    'strategicgoal': [
+        ('strategicgoal', '创建战略目标'),
+        ('goaladjustment', '目标调整申请'),
+    ],
+    'case': [
+        ('case', '创建诉讼案件'),
+    ],
+    'litigationexpense': [
+        ('litigationexpense', '创建诉讼费用'),
+    ],
+    'sealborrowing': [
+        ('sealborrowing', '申请借用印章'),
+    ],
+    'sealusage': [
+        ('sealusage', '申请用印'),
+    ],
+}
+
+# 定义可用的业务模型选项
+# 注意：模型名称使用小写，对应 Django ContentType 的 model 字段值
+APPLICABLE_MODEL_CHOICES = [
+    # 客户管理模块
+    ('client', '客户 (Client)'),
+    ('businesscontract', '合同 (BusinessContract)'),
+    ('businessopportunity', '商机 (BusinessOpportunity)'),
+    
+    # 项目管理模块
+    ('project', '项目 (Project)'),
+    
+    # 计划管理模块
+    ('plan', '计划 (Plan)'),
+    ('strategicgoal', '战略目标 (StrategicGoal)'),
+    
+    # 诉讼管理模块
+    ('case', '诉讼案件 (Case)'),
+    ('litigationexpense', '诉讼费用 (LitigationExpense)'),
+    
+    # 生产管理模块
+    ('productiontask', '生产任务 (ProductionTask)'),
+    ('productionplan', '生产计划 (ProductionPlan)'),
+    
+    # 结算管理模块
+    ('settlement', '结算单 (Settlement)'),
+    ('payment', '付款单 (Payment)'),
+    
+    # 财务管理模块
+    ('invoice', '发票 (Invoice)'),
+    ('fundflow', '资金流水 (FundFlow)'),
+    
+    # 行政管理模块
+    ('vehiclebooking', '车辆预订 (VehicleBooking)'),
+    ('meetingroombooking', '会议室预订 (MeetingRoomBooking)'),
+    ('sealborrowing', '印章借用 (SealBorrowing)'),
+    ('sealusage', '用印申请 (SealUsage)'),
+    
+    # 人事管理模块
+    ('employee', '员工 (Employee)'),
+    ('attendance', '考勤记录 (Attendance)'),
+    
+    # 档案管理模块
+    ('archive', '档案 (Archive)'),
+    ('document', '文档 (Document)'),
+    
+    # 任务协作模块
+    ('task', '任务 (Task)'),
+    ('collaborationtask', '协作任务 (CollaborationTask)'),
+    
+    # 交付客户模块
+    ('deliveryrecord', '交付记录 (DeliveryRecord)'),
+    ('deliveryfile', '交付文件 (DeliveryFile)'),
+]
 
 
 @admin.register(WorkflowTemplate)
@@ -20,11 +116,119 @@ class WorkflowTemplateAdmin(AuditAdminMixin, BaseModelAdmin):
         ('流程配置', {
             'fields': ('allow_withdraw', 'allow_reject', 'allow_transfer', 'timeout_hours', 'timeout_action')
         }),
+        ('适用范围', {
+            'fields': ('applicable_models', 'form_filter_conditions'),
+            'description': '选择此流程适用的业务模型类型。可以选择多个模型。如果为空，则适用于所有模型。右侧筛选框用于进一步筛选具体表单。'
+        }),
         ('审计信息', {
             'fields': ('created_by',)
         }),
         # 时间信息会自动添加
     )
+    
+    def get_form(self, request, obj=None, **kwargs):
+        """自定义表单，将 applicable_models 改为多选下拉框，并添加表单筛选条件字段"""
+        form = super().get_form(request, obj, **kwargs)
+        
+        # 将 ArrayField 改为 MultipleChoiceField
+        if 'applicable_models' in form.base_fields:
+            form.base_fields['applicable_models'] = forms.MultipleChoiceField(
+                choices=APPLICABLE_MODEL_CHOICES,
+                required=False,
+                widget=forms.SelectMultiple(attrs={
+                    'size': 10,
+                    'style': 'min-width: 300px;',
+                    'class': 'form-select',
+                    'id': 'id_applicable_models'
+                }),
+                help_text='选择此流程适用的业务模型类型。可以按住 Ctrl (Windows) 或 Cmd (Mac) 键进行多选。',
+                label='适用模型',
+            )
+            # 如果正在编辑现有对象，设置初始值
+            if obj and obj.applicable_models:
+                form.base_fields['applicable_models'].initial = obj.applicable_models
+        
+        # 自定义表单筛选条件字段 - 改为多选下拉框
+        if 'form_filter_conditions' in form.base_fields:
+            # 获取所有可用的表单选项（合并所有模型的表单）
+            all_form_choices = []
+            for forms_list in MODEL_FORM_MAP.values():
+                all_form_choices.extend(forms_list)
+            
+            # 去重并排序
+            seen = set()
+            unique_choices = []
+            for choice in all_form_choices:
+                if choice[0] not in seen:
+                    seen.add(choice[0])
+                    unique_choices.append(choice)
+            unique_choices.sort(key=lambda x: x[1])
+            
+            # 将 JSONField 改为 MultipleChoiceField
+            form.base_fields['form_filter_conditions'] = forms.MultipleChoiceField(
+                choices=unique_choices if unique_choices else [('', '请先选择适用模型')],
+                required=False,
+                widget=forms.SelectMultiple(attrs={
+                    'size': 10,
+                    'style': 'min-width: 300px;',
+                    'class': 'form-select',
+                    'id': 'id_form_filter_conditions'
+                }),
+                help_text=format_html(
+                    '根据左侧选择的模型，显示该模型下所有需要审批的表单。可以选择多个表单。<br>'
+                    '<small style="color: #666;">提示：此字段会根据左侧选择的模型动态更新。</small>'
+                ),
+                label='具体表单',
+            )
+            # 如果正在编辑现有对象，从 JSON 中提取已选择的表单
+            if obj and obj.form_filter_conditions:
+                try:
+                    # form_filter_conditions 是 JSON，格式可能是 {"plan": ["plan", "strategicgoal"]}
+                    selected_forms = []
+                    if isinstance(obj.form_filter_conditions, dict):
+                        for model, forms_list in obj.form_filter_conditions.items():
+                            if isinstance(forms_list, list):
+                                selected_forms.extend(forms_list)
+                    form.base_fields['form_filter_conditions'].initial = selected_forms
+                except (TypeError, ValueError, AttributeError):
+                    form.base_fields['form_filter_conditions'].initial = []
+        
+        return form
+    
+    class Media:
+        css = {
+            'all': ('admin/css/workflow_template_admin.css',)
+        }
+        js = ('admin/js/workflow_template_admin.js',)
+    
+    def save_model(self, request, obj, form, change):
+        """保存模型时，确保字段不为 None，并处理 MultipleChoiceField 的数据"""
+        # 处理 applicable_models（从 MultipleChoiceField 转换为列表）
+        if 'applicable_models' in form.cleaned_data:
+            obj.applicable_models = form.cleaned_data['applicable_models']
+        elif not obj.applicable_models:
+            obj.applicable_models = []
+        
+        # 处理 form_filter_conditions（从 MultipleChoiceField 转换为 JSON）
+        if 'form_filter_conditions' in form.cleaned_data:
+            selected_forms = form.cleaned_data['form_filter_conditions']
+            # 将选择的表单按模型分组
+            form_by_model = {}
+            for form_name in selected_forms:
+                # 查找表单属于哪个模型
+                for model, forms_list in MODEL_FORM_MAP.items():
+                    if any(f[0] == form_name for f in forms_list):
+                        if model not in form_by_model:
+                            form_by_model[model] = []
+                        form_by_model[model].append(form_name)
+                        break
+            obj.form_filter_conditions = form_by_model
+        elif not obj.form_filter_conditions:
+            obj.form_filter_conditions = {}
+        
+        if not obj.sub_workflow_trigger_condition:
+            obj.sub_workflow_trigger_condition = {}
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(ApprovalNode)

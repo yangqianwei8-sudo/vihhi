@@ -20,7 +20,7 @@ JavaScript功能：
 {% endcomment %}
 {% load static %}
 
-{% block list_page_title %}审批流程管理{% endblock %}
+{% block list_page_title %}审批引擎 ----流程模板{% endblock %}
 
 {% block list_page_actions %}
 <a href="{% url 'workflow_engine:workflow_create' %}" class="btn btn-primary">
@@ -74,6 +74,9 @@ JavaScript功能：
 </th>
 {% endblock %}
 
+{% block list_table_rows %}
+{% for item in workflows %}
+<tr>
 {% block list_page_table_checkbox_cell %}
 <td>
     <input type="checkbox" class="row-checkbox" value="{{ item.id }}" aria-label="选择">
@@ -125,6 +128,17 @@ JavaScript功能：
     </div>
 </td>
 {% endblock %}
+</tr>
+{% empty %}
+<tr>
+    <td colspan="8" class="list-empty">
+        <div class="list-empty-icon">📋</div>
+        <div class="list-empty-text">暂无流程模板</div>
+        <div class="list-empty-hint">请创建第一个流程模板开始使用</div>
+    </td>
+</tr>
+{% endfor %}
+{% endblock list_table_rows %}
 
 {% block empty_colspan %}8{% endblock %}
 

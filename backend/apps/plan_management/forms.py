@@ -502,6 +502,8 @@ class PlanForm(forms.ModelForm):
             'related_goal', 'plan_period', 'parent_plan', 'related_project',
             # 计划内容
             'content', 'plan_objective',
+            # 验收标准
+            'acceptance_criteria',
             # 协作信息
             'collaboration_plan',
             # 时间信息
@@ -536,6 +538,11 @@ class PlanForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': '请输入计划目标',
                 'maxlength': '1000'
+            }),
+            'acceptance_criteria': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '请明确说明如何判定计划完成，例如：完成所有任务项、达到预期目标、通过验收等',
+                'maxlength': '2000'
             }),
             'start_time': forms.DateInput(
                 format='%Y-%m-%d',

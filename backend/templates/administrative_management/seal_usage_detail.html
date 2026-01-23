@@ -1,0 +1,214 @@
+{% extends "shared/detail_base.html" %}
+{% load static %}
+
+{% block detail_title %}用印记录详情{% endblock %}
+{% block detail_subtitle %}{{ usage.usage_number }}{% endblock %}
+
+{% block detail_header_actions %}
+<a href="{% url 'admin_pages:seal_usage_list' %}" class="btn btn-secondary">
+  <i class="bi bi-arrow-left"></i>
+  返回列表
+</a>
+<a href="{% url 'admin_pages:seal_detail' seal.id %}" class="btn btn-outline-primary">
+  <i class="bi bi-shield-lock"></i>
+  查看印章详情
+</a>
+{% endblock %}
+
+{% block detail_basic_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-basic-info">
+  <div class="detail-card detail-card-basic-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-info-circle"></i>
+        基本信息
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      {# 第一排：用印单号、印章名称、用印类型、用印日期、用印时间（5个字段） #}
+      <div class="form-row-5 mb-3">
+        {# 用印单号 #}
+        <div class="col-5-fields detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">用印单号</label>
+            <div class="detail-field-value">
+              <code>{{ usage.usage_number }}</code>
+            </div>
+          </div>
+        </div>
+        {# 印章名称 #}
+        <div class="col-5-fields detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">印章名称</label>
+            <div class="detail-field-value">
+              <a href="{% url 'admin_pages:seal_detail' seal.id %}" class="text-decoration-none">
+                {{ seal.seal_name }}
+              </a>
+            </div>
+          </div>
+        </div>
+        {# 用印类型 #}
+        <div class="col-5-fields detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">用印类型</label>
+            <div class="detail-field-value">
+              {{ usage.get_usage_type_display }}
+            </div>
+          </div>
+        </div>
+        {# 用印日期 #}
+        <div class="col-5-fields detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">用印日期</label>
+            <div class="detail-field-value">
+              {{ usage.usage_date|date:"Y-m-d" }}
+            </div>
+          </div>
+        </div>
+        {# 用印时间 #}
+        <div class="col-5-fields detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">用印时间</label>
+            <div class="detail-field-value">
+              {{ usage.usage_time|date:"Y-m-d H:i:s" }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# 第二排：用印数量、用印人、见证人（3个字段） #}
+      <div class="form-row-5 mb-3">
+        {# 用印数量 #}
+        <div class="col-5-fields detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">用印数量</label>
+            <div class="detail-field-value">
+              {{ usage.usage_count }}
+            </div>
+          </div>
+        </div>
+        {# 用印人 #}
+        <div class="col-5-fields detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">用印人</label>
+            <div class="detail-field-value">
+              {{ usage.used_by.get_full_name|default:usage.used_by.username }}
+            </div>
+          </div>
+        </div>
+        {# 见证人 #}
+        <div class="col-5-fields detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">见证人</label>
+            <div class="detail-field-value">
+              {% if usage.witness %}
+                {{ usage.witness.get_full_name|default:usage.witness.username }}
+              {% else %}
+                未指定
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock detail_basic_info_card %}
+
+{% block detail_status_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-status-info">
+  <div class="detail-card detail-card-status-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-file-alt"></i>
+        用印信息
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      <div class="form-row-5 mb-3">
+        {# 用印事由（占整行） #}
+        <div class="col-12 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">用印事由</label>
+            <div class="detail-field-value" style="white-space: pre-wrap;">{{ usage.usage_reason }}</div>
+          </div>
+        </div>
+      </div>
+
+      {% if usage.document_name or usage.document_file %}
+      <div class="form-row-5 mb-3">
+        {% if usage.document_name %}
+        {# 文件名称 #}
+        <div class="col-5-fields detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">文件名称</label>
+            <div class="detail-field-value">
+              {{ usage.document_name }}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        {% if usage.document_file %}
+        {# 用印文件 #}
+        <div class="col-5-fields detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">用印文件</label>
+            <div class="detail-field-value">
+              <a href="{{ usage.document_file.url }}" target="_blank" class="text-decoration-none">
+                <i class="bi bi-file-earmark"></i> 查看文件
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if usage.notes %}
+      <div class="form-row-5 mb-3">
+        {# 备注（占整行） #}
+        <div class="col-12 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">备注信息</label>
+            <div class="detail-field-value" style="white-space: pre-wrap;">{{ usage.notes }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock detail_status_info_card %}
+
+{% block detail_related_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-related-info">
+  <div class="detail-card detail-card-related-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-link"></i>
+        其他信息
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      <table class="detail-table">
+        <tbody>
+          <tr>
+            <th>创建时间</th>
+            <td>{{ usage.created_time|date:"Y-m-d H:i:s" }}</td>
+          </tr>
+          {% if usage.borrowing %}
+          <tr>
+            <th>关联借用</th>
+            <td>
+              <a href="/admin/administrative_management/sealborrowing/{{ usage.borrowing.id }}/" class="text-decoration-none">
+                {{ usage.borrowing.borrowing_number }}
+              </a>
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock detail_related_info_card %}

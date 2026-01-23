@@ -216,6 +216,10 @@ PERMISSION_DEFINITIONS = [
     {"code": "plan_management.goal.cancel", "module": "计划管理", "action": "goal.cancel", "name": "计划管理-取消目标", "description": "取消目标"},
     {"code": "plan_management.goal.export", "module": "计划管理", "action": "goal.export", "name": "计划管理-导出目标", "description": "导出目标数据"},
     {"code": "plan_management.goal.view_statistics", "module": "计划管理", "action": "goal.view_statistics", "name": "计划管理-查看目标统计", "description": "查看目标统计分析报表"},
+    {"code": "plan_management.view_goal_progress", "module": "计划管理", "action": "goal.view_progress", "name": "计划管理-查看目标进度", "description": "查看目标跟踪页面，查看目标进度记录"},
+    
+    # 分析相关权限
+    {"code": "plan_management.view_analysis", "module": "计划管理", "action": "view_analysis", "name": "计划管理-查看分析", "description": "查看计划分析模块（完成度分析、目标达成分析、统计报表）"},
     
     # 审批相关权限（兼容旧权限，推荐使用 plan.approve_decision）
     {"code": "plan_management.approve_plan", "module": "计划管理", "action": "plan.approve_decision", "name": "计划管理-审批计划", "description": "审批计划的启动/取消请求（兼容别名，等同于 plan.approve_decision）"},
@@ -240,12 +244,74 @@ PERMISSION_DEFINITIONS = [
     
     # 行政管理
     {"code": "administrative_management.view", "module": "行政管理", "action": "view", "name": "行政管理-查看", "description": "查看行政管理模块"},
+    
+    # 行政事务
     {"code": "administrative_management.affair.view", "module": "行政管理", "action": "affair.view", "name": "行政管理-查看事务", "description": "查看行政事务列表和详情"},
     {"code": "administrative_management.affair.create", "module": "行政管理", "action": "affair.create", "name": "行政管理-创建事务", "description": "创建行政事务"},
+    
+    # 办公用品管理
     {"code": "administrative_management.supplies.view", "module": "行政管理", "action": "supplies.view", "name": "行政管理-查看用品", "description": "查看办公用品管理"},
     {"code": "administrative_management.supplies.manage", "module": "行政管理", "action": "supplies.manage", "name": "行政管理-管理用品", "description": "管理办公用品"},
+    
+    # 会议室管理
+    {"code": "administrative_management.meeting_room.view", "module": "行政管理", "action": "meeting_room.view", "name": "行政管理-查看会议室", "description": "查看会议室列表和详情"},
+    {"code": "administrative_management.meeting_room.create", "module": "行政管理", "action": "meeting_room.create", "name": "行政管理-创建会议室", "description": "创建会议室"},
+    {"code": "administrative_management.meeting_room.manage", "module": "行政管理", "action": "meeting_room.manage", "name": "行政管理-管理会议室", "description": "编辑和删除会议室"},
+    {"code": "administrative_management.meeting_room.booking", "module": "行政管理", "action": "meeting_room.booking", "name": "行政管理-会议室预订", "description": "预订会议室"},
+    
+    # 会议管理
     {"code": "administrative_management.meeting.view", "module": "行政管理", "action": "meeting.view", "name": "行政管理-查看会议", "description": "查看会议管理"},
     {"code": "administrative_management.meeting.manage", "module": "行政管理", "action": "meeting.manage", "name": "行政管理-管理会议", "description": "管理会议和会议室"},
+    
+    # 车辆管理
+    {"code": "administrative_management.vehicle.view", "module": "行政管理", "action": "vehicle.view", "name": "行政管理-查看车辆", "description": "查看车辆列表和详情"},
+    {"code": "administrative_management.vehicle.create", "module": "行政管理", "action": "vehicle.create", "name": "行政管理-创建车辆", "description": "创建车辆信息"},
+    {"code": "administrative_management.vehicle.manage", "module": "行政管理", "action": "vehicle.manage", "name": "行政管理-管理车辆", "description": "编辑和删除车辆信息"},
+    {"code": "administrative_management.vehicle.booking", "module": "行政管理", "action": "vehicle.booking", "name": "行政管理-用车申请", "description": "申请用车"},
+    {"code": "administrative_management.vehicle.approve", "module": "行政管理", "action": "vehicle.approve", "name": "行政管理-审批用车", "description": "审批用车申请"},
+    {"code": "administrative_management.vehicle.dispatch", "module": "行政管理", "action": "vehicle.dispatch", "name": "行政管理-派车", "description": "派车和确认"},
+    
+    # 固定资产管理
+    {"code": "administrative_management.asset.view", "module": "行政管理", "action": "asset.view", "name": "行政管理-查看资产", "description": "查看固定资产列表和详情"},
+    {"code": "administrative_management.asset.create", "module": "行政管理", "action": "asset.create", "name": "行政管理-创建资产", "description": "创建固定资产"},
+    {"code": "administrative_management.asset.manage", "module": "行政管理", "action": "asset.manage", "name": "行政管理-管理资产", "description": "编辑和删除固定资产"},
+    {"code": "administrative_management.asset.transfer", "module": "行政管理", "action": "asset.transfer", "name": "行政管理-资产转移", "description": "申请资产转移"},
+    {"code": "administrative_management.asset.transfer_approve", "module": "行政管理", "action": "asset.transfer_approve", "name": "行政管理-审批转移", "description": "审批资产转移申请"},
+    {"code": "administrative_management.asset.transfer_complete", "module": "行政管理", "action": "asset.transfer_complete", "name": "行政管理-完成转移", "description": "确认资产转移完成"},
+    {"code": "administrative_management.asset.maintenance", "module": "行政管理", "action": "asset.maintenance", "name": "行政管理-资产维护", "description": "创建资产维护记录"},
+    {"code": "administrative_management.asset.maintenance_manage", "module": "行政管理", "action": "asset.maintenance_manage", "name": "行政管理-管理维护", "description": "编辑和删除资产维护记录"},
+    
+    # 印章管理
+    {"code": "administrative_management.seal.view", "module": "行政管理", "action": "seal.view", "name": "行政管理-查看印章", "description": "查看印章列表和详情"},
+    {"code": "administrative_management.seal.create", "module": "行政管理", "action": "seal.create", "name": "行政管理-创建印章", "description": "创建印章"},
+    {"code": "administrative_management.seal.manage", "module": "行政管理", "action": "seal.manage", "name": "行政管理-管理印章", "description": "编辑和删除印章"},
+    {"code": "administrative_management.seal.borrow", "module": "行政管理", "action": "seal.borrow", "name": "行政管理-申请借用", "description": "申请借用印章"},
+    
+    # 接待管理
+    {"code": "administrative_management.reception.view", "module": "行政管理", "action": "reception.view", "name": "行政管理-查看接待", "description": "查看接待记录列表和详情"},
+    {"code": "administrative_management.reception.create", "module": "行政管理", "action": "reception.create", "name": "行政管理-创建接待", "description": "创建接待记录"},
+    {"code": "administrative_management.reception.manage", "module": "行政管理", "action": "reception.manage", "name": "行政管理-管理接待", "description": "编辑和删除接待记录"},
+    
+    # 差旅管理
+    {"code": "administrative_management.travel.view", "module": "行政管理", "action": "travel.view", "name": "行政管理-查看差旅", "description": "查看差旅申请列表和详情"},
+    {"code": "administrative_management.travel.create", "module": "行政管理", "action": "travel.create", "name": "行政管理-创建差旅", "description": "创建差旅申请"},
+    {"code": "administrative_management.travel.manage", "module": "行政管理", "action": "travel.manage", "name": "行政管理-管理差旅", "description": "编辑和删除差旅申请"},
+    {"code": "administrative_management.travel.approve", "module": "行政管理", "action": "travel.approve", "name": "行政管理-审批差旅", "description": "审批差旅申请"},
+    
+    # 公告通知
+    {"code": "administrative_management.announcement.view", "module": "行政管理", "action": "announcement.view", "name": "行政管理-查看公告", "description": "查看公告列表和详情"},
+    {"code": "administrative_management.announcement.create", "module": "行政管理", "action": "announcement.create", "name": "行政管理-创建公告", "description": "创建公告"},
+    {"code": "administrative_management.announcement.manage", "module": "行政管理", "action": "announcement.manage", "name": "行政管理-管理公告", "description": "编辑和删除公告"},
+    
+    # 审批引擎
+    {"code": "workflow_engine.view", "module": "审批引擎", "action": "view", "name": "审批引擎-查看", "description": "查看审批引擎模块，访问审批列表和详情"},
+    {"code": "workflow_engine.workflow.view", "module": "审批引擎", "action": "workflow.view", "name": "审批引擎-查看流程", "description": "查看审批流程模板列表和详情"},
+    {"code": "workflow_engine.workflow.create", "module": "审批引擎", "action": "workflow.create", "name": "审批引擎-创建流程", "description": "创建审批流程模板"},
+    {"code": "workflow_engine.workflow.manage", "module": "审批引擎", "action": "workflow.manage", "name": "审批引擎-管理流程", "description": "编辑和删除审批流程模板"},
+    {"code": "workflow_engine.node.manage", "module": "审批引擎", "action": "node.manage", "name": "审批引擎-管理节点", "description": "创建、编辑和删除审批节点"},
+    {"code": "workflow_engine.approval.view", "module": "审批引擎", "action": "approval.view", "name": "审批引擎-查看审批", "description": "查看审批实例列表和详情"},
+    {"code": "workflow_engine.approval.approve", "module": "审批引擎", "action": "approval.approve", "name": "审批引擎-审批操作", "description": "执行审批操作（通过、驳回、转交）"},
+    {"code": "workflow_engine.approval.withdraw", "module": "审批引擎", "action": "approval.withdraw", "name": "审批引擎-撤回审批", "description": "撤回已提交的审批申请"},
 ]
 
 

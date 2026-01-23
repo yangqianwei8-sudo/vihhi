@@ -1,9 +1,14 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views_pages
 
 app_name = 'workflow_engine'
 
 urlpatterns = [
+    # 首页 - 根路径重定向到 /home/
+    path('', RedirectView.as_view(url='home/', permanent=False), name='workflow_home'),
+    path('home/', views_pages.workflow_home, name='workflow_home_alt'),
+    
     # 流程模板管理
     path('workflows/', views_pages.workflow_list, name='workflow_list'),
     path('workflows/create/', views_pages.workflow_create, name='workflow_create'),

@@ -9,12 +9,22 @@
     box-sizing: border-box;
 }
 
-.selector-available,
-.selector-chosen {
-    flex: 1 1 50% !important;
-    min-width: 0;
-    width: 50% !important;
-    max-width: 50% !important;
+/* 使用更具体的选择器提高优先级，确保不被 Django admin 默认样式覆盖 */
+/* 使用最高优先级选择器，确保在所有情况下都能生效 */
+body.change-form #content .selector .selector-available,
+body.change-form #content .selector .selector-chosen,
+body.add-form #content .selector .selector-available,
+body.add-form #content .selector .selector-chosen,
+#content .selector .selector-available,
+#content .selector .selector-chosen,
+.selector .selector-available,
+.selector .selector-chosen,
+body.change-form .selector-available,
+body.change-form .selector-chosen {
+    flex: 0 0 700px !important;  /* 固定宽度 700px，不伸缩 */
+    min-width: 700px !important;
+    width: 700px !important;
+    max-width: 700px !important;
     box-sizing: border-box;
 }
 
@@ -134,9 +144,17 @@
         flex-direction: column;
     }
     
-    .selector-available,
-    .selector-chosen {
+    /* 移动端使用更具体的选择器 */
+    .selector .selector-available,
+    .selector .selector-chosen,
+    #content .selector-available,
+    #content .selector-chosen,
+    body.change-form .selector-available,
+    body.change-form .selector-chosen {
         width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex: 1 1 100% !important;
         margin-bottom: 20px;
     }
 }

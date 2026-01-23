@@ -25,7 +25,10 @@ def _ensure_plan_status(plan: Plan, allowed: set[str], action: str):
 @transaction.atomic
 def request_start(plan: Plan, user, reason: str | None = None) -> PlanDecision:
     """
-    发起启动请求
+    发起启动请求（已迁移至审批引擎）
+    
+    注意：此函数保留用于向后兼容，实际已迁移到审批引擎。
+    新代码应直接使用 PlanApprovalService.submit_start_approval()
     
     Args:
         plan: 计划实例
@@ -33,7 +36,7 @@ def request_start(plan: Plan, user, reason: str | None = None) -> PlanDecision:
         reason: 请求原因（可选）
     
     Returns:
-        PlanDecision: 创建的决策记录
+        PlanDecision: 创建的决策记录（已废弃，仅用于兼容）
     
     Raises:
         PlanDecisionError: 如果状态不允许或已存在待处理的请求
@@ -45,6 +48,42 @@ def request_start(plan: Plan, user, reason: str | None = None) -> PlanDecision:
     if not plan.acceptance_criteria or not plan.acceptance_criteria.strip():
         raise PlanDecisionError("提交审批前必须填写验收标准，明确说明如何判定计划完成")
 
+    # 优先使用审批引擎
+    try:
+        from .plan_approval import PlanApprovalService
+        approval_instance = PlanApprovalService.submit_start_approval(plan, user, reason or "")
+        
+        if approval_instance:
+            # 审批引擎已创建审批实例，为了向后兼容，创建一个标记性的 PlanDecision
+            # 注意：这个 PlanDecision 不会被实际使用，审批流程由审批引擎管理
+            try:
+                decision = PlanDecision.objects.create(
+                    plan=plan,
+                    request_type="start",
+                    decision=None,
+                    requested_by=user,
+                    requested_at=timezone.now(),
+                    reason=reason or "",
+                )
+                logger = __import__('logging').getLogger(__name__)
+                logger.info(f"计划 {plan.plan_number} 已通过审批引擎提交启动审批，审批实例: {approval_instance.instance_number}")
+                return decision
+            except IntegrityError:
+                # 如果已存在，返回现有的
+                return PlanDecision.objects.filter(
+                    plan=plan,
+                    request_type="start",
+                    decided_at__isnull=True
+                ).first()
+        else:
+            # 审批流程未配置，回退到旧的 PlanDecision 方式
+            logger = __import__('logging').getLogger(__name__)
+            logger.warning(f"计划 {plan.plan_number} 审批流程未配置，使用旧的 PlanDecision 方式")
+    except Exception as e:
+        logger = __import__('logging').getLogger(__name__)
+        logger.warning(f"使用审批引擎失败，回退到 PlanDecision: {str(e)}")
+
+    # 回退到旧的 PlanDecision 方式
     try:
         decision = PlanDecision.objects.create(
             plan=plan,
@@ -64,7 +103,10 @@ def request_start(plan: Plan, user, reason: str | None = None) -> PlanDecision:
 @transaction.atomic
 def request_cancel(plan: Plan, user, reason: str | None = None) -> PlanDecision:
     """
-    发起取消请求
+    发起取消请求（已迁移至审批引擎）
+    
+    注意：此函数保留用于向后兼容，实际已迁移到审批引擎。
+    新代码应直接使用 PlanApprovalService.submit_cancel_approval()
     
     Args:
         plan: 计划实例
@@ -72,13 +114,49 @@ def request_cancel(plan: Plan, user, reason: str | None = None) -> PlanDecision:
         reason: 请求原因（可选）
     
     Returns:
-        PlanDecision: 创建的决策记录
+        PlanDecision: 创建的决策记录（已废弃，仅用于兼容）
     
     Raises:
         PlanDecisionError: 如果状态不允许或已存在待处理的请求
     """
     _ensure_plan_status(plan, {"draft", "in_progress"}, "cancel_request")
 
+    # 优先使用审批引擎
+    try:
+        from .plan_approval import PlanApprovalService
+        approval_instance = PlanApprovalService.submit_cancel_approval(plan, user, reason or "")
+        
+        if approval_instance:
+            # 审批引擎已创建审批实例，为了向后兼容，创建一个标记性的 PlanDecision
+            # 注意：这个 PlanDecision 不会被实际使用，审批流程由审批引擎管理
+            try:
+                decision = PlanDecision.objects.create(
+                    plan=plan,
+                    request_type="cancel",
+                    decision=None,
+                    requested_by=user,
+                    requested_at=timezone.now(),
+                    reason=reason or "",
+                )
+                logger = __import__('logging').getLogger(__name__)
+                logger.info(f"计划 {plan.plan_number} 已通过审批引擎提交取消审批，审批实例: {approval_instance.instance_number}")
+                return decision
+            except IntegrityError:
+                # 如果已存在，返回现有的
+                return PlanDecision.objects.filter(
+                    plan=plan,
+                    request_type="cancel",
+                    decided_at__isnull=True
+                ).first()
+        else:
+            # 审批流程未配置，回退到旧的 PlanDecision 方式
+            logger = __import__('logging').getLogger(__name__)
+            logger.warning(f"计划 {plan.plan_number} 审批流程未配置，使用旧的 PlanDecision 方式")
+    except Exception as e:
+        logger = __import__('logging').getLogger(__name__)
+        logger.warning(f"使用审批引擎失败，回退到 PlanDecision: {str(e)}")
+
+    # 回退到旧的 PlanDecision 方式
     try:
         decision = PlanDecision.objects.create(
             plan=plan,

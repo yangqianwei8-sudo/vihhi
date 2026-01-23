@@ -1,10 +1,12 @@
 {% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block list_page_title %}我的审批{% endblock %}
+{% block list_page_title %}审批引擎 ----我的审批列表{% endblock %}
 
-{% block list_page_extra_css %}
-<style>
+{% block module_styles %}
+  {{ block.super }}
+  <style>
+    /* 审批状态徽章样式 - 使用 scoped 样式避免覆盖通用样式 */
     .approval-status-badge {
         padding: 4px 8px;
         border-radius: 4px;
@@ -27,47 +29,94 @@
         background: #e2e3e5;
         color: #383d41;
     }
-</style>
-{% endblock %}
+    
+    /* 标签页样式 */
+    .approval-tabs {
+        margin-bottom: 16px;
+    }
+  </style>
+{% endblock module_styles %}
 
-{% block list_page_tabs %}
-<ul class="nav nav-tabs mb-4">
-    <li class="nav-item">
-        <a class="nav-link {% if not tab or tab == 'pending' %}active{% endif %}" href="?tab=pending">
-            待我审批 
-            {% if pending_approvals %}
-            <span class="badge bg-danger">{{ pending_approvals|length }}</span>
-            {% endif %}
+{% block list_stats_content %}
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="list-stat-card">
+            <div class="list-stat-label">待我审批</div>
+            <div class="list-stat-value">{{ pending_count|default:0 }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="list-stat-card">
+            <div class="list-stat-label">历史审批</div>
+            <div class="list-stat-value">{{ historical_count|default:0 }}</div>
+        </div>
+    </div>
+</div>
+{% endblock list_stats_content %}
+
+{% block list_action_bar_content %}
+<div class="list-page-actions-bar">
+    <div class="approval-tabs">
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link {% if not tab or tab == 'pending' %}active{% endif %}" href="?tab=pending">
+                    待我审批 
+                    {% if pending_count %}
+                    <span class="badge bg-danger">{{ pending_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if tab == 'historical' %}active{% endif %}" href="?tab=historical">
+                    历史审批
+                    {% if historical_count %}
+                    <span class="badge bg-secondary">{{ historical_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="list-page-action-buttons">
+        <a href="#" class="btn btn-outline-primary btn-sm" onclick="alert('导出功能开发中'); return false;">
+            <i class="bi bi-download"></i> 导出数据
         </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if tab == 'historical' %}active{% endif %}" href="?tab=historical">
-            历史审批
-            {% if historical_approvals %}
-            <span class="badge bg-secondary">{{ historical_approvals|length }}</span>
-            {% endif %}
-        </a>
-    </li>
-</ul>
-{% endblock %}
+    </div>
+</div>
+{% endblock list_action_bar_content %}
 
-{% block list_page_actions %}
-<a href="{% url 'workflow_engine:export_approvals' %}" class="btn btn-outline-primary btn-sm">
-    <i class="bi bi-download"></i> 导出数据
-</a>
-{% endblock %}
+{% block list_toolbar_content %}
+{% if not tab or tab == 'pending' %}
+{% if pending_count > 0 %}
+<form id="batchApproveForm" method="post" action="#" style="display: none;">
+    {% csrf_token %}
+    <div class="list-page-batch-actions">
+        <div class="list-page-batch-actions-info">
+            <span id="selectedCount">0</span> 项已选择
+        </div>
+        <div class="list-page-batch-actions-buttons">
+            <button type="button" class="btn btn-sm btn-success" id="batchApproveBtn">
+                <i class="bi bi-check-circle"></i> 批量通过
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" id="batchRejectBtn">
+                <i class="bi bi-x-circle"></i> 批量驳回
+            </button>
+        </div>
+    </div>
+</form>
+{% endif %}
+{% endif %}
+{% endblock list_toolbar_content %}
 
-{% block list_page_table_checkbox_header %}
+{% block list_filters_content %}
+  {# 筛选器可以在这里添加 #}
+{% endblock list_filters_content %}
+
+{% block list_table_headers %}
 {% if not tab or tab == 'pending' %}
 <th style="width: 50px;">
     <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
 </th>
-{% else %}
-<th style="width: 50px;"></th>
 {% endif %}
-{% endblock %}
-
-{% block list_page_table_headers %}
 <th style="width: 12%;">审批编号</th>
 <th style="width: 15%;">流程名称</th>
 <th style="width: 10%;">申请人</th>
@@ -76,222 +125,156 @@
 <th style="width: 12%;">当前节点</th>
 <th style="width: 15%;">关联对象</th>
 <th style="width: 18%;">操作</th>
-{% endblock %}
+{% endblock list_table_headers %}
 
-{% block list_page_table_checkbox_cell %}
-{% if not tab or tab == 'pending' %}
-<td>
-    <input type="checkbox" class="form-check-input row-checkbox" name="instance_ids" value="{{ item.id }}" id="instance_{{ item.id }}">
-</td>
-{% else %}
-<td></td>
-{% endif %}
-{% endblock %}
-
-{% block list_page_table_row_content %}
-{# 注意：此块在 list_page_base.html 的循环内部，item 变量已可用 #}
-{% if not tab or tab == 'pending' %}
-    {# 待我审批列表 #}
-    <td><code>{{ item.instance_number }}</code></td>
-    <td>
-        <strong>{{ item.workflow.name }}</strong>
-        {% if item.workflow.category %}
-        <br><small class="text-muted">{{ item.workflow.category }}</small>
+{% block list_table_rows %}
+{% if page_obj %}
+    {% for item in page_obj %}
+    <tr>
+        {% if not tab or tab == 'pending' %}
+        <td>
+            <input type="checkbox" class="form-check-input row-checkbox" name="instance_ids" value="{{ item.id }}" id="instance_{{ item.id }}">
+        </td>
         {% endif %}
-    </td>
-    <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
-    <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
-    <td>
-        <span class="approval-status-badge badge-pending">待审批</span>
-    </td>
-    <td>
-        {% if item.current_node %}
-        <span class="badge bg-info">{{ item.current_node.name }}</span>
-        {% else %}
-        <span class="text-muted">-</span>
+        
+        {% if not tab or tab == 'pending' %}
+            {# 待我审批列表 #}
+            <td><code>{{ item.instance_number }}</code></td>
+            <td>
+                <strong>{{ item.workflow.name }}</strong>
+                {% if item.workflow.category %}
+                <br><small class="text-muted">{{ item.workflow.category }}</small>
+                {% endif %}
+            </td>
+            <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
+            <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
+            <td>
+                <span class="approval-status-badge badge-pending">待审批</span>
+            </td>
+            <td>
+                {% if item.current_node %}
+                <span class="badge bg-info">{{ item.current_node.name }}</span>
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if item.content_object %}
+                    {% if item.content_type.model == 'outgoingdocument' %}
+                    <div><strong>{{ item.content_object.document_number }}</strong></div>
+                    <small class="text-muted">{{ item.content_object.title|truncatewords:5 }}</small>
+                    {% else %}
+                    {{ item.content_object }}
+                    {% endif %}
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+            </td>
+            <td>
+                <div class="list-page-table-actions">
+                    <a href="#" class="action-edit" data-bs-toggle="modal" data-bs-target="#approvalModal{{ item.id }}" onclick="loadApprovalModal({{ item.id }}); return false;" title="立即审批">
+                        <i class="bi bi-check-circle"></i>
+                    </a>
+                    <span class="action-separator">|</span>
+                    <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </div>
+            </td>
+        {% elif tab == 'historical' %}
+            {# 历史审批列表 #}
+            <td><code>{{ item.instance_number }}</code></td>
+            <td>
+                <strong>{{ item.workflow.name }}</strong>
+                {% if item.workflow.category %}
+                <br><small class="text-muted">{{ item.workflow.category }}</small>
+                {% endif %}
+            </td>
+            <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
+            <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
+            <td>
+                {% if item.status == 'approved' %}
+                    <span class="approval-status-badge badge-approved">已通过</span>
+                {% elif item.status == 'rejected' %}
+                    <span class="approval-status-badge badge-rejected">已驳回</span>
+                {% elif item.status == 'withdrawn' %}
+                    <span class="approval-status-badge badge-withdrawn">已撤回</span>
+                {% else %}
+                    <span class="badge bg-secondary">{{ item.get_status_display }}</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if item.current_node %}
+                <span class="badge bg-info">{{ item.current_node.name }}</span>
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if item.content_object %}
+                    {% if item.content_type.model == 'outgoingdocument' %}
+                    <div><strong>{{ item.content_object.document_number }}</strong></div>
+                    <small class="text-muted">{{ item.content_object.title|truncatewords:5 }}</small>
+                    {% else %}
+                    {{ item.content_object }}
+                    {% endif %}
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+            </td>
+            <td>
+                <div class="list-page-table-actions">
+                    <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </div>
+            </td>
         {% endif %}
-    </td>
-    <td>
-        {% if item.content_object %}
-            {% if item.content_type.model == 'outgoingdocument' %}
-            <div><strong>{{ item.content_object.document_number }}</strong></div>
-            <small class="text-muted">{{ item.content_object.title|truncatewords:5 }}</small>
-            {% else %}
-            {{ item.content_object }}
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="{% if not tab or tab == 'pending' %}9{% else %}8{% endif %}" class="list-empty">
+            <div class="list-empty-icon">📋</div>
+            <div class="list-empty-text">
+                {% if not tab or tab == 'pending' %}
+                暂无待审批事项
+                {% elif tab == 'historical' %}
+                暂无历史审批记录
+                {% else %}
+                暂无数据
+                {% endif %}
+            </div>
+            {% block list_empty_hint %}
+            {% if not tab or tab == 'pending' %}
+            <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
+                💡 提示：如果您刚刚完成了审批，审批事项可能已进入下一节点或已完成。<br>
+                您可以在"历史审批"标签中查看所有已审批的记录。
+            </p>
+            {% elif tab == 'historical' %}
+            <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
+                您审批过的记录将显示在这里
+            </p>
             {% endif %}
-        {% else %}
-        <span class="text-muted">-</span>
-        {% endif %}
-    </td>
-    <td>
-        <div class="list-page-table-actions">
-            <a href="#" class="action-edit" data-bs-toggle="modal" data-bs-target="#approvalModal{{ item.id }}" onclick="loadApprovalModal({{ item.id }}); return false;" title="立即审批">
-                <i class="bi bi-check-circle"></i>
-            </a>
-            <span class="action-separator">|</span>
-            <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
-                <i class="bi bi-eye"></i>
-            </a>
-        </div>
-    </td>
-{% elif tab == 'historical' %}
-    {# 历史审批列表 #}
-    <td><code>{{ item.instance_number }}</code></td>
-    <td>
-        <strong>{{ item.workflow.name }}</strong>
-        {% if item.workflow.category %}
-        <br><small class="text-muted">{{ item.workflow.category }}</small>
-        {% endif %}
-    </td>
-    <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
-    <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
-    <td>
-        {% if item.status == 'approved' %}
-            <span class="approval-status-badge badge-approved">已通过</span>
-        {% elif item.status == 'rejected' %}
-            <span class="approval-status-badge badge-rejected">已驳回</span>
-        {% elif item.status == 'withdrawn' %}
-            <span class="approval-status-badge badge-withdrawn">已撤回</span>
-        {% else %}
-            <span class="badge bg-secondary">{{ item.get_status_display }}</span>
-        {% endif %}
-    </td>
-    <td>
-        {% if item.current_node %}
-        <span class="badge bg-info">{{ item.current_node.name }}</span>
-        {% else %}
-        <span class="text-muted">-</span>
-        {% endif %}
-    </td>
-    <td>
-        {% if item.content_object %}
-            {% if item.content_type.model == 'outgoingdocument' %}
-            <div><strong>{{ item.content_object.document_number }}</strong></div>
-            <small class="text-muted">{{ item.content_object.title|truncatewords:5 }}</small>
-            {% else %}
-            {{ item.content_object }}
-            {% endif %}
-        {% else %}
-        <span class="text-muted">-</span>
-        {% endif %}
-    </td>
-    <td>
-        <div class="list-page-table-actions">
-            <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
-                <i class="bi bi-eye"></i>
-            </a>
-        </div>
-    </td>
-{% endif %}
-{% endblock %}
-
-{% block empty_table_message %}
-{% if not tab or tab == 'pending' %}
-<i class="bi bi-inbox" style="font-size: 2rem;"></i>
-<p class="mt-2">暂无待审批事项</p>
-<p class="text-muted" style="font-size: 0.9rem;">
-    💡 提示：如果您刚刚完成了审批，审批事项可能已进入下一节点或已完成。<br>
-    您可以在"历史审批"标签中查看所有已审批的记录。
-</p>
-{% elif tab == 'historical' %}
-<i class="bi bi-inbox" style="font-size: 2rem;"></i>
-<p class="mt-2">暂无历史审批记录</p>
-<p class="text-muted" style="font-size: 0.9rem;">
-    您审批过的记录将显示在这里
-</p>
+            {% endblock list_empty_hint %}
+        </td>
+    </tr>
+    {% endfor %}
 {% else %}
-暂无数据
+    <tr>
+        <td colspan="{% if not tab or tab == 'pending' %}9{% else %}8{% endif %}" class="list-empty">
+            <div class="list-empty-icon">📋</div>
+            <div class="list-empty-text">暂无数据</div>
+        </td>
+    </tr>
 {% endif %}
-{% endblock %}
+{% endblock list_table_rows %}
 
-{% block empty_colspan %}9{% endblock %}
-
-{% block list_page_batch_actions %}
-{% if not tab or tab == 'pending' %}
-{% if pending_approvals %}
-<form id="batchApproveForm" method="post" action="{% url 'workflow_engine:batch_approve' %}">
-    {% csrf_token %}
-    {% include "shared/batch_actions_bar.html" %}
-</form>
-{% endif %}
-{% endif %}
-{% endblock %}
-
-{% block list_page_batch_actions_custom_buttons %}
-{% if not tab or tab == 'pending' %}
-<button type="button" class="btn btn-sm btn-success" id="batchApproveBtn">
-    <i class="bi bi-check-circle"></i> 批量通过
-</button>
-<button type="button" class="btn btn-sm btn-danger" id="batchRejectBtn">
-    <i class="bi bi-x-circle"></i> 批量驳回
-</button>
-{% endif %}
-{% endblock %}
-
-{% block list_page_custom_js %}
-// 批量审批功能
-document.addEventListener('DOMContentLoaded', function() {
-    const batchApproveBtn = document.getElementById('batchApproveBtn');
-    const batchRejectBtn = document.getElementById('batchRejectBtn');
-    const batchApproveForm = document.getElementById('batchApproveForm');
-    
-    if (batchApproveBtn && batchApproveForm) {
-        batchApproveBtn.addEventListener('click', function() {
-            batchApprove('approve');
-        });
-    }
-    
-    if (batchRejectBtn && batchApproveForm) {
-        batchRejectBtn.addEventListener('click', function() {
-            batchApprove('reject');
-        });
-    }
-    
-    function batchApprove(action) {
-        const form = document.getElementById('batchApproveForm');
-        const checked = document.querySelectorAll('.row-checkbox:checked');
-        
-        if (checked.length === 0) {
-            showError('请至少选择一个审批实例');
-            return;
-        }
-        
-        if (!confirm(`确定要${action === 'approve' ? '批量通过' : '批量驳回'} ${checked.length} 个审批吗？`)) {
-            return;
-        }
-        
-        // 添加操作类型和审批意见
-        const actionInput = document.createElement('input');
-        actionInput.type = 'hidden';
-        actionInput.name = 'action';
-        actionInput.value = action;
-        form.appendChild(actionInput);
-        
-        const commentInput = document.createElement('input');
-        commentInput.type = 'hidden';
-        commentInput.name = 'comment';
-        commentInput.value = '批量审批';
-        form.appendChild(commentInput);
-        
-        form.submit();
-    }
-});
-
-// 加载审批模态框数据
-function loadApprovalModal(instanceId) {
-    // 模态框内容会在模板中动态生成，这里可以添加额外的逻辑
-    const modal = document.getElementById('approvalModal' + instanceId);
-    if (modal) {
-        // 可以在这里加载额外的数据
-    }
-}
-{% endblock %}
-
-{% block modals %}
+{% block list_pagination_content %}
 {{ block.super }}
-<!-- 审批模态框 -->
+
+{# 审批模态框 - 放在分页之后，pm_content 块内 #}
 {% if not tab or tab == 'pending' %}
-{% for instance in page_obj.object_list %}
+{% for instance in page_obj %}
 <div class="modal fade" id="approvalModal{{ instance.id }}" tabindex="-1" aria-labelledby="approvalModalLabel{{ instance.id }}" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -379,4 +362,93 @@ function loadApprovalModal(instanceId) {
 </div>
 {% endfor %}
 {% endif %}
-{% endblock %}
+{% endblock list_pagination_content %}
+
+{% block module_extra_js %}
+{{ block.super }}
+<script>
+// 批量审批功能
+document.addEventListener('DOMContentLoaded', function() {
+    const batchApproveBtn = document.getElementById('batchApproveBtn');
+    const batchRejectBtn = document.getElementById('batchRejectBtn');
+    const batchApproveForm = document.getElementById('batchApproveForm');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    
+    // 全选/取消全选
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            rowCheckboxes.forEach(function(checkbox) {
+                checkbox.checked = this.checked;
+            }, this);
+            updateBatchActions();
+        });
+    }
+    
+    // 单个复选框变化
+    rowCheckboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            updateBatchActions();
+            // 更新全选状态
+            if (selectAllCheckbox) {
+                const allChecked = Array.from(rowCheckboxes).every(cb => cb.checked);
+                selectAllCheckbox.checked = allChecked;
+            }
+        });
+    });
+    
+    // 更新批量操作栏显示
+    function updateBatchActions() {
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        if (checked.length > 0 && batchApproveForm) {
+            batchApproveForm.style.display = 'block';
+            if (selectedCountSpan) {
+                selectedCountSpan.textContent = checked.length;
+            }
+        } else if (batchApproveForm) {
+            batchApproveForm.style.display = 'none';
+        }
+    }
+    
+    // 批量通过
+    if (batchApproveBtn && batchApproveForm) {
+        batchApproveBtn.addEventListener('click', function() {
+            batchApprove('approve');
+        });
+    }
+    
+    // 批量驳回
+    if (batchRejectBtn && batchApproveForm) {
+        batchRejectBtn.addEventListener('click', function() {
+            batchApprove('reject');
+        });
+    }
+    
+    function batchApprove(action) {
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        
+        if (checked.length === 0) {
+            alert('请至少选择一个审批实例');
+            return;
+        }
+        
+        if (!confirm(`确定要${action === 'approve' ? '批量通过' : '批量驳回'} ${checked.length} 个审批吗？`)) {
+            return;
+        }
+        
+        // 这里可以添加实际的批量审批逻辑
+        alert('批量审批功能开发中');
+    }
+});
+
+// 加载审批模态框数据
+function loadApprovalModal(instanceId) {
+    // 模态框内容会在模板中动态生成，这里可以添加额外的逻辑
+    const modal = document.getElementById('approvalModal' + instanceId);
+    if (modal) {
+        // 可以在这里加载额外的数据
+    }
+}
+</script>
+{% endblock module_extra_js %}

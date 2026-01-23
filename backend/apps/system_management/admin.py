@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.contrib import messages
 from django.db.models import Count
+from django import forms
 
 from backend.apps.system_management.models import (
     User, Department, Role, RegistrationRequest,
@@ -39,6 +40,13 @@ class RoleAdmin(BaseModelAdmin):
         }),
         # 时间信息会自动添加，无需手动定义
     )
+    
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        """自定义字段的显示"""
+        if db_field.name == 'description':
+            # 将 description 字段从 TextField（多行文本域）改为普通输入框（单行）
+            kwargs['widget'] = forms.TextInput(attrs={'size': 80})
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
     
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         """自定义多对多字段的显示"""
@@ -96,11 +104,12 @@ class RoleAdmin(BaseModelAdmin):
 @admin.register(Department)
 class DepartmentAdmin(BaseModelAdmin):
     """部门管理"""
-    list_display = ('name', 'code', 'parent', 'leader', 'member_count', 'order', 'is_active', 'created_time')
+    list_display = ('name', 'code', 'parent', 'leader_display', 'member_count', 'order', 'is_active', 'created_time')
     list_filter = ('is_active', 'parent', 'created_time')
     search_fields = ('name', 'code', 'description')
     ordering = ('order', 'name')
-    raw_id_fields = ('parent', 'leader')
+    raw_id_fields = ('parent',)
+    autocomplete_fields = ('leader',)
     readonly_fields = ('created_time',)
     fieldsets = (
         ('基本信息', {
@@ -111,6 +120,17 @@ class DepartmentAdmin(BaseModelAdmin):
         }),
         # 时间信息会自动添加
     )
+    
+    def leader_display(self, obj):
+        """显示部门负责人（只显示姓名，避免重复）"""
+        if obj.leader:
+            full_name = obj.leader.get_full_name()
+            if full_name:
+                return full_name
+            return obj.leader.username
+        return '-'
+    leader_display.short_description = '部门负责人'
+    leader_display.admin_order_field = 'leader'
     
     def member_count(self, obj):
         """显示部门成员数量"""

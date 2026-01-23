@@ -1,191 +1,126 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/list_page_base.html" %}
+{% comment %}
+接待记录列表页面模板 (Reception List Template)
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+功能说明：
+- 展示接待记录的列表页面
+- 支持按类型、级别等多维度筛选
+- 支持接待记录的查看、编辑操作
+{% endcomment %}
+{% load static %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-    .page-title {
-        font-size: var(--font-size-2xl);
-        font-weight: 700;
-        margin: 0 0 var(--spacing-sm) 0;
-    }
-    .page-description {
-        font-size: var(--font-size-base);
-        opacity: 0.9;
-        margin: 0;
-    }
-    .content-card {
-        background: var(--vh-card-bg);
-        border-radius: var(--radius-xl);
-        padding: var(--spacing-lg);
-        box-shadow: var(--shadow-lg);
-    }
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        color: var(--vh-text-muted);
-    }
-    .empty-state-icon {
-        font-size: 64px;
-        margin-bottom: var(--spacing-md);
-        opacity: 0.5;
-    }
-</style>
-{% endblock %}
-
-{% block content %}
-<div class="container-fluid py-4">
-    <div class="center-hero">
-        <h1 class="hero-title">{{ page_title }}</h1>
-        <p class="hero-subtitle">{{ description }}</p>
-    </div>
-
-    <div class="content-card">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="mb-0">接待记录列表</h3>
-            <a href="{% url 'admin_pages:reception_create' %}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> 新增接待记录
-            </a>
-        </div>
-
-        <form method="get" class="mb-4">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <input type="text" name="search" class="form-control" placeholder="搜索访客姓名、单位、会议主题..." value="{{ search }}">
-                </div>
-                <div class="col-md-2">
-                    <select name="reception_type" class="form-select">
-                        <option value="">全部类型</option>
-                        {% for code, label in reception_type_choices %}
-                        <option value="{{ code }}" {% if reception_type == code %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select name="reception_level" class="form-select">
-                        <option value="">全部级别</option>
-                        {% for code, label in reception_level_choices %}
-                        <option value="{{ code }}" {% if reception_level == code %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="bi bi-search"></i> 搜索
-                    </button>
-                    <a href="{% url 'admin_pages:reception_management' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle"></i> 清除
-                    </a>
-                </div>
-            </div>
-        </form>
-
-        {% if page_obj %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>单号</th>
-                        <th>访客姓名</th>
-                        <th>访客单位</th>
-                        <th>接待日期</th>
-                        <th>接待时间</th>
-                        <th>接待类型</th>
-                        <th>接待级别</th>
-                        <th>接待人</th>
-                        <th>访客人数</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for reception in page_obj %}
-                    <tr>
-                        <td><code>{{ reception.record_number }}</code></td>
-                        <td>{{ reception.visitor_name }}</td>
-                        <td>{{ reception.visitor_company|default:"-" }}</td>
-                        <td>{{ reception.reception_date|date:"Y-m-d" }}</td>
-                        <td>{{ reception.reception_time|time:"H:i" }}</td>
-                        <td>{{ reception.get_reception_type_display }}</td>
-                        <td>
-                            {% if reception.reception_level == 'vip' %}
-                            <span class="badge bg-danger">VIP</span>
-                            {% elif reception.reception_level == 'important' %}
-                            <span class="badge bg-warning">重要</span>
-                            {% else %}
-                            <span class="badge bg-info">一般</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ reception.host.get_full_name|default:reception.host.username }}</td>
-                        <td>{{ reception.visitor_count }} 人</td>
-                        <td>
-                            <a href="{% url 'admin_pages:reception_detail' reception.id %}" class="btn btn-sm btn-outline-primary" title="查看详情">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a href="{% url 'admin_pages:reception_update' reception.id %}" class="btn btn-sm btn-outline-secondary" title="编辑">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="10" class="text-center py-5">
-                            <div class="empty-state">
-                                <div class="empty-state-icon">🤝</div>
-                                <div class="empty-state-title">暂无数据</div>
-                                <div class="empty-state-text">
-                                    当前筛选条件下没有找到接待记录，请调整筛选条件或添加新记录。
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {% if page_obj.has_other_pages %}
-        <nav aria-label="分页导航">
-            <ul class="pagination justify-content-center mt-4">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if reception_type %}&reception_type={{ reception_type }}{% endif %}{% if reception_level %}&reception_level={{ reception_level }}{% endif %}">首页</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if reception_type %}&reception_type={{ reception_type }}{% endif %}{% if reception_level %}&reception_level={{ reception_level }}{% endif %}">上一页</a>
-                </li>
-                {% endif %}
-
-                <li class="page-item active">
-                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-                </li>
-
-                {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if reception_type %}&reception_type={{ reception_type }}{% endif %}{% if reception_level %}&reception_level={{ reception_level }}{% endif %}">下一页</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if reception_type %}&reception_type={{ reception_type }}{% endif %}{% if reception_level %}&reception_level={{ reception_level }}{% endif %}">末页</a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
-        {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon">🤝</div>
-            <div class="empty-state-title">暂无数据</div>
-            <div class="empty-state-text">
-                当前没有接待记录数据，请先添加接待记录。
-            </div>
-            <a href="{% url 'admin_pages:reception_create' %}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> 添加第一条接待记录
-            </a>
-        </div>
-        {% endif %}
-    </div>
+{# 操作栏 - 顶部操作按钮 #}
+{% block list_action_bar_content %}
+<div class="list-page-action-bar">
+  <div class="list-page-action-bar-left">
+    {# 可以添加搜索框等 #}
+  </div>
+  <div class="list-page-action-bar-right">
+    <a href="{% url 'admin_pages:reception_create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> 新增接待记录
+    </a>
+  </div>
 </div>
-{% endblock %}
+{% endblock list_action_bar_content %}
+
+{# 筛选器区域 #}
+{% block list_filters_content %}
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">搜索</label>
+    <input type="text" name="search" class="form-control" placeholder="搜索访客姓名、单位、会议主题..." value="{{ search }}">
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">类型</label>
+    <select name="reception_type" class="form-select">
+      <option value="">全部类型</option>
+      {% for code, label in reception_type_choices %}
+      <option value="{{ code }}" {% if reception_type == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">级别</label>
+    <select name="reception_level" class="form-select">
+      <option value="">全部级别</option>
+      {% for code, label in reception_level_choices %}
+      <option value="{{ code }}" {% if reception_level == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+{% endblock list_filters_content %}
+
+{# 表格表头 #}
+{% block list_table_headers %}
+  <th>单号</th>
+  <th>访客姓名</th>
+  <th>访客单位</th>
+  <th>接待日期</th>
+  <th>接待时间</th>
+  <th>接待类型</th>
+  <th>接待级别</th>
+  <th>接待人</th>
+  <th>访客人数</th>
+  <th>操作</th>
+{% endblock list_table_headers %}
+
+{# 表格行 #}
+{% block list_table_rows %}
+  {% if page_obj %}
+    {% for reception in page_obj %}
+    <tr>
+      <td><code>{{ reception.record_number }}</code></td>
+      <td>{{ reception.visitor_name }}</td>
+      <td>{{ reception.visitor_company|default:"-" }}</td>
+      <td>{{ reception.reception_date|date:"Y-m-d" }}</td>
+      <td>{{ reception.reception_time|time:"H:i" }}</td>
+      <td>{{ reception.get_reception_type_display }}</td>
+      <td>
+        {% if reception.reception_level == 'vip' %}
+        <span class="badge bg-danger">VIP</span>
+        {% elif reception.reception_level == 'important' %}
+        <span class="badge bg-warning">重要</span>
+        {% else %}
+        <span class="badge bg-info">一般</span>
+        {% endif %}
+      </td>
+      <td>{{ reception.host.get_full_name|default:reception.host.username }}</td>
+      <td>{{ reception.visitor_count }} 人</td>
+      <td>
+        <div class="list-page-table-actions">
+          <a href="{% url 'admin_pages:reception_detail' reception.id %}" class="action-view" title="查看详情">
+            <i class="bi bi-eye"></i>
+          </a>
+          <span class="action-separator">|</span>
+          <a href="{% url 'admin_pages:reception_update' reception.id %}" class="action-edit" title="编辑">
+            <i class="bi bi-pencil"></i>
+          </a>
+        </div>
+      </td>
+    </tr>
+    {% empty %}
+    {# 空状态 - 当 page_obj 存在但没有数据时显示 #}
+    <tr>
+      <td colspan="10" class="list-empty">
+        <div class="list-empty-icon">🤝</div>
+        <div class="list-empty-text">暂无数据</div>
+        {% block list_empty_hint %}
+        <div class="list-empty-hint">
+          当前筛选条件下没有找到接待记录，请调整筛选条件或添加新记录。
+        </div>
+        {% endblock list_empty_hint %}
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+    {# 空状态 - 当 page_obj 不存在时显示 #}
+    <tr>
+      <td colspan="10" class="list-empty">
+        <div class="list-empty-icon">🤝</div>
+        <div class="list-empty-text">暂无数据</div>
+        <div class="list-empty-hint">
+          当前筛选条件下没有找到接待记录，请调整筛选条件或添加新记录。
+        </div>
+      </td>
+    </tr>
+  {% endif %}
+{% endblock list_table_rows %}

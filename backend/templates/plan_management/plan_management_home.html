@@ -538,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function() {
           {% endfor %}
         ],
         backgroundColor: [
-          '#666666', '#999999', '#CCCCCC', '#333333', '#1A1A1A'
+          '#4A90E2', '#50C878', '#FF6B6B', '#FFD93D', '#9B59B6', '#F39C12', '#3498DB', '#1ABC9C'
         ]
       }]
     };
@@ -586,7 +586,7 @@ document.addEventListener('DOMContentLoaded', function() {
           {% endfor %}
         ],
         backgroundColor: [
-          '#666666', '#999999', '#CCCCCC', '#333333', '#1A1A1A'
+          '#4A90E2', '#50C878', '#FF6B6B', '#FFD93D', '#9B59B6', '#F39C12', '#3498DB', '#1ABC9C'
         ]
       }]
     };
@@ -716,17 +716,25 @@ document.addEventListener('DOMContentLoaded', function() {
       {% if todo_items %}
       <ul class="pm-todo-list">
         {% for item in todo_items %}
-        <li class="pm-todo-item">
+        <li class="pm-todo-item {% if item.is_overdue %}overdue{% endif %}">
           <div class="pm-item-title">
             <a href="{{ item.url }}" class="pm-item-link">{{ item.title }}</a>
+            {% if item.is_overdue %}
+            <span class="badge bg-danger" style="font-size: 10px; margin-left: 8px;">逾期</span>
+            {% elif item.priority == 'high' %}
+            <span class="badge bg-warning" style="font-size: 10px; margin-left: 8px;">紧急</span>
+            {% endif %}
           </div>
           <div class="pm-item-meta">
-            {% if item.type == 'approval' %}
-            {{ item.request_type }} | {{ item.time|date:"Y-m-d H:i" }}
-            {% elif item.type == 'deadline' %}
-            负责人：{{ item.responsible }} | {{ item.deadline }} 到期（剩余 {{ item.days_left }} 天）
-            {% elif item.type == 'goal_update' %}
-            负责人：{{ item.responsible }} | {{ item.days }} 天未更新
+            {% if item.meta %}
+            {{ item.meta }}
+            {% elif item.responsible %}
+            负责人：{{ item.responsible }}
+            {% elif item.description %}
+            {{ item.description|truncatewords:15 }}
+            {% endif %}
+            {% if item.deadline %}
+            | 截止：{{ item.deadline|date:"m-d H:i" }}
             {% endif %}
           </div>
         </li>

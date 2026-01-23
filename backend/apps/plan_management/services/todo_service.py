@@ -6,38 +6,145 @@ P2-4: 待办中心服务
 - 待执行目标/计划（accepted，owner=user）
 - 今日应执行计划（in_progress，today在[start_time, end_time]）
 - 风险计划（逾期）
+- 系统生成的待办事项（TodoTask模型）
 
 原则：
-- 不存表，通过查询实现
+- 查询待办和存储待办相结合
 - 所有待办必须能点进去处理
 """
 from django.utils import timezone
 from django.urls import reverse
 from datetime import date, datetime, timedelta
-from typing import List, Dict, Any
-from ..models import StrategicGoal, Plan
+from typing import List, Dict, Any, Optional
+from ..models import StrategicGoal, Plan, TodoTask
 
 
 def get_user_todos(user) -> List[Dict[str, Any]]:
     """
-    获取用户的待办列表
+    获取用户的待办列表（包含查询生成的待办和数据库中的待办）
     
     Args:
         user: User 对象
     
     Returns:
         List[Dict]: 待办列表，每个待办包含：
-            - type: 待办类型（'goal_accept', 'plan_accept', 'goal_execute', 'plan_execute', 'plan_today', 'plan_risk'）
+            - type: 待办类型（'goal_accept', 'plan_accept', 'goal_execute', 'plan_execute', 'plan_today', 'plan_risk', 或数据库待办类型）
             - title: 待办标题
             - description: 待办描述
             - priority: 优先级（'high', 'medium', 'low'）
             - url: 跳转链接
-            - object: 关联的对象（StrategicGoal 或 Plan）
+            - object: 关联的对象（StrategicGoal 或 Plan 或 TodoTask）
             - created_at: 创建时间（用于排序）
+            - deadline: 截止时间（数据库待办）
+            - is_overdue: 是否逾期（数据库待办）
     """
     todos = []
     now = timezone.now()
     today = now.date()
+    
+    # ========== 0. 从数据库获取系统生成的待办事项 ==========
+    db_todos = TodoTask.objects.filter(
+        user=user,
+        status__in=['pending', 'overdue']
+    ).select_related('user').order_by('deadline')
+    
+    for todo in db_todos:
+        # 检查是否逾期（如果模型有 check_overdue 方法则调用，否则使用 save 方法自动检查）
+        if hasattr(todo, 'check_overdue'):
+            todo.check_overdue()
+        elif todo.deadline and todo.status == 'pending' and todo.deadline < now:
+            # 如果没有 check_overdue 方法，手动检查
+            todo.is_overdue = True
+            todo.overdue_days = (now.date() - todo.deadline.date()).days
+            todo.status = 'overdue'
+            todo.save(update_fields=['status', 'is_overdue', 'overdue_days'])
+        
+        # 构建跳转链接
+        url = '#'
+        
+        # 根据待办类型设置跳转URL
+        if todo.task_type == 'plan_decomposition_weekly':
+            # 周计划分解待办：跳转到计划创建页面，筛选周计划
+            try:
+                url = reverse('plan_pages:plan_create') + '?plan_period=weekly'
+            except:
+                url = '/plan/plans/create/?plan_period=weekly'
+        elif todo.task_type == 'plan_decomposition_daily':
+            # 日计划分解待办：跳转到计划创建页面，筛选日计划
+            try:
+                url = reverse('plan_pages:plan_create') + '?plan_period=daily'
+            except:
+                url = '/plan/plans/create/?plan_period=daily'
+        elif todo.task_type == 'plan_creation':
+            # 计划创建待办：跳转到计划创建页面
+            try:
+                url = reverse('plan_pages:plan_create')
+            except:
+                url = '/plan/plans/create/'
+        elif todo.task_type == 'goal_creation':
+            # 目标创建待办：跳转到目标创建页面
+            try:
+                url = reverse('plan_pages:strategic_goal_create')
+            except:
+                url = '/plan/strategic-goals/create/'
+        elif todo.task_type == 'goal_decomposition':
+            # 目标分解待办：跳转到目标列表页面
+            try:
+                url = reverse('plan_pages:strategic_goal_list')
+            except:
+                url = '/plan/strategic-goals/'
+        elif todo.task_type in ['goal_progress_update', 'plan_progress_update']:
+            # 进度更新待办：根据关联对象跳转
+            if todo.related_object_type == 'goal' and todo.related_object_id:
+                try:
+                    url = reverse('plan_pages:strategic_goal_track', args=[todo.related_object_id])
+                except:
+                    pass
+            elif todo.related_object_type == 'plan' and todo.related_object_id:
+                try:
+                    url = reverse('plan_pages:plan_execution_track', args=[todo.related_object_id])
+                except:
+                    pass
+            else:
+                # 如果没有关联对象，跳转到对应的列表页面
+                if todo.task_type == 'goal_progress_update':
+                    try:
+                        url = reverse('plan_pages:strategic_goal_list')
+                    except:
+                        url = '/plan/strategic-goals/'
+                elif todo.task_type == 'plan_progress_update':
+                    try:
+                        url = reverse('plan_pages:plan_list')
+                    except:
+                        url = '/plan/plans/'
+        elif todo.related_object_type == 'goal' and todo.related_object_id:
+            # 其他目标相关待办
+            try:
+                url = reverse('plan_pages:strategic_goal_detail', args=[todo.related_object_id])
+            except:
+                pass
+        elif todo.related_object_type == 'plan' and todo.related_object_id:
+            # 其他计划相关待办
+            try:
+                url = reverse('plan_pages:plan_detail', args=[todo.related_object_id])
+            except:
+                pass
+        
+        priority = 'high' if todo.is_overdue else ('high' if (todo.deadline - now).total_seconds() < 86400 else 'medium')
+        
+        todos.append({
+            'type': todo.task_type,
+            'title': todo.title,
+            'description': todo.description or f'截止时间：{todo.deadline.strftime("%Y-%m-%d %H:%M")}',
+            'priority': priority,
+            'url': url,
+            'object': todo,
+            'created_at': todo.created_at,
+            'deadline': todo.deadline,
+            'is_overdue': todo.is_overdue,
+            'overdue_days': todo.overdue_days,
+            'is_db_todo': True,  # 标记为数据库待办
+        })
     
     # ========== 1. 待接收目标（published，owner=user）==========
     pending_goals = StrategicGoal.objects.filter(
@@ -207,4 +314,170 @@ def get_user_todo_summary(user) -> Dict[str, int]:
     }
     
     return summary
+
+
+def create_todo_task(
+    task_type: str,
+    user,
+    title: str,
+    description: str = '',
+    related_object_type: Optional[str] = None,
+    related_object_id: Optional[str] = None,
+    deadline: datetime = None,
+    auto_generated: bool = True
+) -> TodoTask:
+    """
+    创建待办事项
+    
+    Args:
+        task_type: 待办类型
+        user: 负责人
+        title: 待办标题
+        description: 待办描述
+        related_object_type: 关联对象类型
+        related_object_id: 关联对象ID
+        deadline: 截止时间
+        auto_generated: 是否系统自动生成
+    
+    Returns:
+        TodoTask实例
+    """
+    if deadline is None:
+        deadline = timezone.now() + timedelta(days=1)
+    
+    todo = TodoTask.objects.create(
+        task_type=task_type,
+        user=user,
+        title=title,
+        description=description,
+        related_object_type=related_object_type,
+        related_object_id=related_object_id,
+        deadline=deadline,
+        auto_generated=auto_generated,
+        status='pending'
+    )
+    
+    # 检查是否已逾期
+    todo.check_overdue()
+    if todo.is_overdue:
+        todo.save()
+    
+    return todo
+
+
+def mark_todo_completed(todo: TodoTask, user=None) -> bool:
+    """
+    标记待办完成
+    
+    Args:
+        todo: TodoTask实例
+        user: 完成人（可选）
+    
+    Returns:
+        bool: 是否成功
+    """
+    if todo.status in ['completed', 'cancelled']:
+        return False
+    
+    todo.status = 'completed'
+    todo.completed_at = timezone.now()
+    todo.is_overdue = False
+    todo.overdue_days = 0
+    todo.save()
+    
+    return True
+
+
+def check_todo_overdue() -> int:
+    """
+    检查并标记逾期待办
+    
+    Returns:
+        int: 标记为逾期的待办数量
+    """
+    now = timezone.now()
+    pending_todos = TodoTask.objects.filter(status='pending')
+    
+    updated_count = 0
+    for todo in pending_todos:
+        if todo.check_overdue():
+            todo.save()
+            updated_count += 1
+    
+    return updated_count
+
+
+def get_todos_by_type(user, task_type: str) -> List[TodoTask]:
+    """
+    按类型获取待办
+    
+    Args:
+        user: 用户
+        task_type: 待办类型
+    
+    Returns:
+        List[TodoTask]: 待办列表
+    """
+    return list(TodoTask.objects.filter(
+        user=user,
+        task_type=task_type,
+        status__in=['pending', 'overdue']
+    ).order_by('deadline'))
+
+
+def get_todos_for_period(user, period: str = 'today') -> List[TodoTask]:
+    """
+    按周期获取待办（今日/本周/本月）
+    
+    Args:
+        user: 用户
+        period: 周期（today/week/month）
+    
+    Returns:
+        List[TodoTask]: 待办列表
+    """
+    now = timezone.now()
+    today = now.date()
+    
+    if period == 'today':
+        start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+        end = timezone.make_aware(datetime.combine(today, datetime.max.time()))
+        return list(TodoTask.objects.filter(
+            user=user,
+            deadline__gte=start,
+            deadline__lte=end,
+            status__in=['pending', 'overdue']
+        ).order_by('deadline'))
+    
+    elif period == 'week':
+        # 本周一
+        days_since_monday = today.weekday()
+        week_start = today - timedelta(days=days_since_monday)
+        week_end = week_start + timedelta(days=6)
+        start = timezone.make_aware(datetime.combine(week_start, datetime.min.time()))
+        end = timezone.make_aware(datetime.combine(week_end, datetime.max.time()))
+        return list(TodoTask.objects.filter(
+            user=user,
+            deadline__gte=start,
+            deadline__lte=end,
+            status__in=['pending', 'overdue']
+        ).order_by('deadline'))
+    
+    elif period == 'month':
+        # 本月第一天和最后一天
+        month_start = today.replace(day=1)
+        if today.month == 12:
+            month_end = today.replace(day=31)
+        else:
+            month_end = (today.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        start = timezone.make_aware(datetime.combine(month_start, datetime.min.time()))
+        end = timezone.make_aware(datetime.combine(month_end, datetime.max.time()))
+        return list(TodoTask.objects.filter(
+            user=user,
+            deadline__gte=start,
+            deadline__lte=end,
+            status__in=['pending', 'overdue']
+        ).order_by('deadline'))
+    
+    return []
 

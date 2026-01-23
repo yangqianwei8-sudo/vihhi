@@ -19,37 +19,42 @@
 /* @import url('sidebar_v2_fixed.css'); */
 
 /* ===== CSS 变量定义 ===== */
+/* 注意：使用通用变量系统，避免重复定义和冲突 */
 :root {
-  --two-col-sidebar-width: var(--sidebar-width, 224px);
+  /* 使用通用变量，避免硬编码 */
+  /* 优先使用模板设置的 --sidebar-width，如果没有则使用 --nav-expanded-width */
+  --two-col-sidebar-width: var(--sidebar-width, var(--nav-expanded-width, 232px));
   --two-col-navbar-height: var(--navbar-height, 62px); /* 顶部导航栏高度 */
-  --two-col-gap: 8px;
-  --two-col-content-padding: 8px;
-  --two-col-content-padding-bottom: 24px;
-  --two-col-bg: #F5F5F5;
-  --two-col-card-bg: #ffffff;
-  --two-col-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --two-col-card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.12);
-  --two-col-border-color: #E5E5E5;
-  --two-col-text-primary: #1F2937;
-  --two-col-text-secondary: #6B7280;
-  --two-col-text-muted: #9CA3AF;
-  --two-col-transition: all 0.2s ease;
+  --two-col-gap: var(--spacing-sm, 8px); /* 使用通用间距变量 */
+  --two-col-content-padding: var(--spacing-sm, 8px); /* 使用通用间距变量 */
+  --two-col-content-padding-bottom: var(--spacing-lg, 24px); /* 使用通用间距变量 */
+  /* 使用通用颜色变量，保持一致性 */
+  --two-col-bg: var(--vh-surface, #F5F5F5);
+  --two-col-card-bg: var(--vh-card-bg, #ffffff);
+  --two-col-card-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
+  --two-col-card-shadow-hover: var(--shadow-md, 0 2px 8px rgba(0, 0, 0, 0.12));
+  --two-col-border-color: var(--vh-border, #E5E5E5);
+  --two-col-text-primary: var(--vh-text, #1F2937);
+  --two-col-text-secondary: var(--vh-text-muted, #6B7280);
+  --two-col-text-muted: var(--vh-text-light, #9CA3AF);
+  --two-col-transition: var(--transition-base, all 0.2s ease);
 }
 
 /* ===== Body 滚动控制 ===== */
 /* 当使用 two-column-layout 时，强制禁用 body 的滚动条，只让 .two-col-main 滚动 */
 /* 避免双重滚动条问题：body 和 .two-col-main 不能同时有滚动条 */
 /* 使用多种选择器确保兼容性和优先级 */
-body:has(.two-column-layout) {
-  overflow-y: hidden !important; /* 强制禁用 body 滚动条 */
-  height: 100% !important;
-}
-
-/* 如果浏览器不支持 :has()，使用类名方式 */
-body.two-column-layout-active {
+/* 注释：与通用样式冲突，通用样式已定义 body 的 padding-top，此处可能影响布局 */
+/* body:has(.two-column-layout) {
   overflow-y: hidden !important;
   height: 100% !important;
-}
+} */
+
+/* 如果浏览器不支持 :has()，使用类名方式 */
+/* body.two-column-layout-active {
+  overflow-y: hidden !important;
+  height: 100% !important;
+} */
 
 /* ===== 布局容器 ===== */
 .two-column-layout {
@@ -133,63 +138,48 @@ body.two-column-layout-active {
 
 /* 内容区变体：紧凑模式 */
 .two-col-content--compact {
-  padding: 4px 4px 12px 4px !important;
-  gap: 8px;
+  padding: var(--spacing-xs, 4px) var(--spacing-xs, 4px) var(--spacing-sm, 12px) var(--spacing-xs, 4px) !important;
+  gap: var(--spacing-sm, 8px);
 }
 
 /* 内容区变体：宽松模式 */
 .two-col-content--spacious {
-  padding: 16px 16px 32px 16px !important;
-  gap: 24px;
+  padding: var(--spacing-md, 16px) var(--spacing-md, 16px) var(--spacing-xl, 32px) var(--spacing-md, 16px) !important;
+  gap: var(--spacing-lg, 24px);
 }
 
 /* ===== 页面头部样式 ===== */
-.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 {
-  margin-bottom: 24px !important;
-  padding-bottom: 16px;
+/* 
+ * 说明：两栏布局的页面头部需要特殊的样式处理
+ * - 覆盖通用样式以确保在两栏布局中的正确显示
+ * - 使用语义化的类名和通用变量保持一致性
+ * - 选择器针对两栏布局的特定结构，避免影响其他页面
+ */
+
+/* 页面头部容器样式 */
+/* 针对两栏布局中的 page_header block 结构 */
+.two-col-content > .d-flex.align-items-end.justify-content-between {
+  margin-bottom: var(--spacing-lg, 24px) !important;
+  padding-bottom: var(--spacing-md, 16px);
   border-bottom: 1px solid var(--two-col-border-color);
 }
 
-.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child {
+/* 标题容器（包含主标题和副标题） */
+.two-col-content > .d-flex.align-items-end.justify-content-between > div:first-child {
   flex: 1;
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: var(--spacing-sm, 12px);
   flex-wrap: wrap;
 }
 
-/* 主标题样式 */
-.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 h1.h3,
-.two-col-page-title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--two-col-text-primary);
-  line-height: 1.4;
-  display: inline-block;
-}
+/* ===== 主标题样式 ===== */
+/* 已移除：主标题样式由通用样式系统（base.css）统一管理 */
+/* 如需自定义，请在具体模板中使用内联样式或模块特定样式 */
 
-/* 副标题样式 - 与主标题同一行显示 */
-.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > :not(h1),
-.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > span,
-.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > p,
-.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > small,
-.two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 > div:first-child > .two-col-page-subtitle,
-.two-col-page-subtitle {
-  margin-top: 0;
-  margin-left: 0;
-  font-size: 14px;
-  color: var(--two-col-text-secondary);
-  line-height: 1.5;
-  display: inline-block;
-  vertical-align: baseline;
-}
-
-/* 副标题特定样式增强 */
-.two-col-page-subtitle {
-  font-weight: 400;
-  letter-spacing: 0.01em;
-}
+/* ===== 副标题样式 ===== */
+/* 已移除：副标题样式由通用样式系统（base.css）统一管理 */
+/* 如需自定义，请在具体模板中使用内联样式或模块特定样式 */
 
 /* ===== 卡片容器样式 ===== */
 .two-col-card {
@@ -197,8 +187,8 @@ body.two-column-layout-active {
   border: 1px solid var(--two-col-border-color);
   border-radius: 0;
   box-shadow: var(--two-col-card-shadow);
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: var(--spacing-md, 16px);
+  margin-bottom: var(--spacing-md, 16px);
   transition: var(--two-col-transition);
 }
 
@@ -207,13 +197,13 @@ body.two-column-layout-active {
 }
 
 .two-col-card-header {
-  padding: 0 0 12px 0;
-  margin-bottom: 12px;
+  padding: 0 0 var(--spacing-sm, 12px) 0;
+  margin-bottom: var(--spacing-sm, 12px);
   border-bottom: 1px solid var(--two-col-border-color);
 }
 
 .two-col-card-title {
-  font-size: 16px;
+  font-size: var(--font-size-md, 16px); /* 使用通用字体大小变量 */
   font-weight: 600;
   color: var(--two-col-text-primary);
   margin: 0;
@@ -224,8 +214,8 @@ body.two-column-layout-active {
 }
 
 .two-col-card-footer {
-  padding: 12px 0 0 0;
-  margin-top: 12px;
+  padding: var(--spacing-sm, 12px) 0 0 0;
+  margin-top: var(--spacing-sm, 12px);
   border-top: 1px solid var(--two-col-border-color);
 }
 
@@ -247,48 +237,50 @@ body.two-column-layout-active {
 }
 
 .two-col-card--compact {
-  padding: 12px;
+  padding: var(--spacing-sm, 12px);
 }
 
 .two-col-card--spacious {
-  padding: 24px;
+  padding: var(--spacing-lg, 24px);
 }
 
 /* ===== 间距工具类 ===== */
-.two-col-gap-xs { gap: 4px; }
-.two-col-gap-sm { gap: 8px; }
-.two-col-gap-md { gap: 16px; }
-.two-col-gap-lg { gap: 24px; }
-.two-col-gap-xl { gap: 32px; }
+/* 注意：这些工具类使用通用间距变量，保持与系统一致 */
+.two-col-gap-xs { gap: var(--spacing-xs, 4px); }
+.two-col-gap-sm { gap: var(--spacing-sm, 8px); }
+.two-col-gap-md { gap: var(--spacing-md, 16px); }
+.two-col-gap-lg { gap: var(--spacing-lg, 24px); }
+.two-col-gap-xl { gap: var(--spacing-xl, 32px); }
 
-.two-col-mt-xs { margin-top: 4px !important; }
-.two-col-mt-sm { margin-top: 8px !important; }
-.two-col-mt-md { margin-top: 16px !important; }
-.two-col-mt-lg { margin-top: 24px !important; }
-.two-col-mt-xl { margin-top: 32px !important; }
+.two-col-mt-xs { margin-top: var(--spacing-xs, 4px) !important; }
+.two-col-mt-sm { margin-top: var(--spacing-sm, 8px) !important; }
+.two-col-mt-md { margin-top: var(--spacing-md, 16px) !important; }
+.two-col-mt-lg { margin-top: var(--spacing-lg, 24px) !important; }
+.two-col-mt-xl { margin-top: var(--spacing-xl, 32px) !important; }
 
-.two-col-mb-xs { margin-bottom: 4px !important; }
-.two-col-mb-sm { margin-bottom: 8px !important; }
-.two-col-mb-md { margin-bottom: 16px !important; }
-.two-col-mb-lg { margin-bottom: 24px !important; }
-.two-col-mb-xl { margin-bottom: 32px !important; }
+.two-col-mb-xs { margin-bottom: var(--spacing-xs, 4px) !important; }
+.two-col-mb-sm { margin-bottom: var(--spacing-sm, 8px) !important; }
+.two-col-mb-md { margin-bottom: var(--spacing-md, 16px) !important; }
+.two-col-mb-lg { margin-bottom: var(--spacing-lg, 24px) !important; }
+.two-col-mb-xl { margin-bottom: var(--spacing-xl, 32px) !important; }
 
-.two-col-p-xs { padding: 4px !important; }
-.two-col-p-sm { padding: 8px !important; }
-.two-col-p-md { padding: 16px !important; }
-.two-col-p-lg { padding: 24px !important; }
-.two-col-p-xl { padding: 32px !important; }
+.two-col-p-xs { padding: var(--spacing-xs, 4px) !important; }
+.two-col-p-sm { padding: var(--spacing-sm, 8px) !important; }
+.two-col-p-md { padding: var(--spacing-md, 16px) !important; }
+.two-col-p-lg { padding: var(--spacing-lg, 24px) !important; }
+.two-col-p-xl { padding: var(--spacing-xl, 32px) !important; }
 
 /* ===== 文本样式工具类 ===== */
 .two-col-text-primary { color: var(--two-col-text-primary) !important; }
 .two-col-text-secondary { color: var(--two-col-text-secondary) !important; }
 .two-col-text-muted { color: var(--two-col-text-muted) !important; }
 
-.two-col-text-xs { font-size: 12px !important; }
-.two-col-text-sm { font-size: 14px !important; }
-.two-col-text-md { font-size: 16px !important; }
-.two-col-text-lg { font-size: 18px !important; }
-.two-col-text-xl { font-size: 20px !important; }
+/* 使用通用字体大小变量 */
+.two-col-text-xs { font-size: var(--font-size-xs, 12px) !important; }
+.two-col-text-sm { font-size: var(--font-size-sm, 14px) !important; }
+.two-col-text-md { font-size: var(--font-size-md, 16px) !important; }
+.two-col-text-lg { font-size: var(--font-size-lg, 18px) !important; }
+.two-col-text-xl { font-size: var(--font-size-xl, 20px) !important; }
 
 .two-col-text-bold { font-weight: 600 !important; }
 .two-col-text-normal { font-weight: 400 !important; }
@@ -299,13 +291,13 @@ body.two-column-layout-active {
   height: 1px;
   background: var(--two-col-border-color);
   border: none;
-  margin: 16px 0;
+  margin: var(--spacing-md, 16px) 0;
 }
 
 .two-col-divider--vertical {
   width: 1px;
   height: auto;
-  margin: 0 16px;
+  margin: 0 var(--spacing-md, 16px);
 }
 
 .two-col-divider--thick {
@@ -342,26 +334,26 @@ body.two-column-layout-active {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 16px;
+  padding: var(--spacing-2xl, 48px) var(--spacing-md, 16px);
   text-align: center;
   color: var(--two-col-text-muted);
 }
 
 .two-col-empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+  font-size: var(--spacing-2xl, 48px);
+  margin-bottom: var(--spacing-md, 16px);
   opacity: 0.5;
 }
 
 .two-col-empty-text {
-  font-size: 14px;
+  font-size: var(--font-size-base, 14px);
   color: var(--two-col-text-secondary);
 }
 
 /* ===== 网格布局工具 ===== */
 .two-col-grid {
   display: grid;
-  gap: 16px;
+  gap: var(--spacing-md, 16px);
 }
 
 .two-col-grid--2 { grid-template-columns: repeat(2, 1fr); }
@@ -416,8 +408,8 @@ body.two-column-layout-active {
   }
   
   .two-col-content {
-    padding: 8px !important;
-    gap: 12px;
+    padding: var(--spacing-sm, 8px) !important;
+    gap: var(--spacing-sm, 12px);
   }
   
   .two-col-grid--4,
@@ -427,32 +419,34 @@ body.two-column-layout-active {
   }
   
   .two-col-card {
-    padding: 12px;
-    margin-bottom: 12px;
+    padding: var(--spacing-sm, 12px);
+    margin-bottom: var(--spacing-sm, 12px);
   }
   
-  .two-col-content > .d-flex.align-items-end.justify-content-between.mb-4 {
+  /* 移动端：页面头部改为垂直布局 */
+  .two-col-content > .d-flex.align-items-end.justify-content-between {
     flex-direction: column;
     align-items: flex-start !important;
-    gap: 12px;
+    gap: var(--spacing-sm, 12px);
   }
 }
 
 @media (max-width: 576px) {
   .two-col-content {
-    padding: 4px !important;
-    gap: 8px;
+    padding: var(--spacing-xs, 4px) !important;
+    gap: var(--spacing-sm, 8px);
   }
   
   .two-col-card {
-    padding: 8px;
-    margin-bottom: 8px;
+    padding: var(--spacing-sm, 8px);
+    margin-bottom: var(--spacing-sm, 8px);
   }
 }
 
 /* ===== 顶部导航栏样式增强 ===== */
 /* 当使用两栏布局时，确保顶部栏样式正确 */
-.two-column-layout ~ .navbar,
+/* 注释：与通用样式冲突，navigation.css 已定义 .navbar 的 position、top、left、right、z-index、width */
+/* .two-column-layout ~ .navbar,
 body:has(.two-column-layout) .navbar {
   position: fixed !important;
   top: 0 !important;
@@ -460,7 +454,7 @@ body:has(.two-column-layout) .navbar {
   right: 0 !important;
   z-index: 1030 !important;
   width: 100% !important;
-}
+} */
 
 /* 顶部导航栏与侧边栏的配合 */
 /* 注释掉：让导航栏从最左边开始，不再与侧边栏对齐 */
@@ -470,13 +464,15 @@ body:has(.two-column-layout) .navbar {
 } */
 
 /* 响应式：移动端顶部栏全宽 */
-@media (max-width: 768px) {
+/* 注释：与通用样式冲突，navigation.css 已处理导航栏样式 */
+/* @media (max-width: 768px) {
   body:has(.two-column-layout) .navbar {
     padding-left: 0 !important;
   }
-}
+} */
 
 /* ===== 打印样式 ===== */
+/* 注意：打印样式可能与 base.css 的打印样式冲突，但选择器更具体，保留以覆盖通用样式 */
 @media print {
   .two-col-main {
     margin-left: 0 !important;
@@ -490,14 +486,15 @@ body:has(.two-column-layout) .navbar {
   
   .two-col-card {
     box-shadow: none;
-    border: 1px solid #ddd;
+    border: 1px solid var(--vh-border, #ddd); /* 使用通用变量 */
     page-break-inside: avoid;
   }
   
   /* 打印时隐藏顶部栏 */
-  .navbar {
+  /* 注释：base.css 已定义 .navbar { display: none !important; }，此处可能重复 */
+  /* .navbar {
     display: none !important;
-  }
+  } */
   
   .two-column-layout {
     margin-top: 0 !important;

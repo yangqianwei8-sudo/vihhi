@@ -247,41 +247,12 @@ def notify_company_goal_published(goal):
             logger.warning(f"目标 #{goal.id} 不是已发布的公司目标，跳过通知")
             return 0
         
-        # 通知对象：公司内所有活跃员工（或根据业务规则筛选）
-        # P2-2 简化版：通知所有活跃用户（后续可优化为按部门/角色筛选）
-        from django.contrib.auth.models import User
+        # 生成目标分解待办事项
+        from .todo_generator import generate_goal_decomposition_todo
+        todos = generate_goal_decomposition_todo(goal)
         
-        # 公司隔离
-        recipients = User.objects.filter(is_active=True)
-        if hasattr(goal, 'company') and goal.company:
-            recipients = recipients.filter(profile__company=goal.company)
-        
-        # 排除创建人（创建人不需要通知自己）
-        recipients = recipients.exclude(id=goal.created_by_id)
-        
-        # 构建通知内容
-        title = "[目标发布] 请创建个人目标进行对齐"
-        content = f"公司目标《{goal.name}》已发布，请创建个人目标进行对齐。"
-        
-        # 为每个员工创建通知
-        count = 0
-        for recipient in recipients:
-            try:
-                safe_approval_notification(
-                    user=recipient,
-                    title=title,
-                    content=content,
-                    object_type='goal',
-                    object_id=str(goal.id),
-                    event='company_goal_published',
-                    is_read=False
-                )
-                count += 1
-            except Exception as e:
-                logger.warning(f"创建通知失败（用户：{recipient.username}）：{str(e)}")
-        
-        logger.info(f"成功创建 {count} 条公司目标发布通知（目标 #{goal.id}）")
-        return count
+        logger.info(f"成功创建 {len(todos)} 个目标分解待办和通知（目标 #{goal.id}）")
+        return len(todos)
         
     except Exception as e:
         logger.warning(f"通知公司目标发布失败（不影响业务）：{str(e)}")
@@ -445,41 +416,43 @@ def notify_company_plan_published(plan):
             logger.warning(f"计划 #{plan.id} 不是已发布的公司计划，跳过通知")
             return 0
         
-        # 通知对象：公司内所有活跃员工（或根据业务规则筛选）
-        # P2-3 简化版：通知所有活跃用户（后续可优化为按部门/角色筛选）
-        from django.contrib.auth.models import User
-        
-        # 公司隔离
-        recipients = User.objects.filter(is_active=True)
-        if hasattr(plan, 'company') and plan.company:
-            recipients = recipients.filter(profile__company=plan.company)
-        
-        # 排除创建人（创建人不需要通知自己）
-        recipients = recipients.exclude(id=plan.created_by_id)
-        
-        # 构建通知内容
-        title = "[计划发布] 请创建个人计划进行对齐"
-        content = f"公司计划《{plan.name}》已发布，请创建个人计划进行对齐。"
-        
-        # 为每个员工创建通知
-        count = 0
-        for recipient in recipients:
-            try:
-                safe_approval_notification(
-                    user=recipient,
-                    title=title,
-                    content=content,
-                    object_type='plan',
-                    object_id=str(plan.id),
-                    event='company_plan_published',
-                    is_read=False
-                )
-                count += 1
-            except Exception as e:
-                logger.warning(f"创建通知失败（用户：{recipient.username}）：{str(e)}")
-        
-        logger.info(f"成功创建 {count} 条公司计划发布通知（计划 #{plan.id}）")
-        return count
+        # 如果是月度计划，生成月度个人计划创建待办
+        if plan.plan_period == 'monthly':
+            from .todo_generator import generate_monthly_personal_plan_todos
+            todos = generate_monthly_personal_plan_todos(plan)
+            logger.info(f"成功创建 {len(todos)} 个月度个人计划创建待办和通知（计划 #{plan.id}）")
+            return len(todos)
+        else:
+            # 其他类型的计划，使用原有通知逻辑
+            from django.contrib.auth.models import User
+            
+            recipients = User.objects.filter(is_active=True)
+            if hasattr(plan, 'company') and plan.company:
+                recipients = recipients.filter(profile__company=plan.company)
+            
+            recipients = recipients.exclude(id=plan.created_by_id)
+            
+            title = "[计划发布] 请创建个人计划进行对齐"
+            content = f"公司计划《{plan.name}》已发布，请创建个人计划进行对齐。"
+            
+            count = 0
+            for recipient in recipients:
+                try:
+                    safe_approval_notification(
+                        user=recipient,
+                        title=title,
+                        content=content,
+                        object_type='plan',
+                        object_id=str(plan.id),
+                        event='company_plan_published',
+                        is_read=False
+                    )
+                    count += 1
+                except Exception as e:
+                    logger.warning(f"创建通知失败（用户：{recipient.username}）：{str(e)}")
+            
+            logger.info(f"成功创建 {count} 条公司计划发布通知（计划 #{plan.id}）")
+            return count
         
     except Exception as e:
         logger.warning(f"通知公司计划发布失败（不影响业务）：{str(e)}")
@@ -607,5 +580,67 @@ def notify_approval_timeout(plan, days_overdue=3):
         
     except Exception as e:
         logger.warning(f"通知审批超时失败（不影响业务）：{str(e)}")
+        return False
+
+
+def notify_supervisor_progress_update(obj, actor):
+    """
+    通知上级进度更新（目标/计划进度更新后）
+    
+    Args:
+        obj: StrategicGoal 或 Plan 对象
+        actor: 更新进度的用户
+    
+    Returns:
+        bool: 是否成功创建通知
+    """
+    try:
+        # 确定对象类型和名称
+        if isinstance(obj, StrategicGoal):
+            object_type = 'goal'
+            obj_name = obj.name
+            responsible_user = obj.owner or obj.responsible_person
+        elif isinstance(obj, Plan):
+            object_type = 'plan'
+            obj_name = obj.name
+            responsible_user = obj.responsible_person
+        else:
+            logger.warning(f"未知对象类型：{type(obj)}")
+            return False
+        
+        if not responsible_user:
+            logger.warning(f"对象 {object_type} #{obj.id} 没有负责人，无法通知上级")
+            return False
+        
+        # 获取负责人的部门负责人（上级）
+        supervisor = None
+        if hasattr(responsible_user, 'department') and responsible_user.department:
+            supervisor = responsible_user.department.leader
+        
+        if not supervisor:
+            logger.debug(f"用户 {responsible_user.username} 没有上级，跳过通知")
+            return False
+        
+        # 构建通知内容
+        actor_name = actor.get_full_name() or actor.username
+        title = f"[进度更新] {obj_name} 进度已更新"
+        content = f"{actor_name} 已更新{object_type}《{obj_name}》的进度，请查阅。"
+        
+        # 创建通知
+        safe_approval_notification(
+            user=supervisor,
+            title=title,
+            content=content,
+            object_type=object_type,
+            object_id=str(obj.id),
+            event='progress_update_notify_supervisor',
+            is_read=False
+        )
+        
+        logger.info(f"成功创建进度更新通知给上级（{object_type} #{obj.id} → {supervisor.username}）")
+        return True
+        
+    except Exception as e:
+        logger.warning(f"通知上级进度更新失败（不影响业务）：{str(e)}")
         return False
 

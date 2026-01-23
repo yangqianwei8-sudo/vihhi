@@ -1,257 +1,179 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/list_page_base.html" %}
+{% comment %}
+差旅申请列表页面模板 (Travel List Template)
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+功能说明：
+- 展示差旅申请记录的列表页面
+- 支持按状态、差旅方式等多维度筛选
+- 支持差旅申请的查看、编辑、审批操作
+{% endcomment %}
+{% load static %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-    .page-title {
-        font-size: var(--font-size-2xl);
-        font-weight: 700;
-        margin: 0 0 var(--spacing-sm) 0;
-    }
-    .page-description {
-        font-size: var(--font-size-base);
-        opacity: 0.9;
-        margin: 0;
-    }
-    .content-card {
-        background: var(--vh-card-bg);
-        border-radius: var(--radius-xl);
-        padding: var(--spacing-lg);
-        box-shadow: var(--shadow-lg);
-        border: 1px solid rgba(20, 47, 91, 0.08);
-    }
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        color: var(--vh-text-muted);
-    }
-    .empty-state-icon {
-        font-size: 64px;
-        margin-bottom: var(--spacing-md);
-        opacity: 0.5;
-    }
-    .empty-state-title {
-        font-size: var(--font-size-lg);
-        font-weight: 600;
-        color: var(--vh-text);
-        margin-bottom: var(--spacing-sm);
-    }
-    .empty-state-text {
-        font-size: var(--font-size-base);
-        color: var(--vh-text-muted);
-        margin-bottom: var(--spacing-lg);
-    }
-    .status-badge {
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: var(--font-size-sm);
-        font-weight: 500;
-    }
-    .status-draft { background: #e7f3ff; color: #0066cc; }
-    .status-pending_approval { background: #fff3cd; color: #856404; }
-    .status-approved { background: #d1e7dd; color: #0f5132; }
-    .status-rejected { background: #f8d7da; color: #842029; }
-    .status-in_progress { background: #cfe2ff; color: #084298; }
-    .status-completed { background: #d1e7dd; color: #0f5132; }
-    .status-cancelled { background: #f8d7da; color: #842029; }
-    .method-badge {
-        padding: 2px 8px;
-        border-radius: 8px;
-        font-size: var(--font-size-xs);
-        font-weight: 500;
-    }
-    .method-plane { background: #e7f3ff; color: #0066cc; }
-    .method-train { background: #fff4e6; color: #cc6600; }
-    .method-bus { background: #f0f0f0; color: #666; }
-    .method-self_drive { background: #e6ffe6; color: #006600; }
-    .method-other { background: #f0f0f0; color: #666; }
-</style>
-{% endblock %}
-
-{% block content %}
-<div class="container-fluid py-4">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="page-title">{{ page_title }}</h1>
-            <p class="page-description">{{ description }}</p>
-        </div>
-        <a href="{% url 'admin_pages:travel_create' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> 创建申请
-        </a>
-    </div>
-
-    <div class="content-card">
-
-        <form method="get" class="mb-4">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <input type="text" name="search" class="form-control" placeholder="搜索申请单号、目的地、事由..." value="{{ search }}">
-                </div>
-                <div class="col-md-2">
-                    <select name="status" class="form-select">
-                        <option value="">全部状态</option>
-                        {% for code, label in status_choices %}
-                        <option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select name="travel_method" class="form-select">
-                        <option value="">全部方式</option>
-                        {% for code, label in travel_method_choices %}
-                        <option value="{{ code }}" {% if travel_method == code %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="bi bi-search"></i> 搜索
-                    </button>
-                    <a href="{% url 'admin_pages:travel_list' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle"></i> 清除
-                    </a>
-                </div>
-            </div>
-        </form>
-
-        {% if page_obj %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>申请单号</th>
-                        <th>目的地</th>
-                        <th>差旅时间</th>
-                        <th>差旅天数</th>
-                        <th>差旅方式</th>
-                        <th>申请人</th>
-                        <th>状态</th>
-                        <th>预算</th>
-                        <th>创建时间</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for travel in page_obj %}
-                    <tr>
-                        <td>
-                            <a href="{% url 'admin_pages:travel_detail' travel_id=travel.id %}" class="text-decoration-none">
-                                <code>{{ travel.application_number }}</code>
-                            </a>
-                        </td>
-                        <td>
-                            <a href="{% url 'admin_pages:travel_detail' travel_id=travel.id %}" class="text-decoration-none">
-                                {{ travel.destination }}
-                            </a>
-                        </td>
-                        <td>
-                            <div class="small">
-                                <div>{{ travel.start_date|date:"Y-m-d" }} 至</div>
-                                <div>{{ travel.end_date|date:"Y-m-d" }}</div>
-                            </div>
-                        </td>
-                        <td>{{ travel.travel_days }} 天</td>
-                        <td>
-                            <span class="method-badge method-{{ travel.travel_method }}">
-                                {{ travel.get_travel_method_display }}
-                            </span>
-                        </td>
-                        <td>{{ travel.applicant.get_full_name|default:travel.applicant.username }}</td>
-                        <td>
-                            <span class="status-badge status-{{ travel.status }}">
-                                {{ travel.get_status_display }}
-                            </span>
-                        </td>
-                        <td>
-                            {% if travel.travel_budget %}
-                            ¥{{ travel.travel_budget|floatformat:2 }}
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
-                        <td>{{ travel.created_time|date:"Y-m-d H:i" }}</td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="{% url 'admin_pages:travel_detail' travel_id=travel.id %}" class="btn btn-outline-primary" title="查看详情">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                {% if travel.status in 'draft,pending_approval' and travel.applicant == request.user %}
-                                <a href="{% url 'admin_pages:travel_update' travel_id=travel.id %}" class="btn btn-outline-secondary" title="编辑">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                {% endif %}
-                                {% if travel.status == 'pending_approval' %}
-                                <a href="{% url 'admin_pages:travel_approve' travel_id=travel.id %}" class="btn btn-outline-success" title="审批">
-                                    <i class="bi bi-check-circle"></i>
-                                </a>
-                                <a href="{% url 'admin_pages:travel_reject' travel_id=travel.id %}" class="btn btn-outline-danger" title="拒绝">
-                                    <i class="bi bi-x-circle"></i>
-                                </a>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="10" class="text-center py-5">
-                            <div class="empty-state">
-                                <div class="empty-state-icon">✈️</div>
-                                <div class="empty-state-title">暂无数据</div>
-                                <div class="empty-state-text">当前筛选条件下没有找到差旅申请记录</div>
-                                <a href="{% url 'admin_pages:travel_create' %}" class="btn btn-primary mt-3">
-                                    <i class="bi bi-plus-circle"></i> 创建第一个申请
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {% if page_obj.has_other_pages %}
-        <nav aria-label="分页导航" class="mt-4">
-            <ul class="pagination justify-content-center">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if travel_method %}&travel_method={{ travel_method }}{% endif %}">首页</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if travel_method %}&travel_method={{ travel_method }}{% endif %}">上一页</a>
-                </li>
-                {% endif %}
-
-                <li class="page-item active">
-                    <span class="page-link">第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页</span>
-                </li>
-
-                {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if travel_method %}&travel_method={{ travel_method }}{% endif %}">下一页</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if travel_method %}&travel_method={{ travel_method }}{% endif %}">末页</a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
-        {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon">✈️</div>
-            <div class="empty-state-title">暂无数据</div>
-            <div class="empty-state-text">当前筛选条件下没有找到差旅申请记录</div>
-            <a href="{% url 'admin_pages:travel_create' %}" class="btn btn-primary mt-3">
-                <i class="bi bi-plus-circle"></i> 创建第一个申请
-            </a>
-        </div>
-        {% endif %}
-    </div>
+{# 操作栏 - 顶部操作按钮 #}
+{% block list_action_bar_content %}
+<div class="list-page-action-bar">
+  <div class="list-page-action-bar-left">
+    {# 可以添加搜索框等 #}
+  </div>
+  <div class="list-page-action-bar-right">
+    <a href="{% url 'admin_pages:travel_create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> 创建申请
+    </a>
+  </div>
 </div>
-{% endblock %}
+{% endblock list_action_bar_content %}
+
+{# 筛选器区域 #}
+{% block list_filters_content %}
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">搜索</label>
+    <input type="text" name="search" class="form-control" placeholder="搜索申请单号、目的地、事由..." value="{{ search }}">
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">状态</label>
+    <select name="status" class="form-select">
+      <option value="">全部状态</option>
+      {% for code, label in status_choices %}
+      <option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">差旅方式</label>
+    <select name="travel_method" class="form-select">
+      <option value="">全部方式</option>
+      {% for code, label in travel_method_choices %}
+      <option value="{{ code }}" {% if travel_method == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+{% endblock list_filters_content %}
+
+{# 表格表头 #}
+{% block list_table_headers %}
+  <th>申请单号</th>
+  <th>目的地</th>
+  <th>差旅时间</th>
+  <th>差旅天数</th>
+  <th>差旅方式</th>
+  <th>申请人</th>
+  <th>状态</th>
+  <th>预算</th>
+  <th>创建时间</th>
+  <th>操作</th>
+{% endblock list_table_headers %}
+
+{# 表格行 #}
+{% block list_table_rows %}
+  {% if page_obj %}
+    {% for travel in page_obj %}
+    <tr>
+      <td>
+        <a href="{% url 'admin_pages:travel_detail' travel_id=travel.id %}" class="text-decoration-none">
+          <code>{{ travel.application_number }}</code>
+        </a>
+      </td>
+      <td>
+        <a href="{% url 'admin_pages:travel_detail' travel_id=travel.id %}" class="text-decoration-none">
+          {{ travel.destination }}
+        </a>
+      </td>
+      <td>
+        <div class="small">
+          <div>{{ travel.start_date|date:"Y-m-d" }} 至</div>
+          <div>{{ travel.end_date|date:"Y-m-d" }}</div>
+        </div>
+      </td>
+      <td>{{ travel.travel_days }} 天</td>
+      <td>
+        {% if travel.travel_method == 'plane' %}
+        <span class="badge bg-info">飞机</span>
+        {% elif travel.travel_method == 'train' %}
+        <span class="badge bg-warning">火车</span>
+        {% elif travel.travel_method == 'bus' %}
+        <span class="badge bg-secondary">汽车</span>
+        {% elif travel.travel_method == 'self_drive' %}
+        <span class="badge bg-success">自驾</span>
+        {% else %}
+        <span class="badge bg-secondary">其他</span>
+        {% endif %}
+      </td>
+      <td>{{ travel.applicant.get_full_name|default:travel.applicant.username }}</td>
+      <td>
+        {% if travel.status == 'draft' %}
+        <span class="badge bg-secondary">草稿</span>
+        {% elif travel.status == 'pending_approval' %}
+        <span class="badge bg-warning">待审批</span>
+        {% elif travel.status == 'approved' %}
+        <span class="badge bg-success">已批准</span>
+        {% elif travel.status == 'rejected' %}
+        <span class="badge bg-danger">已拒绝</span>
+        {% elif travel.status == 'in_progress' %}
+        <span class="badge bg-info">进行中</span>
+        {% elif travel.status == 'completed' %}
+        <span class="badge bg-success">已完成</span>
+        {% elif travel.status == 'cancelled' %}
+        <span class="badge bg-danger">已取消</span>
+        {% else %}
+        <span class="badge bg-secondary">{{ travel.get_status_display }}</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if travel.travel_budget %}
+        ¥{{ travel.travel_budget|floatformat:2 }}
+        {% else %}
+        -
+        {% endif %}
+      </td>
+      <td>{{ travel.created_time|date:"Y-m-d H:i" }}</td>
+      <td>
+        <div class="list-page-table-actions">
+          <a href="{% url 'admin_pages:travel_detail' travel_id=travel.id %}" class="action-view" title="查看详情">
+            <i class="bi bi-eye"></i>
+          </a>
+          {% if travel.status in 'draft,pending_approval' and travel.applicant == request.user %}
+          <span class="action-separator">|</span>
+          <a href="{% url 'admin_pages:travel_update' travel_id=travel.id %}" class="action-edit" title="编辑">
+            <i class="bi bi-pencil"></i>
+          </a>
+          {% endif %}
+          {% if travel.status == 'pending_approval' %}
+          <span class="action-separator">|</span>
+          <a href="{% url 'admin_pages:travel_approve' travel_id=travel.id %}" class="action-edit" title="审批">
+            <i class="bi bi-check-circle"></i>
+          </a>
+          <span class="action-separator">|</span>
+          <a href="{% url 'admin_pages:travel_reject' travel_id=travel.id %}" class="action-delete" title="拒绝">
+            <i class="bi bi-x-circle"></i>
+          </a>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+    {% empty %}
+    {# 空状态 - 当 page_obj 存在但没有数据时显示 #}
+    <tr>
+      <td colspan="10" class="list-empty">
+        <div class="list-empty-icon">✈️</div>
+        <div class="list-empty-text">暂无数据</div>
+        {% block list_empty_hint %}
+        <div class="list-empty-hint">
+          当前筛选条件下没有找到差旅申请记录。
+        </div>
+        {% endblock list_empty_hint %}
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+    {# 空状态 - 当 page_obj 不存在时显示 #}
+    <tr>
+      <td colspan="10" class="list-empty">
+        <div class="list-empty-icon">✈️</div>
+        <div class="list-empty-text">暂无数据</div>
+        <div class="list-empty-hint">
+          当前筛选条件下没有找到差旅申请记录。
+        </div>
+      </td>
+    </tr>
+  {% endif %}
+{% endblock list_table_rows %}

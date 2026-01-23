@@ -217,14 +217,14 @@
 {% block detail_approval_url %}{% url 'plan_pages:plan_approval_list' %}{% endblock %}
 
 {% block detail_other_actions %}{% endblock detail_other_actions %}
-{% block detail_approval_button_header %}
-  {% if can_approve %}
-  <a href="#" class="btn btn-warning">
-    <i class="fas fa-check-circle"></i>
-    审批
-  </a>
-  {% endif %}
-{% endblock detail_approval_button_header %}
+
+{% block detail_submit_approval_url %}
+{% url 'plan_pages:plan_request_start' plan.id %}
+{% endblock detail_submit_approval_url %}
+
+{% block detail_submit_approval %}
+{{ block.super }}
+{% endblock detail_submit_approval %}
 
 {% block detail_other_actions_header %}
   {# 申请调整 #}
@@ -268,36 +268,23 @@
 
 {% block detail_modification_history_content %}
   {% if progress_records %}
-  <div class="table-responsive">
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th>记录时间</th>
-          <th>进度</th>
-          <th>记录人</th>
-          <th>备注</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for record in progress_records %}
-        <tr>
-          <td>{{ record.recorded_time|date:"Y-m-d H:i" }}</td>
-          <td><strong>{{ record.progress }}%</strong></td>
-          <td>
-            {% if record.recorded_by %}
-              {{ record.recorded_by.get_full_name|default:record.recorded_by.username }}
-            {% else %}
-              -
-            {% endif %}
-          </td>
-          <td>{{ record.notes|default:"-" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="text-muted">暂无进度记录</div>
+    {% for record in progress_records %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ record.recorded_time|date:"Y-m-d H:i" }}</td>
+      <td>
+        {% if record.recorded_by %}
+          {{ record.recorded_by.get_full_name|default:record.recorded_by.username }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>进度</td>
+      <td>-</td>
+      <td><strong>{{ record.progress }}%</strong></td>
+      <td>{{ record.notes|default:"-" }}</td>
+    </tr>
+    {% endfor %}
   {% endif %}
 {% endblock detail_modification_history_content %}
 
@@ -339,8 +326,6 @@
       </tbody>
     </table>
   </div>
-  {% else %}
-  <div class="text-muted">暂无状态变更记录</div>
   {% endif %}
 {% endblock detail_status_history_content %}
 {% block detail_status_timestamps_content %}
@@ -382,32 +367,23 @@
 {% block detail_audit_log_content %}
   {# 不作为记录 #}
   {% if inactivity_logs %}
-  <div class="table-responsive">
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th>检测时间</th>
-          <th>时间段</th>
-          <th>原因</th>
-          <th>说明</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for log in inactivity_logs %}
-        <tr>
-          <td>{{ log.detected_at|date:"Y-m-d H:i" }}</td>
-          <td>
-            {{ log.period_start|date:"Y-m-d" }} 至 {{ log.period_end|date:"Y-m-d" }}
-          </td>
-          <td>{{ log.get_reason_display|default:log.reason }}</td>
-          <td>{{ log.description|default:"-" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="text-muted">暂无不作为记录</div>
+    {% for log in inactivity_logs %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ log.detected_at|date:"Y-m-d H:i" }}</td>
+      <td>
+        {% if log.detected_by %}
+          {{ log.detected_by.get_full_name|default:log.detected_by.username }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>不作为检测</td>
+      <td>{{ log.period_start|date:"Y-m-d" }} 至 {{ log.period_end|date:"Y-m-d" }} | {{ log.get_reason_display|default:log.reason }}</td>
+      <td>-</td>
+      <td>{{ log.description|default:"-" }}</td>
+    </tr>
+    {% endfor %}
   {% endif %}
 {% endblock detail_audit_log_content %}
 
@@ -795,6 +771,15 @@
     background-color: #333333 !important;
     color: #FFFFFF !important;
     border-color: #333333 !important;
+  }
+  
+  .detail-page-container .btn:disabled,
+  .detail-page-container .btn-success:disabled {
+    background-color: #CCCCCC !important;
+    color: #666666 !important;
+    border-color: #CCCCCC !important;
+    opacity: 1 !important;
+    cursor: not-allowed !important;
   }
   
   .two-col-content .btn-group .btn,

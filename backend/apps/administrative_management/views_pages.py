@@ -64,7 +64,7 @@ from backend.apps.administrative_management.models import (
 from .forms import (
     OfficeSupplyForm, SupplyCategoryForm, MeetingRoomForm, MeetingRoomBookingForm, MeetingForm, MeetingRecordForm,
     VehicleForm, VehicleBookingForm, ReceptionRecordForm,
-    AnnouncementForm, SealForm, FixedAssetForm, ExpenseReimbursementForm, ExpenseItemForm,
+    AnnouncementForm, SealForm, SealBorrowingForm, SealUsageForm, FixedAssetForm, ExpenseReimbursementForm, ExpenseItemForm,
     AdministrativeAffairForm, AffairProgressRecordForm, TravelApplicationForm,
     SupplierForm, PurchaseContractForm, PurchasePaymentForm,
     InventoryCheckForm, InventoryCheckItemForm, InventoryAdjustForm, InventoryAdjustItemForm,
@@ -86,25 +86,27 @@ ExpenseItemFormSet = inlineformset_factory(
 # 行政管理模块左侧导航菜单结构（分组格式）
 ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
     {
+        'id': 'administrative_home',
+        'label': '行政管理首页',
+        'url_name': 'admin_pages:administrative_home',
+        'permission': None,
+        'path_keywords': ['administrative_home', 'administrative'],
+        'icon': 'bi-house-door',
+    },
+    {
         'id': 'affairs',
         'label': '行政事务',
         'icon': '📋',
         'permission': None,  # 所有用户都可以访问
-        'expanded': True,
+        'expanded': False,
         'children': [
-            {
-                'id': 'administrative_home',
-                'label': '行政管理首页',
-                'url_name': 'admin_pages:administrative_home',
-                'permission': None,
-                'path_keywords': ['administrative_home', 'administrative'],
-            },
             {
                 'id': 'affair_list',
                 'label': '行政事务列表',
                 'url_name': 'admin_pages:affair_list',
                 'permission': None,
                 'path_keywords': ['affair'],
+                'icon': 'bi-list-task',
             },
         ],
     },
@@ -121,6 +123,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:supplies_management',
                 'permission': 'administrative_management.supplies.view',
                 'path_keywords': ['supplies', 'supply'],
+                'icon': 'bi-box',
             },
             {
                 'id': 'supply_category',
@@ -128,6 +131,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:supply_category_list',
                 'permission': 'administrative_management.supplies.view',
                 'path_keywords': ['supplies/categories', 'category'],
+                'icon': 'bi-tags',
             },
             {
                 'id': 'supply_purchase',
@@ -135,6 +139,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:supply_purchase_list',
                 'permission': 'administrative_management.supplies.view',
                 'path_keywords': ['supplies/purchases', 'purchase'],
+                'icon': 'bi-cart',
             },
             {
                 'id': 'supply_request',
@@ -142,6 +147,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:supply_request_list',
                 'permission': 'administrative_management.supplies.view',
                 'path_keywords': ['supplies/requests', 'request'],
+                'icon': 'bi-handbag',
             },
             {
                 'id': 'inventory_check',
@@ -149,6 +155,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:inventory_check_list',
                 'permission': 'administrative_management.supplies.view',
                 'path_keywords': ['supplies/inventory/checks', 'inventory_check'],
+                'icon': 'bi-clipboard-check',
             },
             {
                 'id': 'inventory_adjust',
@@ -156,6 +163,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:inventory_adjust_list',
                 'permission': 'administrative_management.supplies.view',
                 'path_keywords': ['supplies/inventory/adjusts', 'inventory_adjust'],
+                'icon': 'bi-arrow-left-right',
             },
         ],
     },
@@ -172,6 +180,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:meeting_room_management',
                 'permission': 'administrative_management.meeting_room.view',
                 'path_keywords': ['meeting', 'meeting_room'],
+                'icon': 'bi-door-open',
             },
             {
                 'id': 'meeting_room_booking',
@@ -179,6 +188,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:meeting_room_booking_list',
                 'permission': 'administrative_management.meeting_room.view',
                 'path_keywords': ['meeting-rooms/bookings', 'booking'],
+                'icon': 'bi-calendar-check',
             },
             {
                 'id': 'meeting_list',
@@ -186,6 +196,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:meeting_list',
                 'permission': 'administrative_management.meeting_room.view',
                 'path_keywords': ['meetings', 'meeting'],
+                'icon': 'bi-people',
             },
         ],
     },
@@ -202,6 +213,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:vehicle_management',
                 'permission': 'administrative_management.vehicle.view',
                 'path_keywords': ['vehicle'],
+                'icon': 'bi-car-front',
             },
             {
                 'id': 'vehicle_booking',
@@ -209,6 +221,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:vehicle_booking_list',
                 'permission': 'administrative_management.vehicle.view',
                 'path_keywords': ['vehicles/bookings', 'booking'],
+                'icon': 'bi-calendar-event',
             },
         ],
     },
@@ -225,6 +238,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:asset_management',
                 'permission': 'administrative_management.asset.view',
                 'path_keywords': ['asset'],
+                'icon': 'bi-building',
             },
             {
                 'id': 'asset_transfer',
@@ -232,6 +246,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:asset_transfer_list',
                 'permission': 'administrative_management.asset.view',
                 'path_keywords': ['assets/transfers', 'transfer'],
+                'icon': 'bi-arrow-left-right',
             },
         ],
     },
@@ -248,6 +263,39 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:seal_management',
                 'permission': 'administrative_management.seal.view',
                 'path_keywords': ['seal'],
+                'icon': 'bi-shield-lock',
+            },
+            {
+                'id': 'seal_borrowing_create',
+                'label': '申请借用',
+                'url_name': 'admin_pages:seal_borrowing_create',
+                'permission': 'administrative_management.seal.borrow',  # 优先使用 borrow 权限，如果没有则 fallback 到 view
+                'path_keywords': ['seal.*borrow', 'borrow'],
+                'icon': 'bi-box-arrow-in-right',
+            },
+            {
+                'id': 'seal_borrowing_return_list',
+                'label': '归还印章',
+                'url_name': 'admin_pages:seal_borrowing_return_list',
+                'permission': 'administrative_management.seal.view',  # 有查看权限即可归还
+                'path_keywords': ['seal.*return', 'return'],
+                'icon': 'bi-box-arrow-in-left',
+            },
+            {
+                'id': 'seal_usage_create',
+                'label': '申请用印',
+                'url_name': 'admin_pages:seal_usage_create',
+                'permission': 'administrative_management.seal.view',  # 有查看权限即可申请用印
+                'path_keywords': ['seal.*usage', 'usage'],
+                'icon': 'bi-file-earmark-text',
+            },
+            {
+                'id': 'seal_create',
+                'label': '新增印章',
+                'url_name': 'admin_pages:seal_create',
+                'permission': 'administrative_management.seal.create',
+                'path_keywords': ['seal.*create', 'seals/create'],
+                'icon': 'bi-plus-circle',
             },
         ],
     },
@@ -264,6 +312,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:reception_management',
                 'permission': 'administrative_management.reception.view',
                 'path_keywords': ['reception'],
+                'icon': 'bi-person-heart',
             },
         ],
     },
@@ -280,6 +329,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:travel_list',
                 'permission': 'administrative_management.travel.view',
                 'path_keywords': ['travel', 'expense'],
+                'icon': 'bi-airplane',
             },
             {
                 'id': 'expense_management',
@@ -287,6 +337,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:expense_management',
                 'permission': 'administrative_management.travel.view',
                 'path_keywords': ['expenses', 'expense'],
+                'icon': 'bi-receipt',
             },
         ],
     },
@@ -303,6 +354,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:supplier_list',
                 'permission': 'administrative_management.supplies.view',
                 'path_keywords': ['suppliers', 'supplier'],
+                'icon': 'bi-truck',
             },
             {
                 'id': 'purchase_contract',
@@ -310,6 +362,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:purchase_contract_list',
                 'permission': 'administrative_management.supplies.view',
                 'path_keywords': ['purchases/contracts', 'contract'],
+                'icon': 'bi-file-earmark-text',
             },
             {
                 'id': 'purchase_payment',
@@ -317,6 +370,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:purchase_payment_list',
                 'permission': 'administrative_management.supplies.view',
                 'path_keywords': ['purchases/payments', 'payment'],
+                'icon': 'bi-credit-card',
             },
         ],
     },
@@ -333,6 +387,7 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:announcement_management',
                 'permission': None,
                 'path_keywords': ['announcements', 'announcement'],
+                'icon': 'bi-megaphone',
             },
         ],
     },
@@ -375,13 +430,74 @@ def _build_administrative_sidebar_nav(permission_set, request_path=None, active_
             if group.get('permission') and not _permission_granted(group['permission'], permission_set):
                 continue
             
-            # 构建子菜单项
+            # 处理顶级菜单项（没有 children 的菜单项）
+            if 'children' not in group or not group.get('children'):
+                # 这是一个顶级菜单项，直接添加
+                try:
+                    # 检查权限
+                    if group.get('permission') and not _permission_granted(group['permission'], permission_set):
+                        continue
+                    
+                    # 获取URL
+                    try:
+                        url = reverse(group['url_name'])
+                    except NoReverseMatch:
+                        url = '#'
+                    
+                    # 判断是否激活
+                    active = False
+                    if active_id:
+                        active = group.get('id') == active_id
+                    elif request_path:
+                        # 特殊处理首页
+                        if group.get('id') == 'administrative_home':
+                            try:
+                                home_url = reverse('admin_pages:administrative_home')
+                                try:
+                                    home_url2 = reverse('admin_pages:administrative_management_home')
+                                except NoReverseMatch:
+                                    home_url2 = None
+                                active = (
+                                    request_path == home_url or
+                                    (home_url2 and request_path == home_url2) or
+                                    request_path == '/administrative/' or
+                                    request_path == '/administrative/home/'
+                                )
+                            except NoReverseMatch:
+                                pass
+                        if not active:
+                            for keyword in group.get('path_keywords', []):
+                                if keyword in request_path:
+                                    active = True
+                                    break
+                    
+                    menu_groups.append({
+                        'label': group['label'],
+                        'url': url,
+                        'active': active,
+                        'icon': group.get('icon', ''),
+                        'is_top_level': True,  # 标记为顶级菜单项
+                    })
+                except Exception as e:
+                    logger.warning('构建顶级菜单项失败: %s, 错误: %s', group.get('label', 'unknown'), str(e))
+                    continue
+                continue  # 跳过后续的分组处理逻辑
+            
+            # 构建子菜单项（分组菜单）
             children = []
             for child in group.get('children', []):
                 try:
-                    # 检查子项权限
-                    if child.get('permission') and not _permission_granted(child['permission'], permission_set):
-                        continue
+                    # 检查子项权限（支持 fallback）
+                    child_permission = child.get('permission')
+                    if child_permission:
+                        # 特殊处理：印章借用权限 fallback 到查看权限
+                        if child_permission == 'administrative_management.seal.borrow':
+                            if not _permission_granted(child_permission, permission_set) and \
+                               not _permission_granted('administrative_management.seal.view', permission_set):
+                                continue
+                        else:
+                            if not _permission_granted(child_permission, permission_set):
+                                continue
                     
                     # 获取URL
                     try:
@@ -420,6 +536,7 @@ def _build_administrative_sidebar_nav(permission_set, request_path=None, active_
                         'label': child['label'],
                         'url': url,
                         'active': active,
+                        'icon': child.get('icon', ''),
                     })
                 except Exception as e:
                     logger.warning('构建子菜单项失败: %s, 错误: %s', child.get('label', 'unknown'), str(e))
@@ -2487,6 +2604,368 @@ def seal_update(request, seal_id):
 
 
 @login_required
+def seal_borrowing_create(request):
+    """申请借用印章"""
+    permission_codes = get_user_permission_codes(request.user)
+    # 检查是否有申请借用权限，如果没有则检查查看权限（向后兼容）
+    if not _permission_granted('administrative_management.seal.borrow', permission_codes) and \
+       not _permission_granted('administrative_management.seal.view', permission_codes):
+        messages.error(request, '您没有权限申请借用印章')
+        return redirect('admin_pages:seal_management')
+    
+    if request.method == 'POST':
+        form = SealBorrowingForm(request.POST, user=request.user)
+        if form.is_valid():
+            borrowing = form.save(commit=False)
+            # 设置默认借用人为当前用户（如果未指定）
+            if not borrowing.borrower:
+                borrowing.borrower = request.user
+            borrowing.save()
+            
+            # 启动审批流程
+            try:
+                from backend.apps.workflow_engine.models import WorkflowTemplate
+                from backend.apps.workflow_engine.services import ApprovalEngine
+                
+                # 获取印章借用审批流程
+                workflow = WorkflowTemplate.objects.filter(
+                    code='seal_borrowing_approval',
+                    status='active'
+                ).first()
+                
+                if workflow:
+                    # 启动审批流程
+                    approval_instance = ApprovalEngine.start_approval(
+                        workflow=workflow,
+                        content_object=borrowing,
+                        applicant=request.user,
+                        comment=f'申请借用印章：{borrowing.seal.seal_name}，借用事由：{borrowing.borrowing_reason[:50]}'
+                    )
+                    messages.success(request, f'印章借用申请 {borrowing.borrowing_number} 提交成功！审批流程已启动，审批单号：{approval_instance.instance_number}')
+                else:
+                    # 如果没有配置审批流程，使用原有的审批逻辑
+                    messages.success(request, f'印章借用申请 {borrowing.borrowing_number} 提交成功！')
+            except Exception as e:
+                logger.exception('启动审批流程失败: %s', str(e))
+                # 审批流程启动失败不影响申请提交
+                messages.warning(request, f'印章借用申请 {borrowing.borrowing_number} 提交成功，但审批流程启动失败：{str(e)}')
+            
+            return redirect('admin_pages:seal_management')
+    else:
+        form = SealBorrowingForm(initial={'borrower': request.user}, user=request.user)
+    
+    context = _context(
+        "申请借用印章",
+        "📝",
+        "提交印章借用申请",
+        request=request,
+        use_administrative_nav=True
+    )
+    context.update({
+        'form': form,
+        'is_create': True,
+    })
+    return render(request, "administrative_management/seal_borrowing_form.html", context)
+
+
+@login_required
+def seal_borrowing_return(request, borrowing_id):
+    """归还印章"""
+    borrowing = get_object_or_404(SealBorrowing, id=borrowing_id)
+    permission_codes = get_user_permission_codes(request.user)
+    
+    # 检查权限：借用人可以归还，或者有印章管理权限的人可以代为归还
+    can_return = (
+        borrowing.borrower == request.user or
+        _permission_granted('administrative_management.seal.view', permission_codes) or
+        _permission_granted('administrative_management.seal.manage', permission_codes)
+    )
+    
+    if not can_return:
+        messages.error(request, '您没有权限归还此印章')
+        return redirect('admin_pages:seal_detail', seal_id=borrowing.seal.id)
+    
+    # 检查状态：只有借用中或已批准的状态可以归还
+    if borrowing.status not in ['borrowed', 'approved']:
+        messages.error(request, f'只有借用中或已批准状态的印章可以归还，当前状态：{borrowing.get_status_display()}')
+        return redirect('admin_pages:seal_detail', seal_id=borrowing.seal.id)
+    
+    if request.method == 'POST':
+        actual_return_date = request.POST.get('actual_return_date')
+        return_notes = request.POST.get('return_notes', '').strip()
+        
+        if not actual_return_date:
+            messages.error(request, '请填写实际归还日期')
+            return redirect('admin_pages:seal_borrowing_return', borrowing_id=borrowing_id)
+        
+        try:
+            from datetime import datetime
+            return_date = datetime.strptime(actual_return_date, '%Y-%m-%d').date()
+            
+            # 更新借用记录
+            borrowing.actual_return_date = return_date
+            borrowing.return_received_by = request.user
+            borrowing.status = 'returned'
+            if return_notes:
+                borrowing.notes = (borrowing.notes + '\n归还备注：' + return_notes).strip()
+            borrowing.save()
+            
+            # 更新印章状态为可用
+            seal = borrowing.seal
+            seal.status = 'available'
+            seal.save(update_fields=['status'])
+            
+            messages.success(request, f'印章 {seal.seal_name} 已成功归还！')
+            return redirect('admin_pages:seal_detail', seal_id=seal.id)
+            
+        except ValueError:
+            messages.error(request, '归还日期格式不正确')
+            return redirect('admin_pages:seal_borrowing_return', borrowing_id=borrowing_id)
+        except Exception as e:
+            logger.exception('归还印章失败: %s', str(e))
+            messages.error(request, f'归还印章失败：{str(e)}')
+            return redirect('admin_pages:seal_detail', seal_id=borrowing.seal.id)
+    
+    # GET 请求，显示归还表单
+    context = _context(
+        "归还印章",
+        "🔙",
+        f"归还印章：{borrowing.seal.seal_name}",
+        request=request,
+        use_administrative_nav=True
+    )
+    context.update({
+        'borrowing': borrowing,
+        'seal': borrowing.seal,
+        'default_return_date': timezone.now().date(),
+    })
+    return render(request, "administrative_management/seal_borrowing_return.html", context)
+
+
+@login_required
+def seal_borrowing_return_list(request):
+    """归还印章列表（显示当前用户借用中的印章）"""
+    permission_codes = get_user_permission_codes(request.user)
+    if not _permission_granted('administrative_management.seal.view', permission_codes):
+        messages.error(request, '您没有权限查看印章归还列表')
+        return redirect('admin_pages:administrative_home')
+    
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    
+    # 获取当前用户借用中的印章记录
+    # 如果有管理权限，可以查看所有借用中的记录；否则只查看自己的
+    if _permission_granted('administrative_management.seal.manage', permission_codes):
+        borrowings = SealBorrowing.objects.filter(
+            status__in=['borrowed', 'approved']
+        ).select_related('seal', 'borrower', 'approver')
+    else:
+        borrowings = SealBorrowing.objects.filter(
+            borrower=request.user,
+            status__in=['borrowed', 'approved']
+        ).select_related('seal', 'borrower', 'approver')
+    
+    # 搜索功能
+    if search:
+        borrowings = borrowings.filter(
+            Q(borrowing_number__icontains=search) |
+            Q(seal__seal_name__icontains=search) |
+            Q(seal__seal_number__icontains=search) |
+            Q(borrower__username__icontains=search) |
+            Q(borrower__first_name__icontains=search) |
+            Q(borrower__last_name__icontains=search)
+        )
+    
+    # 排序和分页
+    borrowings = borrowings.order_by('-borrowing_date')
+    paginator = Paginator(borrowings, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = _context(
+        "归还印章",
+        "🔙",
+        "查看并归还借用中的印章",
+        request=request,
+        use_administrative_nav=True
+    )
+    context.update({
+        'page_obj': page_obj,
+        'borrowings': page_obj,
+        'search': search,
+    })
+    return render(request, "administrative_management/seal_borrowing_return_list.html", context)
+
+
+@login_required
+def seal_usage_create(request):
+    """申请用印"""
+    permission_codes = get_user_permission_codes(request.user)
+    # 检查是否有用印权限，如果没有则检查查看权限（向后兼容）
+    if not _permission_granted('administrative_management.seal.view', permission_codes):
+        messages.error(request, '您没有权限申请用印')
+        return redirect('admin_pages:seal_management')
+    
+    if request.method == 'POST':
+        form = SealUsageForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            usage = form.save(commit=False)
+            # 设置默认用印人为当前用户（如果未指定）
+            if not usage.used_by:
+                usage.used_by = request.user
+            usage.save()
+            
+            # 启动审批流程
+            try:
+                from backend.apps.workflow_engine.models import WorkflowTemplate
+                from backend.apps.workflow_engine.services import ApprovalEngine
+                
+                # 获取用印申请审批流程
+                workflow = WorkflowTemplate.objects.filter(
+                    code='seal_usage_approval',
+                    status='active'
+                ).first()
+                
+                if workflow:
+                    # 启动审批流程
+                    approval_instance = ApprovalEngine.start_approval(
+                        workflow=workflow,
+                        content_object=usage,
+                        applicant=request.user,
+                        comment=f'申请用印：{usage.seal.seal_name}，用印事由：{usage.usage_reason[:50]}'
+                    )
+                    messages.success(request, f'用印申请 {usage.usage_number} 提交成功！审批流程已启动，审批单号：{approval_instance.instance_number}')
+                else:
+                    # 如果没有配置审批流程，使用原有的逻辑
+                    messages.success(request, f'用印申请 {usage.usage_number} 提交成功！')
+            except Exception as e:
+                logger.exception('启动审批流程失败: %s', str(e))
+                # 审批流程启动失败不影响申请提交
+                messages.warning(request, f'用印申请 {usage.usage_number} 提交成功，但审批流程启动失败：{str(e)}')
+            
+            return redirect('admin_pages:seal_usage_list')
+    else:
+        form = SealUsageForm(user=request.user, initial={
+            'used_by': request.user,
+            'usage_date': timezone.now().date(),
+            'usage_time': timezone.now(),
+        })
+    
+    context = _context(
+        "申请用印",
+        "📝",
+        "提交用印申请",
+        request=request,
+        use_administrative_nav=True
+    )
+    context.update({
+        'form': form,
+        'is_create': True,
+    })
+    return render(request, "administrative_management/seal_usage_form.html", context)
+
+
+@login_required
+def seal_usage_list(request):
+    """用印记录列表"""
+    permission_codes = get_user_permission_codes(request.user)
+    if not _permission_granted('administrative_management.seal.view', permission_codes):
+        messages.error(request, '您没有权限查看用印记录')
+        return redirect('admin_pages:administrative_home')
+    
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    usage_type = request.GET.get('usage_type', '')
+    seal_id = request.GET.get('seal', '')
+    
+    # 获取用印记录
+    # 如果有管理权限，可以查看所有记录；否则只查看自己的
+    if _permission_granted('administrative_management.seal.manage', permission_codes):
+        usages = SealUsage.objects.all().select_related('seal', 'used_by', 'witness', 'borrowing')
+    else:
+        usages = SealUsage.objects.filter(
+            used_by=request.user
+        ).select_related('seal', 'used_by', 'witness', 'borrowing')
+    
+    # 搜索功能
+    if search:
+        usages = usages.filter(
+            Q(usage_number__icontains=search) |
+            Q(seal__seal_name__icontains=search) |
+            Q(seal__seal_number__icontains=search) |
+            Q(document_name__icontains=search) |
+            Q(usage_reason__icontains=search) |
+            Q(used_by__username__icontains=search) |
+            Q(used_by__first_name__icontains=search) |
+            Q(used_by__last_name__icontains=search)
+        )
+    
+    # 筛选
+    if usage_type:
+        usages = usages.filter(usage_type=usage_type)
+    if seal_id:
+        usages = usages.filter(seal_id=seal_id)
+    
+    # 排序和分页
+    usages = usages.order_by('-usage_date', '-usage_time')
+    paginator = Paginator(usages, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # 获取筛选选项
+    seal_choices = Seal.objects.filter(is_active=True).order_by('seal_name')
+    
+    context = _context(
+        "用印记录",
+        "📋",
+        "查看用印申请记录",
+        request=request,
+        use_administrative_nav=True
+    )
+    context.update({
+        'page_obj': page_obj,
+        'usages': page_obj,
+        'search': search,
+        'usage_type': usage_type,
+        'seal_id': seal_id,
+        'usage_type_choices': SealUsage.USAGE_TYPE_CHOICES,
+        'seal_choices': seal_choices,
+    })
+    return render(request, "administrative_management/seal_usage_list.html", context)
+
+
+@login_required
+def seal_usage_detail(request, usage_id):
+    """用印记录详情"""
+    usage = get_object_or_404(SealUsage, id=usage_id)
+    permission_codes = get_user_permission_codes(request.user)
+    
+    # 检查权限：用印人可以查看，或者有印章管理权限的人可以查看
+    can_view = (
+        usage.used_by == request.user or
+        _permission_granted('administrative_management.seal.view', permission_codes) or
+        _permission_granted('administrative_management.seal.manage', permission_codes)
+    )
+    
+    if not can_view:
+        messages.error(request, '您没有权限查看此用印记录')
+        return redirect('admin_pages:seal_usage_list')
+    
+    context = _context(
+        f"用印记录详情 - {usage.usage_number}",
+        "📋",
+        f"查看用印记录 {usage.usage_number} 的详细信息",
+        request=request,
+        use_administrative_nav=True
+    )
+    context.update({
+        'usage': usage,
+        'seal': usage.seal,
+    })
+    return render(request, "administrative_management/seal_usage_detail.html", context)
+
+
+@login_required
 def asset_create(request):
     """新增固定资产"""
     permission_codes = get_user_permission_codes(request.user)
@@ -3927,13 +4406,24 @@ def seal_detail(request, seal_id):
     """印章详情"""
     seal = get_object_or_404(Seal, id=seal_id)
     
-    # 获取借用记录
+    # 获取借用记录（最近10条）
     try:
         borrowings = SealBorrowing.objects.filter(seal=seal).select_related(
-            'borrower', 'approver', 'returned_by'
-        ).order_by('-borrow_date')[:10]
-    except Exception:
+            'borrower', 'approver', 'return_received_by'
+        ).order_by('-borrowing_date')[:10]
+    except Exception as e:
+        logger.exception('获取印章借用记录失败: %s', str(e))
         borrowings = []
+    
+    # 获取当前借用中的记录（状态为 borrowed 或 approved）
+    current_borrowing = None
+    try:
+        current_borrowing = SealBorrowing.objects.filter(
+            seal=seal,
+            status__in=['borrowed', 'approved']
+        ).select_related('borrower', 'approver').order_by('-borrowing_date').first()
+    except Exception as e:
+        logger.exception('获取当前借用记录失败: %s', str(e))
     
     context = _context(
         f"印章详情 - {seal.seal_name}",
@@ -3945,6 +4435,7 @@ def seal_detail(request, seal_id):
     context.update({
         'seal': seal,
         'borrowings': borrowings,
+        'current_borrowing': current_borrowing,
     })
     return render(request, "administrative_management/seal_detail.html", context)
 

@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.postgres.fields import ArrayField
 from backend.apps.system_management.models import User
 
 
@@ -34,6 +35,31 @@ class WorkflowTemplate(models.Model):
         ],
         default='notify',
         verbose_name='超时处理方式'
+    )
+    
+    # 适用模型配置
+    applicable_models = ArrayField(
+        models.TextField(),
+        verbose_name='适用模型',
+        help_text='指定此流程适用的业务模型，例如：businesscontract（合同）、businessopportunity（商机）、project（项目）等',
+        default=list,
+        blank=True,
+    )
+    
+    # 具体表单筛选条件
+    form_filter_conditions = models.JSONField(
+        verbose_name='表单筛选条件',
+        help_text='针对所选模型的具体表单筛选条件，JSON格式。例如：{"businesscontract": {"contract_type": ["sales", "purchase"]}}',
+        default=dict,
+        blank=True,
+    )
+    
+    # 子工作流配置
+    sub_workflow_trigger_condition = models.JSONField(
+        verbose_name='子工作流触发条件',
+        help_text='子工作流触发的条件配置，JSON格式',
+        default=dict,
+        blank=True,
     )
     
     # 审计字段
