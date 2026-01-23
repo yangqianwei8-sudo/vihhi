@@ -601,7 +601,6 @@ class PlanAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
             'fields': (
                 'content',
                 'plan_objective',
-                'acceptance_criteria',
             )
         }),
         ('责任人信息', {

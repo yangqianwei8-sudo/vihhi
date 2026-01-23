@@ -44,10 +44,6 @@ def request_start(plan: Plan, user, reason: str | None = None) -> PlanDecision:
     """
     _ensure_plan_status(plan, {"draft"}, "start_request")
     
-    # 提交审批前必须填写验收标准
-    if not plan.acceptance_criteria or not plan.acceptance_criteria.strip():
-        raise PlanDecisionError("提交审批前必须填写验收标准，明确说明如何判定计划完成")
-
     # 优先使用审批引擎
     try:
         from .plan_approval import PlanApprovalService

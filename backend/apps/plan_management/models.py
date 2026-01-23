@@ -532,12 +532,6 @@ class Plan(models.Model):
     # 计划内容
     content = models.TextField(max_length=5000, verbose_name='计划内容', help_text='支持富文本')
     plan_objective = models.TextField(max_length=1000, verbose_name='计划目标')
-    acceptance_criteria = models.CharField(
-        max_length=2000,
-        blank=False,
-        verbose_name='验收标准',
-        help_text='明确说明如何判定计划完成'
-    )
     
     # 时间信息
     start_time = models.DateTimeField(verbose_name='计划开始时间')

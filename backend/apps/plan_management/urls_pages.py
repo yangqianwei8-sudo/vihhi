@@ -33,7 +33,6 @@ urlpatterns = [
     
     # P1 决策接口（围绕 decision 的裁决）
     path("plans/<int:plan_id>/submit-approval/", views_pages.plan_submit_approval, name="plan_submit_approval"),
-    path("plans/<int:plan_id>/update-acceptance-criteria/", views_pages.plan_update_acceptance_criteria, name="plan_update_acceptance_criteria"),
     path("plans/<int:plan_id>/requests/cancel/", views_pages.plan_request_cancel, name="plan_request_cancel"),
     path("decisions/<int:decision_id>/approve/", views_pages.decision_approve, name="decision_approve"),
     path("decisions/<int:decision_id>/reject/", views_pages.decision_reject, name="decision_reject"),

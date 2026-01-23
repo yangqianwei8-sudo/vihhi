@@ -1190,9 +1190,8 @@ def plan_create(request):
                     else:
                         plan.level = 'company'
                 
-                # 如果是草稿保存，设置状态为 draft
-                if is_draft:
-                    plan.status = 'draft'
+                # 确保状态为 draft（无论是草稿还是正常创建，都应该是 draft 状态，以便后续提交审批）
+                plan.status = 'draft'
                 
                 plan.responsible_person = plan.responsible_person or request.user
                 plan.responsible_department = plan.responsible_department or (request.user.responsible_department if hasattr(request.user, 'responsible_department') else None)
@@ -1266,6 +1265,9 @@ def plan_create(request):
                 messages.success(request, f'计划已暂存为草稿（共 {len(created_plans)} 个计划）')
             else:
                 messages.success(request, f'成功创建 {len(created_plans)} 个计划')
+                # 正常创建（非草稿）时，提示用户可以直接提交审批
+                if len(created_plans) == 1:
+                    messages.info(request, '计划已创建，您可以在详情页直接提交审批')
             # 跳转到第一个计划的详情页（如果有）
             if created_plans:
                 return redirect('plan_pages:plan_detail', plan_id=created_plans[0].id)
@@ -1303,23 +1305,6 @@ def plan_create(request):
             context['cancel_url_name'] = 'plan_pages:plan_list'
             context['form_js_file'] = 'js/plan_form_date_calculator.js'
             context['form_page_subtitle_text'] = '请填写计划基本信息'
-            # 查询适用于计划的审批流程模板
-            from backend.apps.workflow_engine.models import WorkflowTemplate
-            available_workflows = WorkflowTemplate.objects.filter(
-                status='active',
-                applicable_models__contains=['plan']
-            ).order_by('name')
-            context['available_workflows'] = available_workflows
-            import json
-            context['workflow_details_json'] = json.dumps({str(wf.id): {
-                'name': wf.name,
-                'description': wf.description or '',
-                'allow_withdraw': wf.allow_withdraw,
-                'allow_reject': wf.allow_reject,
-                'allow_transfer': wf.allow_transfer,
-                'timeout_hours': wf.timeout_hours,
-                'timeout_action': wf.get_timeout_action_display() if wf.timeout_hours else None,
-            } for wf in available_workflows})
             return render(request, "plan_management/plan_form.html", context)
     else:
         # GET 请求：从 URL 参数中读取 plan_period（用于待办事项跳转）
@@ -1347,17 +1332,6 @@ def plan_create(request):
     context['cancel_url_name'] = 'plan_pages:plan_list'
     context['form_js_file'] = 'js/plan_form_date_calculator.js'
     context['form_page_subtitle_text'] = '请填写计划基本信息'
-    context['available_workflows'] = available_workflows
-    import json
-    context['workflow_details_json'] = json.dumps({str(wf.id): {
-        'name': wf.name,
-        'description': wf.description or '',
-        'allow_withdraw': wf.allow_withdraw,
-        'allow_reject': wf.allow_reject,
-        'allow_transfer': wf.allow_transfer,
-        'timeout_hours': wf.timeout_hours,
-        'timeout_action': wf.get_timeout_action_display() if wf.timeout_hours else None,
-    } for wf in available_workflows})
     return render(request, "plan_management/plan_form.html", context)
 
 
@@ -3885,6 +3859,21 @@ def plan_submit_approval(request, plan_id):
     
     # 使用通用审批服务提交审批
     try:
+        # 先检查审批流程模板是否存在
+        from backend.apps.workflow_engine.models import WorkflowTemplate
+        workflow_template = WorkflowTemplate.objects.filter(
+            code='plan_start_approval',
+            status='active'
+        ).first()
+        
+        if not workflow_template:
+            messages.error(request, '审批流程模板未配置，请联系管理员配置"计划启动审批"流程模板')
+            logger.error(f'审批流程模板不存在: plan_start_approval, plan_id={plan_id}')
+            return redirect('plan_pages:plan_detail', plan_id=plan_id)
+        
+        # 检查计划数据完整性（调试用）
+        logger.info(f'提交审批前检查计划数据: plan_id={plan_id}, name={plan.name}, content={bool(plan.content)}, start_time={plan.start_time}, end_time={plan.end_time}, status={plan.status}, responsible_person={plan.responsible_person}')
+        
         service = PlanStartApprovalService()
         comment = request.POST.get('comment', '')
         
@@ -3896,76 +3885,23 @@ def plan_submit_approval(request, plan_id):
         
         if instance:
             messages.success(request, f'已提交审批请求，审批实例编号：{instance.instance_number}')
+            logger.info(f'提交审批成功: instance_number={instance.instance_number}, plan_id={plan_id}')
         else:
-            messages.warning(request, '审批流程未配置，请联系管理员配置审批流程')
+            messages.error(request, '提交审批失败：审批流程未正确配置，请联系管理员')
+            logger.error(f'提交审批失败: 返回None, plan_id={plan_id}, workflow_code=plan_start_approval')
             
     except ValueError as e:
-        # 业务规则错误（如验收标准未填写、状态不允许等）
-        messages.error(request, str(e))
-        logger.warning(f'提交审批请求失败（业务规则）: {str(e)}, plan_id={plan_id}, user={request.user.username}')
+        # 业务规则错误（验证失败）
+        error_msg = str(e)
+        messages.error(request, f'提交审批失败：{error_msg}')
+        logger.warning(f'提交审批请求失败（业务规则验证）: {error_msg}, plan_id={plan_id}, user={request.user.username}, plan_status={plan.status}, plan_name={plan.name}')
     except Exception as e:
         # 其他异常（如数据库错误、审批引擎错误等）
         error_msg = str(e)
-        messages.error(request, f'提交审批请求失败: {error_msg}')
-        logger.error(f'提交审批请求失败（系统错误）: {str(e)}, plan_id={plan_id}, user={request.user.username}', exc_info=True)
+        messages.error(request, f'提交审批请求失败：{error_msg}')
+        logger.error(f'提交审批请求失败（系统错误）: {error_msg}, plan_id={plan_id}, user={request.user.username}', exc_info=True)
     
     return redirect('plan_pages:plan_detail', plan_id=plan_id)
-
-
-@require_http_methods(["POST"])
-@login_required
-def plan_update_acceptance_criteria(request, plan_id):
-    """快速更新计划验收标准（AJAX接口）"""
-    from django.http import JsonResponse
-    import logging
-    logger = logging.getLogger(__name__)
-    
-    permission_set = get_user_permission_codes(request.user)
-    plan = get_object_or_404(Plan, id=plan_id)
-    
-    # 权限检查：plan_management.plan.create 或负责人
-    can_edit = _permission_granted('plan_management.plan.create', permission_set) or plan.responsible_person == request.user
-    if not can_edit:
-        return JsonResponse({'success': False, 'error': '您没有权限编辑此计划'}, status=403)
-    
-    # 检查状态：允许草稿和已取消状态的计划编辑验收标准
-    if plan.status not in ['draft', 'cancelled']:
-        return JsonResponse({'success': False, 'error': f'只有草稿或已取消状态的计划可以编辑验收标准，当前状态：{plan.get_status_display()}'}, status=400)
-    
-    # 检查是否已存在待审批的实例
-    from django.contrib.contenttypes.models import ContentType
-    from backend.apps.workflow_engine.models import ApprovalInstance
-    
-    plan_content_type = ContentType.objects.get_for_model(Plan)
-    existing_pending_approval = ApprovalInstance.objects.filter(
-        content_type=plan_content_type,
-        object_id=plan.id,
-        workflow__code='plan_start_approval',
-        status__in=['pending', 'in_progress']
-    ).exists()
-    
-    if existing_pending_approval:
-        return JsonResponse({'success': False, 'error': '该计划已有待处理的启动请求，不能修改验收标准'}, status=400)
-    
-    # 获取验收标准
-    acceptance_criteria = request.POST.get('acceptance_criteria', '').strip()
-    
-    if not acceptance_criteria:
-        return JsonResponse({'success': False, 'error': '验收标准不能为空'}, status=400)
-    
-    # 更新验收标准
-    try:
-        plan.acceptance_criteria = acceptance_criteria
-        plan.save(update_fields=['acceptance_criteria'])
-        
-        return JsonResponse({
-            'success': True,
-            'message': '验收标准已更新',
-            'acceptance_criteria': acceptance_criteria
-        })
-    except Exception as e:
-        logger.error(f'更新验收标准失败: {str(e)}, plan_id={plan_id}, user={request.user.username}', exc_info=True)
-        return JsonResponse({'success': False, 'error': f'更新失败: {str(e)}'}, status=500)
 
 
 @login_required
