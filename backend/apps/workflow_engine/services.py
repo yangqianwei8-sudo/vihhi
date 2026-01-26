@@ -209,6 +209,8 @@ class ApprovalEngine:
                 logger.info(f'审批被驳回: {instance.instance_number}')
                 # 调用业务对象状态更新回调
                 ApprovalEngine._update_business_object_status(instance, 'rejected')
+                # 发送审批结果通知给提交人
+                ApprovalEngine._send_approval_result_notification(instance, 'rejected', approver)
                 return True
             
             elif result == 'transferred' and transferred_to:
@@ -245,6 +247,8 @@ class ApprovalEngine:
                         logger.info(f'审批流程完成: {instance.instance_number}')
                         # 调用业务对象状态更新回调
                         ApprovalEngine._update_business_object_status(instance, 'approved')
+                        # 发送审批结果通知给提交人
+                        ApprovalEngine._send_approval_result_notification(instance, 'approved', approver)
                     return True
             
             return False
@@ -353,7 +357,7 @@ class ApprovalEngine:
     
     @staticmethod
     def _send_approval_notification(instance: ApprovalInstance, approver: User, node: ApprovalNode):
-        """发送审批通知"""
+        """发送审批通知（给审批人）"""
         try:
             from django.urls import reverse
             from backend.apps.production_management.models import ProjectTeamNotification
@@ -429,6 +433,117 @@ class ApprovalEngine:
         except Exception as e:
             # 通知发送失败不应影响审批流程
             logger.error(f'发送审批通知异常: {str(e)}', exc_info=True)
+    
+    @staticmethod
+    def _send_approval_result_notification(instance: ApprovalInstance, approval_status: str, approver: User):
+        """
+        发送审批结果通知（给提交人）
+        
+        Args:
+            instance: 审批实例
+            approval_status: 审批状态 ('approved' 或 'rejected')
+            approver: 审批人
+        """
+        try:
+            from django.urls import reverse
+            from backend.apps.production_management.models import ProjectTeamNotification
+            
+            # 获取关联对象信息
+            content_obj = instance.content_type.get_object_for_this_type(id=instance.object_id)
+            obj_name = str(content_obj)[:50]
+            
+            # 生成通知标题和内容
+            if approval_status == 'approved':
+                title = f"[审批结果] {instance.workflow.name}已审批通过"
+                message = f"您的申请《{obj_name}》已审批通过"
+                if instance.final_comment:
+                    message += f"\n审批意见：{instance.final_comment}"
+                message += f"\n审批人：{approver.get_full_name() or approver.username}"
+                message += f"\n审批时间：{instance.completed_time.strftime('%Y-%m-%d %H:%M') if instance.completed_time else ''}"
+            elif approval_status == 'rejected':
+                title = f"[审批结果] {instance.workflow.name}已被驳回"
+                message = f"您的申请《{obj_name}》已被驳回"
+                if instance.final_comment:
+                    message += f"\n驳回原因：{instance.final_comment}"
+                message += f"\n审批人：{approver.get_full_name() or approver.username}"
+                message += f"\n审批时间：{instance.completed_time.strftime('%Y-%m-%d %H:%M') if instance.completed_time else ''}"
+            else:
+                logger.warning(f'未知的审批状态: {approval_status}')
+                return
+            
+            # 生成跳转链接（跳转到业务对象详情页或审批详情页）
+            action_url = ''
+            try:
+                # 尝试根据业务对象类型生成详情页链接
+                if instance.content_type.model == 'plan':
+                    action_url = reverse('plan_management:plan_detail', args=[instance.object_id])
+                elif instance.content_type.model == 'strategicgoal':
+                    action_url = reverse('plan_management:strategic_goal_detail', args=[instance.object_id])
+                else:
+                    # 默认跳转到审批详情页
+                    action_url = reverse('workflow_engine:approval_detail', args=[instance.id])
+            except:
+                try:
+                    action_url = reverse('workflow_engine:approval_detail', args=[instance.id])
+                except:
+                    pass
+            
+            # 尝试获取关联的项目（如果关联对象是项目）
+            project = None
+            if hasattr(content_obj, 'project'):
+                project = content_obj.project
+            elif instance.content_type.model == 'project':
+                from backend.apps.production_management.models import Project
+                try:
+                    project = Project.objects.get(id=instance.object_id)
+                except:
+                    pass
+            
+            # 创建通知（发送给提交人）
+            if project:
+                # 使用项目通知
+                ProjectTeamNotification.objects.create(
+                    project=project,
+                    recipient=instance.applicant,
+                    operator=approver,
+                    title=title,
+                    message=message,
+                    category='approval',  # 审批结果通知
+                    action_url=action_url,
+                    is_read=False,
+                    context={
+                        'approval_instance_id': instance.id,
+                        'approval_instance_number': instance.instance_number,
+                        'approval_status': approval_status,
+                        'content_type': instance.content_type.model,
+                        'object_id': instance.object_id,
+                    }
+                )
+                logger.info(f'已发送审批结果通知（项目）: {instance.instance_number}, 提交人: {instance.applicant.username}, 状态: {approval_status}')
+            else:
+                # 对于非项目相关的审批，创建通知（project 可以为 null）
+                ProjectTeamNotification.objects.create(
+                    project=None,
+                    recipient=instance.applicant,
+                    operator=approver,
+                    title=title,
+                    message=message,
+                    category='approval',  # 审批结果通知
+                    action_url=action_url,
+                    is_read=False,
+                    context={
+                        'approval_instance_id': instance.id,
+                        'approval_instance_number': instance.instance_number,
+                        'approval_status': approval_status,
+                        'content_type': instance.content_type.model,
+                        'object_id': instance.object_id,
+                    }
+                )
+                logger.info(f'已发送审批结果通知（非项目）: {instance.instance_number}, 提交人: {instance.applicant.username}, 状态: {approval_status}')
+                
+        except Exception as e:
+            # 通知发送失败不应影响审批流程
+            logger.error(f'发送审批结果通知异常: {str(e)}', exc_info=True)
     
     @staticmethod
     def _update_business_object_status(instance: ApprovalInstance, approval_status: str):

@@ -15,29 +15,24 @@
 </a>
 {% endblock %}
 
-{% block detail_basic_info_card %}
-<div class="detail-card-wrapper detail-card-wrapper-basic-info">
-  <div class="detail-card detail-card-basic-info">
+{# 基本信息卡片由基础模板自动提供，包含：所属部门、负责人、表单编号（用印单号） #}
+
+{% block detail_detail_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-detail-info">
+  <div class="detail-card detail-card-detail-info">
     <div class="detail-card-header">
       <h3 class="detail-card-title">
-        <i class="fas fa-info-circle"></i>
-        基本信息
+        <i class="fas fa-list-alt"></i>
+        详细信息
       </h3>
     </div>
     <div class="detail-card-body">
-      {# 第一排：用印单号、印章名称、用印类型、用印日期、用印时间（5个字段） #}
-      <div class="form-row-5 mb-3">
-        {# 用印单号 #}
-        <div class="col-5-fields detail-field-wrapper">
-          <div class="detail-field">
-            <label class="detail-field-label">用印单号</label>
-            <div class="detail-field-value">
-              <code>{{ usage.usage_number }}</code>
-            </div>
-          </div>
-        </div>
+      {% block detail_detail_info_rows %}
+      {# 第一排：印章名称、用印类型、用印日期（使用标准栅格：col-md-4，一行3个字段） #}
+      <div class="row mb-3">
+        {% block detail_detail_info_row1 %}
         {# 印章名称 #}
-        <div class="col-5-fields detail-field-wrapper">
+        <div class="col-md-4 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">印章名称</label>
             <div class="detail-field-value">
@@ -48,7 +43,7 @@
           </div>
         </div>
         {# 用印类型 #}
-        <div class="col-5-fields detail-field-wrapper">
+        <div class="col-md-4 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">用印类型</label>
             <div class="detail-field-value">
@@ -57,7 +52,7 @@
           </div>
         </div>
         {# 用印日期 #}
-        <div class="col-5-fields detail-field-wrapper">
+        <div class="col-md-4 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">用印日期</label>
             <div class="detail-field-value">
@@ -65,8 +60,14 @@
             </div>
           </div>
         </div>
+        {% endblock detail_detail_info_row1 %}
+      </div>
+
+      {# 第二排：用印时间、用印数量（使用标准栅格：col-md-6，一行2个字段） #}
+      <div class="row mb-3">
+        {% block detail_detail_info_row2 %}
         {# 用印时间 #}
-        <div class="col-5-fields detail-field-wrapper">
+        <div class="col-md-6 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">用印时间</label>
             <div class="detail-field-value">
@@ -74,12 +75,8 @@
             </div>
           </div>
         </div>
-      </div>
-
-      {# 第二排：用印数量、用印人、见证人（3个字段） #}
-      <div class="form-row-5 mb-3">
         {# 用印数量 #}
-        <div class="col-5-fields detail-field-wrapper">
+        <div class="col-md-6 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">用印数量</label>
             <div class="detail-field-value">
@@ -87,8 +84,14 @@
             </div>
           </div>
         </div>
+        {% endblock detail_detail_info_row2 %}
+      </div>
+
+      {# 第三排：用印人、见证人（使用标准栅格：col-md-6，一行2个字段） #}
+      <div class="row mb-3">
+        {% block detail_detail_info_row3 %}
         {# 用印人 #}
-        <div class="col-5-fields detail-field-wrapper">
+        <div class="col-md-6 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">用印人</label>
             <div class="detail-field-value">
@@ -97,7 +100,7 @@
           </div>
         </div>
         {# 见证人 #}
-        <div class="col-5-fields detail-field-wrapper">
+        <div class="col-md-6 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">见证人</label>
             <div class="detail-field-value">
@@ -109,37 +112,30 @@
             </div>
           </div>
         </div>
+        {% endblock detail_detail_info_row3 %}
       </div>
-    </div>
-  </div>
-</div>
-{% endblock detail_basic_info_card %}
 
-{% block detail_status_info_card %}
-<div class="detail-card-wrapper detail-card-wrapper-status-info">
-  <div class="detail-card detail-card-status-info">
-    <div class="detail-card-header">
-      <h3 class="detail-card-title">
-        <i class="fas fa-file-alt"></i>
-        用印信息
-      </h3>
-    </div>
-    <div class="detail-card-body">
-      <div class="form-row-5 mb-3">
-        {# 用印事由（占整行） #}
-        <div class="col-12 detail-field-wrapper">
+      {# 多行文本字段：用印事由（使用标准栅格：col-md-12，一行1个字段） #}
+      <div class="row mb-3">
+        {% block detail_detail_info_reason %}
+        <div class="col-md-12 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">用印事由</label>
-            <div class="detail-field-value" style="white-space: pre-wrap;">{{ usage.usage_reason }}</div>
+            <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+              {{ usage.usage_reason }}
+            </div>
           </div>
         </div>
+        {% endblock detail_detail_info_reason %}
       </div>
 
+      {# 第四排：文件名称、用印文件（使用标准栅格：col-md-6，一行2个字段） #}
       {% if usage.document_name or usage.document_file %}
-      <div class="form-row-5 mb-3">
+      <div class="row mb-3">
+        {% block detail_detail_info_row4 %}
         {% if usage.document_name %}
         {# 文件名称 #}
-        <div class="col-5-fields detail-field-wrapper">
+        <div class="col-md-6 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">文件名称</label>
             <div class="detail-field-value">
@@ -150,7 +146,7 @@
         {% endif %}
         {% if usage.document_file %}
         {# 用印文件 #}
-        <div class="col-5-fields detail-field-wrapper">
+        <div class="col-md-6 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">用印文件</label>
             <div class="detail-field-value">
@@ -161,24 +157,32 @@
           </div>
         </div>
         {% endif %}
+        {% endblock detail_detail_info_row4 %}
       </div>
       {% endif %}
 
+      {# 多行文本字段：备注（使用标准栅格：col-md-12，一行1个字段） #}
       {% if usage.notes %}
-      <div class="form-row-5 mb-3">
-        {# 备注（占整行） #}
-        <div class="col-12 detail-field-wrapper">
+      <div class="row mb-3">
+        {% block detail_detail_info_notes %}
+        <div class="col-md-12 detail-field-wrapper">
           <div class="detail-field">
             <label class="detail-field-label">备注信息</label>
-            <div class="detail-field-value" style="white-space: pre-wrap;">{{ usage.notes }}</div>
+            <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+              {{ usage.notes }}
+            </div>
           </div>
         </div>
+        {% endblock detail_detail_info_notes %}
       </div>
       {% endif %}
+      {% endblock detail_detail_info_rows %}
     </div>
   </div>
 </div>
-{% endblock detail_status_info_card %}
+{% endblock detail_detail_info_card %}
+
+{# 状态信息卡片由基础模板自动提供 #}
 
 {% block detail_related_info_card %}
 <div class="detail-card-wrapper detail-card-wrapper-related-info">

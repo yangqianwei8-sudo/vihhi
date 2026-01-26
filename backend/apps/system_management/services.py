@@ -44,3 +44,51 @@ def user_has_permission(user, *permission_codes: str) -> bool:
     if '__all__' in codes:
         return True
     return any(code in codes for code in permission_codes)
+
+
+def get_subordinate_users(user):
+    """
+    获取用户的下属列表
+    
+    判断逻辑：
+    1. 如果用户是部门负责人（department.leader == user），则返回该部门的所有成员（不包括自己）
+    2. 否则返回空查询集
+    
+    Args:
+        user: 用户对象
+    
+    Returns:
+        QuerySet: 下属用户查询集
+    """
+    from backend.apps.system_management.models import User
+    
+    if not user or not getattr(user, 'is_authenticated', False):
+        return User.objects.none()
+    
+    # 检查用户是否是部门负责人
+    if hasattr(user, 'department') and user.department and user.department.leader == user:
+        # 返回部门的所有成员（不包括自己）
+        return User.objects.filter(
+            department=user.department,
+            is_active=True
+        ).exclude(id=user.id)
+    
+    return User.objects.none()
+
+
+def is_department_manager(user):
+    """
+    判断用户是否是部门负责人
+    
+    Args:
+        user: 用户对象
+    
+    Returns:
+        bool: 是否是部门负责人
+    """
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    
+    return (hasattr(user, 'department') and 
+            user.department and 
+            user.department.leader == user)

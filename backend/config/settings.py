@@ -13,7 +13,7 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 # Default allowed hosts - 生产环境只允许公网域名
 # 重要：生产环境必须通过环境变量 ALLOWED_HOSTS 设置，只包含公网域名
 # 当前配置的公网域名：
-# - rasdmangrhdn.sealosbja.site (Port 8001, 可访问)
+# - rasdmangrhdn.sealosbja.site (Port 8002, 可访问)
 # - dbjhjowayeto.sealosbja.site (Port 8000, 准备中)
 DEFAULT_ALLOWED_HOSTS = 'rasdmangrhdn.sealosbja.site,dbjhjowayeto.sealosbja.site'
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', DEFAULT_ALLOWED_HOSTS).split(',') if h.strip()]

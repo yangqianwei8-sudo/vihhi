@@ -10,18 +10,31 @@ cd "$PROJECT_DIR" || exit 1
 # 激活虚拟环境
 source "$VENV_DIR/bin/activate" || exit 1
 
+# 检查并启动 cron 服务
+echo "检查 cron 定时任务服务..."
+if ! ps aux | grep -E "[c]ron|[/]usr/sbin/cron" > /dev/null 2>&1; then
+    echo "  启动 cron 服务..."
+    if sudo service cron start > /dev/null 2>&1; then
+        echo "✓ Cron 服务已启动"
+    else
+        echo "⚠ Cron 服务启动失败（可能需要手动启动: sudo service cron start）"
+    fi
+else
+    echo "✓ Cron 服务已在运行"
+fi
+
 # 停止旧的服务
 pkill -f "gunicorn.*wsgi" 2>/dev/null
 sleep 2
 
 # 启动 Gunicorn 服务
 # 支持环境变量 PORT（Sealos 等云平台会设置此变量）
-# 优先使用环境变量 PORT，其次尝试读取 .env.sealos 文件，最后默认 8001（Sealos 配置的端口）
+# 优先使用环境变量 PORT，其次尝试读取 .env.sealos 文件，最后默认 8002（生产服务器端口）
 if [ -z "$PORT" ] && [ -f "$PROJECT_DIR/../.env.sealos" ]; then
     source "$PROJECT_DIR/../.env.sealos"
 fi
-# Sealos DevBox 默认使用 8001 端口
-PORT=${PORT:-8001}
+# 生产服务器使用 8002 端口
+PORT=${PORT:-8002}
 BIND_ADDRESS=${BIND_ADDRESS:-0.0.0.0}
 
 # 计算最优workers数量：通常是(2 * CPU核心数) + 1
@@ -89,6 +102,16 @@ echo "访问地址:"
 echo "  - http://localhost:$PORT/login/"
 echo "  - http://127.0.0.1:$PORT/login/"
 echo "  - https://rasdmangrhdn.sealosbja.site/login/"
+echo ""
+echo "定时任务服务:"
+if ps aux | grep -E "[c]ron|[/]usr/sbin/cron" > /dev/null 2>&1; then
+    echo "  ✓ Cron 服务运行中"
+    echo "  - 查看定时任务: crontab -l"
+    echo "  - 查看定时任务日志: tail -f /home/devbox/project/logs/*.log"
+else
+    echo "  ⚠ Cron 服务未运行"
+    echo "  - 启动命令: sudo service cron start"
+fi
 echo ""
 echo "测试账号:"
 echo "  - tx / 123456 (商务经理)"

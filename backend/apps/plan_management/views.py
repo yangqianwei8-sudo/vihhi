@@ -31,6 +31,8 @@ from .adjudicator import adjudicate_plan_status
 from .filters import ListFilterSpec, apply_range, apply_mine_participating, apply_overdue
 from .audit import audit_plan_event
 from .notifications import notify_approvers, notify_submitter
+from backend.apps.system_management.services import get_user_permission_codes
+from .views_pages import _filter_plans_by_permission
 import logging
 
 logger = logging.getLogger(__name__)
@@ -794,10 +796,18 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
             return qs.none()
         qs = qs.filter(company=company)
         
+        # 应用权限过滤：员工只能看到本人的和公司级的工作计划
+        permission_set = get_user_permission_codes(user)
+        qs = _filter_plans_by_permission(qs, user, permission_set)
+        
         # A3-3-7: 使用统一的筛选逻辑
         spec = ListFilterSpec.from_params(self.request.query_params, allow_overdue=True)
         qs = apply_range(qs, "created_time", spec.range)
-        qs = apply_mine_participating(qs, user, spec.mine, spec.participating)
+        # 注意：apply_mine_participating 中的 participating 筛选已被权限过滤替代
+        # 但保留此功能以支持"我负责的"筛选
+        if spec.mine:
+            qs = qs.filter(responsible_person=user)
+        # 移除 participating 筛选，因为权限要求员工只能看到本人的和公司级的计划
         qs = apply_overdue(qs, spec.overdue)
         
         # 默认排序：离现在最近/最新
@@ -866,13 +876,14 @@ class PlanViewSet(AuditMixin, viewsets.ModelViewSet):
             raise ValidationError("status 禁止直接修改，请使用裁决接口（start-request/cancel-request + decide）")
 
         user = self.request.user
+        validated_data = serializer.validated_data
+
         old_company_id = instance.company_id
         old_dept_id = instance.org_department_id
         old_status = instance.status
         old_progress = instance.progress
 
         # A3-3-5 重算状态（如果进度或时间字段变更）
-        validated_data = serializer.validated_data
         should_recalc = any(key in validated_data for key in ['progress', 'start_time', 'end_time'])
         
         obj = serializer.save()

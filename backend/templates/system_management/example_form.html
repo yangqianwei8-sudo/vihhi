@@ -1,0 +1,117 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block pm_title %}示例表单{% endblock %}
+{% block pm_subtitle %}查看表单模板的使用示例和说明文档{% endblock %}
+
+{% block pm_content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h4 class="mb-0">
+            <i class="fas fa-file-alt"></i> create_form_base.html 模板说明
+          </h4>
+        </div>
+        <div class="card-body">
+          <h5>模板概述</h5>
+          <p>这是一个共享的表单创建模板，提供了统一的表单结构和布局规范。</p>
+          
+          <h5 class="mt-4">布局规则</h5>
+          <ul>
+            <li><strong>每排显示5个字段</strong>：使用 <code>form-row-5</code> 类和 <code>col-5-fields</code> 类</li>
+            <li><strong>多行文本字段</strong>：使用 <code>col-12</code>，占据整行</li>
+            <li><strong>多选字段</strong>：使用 <code>col-12</code>，占据整行</li>
+            <li><strong>字段包装</strong>：每个字段必须使用 <code>form-field-wrapper</code> 类包装</li>
+          </ul>
+          
+          <h5 class="mt-4">使用示例</h5>
+          <p>以下是一些使用该模板的实际表单页面：</p>
+          <ul>
+            <li><a href="{% url 'plan_pages:plan_create' %}" target="_blank">计划创建表单</a></li>
+            <li><a href="{% url 'admin_pages:seal_create' %}" target="_blank">印章创建表单</a></li>
+            <li><a href="{% url 'admin_pages:seal_usage_create' %}" target="_blank">印章使用表单</a></li>
+            <li><a href="{% url 'admin_pages:seal_borrowing_create' %}" target="_blank">印章借用表单</a></li>
+          </ul>
+          
+          <h5 class="mt-4">模板结构</h5>
+          <pre class="bg-light p-3 rounded"><code>{% verbatim %}{% extends "shared/create_form_base.html" %}
+
+{% block form_title %}创建XXX{% endblock %}
+{% block form_subtitle %}请填写表单信息{% endblock %}
+
+{% block form_first_row_fields %}
+  {# 第一排字段（最多5个） #}
+  &lt;div class="col-5-fields form-field-wrapper"&gt;
+    {# 字段内容 #}
+  &lt;/div&gt;
+{% endblock %}
+
+{% block form_fields %}
+  {# 其他字段 #}
+{% endblock %}
+
+{% block form_actions %}
+  &lt;button type="button" class="btn btn-primary" id="headerSubmitButton"&gt;创建&lt;/button&gt;
+  &lt;a href="{% url 'xxx:list' %}" class="btn btn-secondary"&gt;取消&lt;/a&gt;
+{% endblock %}{% endverbatim %}</code></pre>
+          
+          <h5 class="mt-4">可用的块（Blocks）</h5>
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>块名称</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>form_title</code></td>
+                <td>表单标题</td>
+              </tr>
+              <tr>
+                <td><code>form_subtitle</code></td>
+                <td>表单副标题</td>
+              </tr>
+              <tr>
+                <td><code>form_first_row_fields</code></td>
+                <td>第一排字段（最多5个字段）</td>
+              </tr>
+              <tr>
+                <td><code>form_second_row_fields</code></td>
+                <td>第二排字段（可选）</td>
+              </tr>
+              <tr>
+                <td><code>form_fields</code></td>
+                <td>其他表单字段</td>
+              </tr>
+              <tr>
+                <td><code>form_actions</code></td>
+                <td>表单操作按钮（创建、取消等）</td>
+              </tr>
+              <tr>
+                <td><code>form_header_actions</code></td>
+                <td>顶部操作按钮（返回列表等）</td>
+              </tr>
+              <tr>
+                <td><code>form_approval_workflow_card</code></td>
+                <td>审批流程配置卡片（可选）</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <h5 class="mt-4">注意事项</h5>
+          <div class="alert alert-info">
+            <ul class="mb-0">
+              <li>创建按钮必须使用 <code>id="headerSubmitButton"</code>，JavaScript 会监听此按钮的点击事件</li>
+              <li>如果字段不足5个，使用空的 <code>&lt;div class="col-5-fields form-field-wrapper"&gt;&lt;/div&gt;</code> 占位</li>
+              <li>多行文本字段和多选字段必须使用 <code>col-12</code>，不使用 <code>form-row-5</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

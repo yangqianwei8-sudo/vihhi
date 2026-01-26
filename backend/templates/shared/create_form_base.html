@@ -6,41 +6,25 @@
 
 【重要布局规则 - 必须遵守】
 ============================================
-1. 每排必须显示5个字段（使用 form-row-5 类和 col-5-fields 类）
-   - 固定字段区域（强制要求）：responsible_department, responsible_person, plan_number/form_number/goal_number（共3个）
-     * 这三个字段是所有继承此模板的表单的强制必需字段，必须显示在第一排的前三个位置
-     * 如果表单类中没有这些字段，模板会报错，提示开发者必须添加
-   - 第一排额外字段块（form_first_row_extra_fields）：最多添加2个字段，凑满5个字段
-   - 其他字段行：使用 form-row-5 类时，每行必须包含5个 col-5-fields 字段
-   - 如果字段不足5个，使用空的 <div class="col-5-fields form-field-wrapper"></div> 占位
+1. 字段布局使用 Bootstrap 栅格系统
+   - 可以使用 col-md-6（一行2个字段）、col-md-4（一行3个字段）、col-md-3（一行4个字段）等
+   - 根据实际需求灵活选择字段宽度
+   - 多行文本字段和多选字段建议使用 col-12 占据整行
 
-2. 多行文本字段和多选字段占据整行
-   - 多行文本字段（Textarea）使用 col-12，不使用 form-row-5
-   - 多选字段（SelectMultiple）使用 col-12，不使用 form-row-5
-
-3. 字段包装
+2. 字段包装
    - 每个字段必须使用 form-field-wrapper 类包装
-   - 格式：<div class="col-5-fields form-field-wrapper">...</div>
+   - 格式：<div class="col-md-6 form-field-wrapper">...</div>
 
-固定字段（强制要求，必须包含）：
-1. 所属部门（responsible_department）- 默认值：当前用户所在部门（默认，不可修改）
-2. 负责人（responsible_person）- 默认值：当前用户（默认，不可修改）
-3. 表单编号（form_number/plan_number/goal_number 三者之一）- 根据业务模块自动生成
+3. 多行文本字段和多选字段占据整行
+   - 多行文本字段（Textarea）使用 col-12
+   - 多选字段（SelectMultiple）使用 col-12
 
-注意：所有继承此模板的表单必须包含以上三个固定字段，且这三个字段必须显示在第一排的前三个位置。
-如果表单类中没有这些字段，模板会报错，提示开发者必须添加。
-
-布局说明：
-- 每行显示5个字段（使用 col-5-fields 自定义类）
-- 多行文本字段（Textarea）占据整行（col-12）
-- 多选字段（SelectMultiple）占据整行（col-12）
-- 使用 form-field-wrapper 类包装每个字段
-
-计划创建使用示例：
-1. 在第一排添加额外字段：使用 form_first_row_extra_fields 块（最多2个字段，凑满5个）
-2. 添加其他字段：使用 form_fields 块，每行使用 form-row-5 类时必须包含5个 col-5-fields 字段
-3. 自定义按钮：使用 form_draft_actions 和 form_actions 块
-4. 自定义操作按钮卡片：使用 form_header_actions_card 块（位于主副标题下方，可完全覆盖操作按钮卡片）
+【按钮样式规范 - 必须遵守】
+============================================
+1. 所有按钮必须使用系统定义的按钮类，禁止使用内联样式或自定义颜色
+2. 主要操作按钮（提交、创建、保存等）：使用 btn btn-primary 类
+3. 次要操作按钮（取消、返回等）：使用 btn btn-secondary 类
+4. 按钮样式会自动继承模板样式，使用CSS变量
 #}
 
 {% block module_styles %}
@@ -49,288 +33,297 @@
 
 {% block pm_title %}{% block form_title %}创建表单{% endblock form_title %}{% endblock pm_title %}
 {% block pm_subtitle %}{% block form_subtitle %}请填写表单信息{% endblock form_subtitle %}{% endblock pm_subtitle %}
+
 {% block pm_actions %}{% block form_header_actions %}
   {# 返回列表按钮：默认显示，可通过 list_url_name 或 cancel_url_name 配置列表URL #}
   {% if list_url %}
-    <a href="{{ list_url }}" class="btn btn-secondary">
-      返回列表
-    </a>
+    <a href="{{ list_url }}" class="btn btn-secondary">返回列表</a>
   {% elif list_url_name %}
-    <a href="{% url list_url_name %}" class="btn btn-secondary">
-      返回列表
-    </a>
+    <a href="{% url list_url_name %}" class="btn btn-secondary">返回列表</a>
   {% elif cancel_url_name %}
-    <a href="{% url cancel_url_name %}" class="btn btn-secondary">
-      返回列表
-    </a>
+    <a href="{% url cancel_url_name %}" class="btn btn-secondary">返回列表</a>
   {% else %}
-    {# 子模板可以覆盖此块来完全自定义，或提供默认列表URL #}
-    <a href="{% url 'home' %}" class="btn btn-secondary">
-      返回列表
-    </a>
+    <a href="{% url 'home' %}" class="btn btn-secondary">返回列表</a>
   {% endif %}
 {% endblock form_header_actions %}{% endblock pm_actions %}
 
-
-
-
 {% block pm_content %}
-  {# ==================== 操作按钮卡片（主副标题下方） ==================== #}
   {% block form_header_actions_card %}
-  <div class="form-card form-card-header-actions mb-3">
-    <div class="form-card-body">
-      <div class="form-actions d-flex justify-content-between align-items-center">
-        {# 左侧：暂存草稿按钮 #}
-        <div class="form-actions-left">
-          {% block form_draft_actions %}
-          <button type="button" class="btn btn-draft" id="headerDraftButton">暂存草稿</button>
-          {% endblock %}
-        </div>
-        {# 右侧：创建和取消按钮 #}
-        <div class="form-actions-right d-flex gap-2">
-          {% block form_actions %}
-          <button type="button" class="btn btn-primary" id="headerSubmitButton">创建</button>
-          {% if list_url %}
-            <a href="{{ list_url }}" class="btn btn-secondary">取消</a>
-          {% elif list_url_name %}
-            <a href="{% url list_url_name %}" class="btn btn-secondary">取消</a>
-          {% elif cancel_url_name %}
-            <a href="{% url cancel_url_name %}" class="btn btn-secondary">取消</a>
-          {% else %}
-            <a href="{% url 'home' %}" class="btn btn-secondary">取消</a>
-          {% endif %}
-          {% endblock %}
-        </div>
-      </div>
-    </div>
-  </div>
+  {# 操作卡片已移除，按钮已移至表单底部 #}
   {% endblock form_header_actions_card %}
 
-<form method="post" class="create-form" id="createForm">
-  {% csrf_token %}
-  
-  {# 隐藏的提交按钮（用于实际提交表单） #}
-  <button type="submit" name="action" value="draft" class="d-none" id="hiddenDraftButton">暂存草稿</button>
-  <button type="submit" class="d-none" id="hiddenSubmitButton">创建</button>
-  
-  {# 表单错误提示 #}
-  {% if form.non_field_errors %}
-  <div class="alert alert-danger">
-    {{ form.non_field_errors }}
-  </div>
-  {% endif %}
-
-  {# ==================== 卡片1：基本信息 ==================== #}
-  {% block form_basic_info_card %}
-  <div class="form-card form-card-basic-info">
-    <div class="form-card-header">
-      <h3 class="form-card-title">
-        <i class="fas fa-info-circle"></i>
-        基本信息
-      </h3>
+  <form method="post" class="create-form" id="createForm">
+    {% csrf_token %}
+    
+    {# 隐藏字段：标识是草稿还是提交审批 #}
+    <input type="hidden" name="is_draft" id="isDraftField" value="1">
+    
+    {# 隐藏的提交按钮（用于实际提交表单） #}
+    <button type="submit" class="d-none" id="hiddenSubmitButton">提交</button>
+    
+    {# 校验失败时本页展示（不写入 messages，避免累积到登录页等） #}
+    {% block form_validation_summary %}
+    {% if form_validation_errors or validation_errors %}
+    <div class="alert alert-danger mb-3" role="alert">
+      {% if form_validation_errors %}
+      <ul class="mb-0 ps-3">
+        {% for msg in form_validation_errors %}
+        <li>{{ msg }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if validation_errors %}
+      <p class="mb-1 mt-2"><strong>创建/保存失败：</strong></p>
+      <ul class="mb-0 ps-3">
+        {% for err in validation_errors %}
+        <li>{{ err }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
     </div>
-    <div class="form-card-body">
-      {# 第一排：固定字段区域 - 每排5个字段 - 这三个字段必须存在，否则模板会报错 #}
-      <div class="row mb-3 form-row-5">
-        {# 固定字段1：所属部门（默认，不可修改）- 必须字段 #}
-        <div class="col-5-fields form-field-wrapper">
-          <label for="{{ form.responsible_department.id_for_label }}" class="form-label">
-            {% if form.responsible_department.label %}
-              {% if "默认" in form.responsible_department.label or "不可修改" in form.responsible_department.label %}
-                {{ form.responsible_department.label }}
-              {% else %}
-                {{ form.responsible_department.label }}（默认，不可修改）
-              {% endif %}
-            {% else %}
-              所属部门（默认，不可修改）
-            {% endif %}
-            {% if form.responsible_department.field.required %}<span class="text-danger">*</span>{% endif %}
-          </label>
-          {{ form.responsible_department }}
-          {% if form.responsible_department.errors %}
-          <div class="text-danger small">{{ form.responsible_department.errors }}</div>
-          {% endif %}
-          {% if form.responsible_department.help_text %}
-          <div class="form-text">{{ form.responsible_department.help_text }}</div>
-          {% endif %}
-        </div>
+    {% endif %}
+    {% endblock form_validation_summary %}
+    
+    {# 表单错误提示 #}
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
 
-        {# 固定字段2：负责人（默认，不可修改）- 必须字段 #}
-        <div class="col-5-fields form-field-wrapper">
-          <label for="{{ form.responsible_person.id_for_label }}" class="form-label">
-            {% if form.responsible_person.label %}
-              {% if "默认" in form.responsible_person.label or "不可修改" in form.responsible_person.label %}
-                {{ form.responsible_person.label }}
-              {% else %}
-                {{ form.responsible_person.label }}（默认，不可修改）
+    {# ==================== 卡片1：基本信息 ==================== #}
+    {% block form_basic_info_card %}
+    <div class="form-card form-card-basic-info">
+      <div class="form-card-header">
+        <h3 class="form-card-title">
+          <i class="fas fa-info-circle"></i>
+          基本信息
+        </h3>
+      </div>
+      <div class="form-card-body">
+        {# 第一排：字段区域 #}
+        <div class="row mb-3">
+          {% block form_first_row_fields %}
+            {# 所属部门字段 #}
+            {% if form.responsible_department %}
+            <div class="col-md-4 form-field-wrapper">
+              <label for="{{ form.responsible_department.id_for_label }}" class="form-label">
+                {% if form.responsible_department.label %}
+                  {% if "默认" in form.responsible_department.label or "不可修改" in form.responsible_department.label %}
+                    {{ form.responsible_department.label }}
+                  {% else %}
+                    {{ form.responsible_department.label }}（默认，不可修改）
+                  {% endif %}
+                {% else %}
+                  所属部门（默认，不可修改）
+                {% endif %}
+                {% if form.responsible_department.field.required %}<span class="text-danger">*</span>{% endif %}
+              </label>
+              {{ form.responsible_department }}
+              {% if form.responsible_department.errors %}
+              <div class="text-danger small">{{ form.responsible_department.errors }}</div>
               {% endif %}
-            {% else %}
-              负责人（默认，不可修改）
+              {% if form.responsible_department.help_text %}
+              <div class="form-text">{{ form.responsible_department.help_text }}</div>
+              {% endif %}
+            </div>
             {% endif %}
-            {% if form.responsible_person.field.required %}<span class="text-danger">*</span>{% endif %}
-          </label>
-          {{ form.responsible_person }}
-          {% if form.responsible_person.errors %}
-          <div class="text-danger small">{{ form.responsible_person.errors }}</div>
-          {% endif %}
-          {% if form.responsible_person.help_text %}
-          <div class="form-text">{{ form.responsible_person.help_text }}</div>
-          {% endif %}
-        </div>
 
-        {# 固定字段3：表单编号（支持多种字段名：form_number, plan_number, goal_number）- 必须字段 #}
-        {% if form.form_number %}
-        <div class="col-5-fields form-field-wrapper">
-          <label for="{{ form.form_number.id_for_label }}" class="form-label">
-            {{ form.form_number.label }}
-            {% if form.form_number.field.required %}<span class="text-danger">*</span>{% endif %}
-          </label>
-          {{ form.form_number }}
-          {% if form.form_number.errors %}
-          <div class="text-danger small">{{ form.form_number.errors }}</div>
-          {% endif %}
-          {% if form.form_number.help_text %}
-          <div class="form-text">{{ form.form_number.help_text }}</div>
-          {% endif %}
+            {# 负责人字段 #}
+            {% if form.responsible_person %}
+            <div class="col-md-4 form-field-wrapper">
+              <label for="{{ form.responsible_person.id_for_label }}" class="form-label">
+                {% if form.responsible_person.label %}
+                  {% if "默认" in form.responsible_person.label or "不可修改" in form.responsible_person.label %}
+                    {{ form.responsible_person.label }}
+                  {% else %}
+                    {{ form.responsible_person.label }}（默认，不可修改）
+                  {% endif %}
+                {% else %}
+                  负责人（默认，不可修改）
+                {% endif %}
+                {% if form.responsible_person.field.required %}<span class="text-danger">*</span>{% endif %}
+              </label>
+              {{ form.responsible_person }}
+              {% if form.responsible_person.errors %}
+              <div class="text-danger small">{{ form.responsible_person.errors }}</div>
+              {% endif %}
+              {% if form.responsible_person.help_text %}
+              <div class="form-text">{{ form.responsible_person.help_text }}</div>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            {# 表单编号字段：自动检测 goal_number、plan_number、form_number 等 #}
+            {% if form.goal_number %}
+            <div class="col-md-4 form-field-wrapper">
+              <label for="{{ form.goal_number.id_for_label }}" class="form-label">
+                {{ form.goal_number.label }}
+                {% if form.goal_number.field.required %}<span class="text-danger">*</span>{% endif %}
+              </label>
+              {{ form.goal_number }}
+              {% if form.goal_number.errors %}
+              <div class="text-danger small">{{ form.goal_number.errors }}</div>
+              {% endif %}
+            </div>
+            {% elif form.plan_number %}
+            <div class="col-md-4 form-field-wrapper">
+              <label for="{{ form.plan_number.id_for_label }}" class="form-label">
+                {{ form.plan_number.label }}
+                {% if form.plan_number.field.required %}<span class="text-danger">*</span>{% endif %}
+              </label>
+              {{ form.plan_number }}
+              {% if form.plan_number.errors %}
+              <div class="text-danger small">{{ form.plan_number.errors }}</div>
+              {% endif %}
+            </div>
+            {% elif form.form_number %}
+            <div class="col-md-4 form-field-wrapper">
+              <label for="{{ form.form_number.id_for_label }}" class="form-label">
+                {{ form.form_number.label }}
+                {% if form.form_number.field.required %}<span class="text-danger">*</span>{% endif %}
+              </label>
+              {{ form.form_number }}
+              {% if form.form_number.errors %}
+              <div class="text-danger small">{{ form.form_number.errors }}</div>
+              {% endif %}
+            </div>
+            {% endif %}
+          {% endblock %}
         </div>
-        {% elif form.plan_number %}
-        <div class="col-5-fields form-field-wrapper">
-          <label for="{{ form.plan_number.id_for_label }}" class="form-label">
-            {{ form.plan_number.label }}
-            {% if form.plan_number.field.required %}<span class="text-danger">*</span>{% endif %}
-          </label>
-          {{ form.plan_number }}
-          {% if form.plan_number.errors %}
-          <div class="text-danger small">{{ form.plan_number.errors }}</div>
-          {% endif %}
-          {% if form.plan_number.help_text %}
-          <div class="form-text">{{ form.plan_number.help_text }}</div>
-          {% endif %}
-        </div>
-        {% elif form.goal_number %}
-        <div class="col-5-fields form-field-wrapper">
-          <label for="{{ form.goal_number.id_for_label }}" class="form-label">
-            {{ form.goal_number.label }}
-            {% if form.goal_number.field.required %}<span class="text-danger">*</span>{% endif %}
-          </label>
-          {{ form.goal_number }}
-          {% if form.goal_number.errors %}
-          <div class="text-danger small">{{ form.goal_number.errors }}</div>
-          {% endif %}
-          {% if form.goal_number.help_text %}
-          <div class="form-text">{{ form.goal_number.help_text }}</div>
-          {% endif %}
-        </div>
-        {% else %}
-        {# 如果表单编号字段不存在，直接使用 form_number 会报错，提示开发者必须添加 form_number、plan_number 或 goal_number 字段之一 #}
-        <div class="col-5-fields form-field-wrapper">
-          {{ form.form_number }}
-        </div>
-        {% endif %}
         
-        {# 第一排额外字段（最多2个，凑满5个字段） #}
-        {% block form_first_row_extra_fields %}{% endblock %}
+        {# 第二排：基本信息其他字段 #}
+        {% block form_second_row_fields %}
+        <div class="row mb-3">
+          {% block form_second_row_extra_fields %}{% endblock %}
+        </div>
+        {% endblock form_second_row_fields %}
       </div>
-      
-      {# 第二排：基本信息其他字段（最多5个字段） #}
-      {% block form_second_row_fields %}
-      <div class="row mb-3 form-row-5">
-        {% block form_second_row_extra_fields %}{% endblock %}
+    </div>
+    {% endblock form_basic_info_card %}
+
+    {# ==================== 卡片2：其他字段 ==================== #}
+    {% block form_other_fields_card %}
+    <div class="form-card form-card-other-fields">
+      <div class="form-card-header">
+        <h3 class="form-card-title">
+          <i class="fas fa-list-alt"></i>
+          详细信息
+        </h3>
       </div>
-      {% endblock form_second_row_fields %}
+      <div class="form-card-body">
+        {% block form_fields %}{% endblock %}
+      </div>
     </div>
-  </div>
-  {% endblock form_basic_info_card %}
+    {% endblock form_other_fields_card %}
 
-  {# ==================== 卡片2：其他字段 ==================== #}
-  {% block form_other_fields_card %}
-  <div class="form-card form-card-other-fields">
-    <div class="form-card-header">
-      <h3 class="form-card-title">
-        <i class="fas fa-list-alt"></i>
-        详细信息
-      </h3>
+    {# ==================== 卡片3：审批流程配置（可选） ==================== #}
+    {% block form_approval_workflow_card %}
+    {% endblock form_approval_workflow_card %}
+
+    {# ==================== 表单底部操作按钮 ==================== #}
+    <div class="form-actions-bottom mt-4 mb-3 pt-3" style="border-top: 1px solid var(--vh-border, #dee2e6);">
+      <div class="d-flex justify-content-end align-items-center gap-2">
+        {% block form_actions %}
+        {# 
+          子模板需要在此定义创建、暂存草稿和取消按钮
+          创建按钮必须使用 id="headerSubmitButton"，JavaScript 会监听此按钮的点击事件
+          暂存草稿按钮必须使用 id="draftButton"，JavaScript 会监听此按钮的点击事件
+          
+          【按钮样式要求】
+          - 必须使用系统定义的按钮类：btn btn-primary（主要操作）和 btn btn-secondary（次要操作）
+          - 禁止使用内联样式或自定义颜色覆盖按钮样式
+          - 按钮颜色会自动继承模板样式（使用CSS变量）
+        #}
+        {% endblock %}
+      </div>
     </div>
-    <div class="form-card-body">
-      {# 其他表单字段 #}
-      {% block form_fields %}{% endblock %}
-    </div>
-  </div>
-  {% endblock form_other_fields_card %}
-
-  {# ==================== 卡片3：审批流程配置（可选） ==================== #}
-  {% block form_approval_workflow_card %}
-  {% endblock form_approval_workflow_card %}
-
-</form>
+  </form>
 {% endblock pm_content %}
 
 {% block module_extra_js %}
 <script>
-// 表单初始化处理
-document.addEventListener('DOMContentLoaded', function() {
-  const form = document.getElementById('createForm');
-  if (!form) return;
+(function() {
+  'use strict';
   
-  // 处理禁用字段（如 responsible_department, responsible_person）
-  const responsibleDeptField = form.querySelector('[name="responsible_department"]');
-  if (responsibleDeptField && responsibleDeptField.hasAttribute('disabled')) {
-    const hiddenDept = document.createElement('input');
-    hiddenDept.type = 'hidden';
-    hiddenDept.name = responsibleDeptField.name;
-    hiddenDept.value = responsibleDeptField.value || '';
-    form.appendChild(hiddenDept);
-  }
-  
-  const responsiblePersonField = form.querySelector('[name="responsible_person"]');
-  if (responsiblePersonField) {
-    if (responsiblePersonField.hasAttribute('disabled')) {
-      const hiddenPerson = document.createElement('input');
-      hiddenPerson.type = 'hidden';
-      hiddenPerson.name = responsiblePersonField.name;
-      hiddenPerson.value = responsiblePersonField.value || '';
-      form.appendChild(hiddenPerson);
+  // 等待DOM加载完成
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('createForm');
+    if (!form) return;
+    
+    const headerSubmitButton = document.getElementById('headerSubmitButton');
+    const draftButton = document.getElementById('draftButton');
+    const hiddenSubmitButton = document.getElementById('hiddenSubmitButton');
+    const isDraftField = document.getElementById('isDraftField');
+    
+    // 处理禁用字段：为禁用的字段创建隐藏输入，确保表单提交时包含这些值
+    function handleDisabledFields() {
+      const disabledFields = form.querySelectorAll('[disabled]');
+      disabledFields.forEach(function(field) {
+        if (!field.name) return;
+        
+        let value = '';
+        if (field.tagName === 'SELECT') {
+          const selectedOption = field.options[field.selectedIndex];
+          value = selectedOption ? selectedOption.value : '';
+        } else {
+          value = field.value || '';
+        }
+        
+        if (value !== undefined && value !== null) {
+          const existingHidden = form.querySelector(`input[type="hidden"][name="${field.name}"]`);
+          if (existingHidden) {
+            existingHidden.value = value;
+          } else {
+            const hiddenField = document.createElement('input');
+            hiddenField.type = 'hidden';
+            hiddenField.name = field.name;
+            hiddenField.value = value;
+            form.appendChild(hiddenField);
+          }
+        }
+      });
     }
-  }
-  
-  // 连接外部按钮和内部提交按钮
-  const headerDraftButton = document.getElementById('headerDraftButton');
-  const headerSubmitButton = document.getElementById('headerSubmitButton');
-  const hiddenDraftButton = document.getElementById('hiddenDraftButton');
-  const hiddenSubmitButton = document.getElementById('hiddenSubmitButton');
-  
-  if (headerDraftButton && hiddenDraftButton) {
-    headerDraftButton.addEventListener('click', function() {
-      hiddenDraftButton.click();
-    });
-  }
-  
-  if (headerSubmitButton && hiddenSubmitButton) {
-    headerSubmitButton.addEventListener('click', function() {
-      hiddenSubmitButton.click();
-    });
-  }
-  
-  // 表单验证
-  form.addEventListener('submit', function(e) {
-    // #region agent log
-    fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create_form_base.html:262',message:'父模板表单提交事件触发',data:{submitterName:e.submitter?.name,submitterValue:e.submitter?.value,defaultPrevented:e.defaultPrevented,formAction:form.action,formMethod:form.method},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     
-    const clickedButton = e.submitter;
-    const isDraft = clickedButton && clickedButton.name === 'action' && clickedButton.value === 'draft';
+    // 提交表单的通用函数
+    function submitForm() {
+      handleDisabledFields();
+      if (hiddenSubmitButton) {
+        hiddenSubmitButton.click();
+      } else {
+        form.submit();
+      }
+    }
     
-    // #region agent log
-    fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create_form_base.html:267',message:'父模板判断是否为草稿',data:{isDraft:isDraft},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
+    // 创建按钮事件处理
+    if (headerSubmitButton) {
+      headerSubmitButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (isDraftField) {
+          isDraftField.value = '1';
+        }
+        submitForm();
+      });
+    }
     
-    if (!isDraft) {
+    // 暂存草稿按钮事件处理
+    if (draftButton) {
+      draftButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (isDraftField) {
+          isDraftField.value = '1';
+        }
+        submitForm();
+      });
+    }
+    
+    // 表单验证
+    form.addEventListener('submit', function(e) {
+      handleDisabledFields();
+      
+      // 必填字段验证
       const requiredFields = form.querySelectorAll('[required]');
       let hasError = false;
-      
-      // #region agent log
-      fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create_form_base.html:272',message:'父模板检查必填字段',data:{requiredFieldsCount:requiredFields.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       
       requiredFields.forEach(function(field) {
         if (field.hasAttribute('disabled')) return;
@@ -342,14 +335,44 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
       
-      // #region agent log
-      fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create_form_base.html:283',message:'父模板验证结果',data:{hasError:hasError},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
+      // 验证FormSet中的时间逻辑
+      const formsetCards = form.querySelectorAll('#planItemsContainer .plan-item-card');
+      formsetCards.forEach(function(card) {
+        const deleteCheckbox = card.querySelector('input[type="checkbox"][name*="DELETE"]');
+        if (deleteCheckbox && deleteCheckbox.checked) return;
+        
+        const cardStartTime = card.querySelector('input[name*="start_time"]');
+        const cardEndTime = card.querySelector('input[name*="end_time"]');
+        
+        if (cardStartTime && cardEndTime && cardStartTime.value && cardEndTime.value) {
+          const startDate = new Date(cardStartTime.value);
+          const endDate = new Date(cardEndTime.value);
+          
+          if (endDate < startDate || endDate.getTime() === startDate.getTime()) {
+            hasError = true;
+            cardStartTime.classList.add('is-invalid');
+            cardEndTime.classList.add('is-invalid');
+            
+            // 显示错误消息
+            let errorMsg = cardEndTime.parentElement.querySelector('.time-validation-error');
+            if (!errorMsg) {
+              errorMsg = document.createElement('div');
+              errorMsg.className = 'text-danger small time-validation-error';
+              errorMsg.textContent = '结束时间必须晚于开始时间';
+              cardEndTime.parentElement.appendChild(errorMsg);
+            }
+          } else {
+            cardStartTime.classList.remove('is-invalid');
+            cardEndTime.classList.remove('is-invalid');
+            const errorMsg = cardEndTime.parentElement.querySelector('.time-validation-error');
+            if (errorMsg) {
+              errorMsg.remove();
+            }
+          }
+        }
+      });
       
       if (hasError) {
-        // #region agent log
-        fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create_form_base.html:286',message:'父模板阻止表单提交 - 必填字段验证失败',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         e.preventDefault();
         const firstError = form.querySelector('.is-invalid');
         if (firstError) {
@@ -358,13 +381,35 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return false;
       }
-    }
+      
+      // 保存当前滚动位置到 sessionStorage（用于页面重新加载后恢复位置）
+      const scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+      sessionStorage.setItem('formScrollPosition', scrollPosition);
+      sessionStorage.setItem('formSubmitted', 'true');
+    });
     
-    // #region agent log
-    fetch('http://localhost:7242/ingest/8da7066a-e0c2-4e09-9af7-37ab2ebaf22c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'create_form_base.html:295',message:'父模板提交事件处理完成',data:{defaultPrevented:e.defaultPrevented,willSubmit:!e.defaultPrevented},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
+    // 页面加载后恢复滚动位置或滚动到错误消息
+    (function() {
+      const formSubmitted = sessionStorage.getItem('formSubmitted');
+      if (formSubmitted === 'true') {
+        sessionStorage.removeItem('formSubmitted');
+        
+        setTimeout(function() {
+          const errorAlert = document.querySelector('.alert-danger, .alert-warning, .alert-info');
+          if (errorAlert) {
+            errorAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            const savedPosition = sessionStorage.getItem('formScrollPosition');
+            if (savedPosition) {
+              window.scrollTo(0, parseInt(savedPosition, 10));
+              sessionStorage.removeItem('formScrollPosition');
+            }
+          }
+        }, 200);
+      }
+    })();
   });
-});
+})();
 </script>
 {{ block.super }}
 {% endblock module_extra_js %}

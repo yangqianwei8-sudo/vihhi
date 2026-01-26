@@ -1,58 +1,46 @@
 {% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block page_title %}目标列表{% endblock page_title %}
-{% block page_subtitle %}查看和管理所有战略目标{% endblock page_subtitle %}
+{% block pm_title %}目标列表{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有战略目标{% endblock pm_subtitle %}
 
 
 {% block list_stats_content %}
-  <div class="row g-3">
-    <div class="col-md-2">
-      <div class="list-stat-card">
-        <div class="list-stat-label">目标总数</div>
-        <div class="list-stat-value">{{ total_count|default:0 }}</div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="list-stat-card">
-        <div class="list-stat-label">制定中</div>
-        <div class="list-stat-value">{{ draft_count|default:0 }}</div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="list-stat-card">
-        <div class="list-stat-label">已发布</div>
-        <div class="list-stat-value">{{ published_count|default:0 }}</div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="list-stat-card">
-        <div class="list-stat-label">执行中</div>
-        <div class="list-stat-value">{{ in_progress_count|default:0 }}</div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="list-stat-card">
-        <div class="list-stat-label">已完成</div>
-        <div class="list-stat-value">{{ completed_count|default:0 }}</div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="list-stat-card">
-        <div class="list-stat-label">已取消</div>
-        <div class="list-stat-value">{{ cancelled_count|default:0 }}</div>
-      </div>
-    </div>
+  {# 统计卡片 - 直接放在 list-page-stats 中，CSS会自动一行排列 #}
+  <div class="list-stat-card">
+    <div class="list-stat-label">目标总数</div>
+    <div class="list-stat-value">{{ total_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">制定中</div>
+    <div class="list-stat-value">{{ draft_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">已发布</div>
+    <div class="list-stat-value">{{ published_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">执行中</div>
+    <div class="list-stat-value">{{ in_progress_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">已完成</div>
+    <div class="list-stat-value">{{ completed_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">已取消</div>
+    <div class="list-stat-value">{{ cancelled_count|default:0 }}</div>
   </div>
 {% endblock list_stats_content %}
+
 {% block list_filters_content %}
-  
-  <div class="col-md-3">
-    <label class="form-label">搜索</label>
+  {# 筛选器区域 #}
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">搜索</label>
     <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="目标编号、名称、负责人">
   </div>
-  <div class="col-md-2">
-    <label class="form-label">状态</label>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">状态</label>
     <select name="status" class="form-select">
       <option value="">全部状态</option>
       {% for value, label in status_options %}
@@ -60,8 +48,8 @@
       {% endfor %}
     </select>
   </div>
-  <div class="col-md-2">
-    <label class="form-label">目标层级</label>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">目标层级</label>
     <select name="level" class="form-select">
       <option value="">全部层级</option>
       {% for value, label in level_choices %}
@@ -69,8 +57,8 @@
       {% endfor %}
     </select>
   </div>
-  <div class="col-md-2">
-    <label class="form-label">目标类型</label>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">目标类型</label>
     <select name="goal_type" class="form-select">
       <option value="">全部类型</option>
       {% for value, label in goal_type_choices %}
@@ -78,8 +66,8 @@
       {% endfor %}
     </select>
   </div>
-  <div class="col-md-2">
-    <label class="form-label">目标周期</label>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">目标周期</label>
     <select name="goal_period" class="form-select">
       <option value="">全部周期</option>
       {% for value, label in goal_period_choices %}
@@ -87,8 +75,8 @@
       {% endfor %}
     </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">负责人</label>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">负责人</label>
     <select name="responsible" class="form-select">
       <option value="">全部负责人</option>
       {% for u in all_users %}
@@ -98,15 +86,22 @@
       {% endfor %}
     </select>
   </div>
-  <div class="col-md-2">
-    <label class="form-label">开始日期</label>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">开始日期</label>
     <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
   </div>
-  <div class="col-md-2">
-    <label class="form-label">结束日期</label>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">结束日期</label>
     <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
   </div>
 {% endblock list_filters_content %}
+
+{% block list_table_checkbox_header %}
+  <th style="width: 50px;">
+    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
+  </th>
+{% endblock list_table_checkbox_header %}
+
 {% block list_table_headers %}
   <th>目标编号</th>
   <th>目标名称</th>
@@ -122,67 +117,78 @@
 {% endblock list_table_headers %}
 
 {% block list_table_rows %}
-  {% for goal in page_obj %}
-  <tr>
-    <td><code>{{ goal.goal_number }}</code></td>
-    <td>
-      <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="text-dark text-decoration-none fw-medium">
-        {{ goal.name }}
-      </a>
-    </td>
-    <td>
-      <span class="badge">{{ goal.get_level_display }}</span>
-    </td>
-    <td>{{ goal.get_goal_type_display }}</td>
-    <td>{{ goal.get_goal_period_display }}</td>
-    <td>
-      {% if goal.parent_goal %}
-      <a href="{% url 'plan_pages:strategic_goal_detail' goal.parent_goal.id %}" class="text-muted text-decoration-none">
-        {{ goal.parent_goal.name|truncatewords:5 }}
-      </a>
-      {% else %}
-      <span class="text-muted">-</span>
-      {% endif %}
-    </td>
-    <td>{{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}</td>
-    <td>
-      <small class="text-muted">
-        {{ goal.start_date|date:"Y-m-d" }}<br>
-        至 {{ goal.end_date|date:"Y-m-d" }}
-      </small>
-    </td>
-    <td>
-      <div class="d-flex align-items-center gap-2">
-        <div class="flex-grow-1" style="height: 8px; background: #F0F0F0;">
-          <div style="height: 100%; background: #333333; width: {{ goal.completion_rate }}%;"></div>
-        </div>
-        <small class="text-muted">{{ goal.completion_rate }}%</small>
-      </div>
-    </td>
-    <td>
-      <span class="badge">{{ goal.get_status_display }}</span>
-    </td>
-    <td>
-      <div class="btn-group btn-group-sm">
-        <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="btn btn-sm">查看</a>
-        {% if goal.status in 'draft,published' %}
-        <a href="{% url 'plan_pages:strategic_goal_edit' goal.id %}" class="btn btn-sm">编辑</a>
+  {% if page_obj %}
+    {% for goal in page_obj %}
+    <tr>
+      <td>
+        <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ goal.id }}" id="item_{{ goal.id }}">
+      </td>
+      <td><code>{{ goal.goal_number }}</code></td>
+      <td>
+        <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="text-dark text-decoration-none fw-medium">
+          {{ goal.name }}
+        </a>
+      </td>
+      <td>
+        <span class="badge">{{ goal.get_level_display }}</span>
+      </td>
+      <td>{{ goal.get_goal_type_display }}</td>
+      <td>{{ goal.get_goal_period_display }}</td>
+      <td>
+        {% if goal.parent_goal %}
+        <a href="{% url 'plan_pages:strategic_goal_detail' goal.parent_goal.id %}" class="text-muted text-decoration-none">
+          {{ goal.parent_goal.name|truncatewords:5 }}
+        </a>
+        {% else %}
+        <span class="text-muted">-</span>
         {% endif %}
-      </div>
-    </td>
-  </tr>
-  {% empty %}
-  <tr>
-    <td colspan="11" class="list-empty-state">
-      <div class="list-empty-state-icon">🎯</div>
-      <div class="list-empty-state-text">暂无目标数据</div>
-      <div class="list-empty-state-hint">请创建第一个目标开始使用</div>
-    </td>
-  </tr>
-  {% endfor %}
+      </td>
+      <td>{{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}</td>
+      <td>
+        <small class="text-muted">
+          {{ goal.start_date|date:"Y-m-d" }}<br>
+          至 {{ goal.end_date|date:"Y-m-d" }}
+        </small>
+      </td>
+      <td>
+        <div class="d-flex align-items-center gap-2">
+          <div class="flex-grow-1" style="height: 8px; background: #F0F0F0;">
+            <div style="height: 100%; background: #333333; width: {{ goal.completion_rate }}%;"></div>
+          </div>
+          <small class="text-muted">{{ goal.completion_rate }}%</small>
+        </div>
+      </td>
+      <td>
+        <span class="badge">{{ goal.get_status_display }}</span>
+      </td>
+      <td>
+        <div class="list-page-table-actions">
+          <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="action-view" title="查看">
+            <i class="bi bi-eye"></i>
+          </a>
+          {% if goal.status in 'draft,published' %}
+          <span class="action-separator">|</span>
+          <a href="{% url 'plan_pages:strategic_goal_edit' goal.id %}" class="action-edit" title="编辑">
+            <i class="bi bi-pencil"></i>
+          </a>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+    <tr>
+      <td colspan="12" class="list-empty">
+        <div class="list-empty-icon">🎯</div>
+        <div class="list-empty-text">暂无目标数据</div>
+      </td>
+    </tr>
+  {% endif %}
 {% endblock list_table_rows %}
 
-
+{% block list_empty_hint %}
+  <div class="list-empty-hint">请创建第一个目标开始使用</div>
+{% endblock list_empty_hint %}
 
 {% block extra_js %}
   <!-- 配置列表筛选功能 -->
@@ -195,4 +201,34 @@
   </script>
   <!-- 引入列表筛选功能模块 -->
   <script src="{% static 'js/list-filters.js' %}"></script>
+  
+  <!-- 复选框功能调试 -->
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('复选框功能调试：');
+    const selectAll = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    console.log('全选复选框:', selectAll);
+    console.log('行复选框数量:', rowCheckboxes.length);
+    console.log('list-checkbox.js 是否加载:', typeof window.getSelectedIds === 'function');
+    
+    // 如果JavaScript没有加载，手动初始化
+    if (selectAll && rowCheckboxes.length > 0 && typeof window.getSelectedIds !== 'function') {
+      console.warn('list-checkbox.js 未加载，手动初始化复选框功能');
+      selectAll.addEventListener('change', function() {
+        rowCheckboxes.forEach(function(cb) {
+          cb.checked = this.checked;
+        }, this);
+      });
+      rowCheckboxes.forEach(function(cb) {
+        cb.addEventListener('change', function() {
+          const allChecked = Array.from(rowCheckboxes).every(function(c) {
+            return c.checked;
+          });
+          selectAll.checked = allChecked;
+        });
+      });
+    }
+  });
+  </script>
 {% endblock extra_js %}

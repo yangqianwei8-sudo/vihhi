@@ -38,20 +38,15 @@
 {% endblock module_styles %}
 
 {% block list_stats_content %}
-<div class="row g-3">
-    <div class="col-md-3">
-        <div class="list-stat-card">
-            <div class="list-stat-label">待我审批</div>
-            <div class="list-stat-value">{{ pending_count|default:0 }}</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="list-stat-card">
-            <div class="list-stat-label">历史审批</div>
-            <div class="list-stat-value">{{ historical_count|default:0 }}</div>
-        </div>
-    </div>
-</div>
+  {# 统计卡片 - 直接放在 list-page-stats 中，CSS会自动一行排列 #}
+  <div class="list-stat-card">
+    <div class="list-stat-label">待我审批</div>
+    <div class="list-stat-value">{{ pending_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">历史审批</div>
+    <div class="list-stat-value">{{ historical_count|default:0 }}</div>
+  </div>
 {% endblock list_stats_content %}
 
 {% block list_action_bar_content %}
@@ -87,8 +82,9 @@
 {% block list_toolbar_content %}
 {% if not tab or tab == 'pending' %}
 {% if pending_count > 0 %}
-<form id="batchApproveForm" method="post" action="#" style="display: none;">
+<form id="batchApproveForm" method="post" action="{% url 'workflow_engine:approval_list' %}" style="display: none;">
     {% csrf_token %}
+    <input type="hidden" name="action" id="batchAction" value="">
     <div class="list-page-batch-actions">
         <div class="list-page-batch-actions-info">
             <span id="selectedCount">0</span> 项已选择
@@ -437,8 +433,29 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // 这里可以添加实际的批量审批逻辑
-        alert('批量审批功能开发中');
+        // 设置操作类型
+        const actionInput = document.getElementById('batchAction');
+        if (actionInput) {
+            actionInput.value = action;
+        }
+        
+        // 清除之前添加的隐藏input（如果有）
+        const existingInputs = batchApproveForm.querySelectorAll('input[name="instance_ids"][type="hidden"]');
+        existingInputs.forEach(function(input) {
+            input.remove();
+        });
+        
+        // 收集所有选中的复选框值，创建隐藏input添加到表单中
+        checked.forEach(function(checkbox) {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'instance_ids';
+            hiddenInput.value = checkbox.value;
+            batchApproveForm.appendChild(hiddenInput);
+        });
+        
+        // 提交表单
+        batchApproveForm.submit();
     }
 });
 

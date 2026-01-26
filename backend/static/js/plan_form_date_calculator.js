@@ -43,8 +43,8 @@
                 endDate.setDate(endDate.getDate() + 6);
                 break;
             case 'daily':
-                // 日计划：开始日期当天（即结束日期等于开始日期）
-                // endDate 保持不变
+                // 日计划：开始日期后1天（今天开始，明天结束）
+                endDate.setDate(endDate.getDate() + 1);
                 break;
             default:
                 return '';

@@ -65,6 +65,55 @@ def get_user_plan_stats(user) -> Dict[str, Any]:
     }
 
 
+def get_user_collaboration_plan_stats(user) -> Dict[str, Any]:
+    """
+    获取用户协作的计划统计（作为参与者）
+    
+    Args:
+        user: User 对象
+    
+    Returns:
+        Dict: 协作计划统计
+            - total: 总计划数
+            - in_progress: 执行中计划数
+            - today: 今日应执行计划数
+            - overdue: 逾期计划数
+    """
+    now = timezone.now()
+    today = now.date()
+    today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+    today_end = timezone.make_aware(datetime.combine(today, datetime.max.time()))
+    
+    # 用户作为参与者的计划（排除自己负责的）
+    collaboration_plans = Plan.objects.filter(participants=user).exclude(responsible_person=user)
+    
+    # 总计划数
+    total = collaboration_plans.count()
+    
+    # 执行中计划
+    in_progress = collaboration_plans.filter(status='in_progress').count()
+    
+    # 今日应执行计划
+    today_plans = collaboration_plans.filter(
+        status='in_progress',
+        start_time__lte=today_end,
+        end_time__gte=today_start
+    ).count()
+    
+    # 逾期计划
+    overdue = collaboration_plans.filter(
+        status__in=['draft', 'published', 'accepted', 'in_progress'],
+        end_time__lt=now
+    ).count()
+    
+    return {
+        'total': total,
+        'in_progress': in_progress,
+        'today': today_plans,
+        'overdue': overdue,
+    }
+
+
 def get_company_plan_stats(user) -> Dict[str, Any]:
     """
     获取公司计划统计（管理视角）

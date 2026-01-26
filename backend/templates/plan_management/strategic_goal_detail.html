@@ -11,301 +11,299 @@
 </a>
 {% endblock %}
 
-{% block detail_basic_info %}
-  {# 目标编号 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">目标编号</label>
-      <div class="detail-field-value">
-        <code>{{ goal.goal_number }}</code>
+{# 基本信息卡片由基础模板自动提供，包含：所属部门、负责人、目标编号 #}
+
+{% block detail_detail_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-detail-info">
+  <div class="detail-card detail-card-detail-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-list-alt"></i>
+        详细信息
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      {% block detail_detail_info_rows %}
+  {# 第一排：目标名称、目标状态、目标层级（使用标准栅格：col-md-4，一行3个字段） #}
+  <div class="row mb-3">
+    {% block detail_detail_info_row1 %}
+    {# 目标名称 #}
+    <div class="col-md-4 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">目标名称</label>
+        <div class="detail-field-value">
+          <strong>{{ goal.name }}</strong>
+        </div>
       </div>
     </div>
-  </div>
-
-  {# 目标名称 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">目标名称</label>
-      <div class="detail-field-value">
-        <strong>{{ goal.name }}</strong>
+    {# 目标状态 #}
+    <div class="col-md-4 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">目标状态</label>
+        <div class="detail-field-value">
+          <span class="badge badge-status badge-{{ goal.status }}">
+            {{ goal.get_status_display|default:goal.status }}
+          </span>
+        </div>
       </div>
     </div>
-  </div>
-
-  {# 目标状态 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">目标状态</label>
-      <div class="detail-field-value">
-        <span class="badge badge-status badge-{{ goal.status }}">
-          {{ goal.get_status_display|default:goal.status }}
-        </span>
+    {# 目标层级 #}
+    <div class="col-md-4 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">目标层级</label>
+        <div class="detail-field-value">
+          {{ goal.get_level_display|default:goal.level }}
+        </div>
       </div>
     </div>
+    {% endblock detail_detail_info_row1 %}
   </div>
 
-  {# 目标层级 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">目标层级</label>
-      <div class="detail-field-value">
-        {{ goal.get_level_display|default:goal.level }}
+  {# 第二排：目标类型、目标周期（使用标准栅格：col-md-6，一行2个字段） #}
+  <div class="row mb-3">
+    {% block detail_detail_info_row2 %}
+    {# 目标类型 #}
+    <div class="col-md-6 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">目标类型</label>
+        <div class="detail-field-value">
+          {{ goal.get_goal_type_display|default:goal.goal_type }}
+        </div>
       </div>
     </div>
-  </div>
-
-  {# 目标类型 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">目标类型</label>
-      <div class="detail-field-value">
-        {{ goal.get_goal_type_display|default:goal.goal_type }}
+    {# 目标周期 #}
+    <div class="col-md-6 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">目标周期</label>
+        <div class="detail-field-value">
+          {{ goal.get_goal_period_display|default:goal.goal_period }}
+        </div>
       </div>
     </div>
+    {% endblock detail_detail_info_row2 %}
   </div>
 
-  {# 目标周期 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">目标周期</label>
-      <div class="detail-field-value">
-        {{ goal.get_goal_period_display|default:goal.goal_period }}
+  {# 第三排：目标值、当前值、完成率（使用标准栅格：col-md-4，一行3个字段） #}
+  <div class="row mb-3">
+    {% block detail_detail_info_row3 %}
+    {# 目标值 #}
+    <div class="col-md-4 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">目标值</label>
+        <div class="detail-field-value">
+          <strong>{{ goal.target_value }}</strong>{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+        </div>
       </div>
     </div>
-  </div>
-
-  {# 负责人 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">负责人</label>
-      <div class="detail-field-value">
-        {% if goal.responsible_person %}
-          {{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}
-        {% else %}
-          -
-        {% endif %}
+    {# 当前值 #}
+    <div class="col-md-4 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">当前值</label>
+        <div class="detail-field-value">
+          <strong>{{ goal.current_value }}</strong>{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+        </div>
       </div>
     </div>
-  </div>
-
-  {# 负责部门 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">负责部门</label>
-      <div class="detail-field-value">
-        {{ goal.responsible_department.name|default:"-" }}
+    {# 完成率 #}
+    <div class="col-md-4 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">完成率</label>
+        <div class="detail-field-value">
+          <strong>{{ goal.completion_rate }}%</strong>
+        </div>
       </div>
     </div>
+    {% endblock detail_detail_info_row3 %}
   </div>
 
-  {# 创建时间 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">创建时间</label>
-      <div class="detail-field-value">
-        {{ goal.created_time|date:"Y-m-d H:i:s"|default:"-" }}
+  {# 第四排：目标权重、指标名称、指标类型（使用标准栅格：col-md-4，一行3个字段） #}
+  <div class="row mb-3">
+    {% block detail_detail_info_row4 %}
+    {% if goal.weight %}
+    {# 目标权重 #}
+    <div class="col-md-4 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">目标权重</label>
+        <div class="detail-field-value">
+          {{ goal.weight }}
+        </div>
       </div>
     </div>
-  </div>
-
-  {# 更新时间 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">更新时间</label>
-      <div class="detail-field-value">
-        {{ goal.updated_time|date:"Y-m-d H:i:s"|default:"-" }}
+    {% endif %}
+    {% if goal.indicator_name %}
+    {# 指标名称 #}
+    <div class="col-md-4 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">指标名称</label>
+        <div class="detail-field-value">
+          {{ goal.indicator_name }}
+        </div>
       </div>
     </div>
+    {% endif %}
+    {% if goal.indicator_type %}
+    {# 指标类型 #}
+    <div class="col-md-4 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">指标类型</label>
+        <div class="detail-field-value">
+          {{ goal.get_indicator_type_display|default:goal.indicator_type }}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% endblock detail_detail_info_row4 %}
   </div>
-{% endblock detail_basic_info %}
 
-{% block detail_text_fields_content %}
-  {# 目标描述 #}
+  {# 第五排：开始日期、结束日期（使用标准栅格：col-md-6，一行2个字段） #}
+  <div class="row mb-3">
+    {% block detail_detail_info_row5 %}
+    {# 开始日期 #}
+    <div class="col-md-6 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">开始日期</label>
+        <div class="detail-field-value">
+          {{ goal.start_date|date:"Y-m-d"|default:"-" }}
+        </div>
+      </div>
+    </div>
+    {# 结束日期 #}
+    <div class="col-md-6 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">结束日期</label>
+        <div class="detail-field-value">
+          {{ goal.end_date|date:"Y-m-d"|default:"-" }}
+        </div>
+      </div>
+    </div>
+    {% endblock detail_detail_info_row5 %}
+  </div>
+
+  {# 第六排：发布时间、接收时间、完成时间（使用标准栅格：col-md-4，一行3个字段） #}
+  {% if goal.published_at or goal.accepted_at or goal.completed_at %}
+  <div class="row mb-3">
+    {% block detail_detail_info_row6 %}
+    {% if goal.published_at %}
+    {# 发布时间 #}
+    <div class="col-md-4 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">发布时间</label>
+        <div class="detail-field-value">
+          {{ goal.published_at|date:"Y-m-d H:i" }}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if goal.accepted_at %}
+    {# 接收时间 #}
+    <div class="col-md-4 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">接收时间</label>
+        <div class="detail-field-value">
+          {{ goal.accepted_at|date:"Y-m-d H:i" }}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if goal.completed_at %}
+    {# 完成时间 #}
+    <div class="col-md-4 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">完成时间</label>
+        <div class="detail-field-value">
+          {{ goal.completed_at|date:"Y-m-d H:i" }}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% endblock detail_detail_info_row6 %}
+  </div>
+  {% endif %}
+
+  {# 多行文本字段：目标描述（使用标准栅格：col-md-12，一行1个字段） #}
   {% if goal.description %}
-  <div class="col-12-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">目标描述</label>
-      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.5;">
-        {{ goal.description }}
+  <div class="row mb-3">
+    {% block detail_detail_info_description %}
+    <div class="col-md-12 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">目标描述</label>
+        <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+          {{ goal.description }}
+        </div>
       </div>
     </div>
+    {% endblock detail_detail_info_description %}
   </div>
   {% endif %}
 
-  {# 目标背景 #}
+  {# 多行文本字段：目标背景（使用标准栅格：col-md-12，一行1个字段） #}
   {% if goal.background %}
-  <div class="col-12-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">目标背景</label>
-      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.5;">
-        {{ goal.background }}
+  <div class="row mb-3">
+    {% block detail_detail_info_background %}
+    <div class="col-md-12 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">目标背景</label>
+        <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+          {{ goal.background }}
+        </div>
       </div>
     </div>
+    {% endblock detail_detail_info_background %}
   </div>
   {% endif %}
 
-  {# 目标意义 #}
+  {# 多行文本字段：目标意义（使用标准栅格：col-md-12，一行1个字段） #}
   {% if goal.significance %}
-  <div class="col-12-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">目标意义</label>
-      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.5;">
-        {{ goal.significance }}
+  <div class="row mb-3">
+    {% block detail_detail_info_significance %}
+    <div class="col-md-12 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">目标意义</label>
+        <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+          {{ goal.significance }}
+        </div>
       </div>
     </div>
+    {% endblock detail_detail_info_significance %}
   </div>
   {% endif %}
 
-  {# 权重说明 #}
+  {# 多行文本字段：权重说明（使用标准栅格：col-md-12，一行1个字段） #}
   {% if goal.weight_description %}
-  <div class="col-12-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">权重说明</label>
-      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.5;">
-        {{ goal.weight_description }}
+  <div class="row mb-3">
+    {% block detail_detail_info_weight_description %}
+    <div class="col-md-12 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">权重说明</label>
+        <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+          {{ goal.weight_description }}
+        </div>
       </div>
     </div>
+    {% endblock detail_detail_info_weight_description %}
   </div>
   {% endif %}
 
-  {# 备注 #}
+  {# 多行文本字段：备注（使用标准栅格：col-md-12，一行1个字段） #}
   {% if goal.notes %}
-  <div class="col-12-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">备注</label>
-      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.5;">
-        {{ goal.notes }}
+  <div class="row mb-3">
+    {% block detail_detail_info_notes %}
+    <div class="col-md-12 detail-field-wrapper">
+      <div class="detail-field">
+        <label class="detail-field-label">备注</label>
+        <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+          {{ goal.notes }}
+        </div>
       </div>
     </div>
+    {% endblock detail_detail_info_notes %}
   </div>
   {% endif %}
-{% endblock detail_text_fields_content %}
-
-{% block detail_number_fields_content %}
-  {# 目标值 #}
-  <div class="col-5-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">目标值</label>
-      <div class="detail-field-value">
-        <strong>{{ goal.target_value }}</strong>{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
-      </div>
+      {% endblock detail_detail_info_rows %}
     </div>
   </div>
-
-  {# 当前值 #}
-  <div class="col-5-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">当前值</label>
-      <div class="detail-field-value">
-        <strong>{{ goal.current_value }}</strong>{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
-      </div>
-    </div>
-  </div>
-
-  {# 完成率 #}
-  <div class="col-5-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">完成率</label>
-      <div class="detail-field-value">
-        <strong>{{ goal.completion_rate }}%</strong>
-      </div>
-    </div>
-  </div>
-
-  {# 目标权重 #}
-  {% if goal.weight %}
-  <div class="col-5-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">目标权重</label>
-      <div class="detail-field-value">
-        {{ goal.weight }}
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {# 指标名称 #}
-  {% if goal.indicator_name %}
-  <div class="col-5-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">指标名称</label>
-      <div class="detail-field-value">
-        {{ goal.indicator_name }}
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {# 指标类型 #}
-  {% if goal.indicator_type %}
-  <div class="col-5-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">指标类型</label>
-      <div class="detail-field-value">
-        {{ goal.get_indicator_type_display|default:goal.indicator_type }}
-      </div>
-    </div>
-  </div>
-  {% endif %}
-{% endblock detail_number_fields_content %}
-
-{% block detail_datetime_fields_content %}
-  {# 开始日期 #}
-  <div class="col-5-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">开始日期</label>
-      <div class="detail-field-value">
-        {{ goal.start_date|date:"Y-m-d"|default:"-" }}
-      </div>
-    </div>
-  </div>
-
-  {# 结束日期 #}
-  <div class="col-5-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">结束日期</label>
-      <div class="detail-field-value">
-        {{ goal.end_date|date:"Y-m-d"|default:"-" }}
-      </div>
-    </div>
-  </div>
-
-  {# 发布时间 #}
-  {% if goal.published_at %}
-  <div class="col-5-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">发布时间</label>
-      <div class="detail-field-value">
-        {{ goal.published_at|date:"Y-m-d H:i" }}
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {# 接收时间 #}
-  {% if goal.accepted_at %}
-  <div class="col-5-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">接收时间</label>
-      <div class="detail-field-value">
-        {{ goal.accepted_at|date:"Y-m-d H:i" }}
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {# 完成时间 #}
-  {% if goal.completed_at %}
-  <div class="col-5-fields detail-field-wrapper mb-3">
-    <div class="detail-field">
-      <label class="detail-field-label">完成时间</label>
-      <div class="detail-field-value">
-        {{ goal.completed_at|date:"Y-m-d H:i" }}
-      </div>
-    </div>
-  </div>
-  {% endif %}
-{% endblock detail_datetime_fields_content %}
+</div>
+{% endblock detail_detail_info_card %}
 
 {% block detail_edit_url %}{% url 'plan_pages:strategic_goal_edit' goal.id %}{% endblock %}
 {% block detail_delete_url %}{% url 'plan_pages:strategic_goal_delete' goal.id %}{% endblock %}
@@ -381,44 +379,139 @@
 
 {% block detail_status_history_content %}
   {% if status_logs %}
-  <div class="table-responsive">
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th>变更时间</th>
-          <th>状态变更</th>
-          <th>变更人</th>
-          <th>变更原因</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for log in status_logs %}
-        <tr>
-          <td>{{ log.changed_time|date:"Y-m-d H:i" }}</td>
-          <td>
-            <span class="badge badge-status badge-{{ log.old_status }}">
-              {{ log.get_old_status_display|default:log.old_status }}
-            </span>
-            →
-            <span class="badge badge-status badge-{{ log.new_status }}">
-              {{ log.get_new_status_display|default:log.new_status }}
-            </span>
-          </td>
-          <td>
-            {% if log.changed_by %}
-              {{ log.changed_by.get_full_name|default:log.changed_by.username }}
-            {% else %}
-              -
-            {% endif %}
-          </td>
-          <td>{{ log.change_reason|default:"-" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    {% for log in status_logs %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>
+        <span class="badge badge-status badge-{{ log.old_status }}">
+          {{ log.get_old_status_display|default:log.old_status }}
+        </span>
+        →
+        <span class="badge badge-status badge-{{ log.new_status }}">
+          {{ log.get_new_status_display|default:log.new_status }}
+        </span>
+      </td>
+      <td>
+        {% if log.changed_by %}
+          {{ log.changed_by.get_full_name|default:log.changed_by.username }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>{{ log.changed_time|date:"Y-m-d H:i" }}</td>
+      <td>{{ log.get_change_evidence|default:"-" }}</td>
+      <td>{{ log.notes|default:"-" }}</td>
+    </tr>
+    {% endfor %}
   {% endif %}
 {% endblock detail_status_history_content %}
+
+{% block detail_related_info_content %}
+  {# 关联计划 #}
+  {% if related_plans %}
+    {% for plan in related_plans %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>关联计划</td>
+      <td>
+        <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="text-decoration-none">
+          {{ plan.plan_number }} - {{ plan.name }}
+        </a>
+      </td>
+      <td>{{ plan.created_time|date:"Y-m-d H:i" }}</td>
+      <td>{{ plan.get_status_display|default:plan.status }}</td>
+      <td>-</td>
+    </tr>
+    {% endfor %}
+  {% endif %}
+  
+  {# 子目标 #}
+  {% if child_goals %}
+    {% for child_goal in child_goals %}
+    <tr>
+      <td>{% if related_plans %}{{ related_plans|length|add:forloop.counter }}{% else %}{{ forloop.counter }}{% endif %}</td>
+      <td>子目标</td>
+      <td>
+        <a href="{% url 'plan_pages:strategic_goal_detail' child_goal.id %}" class="text-decoration-none">
+          {{ child_goal.goal_number }} - {{ child_goal.name }}
+        </a>
+      </td>
+      <td>{{ child_goal.created_time|date:"Y-m-d H:i" }}</td>
+      <td>{{ child_goal.get_status_display|default:child_goal.status }}</td>
+      <td>-</td>
+    </tr>
+    {% endfor %}
+  {% endif %}
+  
+  {# 如果没有关联信息，显示空状态 #}
+  {% if not related_plans and not child_goals %}
+  <tr>
+    <td colspan="6" class="text-center text-muted">暂无关联信息</td>
+  </tr>
+  {% endif %}
+{% endblock detail_related_info_content %}
+
+{% block detail_audit_info_content %}
+  {% if audit_logs %}
+    {% for log in audit_logs %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ log.created_time|date:"Y-m-d H:i:s" }}</td>
+      <td>
+        {% if log.actor %}
+          {{ log.actor.get_full_name|default:log.actor.username }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>
+        {% if log.meta.event %}
+          {{ log.meta.event }}
+        {% elif log.action %}
+          {{ log.action }}
+        {% else %}
+          操作
+        {% endif %}
+      </td>
+      <td>
+        {% if log.changes %}
+          {% for field, change in log.changes.items %}
+            {% if change.from %}
+              {{ field }}: {{ change.from }}
+            {% endif %}
+            {% if not forloop.last %}<br>{% endif %}
+          {% endfor %}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>
+        {% if log.changes %}
+          {% for field, change in log.changes.items %}
+            {% if change.to %}
+              {{ field }}: {{ change.to }}
+            {% endif %}
+            {% if not forloop.last %}<br>{% endif %}
+          {% endfor %}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>
+        {% if log.meta.event %}
+          {% if log.meta.ip %}{{ log.meta.ip }}{% endif %}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+  <tr>
+    <td colspan="7" class="text-center text-muted">暂无审计信息</td>
+  </tr>
+  {% endif %}
+{% endblock detail_audit_info_content %}
 
 {% block detail_related_records_content %}
   {# 子目标列表 #}
@@ -561,8 +654,8 @@
   {% endif %}
 {% endblock detail_related_links_content %}
 
-{% block detail_statistics_content %}
-  {# 完成率进度条 #}
+{% block detail_data_info_content %}
+  {# 完成进度 #}
   {% if goal.completion_rate is not None %}
   <div class="mb-4">
     <h5 class="detail-subsection-title">完成进度</h5>
@@ -596,43 +689,26 @@
     </div>
   </div>
   {% endif %}
+{% endblock detail_data_info_content %}
 
-  {# 统计信息卡片 #}
-  <div class="row">
-    <div class="col-md-3 mb-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h5 class="card-title">{{ child_goals|length|default:0 }}</h5>
-          <p class="card-text text-muted">子目标数</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 mb-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h5 class="card-title">{{ related_plans_count|default:0 }}</h5>
-          <p class="card-text text-muted">关联计划</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 mb-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h5 class="card-title">{{ progress_records|length|default:0 }}</h5>
-          <p class="card-text text-muted">进度记录</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 mb-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h5 class="card-title">{{ status_logs|length|default:0 }}</h5>
-          <p class="card-text text-muted">状态变更</p>
-        </div>
-      </div>
-    </div>
-  </div>
-{% endblock detail_statistics_content %}
+{% block detail_statistics_rows_content %}
+  <tr>
+    <th>子目标数</th>
+    <td>{{ child_goals|length|default:0 }}</td>
+  </tr>
+  <tr>
+    <th>关联计划</th>
+    <td>{{ related_plans_count|default:0 }}</td>
+  </tr>
+  <tr>
+    <th>进度记录</th>
+    <td>{{ progress_records|length|default:0 }}</td>
+  </tr>
+  <tr>
+    <th>状态变更</th>
+    <td>{{ status_logs|length|default:0 }}</td>
+  </tr>
+{% endblock detail_statistics_rows_content %}
 
 {% block module_extra_css %}
 {{ block.super }}

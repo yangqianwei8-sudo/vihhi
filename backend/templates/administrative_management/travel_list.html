@@ -1,30 +1,11 @@
 {% extends "shared/list_page_base.html" %}
-{% comment %}
-差旅申请列表页面模板 (Travel List Template)
-
-功能说明：
-- 展示差旅申请记录的列表页面
-- 支持按状态、差旅方式等多维度筛选
-- 支持差旅申请的查看、编辑、审批操作
-{% endcomment %}
 {% load static %}
 
-{# 操作栏 - 顶部操作按钮 #}
-{% block list_action_bar_content %}
-<div class="list-page-action-bar">
-  <div class="list-page-action-bar-left">
-    {# 可以添加搜索框等 #}
-  </div>
-  <div class="list-page-action-bar-right">
-    <a href="{% url 'admin_pages:travel_create' %}" class="btn btn-primary">
-      <i class="bi bi-plus-circle"></i> 创建申请
-    </a>
-  </div>
-</div>
-{% endblock list_action_bar_content %}
+{% block pm_title %}差旅申请列表{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有差旅申请{% endblock pm_subtitle %}
 
-{# 筛选器区域 #}
 {% block list_filters_content %}
+  {# 筛选器区域 #}
   <div class="list-page-filter-item">
     <label class="list-page-filter-label">搜索</label>
     <input type="text" name="search" class="form-control" placeholder="搜索申请单号、目的地、事由..." value="{{ search }}">
@@ -49,7 +30,12 @@
   </div>
 {% endblock list_filters_content %}
 
-{# 表格表头 #}
+{% block list_table_checkbox_header %}
+  <th style="width: 50px;">
+    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
+  </th>
+{% endblock list_table_checkbox_header %}
+
 {% block list_table_headers %}
   <th>申请单号</th>
   <th>目的地</th>
@@ -63,26 +49,28 @@
   <th>操作</th>
 {% endblock list_table_headers %}
 
-{# 表格行 #}
 {% block list_table_rows %}
   {% if page_obj %}
     {% for travel in page_obj %}
     <tr>
       <td>
-        <a href="{% url 'admin_pages:travel_detail' travel_id=travel.id %}" class="text-decoration-none">
+        <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ travel.id }}" id="item_{{ travel.id }}">
+      </td>
+      <td>
+        <a href="{% url 'admin_pages:travel_detail' travel_id=travel.id %}" class="text-dark text-decoration-none fw-medium">
           <code>{{ travel.application_number }}</code>
         </a>
       </td>
       <td>
-        <a href="{% url 'admin_pages:travel_detail' travel_id=travel.id %}" class="text-decoration-none">
+        <a href="{% url 'admin_pages:travel_detail' travel_id=travel.id %}" class="text-dark text-decoration-none">
           {{ travel.destination }}
         </a>
       </td>
       <td>
-        <div class="small">
-          <div>{{ travel.start_date|date:"Y-m-d" }} 至</div>
-          <div>{{ travel.end_date|date:"Y-m-d" }}</div>
-        </div>
+        <small class="text-muted">
+          {{ travel.start_date|date:"Y-m-d" }}<br>
+          至 {{ travel.end_date|date:"Y-m-d" }}
+        </small>
       </td>
       <td>{{ travel.travel_days }} 天</td>
       <td>
@@ -122,10 +110,12 @@
         {% if travel.travel_budget %}
         ¥{{ travel.travel_budget|floatformat:2 }}
         {% else %}
-        -
+        <span class="text-muted">-</span>
         {% endif %}
       </td>
-      <td>{{ travel.created_time|date:"Y-m-d H:i" }}</td>
+      <td>
+        <small class="text-muted">{{ travel.created_time|date:"Y-m-d H:i" }}</small>
+      </td>
       <td>
         <div class="list-page-table-actions">
           <a href="{% url 'admin_pages:travel_detail' travel_id=travel.id %}" class="action-view" title="查看详情">
@@ -150,30 +140,115 @@
         </div>
       </td>
     </tr>
-    {% empty %}
-    {# 空状态 - 当 page_obj 存在但没有数据时显示 #}
-    <tr>
-      <td colspan="10" class="list-empty">
-        <div class="list-empty-icon">✈️</div>
-        <div class="list-empty-text">暂无数据</div>
-        {% block list_empty_hint %}
-        <div class="list-empty-hint">
-          当前筛选条件下没有找到差旅申请记录。
-        </div>
-        {% endblock list_empty_hint %}
-      </td>
-    </tr>
     {% endfor %}
   {% else %}
-    {# 空状态 - 当 page_obj 不存在时显示 #}
     <tr>
-      <td colspan="10" class="list-empty">
+      <td colspan="11" class="list-empty">
         <div class="list-empty-icon">✈️</div>
-        <div class="list-empty-text">暂无数据</div>
-        <div class="list-empty-hint">
-          当前筛选条件下没有找到差旅申请记录。
-        </div>
+        <div class="list-empty-text">暂无差旅申请数据</div>
       </td>
     </tr>
   {% endif %}
 {% endblock list_table_rows %}
+
+{% block list_empty_hint %}
+  <div class="list-empty-hint">请创建第一个差旅申请开始使用</div>
+{% endblock list_empty_hint %}
+
+{% block extra_js %}
+  {{ block.super }}
+  
+  <!-- 差旅列表专用复选框初始化 -->
+  <script>
+  (function() {
+    'use strict';
+    
+    function initTravelListCheckboxes() {
+      const selectAll = document.getElementById('selectAll');
+      const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+      
+      if (!selectAll || rowCheckboxes.length === 0) {
+        return;
+      }
+      
+      if (selectAll.dataset.travelListInitialized === 'true') {
+        return;
+      }
+      
+      selectAll.dataset.travelListInitialized = 'true';
+      
+      function updateSelectAllState() {
+        const allChecked = rowCheckboxes.length > 0 && Array.from(rowCheckboxes).every(function(cb) {
+          return cb.checked;
+        });
+        const someChecked = Array.from(rowCheckboxes).some(function(cb) {
+          return cb.checked;
+        });
+        selectAll.checked = allChecked;
+        selectAll.indeterminate = someChecked && !allChecked;
+      }
+      
+      function updateSelectedCount() {
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        const count = checked.length;
+        const event = new CustomEvent('checkboxSelectionChanged', {
+          detail: { 
+            count: count, 
+            selectedIds: Array.from(checked).map(function(cb) {
+              return cb.value;
+            })
+          }
+        });
+        document.dispatchEvent(event);
+      }
+      
+      selectAll.addEventListener('change', function(e) {
+        e.stopPropagation();
+        const checked = this.checked;
+        rowCheckboxes.forEach(function(cb) {
+          cb.checked = checked;
+        });
+        updateSelectedCount();
+      });
+      
+      rowCheckboxes.forEach(function(cb) {
+        if (cb.dataset.travelListInitialized === 'true') {
+          return;
+        }
+        cb.dataset.travelListInitialized = 'true';
+        
+        cb.addEventListener('change', function(e) {
+          e.stopPropagation();
+          updateSelectAllState();
+          updateSelectedCount();
+        });
+      });
+      
+      window.getSelectedIds = function() {
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        return Array.from(checked).map(function(cb) {
+          return cb.value;
+        });
+      };
+      
+      updateSelectAllState();
+      updateSelectedCount();
+    }
+    
+    function tryInit() {
+      try {
+        initTravelListCheckboxes();
+      } catch (e) {
+        console.error('[差旅列表] 复选框初始化失败:', e);
+      }
+    }
+    
+    tryInit();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', tryInit);
+    }
+    setTimeout(tryInit, 100);
+    setTimeout(tryInit, 500);
+  })();
+  </script>
+{% endblock extra_js %}

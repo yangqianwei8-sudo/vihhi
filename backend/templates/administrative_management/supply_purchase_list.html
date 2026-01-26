@@ -1,13 +1,8 @@
 {% extends "shared/list_page_base.html" %}
-{% comment %}
-采购单列表页面模板 (Supply Purchase List Template)
-
-功能说明：
-- 展示采购单记录的列表页面
-- 支持按状态等多维度筛选
-- 支持采购单的查看、编辑、审批、收货操作
-{% endcomment %}
 {% load static %}
+
+{% block pm_title %}采购单列表{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有采购单{% endblock pm_subtitle %}
 
 {# 操作栏 - 顶部操作按钮 #}
 {% block list_action_bar_content %}
@@ -40,7 +35,12 @@
   </div>
 {% endblock list_filters_content %}
 
-{# 表格表头 #}
+{% block list_table_checkbox_header %}
+  <th style="width: 50px;">
+    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
+  </th>
+{% endblock list_table_checkbox_header %}
+
 {% block list_table_headers %}
   <th>采购单号</th>
   <th>供应商</th>
@@ -58,13 +58,16 @@
     {% for purchase in page_obj %}
     <tr>
       <td>
-        <a href="{% url 'admin_pages:supply_purchase_detail' purchase_id=purchase.id %}" class="text-decoration-none">
+        <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ purchase.id }}" id="item_{{ purchase.id }}">
+      </td>
+      <td>
+        <a href="{% url 'admin_pages:supply_purchase_detail' purchase_id=purchase.id %}" class="text-dark text-decoration-none fw-medium">
           <code>{{ purchase.purchase_number }}</code>
         </a>
       </td>
       <td>{{ purchase.supplier }}</td>
       <td>{{ purchase.purchase_date|date:"Y-m-d" }}</td>
-      <td>¥{{ purchase.total_amount|floatformat:2 }}</td>
+      <td><strong>¥{{ purchase.total_amount|floatformat:2 }}</strong></td>
       <td>{{ purchase.created_by.get_full_name|default:purchase.created_by.username }}</td>
       <td>
         {% if purchase.status == 'draft' %}
@@ -83,7 +86,9 @@
         <span class="badge bg-secondary">{{ purchase.get_status_display }}</span>
         {% endif %}
       </td>
-      <td>{{ purchase.created_time|date:"Y-m-d H:i" }}</td>
+      <td>
+        <small class="text-muted">{{ purchase.created_time|date:"Y-m-d H:i" }}</small>
+      </td>
       <td>
         <div class="list-page-table-actions">
           <a href="{% url 'admin_pages:supply_purchase_detail' purchase_id=purchase.id %}" class="action-view" title="查看详情">
@@ -110,30 +115,115 @@
         </div>
       </td>
     </tr>
-    {% empty %}
-    {# 空状态 - 当 page_obj 存在但没有数据时显示 #}
-    <tr>
-      <td colspan="8" class="list-empty">
-        <div class="list-empty-icon">🛒</div>
-        <div class="list-empty-text">暂无数据</div>
-        {% block list_empty_hint %}
-        <div class="list-empty-hint">
-          当前筛选条件下没有找到采购单记录。
-        </div>
-        {% endblock list_empty_hint %}
-      </td>
-    </tr>
     {% endfor %}
   {% else %}
-    {# 空状态 - 当 page_obj 不存在时显示 #}
     <tr>
-      <td colspan="8" class="list-empty">
+      <td colspan="9" class="list-empty">
         <div class="list-empty-icon">🛒</div>
-        <div class="list-empty-text">暂无数据</div>
-        <div class="list-empty-hint">
-          当前筛选条件下没有找到采购单记录。
-        </div>
+        <div class="list-empty-text">暂无采购单数据</div>
       </td>
     </tr>
   {% endif %}
 {% endblock list_table_rows %}
+
+{% block list_empty_hint %}
+  <div class="list-empty-hint">请创建第一个采购单开始使用</div>
+{% endblock list_empty_hint %}
+
+{% block extra_js %}
+  {{ block.super }}
+  
+  <!-- 采购单列表专用复选框初始化 -->
+  <script>
+  (function() {
+    'use strict';
+    
+    function initSupplyPurchaseListCheckboxes() {
+      const selectAll = document.getElementById('selectAll');
+      const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+      
+      if (!selectAll || rowCheckboxes.length === 0) {
+        return;
+      }
+      
+      if (selectAll.dataset.supplyPurchaseListInitialized === 'true') {
+        return;
+      }
+      
+      selectAll.dataset.supplyPurchaseListInitialized = 'true';
+      
+      function updateSelectAllState() {
+        const allChecked = rowCheckboxes.length > 0 && Array.from(rowCheckboxes).every(function(cb) {
+          return cb.checked;
+        });
+        const someChecked = Array.from(rowCheckboxes).some(function(cb) {
+          return cb.checked;
+        });
+        selectAll.checked = allChecked;
+        selectAll.indeterminate = someChecked && !allChecked;
+      }
+      
+      function updateSelectedCount() {
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        const count = checked.length;
+        const event = new CustomEvent('checkboxSelectionChanged', {
+          detail: { 
+            count: count, 
+            selectedIds: Array.from(checked).map(function(cb) {
+              return cb.value;
+            })
+          }
+        });
+        document.dispatchEvent(event);
+      }
+      
+      selectAll.addEventListener('change', function(e) {
+        e.stopPropagation();
+        const checked = this.checked;
+        rowCheckboxes.forEach(function(cb) {
+          cb.checked = checked;
+        });
+        updateSelectedCount();
+      });
+      
+      rowCheckboxes.forEach(function(cb) {
+        if (cb.dataset.supplyPurchaseListInitialized === 'true') {
+          return;
+        }
+        cb.dataset.supplyPurchaseListInitialized = 'true';
+        
+        cb.addEventListener('change', function(e) {
+          e.stopPropagation();
+          updateSelectAllState();
+          updateSelectedCount();
+        });
+      });
+      
+      window.getSelectedIds = function() {
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        return Array.from(checked).map(function(cb) {
+          return cb.value;
+        });
+      };
+      
+      updateSelectAllState();
+      updateSelectedCount();
+    }
+    
+    function tryInit() {
+      try {
+        initSupplyPurchaseListCheckboxes();
+      } catch (e) {
+        console.error('[采购单列表] 复选框初始化失败:', e);
+      }
+    }
+    
+    tryInit();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', tryInit);
+    }
+    setTimeout(tryInit, 100);
+    setTimeout(tryInit, 500);
+  })();
+  </script>
+{% endblock extra_js %}

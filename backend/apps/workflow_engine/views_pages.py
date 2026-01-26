@@ -169,7 +169,9 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
         permission_set = get_user_permission_codes(request.user)
         context['user'] = request.user
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        context['sidebar_menu'] = _build_workflow_engine_sidebar_nav(permission_set, request.path, request.user)
+        sidebar_nav = _build_workflow_engine_sidebar_nav(permission_set, request.path, request.user)
+        context['sidebar_menu'] = sidebar_nav
+        context['sidebar_nav'] = sidebar_nav  # 为三栏布局模板提供
         # 设置侧边栏标题和副标题
         context['sidebar_title'] = '审批引擎'
         context['sidebar_subtitle'] = 'Workflow Engine'
@@ -683,6 +685,60 @@ def approval_list(request):
     from .services import ApprovalEngine
     from django.core.paginator import Paginator
     
+    # 处理批量审批POST请求
+    if request.method == 'POST':
+        action = request.POST.get('action')  # 'approve' 或 'reject'
+        instance_ids = request.POST.getlist('instance_ids')
+        
+        if not instance_ids:
+            messages.error(request, '请至少选择一个审批实例')
+            return redirect('workflow_engine:approval_list')
+        
+        if action not in ['approve', 'reject']:
+            messages.error(request, '无效的操作类型')
+            return redirect('workflow_engine:approval_list')
+        
+        # 获取待审批的实例（确保用户有权限审批）
+        pending_approvals = ApprovalEngine.get_pending_approvals(request.user)
+        instances = pending_approvals.filter(id__in=instance_ids)
+        
+        if instances.count() != len(instance_ids):
+            messages.warning(request, '部分审批实例不存在或您没有权限审批')
+        
+        success_count = 0
+        error_count = 0
+        error_messages = []
+        
+        for instance in instances:
+            try:
+                result = 'approved' if action == 'approve' else 'rejected'
+                comment = f'批量{"通过" if action == "approve" else "驳回"}'
+                
+                success = ApprovalEngine.approve(
+                    instance=instance,
+                    approver=request.user,
+                    result=result,
+                    comment=comment
+                )
+                
+                if success:
+                    success_count += 1
+                else:
+                    error_count += 1
+                    error_messages.append(f'{instance.instance_number}: 审批失败（状态不正确或已处理）')
+            except Exception as e:
+                error_count += 1
+                error_messages.append(f'{instance.instance_number}: {str(e)}')
+        
+        # 审批结果走通知中心，不写入 messages，避免出现在登录页等
+        if error_count > 0 and success_count == 0:
+            messages.error(request, f'{error_count} 个审批处理失败')
+        elif error_count > 0:
+            messages.warning(request, f'{success_count} 个已处理，{error_count} 个失败')
+        
+        return redirect('workflow_engine:approval_list')
+    
+    # GET请求：显示列表
     # 获取标签页参数
     tab = request.GET.get('tab', 'pending')
     per_page = request.GET.get('per_page', 20)
@@ -826,6 +882,13 @@ def approval_detail(request, instance_id):
                     content_object_type_name = '项目'
                 except:
                     pass
+            elif model_name == 'plan':
+                from django.urls import reverse
+                try:
+                    content_object_detail_url = reverse('plan_pages:plan_detail', args=[instance.object_id])
+                    content_object_type_name = '计划'
+                except:
+                    pass
             else:
                 content_object_type_name = model_name
         except Exception as e:
@@ -839,8 +902,21 @@ def approval_detail(request, instance_id):
         f"流程：{instance.workflow.name}",
         request=request,
     )
+    
+    # 获取所有用户列表（用于转交）
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    all_users = User.objects.filter(is_active=True).order_by('username')[:100]
+    
+    # 为审批记录添加排序后的记录列表（用于三栏布局）
+    instance.records_sorted = sorted(
+        records,
+        key=lambda r: (r.node.sequence if r.node else 999, r.approval_time or r.created_time)
+    )
+    
     context.update({
         'instance': instance,
+        'object': instance,  # 为三栏布局模板提供 object 变量
         'records': records,
         'records_by_node': dict(records_by_node),
         'node_status': node_status,
@@ -849,9 +925,13 @@ def approval_detail(request, instance_id):
         'content_object': content_object,
         'content_object_detail_url': content_object_detail_url,
         'content_object_type_name': content_object_type_name,
+        'all_users': all_users,  # 用于转交的用户列表
     })
     
-    return render(request, 'workflow_engine/approval_detail.html', context)
+    # 默认使用三栏布局模板，可以通过URL参数切换回旧布局
+    use_three_column = request.GET.get('layout') != 'old'
+    template_name = "workflow_engine/approval_detail_three_column.html" if use_three_column else "workflow_engine/approval_detail.html"
+    return render(request, template_name, context)
 
 
 @login_required
@@ -874,10 +954,9 @@ def approval_action(request, instance_id):
                     result='approved',
                     comment=comment
                 )
-                if success:
-                    messages.success(request, '审批通过')
-                else:
+                if not success:
                     messages.error(request, '审批操作失败')
+                # 审批结果走通知中心，不写入 success messages
             
             elif action == 'reject':
                 success = ApprovalEngine.approve(
@@ -886,10 +965,9 @@ def approval_action(request, instance_id):
                     result='rejected',
                     comment=comment
                 )
-                if success:
-                    messages.success(request, '审批已驳回')
-                else:
+                if not success:
                     messages.error(request, '驳回操作失败')
+                # 审批结果走通知中心，不写入 success messages
             
             elif action == 'transfer' and transferred_to_id:
                 transferred_to = get_object_or_404(User, id=transferred_to_id)
@@ -900,12 +978,11 @@ def approval_action(request, instance_id):
                     comment=comment,
                     transferred_to=transferred_to
                 )
-                if success:
-                    messages.success(request, f'审批已转交给 {transferred_to.username}')
-                else:
+                if not success:
                     messages.error(request, '转交操作失败')
+                # 审批结果走通知中心，不写入 success messages
             
-            return redirect('workflow_engine:approval_detail', instance_id=instance.id)
+            return redirect('workflow_engine:approval_list')
             
         except Exception as e:
             import logging
@@ -913,5 +990,5 @@ def approval_action(request, instance_id):
             logger.exception('审批操作失败: %s', str(e))
             messages.error(request, f'审批操作失败：{str(e)}')
     
-    return redirect('workflow_engine:approval_detail', instance_id=instance.id)
+    return redirect('workflow_engine:approval_list')
 

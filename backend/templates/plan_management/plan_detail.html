@@ -11,205 +11,187 @@
 </a>
 {% endblock %}
 
-{% block detail_basic_info_card %}
-<div class="detail-card-wrapper detail-card-wrapper-basic-info">
-  <div class="detail-card detail-card-basic-info">
+{# 基本信息卡片由基础模板自动提供，包含：所属部门、负责人、计划编号 #}
+
+{% block detail_detail_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-detail-info">
+  <div class="detail-card detail-card-detail-info">
     <div class="detail-card-header">
       <h3 class="detail-card-title">
-        <i class="fas fa-info-circle"></i>
-        表单信息
+        <i class="fas fa-list-alt"></i>
+        详细信息
       </h3>
     </div>
     <div class="detail-card-body">
-{# 第一排：计划编号、计划名称、计划层级、计划周期（4个字段，计划状态已移至状态信息卡片） #}
-    <div class="form-row-5 mb-3">
-      {% block detail_basic_info_row1 %}
-  {# 计划编号 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">计划编号</label>
-      <div class="detail-field-value">
-        <code>{{ plan.plan_number|default:plan.id }}</code>
-      </div>
-    </div>
-  </div>
-  {# 计划名称 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">计划名称</label>
-      <div class="detail-field-value">
-        <strong>{{ plan.name }}</strong>
-      </div>
-    </div>
-  </div>
-  {# 计划层级 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">计划层级</label>
-      <div class="detail-field-value">
-        {{ plan.get_level_display|default:plan.level }}
-      </div>
-    </div>
-  </div>
-  {# 计划周期 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">计划周期</label>
-      <div class="detail-field-value">
-        {{ plan.get_plan_period_display|default:plan.plan_period }}
-      </div>
-    </div>
-  </div>
-  {# 空占位符，移除计划状态（状态信息已在状态信息卡片中显示） #}
-  <div class="col-5-fields detail-field-wrapper"></div>
-  {% endblock detail_basic_info_row1 %}
-    </div>
-
-  {# 第二排：关联战略目标、父计划、关联项目（3个字段 + 2个空占位符 = 5个位置） #}
-    <div class="form-row-5 mb-3">
-      {% block detail_basic_info_row2 %}
-  {# 关联战略目标 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">关联战略目标</label>
-      <div class="detail-field-value">
-        {% if plan.related_goal %}
-          <a href="{% url 'plan_pages:strategic_goal_detail' plan.related_goal.id %}">{{ plan.related_goal.name }}</a>
-        {% else %}
-          -
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  {# 父计划 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">父计划</label>
-      <div class="detail-field-value">
-        {% if plan.parent_plan %}
-          <a href="{% url 'plan_pages:plan_detail' plan.parent_plan.id %}">{{ plan.parent_plan.name }}</a>
-        {% else %}
-          -
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  {# 关联项目 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">关联项目</label>
-      <div class="detail-field-value">
-        {% if plan.related_project %}
-          {{ plan.related_project }}
-        {% else %}
-          -
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  {# 空占位符，凑满5个字段 #}
-  <div class="col-5-fields detail-field-wrapper"></div>
-  <div class="col-5-fields detail-field-wrapper"></div>
-  {% endblock detail_basic_info_row2 %}
-    </div>
-
-  {# 第三排：开始时间、结束时间（2个字段 + 3个空占位符 = 5个位置） #}
-    <div class="form-row-5 mb-3">
-      {% block detail_basic_info_row3 %}
-  {# 开始时间 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">计划开始时间</label>
-      <div class="detail-field-value">
-        {{ plan.start_time|date:"Y-m-d H:i"|default:"-" }}
-      </div>
-    </div>
-  </div>
-  {# 结束时间 #}
-  <div class="col-5-fields detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">计划结束时间</label>
-      <div class="detail-field-value">
-        {{ plan.end_time|date:"Y-m-d H:i"|default:"-" }}
-      </div>
-    </div>
-  </div>
-  {# 空占位符，凑满5个字段 #}
-  <div class="col-5-fields detail-field-wrapper"></div>
-  <div class="col-5-fields detail-field-wrapper"></div>
-  <div class="col-5-fields detail-field-wrapper"></div>
-  {% endblock detail_basic_info_row3 %}
-    </div>
-
-  {# 多行文本字段：计划内容（整行，使用 col-12） #}
+      {% block detail_detail_info_rows %}
+      {# 第一排：计划名称、计划层级、计划周期（使用标准栅格：col-md-4，一行3个字段） #}
       <div class="row mb-3">
-      {% block detail_basic_info_content %}
-  <div class="col-12 detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">计划内容</label>
-      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
-        {% if plan.content %}{{ plan.content }}{% else %}暂无内容{% endif %}
+        {% block detail_detail_info_row1 %}
+        {# 计划名称 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划名称</label>
+            <div class="detail-field-value">
+              <strong>{{ plan.name }}</strong>
+            </div>
+          </div>
+        </div>
+        {# 计划层级 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划层级</label>
+            <div class="detail-field-value">
+              {{ plan.get_level_display|default:plan.level }}
+            </div>
+          </div>
+        </div>
+        {# 计划周期 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划周期</label>
+            <div class="detail-field-value">
+              {{ plan.get_plan_period_display|default:plan.plan_period }}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_row1 %}
       </div>
-    </div>
-  </div>
-  {% endblock detail_basic_info_content %}
-    </div>
 
-  {# 多行文本字段：计划目标（整行，使用 col-12） #}
+      {# 第二排：关联战略目标、父计划、关联项目（使用标准栅格：col-md-4，一行3个字段） #}
       <div class="row mb-3">
-      {% block detail_basic_info_objective %}
-  <div class="col-12 detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">计划目标</label>
-      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
-        {% if plan.plan_objective %}{{ plan.plan_objective }}{% else %}暂无目标{% endif %}
+        {% block detail_detail_info_row2 %}
+        {# 关联战略目标 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">关联战略目标</label>
+            <div class="detail-field-value">
+              {% if plan.related_goal %}
+                <a href="{% url 'plan_pages:strategic_goal_detail' plan.related_goal.id %}">{{ plan.related_goal.name }}</a>
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {# 父计划 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">父计划</label>
+            <div class="detail-field-value">
+              {% if plan.parent_plan %}
+                <a href="{% url 'plan_pages:plan_detail' plan.parent_plan.id %}">{{ plan.parent_plan.name }}</a>
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {# 关联项目 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">关联项目</label>
+            <div class="detail-field-value">
+              {% if plan.related_project %}
+                {{ plan.related_project }}
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_row2 %}
       </div>
-    </div>
-  </div>
-  {% endblock detail_basic_info_objective %}
-    </div>
 
-  {# 多行文本字段：协作计划（整行，使用 col-12） #}
+      {# 第三排：开始时间、结束时间（使用标准栅格：col-md-6，一行2个字段） #}
       <div class="row mb-3">
-      {% block detail_basic_info_collaboration %}
-  <div class="col-12 detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">协作计划</label>
-      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
-        {% if plan.collaboration_plan %}{{ plan.collaboration_plan }}{% else %}暂无协作计划{% endif %}
+        {% block detail_detail_info_row3 %}
+        {# 开始时间 #}
+        <div class="col-md-6 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划开始时间</label>
+            <div class="detail-field-value">
+              {{ plan.start_time|date:"Y-m-d H:i"|default:"-" }}
+            </div>
+          </div>
+        </div>
+        {# 结束时间 #}
+        <div class="col-md-6 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划结束时间</label>
+            <div class="detail-field-value">
+              {{ plan.end_time|date:"Y-m-d H:i"|default:"-" }}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_row3 %}
       </div>
-    </div>
-  </div>
-  {% endblock detail_basic_info_collaboration %}
-    </div>
 
-  {# 多选字段：协作人员（整行，使用 col-12） #}
+      {# 多行文本字段：计划内容（使用标准栅格：col-md-12，一行1个字段） #}
       <div class="row mb-3">
-      {% block detail_basic_info_participants %}
-  <div class="col-12 detail-field-wrapper">
-    <div class="detail-field">
-      <label class="detail-field-label">协作人员</label>
-      <div class="detail-field-value">
-        {% if plan.participants.all %}
-          {% for participant in plan.participants.all %}
-            <span class="badge badge-secondary">{{ participant.get_full_name|default:participant.username }}</span>
-          {% endfor %}
-        {% else %}
-          暂无协作人员
-        {% endif %}
+        {% block detail_detail_info_content %}
+        <div class="col-md-12 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划内容</label>
+            <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+              {% if plan.content %}{{ plan.content }}{% else %}暂无内容{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_content %}
       </div>
-    </div>
-  </div>
-  {% endblock detail_basic_info_participants %}
-    </div>
+
+      {# 多行文本字段：计划目标（使用标准栅格：col-md-12，一行1个字段） #}
+      <div class="row mb-3">
+        {% block detail_detail_info_objective %}
+        <div class="col-md-12 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划目标</label>
+            <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+              {% if plan.plan_objective %}{{ plan.plan_objective }}{% else %}暂无目标{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_objective %}
+      </div>
+
+      {# 多行文本字段：协作计划（使用标准栅格：col-md-12，一行1个字段） #}
+      <div class="row mb-3">
+        {% block detail_detail_info_collaboration %}
+        <div class="col-md-12 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">协作计划</label>
+            <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+              {% if plan.collaboration_plan %}{{ plan.collaboration_plan }}{% else %}暂无协作计划{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_collaboration %}
+      </div>
+
+      {# 多选字段：协作人员（使用标准栅格：col-md-12，一行1个字段） #}
+      <div class="row mb-3">
+        {% block detail_detail_info_participants %}
+        <div class="col-md-12 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">协作人员</label>
+            <div class="detail-field-value">
+              {% if plan.participants.all %}
+                {% for participant in plan.participants.all %}
+                  <span class="badge badge-secondary">{{ participant.get_full_name|default:participant.username }}</span>
+                {% endfor %}
+              {% else %}
+                暂无协作人员
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_participants %}
+      </div>
+      {% endblock detail_detail_info_rows %}
     </div>
   </div>
 </div>
-{% endblock detail_basic_info_card %}
-
-
-
-
+{% endblock detail_detail_info_card %}
 
 
 {% block detail_edit_url %}{% url 'plan_pages:plan_edit' plan.id %}{% endblock %}
@@ -290,44 +272,160 @@
 
 {% block detail_status_history_content %}
   {% if status_logs %}
-  <div class="table-responsive">
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th>变更时间</th>
-          <th>状态变更</th>
-          <th>变更人</th>
-          <th>变更原因</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for log in status_logs %}
-        <tr>
-          <td>{{ log.changed_time|date:"Y-m-d H:i" }}</td>
-          <td>
-            <span class="badge badge-status badge-{{ log.old_status }}">
-              {{ log.get_old_status_display|default:log.old_status }}
-            </span>
-            →
-            <span class="badge badge-status badge-{{ log.new_status }}">
-              {{ log.get_new_status_display|default:log.new_status }}
-            </span>
-          </td>
-          <td>
-            {% if log.changed_by %}
-              {{ log.changed_by.get_full_name|default:log.changed_by.username }}
-            {% else %}
-              -
-            {% endif %}
-          </td>
-          <td>{{ log.change_reason|default:"-" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    {% for log in status_logs %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>
+        <span class="badge badge-status badge-{{ log.old_status }}">
+          {{ log.get_old_status_display|default:log.old_status }}
+        </span>
+        →
+        <span class="badge badge-status badge-{{ log.new_status }}">
+          {{ log.get_new_status_display|default:log.new_status }}
+        </span>
+      </td>
+      <td>
+        {% if log.changed_by %}
+          {{ log.changed_by.get_full_name|default:log.changed_by.username }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>{{ log.changed_time|date:"Y-m-d H:i" }}</td>
+      <td>{{ log.get_change_evidence|default:"-" }}</td>
+      <td>{{ log.notes|default:"-" }}</td>
+    </tr>
+    {% endfor %}
   {% endif %}
 {% endblock detail_status_history_content %}
+
+{% block detail_related_info_content %}
+  {# 关联项目 #}
+  {% if related_projects %}
+    {% for project in related_projects %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>关联项目</td>
+      <td>
+        {% if project.project_number %}
+          <a href="{% url 'project_center:project_detail' project.id %}" class="text-decoration-none">
+            {{ project.project_number }} - {{ project.name }}
+          </a>
+        {% else %}
+          {{ project.name }}
+        {% endif %}
+      </td>
+      <td>{{ project.created_time|date:"Y-m-d H:i" }}</td>
+      <td>{{ project.get_status_display|default:project.status }}</td>
+      <td>-</td>
+    </tr>
+    {% endfor %}
+  {% endif %}
+  
+  {# 下级计划 #}
+  {% if child_plans %}
+    {% for child in child_plans %}
+    <tr>
+      <td>{% if related_projects %}{{ related_projects|length|add:forloop.counter }}{% else %}{{ forloop.counter }}{% endif %}</td>
+      <td>下级计划</td>
+      <td>
+        <a href="{% url 'plan_pages:plan_detail' child.id %}" class="text-decoration-none">
+          {{ child.plan_number }} - {{ child.name }}
+        </a>
+      </td>
+      <td>{{ child.created_time|date:"Y-m-d H:i" }}</td>
+      <td>{{ child.get_status_display|default:child.status }}</td>
+      <td>-</td>
+    </tr>
+    {% endfor %}
+  {% endif %}
+  
+  {# 关联战略目标 #}
+  {% if plan.related_goal %}
+  <tr>
+    <td>{% if related_projects %}{{ related_projects|length|add:child_plans|length|add:1 }}{% elif child_plans %}{{ child_plans|length|add:1 }}{% else %}1{% endif %}</td>
+    <td>关联目标</td>
+    <td>
+      <a href="{% url 'plan_pages:strategic_goal_detail' plan.related_goal.id %}" class="text-decoration-none">
+        {{ plan.related_goal.goal_number }} - {{ plan.related_goal.name }}
+      </a>
+    </td>
+    <td>{{ plan.related_goal.created_time|date:"Y-m-d H:i" }}</td>
+    <td>{{ plan.related_goal.get_status_display|default:plan.related_goal.status }}</td>
+    <td>-</td>
+  </tr>
+  {% endif %}
+  
+  {# 如果没有关联信息，显示空状态 #}
+  {% if not related_projects and not child_plans and not plan.related_goal %}
+  <tr>
+    <td colspan="6" class="text-center text-muted">暂无关联信息</td>
+  </tr>
+  {% endif %}
+{% endblock detail_related_info_content %}
+
+{% block detail_audit_info_content %}
+  {% if audit_logs %}
+    {% for log in audit_logs %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ log.created_time|date:"Y-m-d H:i:s" }}</td>
+      <td>
+        {% if log.actor %}
+          {{ log.actor.get_full_name|default:log.actor.username }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>
+        {% if log.meta.event %}
+          {{ log.meta.event }}
+        {% elif log.action %}
+          {{ log.action }}
+        {% else %}
+          操作
+        {% endif %}
+      </td>
+      <td>
+        {% if log.changes %}
+          {% for field, change in log.changes.items %}
+            {% if change.from %}
+              {{ field }}: {{ change.from }}
+            {% endif %}
+            {% if not forloop.last %}<br>{% endif %}
+          {% endfor %}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>
+        {% if log.changes %}
+          {% for field, change in log.changes.items %}
+            {% if change.to %}
+              {{ field }}: {{ change.to }}
+            {% endif %}
+            {% if not forloop.last %}<br>{% endif %}
+          {% endfor %}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>
+        {% if log.meta.event %}
+          {% if log.meta.ip %}{{ log.meta.ip }}{% endif %}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+  <tr>
+    <td colspan="7" class="text-center text-muted">暂无审计信息</td>
+  </tr>
+  {% endif %}
+{% endblock detail_audit_info_content %}
+
 {% block detail_status_timestamps_content %}
   {# 发布时间 #}
   {% if plan.published_at %}
@@ -526,78 +624,52 @@
   {% endif %}
 {% endblock detail_related_links_content %}
 
-{% block detail_statistics_content %}
+{% block detail_data_info_custom_rows %}
   {# 时间进度 #}
   {% if progress_percent is not None %}
-  <div class="mb-4">
-    <h5 class="detail-subsection-title">时间进度</h5>
-    <div class="row mb-3">
-      <div class="col-md-6">
-        <div class="detail-field">
-          <label class="detail-field-label">进度百分比</label>
-          <div class="detail-field-value">
-            <strong style="font-size: 16px;">{{ progress_percent }}%</strong>
-          </div>
+  <tr>
+    <th>进度百分比</th>
+    <td>
+      <strong style="font-size: 16px;">{{ progress_percent }}%</strong>
+      <div class="progress mt-2" style="height: 30px; max-width: 400px;">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+             role="progressbar" 
+             style="width: {{ progress_percent }}%;" 
+             aria-valuenow="{{ progress_percent }}" 
+             aria-valuemin="0" 
+             aria-valuemax="100">
+          {{ progress_percent }}%
         </div>
       </div>
-      <div class="col-md-6">
-        <div class="detail-field">
-          <label class="detail-field-label">时间范围</label>
-          <div class="detail-field-value">
-            {{ plan.start_time|date:"Y-m-d" }} → {{ plan.end_time|date:"Y-m-d" }}
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="progress" style="height: 30px;">
-      <div class="progress-bar progress-bar-striped progress-bar-animated" 
-           role="progressbar" 
-           style="width: {{ progress_percent }}%;" 
-           aria-valuenow="{{ progress_percent }}" 
-           aria-valuemin="0" 
-           aria-valuemax="100">
-        {{ progress_percent }}%
-      </div>
-    </div>
-  </div>
+    </td>
+  </tr>
+  <tr>
+    <th>时间范围</th>
+    <td>
+      {{ plan.start_time|date:"Y-m-d" }} → {{ plan.end_time|date:"Y-m-d" }}
+    </td>
+  </tr>
   {% endif %}
+{% endblock detail_data_info_custom_rows %}
 
-  {# 统计信息卡片 #}
-  <div class="row">
-    <div class="col-md-3 mb-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h5 class="card-title">{{ child_plans|length|default:0 }}</h5>
-          <p class="card-text text-muted">下级计划</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 mb-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h5 class="card-title">{{ issues|length|default:0 }}</h5>
-          <p class="card-text text-muted">问题数量</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 mb-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h5 class="card-title">{{ progress_records|length|default:0 }}</h5>
-          <p class="card-text text-muted">进度记录</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3 mb-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h5 class="card-title">{{ status_logs|length|default:0 }}</h5>
-          <p class="card-text text-muted">状态变更</p>
-        </div>
-      </div>
-    </div>
-  </div>
-{% endblock detail_statistics_content %}
+{% block detail_statistics_rows_content %}
+  <tr>
+    <th>下级计划</th>
+    <td>{{ child_plans|length|default:0 }}</td>
+  </tr>
+  <tr>
+    <th>问题数量</th>
+    <td>{{ issues|length|default:0 }}</td>
+  </tr>
+  <tr>
+    <th>进度记录</th>
+    <td>{{ progress_records|length|default:0 }}</td>
+  </tr>
+  <tr>
+    <th>状态变更</th>
+    <td>{{ status_logs|length|default:0 }}</td>
+  </tr>
+{% endblock detail_statistics_rows_content %}
 
 {% block module_extra_css %}
 {{ block.super }}

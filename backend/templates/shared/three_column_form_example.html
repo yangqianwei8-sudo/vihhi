@@ -1,0 +1,632 @@
+{% extends "shared/three_column_layout_base.html" %}
+{% load static %}
+
+{% block title %}三栏布局表单示例 - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<!-- 表单样式 -->
+<link rel="stylesheet" href="{% static 'css/components/forms.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/cards.css' %}">
+<style>
+    /* 三栏布局中的表单样式适配 */
+    .three-column-main__content .form-card {
+        margin-bottom: var(--spacing-lg, 24px);
+    }
+    
+    .three-column-main__content .form-card:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* 表单字段在中间详情区的样式 */
+    .three-column-main__content .form-field-wrapper {
+        margin-bottom: var(--spacing-md, 16px);
+    }
+    
+    /* 表单操作按钮区域 */
+    .form-actions-bottom {
+        margin-top: var(--spacing-lg, 24px);
+        padding-top: var(--spacing-md, 16px);
+        border-top: 1px solid var(--vh-border, #E0E0E0);
+    }
+    
+    /* 右侧操作区的按钮样式 */
+    .three-column-actions__button {
+        margin-bottom: var(--spacing-xs, 4px);
+    }
+    
+    .three-column-actions__button:last-child {
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}
+
+{% block header_title %}创建表单示例{% endblock %}
+{% block header_subtitle_text %}使用三栏布局的表单页面{% endblock %}
+
+{% block header_right %}
+<button class="btn btn-secondary btn-sm" onclick="window.history.back()">
+    <i class="fas fa-arrow-left"></i> 返回
+</button>
+<button class="btn btn-primary btn-sm" id="headerSubmitButton">
+    <i class="fas fa-save"></i> 保存
+</button>
+{% endblock %}
+
+{% block sidebar_title %}表单导航{% endblock %}
+
+{% block sidebar_content %}
+<!-- 页面导航 -->
+<div class="three-column-sidebar__section">
+    <div class="three-column-sidebar__section-title">页面导航</div>
+    <nav class="three-column-sidebar__nav">
+        <a href="/" class="three-column-sidebar__nav-item">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-home"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">返回首页</span>
+        </a>
+        <a href="#" class="three-column-sidebar__nav-item" onclick="window.history.back(); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-arrow-left"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">返回上一页</span>
+        </a>
+        <a href="#" class="three-column-sidebar__nav-item" onclick="alert('列表页面功能'); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-list"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">查看列表</span>
+        </a>
+        <a href="#" class="three-column-sidebar__nav-item" onclick="alert('详情页面功能'); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-file-alt"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">查看详情</span>
+        </a>
+    </nav>
+</div>
+
+<!-- 表单步骤导航 -->
+<div class="three-column-sidebar__section">
+    <div class="three-column-sidebar__section-title">表单步骤</div>
+    <nav class="three-column-sidebar__nav">
+        <a href="#basic-info" class="three-column-sidebar__nav-item active" onclick="scrollToSection('basic-info'); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-info-circle"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">基本信息</span>
+        </a>
+        <a href="#details" class="three-column-sidebar__nav-item" onclick="scrollToSection('details'); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-list-alt"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">详细信息</span>
+        </a>
+        <a href="#attachments" class="three-column-sidebar__nav-item" onclick="scrollToSection('attachments'); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-paperclip"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">附件</span>
+        </a>
+    </nav>
+</div>
+
+<!-- 快速操作 -->
+<div class="three-column-sidebar__section">
+    <div class="three-column-sidebar__section-title">快速操作</div>
+    <nav class="three-column-sidebar__nav">
+        <a href="#" class="three-column-sidebar__nav-item" onclick="clearForm(); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-redo"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">清空表单</span>
+        </a>
+        <a href="#" class="three-column-sidebar__nav-item" onclick="saveDraft(); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-save"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">保存草稿</span>
+        </a>
+        <a href="#" class="three-column-sidebar__nav-item" onclick="previewForm(); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-eye"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">预览表单</span>
+        </a>
+        <a href="#" class="three-column-sidebar__nav-item" onclick="printForm(); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-print"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">打印表单</span>
+        </a>
+    </nav>
+</div>
+
+<!-- 相关页面 -->
+<div class="three-column-sidebar__section">
+    <div class="three-column-sidebar__section-title">相关页面</div>
+    <nav class="three-column-sidebar__nav">
+        <a href="#" class="three-column-sidebar__nav-item" onclick="alert('相关表单功能'); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-file-invoice"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">相关表单</span>
+        </a>
+        <a href="#" class="three-column-sidebar__nav-item" onclick="alert('审批流程功能'); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-check-circle"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">审批流程</span>
+        </a>
+        <a href="#" class="three-column-sidebar__nav-item" onclick="alert('操作日志功能'); return false;">
+            <span class="three-column-sidebar__nav-icon">
+                <i class="fas fa-history"></i>
+            </span>
+            <span class="three-column-sidebar__nav-label">操作日志</span>
+        </a>
+    </nav>
+</div>
+{% endblock %}
+
+{% block main_content %}
+<form method="post" class="create-form" id="createForm">
+    {% csrf_token %}
+    
+    <!-- 隐藏的提交按钮（用于实际提交表单） -->
+    <button type="submit" class="d-none" id="hiddenSubmitButton">提交</button>
+    
+    <!-- 表单错误提示 -->
+    <div class="alert alert-danger d-none" id="formErrors">
+        <strong>表单验证失败：</strong>
+        <ul id="errorList"></ul>
+    </div>
+
+    <!-- 卡片1：基本信息 -->
+    <div class="form-card form-card-basic-info" id="basic-info">
+        <div class="form-card-header">
+            <h3 class="form-card-title">
+                <i class="fas fa-info-circle"></i>
+                基本信息
+            </h3>
+        </div>
+        <div class="form-card-body">
+            <!-- 第一排：字段区域 -->
+            <div class="row mb-3">
+                <!-- 所属部门 -->
+                <div class="col-md-4 form-field-wrapper">
+                    <label for="responsible_department" class="form-label">
+                        所属部门 <span class="text-danger">*</span>
+                    </label>
+                    <select class="form-select" id="responsible_department" name="responsible_department" required>
+                        <option value="">请选择部门</option>
+                        <option value="1">技术部</option>
+                        <option value="2">市场部</option>
+                        <option value="3">财务部</option>
+                        <option value="4">人事部</option>
+                    </select>
+                    <div class="form-text">选择所属部门</div>
+                </div>
+
+                <!-- 负责人 -->
+                <div class="col-md-4 form-field-wrapper">
+                    <label for="responsible_person" class="form-label">
+                        负责人 <span class="text-danger">*</span>
+                    </label>
+                    <select class="form-select" id="responsible_person" name="responsible_person" required>
+                        <option value="">请选择负责人</option>
+                        <option value="1">张三</option>
+                        <option value="2">李四</option>
+                        <option value="3">王五</option>
+                    </select>
+                    <div class="form-text">选择负责人</div>
+                </div>
+
+                <!-- 表单编号 -->
+                <div class="col-md-4 form-field-wrapper">
+                    <label for="form_number" class="form-label">
+                        表单编号
+                    </label>
+                    <input type="text" class="form-control" id="form_number" name="form_number" value="FORM-2026-001" readonly>
+                    <div class="form-text">系统自动生成</div>
+                </div>
+            </div>
+            
+            <!-- 第二排：其他基本信息字段 -->
+            <div class="row mb-3">
+                <div class="col-md-6 form-field-wrapper">
+                    <label for="project_name" class="form-label">
+                        项目名称 <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="project_name" name="project_name" placeholder="请输入项目名称" required>
+                </div>
+                
+                <div class="col-md-6 form-field-wrapper">
+                    <label for="project_type" class="form-label">
+                        项目类型 <span class="text-danger">*</span>
+                    </label>
+                    <select class="form-select" id="project_type" name="project_type" required>
+                        <option value="">请选择项目类型</option>
+                        <option value="1">研发项目</option>
+                        <option value="2">实施项目</option>
+                        <option value="3">维护项目</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 卡片2：详细信息 -->
+    <div class="form-card form-card-other-fields" id="details">
+        <div class="form-card-header">
+            <h3 class="form-card-title">
+                <i class="fas fa-list-alt"></i>
+                详细信息
+            </h3>
+        </div>
+        <div class="form-card-body">
+            <div class="row mb-3">
+                <div class="col-md-6 form-field-wrapper">
+                    <label for="start_date" class="form-label">
+                        开始日期 <span class="text-danger">*</span>
+                    </label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                </div>
+                
+                <div class="col-md-6 form-field-wrapper">
+                    <label for="end_date" class="form-label">
+                        结束日期
+                    </label>
+                    <input type="date" class="form-control" id="end_date" name="end_date">
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6 form-field-wrapper">
+                    <label for="budget" class="form-label">
+                        预算金额（元）
+                    </label>
+                    <input type="number" class="form-control" id="budget" name="budget" placeholder="0.00" step="0.01" min="0">
+                </div>
+                
+                <div class="col-md-6 form-field-wrapper">
+                    <label for="priority" class="form-label">
+                        优先级
+                    </label>
+                    <select class="form-select" id="priority" name="priority">
+                        <option value="low">低</option>
+                        <option value="medium" selected>中</option>
+                        <option value="high">高</option>
+                        <option value="urgent">紧急</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-12 form-field-wrapper">
+                    <label for="description" class="form-label">
+                        项目描述
+                    </label>
+                    <textarea class="form-control" id="description" name="description" rows="5" placeholder="请输入项目描述"></textarea>
+                    <div class="form-text">详细描述项目的目标、范围和要求</div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-12 form-field-wrapper">
+                    <label for="requirements" class="form-label">
+                        项目需求
+                    </label>
+                    <textarea class="form-control" id="requirements" name="requirements" rows="4" placeholder="请输入项目需求"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 卡片3：附件 -->
+    <div class="form-card form-card-attachments" id="attachments">
+        <div class="form-card-header">
+            <h3 class="form-card-title">
+                <i class="fas fa-paperclip"></i>
+                附件
+            </h3>
+        </div>
+        <div class="form-card-body">
+            <div class="row mb-3">
+                <div class="col-12 form-field-wrapper">
+                    <label for="attachments" class="form-label">
+                        上传附件
+                    </label>
+                    <input type="file" class="form-control" id="attachments" name="attachments" multiple>
+                    <div class="form-text">支持多个文件上传，单个文件大小不超过10MB</div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        已上传文件将显示在这里
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表单底部操作按钮（在中间详情区底部） -->
+    <div class="form-actions-bottom">
+        <div class="d-flex justify-content-end align-items-center gap-2">
+            <button type="button" class="btn btn-secondary" onclick="window.history.back()">
+                <i class="fas fa-times"></i> 取消
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="saveDraft()">
+                <i class="fas fa-save"></i> 保存草稿
+            </button>
+            <button type="button" class="btn btn-primary" id="headerSubmitButton">
+                <i class="fas fa-check"></i> 提交
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block actions_title %}操作面板{% endblock %}
+
+{% block actions_content %}
+<!-- 主要操作 -->
+<div class="three-column-actions__group">
+    <div class="three-column-actions__group-title">主要操作</div>
+    <button class="three-column-actions__button primary" onclick="document.getElementById('headerSubmitButton').click();">
+        <i class="fas fa-check"></i> 提交表单
+    </button>
+    <button class="three-column-actions__button" onclick="saveDraft()">
+        <i class="fas fa-save"></i> 保存草稿
+    </button>
+    <button class="three-column-actions__button" onclick="clearForm()">
+        <i class="fas fa-redo"></i> 清空表单
+    </button>
+</div>
+
+<!-- 其他操作 -->
+<div class="three-column-actions__group">
+    <div class="three-column-actions__group-title">其他操作</div>
+    <button class="three-column-actions__button" onclick="previewForm()">
+        <i class="fas fa-eye"></i> 预览
+    </button>
+    <button class="three-column-actions__button" onclick="printForm()">
+        <i class="fas fa-print"></i> 打印
+    </button>
+    <button class="three-column-actions__button" onclick="exportForm()">
+        <i class="fas fa-download"></i> 导出
+    </button>
+</div>
+
+<!-- 表单信息 -->
+<div class="three-column-actions__group">
+    <div class="three-column-actions__group-title">表单信息</div>
+    <div class="three-column-actions__info-item">
+        <div class="three-column-actions__info-label">创建时间</div>
+        <div class="three-column-actions__info-value" id="createTime">--</div>
+    </div>
+    <div class="three-column-actions__info-item">
+        <div class="three-column-actions__info-label">最后保存</div>
+        <div class="three-column-actions__info-value" id="lastSave">--</div>
+    </div>
+    <div class="three-column-actions__info-item">
+        <div class="three-column-actions__info-label">表单状态</div>
+        <div class="three-column-actions__info-value">草稿</div>
+    </div>
+    <div class="three-column-actions__info-item">
+        <div class="three-column-actions__info-label">必填字段</div>
+        <div class="three-column-actions__info-value" id="requiredFields">5</div>
+    </div>
+</div>
+
+<!-- 快速链接 -->
+<div class="three-column-actions__group">
+    <div class="three-column-actions__group-title">快速链接</div>
+    <button class="three-column-actions__button" onclick="scrollToSection('basic-info')">
+        <i class="fas fa-info-circle"></i> 基本信息
+    </button>
+    <button class="three-column-actions__button" onclick="scrollToSection('details')">
+        <i class="fas fa-list-alt"></i> 详细信息
+    </button>
+    <button class="three-column-actions__button" onclick="scrollToSection('attachments')">
+        <i class="fas fa-paperclip"></i> 附件
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+// 表单初始化处理
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('createForm');
+    if (!form) return;
+    
+    // 设置创建时间
+    const now = new Date();
+    document.getElementById('createTime').textContent = now.toLocaleString('zh-CN');
+    
+    // 处理禁用字段：为禁用的字段创建隐藏输入，确保表单提交时包含这些值
+    function handleDisabledFields() {
+        const disabledFields = form.querySelectorAll('[disabled], [readonly]');
+        disabledFields.forEach(function(field) {
+            if (field.name && field.hasAttribute('readonly')) {
+                let value = '';
+                
+                // 对于 select 元素，获取选中项的 value
+                if (field.tagName === 'SELECT') {
+                    const selectedOption = field.options[field.selectedIndex];
+                    value = selectedOption ? selectedOption.value : '';
+                } else {
+                    // 对于其他类型的字段（input, textarea等）
+                    value = field.value || '';
+                }
+                
+                // 如果字段有值，创建或更新隐藏输入
+                if (value !== undefined && value !== null) {
+                    // 先检查是否已经存在隐藏字段，避免重复创建
+                    const existingHidden = form.querySelector(`input[type="hidden"][name="${field.name}"]`);
+                    if (existingHidden) {
+                        // 如果已存在，更新其值
+                        existingHidden.value = value;
+                    } else {
+                        // 如果不存在，创建新的隐藏字段
+                        const hiddenField = document.createElement('input');
+                        hiddenField.type = 'hidden';
+                        hiddenField.name = field.name;
+                        hiddenField.value = value;
+                        form.appendChild(hiddenField);
+                    }
+                }
+            }
+        });
+    }
+    
+    // 页面加载时处理一次
+    handleDisabledFields();
+    
+    // 连接外部按钮和表单提交
+    const headerSubmitButton = document.getElementById('headerSubmitButton');
+    const hiddenSubmitButton = document.getElementById('hiddenSubmitButton');
+    
+    if (headerSubmitButton) {
+        headerSubmitButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('提交按钮被点击');
+            // 在提交前处理禁用字段
+            handleDisabledFields();
+            // 使用隐藏的提交按钮来触发提交，这样会触发所有 submit 事件监听器
+            if (hiddenSubmitButton) {
+                console.log('点击隐藏的提交按钮');
+                hiddenSubmitButton.click();
+            } else {
+                console.log('隐藏的提交按钮不存在，直接提交表单');
+                form.submit();
+            }
+        });
+    }
+    
+    // 表单验证
+    form.addEventListener('submit', function(e) {
+        console.log('表单 submit 事件被触发');
+        // 在提交前，确保所有禁用字段的值都被包含
+        handleDisabledFields();
+        
+        // 进行前端验证
+        const requiredFields = form.querySelectorAll('[required]');
+        let hasError = false;
+        const errors = [];
+        
+        requiredFields.forEach(function(field) {
+            if (field.hasAttribute('disabled') || field.hasAttribute('readonly')) return;
+            if (!field.value || field.value.trim() === '') {
+                hasError = true;
+                field.classList.add('is-invalid');
+                const label = field.closest('.form-field-wrapper')?.querySelector('.form-label')?.textContent || field.name;
+                errors.push(`${label}不能为空`);
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (hasError) {
+            console.log('表单验证失败，阻止提交');
+            e.preventDefault();
+            
+            // 显示错误信息
+            const errorAlert = document.getElementById('formErrors');
+            const errorList = document.getElementById('errorList');
+            errorList.innerHTML = '';
+            errors.forEach(function(error) {
+                const li = document.createElement('li');
+                li.textContent = error;
+                errorList.appendChild(li);
+            });
+            errorAlert.classList.remove('d-none');
+            
+            // 滚动到第一个错误字段
+            const firstError = form.querySelector('.is-invalid');
+            if (firstError) {
+                firstError.focus();
+                scrollToSection(firstError.closest('.form-card')?.id || 'basic-info');
+            }
+            return false;
+        } else {
+            console.log('表单验证通过，允许提交');
+            document.getElementById('formErrors').classList.add('d-none');
+        }
+    });
+    
+    // 实时更新最后保存时间
+    form.addEventListener('input', function() {
+        const now = new Date();
+        document.getElementById('lastSave').textContent = now.toLocaleString('zh-CN');
+    });
+});
+
+// 滚动到指定区域
+function scrollToSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // 更新左侧导航的激活状态
+        document.querySelectorAll('.three-column-sidebar__nav-item').forEach(function(item) {
+            item.classList.remove('active');
+        });
+        const navItem = document.querySelector(`a[href="#${sectionId}"]`);
+        if (navItem) {
+            navItem.classList.add('active');
+        }
+    }
+}
+
+// 清空表单
+function clearForm() {
+    if (confirm('确定要清空表单吗？此操作不可撤销。')) {
+        document.getElementById('createForm').reset();
+        document.querySelectorAll('.is-invalid').forEach(function(el) {
+            el.classList.remove('is-invalid');
+        });
+        document.getElementById('formErrors').classList.add('d-none');
+    }
+}
+
+// 保存草稿
+function saveDraft() {
+    const form = document.getElementById('createForm');
+    const formData = new FormData(form);
+    
+    // 这里可以添加保存草稿的逻辑
+    console.log('保存草稿', Object.fromEntries(formData));
+    alert('草稿已保存');
+    
+    const now = new Date();
+    document.getElementById('lastSave').textContent = now.toLocaleString('zh-CN');
+}
+
+// 预览表单
+function previewForm() {
+    const form = document.getElementById('createForm');
+    const formData = new FormData(form);
+    console.log('预览表单', Object.fromEntries(formData));
+    alert('预览功能：显示表单数据预览');
+}
+
+// 打印表单
+function printForm() {
+    window.print();
+}
+
+// 导出表单
+function exportForm() {
+    const form = document.getElementById('createForm');
+    const formData = new FormData(form);
+    console.log('导出表单', Object.fromEntries(formData));
+    alert('导出功能：导出表单数据');
+}
+</script>
+{% endblock %}

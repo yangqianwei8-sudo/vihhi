@@ -529,10 +529,9 @@ class ApprovalInstanceAdmin(BaseModelAdmin):
                 result='approved',
                 comment=comment
             )
-            if success:
-                messages.success(request, '审批已通过')
-            else:
+            if not success:
                 messages.error(request, '审批操作失败')
+            # 审批结果走通知中心，不写入 success messages
             return redirect('admin:workflow_engine_approvalinstance_changelist')
         
         # GET请求，显示确认页面
@@ -566,10 +565,9 @@ class ApprovalInstanceAdmin(BaseModelAdmin):
                 result='rejected',
                 comment=comment
             )
-            if success:
-                messages.success(request, '审批已驳回')
-            else:
+            if not success:
                 messages.error(request, '驳回操作失败')
+            # 审批结果走通知中心，不写入 success messages
             return redirect('admin:workflow_engine_approvalinstance_changelist')
         
         # GET请求，显示确认页面
@@ -598,8 +596,7 @@ class ApprovalInstanceAdmin(BaseModelAdmin):
             )
             if success:
                 count += 1
-        
-        messages.success(request, f'成功审批通过 {count} 条记录')
+        # 审批结果走通知中心，不写入 success messages
     approve_selected.short_description = '批量审批通过'
     
     def reject_selected(self, request, queryset):
@@ -617,8 +614,7 @@ class ApprovalInstanceAdmin(BaseModelAdmin):
             )
             if success:
                 count += 1
-        
-        messages.success(request, f'成功驳回 {count} 条记录')
+        # 审批结果走通知中心，不写入 success messages
     reject_selected.short_description = '批量审批驳回'
 
 

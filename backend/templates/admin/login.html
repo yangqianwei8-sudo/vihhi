@@ -17,6 +17,14 @@
 
 {% block nav-breadcrumbs %}{% endblock %}
 
+{% comment %}
+登录页不展示 messages：退出、报错等应显示在产生该消息的页面。
+重定向到登录页时，session 中残留的 messages 会在此显示，造成干扰。
+此处消耗 messages（迭代后即从 session 清除）但不渲染，避免登录后跳转页再次显示。
+登录表单的校验错误仍通过 form.errors 在下方 content 中展示。
+{% endcomment %}
+{% block messages %}{% for message in messages %}{% endfor %}{% endblock %}
+
 {% block content %}
 {% if form.errors and not form.non_field_errors %}
 <p class="errornote">

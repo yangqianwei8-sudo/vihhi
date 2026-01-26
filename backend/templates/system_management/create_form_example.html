@@ -1,0 +1,53 @@
+{% extends "shared/create_form_base.html" %}
+{% load static %}
+
+{% block form_title %}创建提交表单示例{% endblock %}
+{% block form_subtitle %}完全按照 create_form_base.html 模板渲染，不添加任何字段{% endblock %}
+
+{% block form_header_actions %}
+  <a href="{% url 'system_pages:example_form' %}" class="btn btn-secondary">
+    返回示例表单说明
+  </a>
+{% endblock %}
+
+{% block form_first_row_fields %}
+  {# 基本信息字段：所属部门、负责人、表单编号 #}
+  <div class="col-md-4 form-field-wrapper">
+    <label for="{{ form.responsible_department.id_for_label }}" class="form-label">
+      {{ form.responsible_department.label }}{% if form.responsible_department.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.responsible_department }}
+    {% if form.responsible_department.errors %}
+      <div class="text-danger small">{{ form.responsible_department.errors }}</div>
+    {% endif %}
+  </div>
+  
+  <div class="col-md-4 form-field-wrapper">
+    <label for="{{ form.responsible_person.id_for_label }}" class="form-label">
+      {{ form.responsible_person.label }}{% if form.responsible_person.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.responsible_person }}
+    {% if form.responsible_person.errors %}
+      <div class="text-danger small">{{ form.responsible_person.errors }}</div>
+    {% endif %}
+  </div>
+  
+  <div class="col-md-4 form-field-wrapper">
+    <label for="{{ form.form_number.id_for_label }}" class="form-label">
+      {{ form.form_number.label }}{% if form.form_number.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.form_number }}
+    {% if form.form_number.errors %}
+      <div class="text-danger small">{{ form.form_number.errors }}</div>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block form_actions %}
+  <button type="button" class="btn btn-primary" id="headerSubmitButton">
+    <i class="fas fa-save"></i> 创建
+  </button>
+  <a href="{% url 'system_pages:example_form' %}" class="btn btn-secondary">
+    <i class="fas fa-times"></i> 取消
+  </a>
+{% endblock %}

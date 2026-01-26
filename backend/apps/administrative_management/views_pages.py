@@ -3146,6 +3146,7 @@ def seal_usage_detail(request, usage_id):
         use_administrative_nav=True
     )
     context.update({
+        'object': usage,  # 用于 detail_base.html（基础模板会自动检测 usage_number）
         'usage': usage,
         'seal': usage.seal,
     })

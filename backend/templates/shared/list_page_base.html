@@ -13,6 +13,504 @@
   <link rel="stylesheet" href="{% static 'css/components/list_page_base_v2.css' %}">
 {% endblock module_styles %}
 
+{% block module_scripts %}
+  {{ block.super }}
+  <script src="{% static 'js/list-checkbox.js' %}"></script>
+  <script>
+  // 强制初始化复选框功能（确保在所有情况下都能工作）
+  (function() {
+    // 更新全选状态的辅助函数
+    function updateSelectAllState() {
+      const selectAll = document.getElementById('selectAll');
+      const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+      
+      if (!selectAll || rowCheckboxes.length === 0) {
+        return;
+      }
+
+      const allChecked = rowCheckboxes.length > 0 && Array.from(rowCheckboxes).every(function(cb) {
+        return cb.checked;
+      });
+      const someChecked = Array.from(rowCheckboxes).some(function(cb) {
+        return cb.checked;
+      });
+      
+      selectAll.checked = allChecked;
+      selectAll.indeterminate = someChecked && !allChecked;
+    }
+    
+    function forceInitCheckboxes() {
+      const selectAll = document.getElementById('selectAll');
+      const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+      
+      if (!selectAll || rowCheckboxes.length === 0) {
+        return;
+      }
+      
+      // 如果已经初始化过，跳过
+      if (selectAll.dataset.initialized === 'true') {
+        return;
+      }
+      
+      // 标记为已初始化
+      selectAll.dataset.initialized = 'true';
+      
+      // 绑定全选事件 - 使用 change 事件确保获取正确的状态
+      selectAll.addEventListener('change', function(e) {
+        e.stopPropagation();
+        const checked = this.checked;
+        console.log('[强制初始化] 全选复选框状态改变:', checked);
+        rowCheckboxes.forEach(function(cb) {
+          cb.checked = checked;
+        });
+        updateSelectAllState();
+        if (typeof window.updateSelectedCount === 'function') {
+          window.updateSelectedCount();
+        }
+      });
+      
+      // 也绑定 click 事件作为备用
+      selectAll.addEventListener('click', function(e) {
+        e.stopPropagation();
+        // 注意：click 事件触发时，checked 状态还没有改变
+        // 所以我们需要使用 !this.checked 来获取新状态
+        setTimeout(function() {
+          const checked = selectAll.checked;
+          console.log('[强制初始化] 全选复选框点击后状态:', checked);
+          rowCheckboxes.forEach(function(cb) {
+            cb.checked = checked;
+          });
+          updateSelectAllState();
+          if (typeof window.updateSelectedCount === 'function') {
+            window.updateSelectedCount();
+          }
+        }, 0);
+      });
+      
+      // 绑定行复选框事件
+      rowCheckboxes.forEach(function(cb) {
+        if (cb.dataset.initialized === 'true') {
+          return;
+        }
+        cb.dataset.initialized = 'true';
+        
+        cb.addEventListener('change', function(e) {
+          e.stopPropagation();
+          console.log('[强制初始化] 行复选框状态改变:', this.checked);
+          updateSelectAllState();
+          if (typeof window.updateSelectedCount === 'function') {
+            window.updateSelectedCount();
+          }
+        });
+        
+        // 也绑定 click 事件作为备用
+        cb.addEventListener('click', function(e) {
+          e.stopPropagation();
+          setTimeout(function() {
+            updateSelectAllState();
+            if (typeof window.updateSelectedCount === 'function') {
+              window.updateSelectedCount();
+            }
+          }, 0);
+        });
+      });
+      
+      // 导出 updateSelectAllState 到全局
+      window.updateSelectAllState = updateSelectAllState;
+    }
+    
+    // 立即执行
+    forceInitCheckboxes();
+    
+    // DOMContentLoaded时执行
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', forceInitCheckboxes);
+    }
+    
+    // 延迟执行（确保DOM完全渲染）
+    setTimeout(forceInitCheckboxes, 100);
+    setTimeout(forceInitCheckboxes, 500);
+  })();
+  </script>
+  
+  {# 批量删除功能 - 默认启用，所有继承该模板的页面都自动具有 #}
+  <script>
+  (function() {
+    'use strict';
+    
+    // 获取 CSRF token（支持多种方式）
+    function getCsrfToken() {
+      // 方式1: 从表单中的隐藏 input 获取
+      let token = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                  document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
+      
+      // 方式2: 从 meta 标签获取
+      if (!token) {
+        token = document.querySelector('meta[name=csrf-token]')?.content ||
+                document.querySelector('meta[name="csrf-token"]')?.content;
+      }
+      
+      // 方式3: 从 Cookie 获取（Django 默认方式）
+      if (!token) {
+        // 方法1: 使用 split 方式
+        function getCookie(name) {
+          let cookieValue = null;
+          if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+              const cookie = cookies[i].trim();
+              if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+              }
+            }
+          }
+          return cookieValue;
+        }
+        token = getCookie('csrftoken');
+      }
+      
+      // 方式4: 使用正则表达式从 cookie 中匹配（备用方法）
+      if (!token) {
+        const match = document.cookie.match(/csrftoken=([^;]+)/);
+        if (match) {
+          token = decodeURIComponent(match[1]);
+        }
+      }
+      
+      // 方式5: 使用另一种 cookie 解析方式
+      if (!token) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; csrftoken=`);
+        if (parts.length === 2) {
+          token = parts.pop().split(';').shift();
+        }
+      }
+      
+      if (!token) {
+        console.warn('[批量删除] 无法获取 CSRF token，尝试的方法：', {
+          hasFormInput: !!document.querySelector('[name=csrfmiddlewaretoken]'),
+          hasMetaTag: !!document.querySelector('meta[name=csrf-token]'),
+          hasCookie: document.cookie.includes('csrftoken')
+        });
+      }
+      
+      return token || '';
+    }
+    
+    // 显示消息提示（简单实现，可以替换为项目中的消息提示组件）
+    function showMessage(message, type) {
+      type = type || 'info';
+      // 使用 alert 作为简单实现，子模板可以覆盖此函数
+      if (typeof window.showNotification === 'function') {
+        window.showNotification(message, type);
+      } else if (typeof window.showSuccess === 'function' && type === 'success') {
+        window.showSuccess(message);
+      } else if (typeof window.showError === 'function' && type === 'error') {
+        window.showError(message);
+      } else {
+        alert(message);
+      }
+    }
+    
+    // 更新批量删除按钮显示状态（全局函数，供其他脚本调用）
+    function updateBatchDeleteButton() {
+      const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+      if (!batchDeleteBtn) {
+        return;
+      }
+      
+      const selectedIds = window.getSelectedIds ? window.getSelectedIds() : [];
+      const count = selectedIds.length;
+      
+      if (count > 0) {
+        batchDeleteBtn.style.display = 'inline-block';
+        // 更新按钮文本显示选中数量
+        const icon = batchDeleteBtn.querySelector('i');
+        const iconHtml = icon ? icon.outerHTML : '<i class="bi bi-trash"></i>';
+        batchDeleteBtn.innerHTML = iconHtml + ' 批量删除 (' + count + ')';
+      } else {
+        batchDeleteBtn.style.display = 'none';
+        batchDeleteBtn.innerHTML = '<i class="bi bi-trash"></i> 批量删除';
+      }
+    }
+    
+    // 将更新函数暴露到全局，供其他脚本调用
+    window.updateBatchDeleteButton = updateBatchDeleteButton;
+    
+    // 初始化标记，防止重复初始化
+    let batchDeleteInitialized = false;
+    
+    // 初始化批量删除功能
+    function initBatchDelete() {
+      const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+      if (!batchDeleteBtn) {
+        console.warn('[批量删除] 未找到批量删除按钮');
+        return;
+      }
+      
+      // 如果已经初始化过，跳过
+      if (batchDeleteInitialized) {
+        console.log('[批量删除] 已经初始化过，跳过重复初始化');
+        return;
+      }
+      
+      console.log('[批量删除] 开始初始化批量删除功能');
+      batchDeleteInitialized = true;
+      
+      // 复选框选择变化事件处理器（只绑定一次）
+      document.addEventListener('checkboxSelectionChanged', function(e) {
+        console.log('[批量删除] 收到复选框选择变化事件，选中数量:', e.detail?.count || 0);
+        updateBatchDeleteButton();
+      }, true);
+      
+      // change 事件处理器（只绑定一次）
+      document.addEventListener('change', function(e) {
+        if (e.target && (e.target.classList.contains('row-checkbox') || e.target.id === 'selectAll')) {
+          console.log('[批量删除] 检测到复选框变化，更新按钮状态');
+          setTimeout(updateBatchDeleteButton, 50);
+        }
+      }, true);
+      
+      // click 事件处理器（用于复选框点击，只绑定一次）
+      document.addEventListener('click', function(e) {
+        if (e.target && (e.target.classList.contains('row-checkbox') || e.target.id === 'selectAll' || e.target.closest('.row-checkbox') || e.target.closest('#selectAll'))) {
+          setTimeout(updateBatchDeleteButton, 100);
+        }
+      }, true);
+      
+      // 定期检查选中状态（作为最后的备用方案，只启动一次）
+      setInterval(function() {
+        const selectedIds = window.getSelectedIds ? window.getSelectedIds() : [];
+        const count = selectedIds.length;
+        const btn = document.getElementById('batchDeleteBtn');
+        if (btn) {
+          const isVisible = btn.style.display !== 'none';
+          if (count > 0 && !isVisible) {
+            console.log('[批量删除] 定期检查：发现选中项但按钮未显示，更新按钮');
+            updateBatchDeleteButton();
+          } else if (count === 0 && isVisible) {
+            console.log('[批量删除] 定期检查：无选中项但按钮显示，隐藏按钮');
+            updateBatchDeleteButton();
+          }
+        }
+      }, 1000);
+      
+      // 初始状态检查（多次检查，确保能获取到正确的状态）
+      setTimeout(updateBatchDeleteButton, 100);
+      setTimeout(updateBatchDeleteButton, 300);
+      setTimeout(updateBatchDeleteButton, 600);
+      setTimeout(updateBatchDeleteButton, 1000);
+      
+      // 批量删除按钮点击事件（只绑定一次，防止重复绑定）
+      // 检查按钮是否已经有 data-batch-delete-initialized 标记
+      if (batchDeleteBtn.dataset.batchDeleteInitialized === 'true') {
+        console.log('[批量删除] 按钮点击事件已绑定，跳过');
+        return;
+      }
+      
+      // 标记按钮已初始化
+      batchDeleteBtn.dataset.batchDeleteInitialized = 'true';
+      
+      batchDeleteBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // 如果按钮已被禁用，说明正在处理中，直接返回
+        if (this.disabled) {
+          console.log('[批量删除] 按钮已禁用，忽略重复点击');
+          return false;
+        }
+        
+        // 获取选中的ID
+        const selectedIds = window.getSelectedIds ? window.getSelectedIds() : [];
+        
+        if (selectedIds.length === 0) {
+          showMessage('请先选择要删除的项目', 'warning');
+          return false;
+        }
+        
+        // 确认对话框
+        const confirmMessageTemplate = '{% block batch_delete_confirm_message %}确定要删除选中的 {count} 个项目吗？此操作不可恢复！{% endblock %}';
+        const confirmMessage = confirmMessageTemplate.replace('{count}', selectedIds.length);
+        if (!confirm(confirmMessage)) {
+          return false;
+        }
+        
+        // 禁用按钮，防止重复提交
+        const originalHtml = this.innerHTML;
+        this.disabled = true;
+        this.innerHTML = '<i class="bi bi-hourglass-split"></i> 删除中...';
+        
+        // 保存按钮引用（用于在回调中使用）
+        const btn = this;
+        
+        // 获取批量删除URL
+        // 优先使用子模板提供的 batch_delete_url
+        let deleteUrl = '{{ batch_delete_url|default:"" }}';
+        
+        // 如果未提供URL，尝试从当前路径自动推断
+        if (!deleteUrl || deleteUrl.trim() === '') {
+          const currentPath = window.location.pathname;
+          
+          // 尝试多种常见的批量删除URL模式
+          const possibleUrls = [];
+          
+          // 模式1: 当前路径 + batch-delete/
+          if (currentPath.endsWith('/')) {
+            possibleUrls.push(currentPath + 'batch-delete/');
+          } else {
+            possibleUrls.push(currentPath + '/batch-delete/');
+          }
+          
+          // 模式2: 移除最后的路径段，添加 batch-delete/
+          const pathParts = currentPath.split('/').filter(p => p);
+          if (pathParts.length > 0) {
+            pathParts.pop(); // 移除最后一个路径段
+            if (pathParts.length > 0) {
+              possibleUrls.push('/' + pathParts.join('/') + '/batch-delete/');
+            }
+          }
+          
+          // 模式3: 检查全局配置
+          if (typeof window.BATCH_DELETE_URL !== 'undefined' && window.BATCH_DELETE_URL) {
+            possibleUrls.push(window.BATCH_DELETE_URL);
+          }
+          
+        // 使用第一个可能的URL（子模板可以通过设置 window.BATCH_DELETE_URL 来覆盖）
+        if (possibleUrls.length > 0) {
+          deleteUrl = possibleUrls[0];
+          console.log('[批量删除] 推断的批量删除URL:', deleteUrl, '可能的URL列表:', possibleUrls);
+        }
+      }
+      
+        // 如果仍然没有有效的URL，显示错误
+        if (!deleteUrl || deleteUrl.trim() === '' || deleteUrl === '/batch-delete/') {
+          console.error('[批量删除] 无法推断批量删除URL，当前路径:', window.location.pathname);
+          showMessage('未配置批量删除URL。请在视图函数中设置 batch_delete_url 变量，或在页面中设置 window.BATCH_DELETE_URL', 'error');
+          this.disabled = false;
+          this.innerHTML = originalHtml;
+          return;
+        }
+        
+        console.log('[批量删除] 使用批量删除URL:', deleteUrl);
+        
+        // 获取 CSRF token
+        const csrfToken = getCsrfToken();
+        if (!csrfToken) {
+          showMessage('无法获取CSRF token，请刷新页面后重试', 'error');
+          this.disabled = false;
+          this.innerHTML = originalHtml;
+          return;
+        }
+        
+        // 保存按钮引用（用于在回调中使用）
+        const btn = this;
+        
+        // 发送批量删除请求
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', csrfToken);
+        formData.append('ids', selectedIds.join(','));
+        
+        // 如果子模板定义了自定义的批量删除处理函数，使用它
+        if (typeof window.handleBatchDelete === 'function') {
+          window.handleBatchDelete(selectedIds, {
+            url: deleteUrl,
+            csrfToken: csrfToken,
+            onSuccess: function(response) {
+              showMessage('批量删除成功', 'success');
+              if (typeof window.clearSelection === 'function') {
+                window.clearSelection();
+              }
+              // 刷新页面
+              setTimeout(function() {
+                window.location.reload();
+              }, 500);
+            },
+            onError: function(error) {
+              showMessage('批量删除失败：' + (error.message || '未知错误'), 'error');
+              btn.disabled = false;
+              btn.innerHTML = originalHtml;
+            }
+          });
+        } else {
+          // 默认的批量删除实现
+          fetch(deleteUrl, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': csrfToken,
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData,
+            credentials: 'same-origin'
+          })
+          .then(function(response) {
+            if (response.ok) {
+              return response.json().catch(function() {
+                // 如果响应不是JSON，也认为成功
+                return { success: true };
+              });
+            } else {
+              return response.json().then(function(data) {
+                throw new Error(data.message || '删除失败');
+              }).catch(function() {
+                throw new Error('删除失败，状态码：' + response.status);
+              });
+            }
+          })
+          .then(function(data) {
+            if (data.success !== false) {
+              const deletedCount = data.deleted_count || selectedIds.length;
+              showMessage('成功删除 ' + deletedCount + ' 个项目', 'success');
+              if (typeof window.clearSelection === 'function') {
+                window.clearSelection();
+              }
+              // 刷新页面
+              setTimeout(function() {
+                window.location.reload();
+              }, 500);
+            } else {
+              throw new Error(data.message || '删除失败');
+            }
+          })
+          .catch(function(error) {
+            console.error('批量删除错误:', error);
+            showMessage('批量删除失败：' + (error.message || '未知错误'), 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+          });
+        }
+      });
+    }
+    
+    // 等待DOM和复选框功能初始化完成
+    function tryInitBatchDelete() {
+      try {
+        initBatchDelete();
+      } catch (e) {
+        console.error('[批量删除] 初始化失败:', e);
+      }
+    }
+    
+    // 立即尝试初始化（如果DOM已准备好）
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        tryInitBatchDelete();
+      });
+    } else {
+      tryInitBatchDelete();
+    }
+    
+    // 延迟初始化，确保复选框功能已加载（多次尝试）
+    setTimeout(tryInitBatchDelete, 100);
+    setTimeout(tryInitBatchDelete, 300);
+    setTimeout(tryInitBatchDelete, 600);
+    setTimeout(tryInitBatchDelete, 1000);
+    setTimeout(tryInitBatchDelete, 2000);
+  })();
+  </script>
+{% endblock module_scripts %}
+
 {# 主标题 - 继承父模板的 pm_title 块 #}
 {% block pm_title %}
   {% if page_title %}{{ page_title }}{% endif %}
@@ -23,51 +521,52 @@
   {% if description %}{{ description }}{% endif %}
 {% endblock pm_subtitle %}
 
+{# 主标题右侧操作按钮 - 继承父模板的 pm_actions 块 #}
+{% block pm_actions %}
+  {% block list_page_actions %}
+    {# 批量删除按钮 - 默认显示，所有继承该模板的页面都自动具有 #}
+    <button type="button" id="batchDeleteBtn" class="btn btn-danger" style="display: none;">
+      <i class="bi bi-trash"></i> 批量删除
+    </button>
+    {# 子模板可以覆盖此块添加其他操作按钮 #}
+  {% endblock list_page_actions %}
+{% endblock pm_actions %}
+
 {% block pm_content %}
+  {# 隐藏的 CSRF token 字段，确保批量删除功能可以获取到 token #}
+  {% csrf_token %}
 
   {# 统计卡片区域 - 显示关键指标 #}
   {% block list_stats_section %}
-  <div class="list-page-stats">
-    {% block list_stats_content %}
-      {# 子模板可以覆盖此块添加统计卡片 #}
-    {% endblock list_stats_content %}
+  <div class="list-stats-section">
+    <div class="list-page-stats">
+      {% block list_stats_content %}
+        {# 子模板可以覆盖此块添加统计卡片 #}
+      {% endblock list_stats_content %}
+    </div>
   </div>
   {% endblock list_stats_section %}
-
-  {# 操作栏 - 顶部操作按钮和搜索 #}
-  {% block list_action_bar_section %}
-    {% block list_action_bar_content %}
-      {# 子模板可以覆盖此块添加操作栏 #}
-    {% endblock list_action_bar_content %}
-  {% endblock list_action_bar_section %}
-
-  {# 工具栏 - 批量操作栏 #}
-  {% block list_toolbar_section %}
-    {% block list_toolbar_content %}
-      {# 子模板可以覆盖此块添加工具栏和批量操作 #}
-    {% endblock list_toolbar_content %}
-  {% endblock list_toolbar_section %}
 
   {# 筛选器区域 #}
   {% block list_filters_section %}
   <div class="list-page-filters">
     <div class="list-page-filter-row">
-    {% block list_filters_content %}
-  <form id="filterForm" method="get"{% if filter_form_action %} action="{{ filter_form_action }}"{% endif %}>
-      {# 子模板可以覆盖此块添加筛选器表单 #}
-    {% endblock list_filters_content %}
-  </form>
-    {% block list_filter_actions %}
-    <!-- 筛选和重置按钮 - 自动添加到所有筛选表单 -->
-    <div class="list-page-filter-actions">
+      <form id="filterForm" method="get" {% if filter_form_action %} action="{{ filter_form_action }}"{% endif %}>
+        {% block list_filters_content %}
+          {# 子模板可以覆盖此块添加筛选器表单字段 #}
+        {% endblock list_filters_content %}
+      </form>
+      {% block list_filter_actions %}
+      <!-- 筛选和重置按钮 - 自动添加到所有筛选表单 -->
+      <div class="list-page-filter-actions">
         <button type="submit" form="filterForm" class="btn btn-primary">
-            <i class="bi bi-funnel"></i> 筛选
+          <i class="bi bi-funnel"></i> 筛选
         </button>
         <button type="reset" form="filterForm" class="btn btn-secondary">
-            <i class="bi bi-arrow-counterclockwise"></i> 重置
+          <i class="bi bi-arrow-counterclockwise"></i> 重置
         </button>
-    </div>
-    {% endblock list_filter_actions %}
+      </div>
+      {% endblock list_filter_actions %}
     </div>
   </div>
   {% endblock list_filters_section %}
@@ -96,6 +595,10 @@
           <table class="list-table">
             <thead>
               <tr>
+                {% block list_table_checkbox_header %}
+                  {# 子模板可以覆盖此块添加复选框列表头 #}
+                  {# 如果需要复选框，添加：<th style="width: 50px;"><input type="checkbox" id="selectAll" class="form-check-input" title="全选"></th> #}
+                {% endblock list_table_checkbox_header %}
                 {% block list_table_headers %}
                   {# 子模板需要在此定义表头 #}
                 {% endblock list_table_headers %}
@@ -121,28 +624,73 @@
     {% endblock list_table_content %}
   {% endblock list_table_section %}
 
-  {# 加载状态 #}
-  {% block list_loading_section %}
-    {% block list_loading_content %}
-      {# 子模板可以覆盖此块添加加载状态 #}
-    {% endblock list_loading_content %}
-  {% endblock list_loading_section %}
-
-  {# 错误状态 #}
-  {% block list_error_section %}
-    {% block list_error_content %}
-      {# 子模板可以覆盖此块添加错误状态 #}
-    {% endblock list_error_content %}
-  {% endblock list_error_section %}
-
   {# 分页区域 #}
   {% block list_pagination_section %}
-    {% if page_obj and page_obj.has_other_pages %}
-      <div class="list-pagination">
-        {% block list_pagination_content %}
-          {% include "shared/_pagination.html" %}
-        {% endblock list_pagination_content %}
+  <div class="list-pagination-section">
+    <div class="list-pagination">
+      <div class="list-pagination-info">
+        {% if page_obj %}
+          显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+        {% else %}
+          暂无数据
+        {% endif %}
       </div>
-    {% endif %}
+      <div class="list-pagination-controls">
+        {% if page_obj and page_obj.paginator.num_pages > 1 %}
+          <nav aria-label="分页导航">
+            <ul class="pagination">
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">上一页</a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">上一页</span>
+                </li>
+              {% endif %}
+              
+              {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+              
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">下一页</a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">下一页</span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% else %}
+          {# 即使只有一页也显示分页信息 #}
+          <nav aria-label="分页导航">
+            <ul class="pagination">
+              <li class="page-item disabled">
+                <span class="page-link">上一页</span>
+              </li>
+              <li class="page-item active">
+                <span class="page-link">1</span>
+              </li>
+              <li class="page-item disabled">
+                <span class="page-link">下一页</span>
+              </li>
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+    </div>
+  </div>
   {% endblock list_pagination_section %}
+
 {% endblock pm_content %}

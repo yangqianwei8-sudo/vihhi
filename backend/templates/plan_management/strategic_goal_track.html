@@ -344,28 +344,64 @@
     </div>
     {% endblock list_filters_section %}
 
+    {% block list_table_section %}
     <div class="list-table-section">
       <div class="list-table-wrapper">
         <table class="list-table">
           <thead>
-            <tr>{% block list_table_headers %}{% endblock list_table_headers %}</tr>
+            <tr>{% block list_table_headers %}
+              <th>记录时间</th>
+              <th>记录人</th>
+              <th>当前值</th>
+              <th>完成率</th>
+              <th>进度说明</th>
+              <th>备注</th>
+            {% endblock list_table_headers %}</tr>
           </thead>
           <tbody>
-{% block list_table_rows %}<tr>
-              <td colspan="100%" class="list-empty-state">暂无数据</td>
-            </tr>{% endblock list_table_rows %}
-              <td colspan="100%" class="list-empty-state">暂无数据</td>
-            </tr>{% endblock list_table_rows %}
-          </thead>
-          <tbody>
-              <td colspan="100%" class="list-empty-state">暂无数据</td>
-            </tr>{% endblock list_table_rows %}
-              <td colspan="100%" class="list-empty-state">暂无数据</td>
-            </tr>{% endblock list_table_rows %}
+            {% block list_table_rows %}
+              {% for record in page_obj %}
+              <tr>
+                <td>
+                  <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ record.recorded_time|date:"Y-m-d" }}</div>
+                  <div style="font-size: 12px; color: #999999;">{{ record.recorded_time|date:"H:i" }}</div>
+                </td>
+                <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
+                <td>
+                  <span class="list-badge">{{ record.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</span>
+                </td>
+                <td>
+                  <div class="list-progress">
+                    <div class="list-progress-fill" style="width: {{ record.completion_rate }}%"></div>
+                    <span class="list-progress-text">{{ record.completion_rate }}%</span>
+                  </div>
+                </td>
+                <td>
+                  <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ record.progress_description|truncatewords:15 }}</div>
+                </td>
+                <td>
+                  {% if record.notes %}
+                  <div style="font-size: 12px; color: #999999;">{{ record.notes|truncatewords:10 }}</div>
+                  {% else %}
+                  <span style="color: #999999;">-</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="list-empty-state">
+                  <div class="list-empty-state-icon">📋</div>
+                  <div class="list-empty-state-text">暂无进度记录</div>
+                  <div class="list-empty-state-hint">更新进度后将显示在这里</div>
+                </td>
+              </tr>
+              {% endfor %}
+            {% endblock list_table_rows %}
           </tbody>
         </table>
       </div>
     </div>
+    {% endblock list_table_section %}
 
     {% block list_pagination_section %}
     {% if page_obj and page_obj.has_other_pages %}
@@ -374,135 +410,6 @@
     </div>
     {% endif %}
     {% endblock list_pagination_section %}
-    {% if page_obj and page_obj.has_other_pages %}
-    <div class="list-pagination-section">
-      {% include "shared/_pagination.html" %}
-    </div>
-    {% endif %}
-    {% endblock list_pagination_section %}
-
-    {# 状态日志表格 #}
-    <div class="track-extra-section">
-      <div class="track-extra-section-title">状态日志（共 {{ status_logs|length }} 条记录）</div>
-      <div class="list-table-section">
-        <div class="list-table-wrapper">
-          <table class="list-table">
-            <thead>
-              <tr>
-                <th>变更时间</th>
-                <th>状态变更</th>
-                <th>变更人</th>
-                <th>变更原因</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for log in status_logs %}
-              <tr>
-                <td>
-                  <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ log.changed_time|date:"Y-m-d" }}</div>
-                  <div style="font-size: 12px; color: #999999;">{{ log.changed_time|date:"H:i" }}</div>
-                </td>
-                <td>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="list-badge">{{ log.old_status }}</span>
-                    <span style="color: #999999;">→</span>
-                    <span class="list-badge">{{ log.new_status }}</span>
-                  </div>
-                </td>
-                <td>
-                  {% if log.changed_by %}
-                  {{ log.changed_by.get_full_name|default:log.changed_by.username }}
-                  {% else %}
-                  <span style="color: #999999;">-</span>
-                  {% endif %}
-                </td>
-                <td>
-                  {% if log.change_reason %}
-                  <div style="font-size: 12px; color: #333333;">{{ log.change_reason|truncatewords:15 }}</div>
-                  {% else %}
-                  <span style="color: #999999;">-</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="4" class="list-empty-state">
-                  <div class="list-empty-state-icon">▢</div>
-                  <div class="list-empty-state-text">暂无状态日志</div>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    {# 调整申请表格 #}
-    <div class="track-extra-section">
-      <div class="track-extra-section-title">调整申请（共 {{ adjustments|length }} 条记录）</div>
-      <div class="list-table-section">
-        <div class="list-table-wrapper">
-          <table class="list-table">
-            <thead>
-              <tr>
-                <th>申请时间</th>
-                <th>状态</th>
-                <th>调整原因</th>
-                <th>审批人</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for adjustment in adjustments %}
-              <tr>
-                <td>
-                  <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ adjustment.created_time|date:"Y-m-d" }}</div>
-                  <div style="font-size: 12px; color: #999999;">{{ adjustment.created_time|date:"H:i" }}</div>
-                </td>
-                <td>
-                  <span class="list-badge list-badge-{{ adjustment.status }}">{{ adjustment.get_status_display }}</span>
-                </td>
-                <td>
-                  <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ adjustment.adjustment_reason|truncatewords:15 }}</div>
-                </td>
-                <td>
-                  {% if adjustment.approved_by %}
-                  {{ adjustment.approved_by.get_full_name|default:adjustment.approved_by.username }}
-                  {% else %}
-                  <span style="color: #999999;">-</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="4" class="list-empty-state">
-                  <div class="list-empty-state-icon">▢</div>
-                  <div class="list-empty-state-text">暂无调整申请</div>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>{% endblock list_table_headers %}</tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colspan="100%" class="list-empty-state">暂无数据</td>
-            </tr>
-            {% endblock list_table_rows %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    {% if page_obj and page_obj.has_other_pages %}
-    <div class="list-pagination-section">
-      {% include "shared/_pagination.html" %}
-    </div>
-    {% endif %}
-    {% endblock list_pagination_section %}
 
     {# 状态日志表格 #}
     <div class="track-extra-section">
@@ -609,53 +516,7 @@
         </div>
       </div>
     </div>
-{% endblock %}
-
-  <th>记录时间</th>
-  <th>记录人</th>
-  <th>当前值</th>
-  <th>完成率</th>
-  <th>进度说明</th>
-  <th>备注</th>
-{% endblock %}
-
-  {% for record in page_obj %}
-  <tr>
-    <td>
-      <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ record.recorded_time|date:"Y-m-d" }}</div>
-      <div style="font-size: 12px; color: #999999;">{{ record.recorded_time|date:"H:i" }}</div>
-    </td>
-    <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
-    <td>
-      <span class="list-badge">{{ record.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</span>
-    </td>
-    <td>
-      <div class="list-progress">
-        <div class="list-progress-fill" style="width: {{ record.completion_rate }}%"></div>
-        <span class="list-progress-text">{{ record.completion_rate }}%</span>
-      </div>
-    </td>
-    <td>
-      <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ record.progress_description|truncatewords:15 }}</div>
-    </td>
-    <td>
-      {% if record.notes %}
-      <div style="font-size: 12px; color: #999999;">{{ record.notes|truncatewords:10 }}</div>
-      {% else %}
-      <span style="color: #999999;">-</span>
-      {% endif %}
-    </td>
-  </tr>
-  {% empty %}
-  <tr>
-    <td colspan="6" class="list-empty-state">
-      <div class="list-empty-state-icon">📋</div>
-      <div class="list-empty-state-text">暂无进度记录</div>
-      <div class="list-empty-state-hint">更新进度后将显示在这里</div>
-    </td>
-  </tr>
-  {% endfor %}
-{% endblock %}
+{% endblock pm_content %}
 
 {% block extra_js %}
 <script>

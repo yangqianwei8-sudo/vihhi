@@ -1,0 +1,377 @@
+{% extends "shared/three_column_layout_base.html" %}
+{% load static %}
+
+{% block title %}审批详情 - {{ instance.instance_number }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+{% endblock %}
+
+{% block main_content %}
+{% if content_object %}
+<div class="detail-card-wrapper detail-card-wrapper-basic-info">
+  <div class="detail-card detail-card-basic-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-file-alt"></i>
+        待审批内容 - {{ content_object_type_name|default:"业务对象" }}
+        {% if content_object_detail_url %}
+        <a href="{{ content_object_detail_url }}" class="btn btn-sm btn-outline-primary ms-2" target="_blank">查看详情</a>
+        {% endif %}
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      {% if instance.content_type.model == 'client' %}
+        {% include 'workflow_engine/partials/client_content.html' with client=content_object %}
+      {% elif instance.content_type.model == 'businesscontract' %}
+        {% include 'workflow_engine/partials/contract_content.html' with contract=content_object %}
+      {% elif instance.content_type.model == 'businessopportunity' %}
+        {% include 'workflow_engine/partials/opportunity_content.html' with opportunity=content_object %}
+      {% elif instance.content_type.model == 'plan' %}
+        {% include 'workflow_engine/partials/plan_content.html' with plan=content_object %}
+      {% else %}
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">对象类型：</span>
+            <span class="info-value">{{ content_object_type_name|default:instance.content_type.model }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">对象名称：</span>
+            <span class="info-value">{{ content_object }}</span>
+          </div>
+          {% if content_object_detail_url %}
+          <div class="info-item">
+            <span class="info-label">操作：</span>
+            <span class="info-value"><a href="{{ content_object_detail_url }}" target="_blank">查看完整信息</a></span>
+          </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="detail-card-wrapper detail-card-wrapper-basic-info">
+  <div class="detail-card detail-card-basic-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-info-circle"></i>
+        审批信息
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">实例编号</span>
+          <span class="info-value"><code>{{ instance.instance_number }}</code></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">流程名称</span>
+          <span class="info-value">{{ instance.workflow.name }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">审批状态</span>
+          <span class="info-value">
+            {% if instance.status == 'pending' %}
+            <span class="status-badge pending">审批中</span>
+            {% elif instance.status == 'approved' %}
+            <span class="status-badge approved">已通过</span>
+            {% elif instance.status == 'rejected' %}
+            <span class="status-badge rejected">已驳回</span>
+            {% else %}
+            <span class="badge bg-secondary">{{ instance.get_status_display }}</span>
+            {% endif %}
+          </span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">当前节点</span>
+          <span class="info-value">{{ instance.current_node.name|default:"-" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">申请人</span>
+          <span class="info-value">{{ instance.applicant.username }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">申请时间</span>
+          <span class="info-value">{{ instance.apply_time|date:"Y-m-d H:i" }}</span>
+        </div>
+        {% if instance.apply_comment %}
+        <div class="info-item" style="grid-column: 1 / -1;">
+          <span class="info-label">申请说明</span>
+          <span class="info-value">{{ instance.apply_comment }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="detail-card-wrapper detail-card-wrapper-detail-info">
+  <div class="detail-card detail-card-detail-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-history"></i>
+        审批记录
+        {% if instance.status == 'approved' %}
+        <div class="alert alert-success mb-0 py-2 px-3 ms-2" style="font-size: 0.875rem; display: inline-block;">
+          <i class="bi bi-check-circle"></i> 审批流程已完成
+        </div>
+        {% elif instance.status == 'rejected' %}
+        <div class="alert alert-danger mb-0 py-2 px-3 ms-2" style="font-size: 0.875rem; display: inline-block;">
+          <i class="bi bi-x-circle"></i> 审批流程已驳回
+        </div>
+        {% endif %}
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      {% if records %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>节点</th>
+              <th>审批人</th>
+              <th>结果</th>
+              <th>意见</th>
+              <th>时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for record in records %}
+            <tr {% if record.is_obsolete %}class="table-secondary opacity-75" title="此节点已由他人处理完成，此记录无需再处理"{% endif %}>
+              <td>
+                {{ record.node.name }}
+                {% if record.is_obsolete %}
+                <small class="text-muted d-block" style="font-size: 0.75rem;">（已由他人处理）</small>
+                {% endif %}
+              </td>
+              <td>{{ record.approver.username }}</td>
+              <td>
+                {% if record.result == 'approved' %}
+                <span class="badge bg-success">通过</span>
+                {% elif record.result == 'rejected' %}
+                <span class="badge bg-danger">驳回</span>
+                {% elif record.result == 'transferred' %}
+                <span class="badge bg-info">转交</span>
+                {% elif record.result == 'withdrawn' %}
+                <span class="badge bg-secondary">撤回</span>
+                {% else %}
+                <span class="badge bg-warning">待审批</span>
+                {% endif %}
+              </td>
+              <td>{{ record.comment|default:"-" }}</td>
+              <td>{{ record.approval_time|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if instance.status != 'pending' %}
+      <div class="alert alert-info mt-3 mb-0" style="font-size: 0.875rem;">
+        <i class="bi bi-info-circle"></i>
+        <strong>说明：</strong>
+        审批流程已{{ instance.get_status_display }}。表格中灰色显示的"待审批"记录表示该节点已由其他审批人处理完成，这些记录无需再处理。
+      </div>
+      {% endif %}
+      {% else %}
+      <p class="text-muted text-center py-4">暂无审批记录</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock main_content %}
+
+{% block approval_title %}审批栏{% endblock %}
+
+{% block approval_content %}
+{% block approval_status %}
+<div class="three-column-actions__group">
+  <div class="three-column-actions__group-title">审批状态</div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">当前状态</div>
+    <div class="three-column-actions__info-value">
+      {% if instance.status == 'pending' %}
+        <span class="badge bg-warning">审批中</span>
+      {% elif instance.status == 'approved' %}
+        <span class="badge bg-success">已通过</span>
+      {% elif instance.status == 'rejected' %}
+        <span class="badge bg-danger">已驳回</span>
+      {% elif instance.status == 'withdrawn' %}
+        <span class="badge bg-secondary">已撤回</span>
+      {% elif instance.status == 'cancelled' %}
+        <span class="badge bg-secondary">已取消</span>
+      {% else %}
+        <span class="badge bg-secondary">{{ instance.get_status_display }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">当前节点</div>
+    <div class="three-column-actions__info-value">
+      {{ instance.current_node.name|default:"-" }}
+    </div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">申请人</div>
+    <div class="three-column-actions__info-value">
+      {{ instance.applicant.username }}
+    </div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">申请时间</div>
+    <div class="three-column-actions__info-value">
+      {{ instance.apply_time|date:"Y-m-d H:i" }}
+    </div>
+  </div>
+</div>
+{% endblock approval_status %}
+
+{% block approval_form %}
+{% if can_approve %}
+<div class="three-column-actions__group">
+  <div class="three-column-actions__group-title">审批操作</div>
+  <form method="post" id="approvalForm" class="approval-form" action="{% url 'workflow_engine:approval_action' instance.id %}">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="approval_comment" class="form-label small">审批意见</label>
+      <textarea 
+        id="approval_comment" 
+        name="comment" 
+        class="form-control form-control-sm" 
+        rows="4" 
+        placeholder="请输入审批意见..."
+        style="resize: vertical; min-height: 80px;"></textarea>
+    </div>
+    <div class="d-grid gap-2">
+      <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">
+        <i class="fas fa-check"></i> 通过
+      </button>
+      <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">
+        <i class="fas fa-times"></i> 驳回
+      </button>
+      {% if instance.workflow.allow_transfer %}
+      {% block approval_transfer %}
+      <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#transferModal">
+        <i class="fas fa-exchange-alt"></i> 转交
+      </button>
+      {% endblock approval_transfer %}
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock approval_form %}
+
+{% block approval_history %}
+<div class="three-column-actions__group">
+  <div class="three-column-actions__group-title">审批历史</div>
+  <div class="approval-history-list">
+    {% if records %}
+      {% for record in records %}
+      <div class="approval-history-item">
+        <div class="approval-history-item-header">
+          <span class="approval-history-item-name">{{ record.approver.username }}</span>
+          <span class="approval-history-item-time">{{ record.approval_time|date:"Y-m-d H:i" }}</span>
+        </div>
+        <div>
+          {% if record.result == 'approved' %}
+            <span class="approval-history-item-result approved">通过</span>
+          {% elif record.result == 'rejected' %}
+            <span class="approval-history-item-result rejected">驳回</span>
+          {% elif record.result == 'transferred' %}
+            <span class="approval-history-item-result transferred">转交</span>
+            {% if record.transferred_to %}
+              <span class="text-muted small">→ {{ record.transferred_to.username }}</span>
+            {% endif %}
+          {% elif record.result == 'withdrawn' %}
+            <span class="approval-history-item-result pending">撤回</span>
+          {% else %}
+            <span class="approval-history-item-result pending">待审批</span>
+          {% endif %}
+        </div>
+        {% if record.comment %}
+        <div class="approval-history-item-comment">{{ record.comment }}</div>
+        {% endif %}
+        {% if record.node %}
+        <div class="approval-history-item-comment" style="font-size: 0.7rem; color: #999;">
+          <i class="fas fa-layer-group"></i> {{ record.node.name }}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="text-muted small text-center py-3">
+      暂无审批记录
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock approval_history %}
+{% endblock approval_content %}
+
+{% block approval_transfer_modal %}
+{% if can_approve and instance.workflow.allow_transfer %}
+<div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="transferModalLabel">
+          <i class="fas fa-exchange-alt"></i> 转交审批
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" id="transferForm" action="{% url 'workflow_engine:approval_action' instance.id %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="transferred_to" class="form-label">转交给</label>
+            <select id="transferred_to" name="transferred_to" class="form-select" required>
+              <option value="">请选择用户</option>
+              {% for user in all_users %}
+              <option value="{{ user.id }}">{{ user.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="transfer_comment" class="form-label">转交说明</label>
+            <textarea id="transfer_comment" name="comment" class="form-control" rows="3" placeholder="请输入转交说明"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" name="action" value="transfer" class="btn btn-primary">确认转交</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock approval_transfer_modal %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const approvalForm = document.getElementById('approvalForm');
+  if (approvalForm) {
+    approvalForm.addEventListener('submit', function(e) {
+      const action = e.submitter?.value || e.target.querySelector('button[type="submit"][name="action"]')?.value;
+      if (action === 'approve' || action === 'reject') {
+        const comment = document.getElementById('approval_comment')?.value || '';
+        if (!comment || comment.trim() === '') {
+          e.preventDefault();
+          alert('请输入审批意见');
+          return false;
+        }
+        if (!confirm(`确认${action === 'approve' ? '通过' : '驳回'}此审批吗？`)) {
+          e.preventDefault();
+          return false;
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

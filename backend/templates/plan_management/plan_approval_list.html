@@ -20,74 +20,76 @@
 {% endblock %}
 
 {% block list_stats_content %}
-  <div class="row g-3">
-    <div class="col-md-4">
-      <div class="list-stat-card">
-        <div class="list-stat-label">待裁决总数</div>
-        <div class="list-stat-value">{{ total_count|default:0 }}</div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="list-stat-card">
-        <div class="list-stat-label">启动请求</div>
-        <div class="list-stat-value">{{ pending_count|default:0 }}</div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="list-stat-card">
-        <div class="list-stat-label">取消请求</div>
-        <div class="list-stat-value">{{ cancel_count|default:0 }}</div>
-      </div>
-    </div>
+  {# 统计卡片 - 直接放在 list-page-stats 中，CSS会自动一行排列 #}
+  <div class="list-stat-card">
+    <div class="list-stat-label">待裁决总数</div>
+    <div class="list-stat-value">{{ total_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">启动请求</div>
+    <div class="list-stat-value">{{ pending_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">取消请求</div>
+    <div class="list-stat-value">{{ cancel_count|default:0 }}</div>
   </div>
 {% endblock list_stats_content %}
 
 {% block list_filters_content %}
-  <div class="col-md-3">
-    <label class="form-label">搜索</label>
-    <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="计划编号、名称、请求人">
-  </div>
-  <div class="col-md-2">
-    <label class="form-label">请求类型</label>
-    <select name="request_type" class="form-select">
-      <option value="">全部类型</option>
-      {% for value, label in request_type_choices %}
-      <option value="{{ value }}" {% if request_type_filter == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-2">
-    <label class="form-label">计划状态</label>
-    <select name="status" class="form-select">
-      <option value="">全部状态</option>
-      {% for value, label in status_options %}
-      <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-2">
-    <label class="form-label">请求人</label>
-    <select name="requested_by" class="form-select">
-      <option value="">全部请求人</option>
-      {% for user in all_users %}
-      <option value="{{ user.id }}" {% if requested_by_filter|stringformat:"s" == user.id|stringformat:"s" %}selected{% endif %}>
-        {{ user.get_full_name|default:user.username }}
-      </option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-3">
-    <label class="form-label">请求时间</label>
-    <div class="row g-2">
-      <div class="col-6">
-        <input type="date" name="date_from" class="form-control" value="{{ date_from|default:'' }}" placeholder="开始">
-      </div>
-      <div class="col-6">
-        <input type="date" name="date_to" class="form-control" value="{{ date_to|default:'' }}" placeholder="结束">
+  {# 筛选器 - 使用标准Bootstrap栅格系统 #}
+  <div class="row g-3">
+    <div class="col-md-3">
+      <label class="form-label">搜索</label>
+      <input type="text" name="search" class="form-control form-control-sm" value="{{ search }}" placeholder="计划编号、名称、请求人">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">请求类型</label>
+      <select name="request_type" class="form-select form-select-sm">
+        <option value="">全部类型</option>
+        {% for value, label in request_type_choices %}
+        <option value="{{ value }}" {% if request_type_filter == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">计划状态</label>
+      <select name="status" class="form-select form-select-sm">
+        <option value="">全部状态</option>
+        {% for value, label in status_options %}
+        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">请求人</label>
+      <select name="requested_by" class="form-select form-select-sm">
+        <option value="">全部请求人</option>
+        {% for user in all_users %}
+        <option value="{{ user.id }}" {% if requested_by_filter|stringformat:"s" == user.id|stringformat:"s" %}selected{% endif %}>
+          {{ user.get_full_name|default:user.username }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">请求时间</label>
+      <div class="row g-2">
+        <div class="col-6">
+          <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from|default:'' }}" placeholder="开始">
+        </div>
+        <div class="col-6">
+          <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to|default:'' }}" placeholder="结束">
+        </div>
       </div>
     </div>
   </div>
 {% endblock list_filters_content %}
+
+{% block list_table_checkbox_header %}
+  <th style="width: 50px;">
+    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
+  </th>
+{% endblock list_table_checkbox_header %}
 
 {% block list_table_headers %}
   <th>计划编号</th>
@@ -124,18 +126,26 @@
       </span>
     </td>
     <td>
-      <div class="btn-group btn-group-sm">
-        <a href="{% url 'plan_pages:plan_detail' d.plan.id %}" class="btn btn-sm" title="查看">查看</a>
+      <div class="list-page-table-actions">
+        <a href="{% url 'plan_pages:plan_detail' d.plan.id %}" class="action-view" title="查看">
+          <i class="bi bi-eye"></i>
+        </a>
         {% if can_approve %}
-        <button class="btn btn-sm" title="通过" onclick="decidePlanDecision({{ d.id }}, true)">通过</button>
-        <button class="btn btn-sm" title="驳回" onclick="decidePlanDecision({{ d.id }}, false)">驳回</button>
+        <span class="action-separator">|</span>
+        <button class="action-edit" title="通过" onclick="decidePlanDecision({{ d.id }}, true); return false;" style="background: none; border: none; padding: 0; cursor: pointer;">
+          <i class="bi bi-check-circle"></i>
+        </button>
+        <span class="action-separator">|</span>
+        <button class="action-delete" title="驳回" onclick="decidePlanDecision({{ d.id }}, false); return false;" style="background: none; border: none; padding: 0; cursor: pointer;">
+          <i class="bi bi-x-circle"></i>
+        </button>
         {% endif %}
       </div>
     </td>
   </tr>
   {% empty %}
   <tr>
-    <td colspan="7" class="list-empty-state">
+    <td colspan="8" class="list-empty-state">
       <div class="list-empty-state-icon">📋</div>
       <div class="list-empty-state-text">当前没有待裁决的请求</div>
       <div class="list-empty-state-hint">所有审批请求已处理完成</div>

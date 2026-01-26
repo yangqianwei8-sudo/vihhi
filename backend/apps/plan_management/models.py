@@ -6,7 +6,10 @@ from django.db.models import Max, Q
 from django.db import transaction
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 from backend.apps.system_management.models import User, Department
+import os
 
 
 class StrategicGoal(models.Model):
@@ -219,7 +222,26 @@ class StrategicGoal(models.Model):
         # 自动计算周期天数
         self.duration_days = self.calculate_duration_days()
         
+        # 检测是否是新建对象
+        is_new = self.pk is None
+        
         super().save(*args, **kwargs)
+        
+        # 如果是新建且状态为 draft，记录初始状态变更日志
+        if is_new and self.status == 'draft':
+            # 获取创建者（优先从 created_by 获取，如果没有则尝试从 kwargs 传递）
+            created_by = getattr(self, 'created_by', None)
+            if not created_by:
+                # 尝试从 kwargs 中获取 user
+                created_by = kwargs.get('user', None)
+            
+            GoalStatusLog.objects.create(
+                goal=self,
+                old_status='',  # 空状态表示创建
+                new_status='draft',
+                changed_by=created_by,
+                change_reason='创建目标'
+            )
     
     def get_valid_transitions(self):
         """
@@ -330,6 +352,62 @@ class GoalStatusLog(models.Model):
     
     def __str__(self):
         return f"{self.goal.goal_number} - {self.old_status} → {self.new_status}"
+    
+    def get_old_status_display(self):
+        """获取原状态的中文显示"""
+        STATUS_CHOICES = [
+            ('draft', '制定中'),
+            ('published', '已发布'),
+            ('accepted', '已接收'),
+            ('in_progress', '执行中'),
+            ('completed', '已完成'),
+            ('cancelled', '已取消'),
+        ]
+        status_dict = dict(STATUS_CHOICES)
+        return status_dict.get(self.old_status, self.old_status)
+    
+    def get_new_status_display(self):
+        """获取新状态的中文显示"""
+        STATUS_CHOICES = [
+            ('draft', '制定中'),
+            ('published', '已发布'),
+            ('accepted', '已接收'),
+            ('in_progress', '执行中'),
+            ('completed', '已完成'),
+            ('cancelled', '已取消'),
+        ]
+        status_dict = dict(STATUS_CHOICES)
+        return status_dict.get(self.new_status, self.new_status)
+    
+    def get_change_evidence(self):
+        """获取变更依据凭证（审批单号等）"""
+        try:
+            from django.contrib.contenttypes.models import ContentType
+            from backend.apps.workflow_engine.models import ApprovalInstance
+            
+            # 查找关联的审批实例（在变更时间前后1小时内完成的审批）
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            content_type = ContentType.objects.get_for_model(StrategicGoal)
+            time_window_start = self.changed_time - timedelta(hours=1)
+            time_window_end = self.changed_time + timedelta(hours=1)
+            
+            approval_instance = ApprovalInstance.objects.filter(
+                content_type=content_type,
+                object_id=self.goal.id,
+                completed_time__gte=time_window_start,
+                completed_time__lte=time_window_end,
+                status__in=['approved', 'rejected']
+            ).order_by('-completed_time').first()
+            
+            if approval_instance:
+                return approval_instance.instance_number
+        except Exception:
+            pass
+        
+        # 如果没有找到审批实例，返回变更原因作为依据
+        return self.change_reason if self.change_reason else '-'
 
 
 class GoalProgressRecord(models.Model):
@@ -500,8 +578,8 @@ class Plan(models.Model):
     # 基本信息
     plan_number = models.CharField(max_length=50, unique=True, verbose_name='计划编号', help_text='格式：PLAN-{YYYYMMDD}-{序列号}')
     name = models.CharField(max_length=200, verbose_name='计划名称')
-    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='company', verbose_name='计划层级', help_text='company=公司计划, personal=个人计划')
-    plan_period = models.CharField(max_length=20, choices=PLAN_PERIOD_CHOICES, verbose_name='计划周期')
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='company', blank=False, verbose_name='计划层级', help_text='company=公司计划, personal=个人计划')
+    plan_period = models.CharField(max_length=20, choices=PLAN_PERIOD_CHOICES, blank=False, verbose_name='计划周期')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='计划状态')
     
     # 关联战略目标
@@ -532,6 +610,7 @@ class Plan(models.Model):
     # 计划内容
     content = models.TextField(max_length=5000, verbose_name='计划内容', help_text='支持富文本')
     plan_objective = models.TextField(max_length=1000, verbose_name='计划目标')
+    acceptance_criteria = models.TextField(max_length=1000, verbose_name='验收标准', help_text='计划完成的验收标准')
     
     # 时间信息
     start_time = models.DateTimeField(verbose_name='计划开始时间')
@@ -757,6 +836,19 @@ class Plan(models.Model):
         return self.status or 'draft'
     
     def save(self, *args, **kwargs):
+        # 确保 responsible_person 有值（必填字段，不能为 None）
+        # 如果为 None，尝试使用 created_by 作为默认值
+        if not self.responsible_person:
+            if self.created_by:
+                self.responsible_person = self.created_by
+            else:
+                # 如果 created_by 也没有，这是一个严重错误
+                # 应该在视图层面或表单层面确保 responsible_person 被设置
+                # 这里作为最后的保障，记录警告但不抛出异常（让数据库约束来处理）
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f'Plan 对象保存时 responsible_person 和 created_by 都为 None，这可能导致数据库约束错误')
+        
         # 自动生成计划编号
         if not self.plan_number:
             self.plan_number = self.generate_plan_number()
@@ -778,9 +870,17 @@ class Plan(models.Model):
             self.check_overdue_status()
         
         # P1: 状态变更必须通过裁决器，不在 save() 中直接设置
-        # 新建计划默认状态为 draft（由数据库默认值或表单设置）
-        if not self.pk and not self.status:
-            self.status = 'draft'
+        # 新建计划默认状态：日计划为 published（无须审批），其他计划为 draft
+        is_new = self.pk is None
+        if is_new and not self.status:
+            if self.plan_period == 'daily':
+                self.status = 'published'
+                # 日计划创建即为发布，设置发布时间戳
+                if not self.published_at:
+                    from django.utils import timezone
+                    self.published_at = timezone.now()
+            else:
+                self.status = 'draft'
         
         # 修复：确保 plan_type 字段有值（数据库字段仍然存在，需要向后兼容）
         # plan_type 字段已迁移到 level 字段，但数据库表中仍存在该字段且不允许为 null
@@ -805,6 +905,22 @@ class Plan(models.Model):
             cursor.execute(
                 "UPDATE plan_plan SET plan_type = %s WHERE id = %s",
                 [plan_type_value, self.pk]
+            )
+        
+        # 如果是新建且状态为 draft，记录初始状态变更日志
+        if is_new and self.status == 'draft':
+            # 获取创建者（优先从 created_by 获取，如果没有则尝试从 kwargs 传递）
+            created_by = getattr(self, 'created_by', None)
+            if not created_by:
+                # 尝试从 kwargs 中获取 user
+                created_by = kwargs.get('user', None)
+            
+            PlanStatusLog.objects.create(
+                plan=self,
+                old_status='',  # 空状态表示创建
+                new_status='draft',
+                changed_by=created_by,
+                change_reason='创建计划'
             )
     
     def get_valid_transitions(self):
@@ -1039,6 +1155,8 @@ class PlanStatusLog(models.Model):
     
     def get_old_status_display(self):
         """获取原状态的中文显示（P2-1：统一状态机）"""
+        if not self.old_status:
+            return '创建'
         STATUS_CHOICES = [
             ('draft', '草稿'),
             ('published', '已发布'),
@@ -1062,6 +1180,36 @@ class PlanStatusLog(models.Model):
         ]
         status_dict = dict(STATUS_CHOICES)
         return status_dict.get(self.new_status, self.new_status)
+    
+    def get_change_evidence(self):
+        """获取变更依据凭证（审批单号等）"""
+        try:
+            from django.contrib.contenttypes.models import ContentType
+            from backend.apps.workflow_engine.models import ApprovalInstance
+            
+            # 查找关联的审批实例（在变更时间前后1小时内完成的审批）
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            content_type = ContentType.objects.get_for_model(Plan)
+            time_window_start = self.changed_time - timedelta(hours=1)
+            time_window_end = self.changed_time + timedelta(hours=1)
+            
+            approval_instance = ApprovalInstance.objects.filter(
+                content_type=content_type,
+                object_id=self.plan.id,
+                completed_time__gte=time_window_start,
+                completed_time__lte=time_window_end,
+                status__in=['approved', 'rejected']
+            ).order_by('-completed_time').first()
+            
+            if approval_instance:
+                return approval_instance.instance_number
+        except Exception:
+            pass
+        
+        # 如果没有找到审批实例，返回变更原因作为依据
+        return self.change_reason if self.change_reason else '-'
 
 
 class PlanProgressRecord(models.Model):
@@ -1598,4 +1746,125 @@ class WorkSummary(models.Model):
     
     def __str__(self):
         return f"{self.get_summary_type_display()} - {self.user.username} ({self.period_start} ~ {self.period_end})"
+
+
+# ==================== 通用附件模型 ====================
+
+def attachment_upload_path(instance, filename):
+    """附件上传路径"""
+    # 如果 instance 还没有保存，使用时间戳作为临时路径
+    if instance.pk:
+        content_type = ContentType.objects.get_for_model(instance.content_object)
+        app_label = content_type.app_label
+        model_name = content_type.model
+        return f'attachments/{app_label}/{model_name}/{instance.pk}/{filename}'
+    else:
+        # 保存前使用时间戳
+        from django.utils import timezone
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        return f'attachments/temp/{timestamp}/{filename}'
+
+
+class Attachment(models.Model):
+    """通用附件模型（可用于任何业务对象）"""
+    
+    # 关联业务对象（使用 ContentType）
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        verbose_name='关联对象类型'
+    )
+    object_id = models.PositiveIntegerField(verbose_name='关联对象ID')
+    content_object = GenericForeignKey('content_type', 'object_id')
+    
+    # 文件信息
+    file = models.FileField(
+        upload_to=attachment_upload_path,
+        verbose_name='附件文件',
+        max_length=500
+    )
+    name = models.CharField(max_length=255, verbose_name='文件名', help_text='显示名称')
+    file_size = models.BigIntegerField(verbose_name='文件大小（字节）', null=True, blank=True)
+    
+    # 上传信息
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_attachments',
+        verbose_name='上传人'
+    )
+    uploaded_at = models.DateTimeField(default=timezone.now, verbose_name='上传时间', db_index=True)
+    
+    # 备注
+    description = models.TextField(blank=True, verbose_name='备注')
+    
+    class Meta:
+        db_table = 'plan_attachment'
+        verbose_name = '附件'
+        verbose_name_plural = '附件'
+        ordering = ['-uploaded_at']
+        indexes = [
+            models.Index(fields=['content_type', 'object_id']),
+            models.Index(fields=['-uploaded_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} - {self.content_object}"
+    
+    def save(self, *args, **kwargs):
+        """保存时自动设置文件名和文件大小"""
+        if not self.name and self.file:
+            self.name = os.path.basename(self.file.name)
+        if self.file and not self.file_size:
+            try:
+                self.file_size = self.file.size
+            except (OSError, ValueError):
+                pass
+        super().save(*args, **kwargs)
+    
+    def get_file_type(self):
+        """根据文件扩展名推断文件类型（用于模板显示）"""
+        if not self.file:
+            return 'other'
+        
+        ext = os.path.splitext(self.file.name)[1].lower()
+        
+        # PDF
+        if ext == '.pdf':
+            return 'pdf'
+        
+        # 图片
+        image_exts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
+        if ext in image_exts:
+            return 'image'
+        
+        # 视频
+        video_exts = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm']
+        if ext in video_exts:
+            return 'video'
+        
+        # Word文档
+        word_exts = ['.doc', '.docx']
+        if ext in word_exts:
+            return 'word'
+        
+        # Excel文档
+        excel_exts = ['.xls', '.xlsx']
+        if ext in excel_exts:
+            return 'excel'
+        
+        # PowerPoint
+        ppt_exts = ['.ppt', '.pptx']
+        if ext in ppt_exts:
+            return 'powerpoint'
+        
+        # 其他
+        return 'other'
+    
+    @property
+    def file_type(self):
+        """文件类型属性（用于模板）"""
+        return self.get_file_type()
 

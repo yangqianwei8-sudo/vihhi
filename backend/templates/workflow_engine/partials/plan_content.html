@@ -1,0 +1,160 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+
+<div class="info-section">
+    <h6 class="info-section-title">基本信息</h6>
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="info-label">计划名称</span>
+            <span class="info-value"><strong>{{ plan.name }}</strong></span>
+        </div>
+        {% if plan.plan_number %}
+        <div class="info-item">
+            <span class="info-label">计划编号</span>
+            <span class="info-value"><code>{{ plan.plan_number }}</code></span>
+        </div>
+        {% endif %}
+        {% if plan.level %}
+        <div class="info-item">
+            <span class="info-label">计划层级</span>
+            <span class="info-value">{{ plan.get_level_display|default:plan.level }}</span>
+        </div>
+        {% endif %}
+        {% if plan.plan_period %}
+        <div class="info-item">
+            <span class="info-label">计划周期</span>
+            <span class="info-value">{{ plan.get_plan_period_display|default:plan.plan_period }}</span>
+        </div>
+        {% endif %}
+        {% if plan.status %}
+        <div class="info-item">
+            <span class="info-label">计划状态</span>
+            <span class="info-value">
+                {% if plan.status == 'draft' %}
+                <span class="badge bg-secondary">草稿</span>
+                {% elif plan.status == 'published' %}
+                <span class="badge bg-info">已发布</span>
+                {% elif plan.status == 'accepted' %}
+                <span class="badge bg-primary">已接收</span>
+                {% elif plan.status == 'in_progress' %}
+                <span class="badge bg-warning">进行中</span>
+                {% elif plan.status == 'completed' %}
+                <span class="badge bg-success">已完成</span>
+                {% elif plan.status == 'cancelled' %}
+                <span class="badge bg-danger">已取消</span>
+                {% else %}
+                <span class="badge bg-secondary">{{ plan.get_status_display }}</span>
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
+        {% if plan.responsible_department %}
+        <div class="info-item">
+            <span class="info-label">所属部门</span>
+            <span class="info-value">{{ plan.responsible_department.name }}</span>
+        </div>
+        {% endif %}
+        {% if plan.responsible_person %}
+        <div class="info-item">
+            <span class="info-label">负责人</span>
+            <span class="info-value">{{ plan.responsible_person.get_full_name|default:plan.responsible_person.username }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if plan.related_goal or plan.parent_plan or plan.related_project %}
+<div class="info-section">
+    <h6 class="info-section-title">关联信息</h6>
+    <div class="info-grid">
+        {% if plan.related_goal %}
+        <div class="info-item">
+            <span class="info-label">关联战略目标</span>
+            <span class="info-value">
+                {% if plan.related_goal.goal_number %}
+                <code>{{ plan.related_goal.goal_number }}</code> - 
+                {% endif %}
+                {{ plan.related_goal.name }}
+            </span>
+        </div>
+        {% endif %}
+        {% if plan.parent_plan %}
+        <div class="info-item">
+            <span class="info-label">父计划</span>
+            <span class="info-value">
+                {% if plan.parent_plan.plan_number %}
+                <code>{{ plan.parent_plan.plan_number }}</code> - 
+                {% endif %}
+                {{ plan.parent_plan.name }}
+            </span>
+        </div>
+        {% endif %}
+        {% if plan.related_project %}
+        <div class="info-item">
+            <span class="info-label">关联项目</span>
+            <span class="info-value">{{ plan.related_project }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if plan.start_time or plan.end_time %}
+<div class="info-section">
+    <h6 class="info-section-title">时间信息</h6>
+    <div class="info-grid">
+        {% if plan.start_time %}
+        <div class="info-item">
+            <span class="info-label">计划开始时间</span>
+            <span class="info-value">{{ plan.start_time|date:"Y-m-d H:i" }}</span>
+        </div>
+        {% endif %}
+        {% if plan.end_time %}
+        <div class="info-item">
+            <span class="info-label">计划结束时间</span>
+            <span class="info-value">{{ plan.end_time|date:"Y-m-d H:i" }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if plan.content %}
+<div class="info-section">
+    <h6 class="info-section-title">计划内容</h6>
+    <div class="info-item" style="grid-column: 1 / -1;">
+        <span class="info-value" style="white-space: pre-wrap; line-height: 1.6;">{{ plan.content }}</span>
+    </div>
+</div>
+{% endif %}
+
+{% if plan.plan_objective %}
+<div class="info-section">
+    <h6 class="info-section-title">计划目标</h6>
+    <div class="info-item" style="grid-column: 1 / -1;">
+        <span class="info-value" style="white-space: pre-wrap; line-height: 1.6;">{{ plan.plan_objective }}</span>
+    </div>
+</div>
+{% endif %}
+
+{% if plan.collaboration_plan %}
+<div class="info-section">
+    <h6 class="info-section-title">协作计划</h6>
+    <div class="info-item" style="grid-column: 1 / -1;">
+        <span class="info-value" style="white-space: pre-wrap; line-height: 1.6;">{{ plan.collaboration_plan }}</span>
+    </div>
+</div>
+{% endif %}
+
+{% if plan.participants.all %}
+<div class="info-section">
+    <h6 class="info-section-title">协作人员</h6>
+    <div class="info-item" style="grid-column: 1 / -1;">
+        <span class="info-value">
+            {% for participant in plan.participants.all %}
+            <span class="badge bg-secondary">{{ participant.get_full_name|default:participant.username }}</span>
+            {% endfor %}
+        </span>
+    </div>
+</div>
+{% endif %}

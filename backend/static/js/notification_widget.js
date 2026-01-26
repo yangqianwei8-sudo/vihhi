@@ -162,7 +162,8 @@
         // 加载通知
         function loadNotifications() {
             // 使用正确的API路径：/api/plan/notifications/
-            const apiUrl = '/api/plan/notifications/';
+            // 只加载未读通知，已读的通知自动从列表中消失
+            const apiUrl = '/api/plan/notifications/?is_read=0';
             
             // 检查fetch是否可用（兼容旧浏览器）
             if (typeof fetch === 'undefined') {
@@ -277,13 +278,16 @@
                 if (contentArea) {
                     contentArea.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        // 标记为已读
-                        if (!isRead) {
-                            markAsRead(notifId);
-                        }
-                        // 跳转
-                        if (url && url !== '#') {
+                        // 如果未读，先标记为已读，然后跳转
+                        if (!isRead && url && url !== '#') {
+                            // 先标记为已读，然后跳转
+                            markAsReadAndNavigate(notifId, url);
+                        } else if (url && url !== '#') {
+                            // 已读或没有URL，直接跳转
                             window.location.href = url;
+                        } else if (!isRead) {
+                            // 没有URL但未读，只标记为已读
+                            markAsRead(notifId);
                         }
                     });
                     contentArea.style.cursor = 'pointer';
@@ -314,7 +318,7 @@
         // 标记为已读
         function markAsRead(notificationId) {
             // 使用正确的API路径：/api/plan/notifications/{id}/mark-read/
-            fetch(`/api/plan/notifications/${notificationId}/mark-read/`, {
+            return fetch(`/api/plan/notifications/${notificationId}/mark-read/`, {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -331,20 +335,31 @@
             .then(data => {
                 // API返回格式：{ok: true, id: 4, is_read: true}
                 if (data.ok || data.success) {
-                    // 更新本地状态
-                    const notif = notifications.find(n => n.id === notificationId);
-                    if (notif) {
-                        notif.is_read = true;
-                    }
+                    // 从本地数组中移除该通知（因为只显示未读通知，已读的通知应该消失）
+                    notifications = notifications.filter(n => n.id !== notificationId);
                     // 重新渲染
                     renderNotifications();
                     // 更新徽章
                     const unreadCount = notifications.filter(n => !n.is_read).length;
                     updateBadge(unreadCount);
                 }
+                return data;
             })
             .catch(error => {
-                // 标记已读失败，静默处理
+                // 标记已读失败，静默处理，但仍然返回以便调用者可以继续
+                console.error('标记通知已读失败:', error);
+                return { ok: false };
+            });
+        }
+        
+        // 标记为已读并跳转
+        function markAsReadAndNavigate(notificationId, url) {
+            // 先标记为已读
+            markAsRead(notificationId).then(() => {
+                // 标记完成后跳转（无论成功与否都跳转，确保用户体验）
+                if (url && url !== '#') {
+                    window.location.href = url;
+                }
             });
         }
         
@@ -366,10 +381,8 @@
             })
             .then(data => {
                 if (data.ok || data.success) {
-                    // 更新所有通知为已读
-                    notifications.forEach(n => {
-                        n.is_read = true;
-                    });
+                    // 清空所有通知（因为只显示未读通知，全部标记为已读后应该全部消失）
+                    notifications = [];
                     // 重新渲染
                     renderNotifications();
                     // 更新徽章

@@ -22,18 +22,31 @@
     <div class="detail-card-body">
       <div class="detail-actions-container">
         {% block detail_actions %}
+        {# 编辑按钮：始终显示，根据权限设置禁用状态 #}
         {% if can_edit %}
         <a href="{% block detail_edit_url %}#{% endblock %}" class="btn btn-light">
           <i class="fas fa-edit"></i> 编辑
         </a>
+        {% else %}
+        <button type="button" class="btn btn-secondary" disabled title="您没有编辑权限">
+          <i class="fas fa-edit"></i> 编辑
+        </button>
         {% endif %}
+        
+        {# 删除按钮：始终显示，根据权限设置禁用状态 #}
         {% if can_delete %}
         <button type="button" class="btn btn-gray" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal">
           <i class="fas fa-trash"></i> 删除
         </button>
+        {% else %}
+        <button type="button" class="btn btn-secondary" disabled title="您没有删除权限">
+          <i class="fas fa-trash"></i> 删除
+        </button>
         {% endif %}
-        {% if can_submit_approval %}
+        
+        {# 提交审批按钮：始终显示，根据权限设置禁用状态 #}
         {% block detail_submit_approval %}
+        {% if can_submit_approval %}
         <form method="post" action="{% block detail_submit_approval_url %}#{% endblock %}" class="d-inline" id="submitApprovalForm">
           {% csrf_token %}
           <button type="submit" class="btn btn-success" id="submitApprovalBtn" title="直接提交审批，无需编辑">
@@ -56,8 +69,13 @@
             }
           });
         </script>
-        {% endblock detail_submit_approval %}
+        {% else %}
+        <button type="button" class="btn btn-secondary" disabled title="您没有提交审批权限">
+          <i class="fas fa-paper-plane"></i> 提交审批
+        </button>
         {% endif %}
+        {% endblock detail_submit_approval %}
+        
         {% block detail_other_actions_header %}{% endblock %}
         {% block detail_other_actions %}{% endblock %}
         {% endblock detail_actions %}
@@ -73,173 +91,117 @@
   <div class="detail-card-header">
     <h3 class="detail-card-title">
       <i class="fas fa-info-circle"></i>
-      表单信息
+      基本信息
     </h3>
   </div>
   <div class="detail-card-body">
     {% block detail_basic_info_rows %}
-    {# 第一排：编号、名称、层级、周期（4个字段 + 1个空占位符 = 5个位置） #}
-    <div class="form-row-5 mb-3">
+    {# 固定字段：所属部门、负责人、表单编号（自动继承） #}
+    <div class="row mb-3">
       {% block detail_basic_info_row1 %}
-      <div class="col-5-fields detail-field-wrapper">
+      {# 所属部门 #}
+      <div class="col-md-4 detail-field-wrapper">
+        <div class="detail-field">
+          <label class="detail-field-label">所属部门</label>
+          <div class="detail-field-value">
+            {% if object.responsible_department %}{{ object.responsible_department.name }}{% else %}-{% endif %}
+          </div>
+        </div>
+      </div>
+      {# 负责人 #}
+      <div class="col-md-4 detail-field-wrapper">
+        <div class="detail-field">
+          <label class="detail-field-label">负责人</label>
+          <div class="detail-field-value">
+            {% if object.responsible_person %}{{ object.responsible_person.get_full_name|default:object.responsible_person.username }}{% else %}-{% endif %}
+          </div>
+        </div>
+      </div>
+      {# 表单编号字段：自动检测 goal_number、plan_number、form_number、usage_number 等 #}
+      {% if object.goal_number %}
+      <div class="col-md-4 detail-field-wrapper">
+        <div class="detail-field">
+          <label class="detail-field-label">目标编号</label>
+          <div class="detail-field-value">
+            <code>{{ object.goal_number|default:object.id }}</code>
+          </div>
+        </div>
+      </div>
+      {% elif object.plan_number %}
+      <div class="col-md-4 detail-field-wrapper">
         <div class="detail-field">
           <label class="detail-field-label">计划编号</label>
           <div class="detail-field-value">
-            {% if object.plan_number %}{{ object.plan_number }}{% elif object.id %}{{ object.id }}{% else %}-{% endif %}
+            <code>{{ object.plan_number|default:object.id }}</code>
           </div>
         </div>
       </div>
-      <div class="col-5-fields detail-field-wrapper">
+      {% elif object.form_number %}
+      <div class="col-md-4 detail-field-wrapper">
         <div class="detail-field">
-          <label class="detail-field-label">计划名称</label>
+          <label class="detail-field-label">表单编号</label>
           <div class="detail-field-value">
-            {% if object.name %}{{ object.name }}{% elif object.title %}{{ object.title }}{% else %}-{% endif %}
+            <code>{{ object.form_number|default:object.id }}</code>
           </div>
         </div>
       </div>
-      <div class="col-5-fields detail-field-wrapper">
+      {% elif object.usage_number %}
+      <div class="col-md-4 detail-field-wrapper">
         <div class="detail-field">
-          <label class="detail-field-label">计划层级</label>
+          <label class="detail-field-label">用印单号</label>
           <div class="detail-field-value">
-            {% if object.level %}{{ object.get_level_display|default:object.level }}{% else %}-{% endif %}
+            <code>{{ object.usage_number|default:object.id }}</code>
           </div>
         </div>
       </div>
-      <div class="col-5-fields detail-field-wrapper">
+      {% else %}
+      <div class="col-md-4 detail-field-wrapper">
         <div class="detail-field">
-          <label class="detail-field-label">计划周期</label>
+          <label class="detail-field-label">编号</label>
           <div class="detail-field-value">
-            {% if object.plan_period %}{{ object.get_plan_period_display|default:object.plan_period }}{% else %}-{% endif %}
+            <code>{{ object.id }}</code>
           </div>
         </div>
       </div>
-      <div class="col-5-fields detail-field-wrapper"></div>
+      {% endif %}
       {% endblock detail_basic_info_row1 %}
-    </div>
-
-    {# 第二排：关联战略目标、父计划、关联项目（3个字段 + 2个空占位符 = 5个位置） #}
-    <div class="form-row-5 mb-3">
-      {% block detail_basic_info_row2 %}
-      <div class="col-5-fields detail-field-wrapper">
-        <div class="detail-field">
-          <label class="detail-field-label">关联战略目标</label>
-          <div class="detail-field-value">
-            {% if object.related_goal %}{{ object.related_goal.name }}{% else %}-{% endif %}
-          </div>
-        </div>
-      </div>
-      <div class="col-5-fields detail-field-wrapper">
-        <div class="detail-field">
-          <label class="detail-field-label">父计划</label>
-          <div class="detail-field-value">
-            {% if object.parent_plan %}{{ object.parent_plan.name }}{% else %}-{% endif %}
-          </div>
-        </div>
-      </div>
-      <div class="col-5-fields detail-field-wrapper">
-        <div class="detail-field">
-          <label class="detail-field-label">关联项目</label>
-          <div class="detail-field-value">
-            {% if object.related_project %}{{ object.related_project }}{% else %}-{% endif %}
-          </div>
-        </div>
-      </div>
-      <div class="col-5-fields detail-field-wrapper"></div>
-      <div class="col-5-fields detail-field-wrapper"></div>
-      {% endblock detail_basic_info_row2 %}
-    </div>
-
-    {# 第三排：开始时间、结束时间（2个字段 + 3个空占位符 = 5个位置） #}
-    <div class="form-row-5 mb-3">
-      {% block detail_basic_info_row3 %}
-      <div class="col-5-fields detail-field-wrapper">
-        <div class="detail-field">
-          <label class="detail-field-label">计划开始时间</label>
-          <div class="detail-field-value">
-            {% if object.start_time %}{{ object.start_time|date:"Y-m-d H:i" }}{% elif object.start_date %}{{ object.start_date|date:"Y-m-d" }}{% else %}-{% endif %}
-          </div>
-        </div>
-      </div>
-      <div class="col-5-fields detail-field-wrapper">
-        <div class="detail-field">
-          <label class="detail-field-label">计划结束时间</label>
-          <div class="detail-field-value">
-            {% if object.end_time %}{{ object.end_time|date:"Y-m-d H:i" }}{% elif object.end_date %}{{ object.end_date|date:"Y-m-d" }}{% else %}-{% endif %}
-          </div>
-        </div>
-      </div>
-      <div class="col-5-fields detail-field-wrapper"></div>
-      <div class="col-5-fields detail-field-wrapper"></div>
-      <div class="col-5-fields detail-field-wrapper"></div>
-      {% endblock detail_basic_info_row3 %}
-    </div>
-
-    {# 多行文本字段：计划内容（整行，使用 col-12） #}
-    <div class="row mb-3">
-      {% block detail_basic_info_content %}
-      <div class="col-12 detail-field-wrapper">
-        <div class="detail-field">
-          <label class="detail-field-label">计划内容</label>
-          <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
-            {% if object.content %}{{ object.content }}{% else %}暂无内容{% endif %}
-          </div>
-        </div>
-      </div>
-      {% endblock detail_basic_info_content %}
-    </div>
-
-    {# 多行文本字段：计划目标（整行，使用 col-12） #}
-    <div class="row mb-3">
-      {% block detail_basic_info_objective %}
-      <div class="col-12 detail-field-wrapper">
-        <div class="detail-field">
-          <label class="detail-field-label">计划目标</label>
-          <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
-            {% if object.plan_objective %}{{ object.plan_objective }}{% else %}暂无目标{% endif %}
-          </div>
-        </div>
-      </div>
-      {% endblock detail_basic_info_objective %}
-    </div>
-
-    {# 多行文本字段：协作计划（整行，使用 col-12） #}
-    <div class="row mb-3">
-      {% block detail_basic_info_collaboration %}
-      <div class="col-12 detail-field-wrapper">
-        <div class="detail-field">
-          <label class="detail-field-label">协作计划</label>
-          <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
-            {% if object.collaboration_plan %}{{ object.collaboration_plan }}{% else %}暂无协作计划{% endif %}
-          </div>
-        </div>
-      </div>
-      {% endblock detail_basic_info_collaboration %}
-    </div>
-
-    {# 多选字段：协作人员（整行，使用 col-12） #}
-    <div class="row mb-3">
-      {% block detail_basic_info_participants %}
-      <div class="col-12 detail-field-wrapper">
-        <div class="detail-field">
-          <label class="detail-field-label">协作人员</label>
-          <div class="detail-field-value">
-            {% if object.participants.all %}
-              {% for participant in object.participants.all %}
-                <span class="badge badge-secondary">{{ participant.get_full_name|default:participant.username }}</span>
-              {% endfor %}
-            {% else %}
-              暂无协作人员
-            {% endif %}
-          </div>
-        </div>
-      </div>
-      {% endblock detail_basic_info_participants %}
     </div>
     {% endblock detail_basic_info_rows %}
   </div>
 </div>
 </div>
 {% endblock detail_basic_info_card %}
+
+{% block detail_detail_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-detail-info">
+  <div class="detail-card detail-card-detail-info">
+  <div class="detail-card-header">
+    <h3 class="detail-card-title">
+      <i class="fas fa-list-alt"></i>
+      详细信息
+    </h3>
+  </div>
+  <div class="detail-card-body">
+    {% block detail_detail_info_rows %}
+    {# 子模板需要覆盖此块来定义详细信息字段内容 #}
+    {# 使用标准 Bootstrap 栅格系统组织字段布局： #}
+    {# - 使用 row 和 col-md-X 类（X 可以是 3、4、6、12 等） #}
+    {# - col-md-3: 一行4个字段 #}
+    {# - col-md-4: 一行3个字段 #}
+    {# - col-md-6: 一行2个字段 #}
+    {# - col-md-12: 一行1个字段（用于多行文本字段） #}
+    {# 可以使用以下块来组织字段布局： #}
+    {# - detail_detail_info_row1: 第一排字段（使用 row 和 col-md-X） #}
+    {# - detail_detail_info_row2: 第二排字段（使用 row 和 col-md-X） #}
+    {# - detail_detail_info_row3: 第三排字段（使用 row 和 col-md-X） #}
+    {# - detail_detail_info_content: 多行文本字段（使用 row 和 col-md-12） #}
+    {# - detail_detail_info_description: 多行文本字段（使用 row 和 col-md-12） #}
+    {# - detail_detail_info_notes: 多行文本字段（使用 row 和 col-md-12） #}
+    {% endblock detail_detail_info_rows %}
+  </div>
+</div>
+</div>
+{% endblock detail_detail_info_card %}
 
 {% block detail_status_info_card %}
 <div class="detail-card-wrapper detail-card-wrapper-status-info">
@@ -308,31 +270,9 @@
         </tr>
       </thead>
       <tbody>
-        {% block detail_related_records_separator %}
-        <tr class="detail-table-separator">
-          <td colspan="6" style="padding: var(--spacing-md, 16px) 0; border-top: 2px solid var(--vh-border, #E0E0E0);">
-            <strong style="font-size: var(--font-size-base, 16px); color: var(--vh-text, #000000);">关联记录</strong>
-          </td>
-        </tr>
-        {% endblock detail_related_records_separator %}
-        
-        {% block detail_related_records %}
-        {% block detail_related_records_content %}
-        {% endblock detail_related_records_content %}
-        {% endblock detail_related_records %}
-        
-        {% block detail_related_links_separator %}
-        <tr class="detail-table-separator">
-          <td colspan="6" style="padding: var(--spacing-md, 16px) 0; border-top: 2px solid var(--vh-border, #E0E0E0);">
-            <strong style="font-size: var(--font-size-base, 16px); color: var(--vh-text, #000000);">相关链接</strong>
-          </td>
-        </tr>
-        {% endblock detail_related_links_separator %}
-        
-        {% block detail_related_links %}
-        {% block detail_related_links_content %}
-        {% endblock detail_related_links_content %}
-        {% endblock detail_related_links %}
+        {# 子模板需要覆盖此块来定义具体的关联信息内容 #}
+        {% block detail_related_info_content %}
+        {% endblock detail_related_info_content %}
       </tbody>
     </table>
     {% endblock detail_related_info %}
@@ -365,31 +305,9 @@
         </tr>
       </thead>
       <tbody>
-        {% block detail_audit_log_separator %}
-        <tr class="detail-table-separator">
-          <td colspan="7" style="padding: var(--spacing-md, 16px) 0; border-top: 2px solid var(--vh-border, #E0E0E0);">
-            <strong style="font-size: var(--font-size-base, 16px); color: var(--vh-text, #000000);">审计日志</strong>
-          </td>
-        </tr>
-        {% endblock detail_audit_log_separator %}
-        
-        {% block detail_audit_log %}
-        {% block detail_audit_log_content %}
-        {% endblock detail_audit_log_content %}
-        {% endblock detail_audit_log %}
-        
-        {% block detail_modification_history_separator %}
-        <tr class="detail-table-separator">
-          <td colspan="7" style="padding: var(--spacing-md, 16px) 0; border-top: 2px solid var(--vh-border, #E0E0E0);">
-            <strong style="font-size: var(--font-size-base, 16px); color: var(--vh-text, #000000);">修改记录</strong>
-          </td>
-        </tr>
-        {% endblock detail_modification_history_separator %}
-        
-        {% block detail_modification_history %}
-        {% block detail_modification_history_content %}
-        {% endblock detail_modification_history_content %}
-        {% endblock detail_modification_history %}
+        {# 子模板需要覆盖此块来定义具体的审计信息内容 #}
+        {% block detail_audit_info_content %}
+        {% endblock detail_audit_info_content %}
       </tbody>
     </table>
     {% endblock detail_audit_info %}
@@ -398,41 +316,237 @@
 </div>
 {% endblock detail_audit_info_card %}
 
+{% block detail_approval_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-approval-info">
+  <div class="detail-card detail-card-approval-info">
+  <div class="detail-card-header">
+    <h3 class="detail-card-title">
+      <i class="fas fa-check-circle"></i>
+      审批信息
+    </h3>
+  </div>
+  <div class="detail-card-body">
+    {% block detail_approval_info %}
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th style="width: 60px;">序号</th>
+          <th style="width: 120px;">审批单号</th>
+          <th style="width: 100px;">流程名称</th>
+          <th style="width: 100px;">审批状态</th>
+          <th style="width: 120px;">申请人</th>
+          <th style="width: 120px;">节点名称</th>
+          <th style="width: 120px;">审批人</th>
+          <th style="width: 100px;">审批结果</th>
+          <th>申请说明/审批意见</th>
+          <th style="width: 160px;">时间</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% block detail_approval_info_content %}
+        {% if approval_instances %}
+          {% for instance in approval_instances %}
+            {# 如果该实例有审批记录，显示每条记录 #}
+            {% if instance.records_sorted %}
+              {% for record in instance.records_sorted %}
+              <tr>
+                <td>{{ forloop.parentloop.counter }}-{{ forloop.counter }}</td>
+                <td>
+                  {% if forloop.first %}
+                    <code>{{ instance.instance_number }}</code>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if forloop.first %}
+                    {{ instance.workflow.name }}
+                  {% endif %}
+                </td>
+                <td>
+                  {% if forloop.first %}
+                    <span class="badge badge-status badge-{{ instance.status }}">
+                      {{ instance.get_status_display }}
+                    </span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if forloop.first %}
+                    {% if instance.applicant %}
+                      {{ instance.applicant.get_full_name|default:instance.applicant.username }}
+                    {% else %}
+                      -
+                    {% endif %}
+                  {% endif %}
+                </td>
+                <td>{{ record.node.name|default:"-" }}</td>
+                <td>
+                  {% if record.approver %}
+                    {{ record.approver.get_full_name|default:record.approver.username }}
+                  {% else %}
+                    -
+                  {% endif %}
+                  {% if record.transferred_to %}
+                    <br><small class="text-muted">转交给：{{ record.transferred_to.get_full_name|default:record.transferred_to.username }}</small>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge badge-status badge-{{ record.result }}">
+                    {{ record.get_result_display }}
+                  </span>
+                </td>
+                <td>
+                  {% if forloop.first and instance.apply_comment %}
+                    <strong>申请说明：</strong>{{ instance.apply_comment }}
+                    {% if record.comment %}<br>{% endif %}
+                  {% endif %}
+                  {% if record.comment %}
+                    <strong>审批意见：</strong>{{ record.comment }}
+                  {% elif forloop.first and instance.final_comment %}
+                    <strong>最终意见：</strong>{{ instance.final_comment }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  {% if record.approval_time %}
+                    {{ record.approval_time|date:"Y-m-d H:i:s" }}
+                  {% elif forloop.first and instance.apply_time %}
+                    {{ instance.apply_time|date:"Y-m-d H:i:s" }}
+                  {% elif forloop.first %}
+                    {{ instance.created_time|date:"Y-m-d H:i:s" }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              {# 如果没有审批记录，只显示实例信息 #}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><code>{{ instance.instance_number }}</code></td>
+                <td>{{ instance.workflow.name }}</td>
+                <td>
+                  <span class="badge badge-status badge-{{ instance.status }}">
+                    {{ instance.get_status_display }}
+                  </span>
+                </td>
+                <td>
+                  {% if instance.applicant %}
+                    {{ instance.applicant.get_full_name|default:instance.applicant.username }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>
+                  {% if instance.apply_comment %}
+                    <strong>申请说明：</strong>{{ instance.apply_comment }}
+                  {% elif instance.final_comment %}
+                    <strong>最终意见：</strong>{{ instance.final_comment }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  {% if instance.apply_time %}
+                    {{ instance.apply_time|date:"Y-m-d H:i:s" }}
+                  {% else %}
+                    {{ instance.created_time|date:"Y-m-d H:i:s" }}
+                  {% endif %}
+                </td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="10" class="text-center text-muted">暂无审批信息</td>
+          </tr>
+        {% endif %}
+        {% endblock detail_approval_info_content %}
+      </tbody>
+    </table>
+    {% endblock detail_approval_info %}
+  </div>
+</div>
+</div>
+{% endblock detail_approval_info_card %}
+
+{% block detail_data_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-data-info">
+  <div class="detail-card detail-card-data-info">
+  <div class="detail-card-header">
+    <h3 class="detail-card-title">
+      <i class="fas fa-tasks"></i>
+      进度信息
+    </h3>
+  </div>
+  <div class="detail-card-body">
+    {% block detail_data_info_content %}
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th style="width: 150px;">项目</th>
+          <th>内容</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% block detail_data_info_rows %}
+        {% if progress_percentage %}
+        <tr>
+          <th>进度百分比</th>
+          <td>
+            <div class="detail-progress detail-progress-lg" style="max-width: 300px;">
+              <div class="detail-progress-bar" role="progressbar" 
+                   style="width: {{ progress_percentage }}%;" 
+                   aria-valuenow="{{ progress_percentage }}" 
+                   aria-valuemin="0" 
+                   aria-valuemax="100">
+                {{ progress_percentage }}%
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+        {% block detail_data_info_custom_rows %}
+        {% endblock detail_data_info_custom_rows %}
+        {% block detail_charts %}
+        {% block detail_charts_content %}{% endblock %}
+        {% endblock detail_charts %}
+        {% endblock detail_data_info_rows %}
+      </tbody>
+    </table>
+    {% endblock detail_data_info_content %}
+  </div>
+</div>
+</div>
+{% endblock detail_data_info_card %}
+
 {% block detail_statistics_card %}
 <div class="detail-card-wrapper detail-card-wrapper-statistics">
   <div class="detail-card detail-card-statistics">
   <div class="detail-card-header">
     <h3 class="detail-card-title">
       <i class="fas fa-chart-bar"></i>
-      数据与统计信息
+      统计信息
     </h3>
   </div>
   <div class="detail-card-body">
     {% block detail_statistics_content %}
-    {% if progress_percentage %}
-    <div class="mb-4">
-      <h5 class="detail-subsection-title">进度</h5>
-      <div class="detail-progress detail-progress-lg">
-        <div class="detail-progress-bar" role="progressbar" 
-             style="width: {{ progress_percentage }}%;" 
-             aria-valuenow="{{ progress_percentage }}" 
-             aria-valuemin="0" 
-             aria-valuemax="100">
-          {{ progress_percentage }}%
-        </div>
-      </div>
-    </div>
-    {% endif %}
-    {% block detail_charts %}
-    <div class="detail-charts">
-      {% block detail_charts_content %}{% endblock %}
-    </div>
-    {% endblock detail_charts %}
-    {% block detail_statistics_cards %}
-    <div class="row">
-      {% block detail_statistics_cards_content %}{% endblock %}
-    </div>
-    {% endblock detail_statistics_cards %}
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th style="width: 150px;">统计项</th>
+          <th>数值</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% block detail_statistics_rows %}
+        {% block detail_statistics_rows_content %}{% endblock %}
+        {% endblock detail_statistics_rows %}
+      </tbody>
+    </table>
     {% endblock detail_statistics_content %}
   </div>
 </div>

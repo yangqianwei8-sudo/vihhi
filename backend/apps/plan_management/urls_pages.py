@@ -13,6 +13,7 @@ urlpatterns = [
     
     # 计划列表
     path("plans/", views_pages.plan_list, name="plan_list"),
+    path("plans/batch-delete/", views_pages.plan_batch_delete, name="plan_batch_delete"),
     
     # 计划管理
     path("plans/create/", views_pages.plan_create, name="plan_create"),

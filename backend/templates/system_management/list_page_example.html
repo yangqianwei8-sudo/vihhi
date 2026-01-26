@@ -1,0 +1,121 @@
+{% extends "shared/list_page_base.html" %}
+{% load static %}
+
+{% comment %}
+  列表页面示例
+  完全按照 list_page_base.html 基础模板渲染
+  展示如何使用列表页面基础模板
+{% endcomment %}
+
+{% block list_stats_content %}
+  {# 统计卡片示例 #}
+  <div class="list-stat-card">
+    <div class="list-stat-icon">📊</div>
+    <div class="list-stat-content">
+      <div class="list-stat-value">5</div>
+      <div class="list-stat-label">总记录数</div>
+    </div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-icon">✅</div>
+    <div class="list-stat-content">
+      <div class="list-stat-value">3</div>
+      <div class="list-stat-label">活跃状态</div>
+    </div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-icon">⏳</div>
+    <div class="list-stat-content">
+      <div class="list-stat-value">1</div>
+      <div class="list-stat-label">待处理</div>
+    </div>
+  </div>
+{% endblock list_stats_content %}
+
+{% block list_action_bar_content %}
+  {# 操作栏已删除 #}
+{% endblock list_action_bar_content %}
+
+{% block list_filters_content %}
+  {# 筛选器示例 - 使用标准Bootstrap栅格系统 #}
+  <div class="row g-3">
+    <div class="col-md-3">
+      <label class="form-label">名称</label>
+      <input type="text" name="search" class="form-control form-control-sm" placeholder="搜索名称" value="{{ request.GET.search|default:'' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">状态</label>
+      <select name="status" class="form-select form-select-sm">
+        <option value="">全部</option>
+        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>活跃</option>
+        <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>非活跃</option>
+        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>待处理</option>
+      </select>
+    </div>
+  </div>
+{% endblock list_filters_content %}
+
+{% block list_table_headers %}
+  <th style="width: 50px;">
+    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
+  </th>
+  <th style="width: 10%;">ID</th>
+  <th style="width: 30%;">名称</th>
+  <th style="width: 15%;">状态</th>
+  <th style="width: 20%;">创建时间</th>
+  <th style="width: 15%;">创建人</th>
+  <th style="width: 10%;">操作</th>
+{% endblock list_table_headers %}
+
+{% block list_table_rows %}
+  {% if page_obj %}
+    {% for item in page_obj %}
+    <tr>
+      <td>
+        <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ item.id }}" id="item_{{ item.id }}">
+      </td>
+      <td>{{ item.id }}</td>
+      <td><strong>{{ item.name }}</strong></td>
+      <td>
+        {% if item.status == 'active' %}
+          <span class="badge bg-success">活跃</span>
+        {% elif item.status == 'inactive' %}
+          <span class="badge bg-secondary">非活跃</span>
+        {% elif item.status == 'pending' %}
+          <span class="badge bg-warning">待处理</span>
+        {% else %}
+          <span class="badge bg-info">{{ item.status }}</span>
+        {% endif %}
+      </td>
+      <td>{{ item.created_at }}</td>
+      <td>{{ item.created_by.get_full_name|default:item.created_by.username }}</td>
+      <td>
+        <div class="list-page-table-actions">
+          <a href="#" class="action-view" onclick="alert('查看详情功能示例'); return false;" title="查看">
+            <i class="bi bi-eye"></i>
+          </a>
+          <span class="action-separator">|</span>
+          <a href="#" class="action-edit" onclick="alert('编辑功能示例'); return false;" title="编辑">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <span class="action-separator">|</span>
+          <a href="#" class="action-delete" onclick="alert('删除功能示例'); return false;" title="删除">
+            <i class="bi bi-trash"></i>
+          </a>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+    <tr>
+      <td colspan="7" class="list-empty">
+        <div class="list-empty-icon">📋</div>
+        <div class="list-empty-text">暂无数据</div>
+      </td>
+    </tr>
+  {% endif %}
+{% endblock list_table_rows %}
+
+{% block list_empty_hint %}
+  <div class="list-empty-hint">这是使用 list_page_base.html 基础模板的示例列表页面</div>
+{% endblock list_empty_hint %}

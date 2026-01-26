@@ -1,0 +1,272 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三栏布局示例 - 维海科技信息化管理平台</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 项目CSS变量 -->
+    <link rel="stylesheet" href="{% static 'css/core/variables.css' %}">
+    <!-- 三栏布局CSS -->
+    <link rel="stylesheet" href="{% static 'css/layouts/three-column-layout.css' %}">
+    
+    <style>
+        /* 示例样式 */
+        .example-card {
+            background: var(--vh-card-bg);
+            border: 1px solid var(--vh-border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .example-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+        }
+        
+        .example-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+        
+        .example-info-label {
+            font-size: var(--font-size-xs);
+            color: var(--vh-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .example-info-value {
+            font-size: var(--font-size-base);
+            color: var(--vh-text);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="three-column-layout">
+        <!-- 顶部栏 -->
+        <header class="three-column-header">
+            <div class="three-column-header__left">
+                <div>
+                    <h1 class="three-column-header__title">页面标题</h1>
+                    <p class="three-column-header__subtitle">页面副标题或描述信息</p>
+                </div>
+            </div>
+            <div class="three-column-header__right">
+                <button class="btn btn-secondary btn-sm">
+                    <i class="fas fa-search"></i> 搜索
+                </button>
+                <button class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> 新建
+                </button>
+            </div>
+        </header>
+        
+        <!-- 主体区域 -->
+        <div class="three-column-body">
+            <!-- 左边栏 -->
+            <aside class="three-column-sidebar" id="leftSidebar">
+                <div class="three-column-sidebar__header">
+                    <h2 class="three-column-sidebar__title">导航菜单</h2>
+                    <button class="three-column-sidebar__toggle" onclick="toggleLeftSidebar()">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                </div>
+                <div class="three-column-sidebar__content">
+                    <div class="three-column-sidebar__section">
+                        <div class="three-column-sidebar__section-title">主要功能</div>
+                        <nav class="three-column-sidebar__nav">
+                            <a href="#" class="three-column-sidebar__nav-item active">
+                                <span class="three-column-sidebar__nav-icon">
+                                    <i class="fas fa-home"></i>
+                                </span>
+                                <span class="three-column-sidebar__nav-label">首页</span>
+                            </a>
+                            <a href="#" class="three-column-sidebar__nav-item">
+                                <span class="three-column-sidebar__nav-icon">
+                                    <i class="fas fa-list"></i>
+                                </span>
+                                <span class="three-column-sidebar__nav-label">列表</span>
+                            </a>
+                            <a href="#" class="three-column-sidebar__nav-item">
+                                <span class="three-column-sidebar__nav-icon">
+                                    <i class="fas fa-chart-bar"></i>
+                                </span>
+                                <span class="three-column-sidebar__nav-label">统计</span>
+                            </a>
+                        </nav>
+                    </div>
+                    <div class="three-column-sidebar__section">
+                        <div class="three-column-sidebar__section-title">其他功能</div>
+                        <nav class="three-column-sidebar__nav">
+                            <a href="#" class="three-column-sidebar__nav-item">
+                                <span class="three-column-sidebar__nav-icon">
+                                    <i class="fas fa-cog"></i>
+                                </span>
+                                <span class="three-column-sidebar__nav-label">设置</span>
+                            </a>
+                            <a href="#" class="three-column-sidebar__nav-item">
+                                <span class="three-column-sidebar__nav-icon">
+                                    <i class="fas fa-question-circle"></i>
+                                </span>
+                                <span class="three-column-sidebar__nav-label">帮助</span>
+                            </a>
+                        </nav>
+                    </div>
+                </div>
+            </aside>
+            
+            <!-- 中间详情区 -->
+            <main class="three-column-main">
+                <div class="three-column-main__content">
+                    <!-- 详情卡片1 -->
+                    <div class="three-column-main__section">
+                        <h3 class="three-column-main__section-title">
+                            <i class="fas fa-info-circle"></i> 基本信息
+                        </h3>
+                        <div class="three-column-main__section-content">
+                            <div class="example-info-grid">
+                                <div class="example-info-item">
+                                    <div class="example-info-label">名称</div>
+                                    <div class="example-info-value">示例项目名称</div>
+                                </div>
+                                <div class="example-info-item">
+                                    <div class="example-info-label">编号</div>
+                                    <div class="example-info-value">PROJ-2026-001</div>
+                                </div>
+                                <div class="example-info-item">
+                                    <div class="example-info-label">状态</div>
+                                    <div class="example-info-value">进行中</div>
+                                </div>
+                                <div class="example-info-item">
+                                    <div class="example-info-label">负责人</div>
+                                    <div class="example-info-value">张三</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 详情卡片2 -->
+                    <div class="three-column-main__section">
+                        <h3 class="three-column-main__section-title">
+                            <i class="fas fa-file-alt"></i> 详细信息
+                        </h3>
+                        <div class="three-column-main__section-content">
+                            <p>这里是详细信息的展示区域。可以放置任何内容，包括文本、表格、表单等。</p>
+                            <p>内容区域支持滚动，当内容超出可视区域时，会自动显示滚动条。</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 详情卡片3 -->
+                    <div class="three-column-main__section">
+                        <h3 class="three-column-main__section-title">
+                            <i class="fas fa-history"></i> 操作记录
+                        </h3>
+                        <div class="three-column-main__section-content">
+                            <ul>
+                                <li>2026-01-25 10:00 - 创建项目</li>
+                                <li>2026-01-25 14:30 - 更新基本信息</li>
+                                <li>2026-01-25 16:00 - 提交审批</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            
+            <!-- 右侧操作区 -->
+            <aside class="three-column-actions" id="rightActions">
+                <div class="three-column-actions__header">
+                    <h2 class="three-column-actions__title">操作面板</h2>
+                </div>
+                <div class="three-column-actions__content">
+                    <!-- 操作按钮组 -->
+                    <div class="three-column-actions__group">
+                        <div class="three-column-actions__group-title">主要操作</div>
+                        <button class="three-column-actions__button primary">
+                            <i class="fas fa-check"></i> 提交
+                        </button>
+                        <button class="three-column-actions__button">
+                            <i class="fas fa-edit"></i> 编辑
+                        </button>
+                        <button class="three-column-actions__button">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    </div>
+                    
+                    <!-- 其他操作组 -->
+                    <div class="three-column-actions__group">
+                        <div class="three-column-actions__group-title">其他操作</div>
+                        <button class="three-column-actions__button">
+                            <i class="fas fa-download"></i> 导出
+                        </button>
+                        <button class="three-column-actions__button">
+                            <i class="fas fa-print"></i> 打印
+                        </button>
+                        <button class="three-column-actions__button">
+                            <i class="fas fa-share"></i> 分享
+                        </button>
+                    </div>
+                    
+                    <!-- 信息展示组 -->
+                    <div class="three-column-actions__group">
+                        <div class="three-column-actions__group-title">快速信息</div>
+                        <div class="three-column-actions__info-item">
+                            <div class="three-column-actions__info-label">创建时间</div>
+                            <div class="three-column-actions__info-value">2026-01-25 10:00</div>
+                        </div>
+                        <div class="three-column-actions__info-item">
+                            <div class="three-column-actions__info-label">最后更新</div>
+                            <div class="three-column-actions__info-value">2026-01-25 16:00</div>
+                        </div>
+                        <div class="three-column-actions__info-item">
+                            <div class="three-column-actions__info-label">创建人</div>
+                            <div class="three-column-actions__info-value">张三</div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // 左侧边栏折叠/展开
+        function toggleLeftSidebar() {
+            const sidebar = document.getElementById('leftSidebar');
+            const toggle = sidebar.querySelector('.three-column-sidebar__toggle i');
+            
+            sidebar.classList.toggle('collapsed');
+            
+            if (sidebar.classList.contains('collapsed')) {
+                toggle.classList.remove('fa-chevron-left');
+                toggle.classList.add('fa-chevron-right');
+            } else {
+                toggle.classList.remove('fa-chevron-right');
+                toggle.classList.add('fa-chevron-left');
+            }
+        }
+        
+        // 导航项点击高亮
+        document.querySelectorAll('.three-column-sidebar__nav-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.three-column-sidebar__nav-item').forEach(nav => {
+                    nav.classList.remove('active');
+                });
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

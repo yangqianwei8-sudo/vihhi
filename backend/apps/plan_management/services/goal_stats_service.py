@@ -64,6 +64,54 @@ def get_user_goal_stats(user) -> Dict[str, Any]:
     }
 
 
+def get_user_collaboration_goal_stats(user) -> Dict[str, Any]:
+    """
+    获取用户协作的目标统计（作为参与者）
+    
+    Args:
+        user: User 对象
+    
+    Returns:
+        Dict: 协作目标统计
+            - total: 总目标数
+            - in_progress: 执行中目标数
+            - overdue: 逾期目标数
+            - this_month: 本月需完成目标数
+    """
+    today = timezone.now().date()
+    this_month_start = today.replace(day=1)
+    this_month_end = (this_month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    
+    # 用户作为参与者的目标（排除自己负责的）
+    collaboration_goals = StrategicGoal.objects.filter(participants=user).exclude(responsible_person=user)
+    
+    # 总目标数
+    total = collaboration_goals.count()
+    
+    # 执行中目标
+    in_progress = collaboration_goals.filter(status='in_progress').count()
+    
+    # 逾期目标
+    overdue = collaboration_goals.filter(
+        status__in=['published', 'accepted', 'in_progress'],
+        end_date__lt=today
+    ).count()
+    
+    # 本月需完成目标
+    this_month = collaboration_goals.filter(
+        end_date__year=today.year,
+        end_date__month=today.month,
+        status__in=['published', 'accepted', 'in_progress']
+    ).count()
+    
+    return {
+        'total': total,
+        'in_progress': in_progress,
+        'overdue': overdue,
+        'this_month': this_month,
+    }
+
+
 def get_company_goal_stats(user) -> Dict[str, Any]:
     """
     获取公司目标统计（管理视角）

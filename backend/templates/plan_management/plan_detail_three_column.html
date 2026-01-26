@@ -1,0 +1,463 @@
+{% extends "shared/three_column_layout_base.html" %}
+{% load static %}
+
+{% block title %}计划详情 - {{ plan.name }} - 维海科技信息化管理平台{% endblock %}
+
+{% block main_content %}
+{% block detail_basic_info_card %}
+{{ block.super }}
+{% endblock detail_basic_info_card %}
+
+{% block detail_detail_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-detail-info">
+  <div class="detail-card detail-card-detail-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-list-alt"></i>
+        详细信息
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      {% block detail_detail_info_rows %}
+      <div class="row mb-3">
+        {% block detail_detail_info_row1 %}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划名称</label>
+            <div class="detail-field-value">
+              <strong>{{ plan.name }}</strong>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划层级</label>
+            <div class="detail-field-value">
+              {{ plan.get_level_display|default:plan.level }}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划周期</label>
+            <div class="detail-field-value">
+              {{ plan.get_plan_period_display|default:plan.plan_period }}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_row1 %}
+      </div>
+
+      <div class="row mb-3">
+        {% block detail_detail_info_row2 %}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">关联战略目标</label>
+            <div class="detail-field-value">
+              {% if plan.related_goal %}
+                <a href="{% url 'plan_pages:strategic_goal_detail' plan.related_goal.id %}">{{ plan.related_goal.name }}</a>
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">父计划</label>
+            <div class="detail-field-value">
+              {% if plan.parent_plan %}
+                <a href="{% url 'plan_pages:plan_detail' plan.parent_plan.id %}">{{ plan.parent_plan.name }}</a>
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">关联项目</label>
+            <div class="detail-field-value">
+              {% if plan.related_project %}
+                {{ plan.related_project }}
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_row2 %}
+      </div>
+
+      <div class="row mb-3">
+        {% block detail_detail_info_row3 %}
+        <div class="col-md-6 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划开始时间</label>
+            <div class="detail-field-value">
+              {{ plan.start_time|date:"Y-m-d H:i"|default:"-" }}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划结束时间</label>
+            <div class="detail-field-value">
+              {{ plan.end_time|date:"Y-m-d H:i"|default:"-" }}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_row3 %}
+      </div>
+
+      <div class="row mb-3">
+        {% block detail_detail_info_content %}
+        <div class="col-md-12 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划内容</label>
+            <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+              {% if plan.content %}{{ plan.content }}{% else %}暂无内容{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_content %}
+      </div>
+
+      <div class="row mb-3">
+        {% block detail_detail_info_objective %}
+        <div class="col-md-12 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">计划目标</label>
+            <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+              {% if plan.plan_objective %}{{ plan.plan_objective }}{% else %}暂无目标{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_objective %}
+      </div>
+
+      <div class="row mb-3">
+        {% block detail_detail_info_collaboration %}
+        <div class="col-md-12 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">协作计划</label>
+            <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+              {% if plan.collaboration_plan %}{{ plan.collaboration_plan }}{% else %}暂无协作计划{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_collaboration %}
+      </div>
+
+      <div class="row mb-3">
+        {% block detail_detail_info_participants %}
+        <div class="col-md-12 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">协作人员</label>
+            <div class="detail-field-value">
+              {% if plan.participants.all %}
+                {% for participant in plan.participants.all %}
+                  <span class="badge badge-secondary">{{ participant.get_full_name|default:participant.username }}</span>
+                {% endfor %}
+              {% else %}
+                暂无协作人员
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endblock detail_detail_info_participants %}
+      </div>
+      {% endblock detail_detail_info_rows %}
+    </div>
+  </div>
+</div>
+{% endblock detail_detail_info_card %}
+{% endblock main_content %}
+
+{% block approval_title %}审批栏{% endblock %}
+
+{% block approval_content %}
+{% block approval_status %}
+<div class="three-column-actions__group">
+  <div class="three-column-actions__group-title">审批状态</div>
+  {% if current_approval_instance %}
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">当前状态</div>
+    <div class="three-column-actions__info-value">
+      {% if current_approval_instance.status == 'pending' %}
+        <span class="badge bg-warning">审批中</span>
+      {% elif current_approval_instance.status == 'in_progress' %}
+        <span class="badge bg-info">进行中</span>
+      {% elif current_approval_instance.status == 'approved' %}
+        <span class="badge bg-success">已通过</span>
+      {% elif current_approval_instance.status == 'rejected' %}
+        <span class="badge bg-danger">已驳回</span>
+      {% else %}
+        <span class="badge bg-secondary">{{ current_approval_instance.get_status_display }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">当前节点</div>
+    <div class="three-column-actions__info-value">
+      {% if current_approval_instance.current_node %}
+        {{ current_approval_instance.current_node.name }}
+      {% else %}
+        -
+      {% endif %}
+    </div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">申请人</div>
+    <div class="three-column-actions__info-value">
+      {{ current_approval_instance.applicant.get_full_name|default:current_approval_instance.applicant.username }}
+    </div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">申请时间</div>
+    <div class="three-column-actions__info-value">
+      {{ current_approval_instance.apply_time|date:"Y-m-d H:i"|default:current_approval_instance.created_time|date:"Y-m-d H:i" }}
+    </div>
+  </div>
+  {% elif pending_decisions %}
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">当前状态</div>
+    <div class="three-column-actions__info-value">
+      <span class="badge bg-warning">待审批</span>
+    </div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">请求类型</div>
+    <div class="three-column-actions__info-value">
+      {{ pending_decisions.0.get_request_type_display }}
+    </div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">请求人</div>
+    <div class="three-column-actions__info-value">
+      {{ pending_decisions.0.requested_by.get_full_name|default:pending_decisions.0.requested_by.username }}
+    </div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">请求时间</div>
+    <div class="three-column-actions__info-value">
+      {{ pending_decisions.0.requested_at|date:"Y-m-d H:i" }}
+    </div>
+  </div>
+  {% else %}
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">当前状态</div>
+    <div class="three-column-actions__info-value">
+      <span class="badge bg-secondary">待审批</span>
+    </div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">当前节点</div>
+    <div class="three-column-actions__info-value">-</div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">申请人</div>
+    <div class="three-column-actions__info-value">-</div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">申请时间</div>
+    <div class="three-column-actions__info-value">-</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock approval_status %}
+
+{% block approval_form %}
+{% if can_approve and (current_approval_instance or pending_decisions) %}
+<div class="three-column-actions__group">
+  <div class="three-column-actions__group-title">审批操作</div>
+  {% if current_approval_instance %}
+  <form method="post" id="approvalForm" class="approval-form" action="{% url 'workflow_engine:approval_action' current_approval_instance.id %}">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="approval_comment" class="form-label small">审批意见</label>
+      <textarea 
+        id="approval_comment" 
+        name="comment" 
+        class="form-control form-control-sm" 
+        rows="4" 
+        placeholder="请输入审批意见..."
+        style="resize: vertical; min-height: 80px;"></textarea>
+    </div>
+    <div class="d-grid gap-2">
+      <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">
+        <i class="fas fa-check"></i> 通过
+      </button>
+      <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">
+        <i class="fas fa-times"></i> 驳回
+      </button>
+      {% block approval_transfer %}
+      <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#transferModal">
+        <i class="fas fa-exchange-alt"></i> 转交
+      </button>
+      {% endblock approval_transfer %}
+    </div>
+  </form>
+  {% elif pending_decisions %}
+  {% for decision in pending_decisions %}
+  <form method="post" id="approvalForm{{ decision.id }}" class="approval-form" action="{% url 'plan_pages:decision_approve' decision.id %}">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="approval_comment{{ decision.id }}" class="form-label small">审批意见</label>
+      <textarea 
+        id="approval_comment{{ decision.id }}" 
+        name="reason" 
+        class="form-control form-control-sm" 
+        rows="4" 
+        placeholder="请输入审批意见..."
+        style="resize: vertical; min-height: 80px;"></textarea>
+    </div>
+    <div class="d-grid gap-2">
+      <button type="submit" class="btn btn-success btn-sm">
+        <i class="fas fa-check"></i> 通过
+      </button>
+      <a href="{% url 'plan_pages:decision_reject' decision.id %}" class="btn btn-danger btn-sm">
+        <i class="fas fa-times"></i> 驳回
+      </a>
+    </div>
+  </form>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endif %}
+{% endblock approval_form %}
+
+{% block approval_history %}
+<div class="three-column-actions__group">
+  <div class="three-column-actions__group-title">审批历史</div>
+  <div class="approval-history-list">
+    {% if current_approval_instance and current_approval_instance.records_sorted %}
+      {% for record in current_approval_instance.records_sorted %}
+      <div class="approval-history-item">
+        <div class="approval-history-item-header">
+          <span class="approval-history-item-name">{{ record.approver.get_full_name|default:record.approver.username }}</span>
+          <span class="approval-history-item-time">{{ record.approval_time|date:"Y-m-d H:i" }}</span>
+        </div>
+        <div>
+          {% if record.result == 'approved' %}
+            <span class="approval-history-item-result approved">通过</span>
+          {% elif record.result == 'rejected' %}
+            <span class="approval-history-item-result rejected">驳回</span>
+          {% elif record.result == 'transferred' %}
+            <span class="approval-history-item-result transferred">转交</span>
+            {% if record.transferred_to %}
+              <span class="text-muted small">→ {{ record.transferred_to.get_full_name|default:record.transferred_to.username }}</span>
+            {% endif %}
+          {% else %}
+            <span class="approval-history-item-result pending">待审批</span>
+          {% endif %}
+        </div>
+        {% if record.comment %}
+        <div class="approval-history-item-comment">{{ record.comment }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% elif approval_instances %}
+      {% for instance in approval_instances %}
+        {% if instance.records_sorted %}
+          {% for record in instance.records_sorted %}
+          <div class="approval-history-item">
+            <div class="approval-history-item-header">
+              <span class="approval-history-item-name">{{ record.approver.get_full_name|default:record.approver.username }}</span>
+              <span class="approval-history-item-time">{{ record.approval_time|date:"Y-m-d H:i" }}</span>
+            </div>
+            <div>
+              {% if record.result == 'approved' %}
+                <span class="approval-history-item-result approved">通过</span>
+              {% elif record.result == 'rejected' %}
+                <span class="approval-history-item-result rejected">驳回</span>
+              {% elif record.result == 'transferred' %}
+                <span class="approval-history-item-result transferred">转交</span>
+                {% if record.transferred_to %}
+                  <span class="text-muted small">→ {{ record.transferred_to.get_full_name|default:record.transferred_to.username }}</span>
+                {% endif %}
+              {% else %}
+                <span class="approval-history-item-result pending">待审批</span>
+              {% endif %}
+            </div>
+            {% if record.comment %}
+            <div class="approval-history-item-comment">{{ record.comment }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+    {% else %}
+    <div class="text-muted small text-center py-3">
+      暂无审批记录
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock approval_history %}
+{% endblock approval_content %}
+
+{% block approval_transfer_modal %}
+{% if current_approval_instance and can_approve %}
+<div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="transferModalLabel">
+          <i class="fas fa-exchange-alt"></i> 转交审批
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" id="transferForm" action="{% url 'workflow_engine:approval_action' current_approval_instance.id %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="transferred_to" class="form-label">转交给</label>
+            <select id="transferred_to" name="transferred_to" class="form-select" required>
+              <option value="">请选择用户</option>
+              {% for user in all_users %}
+              <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="transfer_comment" class="form-label">转交说明</label>
+            <textarea id="transfer_comment" name="comment" class="form-control" rows="3" placeholder="请输入转交说明"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" name="action" value="transfer" class="btn btn-primary">确认转交</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock approval_transfer_modal %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const approvalForm = document.getElementById('approvalForm');
+  if (approvalForm) {
+    approvalForm.addEventListener('submit', function(e) {
+      const action = e.submitter?.value || e.target.querySelector('button[type="submit"][name="action"]')?.value;
+      if (action === 'approve' || action === 'reject') {
+        const comment = document.getElementById('approval_comment')?.value || '';
+        if (!comment || comment.trim() === '') {
+          e.preventDefault();
+          alert('请输入审批意见');
+          return false;
+        }
+        if (!confirm(`确认${action === 'approve' ? '通过' : '驳回'}此审批吗？`)) {
+          e.preventDefault();
+          return false;
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

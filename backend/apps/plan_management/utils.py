@@ -5,6 +5,22 @@ from datetime import timedelta
 from django.utils import timezone
 
 
+def user_can_create_company_plan(user):
+    """
+    只有总经理（general_manager 角色）或超级用户才能编制公司级工作计划。
+    
+    Returns:
+        bool: 若用户可创建/编制公司级计划则返回 True，否则 False。
+    """
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    if getattr(user, 'is_superuser', False):
+        return True
+    if not hasattr(user, 'roles'):
+        return False
+    return user.roles.filter(code='general_manager').exists()
+
+
 class UserProfileNotFoundError(Exception):
     """
     用户 Profile 缺失异常

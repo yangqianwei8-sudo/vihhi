@@ -109,13 +109,6 @@ class StrategicGoalForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
-        # 获取is_draft参数，判断是否是草稿模式
-        self.is_draft = kwargs.pop('is_draft', False)
-        # 从POST数据中检查action参数
-        if 'data' in kwargs and hasattr(kwargs['data'], 'get'):
-            action = kwargs['data'].get('action', '')
-            if action == 'draft':
-                self.is_draft = True
         super().__init__(*args, **kwargs)
         
         # 设置负责人查询集（确保始终有查询集）
@@ -141,25 +134,6 @@ class StrategicGoalForm(forms.ModelForm):
         else:
             # 新建时：显示提示信息，系统会自动生成
             self.fields['goal_number'].widget.attrs['placeholder'] = '系统将自动生成'
-        
-        # 如果是草稿模式，将必填字段设置为非必填
-        if self.is_draft:
-            # 草稿模式下，允许字段为空
-            if 'name' in self.fields:
-                self.fields['name'].required = False
-            if 'goal_type' in self.fields:
-                self.fields['goal_type'].required = False
-            if 'goal_period' in self.fields:
-                self.fields['goal_period'].required = False
-            if 'start_date' in self.fields:
-                self.fields['start_date'].required = False
-            if 'end_date' in self.fields:
-                self.fields['end_date'].required = False
-            # 草稿模式下，所属部门和负责人也允许为空（虽然通常有默认值）
-            if 'responsible_department' in self.fields:
-                self.fields['responsible_department'].required = False
-            if 'responsible_person' in self.fields:
-                self.fields['responsible_person'].required = False
         
         # P2-2: 设置 level 字段的初始值和逻辑
         if self.instance and self.instance.pk:
@@ -268,21 +242,6 @@ class StrategicGoalForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         
-        # 如果是草稿模式，跳过大部分验证，只做基本的数据处理
-        if self.is_draft:
-            # 处理 disabled 字段：如果字段被禁用，从 initial 值获取
-            if not self.instance or not self.instance.pk:
-                # 新建时，如果字段被禁用，使用 initial 值
-                if 'responsible_person' in self.fields:
-                    if self.fields['responsible_person'].widget.attrs.get('disabled'):
-                        if not cleaned_data.get('responsible_person') and self.fields['responsible_person'].initial:
-                            cleaned_data['responsible_person'] = self.fields['responsible_person'].initial
-                if 'responsible_department' in self.fields:
-                    if self.fields['responsible_department'].widget.attrs.get('disabled'):
-                        if not cleaned_data.get('responsible_department') and self.fields['responsible_department'].initial:
-                            cleaned_data['responsible_department'] = self.fields['responsible_department'].initial
-            return cleaned_data
-        
         # 处理 disabled 字段：如果字段被禁用，从 initial 值获取
         if not self.instance or not self.instance.pk:
             # 新建时，如果字段被禁用，使用 initial 值
@@ -361,10 +320,20 @@ class StrategicGoalForm(forms.ModelForm):
             instance.save()
             
             # 保存多对多关系
-            if 'participants' in self.cleaned_data:
-                instance.participants.set(self.cleaned_data['participants'])
-            if 'related_projects' in self.cleaned_data:
-                instance.related_projects.set(self.cleaned_data['related_projects'])
+            if 'participants' in self.cleaned_data and self.cleaned_data['participants'] is not None:
+                # 确保 participants 是可迭代对象（不能是 None）
+                participants = self.cleaned_data['participants']
+                if participants:
+                    instance.participants.set(participants)
+                else:
+                    instance.participants.clear()
+            if 'related_projects' in self.cleaned_data and self.cleaned_data['related_projects'] is not None:
+                # 确保 related_projects 是可迭代对象（不能是 None）
+                related_projects = self.cleaned_data['related_projects']
+                if related_projects:
+                    instance.related_projects.set(related_projects)
+                else:
+                    instance.related_projects.clear()
         
         return instance
 
@@ -501,7 +470,7 @@ class PlanForm(forms.ModelForm):
             # 关联信息
             'related_goal', 'plan_period', 'parent_plan', 'related_project',
             # 计划内容
-            'content', 'plan_objective',
+            'content', 'plan_objective', 'acceptance_criteria',
             # 协作信息
             'collaboration_plan',
             # 时间信息
@@ -536,6 +505,13 @@ class PlanForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': '请输入计划目标',
                 'maxlength': '1000'
+            }),
+            'acceptance_criteria': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': '请输入验收标准',
+                'rows': 3,
+                'maxlength': '1000',
+                'required': True
             }),
             'start_time': forms.DateInput(
                 format='%Y-%m-%d',
@@ -573,18 +549,18 @@ class PlanForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
-        # 获取is_draft参数，判断是否是草稿模式
-        self.is_draft = kwargs.pop('is_draft', False)
         # 获取has_formset_data参数，判断详细信息表格是否有数据
         has_formset_data = kwargs.pop('has_formset_data', False)
         # 保存到实例变量，供 clean() 方法使用
         self._has_formset_data = has_formset_data
-        # 从POST数据中检查action参数
-        if 'data' in kwargs and hasattr(kwargs['data'], 'get'):
-            action = kwargs['data'].get('action', '')
-            if action == 'draft':
-                self.is_draft = True
         super().__init__(*args, **kwargs)
+        
+        # 如果是新建（没有实例），且使用FormSet模式，基本信息表单的acceptance_criteria字段应为非必填
+        # 因为创建模式下所有字段都在FormSet中，基本信息表单只保留所属部门、负责人、表单编号
+        if not self.instance or not self.instance.pk:
+            # 创建模式下，如果字段在FormSet中，基本信息表单中的对应字段应为非必填
+            if 'acceptance_criteria' in self.fields:
+                self.fields['acceptance_criteria'].required = False
         
         # 确保删除可能存在的 related_opportunity 字段（如果迁移后仍有残留）
         if 'related_opportunity' in self.fields:
@@ -645,18 +621,34 @@ class PlanForm(forms.ModelForm):
         else:
             # 如果没有传入用户，返回空查询集
             self.fields['related_goal'].queryset = StrategicGoal.objects.none()
-        # 关联战略目标为必填（除非详细信息表格有数据或草稿模式）
-        if not (has_formset_data or self.is_draft):
+        # 关联战略目标为必填（除非详细信息表格有数据）
+        if not has_formset_data:
             self.fields['related_goal'].required = True
         
         # 设置父计划查询集（只显示公司计划，排除自己和自己的下级计划）
-        base_queryset = Plan.objects.filter(level='company')  # 只显示公司计划
-        if self.instance and self.instance.pk:
-            exclude_ids = [self.instance.pk]
-            exclude_ids.extend([p.pk for p in self.instance.get_all_descendants()])
-            self.fields['parent_plan'].queryset = base_queryset.exclude(pk__in=exclude_ids)
-        else:
-            self.fields['parent_plan'].queryset = base_queryset
+        # 确保字段始终存在，即使查询集为空也要显示
+        if 'parent_plan' in self.fields:
+            try:
+                base_queryset = Plan.objects.filter(level='company')  # 只显示公司计划
+                if self.instance and self.instance.pk:
+                    exclude_ids = [self.instance.pk]
+                    try:
+                        exclude_ids.extend([p.pk for p in self.instance.get_all_descendants()])
+                    except:
+                        pass
+                    self.fields['parent_plan'].queryset = base_queryset.exclude(pk__in=exclude_ids)
+                else:
+                    self.fields['parent_plan'].queryset = base_queryset
+            except Exception as e:
+                # 如果查询出错，使用空查询集，但字段仍然显示
+                self.fields['parent_plan'].queryset = Plan.objects.none()
+            # 确保字段始终显示，即使查询集为空
+            self.fields['parent_plan'].required = False
+            self.fields['parent_plan'].empty_label = '-------'
+            # 确保字段的 widget 有正确的属性
+            if not hasattr(self.fields['parent_plan'].widget, 'attrs'):
+                self.fields['parent_plan'].widget.attrs = {}
+            self.fields['parent_plan'].widget.attrs.setdefault('class', 'form-select')
         
         # 设置关联项目字段：从商机中获取项目信息
         # 获取所有有项目名称的商机，提取项目信息作为选项
@@ -720,35 +712,32 @@ class PlanForm(forms.ModelForm):
             # 新建时：显示提示信息
             self.fields['plan_number'].widget.attrs['placeholder'] = '系统将自动生成'
         
-        # 如果是草稿模式，或者详细信息表格有数据，将基本信息表单的必填字段设置为非必填
+        # 如果详细信息表格有数据，将基本信息表单的必填字段设置为非必填
         # 因为基本信息表单只作为默认值提供者，详细信息表格才是主要数据源
-        # 注意：验收标准字段保持必填，因为提交审批时需要验收标准
-        if self.is_draft or has_formset_data:
-            # 草稿模式或详细信息表格有数据时，基本信息表单的字段允许为空
+        if has_formset_data:
+            # 详细信息表格有数据时，基本信息表单的字段允许为空
+            # 但计划层级和计划周期始终为必填
             if 'name' in self.fields:
                 self.fields['name'].required = False
             if 'related_goal' in self.fields:
                 self.fields['related_goal'].required = False
             if 'content' in self.fields:
                 self.fields['content'].required = False
-            # 验收标准保持必填，即使草稿模式也需要填写（提交审批时必需）
-            # if 'acceptance_criteria' in self.fields:
-            #     self.fields['acceptance_criteria'].required = True
             if 'plan_objective' in self.fields:
                 self.fields['plan_objective'].required = False
-            if 'plan_period' in self.fields:
-                self.fields['plan_period'].required = False
+            if 'acceptance_criteria' in self.fields:
+                self.fields['acceptance_criteria'].required = False
+            # plan_period 和 level 保持必填，不设置为 False
             if 'start_time' in self.fields:
                 self.fields['start_time'].required = False
             if 'end_time' in self.fields:
                 self.fields['end_time'].required = False
-            
-            # 草稿模式下，所属部门和负责人也允许为空（虽然通常有默认值）
-            if self.is_draft:
-                if 'responsible_department' in self.fields:
-                    self.fields['responsible_department'].required = False
-                if 'responsible_person' in self.fields:
-                    self.fields['responsible_person'].required = False
+        
+        # 确保计划层级和计划周期始终为必填
+        if 'level' in self.fields:
+            self.fields['level'].required = True
+        if 'plan_period' in self.fields:
+            self.fields['plan_period'].required = True
         
         # 如果是编辑，设置初始值
         if self.instance and self.instance.pk:
@@ -834,8 +823,8 @@ class PlanForm(forms.ModelForm):
             # 周计划：开始日期后7天减1天（即6天后）
             return start_date + timedelta(days=6)
         elif plan_period == 'daily':
-            # 日计划：开始日期当天（即结束日期等于开始日期）
-            return start_date
+            # 日计划：开始日期后1天（今天开始，明天结束）
+            return start_date + timedelta(days=1)
         else:
             # 默认返回开始日期
             return start_date
@@ -843,22 +832,20 @@ class PlanForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         
-        # 如果是草稿模式，或者详细信息表格有数据，跳过大部分验证
+        # 如果详细信息表格有数据，跳过大部分验证
         # 因为基本信息表单只作为默认值提供者，详细信息表格才是主要数据源
         has_formset_data = getattr(self, '_has_formset_data', False)
-        if self.is_draft or has_formset_data:
+        if has_formset_data:
             # 处理 disabled 字段：如果字段被禁用，从 initial 值获取
+            # 新建时，如果 responsible_person 为空，使用 initial 值（无论字段是否被禁用）
             if not self.instance or not self.instance.pk:
-                # 新建时，如果字段被禁用，使用 initial 值
                 if 'responsible_person' in self.fields:
-                    if self.fields['responsible_person'].widget.attrs.get('disabled'):
-                        if not cleaned_data.get('responsible_person') and self.fields['responsible_person'].initial:
-                            cleaned_data['responsible_person'] = self.fields['responsible_person'].initial
+                    if not cleaned_data.get('responsible_person') and self.fields['responsible_person'].initial:
+                        cleaned_data['responsible_person'] = self.fields['responsible_person'].initial
                 if 'responsible_department' in self.fields:
-                    if self.fields['responsible_department'].widget.attrs.get('disabled'):
-                        if not cleaned_data.get('responsible_department') and self.fields['responsible_department'].initial:
-                            cleaned_data['responsible_department'] = self.fields['responsible_department'].initial
-            # 草稿模式或详细信息表格有数据时，如果有日期数据，仍然需要转换格式
+                    if not cleaned_data.get('responsible_department') and self.fields['responsible_department'].initial:
+                        cleaned_data['responsible_department'] = self.fields['responsible_department'].initial
+            # 详细信息表格有数据时，如果有日期数据，仍然需要转换格式
             start_time = cleaned_data.get('start_time')
             end_time = cleaned_data.get('end_time')
             if start_time:
@@ -878,12 +865,12 @@ class PlanForm(forms.ModelForm):
             return cleaned_data
         
         # 处理 disabled 字段：如果字段被禁用，从 initial 值获取
+        # 新建时，如果 responsible_person 为空，使用 initial 值（无论字段是否被禁用）
         if not self.instance or not self.instance.pk:
-            # 新建时，如果字段被禁用，使用 initial 值
-            if self.fields['responsible_person'].widget.attrs.get('disabled'):
+            if 'responsible_person' in self.fields:
                 if not cleaned_data.get('responsible_person') and self.fields['responsible_person'].initial:
                     cleaned_data['responsible_person'] = self.fields['responsible_person'].initial
-            if self.fields['responsible_department'].widget.attrs.get('disabled'):
+            if 'responsible_department' in self.fields:
                 if not cleaned_data.get('responsible_department') and self.fields['responsible_department'].initial:
                     cleaned_data['responsible_department'] = self.fields['responsible_department'].initial
         start_time = cleaned_data.get('start_time')
@@ -944,9 +931,33 @@ class PlanForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
         
+        # 确保 responsible_person 有值（必填字段，不能为 None）
+        # 先检查 responsible_person_id，避免触发 RelatedObjectDoesNotExist
+        # 使用 getattr 安全地获取 _id 属性，如果不存在则返回 None
+        responsible_person_id = getattr(instance, 'responsible_person_id', None)
+        if not responsible_person_id:
+            # 优先使用 cleaned_data 中的值
+            if 'responsible_person' in self.cleaned_data and self.cleaned_data['responsible_person']:
+                instance.responsible_person = self.cleaned_data['responsible_person']
+            # 其次使用 initial 中的值
+            elif 'responsible_person' in self.fields and self.fields['responsible_person'].initial:
+                instance.responsible_person = self.fields['responsible_person'].initial
+            # 最后使用 initial 参数中的 user
+            elif self.initial.get('user'):
+                instance.responsible_person = self.initial.get('user')
+        
         # 设置创建人
         if not instance.pk:
-            instance.created_by = self.initial.get('user') or instance.responsible_person
+            # 安全地获取 responsible_person，避免触发 RelatedObjectDoesNotExist
+            responsible_person = None
+            responsible_person_id = getattr(instance, 'responsible_person_id', None)
+            if responsible_person_id:
+                try:
+                    responsible_person = instance.responsible_person
+                except:
+                    # 如果访问失败，使用 initial 中的 user
+                    responsible_person = self.initial.get('user')
+            instance.created_by = self.initial.get('user') or responsible_person
         
         # 新建时，如果计划编号为空，系统会自动生成（在模型的save方法中）
         # 编辑时，计划编号不可修改，保持原值
@@ -955,8 +966,13 @@ class PlanForm(forms.ModelForm):
             instance.save()
             
             # 保存多对多关系
-            if 'participants' in self.cleaned_data:
-                instance.participants.set(self.cleaned_data['participants'])
+            if 'participants' in self.cleaned_data and self.cleaned_data['participants'] is not None:
+                # 确保 participants 是可迭代对象（不能是 None）
+                participants = self.cleaned_data['participants']
+                if participants:
+                    instance.participants.set(participants)
+                else:
+                    instance.participants.clear()
         
         return instance
 
@@ -1178,7 +1194,7 @@ class PlanItemForm(forms.ModelForm):
     
     class Meta:
         model = Plan
-        fields = ['name', 'related_goal', 'related_project', 'content', 'plan_objective', 'collaboration_plan', 'start_time', 'end_time']
+        fields = ['name', 'related_goal', 'related_project', 'content', 'plan_objective', 'acceptance_criteria', 'collaboration_plan', 'start_time', 'end_time']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control form-control-sm',
@@ -1204,6 +1220,13 @@ class PlanItemForm(forms.ModelForm):
                 'placeholder': '请输入计划目标',
                 'rows': 2,
                 'maxlength': '1000'
+            }),
+            'acceptance_criteria': forms.Textarea(attrs={
+                'class': 'form-control form-control-sm',
+                'placeholder': '请输入验收标准',
+                'rows': 2,
+                'maxlength': '1000',
+                'required': True
             }),
             'collaboration_plan': forms.Textarea(attrs={
                 'class': 'form-control form-control-sm',
@@ -1309,6 +1332,7 @@ class PlanItemForm(forms.ModelForm):
             'related_goal': '关联战略目标',
             'content': '计划内容',
             'plan_objective': '计划目标',
+            'acceptance_criteria': '验收标准',
             'start_time': '开始时间',
             'end_time': '结束时间',
         }
