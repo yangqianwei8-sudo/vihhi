@@ -136,6 +136,7 @@ HOME_NAV_STRUCTURE = [
     {'label': '行政管理', 'icon': '🏢', 'url_name': 'admin_pages:administrative_management_home', 'permission': 'administrative_management.view'},
     {'label': '审批引擎', 'icon': '✅', 'url_name': 'workflow_engine:workflow_home', 'permission': 'workflow_engine.view'},
     {'label': '系统管理', 'icon': '⚙️', 'url_name': 'system_pages:system_settings', 'permission': 'system_management.view'},
+    {'label': '示例表单', 'icon': '📝', 'url_name': 'system_pages:example_form', 'admin_only': True},
     # 注意：权限管理仅保留在Django Admin后台管理中，不添加到前端导航栏
 ]
 
@@ -151,7 +152,11 @@ def _build_full_top_nav(permission_set, user=None):
         list: 导航菜单项列表
     """
     nav = []
+    _admin = user and (getattr(user, 'username', None) == 'admin' or getattr(user, 'is_superuser', False))
     for item in HOME_NAV_STRUCTURE:
+        # 仅 admin 可访问的菜单项（示例表单模块）
+        if item.get('admin_only') and not _admin:
+            continue
         # 检查权限
         if item.get('permission'):
             if not _permission_granted(item['permission'], permission_set):
@@ -1121,7 +1126,7 @@ def _get_sidebar_menu_for_module(module_name, permission_set, request_path=None,
         'financial_management': None,  # 待实现
         'personnel_management': 'backend.apps.personnel_management.views_pages._build_personnel_sidebar_nav',
         'administrative_management': 'backend.apps.administrative_management.views_pages._build_administrative_sidebar_nav',
-        'system_management': None,  # 待实现
+        'system_management': 'backend.apps.system_management.views_pages._build_system_management_sidebar_nav',
         'archive_management': None,  # 待实现
         'task_collaboration': None,  # 待实现
         'resource_standard': None,  # 待实现
