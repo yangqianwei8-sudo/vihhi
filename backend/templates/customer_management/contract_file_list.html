@@ -1,21 +1,18 @@
 {% extends "shared/list_page_base.html" %}
+{% load static %}
 
-{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
+{% block pm_title %}合同文件{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有合同文件{% endblock pm_subtitle %}
 
 {% block breadcrumb_items %}
     <li class="breadcrumb-item"><a href="{% url 'business_pages:contract_management_list' %}">合同管理</a></li>
     <li class="breadcrumb-item active" aria-current="page">合同文件</li>
 {% endblock breadcrumb_items %}
 
-
-
-{% load static %}
-
-
 {% block list_filters_content %}
-  <div class="col-md-3">
-    <label class="form-label">文件类型</label>
-    <select name="file_type" class="list-filter-input">
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">文件类型</label>
+    <select name="file_type" class="form-select form-select-sm">
         <option value="">全部类型</option>
         {% for value, label in file_type_choices %}
         <option value="{{ value }}" {% if selected_file_type == value %}selected{% endif %}>{{ label }}</option>
@@ -41,7 +38,7 @@
         <td>{{ file.contract.contract_name|default:file.contract.contract_number }}</td>
         <td>{{ file.file_name }}</td>
         <td>
-          <span class="list-badge">{{ file.get_file_type_display }}</span>
+          <span class="badge bg-secondary">{{ file.get_file_type_display }}</span>
         </td>
         <td>{{ file.version }}</td>
         <td>
@@ -62,27 +59,30 @@
         <td>{{ file.uploaded_by.get_full_name|default:file.uploaded_by.username }}</td>
         <td>{{ file.uploaded_time|date:"Y-m-d H:i" }}</td>
         <td>
-          <div class="list-actions">
-            <a href="{% url 'contract_pages:contract_file_download' file.id %}" class="list-btn" title="下载">下载</a>
-            <a href="{% url 'contract_pages:contract_detail' file.contract.id %}" class="list-btn" title="查看合同">查看合同</a>
+          <div class="list-page-table-actions">
+            <a href="{% url 'contract_pages:contract_file_download' file.id %}" class="action-view" title="下载">
+              <i class="bi bi-download"></i>
+            </a>
+            <span class="action-separator">|</span>
+            <a href="{% url 'contract_pages:contract_detail' file.contract.id %}" class="action-view" title="查看合同">
+              <i class="bi bi-eye"></i>
+            </a>
           </div>
         </td>
+        {% if column_settings_btn|default:False %}<td></td>{% endif %}
       </tr>
       {% empty %}
       <tr>
-        <td colspan="9" class="list-empty">
-          <div class="list-empty-icon">▢</div>
+        <td colspan="{% if column_settings_btn|default:False %}10{% else %}9{% endif %}" class="list-empty">
+          <div class="list-empty-icon">📋</div>
           <div class="list-empty-text">暂无合同文件</div>
-          <div class="list-empty-hint">请上传第一个合同文件开始使用</div>
+          {% block list_empty_hint %}
+          <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">请上传第一个合同文件开始使用</p>
+          {% endblock list_empty_hint %}
         </td>
       </tr>
       {% endfor %}
 {% endblock list_table_rows %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-
-{% endblock extra_css %}
 
 
 

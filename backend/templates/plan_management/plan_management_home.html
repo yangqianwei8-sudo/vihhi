@@ -44,14 +44,25 @@
     margin-bottom: 24px;
   }
 
+  /* 2列卡片（用于我的目标、我的计划一行显示） */
+  .pm-core-cards-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   @media (max-width: 1200px) {
     .pm-core-cards {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .pm-core-cards-2 {
       grid-template-columns: repeat(2, 1fr);
     }
   }
 
   @media (max-width: 768px) {
     .pm-core-cards {
+      grid-template-columns: 1fr;
+    }
+    .pm-core-cards-2 {
       grid-template-columns: 1fr;
     }
   }
@@ -106,10 +117,6 @@
     .pm-warning-card,
     .pm-todo-card,
     .pm-my-work-card,
-    .pm-activities-card {
-      padding: 16px;
-      margin-bottom: 16px;
-    }
 
     .pm-stats-card-title,
     .pm-card-title {
@@ -282,10 +289,6 @@
     .pm-warning-card,
     .pm-todo-card,
     .pm-my-work-card,
-    .pm-activities-card {
-      padding: 16px;
-      margin-bottom: 16px;
-    }
 
     .pm-stats-card-title,
     .pm-card-title {
@@ -380,6 +383,26 @@
     margin-bottom: 16px;
     padding-bottom: 12px;
     border-bottom: 1px solid #E0E0E0;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .pm-card-more {
+    font-size: 12px;
+    color: #1890ff;
+    text-decoration: none;
+    font-weight: normal;
+    padding: 2px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+
+  .pm-card-more:hover {
+    background-color: #f0f0f0;
+    text-decoration: none;
+    color: #1890ff;
   }
 
   .pm-warning-list, .pm-todo-list {
@@ -427,28 +450,13 @@
     text-decoration: underline;
   }
 
-  /* 第五行：快速访问与最近活动（左右分栏） */
-  .pm-my-work-card, .pm-activities-card {
+  /* 第五行：我的工作（拆分为两个卡片） */
+  .pm-my-work-card {
     background: #FFFFFF;
     border: 1px solid #E0E0E0;
     border-radius: 4px;
     padding: 20px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .pm-work-section {
-    margin-bottom: 24px;
-  }
-
-  .pm-work-section:last-child {
-    margin-bottom: 0;
-  }
-
-  .pm-work-section-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1A1A1A;
-    margin-bottom: 12px;
   }
 
   .pm-work-list {
@@ -477,6 +485,213 @@
     font-size: 12px;
     color: #666666;
     margin-left: 12px;
+  }
+
+  /* 战略目标卡片特殊样式 */
+  .pm-goal-item {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .pm-goal-item .pm-work-item-title {
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+
+  .pm-goal-stats {
+    width: 100%;
+  }
+
+  .pm-goal-stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 10px;
+  }
+
+  .pm-goal-stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .pm-goal-stat-label {
+    font-size: 11px;
+    color: #999999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .pm-goal-stat-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A1A1A;
+  }
+
+  .pm-goal-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .pm-goal-progress-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 60px;
+  }
+
+  .pm-goal-progress-label {
+    font-size: 11px;
+    color: #999999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .pm-goal-progress-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1A1A1A;
+  }
+
+  .pm-goal-progress-bar-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  .pm-goal-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #E0E0E0;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .pm-goal-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+
+  .pm-goal-status-badge {
+    font-size: 10px;
+    padding: 4px 8px;
+    white-space: nowrap;
+  }
+
+  /* 工作计划卡片特殊样式（与战略目标类似） */
+  .pm-plan-item {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .pm-plan-item .pm-work-item-title {
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+
+  .pm-plan-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .pm-plan-progress-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 60px;
+  }
+
+  .pm-plan-progress-label {
+    font-size: 11px;
+    color: #999999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .pm-plan-progress-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1A1A1A;
+  }
+
+  .pm-plan-progress-bar-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  .pm-plan-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #E0E0E0;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .pm-plan-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+
+  .pm-plan-status-badge {
+    font-size: 10px;
+    padding: 4px 8px;
+    white-space: nowrap;
+  }
+
+  /* 响应式：小屏幕优化 */
+  @media (max-width: 576px) {
+    .pm-goal-stat-row {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .pm-goal-progress-row {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pm-goal-progress-info {
+      min-width: 50px;
+    }
+
+    .pm-goal-progress-bar-wrapper {
+      order: 1;
+      width: 100%;
+    }
+
+    .pm-goal-status-badge {
+      order: 2;
+    }
+
+    /* 工作计划卡片响应式 */
+    .pm-plan-progress-row {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pm-plan-progress-info {
+      min-width: 50px;
+    }
+
+    .pm-plan-progress-bar-wrapper {
+      order: 1;
+      width: 100%;
+    }
+
+    .pm-plan-status-badge {
+      order: 2;
+    }
   }
 
   .pm-activity-list {
@@ -604,106 +819,6 @@
 {% endblock module_styles %}
 
 {% block module_extra_js %}
-<script src="{% static 'js/lib/chart.umd.min.js' %}"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // 计划状态分布饼图
-  {% if plan_status_dist %}
-  const planCtx = document.getElementById('planStatusChart');
-  if (planCtx) {
-    const planData = {
-      labels: [
-        {% for status_code, status_data in plan_status_dist.items %}
-        '{{ status_data.label }}'{% if not forloop.last %},{% endif %}
-        {% endfor %}
-      ],
-      datasets: [{
-        data: [
-          {% for status_code, status_data in plan_status_dist.items %}
-          {{ status_data.count }}{% if not forloop.last %},{% endif %}
-          {% endfor %}
-        ],
-        backgroundColor: [
-          '#4A90E2', '#50C878', '#FF6B6B', '#FFD93D', '#9B59B6', '#F39C12', '#3498DB', '#1ABC9C'
-        ]
-      }]
-    };
-    new Chart(planCtx, {
-      type: 'pie',
-      data: planData,
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom'
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                const label = context.label || '';
-                const value = context.parsed || 0;
-                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                const percentage = ((value / total) * 100).toFixed(1);
-                return label + ': ' + value + ' (' + percentage + '%)';
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-  {% endif %}
-
-  // 目标状态分布饼图
-  {% if goal_status_dist %}
-  const goalCtx = document.getElementById('goalStatusChart');
-  if (goalCtx) {
-    const goalData = {
-      labels: [
-        {% for status_code, status_data in goal_status_dist.items %}
-        '{{ status_data.label }}'{% if not forloop.last %},{% endif %}
-        {% endfor %}
-      ],
-      datasets: [{
-        data: [
-          {% for status_code, status_data in goal_status_dist.items %}
-          {{ status_data.count }}{% if not forloop.last %},{% endif %}
-          {% endfor %}
-        ],
-        backgroundColor: [
-          '#4A90E2', '#50C878', '#FF6B6B', '#FFD93D', '#9B59B6', '#F39C12', '#3498DB', '#1ABC9C'
-        ]
-      }]
-    };
-    new Chart(goalCtx, {
-      type: 'pie',
-      data: goalData,
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom'
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                const label = context.label || '';
-                const value = context.parsed || 0;
-                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                const percentage = ((value / total) * 100).toFixed(1);
-                return label + ': ' + value + ' (' + percentage + '%)';
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-  {% endif %}
-});
-</script>
 {% endblock module_extra_js %}
 
 {% block module_home_custom_content %}
@@ -746,67 +861,63 @@ document.addEventListener('DOMContentLoaded', function() {
       </li>
       {% endif %}
     </ul>
+    
+    <!-- 筛选栏 -->
+    <div class="pm-filter-bar mb-3 p-3 bg-light rounded">
+      <form method="get" action="{% url 'plan_pages:plan_management_home' %}" id="filterForm" class="row g-3 align-items-end">
+        <!-- 所属部门 -->
+        <div class="col-md-3">
+          <label for="filter_department" class="form-label">所属部门</label>
+          <select class="form-select form-select-sm" id="filter_department" name="filter_department">
+            <option value="">全部部门</option>
+            {% for dept in all_departments %}
+            <option value="{{ dept.id }}" {% if filter_department_id == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- 负责人 -->
+        <div class="col-md-3">
+          <label for="filter_responsible_person" class="form-label">负责人</label>
+          <select class="form-select form-select-sm" id="filter_responsible_person" name="filter_responsible_person">
+            <option value="">全部负责人</option>
+            {% for user in filter_users %}
+            <option value="{{ user.id }}" {% if filter_responsible_person_id == user.id|stringformat:"s" %}selected{% endif %}>
+              {{ user.get_full_name|default:user.username }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- 开始时间 -->
+        <div class="col-md-2">
+          <label for="filter_start_date" class="form-label">开始时间</label>
+          <input type="date" class="form-control form-control-sm" id="filter_start_date" name="filter_start_date" value="{{ filter_start_date }}">
+        </div>
+        
+        <!-- 结束时间 -->
+        <div class="col-md-2">
+          <label for="filter_end_date" class="form-label">结束时间</label>
+          <input type="date" class="form-control form-control-sm" id="filter_end_date" name="filter_end_date" value="{{ filter_end_date }}">
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-primary btn-sm w-100">筛选</button>
+        </div>
+        <div class="col-md-12">
+          {% if filter_department_id or filter_responsible_person_id or filter_start_date or filter_end_date %}
+          <a href="{% url 'plan_pages:plan_management_home' %}" class="btn btn-outline-secondary btn-sm">清除筛选</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+    
     <div class="tab-content" id="workCategoryTabContent">
       <!-- 分类1：全部 -->
       <div class="tab-pane fade show active" id="panel-all" role="tabpanel" aria-labelledby="tab-all">
         <div class="p-3">
           {% with cat_data=category_data.all %}
-          <!-- 目标卡片 -->
-          {% if all_goal_cards %}
-          <div class="pm-core-cards mb-3">
-            {% for card in all_goal_cards %}
-            <a href="{{ card.url }}" class="pm-core-card">
-              <div class="pm-core-card-icon">{{ card.icon }}</div>
-              <div class="pm-core-card-label">{{ card.label }}</div>
-              <div class="pm-core-card-value">{{ card.value }}</div>
-              {% if card.subvalue %}
-              <div class="pm-core-card-subvalue">{{ card.subvalue }}</div>
-              {% endif %}
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-          <!-- 计划卡片 -->
-          {% if all_plan_cards %}
-          <div class="pm-core-cards mb-4">
-            {% for card in all_plan_cards %}
-            <a href="{{ card.url }}" class="pm-core-card">
-              <div class="pm-core-card-icon">{{ card.icon }}</div>
-              <div class="pm-core-card-label">{{ card.label }}</div>
-              <div class="pm-core-card-value">{{ card.value }}</div>
-              {% if card.subvalue %}
-              <div class="pm-core-card-subvalue">{{ card.subvalue }}</div>
-              {% endif %}
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-          
-          <!-- 状态分布统计（左右分栏） -->
-          <div class="pm-stats-row mb-4">
-            <!-- 左侧：计划状态分布 -->
-            <div class="pm-stats-card">
-              <div class="pm-stats-card-title">计划状态分布</div>
-              {% if cat_data.plan_status_dist %}
-              <div class="pm-chart-container">
-                <canvas id="planStatusChartAll"></canvas>
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-            <!-- 右侧：目标状态分布 -->
-            <div class="pm-stats-card">
-              <div class="pm-stats-card-title">目标状态分布</div>
-              {% if cat_data.goal_status_dist %}
-              <div class="pm-chart-container">
-                <canvas id="goalStatusChartAll"></canvas>
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-          </div>
           
           <!-- 风险预警与待办（左右分栏） -->
           <div class="pm-stats-row mb-4">
@@ -855,78 +966,76 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
           </div>
           
-          <!-- 我的工作与最近活动（左右分栏） -->
+          <!-- 工作计划和战略目标（左右分栏） -->
           <div class="pm-stats-row">
-            <!-- 左侧：我的工作 -->
+            <!-- 左侧：工作计划 -->
             <div class="pm-my-work-card">
-              <div class="pm-card-title">我的工作</div>
-              {% if cat_data.my_work %}
-              <div class="pm-work-section">
-                <div class="pm-work-section-title">我负责的计划 ({{ cat_data.my_work.my_plans_count|default:0 }})</div>
-                {% if cat_data.my_work.my_plans %}
-                <ul class="pm-work-list">
-                  {% for plan in cat_data.my_work.my_plans %}
-                  <li class="pm-work-item">
-                    <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
-                    <span class="pm-work-item-meta">{{ plan.status }} | {{ plan.progress }}%</span>
-                  </li>
-                  {% endfor %}
-                </ul>
-                {% else %}
-                <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-                {% endif %}
-              </div>
-              <div class="pm-work-section">
-                <div class="pm-work-section-title">我负责的目标 ({{ cat_data.my_work.my_goals_count|default:0 }})</div>
-                {% if cat_data.my_work.my_goals %}
-                <ul class="pm-work-list">
-                  {% for goal in cat_data.my_work.my_goals %}
-                  <li class="pm-work-item">
-                    <a href="{{ goal.url }}" class="pm-work-item-title">{{ goal.title }}</a>
-                    <span class="pm-work-item-meta">{{ goal.status }} | {{ goal.completion_rate }}%</span>
-                  </li>
-                  {% endfor %}
-                </ul>
-                {% else %}
-                <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-                {% endif %}
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-            <!-- 右侧：最近活动 -->
-            <div class="pm-activities-card">
-              <div class="pm-card-title">最近活动</div>
-              {% if cat_data.recent_activities %}
-              <ul class="pm-activity-list">
-                {% for plan in cat_data.recent_activities.recent_plans %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ plan.url }}" class="pm-item-link">📋 {{ plan.title }}</a>
+              <div class="pm-card-title">工作计划 ({{ cat_data.my_work.my_plans_count|default:0 }})</div>
+              {% if cat_data.my_work.my_plans %}
+              <ul class="pm-work-list">
+                {% for plan in cat_data.my_work.my_plans %}
+                <li class="pm-work-item pm-plan-item">
+                  <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
+                  <div class="pm-plan-progress-row">
+                    <div class="pm-plan-progress-info">
+                      <span class="pm-plan-progress-label">完成率</span>
+                      <span class="pm-plan-progress-value">{{ plan.progress|floatformat:1 }}%</span>
+                    </div>
+                    <div class="pm-plan-progress-bar-wrapper">
+                      <div class="pm-plan-progress-bar">
+                        <div class="pm-plan-progress-fill" style="width: {{ plan.progress }}%;"></div>
+                      </div>
+                    </div>
+                    {% if plan.progress_status %}
+                    <span class="badge {{ plan.progress_status.class }} pm-plan-status-badge">{{ plan.progress_status.label }}</span>
+                    {% endif %}
                   </div>
-                  <div class="pm-activity-meta">{{ plan.creator }} 创建于 {{ plan.time|date:"Y-m-d H:i" }}</div>
-                </li>
-                {% endfor %}
-                {% for goal in cat_data.recent_activities.recent_goals %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ goal.url }}" class="pm-item-link">🎯 {{ goal.title }}</a>
-                  </div>
-                  <div class="pm-activity-meta">{{ goal.updater }} 更新于 {{ goal.time|date:"Y-m-d H:i" }} | 完成率 {{ goal.completion_rate }}%</div>
-                </li>
-                {% endfor %}
-                {% for approval in cat_data.recent_activities.recent_approvals %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ approval.url }}" class="pm-item-link">✅ {{ approval.plan_title }}</a>
-                  </div>
-                  <div class="pm-activity-meta">{{ approval.approver }} {{ approval.result }} | {{ approval.time|date:"Y-m-d H:i" }}</div>
                 </li>
                 {% endfor %}
               </ul>
               {% else %}
-              <div class="pm-empty">暂无活动记录</div>
+              <div class="pm-empty" style="padding: 20px;">暂无数据</div>
+              {% endif %}
+            </div>
+            <!-- 右侧：战略目标 -->
+            <div class="pm-my-work-card">
+              <div class="pm-card-title">战略目标 ({{ cat_data.my_work.my_goals_count|default:0 }})</div>
+              {% if cat_data.my_work.my_goals %}
+              <ul class="pm-work-list">
+                {% for goal in cat_data.my_work.my_goals %}
+                <li class="pm-work-item pm-goal-item">
+                  <a href="{{ goal.url }}" class="pm-work-item-title">{{ goal.title }}</a>
+                  <div class="pm-goal-stats">
+                    <div class="pm-goal-stat-row">
+                      <div class="pm-goal-stat-item">
+                        <span class="pm-goal-stat-label">目标值</span>
+                        <span class="pm-goal-stat-value">{{ goal.target_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}</span>
+                      </div>
+                      <div class="pm-goal-stat-item">
+                        <span class="pm-goal-stat-label">已完成</span>
+                        <span class="pm-goal-stat-value">{{ goal.current_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}</span>
+                      </div>
+                    </div>
+                    <div class="pm-goal-progress-row">
+                      <div class="pm-goal-progress-info">
+                        <span class="pm-goal-progress-label">完成率</span>
+                        <span class="pm-goal-progress-value">{{ goal.completion_rate|floatformat:1 }}%</span>
+                      </div>
+                      <div class="pm-goal-progress-bar-wrapper">
+                        <div class="pm-goal-progress-bar">
+                          <div class="pm-goal-progress-fill" style="width: {{ goal.completion_rate }}%;"></div>
+                        </div>
+                      </div>
+                      {% if goal.progress_status %}
+                      <span class="badge {{ goal.progress_status.class }} pm-goal-status-badge">{{ goal.progress_status.label }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <div class="pm-empty" style="padding: 20px;">暂无数据</div>
               {% endif %}
             </div>
           </div>
@@ -938,60 +1047,6 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="tab-pane fade" id="panel-mine" role="tabpanel" aria-labelledby="tab-mine">
         <div class="p-3">
           {% with cat_data=category_data.mine %}
-          <!-- 目标卡片 -->
-          {% if my_goal_cards %}
-          <div class="pm-core-cards mb-3">
-            {% for card in my_goal_cards %}
-            <a href="{{ card.url }}" class="pm-core-card">
-              <div class="pm-core-card-icon">{{ card.icon }}</div>
-              <div class="pm-core-card-label">{{ card.label }}</div>
-              <div class="pm-core-card-value">{{ card.value }}</div>
-              {% if card.subvalue %}
-              <div class="pm-core-card-subvalue">{{ card.subvalue }}</div>
-              {% endif %}
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-          <!-- 计划卡片 -->
-          {% if my_plan_cards %}
-          <div class="pm-core-cards mb-4">
-            {% for card in my_plan_cards %}
-            <a href="{{ card.url }}" class="pm-core-card">
-              <div class="pm-core-card-icon">{{ card.icon }}</div>
-              <div class="pm-core-card-label">{{ card.label }}</div>
-              <div class="pm-core-card-value">{{ card.value }}</div>
-              {% if card.subvalue %}
-              <div class="pm-core-card-subvalue">{{ card.subvalue }}</div>
-              {% endif %}
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-          
-          <!-- 状态分布统计（左右分栏） -->
-          <div class="pm-stats-row mb-4">
-            <div class="pm-stats-card">
-              <div class="pm-stats-card-title">计划状态分布</div>
-              {% if cat_data.plan_status_dist %}
-              <div class="pm-chart-container">
-                <canvas id="planStatusChartMine"></canvas>
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-            <div class="pm-stats-card">
-              <div class="pm-stats-card-title">目标状态分布</div>
-              {% if cat_data.goal_status_dist %}
-              <div class="pm-chart-container">
-                <canvas id="goalStatusChartMine"></canvas>
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-          </div>
           
           <!-- 风险预警与待办（左右分栏） -->
           <div class="pm-stats-row mb-4">
@@ -1036,76 +1091,76 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
           </div>
           
-          <!-- 我的工作与最近活动（左右分栏） -->
+          <!-- 工作计划和战略目标（左右分栏） -->
           <div class="pm-stats-row">
+            <!-- 左侧：工作计划 -->
             <div class="pm-my-work-card">
-              <div class="pm-card-title">我的工作</div>
-              {% if cat_data.my_work %}
-              <div class="pm-work-section">
-                <div class="pm-work-section-title">我负责的计划 ({{ cat_data.my_work.my_plans_count|default:0 }})</div>
-                {% if cat_data.my_work.my_plans %}
-                <ul class="pm-work-list">
-                  {% for plan in cat_data.my_work.my_plans %}
-                  <li class="pm-work-item">
-                    <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
-                    <span class="pm-work-item-meta">{{ plan.status }} | {{ plan.progress }}%</span>
-                  </li>
-                  {% endfor %}
-                </ul>
-                {% else %}
-                <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-                {% endif %}
-              </div>
-              <div class="pm-work-section">
-                <div class="pm-work-section-title">我负责的目标 ({{ cat_data.my_work.my_goals_count|default:0 }})</div>
-                {% if cat_data.my_work.my_goals %}
-                <ul class="pm-work-list">
-                  {% for goal in cat_data.my_work.my_goals %}
-                  <li class="pm-work-item">
-                    <a href="{{ goal.url }}" class="pm-work-item-title">{{ goal.title }}</a>
-                    <span class="pm-work-item-meta">{{ goal.status }} | {{ goal.completion_rate }}%</span>
-                  </li>
-                  {% endfor %}
-                </ul>
-                {% else %}
-                <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-                {% endif %}
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-            <div class="pm-activities-card">
-              <div class="pm-card-title">最近活动</div>
-              {% if cat_data.recent_activities %}
-              <ul class="pm-activity-list">
-                {% for plan in cat_data.recent_activities.recent_plans %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ plan.url }}" class="pm-item-link">📋 {{ plan.title }}</a>
+              <div class="pm-card-title">工作计划 ({{ cat_data.my_work.my_plans_count|default:0 }})</div>
+              {% if cat_data.my_work.my_plans %}
+              <ul class="pm-work-list">
+                {% for plan in cat_data.my_work.my_plans %}
+                <li class="pm-work-item pm-plan-item">
+                  <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
+                  <div class="pm-plan-progress-row">
+                    <div class="pm-plan-progress-info">
+                      <span class="pm-plan-progress-label">完成率</span>
+                      <span class="pm-plan-progress-value">{{ plan.progress|floatformat:1 }}%</span>
+                    </div>
+                    <div class="pm-plan-progress-bar-wrapper">
+                      <div class="pm-plan-progress-bar">
+                        <div class="pm-plan-progress-fill" style="width: {{ plan.progress }}%;"></div>
+                      </div>
+                    </div>
+                    {% if plan.progress_status %}
+                    <span class="badge {{ plan.progress_status.class }} pm-plan-status-badge">{{ plan.progress_status.label }}</span>
+                    {% endif %}
                   </div>
-                  <div class="pm-activity-meta">{{ plan.creator }} 创建于 {{ plan.time|date:"Y-m-d H:i" }}</div>
-                </li>
-                {% endfor %}
-                {% for goal in cat_data.recent_activities.recent_goals %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ goal.url }}" class="pm-item-link">🎯 {{ goal.title }}</a>
-                  </div>
-                  <div class="pm-activity-meta">{{ goal.updater }} 更新于 {{ goal.time|date:"Y-m-d H:i" }} | 完成率 {{ goal.completion_rate }}%</div>
-                </li>
-                {% endfor %}
-                {% for approval in cat_data.recent_activities.recent_approvals %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ approval.url }}" class="pm-item-link">✅ {{ approval.plan_title }}</a>
-                  </div>
-                  <div class="pm-activity-meta">{{ approval.approver }} {{ approval.result }} | {{ approval.time|date:"Y-m-d H:i" }}</div>
                 </li>
                 {% endfor %}
               </ul>
               {% else %}
-              <div class="pm-empty">暂无活动记录</div>
+              <div class="pm-empty" style="padding: 20px;">暂无数据</div>
+              {% endif %}
+            </div>
+            <!-- 右侧：战略目标 -->
+            <div class="pm-my-work-card">
+              <div class="pm-card-title">战略目标 ({{ cat_data.my_work.my_goals_count|default:0 }})</div>
+              {% if cat_data.my_work.my_goals %}
+              <ul class="pm-work-list">
+                {% for goal in cat_data.my_work.my_goals %}
+                <li class="pm-work-item pm-goal-item">
+                  <a href="{{ goal.url }}" class="pm-work-item-title">{{ goal.title }}</a>
+                  <div class="pm-goal-stats">
+                    <div class="pm-goal-stat-row">
+                      <div class="pm-goal-stat-item">
+                        <span class="pm-goal-stat-label">目标值</span>
+                        <span class="pm-goal-stat-value">{{ goal.target_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}</span>
+                      </div>
+                      <div class="pm-goal-stat-item">
+                        <span class="pm-goal-stat-label">已完成</span>
+                        <span class="pm-goal-stat-value">{{ goal.current_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}</span>
+                      </div>
+                    </div>
+                    <div class="pm-goal-progress-row">
+                      <div class="pm-goal-progress-info">
+                        <span class="pm-goal-progress-label">完成率</span>
+                        <span class="pm-goal-progress-value">{{ goal.completion_rate|floatformat:1 }}%</span>
+                      </div>
+                      <div class="pm-goal-progress-bar-wrapper">
+                        <div class="pm-goal-progress-bar">
+                          <div class="pm-goal-progress-fill" style="width: {{ goal.completion_rate }}%;"></div>
+                        </div>
+                      </div>
+                      {% if goal.progress_status %}
+                      <span class="badge {{ goal.progress_status.class }} pm-goal-status-badge">{{ goal.progress_status.label }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <div class="pm-empty" style="padding: 20px;">暂无数据</div>
               {% endif %}
             </div>
           </div>
@@ -1118,60 +1173,6 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="tab-pane fade" id="panel-subordinate" role="tabpanel" aria-labelledby="tab-subordinate">
         <div class="p-3">
           {% with cat_data=category_data.subordinate %}
-          <!-- 目标卡片（汇总） -->
-          {% if subordinate_goal_cards %}
-          <div class="pm-core-cards mb-3">
-            {% for card in subordinate_goal_cards %}
-            <a href="{{ card.url }}" class="pm-core-card">
-              <div class="pm-core-card-icon">{{ card.icon }}</div>
-              <div class="pm-core-card-label">{{ card.label }}</div>
-              <div class="pm-core-card-value">{{ card.value }}</div>
-              {% if card.subvalue %}
-              <div class="pm-core-card-subvalue">{{ card.subvalue }}</div>
-              {% endif %}
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-          <!-- 计划卡片（汇总） -->
-          {% if subordinate_plan_cards %}
-          <div class="pm-core-cards mb-4">
-            {% for card in subordinate_plan_cards %}
-            <a href="{{ card.url }}" class="pm-core-card">
-              <div class="pm-core-card-icon">{{ card.icon }}</div>
-              <div class="pm-core-card-label">{{ card.label }}</div>
-              <div class="pm-core-card-value">{{ card.value }}</div>
-              {% if card.subvalue %}
-              <div class="pm-core-card-subvalue">{{ card.subvalue }}</div>
-              {% endif %}
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-          
-          <!-- 状态分布统计（左右分栏） -->
-          <div class="pm-stats-row mb-4">
-            <div class="pm-stats-card">
-              <div class="pm-stats-card-title">计划状态分布</div>
-              {% if cat_data.plan_status_dist %}
-              <div class="pm-chart-container">
-                <canvas id="planStatusChartSubordinate"></canvas>
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-            <div class="pm-stats-card">
-              <div class="pm-stats-card-title">目标状态分布</div>
-              {% if cat_data.goal_status_dist %}
-              <div class="pm-chart-container">
-                <canvas id="goalStatusChartSubordinate"></canvas>
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-          </div>
           
           <!-- 风险预警与待办（左右分栏） -->
           <div class="pm-stats-row mb-4">
@@ -1216,76 +1217,76 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
           </div>
           
-          <!-- 我的工作与最近活动（左右分栏） -->
+          <!-- 下属负责的计划和目标（左右分栏） -->
           <div class="pm-stats-row">
+            <!-- 左侧：下属负责的计划 -->
             <div class="pm-my-work-card">
-              <div class="pm-card-title">下属工作</div>
-              {% if cat_data.my_work %}
-              <div class="pm-work-section">
-                <div class="pm-work-section-title">下属负责的计划 ({{ cat_data.my_work.my_plans_count|default:0 }})</div>
-                {% if cat_data.my_work.my_plans %}
-                <ul class="pm-work-list">
-                  {% for plan in cat_data.my_work.my_plans %}
-                  <li class="pm-work-item">
-                    <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
-                    <span class="pm-work-item-meta">{{ plan.status }} | {{ plan.progress }}%</span>
-                  </li>
-                  {% endfor %}
-                </ul>
-                {% else %}
-                <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-                {% endif %}
-              </div>
-              <div class="pm-work-section">
-                <div class="pm-work-section-title">下属负责的目标 ({{ cat_data.my_work.my_goals_count|default:0 }})</div>
-                {% if cat_data.my_work.my_goals %}
-                <ul class="pm-work-list">
-                  {% for goal in cat_data.my_work.my_goals %}
-                  <li class="pm-work-item">
-                    <a href="{{ goal.url }}" class="pm-work-item-title">{{ goal.title }}</a>
-                    <span class="pm-work-item-meta">{{ goal.status }} | {{ goal.completion_rate }}%</span>
-                  </li>
-                  {% endfor %}
-                </ul>
-                {% else %}
-                <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-                {% endif %}
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-            <div class="pm-activities-card">
-              <div class="pm-card-title">最近活动</div>
-              {% if cat_data.recent_activities %}
-              <ul class="pm-activity-list">
-                {% for plan in cat_data.recent_activities.recent_plans %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ plan.url }}" class="pm-item-link">📋 {{ plan.title }}</a>
+              <div class="pm-card-title">下属负责的计划 ({{ cat_data.my_work.my_plans_count|default:0 }})</div>
+              {% if cat_data.my_work.my_plans %}
+              <ul class="pm-work-list">
+                {% for plan in cat_data.my_work.my_plans %}
+                <li class="pm-work-item pm-plan-item">
+                  <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
+                  <div class="pm-plan-progress-row">
+                    <div class="pm-plan-progress-info">
+                      <span class="pm-plan-progress-label">完成率</span>
+                      <span class="pm-plan-progress-value">{{ plan.progress|floatformat:1 }}%</span>
+                    </div>
+                    <div class="pm-plan-progress-bar-wrapper">
+                      <div class="pm-plan-progress-bar">
+                        <div class="pm-plan-progress-fill" style="width: {{ plan.progress }}%;"></div>
+                      </div>
+                    </div>
+                    {% if plan.progress_status %}
+                    <span class="badge {{ plan.progress_status.class }} pm-plan-status-badge">{{ plan.progress_status.label }}</span>
+                    {% endif %}
                   </div>
-                  <div class="pm-activity-meta">{{ plan.creator }} 创建于 {{ plan.time|date:"Y-m-d H:i" }}</div>
-                </li>
-                {% endfor %}
-                {% for goal in cat_data.recent_activities.recent_goals %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ goal.url }}" class="pm-item-link">🎯 {{ goal.title }}</a>
-                  </div>
-                  <div class="pm-activity-meta">{{ goal.updater }} 更新于 {{ goal.time|date:"Y-m-d H:i" }} | 完成率 {{ goal.completion_rate }}%</div>
-                </li>
-                {% endfor %}
-                {% for approval in cat_data.recent_activities.recent_approvals %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ approval.url }}" class="pm-item-link">✅ {{ approval.plan_title }}</a>
-                  </div>
-                  <div class="pm-activity-meta">{{ approval.approver }} {{ approval.result }} | {{ approval.time|date:"Y-m-d H:i" }}</div>
                 </li>
                 {% endfor %}
               </ul>
               {% else %}
-              <div class="pm-empty">暂无活动记录</div>
+              <div class="pm-empty" style="padding: 20px;">暂无数据</div>
+              {% endif %}
+            </div>
+            <!-- 右侧：下属负责的目标 -->
+            <div class="pm-my-work-card">
+              <div class="pm-card-title">下属负责的目标 ({{ cat_data.my_work.my_goals_count|default:0 }})</div>
+              {% if cat_data.my_work.my_goals %}
+              <ul class="pm-work-list">
+                {% for goal in cat_data.my_work.my_goals %}
+                <li class="pm-work-item pm-goal-item">
+                  <a href="{{ goal.url }}" class="pm-work-item-title">{{ goal.title }}</a>
+                  <div class="pm-goal-stats">
+                    <div class="pm-goal-stat-row">
+                      <div class="pm-goal-stat-item">
+                        <span class="pm-goal-stat-label">目标值</span>
+                        <span class="pm-goal-stat-value">{{ goal.target_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}</span>
+                      </div>
+                      <div class="pm-goal-stat-item">
+                        <span class="pm-goal-stat-label">已完成</span>
+                        <span class="pm-goal-stat-value">{{ goal.current_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}</span>
+                      </div>
+                    </div>
+                    <div class="pm-goal-progress-row">
+                      <div class="pm-goal-progress-info">
+                        <span class="pm-goal-progress-label">完成率</span>
+                        <span class="pm-goal-progress-value">{{ goal.completion_rate|floatformat:1 }}%</span>
+                      </div>
+                      <div class="pm-goal-progress-bar-wrapper">
+                        <div class="pm-goal-progress-bar">
+                          <div class="pm-goal-progress-fill" style="width: {{ goal.completion_rate }}%;"></div>
+                        </div>
+                      </div>
+                      {% if goal.progress_status %}
+                      <span class="badge {{ goal.progress_status.class }} pm-goal-status-badge">{{ goal.progress_status.label }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <div class="pm-empty" style="padding: 20px;">暂无数据</div>
               {% endif %}
             </div>
           </div>
@@ -1298,60 +1299,6 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="tab-pane fade" id="panel-collaboration" role="tabpanel" aria-labelledby="tab-collaboration">
         <div class="p-3">
           {% with cat_data=category_data.collaboration %}
-          <!-- 目标卡片 -->
-          {% if collaboration_goal_cards %}
-          <div class="pm-core-cards mb-3">
-            {% for card in collaboration_goal_cards %}
-            <a href="{{ card.url }}" class="pm-core-card">
-              <div class="pm-core-card-icon">{{ card.icon }}</div>
-              <div class="pm-core-card-label">{{ card.label }}</div>
-              <div class="pm-core-card-value">{{ card.value }}</div>
-              {% if card.subvalue %}
-              <div class="pm-core-card-subvalue">{{ card.subvalue }}</div>
-              {% endif %}
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-          <!-- 计划卡片 -->
-          {% if collaboration_plan_cards %}
-          <div class="pm-core-cards mb-4">
-            {% for card in collaboration_plan_cards %}
-            <a href="{{ card.url }}" class="pm-core-card">
-              <div class="pm-core-card-icon">{{ card.icon }}</div>
-              <div class="pm-core-card-label">{{ card.label }}</div>
-              <div class="pm-core-card-value">{{ card.value }}</div>
-              {% if card.subvalue %}
-              <div class="pm-core-card-subvalue">{{ card.subvalue }}</div>
-              {% endif %}
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-          
-          <!-- 状态分布统计（左右分栏） -->
-          <div class="pm-stats-row mb-4">
-            <div class="pm-stats-card">
-              <div class="pm-stats-card-title">计划状态分布</div>
-              {% if cat_data.plan_status_dist %}
-              <div class="pm-chart-container">
-                <canvas id="planStatusChartCollaboration"></canvas>
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-            <div class="pm-stats-card">
-              <div class="pm-stats-card-title">目标状态分布</div>
-              {% if cat_data.goal_status_dist %}
-              <div class="pm-chart-container">
-                <canvas id="goalStatusChartCollaboration"></canvas>
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-          </div>
           
           <!-- 风险预警与待办（左右分栏） -->
           <div class="pm-stats-row mb-4">
@@ -1396,76 +1343,76 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
           </div>
           
-          <!-- 我的工作与最近活动（左右分栏） -->
+          <!-- 我协作的计划和目标（左右分栏） -->
           <div class="pm-stats-row">
+            <!-- 左侧：我协作的计划 -->
             <div class="pm-my-work-card">
-              <div class="pm-card-title">我协作的工作</div>
-              {% if cat_data.my_work %}
-              <div class="pm-work-section">
-                <div class="pm-work-section-title">我协作的计划 ({{ cat_data.my_work.my_plans_count|default:0 }})</div>
-                {% if cat_data.my_work.my_plans %}
-                <ul class="pm-work-list">
-                  {% for plan in cat_data.my_work.my_plans %}
-                  <li class="pm-work-item">
-                    <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
-                    <span class="pm-work-item-meta">{{ plan.status }} | {{ plan.progress }}%</span>
-                  </li>
-                  {% endfor %}
-                </ul>
-                {% else %}
-                <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-                {% endif %}
-              </div>
-              <div class="pm-work-section">
-                <div class="pm-work-section-title">我协作的目标 ({{ cat_data.my_work.my_goals_count|default:0 }})</div>
-                {% if cat_data.my_work.my_goals %}
-                <ul class="pm-work-list">
-                  {% for goal in cat_data.my_work.my_goals %}
-                  <li class="pm-work-item">
-                    <a href="{{ goal.url }}" class="pm-work-item-title">{{ goal.title }}</a>
-                    <span class="pm-work-item-meta">{{ goal.status }} | {{ goal.completion_rate }}%</span>
-                  </li>
-                  {% endfor %}
-                </ul>
-                {% else %}
-                <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-                {% endif %}
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-            <div class="pm-activities-card">
-              <div class="pm-card-title">最近活动</div>
-              {% if cat_data.recent_activities %}
-              <ul class="pm-activity-list">
-                {% for plan in cat_data.recent_activities.recent_plans %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ plan.url }}" class="pm-item-link">📋 {{ plan.title }}</a>
+              <div class="pm-card-title">我协作的计划 ({{ cat_data.my_work.my_plans_count|default:0 }})</div>
+              {% if cat_data.my_work.my_plans %}
+              <ul class="pm-work-list">
+                {% for plan in cat_data.my_work.my_plans %}
+                <li class="pm-work-item pm-plan-item">
+                  <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
+                  <div class="pm-plan-progress-row">
+                    <div class="pm-plan-progress-info">
+                      <span class="pm-plan-progress-label">完成率</span>
+                      <span class="pm-plan-progress-value">{{ plan.progress|floatformat:1 }}%</span>
+                    </div>
+                    <div class="pm-plan-progress-bar-wrapper">
+                      <div class="pm-plan-progress-bar">
+                        <div class="pm-plan-progress-fill" style="width: {{ plan.progress }}%;"></div>
+                      </div>
+                    </div>
+                    {% if plan.progress_status %}
+                    <span class="badge {{ plan.progress_status.class }} pm-plan-status-badge">{{ plan.progress_status.label }}</span>
+                    {% endif %}
                   </div>
-                  <div class="pm-activity-meta">{{ plan.creator }} 创建于 {{ plan.time|date:"Y-m-d H:i" }}</div>
-                </li>
-                {% endfor %}
-                {% for goal in cat_data.recent_activities.recent_goals %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ goal.url }}" class="pm-item-link">🎯 {{ goal.title }}</a>
-                  </div>
-                  <div class="pm-activity-meta">{{ goal.updater }} 更新于 {{ goal.time|date:"Y-m-d H:i" }} | 完成率 {{ goal.completion_rate }}%</div>
-                </li>
-                {% endfor %}
-                {% for approval in cat_data.recent_activities.recent_approvals %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ approval.url }}" class="pm-item-link">✅ {{ approval.plan_title }}</a>
-                  </div>
-                  <div class="pm-activity-meta">{{ approval.approver }} {{ approval.result }} | {{ approval.time|date:"Y-m-d H:i" }}</div>
                 </li>
                 {% endfor %}
               </ul>
               {% else %}
-              <div class="pm-empty">暂无活动记录</div>
+              <div class="pm-empty" style="padding: 20px;">暂无数据</div>
+              {% endif %}
+            </div>
+            <!-- 右侧：我协作的目标 -->
+            <div class="pm-my-work-card">
+              <div class="pm-card-title">我协作的目标 ({{ cat_data.my_work.my_goals_count|default:0 }})</div>
+              {% if cat_data.my_work.my_goals %}
+              <ul class="pm-work-list">
+                {% for goal in cat_data.my_work.my_goals %}
+                <li class="pm-work-item pm-goal-item">
+                  <a href="{{ goal.url }}" class="pm-work-item-title">{{ goal.title }}</a>
+                  <div class="pm-goal-stats">
+                    <div class="pm-goal-stat-row">
+                      <div class="pm-goal-stat-item">
+                        <span class="pm-goal-stat-label">目标值</span>
+                        <span class="pm-goal-stat-value">{{ goal.target_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}</span>
+                      </div>
+                      <div class="pm-goal-stat-item">
+                        <span class="pm-goal-stat-label">已完成</span>
+                        <span class="pm-goal-stat-value">{{ goal.current_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}</span>
+                      </div>
+                    </div>
+                    <div class="pm-goal-progress-row">
+                      <div class="pm-goal-progress-info">
+                        <span class="pm-goal-progress-label">完成率</span>
+                        <span class="pm-goal-progress-value">{{ goal.completion_rate|floatformat:1 }}%</span>
+                      </div>
+                      <div class="pm-goal-progress-bar-wrapper">
+                        <div class="pm-goal-progress-bar">
+                          <div class="pm-goal-progress-fill" style="width: {{ goal.completion_rate }}%;"></div>
+                        </div>
+                      </div>
+                      {% if goal.progress_status %}
+                      <span class="badge {{ goal.progress_status.class }} pm-goal-status-badge">{{ goal.progress_status.label }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <div class="pm-empty" style="padding: 20px;">暂无数据</div>
               {% endif %}
             </div>
           </div>
@@ -1478,60 +1425,6 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="tab-pane fade" id="panel-subordinate-collaboration" role="tabpanel" aria-labelledby="tab-subordinate-collaboration">
         <div class="p-3">
           {% with cat_data=category_data.subordinate_collaboration %}
-          <!-- 目标卡片（汇总） -->
-          {% if subordinate_collaboration_goal_cards %}
-          <div class="pm-core-cards mb-3">
-            {% for card in subordinate_collaboration_goal_cards %}
-            <a href="{{ card.url }}" class="pm-core-card">
-              <div class="pm-core-card-icon">{{ card.icon }}</div>
-              <div class="pm-core-card-label">{{ card.label }}</div>
-              <div class="pm-core-card-value">{{ card.value }}</div>
-              {% if card.subvalue %}
-              <div class="pm-core-card-subvalue">{{ card.subvalue }}</div>
-              {% endif %}
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-          <!-- 计划卡片（汇总） -->
-          {% if subordinate_collaboration_plan_cards %}
-          <div class="pm-core-cards mb-4">
-            {% for card in subordinate_collaboration_plan_cards %}
-            <a href="{{ card.url }}" class="pm-core-card">
-              <div class="pm-core-card-icon">{{ card.icon }}</div>
-              <div class="pm-core-card-label">{{ card.label }}</div>
-              <div class="pm-core-card-value">{{ card.value }}</div>
-              {% if card.subvalue %}
-              <div class="pm-core-card-subvalue">{{ card.subvalue }}</div>
-              {% endif %}
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-          
-          <!-- 状态分布统计（左右分栏） -->
-          <div class="pm-stats-row mb-4">
-            <div class="pm-stats-card">
-              <div class="pm-stats-card-title">计划状态分布</div>
-              {% if cat_data.plan_status_dist %}
-              <div class="pm-chart-container">
-                <canvas id="planStatusChartSubordinateCollaboration"></canvas>
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-            <div class="pm-stats-card">
-              <div class="pm-stats-card-title">目标状态分布</div>
-              {% if cat_data.goal_status_dist %}
-              <div class="pm-chart-container">
-                <canvas id="goalStatusChartSubordinateCollaboration"></canvas>
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-          </div>
           
           <!-- 风险预警与待办（左右分栏） -->
           <div class="pm-stats-row mb-4">
@@ -1576,76 +1469,76 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
           </div>
           
-          <!-- 我的工作与最近活动（左右分栏） -->
+          <!-- 下属协作的计划和目标（左右分栏） -->
           <div class="pm-stats-row">
+            <!-- 左侧：下属协作的计划 -->
             <div class="pm-my-work-card">
-              <div class="pm-card-title">下属协作工作</div>
-              {% if cat_data.my_work %}
-              <div class="pm-work-section">
-                <div class="pm-work-section-title">下属协作的计划 ({{ cat_data.my_work.my_plans_count|default:0 }})</div>
-                {% if cat_data.my_work.my_plans %}
-                <ul class="pm-work-list">
-                  {% for plan in cat_data.my_work.my_plans %}
-                  <li class="pm-work-item">
-                    <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
-                    <span class="pm-work-item-meta">{{ plan.status }} | {{ plan.progress }}%</span>
-                  </li>
-                  {% endfor %}
-                </ul>
-                {% else %}
-                <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-                {% endif %}
-              </div>
-              <div class="pm-work-section">
-                <div class="pm-work-section-title">下属协作的目标 ({{ cat_data.my_work.my_goals_count|default:0 }})</div>
-                {% if cat_data.my_work.my_goals %}
-                <ul class="pm-work-list">
-                  {% for goal in cat_data.my_work.my_goals %}
-                  <li class="pm-work-item">
-                    <a href="{{ goal.url }}" class="pm-work-item-title">{{ goal.title }}</a>
-                    <span class="pm-work-item-meta">{{ goal.status }} | {{ goal.completion_rate }}%</span>
-                  </li>
-                  {% endfor %}
-                </ul>
-                {% else %}
-                <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-                {% endif %}
-              </div>
-              {% else %}
-              <div class="pm-empty">暂无数据</div>
-              {% endif %}
-            </div>
-            <div class="pm-activities-card">
-              <div class="pm-card-title">最近活动</div>
-              {% if cat_data.recent_activities %}
-              <ul class="pm-activity-list">
-                {% for plan in cat_data.recent_activities.recent_plans %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ plan.url }}" class="pm-item-link">📋 {{ plan.title }}</a>
+              <div class="pm-card-title">下属协作的计划 ({{ cat_data.my_work.my_plans_count|default:0 }})</div>
+              {% if cat_data.my_work.my_plans %}
+              <ul class="pm-work-list">
+                {% for plan in cat_data.my_work.my_plans %}
+                <li class="pm-work-item pm-plan-item">
+                  <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
+                  <div class="pm-plan-progress-row">
+                    <div class="pm-plan-progress-info">
+                      <span class="pm-plan-progress-label">完成率</span>
+                      <span class="pm-plan-progress-value">{{ plan.progress|floatformat:1 }}%</span>
+                    </div>
+                    <div class="pm-plan-progress-bar-wrapper">
+                      <div class="pm-plan-progress-bar">
+                        <div class="pm-plan-progress-fill" style="width: {{ plan.progress }}%;"></div>
+                      </div>
+                    </div>
+                    {% if plan.progress_status %}
+                    <span class="badge {{ plan.progress_status.class }} pm-plan-status-badge">{{ plan.progress_status.label }}</span>
+                    {% endif %}
                   </div>
-                  <div class="pm-activity-meta">{{ plan.creator }} 创建于 {{ plan.time|date:"Y-m-d H:i" }}</div>
-                </li>
-                {% endfor %}
-                {% for goal in cat_data.recent_activities.recent_goals %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ goal.url }}" class="pm-item-link">🎯 {{ goal.title }}</a>
-                  </div>
-                  <div class="pm-activity-meta">{{ goal.updater }} 更新于 {{ goal.time|date:"Y-m-d H:i" }} | 完成率 {{ goal.completion_rate }}%</div>
-                </li>
-                {% endfor %}
-                {% for approval in cat_data.recent_activities.recent_approvals %}
-                <li class="pm-activity-item">
-                  <div class="pm-activity-title">
-                    <a href="{{ approval.url }}" class="pm-item-link">✅ {{ approval.plan_title }}</a>
-                  </div>
-                  <div class="pm-activity-meta">{{ approval.approver }} {{ approval.result }} | {{ approval.time|date:"Y-m-d H:i" }}</div>
                 </li>
                 {% endfor %}
               </ul>
               {% else %}
-              <div class="pm-empty">暂无活动记录</div>
+              <div class="pm-empty" style="padding: 20px;">暂无数据</div>
+              {% endif %}
+            </div>
+            <!-- 右侧：下属协作的目标 -->
+            <div class="pm-my-work-card">
+              <div class="pm-card-title">下属协作的目标 ({{ cat_data.my_work.my_goals_count|default:0 }})</div>
+              {% if cat_data.my_work.my_goals %}
+              <ul class="pm-work-list">
+                {% for goal in cat_data.my_work.my_goals %}
+                <li class="pm-work-item pm-goal-item">
+                  <a href="{{ goal.url }}" class="pm-work-item-title">{{ goal.title }}</a>
+                  <div class="pm-goal-stats">
+                    <div class="pm-goal-stat-row">
+                      <div class="pm-goal-stat-item">
+                        <span class="pm-goal-stat-label">目标值</span>
+                        <span class="pm-goal-stat-value">{{ goal.target_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}</span>
+                      </div>
+                      <div class="pm-goal-stat-item">
+                        <span class="pm-goal-stat-label">已完成</span>
+                        <span class="pm-goal-stat-value">{{ goal.current_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}</span>
+                      </div>
+                    </div>
+                    <div class="pm-goal-progress-row">
+                      <div class="pm-goal-progress-info">
+                        <span class="pm-goal-progress-label">完成率</span>
+                        <span class="pm-goal-progress-value">{{ goal.completion_rate|floatformat:1 }}%</span>
+                      </div>
+                      <div class="pm-goal-progress-bar-wrapper">
+                        <div class="pm-goal-progress-bar">
+                          <div class="pm-goal-progress-fill" style="width: {{ goal.completion_rate }}%;"></div>
+                        </div>
+                      </div>
+                      {% if goal.progress_status %}
+                      <span class="badge {{ goal.progress_status.class }} pm-goal-status-badge">{{ goal.progress_status.label }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <div class="pm-empty" style="padding: 20px;">暂无数据</div>
               {% endif %}
             </div>
           </div>
@@ -1656,251 +1549,107 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
 
-  <!-- 第二行：核心指标卡片（6个） -->
-  {% if core_cards %}
-  <div class="pm-core-cards">
-    {% for card in core_cards %}
-    <a href="{{ card.url }}" class="pm-core-card">
-      <div class="pm-core-card-icon">{{ card.icon }}</div>
-      <div class="pm-core-card-label">{{ card.label }}</div>
-      <div class="pm-core-card-value">{{ card.value }}</div>
-      {% if card.subvalue %}
-      <div class="pm-core-card-subvalue">{{ card.subvalue }}</div>
-      {% endif %}
-    </a>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  <!-- 第三行：状态分布统计（左右分栏） -->
-  <div class="pm-stats-row">
-    <!-- 左侧：计划状态分布 -->
-    <div class="pm-stats-card">
-      <div class="pm-stats-card-title">计划状态分布</div>
-      {% if plan_status_dist %}
-      <div class="pm-chart-container">
-        <canvas id="planStatusChart"></canvas>
-      </div>
-      {% else %}
-      <div class="pm-empty">暂无数据</div>
-      {% endif %}
-    </div>
-
-    <!-- 右侧：目标状态分布 -->
-    <div class="pm-stats-card">
-      <div class="pm-stats-card-title">目标状态分布</div>
-      {% if goal_status_dist %}
-      <div class="pm-chart-container">
-        <canvas id="goalStatusChart"></canvas>
-      </div>
-      {% else %}
-      <div class="pm-empty">暂无数据</div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- 第四行：风险预警与待办（左右分栏） -->
-  <div class="pm-stats-row">
-    <!-- 左侧：风险预警 -->
-    <div class="pm-warning-card">
-      <div class="pm-card-title">
-        风险预警
-        {% if overdue_plans_count or stale_plans_count %}
-        <span style="font-size: 12px; color: #333333; margin-left: 8px;">
-          (逾期 {{ overdue_plans_count|default:0 }} | 未更新 {{ stale_plans_count|default:0 }})
-        </span>
-        {% endif %}
-      </div>
-      {% if risk_warnings %}
-      <ul class="pm-warning-list">
-        {% for warning in risk_warnings %}
-        <li class="pm-warning-item {{ warning.type }}">
-          <div class="pm-item-title">
-            <a href="{{ warning.url }}" class="pm-item-link">{{ warning.title }}</a>
-          </div>
-          <div class="pm-item-meta">
-            {% if warning.type == 'overdue' %}
-            负责人：{{ warning.responsible }} | 逾期 {{ warning.days }} 天
-            {% elif warning.type == 'stale' %}
-            负责人：{{ warning.responsible }} | {{ warning.days }} 天未更新
-            {% endif %}
-          </div>
-        </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <div class="pm-empty">暂无风险预警</div>
-      {% endif %}
-    </div>
-
-    <!-- 右侧：待办事项 -->
-    <div class="pm-todo-card">
-      <div class="pm-card-title">
-        {% if todo_summary_url %}
-          <a href="{{ todo_summary_url }}" style="color: inherit; text-decoration: none;">待办事项</a>
-        {% else %}
-          待办事项
-        {% endif %}
-        {% if pending_approval_count or upcoming_deadline_count or stale_goals_count %}
-        <span style="font-size: 12px; color: #333333; margin-left: 8px;">
-          (待审批 {{ pending_approval_count|default:0 }} | 即将到期 {{ upcoming_deadline_count|default:0 }} | 需更新 {{ stale_goals_count|default:0 }})
-        </span>
-        {% endif %}
-      </div>
-      {% if todo_items %}
-      <ul class="pm-todo-list">
-        {% for item in todo_items %}
-        <li class="pm-todo-item {% if item.is_overdue %}overdue{% endif %}">
-          <div class="pm-item-title">
-            <a href="{{ item.url }}" class="pm-item-link">{{ item.title }}</a>
-            {% if item.is_overdue %}
-            <span class="badge bg-danger" style="font-size: 10px; margin-left: 8px;">逾期</span>
-            {% elif item.priority == 'high' %}
-            <span class="badge bg-warning" style="font-size: 10px; margin-left: 8px;">紧急</span>
-            {% endif %}
-          </div>
-          <div class="pm-item-meta">
-            {% if item.meta %}
-            {{ item.meta }}
-            {% elif item.responsible %}
-            负责人：{{ item.responsible }}
-            {% elif item.description %}
-            {{ item.description|truncatewords:15 }}
-            {% endif %}
-            {% if item.deadline %}
-            | 截止：{{ item.deadline|date:"m-d H:i" }}
-            {% endif %}
-          </div>
-        </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <div class="pm-empty">暂无待办事项</div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- 第五行：快速访问与最近活动（左右分栏） -->
-  <div class="pm-stats-row">
-    <!-- 左侧：我的工作 -->
-    <div class="pm-my-work-card">
-      <div class="pm-card-title">
-        {% if my_work.summary_url %}
-          <a href="{{ my_work.summary_url }}" style="color: inherit; text-decoration: none;">我的工作</a>
-        {% else %}
-          我的工作
-        {% endif %}
-      </div>
-      
-      {% if my_work %}
-      <!-- 我负责的计划 -->
-      <div class="pm-work-section">
-        <div class="pm-work-section-title">
-          我负责的计划 ({{ my_work.my_plans_count|default:0 }})
-        </div>
-        {% if my_work.my_plans %}
-        <ul class="pm-work-list">
-          {% for plan in my_work.my_plans %}
-          <li class="pm-work-item">
-            <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
-            <span class="pm-work-item-meta">{{ plan.status }} | {{ plan.progress }}%</span>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-        {% endif %}
-      </div>
-
-      <!-- 我负责的目标 -->
-      <div class="pm-work-section">
-        <div class="pm-work-section-title">
-          我负责的目标 ({{ my_work.my_goals_count|default:0 }})
-        </div>
-        {% if my_work.my_goals %}
-        <ul class="pm-work-list">
-          {% for goal in my_work.my_goals %}
-          <li class="pm-work-item">
-            <a href="{{ goal.url }}" class="pm-work-item-title">{{ goal.title }}</a>
-            <span class="pm-work-item-meta">{{ goal.status }} | {{ goal.completion_rate }}%</span>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-        {% endif %}
-      </div>
-
-      <!-- 我参与的计划 -->
-      <div class="pm-work-section">
-        <div class="pm-work-section-title">
-          我参与的计划 ({{ my_work.participating_plans_count|default:0 }})
-        </div>
-        {% if my_work.participating_plans %}
-        <ul class="pm-work-list">
-          {% for plan in my_work.participating_plans %}
-          <li class="pm-work-item">
-            <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
-            <span class="pm-work-item-meta">{{ plan.role }} | {{ plan.progress }}%</span>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <div class="pm-empty" style="padding: 20px;">暂无数据</div>
-        {% endif %}
-      </div>
-      {% else %}
-      <div class="pm-empty">暂无数据</div>
-      {% endif %}
-    </div>
-
-    <!-- 右侧：最近活动 -->
-    <div class="pm-activities-card">
-      <div class="pm-card-title">最近活动</div>
-      
-      {% if recent_activities %}
-      <ul class="pm-activity-list">
-        <!-- 最近创建的计划 -->
-        {% for plan in recent_activities.recent_plans %}
-        <li class="pm-activity-item">
-          <div class="pm-activity-title">
-            <a href="{{ plan.url }}" class="pm-item-link">📋 {{ plan.title }}</a>
-          </div>
-          <div class="pm-activity-meta">
-            {{ plan.creator }} 创建于 {{ plan.time|date:"Y-m-d H:i" }}
-          </div>
-        </li>
-        {% endfor %}
-
-        <!-- 最近更新的目标 -->
-        {% for goal in recent_activities.recent_goals %}
-        <li class="pm-activity-item">
-          <div class="pm-activity-title">
-            <a href="{{ goal.url }}" class="pm-item-link">🎯 {{ goal.title }}</a>
-          </div>
-          <div class="pm-activity-meta">
-            {{ goal.updater }} 更新于 {{ goal.time|date:"Y-m-d H:i" }} | 完成率 {{ goal.completion_rate }}%
-          </div>
-        </li>
-        {% endfor %}
-
-        <!-- 最近审批记录 -->
-        {% for approval in recent_activities.recent_approvals %}
-        <li class="pm-activity-item">
-          <div class="pm-activity-title">
-            <a href="{{ approval.url }}" class="pm-item-link">✅ {{ approval.plan_title }}</a>
-          </div>
-          <div class="pm-activity-meta">
-            {{ approval.approver }} {{ approval.result }} | {{ approval.time|date:"Y-m-d H:i" }}
-          </div>
-        </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <div class="pm-empty">暂无活动记录</div>
-      {% endif %}
-    </div>
-  </div>
-
 </div>
+
+<script>
+(function() {
+    'use strict';
+    
+    const departmentSelect = document.getElementById('filter_department');
+    const responsiblePersonSelect = document.getElementById('filter_responsible_person');
+    
+    if (!departmentSelect || !responsiblePersonSelect) {
+        return;
+    }
+    
+    // 保存初始的负责人选项
+    const initialResponsiblePersonOptions = Array.from(responsiblePersonSelect.options).map(opt => ({
+        value: opt.value,
+        text: opt.text,
+        selected: opt.selected
+    }));
+    
+    /**
+     * 根据部门ID获取用户列表
+     */
+    function fetchUsersByDepartment(departmentId, callback) {
+        if (!departmentId) {
+            callback([]);
+            return;
+        }
+        
+        const url = `/api/system/users/?department=${departmentId}`;
+        
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('获取用户列表失败');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // 处理分页结果
+                const users = data.results || data;
+                callback(users);
+            })
+            .catch(error => {
+                console.error('获取用户列表错误:', error);
+                callback([]);
+            });
+    }
+    
+    /**
+     * 更新负责人下拉列表选项
+     */
+    function updateResponsiblePersonOptions(users, currentValue) {
+        // 清空现有选项（保留"全部负责人"选项）
+        responsiblePersonSelect.innerHTML = '<option value="">全部负责人</option>';
+        
+        // 添加新用户选项
+        users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.full_name || user.username || `用户${user.id}`;
+            if (currentValue && currentValue === String(user.id)) {
+                option.selected = true;
+            }
+            responsiblePersonSelect.appendChild(option);
+        });
+    }
+    
+    // 监听部门选择变化
+    departmentSelect.addEventListener('change', function() {
+        const departmentId = this.value;
+        const currentResponsiblePersonValue = responsiblePersonSelect.value;
+        
+        if (departmentId) {
+            // 显示加载状态
+            responsiblePersonSelect.disabled = true;
+            responsiblePersonSelect.innerHTML = '<option value="">加载中...</option>';
+            
+            // 获取该部门的用户
+            fetchUsersByDepartment(departmentId, function(users) {
+                updateResponsiblePersonOptions(users, currentResponsiblePersonValue);
+                responsiblePersonSelect.disabled = false;
+            });
+        } else {
+            // 如果没有选择部门，恢复初始选项
+            responsiblePersonSelect.innerHTML = '';
+            initialResponsiblePersonOptions.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt.value;
+                option.textContent = opt.text;
+                option.selected = opt.selected;
+                responsiblePersonSelect.appendChild(option);
+            });
+        }
+    });
+    
+    // 如果部门已有值，初始化时也加载用户（但只在页面加载时执行一次）
+    if (departmentSelect.value && !responsiblePersonSelect.value) {
+        // 如果部门有值但负责人没有值，不自动加载（避免覆盖已有的全部负责人选项）
+    }
+})();
+</script>
+
 {% endblock module_home_custom_content %}

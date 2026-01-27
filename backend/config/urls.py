@@ -4,7 +4,7 @@ from django.shortcuts import redirect
 from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
-from backend.core.api_views import api_root, api_docs, notification_list, mark_notification_read
+from backend.core.api_views import api_root, api_docs, notification_list, mark_notification_read, deepseek_seal_recognition
 from backend.core.views import home, dashboard, health_check, login_view, logout_view, favicon_view, test_admin_page, django_service_control
 from backend.apps.system_management import views_registration as registration_views
 
@@ -76,6 +76,8 @@ urlpatterns = [
     # 通知API
     path('api/notifications/', notification_list, name='notification_list'),
     path('api/notifications/mark-read/', mark_notification_read, name='mark_notification_read'),
+    # DeepSeek盖章文件识别API
+    path('api/deepseek/seal-recognition/', deepseek_seal_recognition, name='deepseek_seal_recognition'),
     # 仪表盘API
     path('api/admin/dashboard/stats/', dashboard_stats, name='dashboard_stats'),
     path('api/admin/dashboard/todos/', dashboard_todos, name='dashboard_todos'),

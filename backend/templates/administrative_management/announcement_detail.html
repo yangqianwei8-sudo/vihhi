@@ -99,14 +99,19 @@
         <a href="{% url 'admin_pages:announcement_management' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> 返回列表
         </a>
+        {% if notification_type == 'announcement' %}
         <a href="{% url 'admin_pages:announcement_update' announcement.id %}" class="btn btn-primary">
             <i class="bi bi-pencil"></i> 编辑
         </a>
+        {% endif %}
     </div>
 
     <div class="info-card">
         <div class="d-flex justify-content-between align-items-start mb-3">
             <h3 style="margin: 0; color: #1f2937;">
+                {% if notification_type == 'team_notification' %}
+                <span class="badge bg-info me-2">团队通知</span>
+                {% endif %}
                 {% if announcement.is_top %}
                 <span class="badge bg-danger me-2">置顶</span>
                 {% endif %}
@@ -141,14 +146,17 @@
                 <span class="info-label">发布日期</span>
                 <span class="info-value">{{ announcement.publish_date|date:"Y-m-d" }}</span>
             </div>
+            {% if notification_type == 'announcement' %}
             <div class="info-item">
                 <span class="info-label">失效日期</span>
                 <span class="info-value">{{ announcement.expiry_date|date:"Y-m-d"|default:"永久有效" }}</span>
             </div>
+            {% endif %}
             <div class="info-item">
                 <span class="info-label">发布人</span>
                 <span class="info-value">{{ announcement.publisher.get_full_name|default:announcement.publisher.username }}</span>
             </div>
+            {% if notification_type == 'announcement' %}
             <div class="info-item">
                 <span class="info-label">查看次数</span>
                 <span class="info-value">{{ announcement.view_count }} 次</span>
@@ -163,15 +171,27 @@
                     {% endif %}
                 </span>
             </div>
+            {% else %}
+            <div class="info-item">
+                <span class="info-label">已读状态</span>
+                <span class="info-value">
+                    {% if announcement.is_read %}
+                    <span class="badge bg-success">已读</span>
+                    {% else %}
+                    <span class="badge bg-warning">未读</span>
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
         </div>
     </div>
 
     <div class="info-card">
-        <h5>公告内容</h5>
+        <h5>{% if notification_type == 'team_notification' %}通知内容{% else %}公告内容{% endif %}</h5>
         <div class="announcement-content">
             {{ announcement.content|safe|linebreaks }}
         </div>
-        {% if announcement.attachment %}
+        {% if notification_type == 'announcement' and announcement.attachment %}
         <div class="mt-3">
             <span class="info-label">附件</span>
             <div class="mt-2">
@@ -181,9 +201,16 @@
             </div>
         </div>
         {% endif %}
+        {% if notification_type == 'team_notification' and announcement.action_url %}
+        <div class="mt-3">
+            <a href="{{ announcement.action_url }}" class="btn btn-sm btn-primary" target="_blank">
+                <i class="bi bi-box-arrow-up-right"></i> 查看详情
+            </a>
+        </div>
+        {% endif %}
     </div>
 
-    {% if read_records %}
+    {% if notification_type == 'announcement' and read_records %}
     <div class="info-card">
         <h5>阅读记录 (最近20条)</h5>
         {% for record in read_records %}

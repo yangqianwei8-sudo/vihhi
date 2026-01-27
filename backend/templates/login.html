@@ -401,22 +401,17 @@
                 <div class="logo-subtitle">信息化管理平台</div>
             </div>
 
-            {# 消息提示区域 #}
+            {# 消息提示区域 - 只显示登录相关的错误消息 #}
             {% if messages %}
             <div class="messages">
                 {% for message in messages %}
-                <div class="alert alert-{{ message.tags|default:'info' }}">
-                    {% if message.tags == 'error' %}
-                        <i class="bi bi-x-circle"></i>
-                    {% elif message.tags == 'success' %}
-                        <i class="bi bi-check-circle"></i>
-                    {% elif message.tags == 'warning' %}
-                        <i class="bi bi-exclamation-triangle"></i>
-                    {% else %}
-                        <i class="bi bi-info-circle"></i>
-                    {% endif %}
+                {# 只显示错误消息（登录失败等），不显示其他系统消息 #}
+                {% if message.tags == 'error' %}
+                <div class="alert alert-{{ message.tags }}">
+                    <i class="bi bi-x-circle"></i>
                     <span>{{ message }}</span>
                 </div>
+                {% endif %}
                 {% endfor %}
             </div>
             {% endif %}

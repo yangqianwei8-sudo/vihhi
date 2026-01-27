@@ -1,32 +1,31 @@
 {% extends "shared/list_page_base.html" %}
-
-{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
-
 {% load static %}
 
+{% block pm_title %}{{ page_title|default:"联系人信息变更" }}{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有联系人信息变更申请{% endblock pm_subtitle %}
 
 {% block list_filters_content %}
-  <div class="col-md-3">
-    <label class="form-label">联系人</label>
-    <select name="contact" class="list-filter-input">
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">联系人</label>
+    <select name="contact" class="form-select form-select-sm">
         <option value="">全部联系人</option>
         {% for c in contacts %}
         <option value="{{ c.id }}" {% if contact_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }} ({{ c.client.name }})</option>
         {% endfor %}
       </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">变更类型</label>
-    <select name="change_type" class="list-filter-input">
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">变更类型</label>
+    <select name="change_type" class="form-select form-select-sm">
         <option value="">全部类型</option>
         {% for value, label in change_type_choices %}
         <option value="{{ value }}" {% if change_type == value %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">审批状态</label>
-    <select name="approval_status" class="list-filter-input">
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">审批状态</label>
+    <select name="approval_status" class="form-select form-select-sm">
         <option value="">全部</option>
         {% for value, label in approval_status_choices %}
         <option value="{{ value }}" {% if approval_status == value %}selected{% endif %}>{{ label }}</option>
@@ -60,32 +59,31 @@
         <td>{{ change.get_change_type_display }}</td>
         <td>{{ change.change_reason|truncatewords:10 }}</td>
         <td>
-          <span class="list-badge list-badge-{{ change.approval_status }}">
-            {{ change.get_approval_status_display }}
-          </span>
+          <span class="badge bg-secondary">{{ change.get_approval_status_display }}</span>
         </td>
         <td>{{ change.created_by.get_full_name|default:change.created_by.username }}</td>
-        <td style="color: #666666;">{{ change.created_time|date:"Y-m-d H:i" }}</td>
+        <td class="text-muted">{{ change.created_time|date:"Y-m-d H:i" }}</td>
         <td>
-          <div class="list-actions">
-            <a href="{% url 'business_pages:contact_info_change_detail' change.id %}" class="list-btn" title="查看">查看</a>
+          <div class="list-page-table-actions">
+            <a href="{% url 'business_pages:contact_info_change_detail' change.id %}" class="action-view" title="查看">
+              <i class="bi bi-eye"></i>
+            </a>
           </div>
         </td>
+        {% if column_settings_btn|default:False %}<td></td>{% endif %}
       </tr>
       {% empty %}
       <tr>
-        <td colspan="8" class="list-empty">
-          <div class="list-empty-icon">▢</div>
+        <td colspan="{% if column_settings_btn|default:False %}9{% else %}8{% endif %}" class="list-empty">
+          <div class="list-empty-icon">📋</div>
           <div class="list-empty-text">暂无人员信息变更申请记录</div>
-          <div class="list-empty-hint">请创建第一个人员信息变更申请开始使用</div>
+          {% block list_empty_hint %}
+          <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">请创建第一个人员信息变更申请开始使用</p>
+          {% endblock list_empty_hint %}
         </td>
       </tr>
       {% endfor %}
 {% endblock list_table_rows %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-{% endblock extra_css %}
 
 {% block breadcrumb_items %}
 <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>

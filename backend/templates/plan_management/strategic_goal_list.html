@@ -111,8 +111,10 @@
   <th>关联目标</th>
   <th>负责人</th>
   <th>时间范围</th>
-  <th>进度</th>
-  <th>状态</th>
+  <th>目标值</th>
+  <th>已完成</th>
+  <th>完成率</th>
+  <th>进度状态</th>
   <th>操作</th>
 {% endblock list_table_headers %}
 
@@ -151,22 +153,34 @@
         </small>
       </td>
       <td>
+        <strong>{{ goal.target_value|floatformat:2 }}</strong>
+        {% if goal.indicator_unit %}<small class="text-muted"> {{ goal.indicator_unit }}</small>{% endif %}
+      </td>
+      <td>
+        <strong>{{ goal.current_value|floatformat:2 }}</strong>
+        {% if goal.indicator_unit %}<small class="text-muted"> {{ goal.indicator_unit }}</small>{% endif %}
+      </td>
+      <td>
         <div class="d-flex align-items-center gap-2">
-          <div class="flex-grow-1" style="height: 8px; background: #F0F0F0;">
-            <div style="height: 100%; background: #333333; width: {{ goal.completion_rate }}%;"></div>
+          <div class="flex-grow-1" style="height: 8px; background: #F0F0F0; border-radius: 4px;">
+            <div style="height: 100%; background: #28a745; width: {{ goal.completion_rate }}%; border-radius: 4px;"></div>
           </div>
-          <small class="text-muted">{{ goal.completion_rate }}%</small>
+          <strong style="min-width: 50px;">{{ goal.completion_rate|floatformat:1 }}%</strong>
         </div>
       </td>
       <td>
-        <span class="badge">{{ goal.get_status_display }}</span>
+        {% if goal.progress_status %}
+          <span class="badge {{ goal.progress_status_class }}">{{ goal.progress_status_label }}</span>
+        {% else %}
+          <span class="badge bg-secondary">-</span>
+        {% endif %}
       </td>
       <td>
         <div class="list-page-table-actions">
           <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="action-view" title="查看">
             <i class="bi bi-eye"></i>
           </a>
-          {% if goal.status in 'draft,published' %}
+          {% if goal.status == 'draft' %}
           <span class="action-separator">|</span>
           <a href="{% url 'plan_pages:strategic_goal_edit' goal.id %}" class="action-edit" title="编辑">
             <i class="bi bi-pencil"></i>
@@ -178,7 +192,7 @@
     {% endfor %}
   {% else %}
     <tr>
-      <td colspan="12" class="list-empty">
+      <td colspan="13" class="list-empty">
         <div class="list-empty-icon">🎯</div>
         <div class="list-empty-text">暂无目标数据</div>
       </td>

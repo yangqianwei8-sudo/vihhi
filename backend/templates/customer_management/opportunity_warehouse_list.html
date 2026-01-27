@@ -1,94 +1,116 @@
 {% extends "shared/list_page_base.html" %}
-
-{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
-
 {% load static %}
 
+{% comment %}
+入库列表页面模板 (Opportunity Warehouse List Template)
 
+功能说明：
+- 展示入库申请记录的列表页面
+- 支持按关联商机、状态等筛选
+- 支持入库申请的查看操作
+{% endcomment %}
+
+{# 主标题和副标题 #}
+{% block pm_title %}{{ page_title|default:"入库列表" }}{% endblock pm_title %}
+{% block pm_subtitle %}{{ description|default:"管理所有入库申请记录" }}{% endblock pm_subtitle %}
+
+{# 筛选器区域 #}
 {% block list_filters_content %}
-  <div class="col-md-3">
-    <label class="form-label">关联商机</label>
-    <select name="opportunity_id" class="list-filter-input" id="opportunitySelect">
-        <option value="">全部商机</option>
-        {% for opp in opportunities %}
-        <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>{{ opp.name }}</option>
-        {% endfor %}
-      </select>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">关联商机</label>
+    <select name="opportunity_id" class="form-select" id="opportunitySelect">
+      <option value="">全部商机</option>
+      {% for opp in opportunities %}
+      <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>{{ opp.name }}</option>
+      {% endfor %}
+    </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">状态</label>
-    <select name="status" class="list-filter-input" id="statusSelect">
-        <option value="">全部状态</option>
-        <option value="pending" {% if status == 'pending' %}selected{% endif %}>待审批</option>
-        <option value="approved" {% if status == 'approved' %}selected{% endif %}>已审批</option>
-        <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>已拒绝</option>
-      </select>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">状态</label>
+    <select name="status" class="form-select" id="statusSelect">
+      <option value="">全部状态</option>
+      <option value="pending" {% if status == 'pending' %}selected{% endif %}>待审批</option>
+      <option value="approved" {% if status == 'approved' %}selected{% endif %}>已审批</option>
+      <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>已拒绝</option>
+    </select>
   </div>
 {% endblock list_filters_content %}
+
+{# 表格头部 #}
 {% block list_table_headers %}
-<th>#</th>
-        <th>入库申请编号</th>
-        <th>关联商机</th>
-        <th>客户</th>
-        <th>申请日期</th>
-        <th>状态</th>
-        <th>申请人</th>
-        <th>操作</th>
+  <th>#</th>
+  <th>入库申请编号</th>
+  <th>关联商机</th>
+  <th>客户</th>
+  <th>申请日期</th>
+  <th>状态</th>
+  <th>申请人</th>
+  <th>操作</th>
 {% endblock list_table_headers %}
+
+{# 表格行 #}
 {% block list_table_rows %}
-{% for item in page_obj %}
-      <tr>
-        <td>{{ forloop.counter0|add:page_obj.start_index }}</td>
-        <td><code>{{ item.application_number|default:"-" }}</code></td>
-        <td>
-          {% if item.opportunity %}
-          <a href="{% url 'opportunity_pages:opportunity_detail' item.opportunity.id %}">
-            {{ item.opportunity.name }}
+  {% if page_obj %}
+    {% for item in page_obj %}
+    <tr>
+      <td>{{ forloop.counter0|add:page_obj.start_index }}</td>
+      <td><code>{{ item.application_number|default:"-" }}</code></td>
+      <td>
+        {% if item.opportunity %}
+        <a href="{% url 'opportunity_pages:opportunity_detail' item.opportunity.id %}" class="text-dark text-decoration-none">
+          {{ item.opportunity.name }}
+        </a>
+        {% else %}
+        <span class="text-muted">-</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if item.opportunity and item.opportunity.client %}
+        {{ item.opportunity.client.name }}
+        {% else %}
+        <span class="text-muted">-</span>
+        {% endif %}
+      </td>
+      <td>{{ item.application_date|date:"Y-m-d"|default:"-" }}</td>
+      <td>
+        {% if item.status == 'pending' %}
+        <span class="badge bg-warning text-dark">待审批</span>
+        {% elif item.status == 'approved' %}
+        <span class="badge bg-success">已审批</span>
+        {% elif item.status == 'rejected' %}
+        <span class="badge bg-danger">已拒绝</span>
+        {% else %}
+        <span class="badge bg-secondary">{{ item.status|default:"-" }}</span>
+        {% endif %}
+      </td>
+      <td>{{ item.created_by.get_full_name|default:item.created_by.username|default:"-" }}</td>
+      <td>
+        <div class="list-page-table-actions">
+          <a href="#" class="action-view" title="查看详情">
+            <i class="bi bi-eye"></i>
           </a>
-          {% else %}
-          <span style="color: #999999;">-</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if item.opportunity and item.opportunity.client %}
-          {{ item.opportunity.client.name }}
-          {% else %}
-          <span style="color: #999999;">-</span>
-          {% endif %}
-        </td>
-        <td>{{ item.application_date|date:"Y-m-d"|default:"-" }}</td>
-        <td>
-          <span class="list-badge list-badge-{{ item.status }}">
-            {{ item.status|default:"-" }}
-          </span>
-        </td>
-        <td>{{ item.created_by.get_full_name|default:item.created_by.username|default:"-" }}</td>
-        <td>
-          <div class="list-actions">
-            <a href="#" class="list-btn" title="查看">查看</a>
-          </div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="8" class="list-empty">
-          <div class="list-empty-icon">▢</div>
-          <div class="list-empty-text">暂无入库申请记录</div>
-          <div class="list-empty-hint">请创建第一个入库申请开始使用</div>
-        </td>
-      </tr>
-      {% endfor %}
+        </div>
+      </td>
+      {# 列设置单元格 - 保持列对齐 #}
+      {% if column_settings_btn|default:False %}<td></td>{% endif %}
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="{% if column_settings_btn|default:False %}9{% else %}8{% endif %}" class="list-empty">
+        <div class="list-empty-icon">📥</div>
+        <div class="list-empty-text">暂无入库申请记录</div>
+        {% block list_empty_hint %}
+        <div class="list-empty-hint">请创建第一个入库申请开始使用</div>
+        {% endblock list_empty_hint %}
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+    <tr>
+      <td colspan="{% if column_settings_btn|default:False %}9{% else %}8{% endif %}" class="list-empty">
+        <div class="list-empty-icon">📥</div>
+        <div class="list-empty-text">暂无数据</div>
+      </td>
+    </tr>
+  {% endif %}
 {% endblock list_table_rows %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-
-{% endblock extra_css %}
-
-{% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'business_pages:opportunity_management' %}">商机管理</a></li>
-<li class="breadcrumb-item active" aria-current="page">入库列表</li>
-{% endblock breadcrumb_items %}
-
-
-

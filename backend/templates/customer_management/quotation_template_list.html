@@ -1,24 +1,22 @@
 {% extends "shared/list_page_base.html" %}
+{% load static %}
 
-{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
-
-
-
-
+{% block pm_title %}{{ page_title|default:"报价模板" }}{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有报价模板{% endblock pm_subtitle %}
 
 {% block list_filters_content %}
-  <div class="col-md-3">
-    <label class="form-label">规则类型</label>
-    <select name="rule_type" class="list-filter-input">
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">规则类型</label>
+    <select name="rule_type" class="form-select form-select-sm">
         <option value="">全部</option>
         {% for code, name in rule_type_choices %}
         <option value="{{ code }}" {% if rule_type == code %}selected{% endif %}>{{ name }}</option>
         {% endfor %}
       </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">状态</label>
-    <select name="is_active" class="list-filter-input">
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">状态</label>
+    <select name="is_active" class="form-select form-select-sm">
         <option value="">全部</option>
         <option value="1" {% if is_active == '1' %}selected{% endif %}>启用</option>
         <option value="0" {% if is_active == '0' %}selected{% endif %}>禁用</option>
@@ -42,7 +40,7 @@
       <tr>
         <td><strong>{{ rule.name }}</strong></td>
         <td>
-          <span class="list-badge">{{ rule.get_rule_type_display }}</span>
+          <span class="badge bg-secondary">{{ rule.get_rule_type_display }}</span>
         </td>
         <td>{{ rule.project_type|default:"-" }}</td>
         <td>{{ rule.service_type|default:"-" }}</td>
@@ -57,32 +55,40 @@
         </td>
         <td>{{ rule.adjustment_factor }}</td>
         <td>
-          <span class="list-badge {% if rule.is_active %}list-badge-active{% else %}list-badge-inactive{% endif %}">
+          <span class="badge {% if rule.is_active %}bg-success{% else %}bg-secondary{% endif %}">
             {% if rule.is_active %}启用{% else %}禁用{% endif %}
           </span>
         </td>
         <td>{{ rule.created_by.get_full_name|default:rule.created_by.username }}</td>
         <td>{{ rule.created_time|date:"Y-m-d H:i" }}</td>
         <td>
-          <div class="list-actions">
-            <a href="{% url 'business_pages:quotation_template_edit' rule.id %}" class="list-btn" title="编辑">编辑</a>
-            <a href="{% url 'business_pages:quotation_template_delete' rule.id %}" class="list-btn" title="删除">删除</a>
+          <div class="list-page-table-actions">
+            <a href="{% url 'business_pages:quotation_template_edit' rule.id %}" class="action-edit" title="编辑">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <span class="action-separator">|</span>
+            <a href="{% url 'business_pages:quotation_template_delete' rule.id %}" class="action-delete" title="删除">
+              <i class="bi bi-trash"></i>
+            </a>
           </div>
         </td>
+        {% if column_settings_btn|default:False %}<td></td>{% endif %}
       </tr>
       {% if rule.description %}
       <tr>
-        <td colspan="10" style="padding-left: 40px; color: #666666; font-size: 12px;">
+        <td colspan="{% if column_settings_btn|default:False %}11{% else %}10{% endif %}" style="padding-left: 40px; color: #666666; font-size: 12px;">
           <i class="bi bi-info-circle"></i> {{ rule.description|truncatewords:30 }}
         </td>
       </tr>
       {% endif %}
       {% empty %}
       <tr>
-        <td colspan="10" class="list-empty">
-          <div class="list-empty-icon">▢</div>
+        <td colspan="{% if column_settings_btn|default:False %}11{% else %}10{% endif %}" class="list-empty">
+          <div class="list-empty-icon">📋</div>
           <div class="list-empty-text">暂无报价模板</div>
-          <div class="list-empty-hint">请创建第一个模板开始使用</div>
+          {% block list_empty_hint %}
+          <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">请创建第一个模板开始使用</p>
+          {% endblock list_empty_hint %}
         </td>
       </tr>
       {% endfor %}

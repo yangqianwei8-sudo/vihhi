@@ -17,6 +17,99 @@ from datetime import datetime, timedelta, date
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.apps.system_management.models import User, Department
 
+
+def calculate_goal_progress_status(goal):
+    """计算目标进度状态（辅助函数）"""
+    from datetime import date
+    today = date.today()
+    completion_progress = float(goal.completion_rate) if goal.completion_rate else 0
+    
+    if goal.end_date and goal.end_date < today:
+        # 已过期
+        if completion_progress >= 100:
+            return {'status': 'completed', 'label': '已完成', 'class': 'bg-success'}
+        else:
+            return {'status': 'overdue', 'label': '已逾期', 'class': 'bg-danger'}
+    elif goal.start_date and goal.start_date > today:
+        # 未开始
+        return {'status': 'not_started', 'label': '未开始', 'class': 'bg-secondary'}
+    else:
+        # 进行中，计算时间进度并比较完成进度
+        if goal.start_date and goal.end_date:
+            total_days = (goal.end_date - goal.start_date).days + 1
+            if total_days > 0:
+                elapsed_days = max((today - goal.start_date).days + 1, 0)
+                time_progress = min((elapsed_days / total_days) * 100, 100)
+            else:
+                time_progress = 0
+        else:
+            time_progress = 0
+        
+        # 比较完成进度和时间进度
+        progress_diff = completion_progress - time_progress
+        if completion_progress >= 100:
+            return {'status': 'ahead_completed', 'label': '提前完成', 'class': 'bg-success'}
+        elif progress_diff >= 10:
+            return {'status': 'ahead', 'label': '提前', 'class': 'bg-info'}
+        elif progress_diff >= -10:
+            return {'status': 'on_track', 'label': '正常', 'class': 'bg-primary'}
+        elif progress_diff >= -20:
+            return {'status': 'behind', 'label': '滞后', 'class': 'bg-warning'}
+        else:
+            return {'status': 'seriously_behind', 'label': '严重滞后', 'class': 'bg-danger'}
+
+
+def calculate_plan_progress_status(plan):
+    """计算计划进度状态（辅助函数）"""
+    from django.utils import timezone
+    from datetime import date
+    now = timezone.now()
+    today = now.date()
+    
+    # 获取进度百分比
+    progress = float(getattr(plan, 'progress', 0) or 0)
+    
+    if plan.end_time:
+        end_date = plan.end_time.date() if hasattr(plan.end_time, 'date') else plan.end_time
+        if end_date < today:
+            # 已过期
+            if progress >= 100:
+                return {'status': 'completed', 'label': '已完成', 'class': 'bg-success'}
+            else:
+                return {'status': 'overdue', 'label': '已逾期', 'class': 'bg-danger'}
+    
+    if plan.start_time:
+        start_date = plan.start_time.date() if hasattr(plan.start_time, 'date') else plan.start_time
+        if start_date > today:
+            # 未开始
+            return {'status': 'not_started', 'label': '未开始', 'class': 'bg-secondary'}
+    
+    # 进行中，计算时间进度并比较完成进度
+    if plan.start_time and plan.end_time:
+        start_date = plan.start_time.date() if hasattr(plan.start_time, 'date') else plan.start_time
+        end_date = plan.end_time.date() if hasattr(plan.end_time, 'date') else plan.end_time
+        total_days = (end_date - start_date).days + 1
+        if total_days > 0:
+            elapsed_days = max((today - start_date).days + 1, 0)
+            time_progress = min((elapsed_days / total_days) * 100, 100)
+        else:
+            time_progress = 0
+    else:
+        time_progress = 0
+    
+    # 比较完成进度和时间进度
+    progress_diff = progress - time_progress
+    if progress >= 100:
+        return {'status': 'ahead_completed', 'label': '提前完成', 'class': 'bg-success'}
+    elif progress_diff >= 10:
+        return {'status': 'ahead', 'label': '提前', 'class': 'bg-info'}
+    elif progress_diff >= -10:
+        return {'status': 'on_track', 'label': '正常', 'class': 'bg-primary'}
+    elif progress_diff >= -20:
+        return {'status': 'behind', 'label': '滞后', 'class': 'bg-warning'}
+    else:
+        return {'status': 'seriously_behind', 'label': '严重滞后', 'class': 'bg-danger'}
+
 # P1: 兼容导入，避免 core.views 变更导致 plan_management 无法启动
 try:
     from backend.core.views import _permission_granted, _build_full_top_nav, _build_unified_sidebar_nav
@@ -385,15 +478,102 @@ def plan_management_home(request):
     
     context = {}
     
+    # ========== 获取筛选参数 ==========
+    filter_department_id = request.GET.get('filter_department', '').strip()
+    filter_responsible_person_id = request.GET.get('filter_responsible_person', '').strip()
+    filter_start_date = request.GET.get('filter_start_date', '').strip()
+    filter_end_date = request.GET.get('filter_end_date', '').strip()
+    
+    # 将筛选参数传递到context
+    context['filter_department_id'] = filter_department_id
+    context['filter_responsible_person_id'] = filter_responsible_person_id
+    context['filter_start_date'] = filter_start_date
+    context['filter_end_date'] = filter_end_date
+    
+    # 获取所有部门和用户（用于筛选下拉框）
+    from backend.apps.plan_management.models import Plan, StrategicGoal
+    all_departments = Department.objects.filter(is_active=True).order_by('order', 'name')
+    context['all_departments'] = all_departments
+    
+    # 根据部门筛选用户
+    filter_users = User.objects.filter(is_active=True)
+    if filter_department_id:
+        try:
+            filter_users = filter_users.filter(department_id=filter_department_id)
+        except ValueError:
+            pass
+    context['filter_users'] = filter_users.order_by('first_name', 'last_name', 'username')
+    
+    # 辅助函数：应用筛选条件到查询集
+    def apply_filters_to_queryset(qs, model_type='plan'):
+        """应用筛选条件到查询集"""
+        if model_type == 'plan':
+            if filter_department_id:
+                try:
+                    qs = qs.filter(responsible_department_id=filter_department_id)
+                except ValueError:
+                    pass
+            if filter_responsible_person_id:
+                try:
+                    qs = qs.filter(responsible_person_id=filter_responsible_person_id)
+                except ValueError:
+                    pass
+            if filter_start_date:
+                try:
+                    start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
+                    qs = qs.filter(created_time__gte=start_date)
+                except ValueError:
+                    pass
+            if filter_end_date:
+                try:
+                    end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
+                    # 包含结束日期当天
+                    end_datetime = datetime.combine(end_date, datetime.max.time())
+                    qs = qs.filter(created_time__lte=end_datetime)
+                except ValueError:
+                    pass
+        elif model_type == 'goal':
+            if filter_department_id:
+                try:
+                    qs = qs.filter(responsible_department_id=filter_department_id)
+                except ValueError:
+                    pass
+            if filter_responsible_person_id:
+                try:
+                    qs = qs.filter(responsible_person_id=filter_responsible_person_id)
+                except ValueError:
+                    pass
+            if filter_start_date:
+                try:
+                    start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
+                    qs = qs.filter(created_time__gte=start_date)
+                except ValueError:
+                    pass
+            if filter_end_date:
+                try:
+                    end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
+                    # 包含结束日期当天
+                    end_datetime = datetime.combine(end_date, datetime.max.time())
+                    qs = qs.filter(created_time__lte=end_datetime)
+                except ValueError:
+                    pass
+        return qs
+    
     try:
         # ========== P2-5: 导入所有 service ==========
         from backend.apps.plan_management.services.goal_stats_service import get_user_goal_stats, get_company_goal_stats, get_user_collaboration_goal_stats
         from backend.apps.plan_management.services.plan_stats_service import get_user_plan_stats, get_company_plan_stats, get_user_collaboration_plan_stats
-        from backend.apps.plan_management.services.todo_service import get_user_todos
-        from backend.apps.plan_management.services.risk_query_service import get_user_risk_items
+        from backend.apps.plan_management.services.todo_service import get_user_todos, get_responsible_todos
+        from backend.apps.plan_management.services.risk_query_service import get_user_risk_items, get_responsible_risk_items, get_subordinates_risk_items
         
         # ========== 第一行：目标中心（个人优先）==========
-        goal_stats = get_user_goal_stats(request.user)
+        goal_stats = get_user_goal_stats(
+            request.user,
+            filter_department_id=filter_department_id,
+            filter_responsible_person_id=filter_responsible_person_id,
+            filter_start_date=filter_start_date,
+            filter_end_date=filter_end_date
+        )
         
         goal_cards = [{
             'label': '我的目标',
@@ -408,7 +588,13 @@ def plan_management_home(request):
         context['goal_stats'] = goal_stats
         
         # ========== 第二行：我的计划执行 ==========
-        plan_stats = get_user_plan_stats(request.user)
+        plan_stats = get_user_plan_stats(
+            request.user,
+            filter_department_id=filter_department_id,
+            filter_responsible_person_id=filter_responsible_person_id,
+            filter_start_date=filter_start_date,
+            filter_end_date=filter_end_date
+        )
         
         plan_cards = [{
             'label': '我的计划',
@@ -423,8 +609,20 @@ def plan_management_home(request):
         context['plan_stats'] = plan_stats
         
         # ========== 我协作的统计 ==========
-        collaboration_plan_stats = get_user_collaboration_plan_stats(request.user)
-        collaboration_goal_stats = get_user_collaboration_goal_stats(request.user)
+        collaboration_plan_stats = get_user_collaboration_plan_stats(
+            request.user,
+            filter_department_id=filter_department_id,
+            filter_responsible_person_id=filter_responsible_person_id,
+            filter_start_date=filter_start_date,
+            filter_end_date=filter_end_date
+        )
+        collaboration_goal_stats = get_user_collaboration_goal_stats(
+            request.user,
+            filter_department_id=filter_department_id,
+            filter_responsible_person_id=filter_responsible_person_id,
+            filter_start_date=filter_start_date,
+            filter_end_date=filter_end_date
+        )
         
         collaboration_plan_cards = [{
             'label': '我协作的计划',
@@ -451,7 +649,13 @@ def plan_management_home(request):
         
         # ========== 第三行：待办 & 风险 ==========
         # 我的待办（左）
-        user_todos = get_user_todos(request.user)
+        user_todos = get_user_todos(
+            request.user,
+            filter_department_id=filter_department_id,
+            filter_responsible_person_id=filter_responsible_person_id,
+            filter_start_date=filter_start_date,
+            filter_end_date=filter_end_date
+        )
         
         # 按类型分类待办事项（本周待办、本月待办、今日待办）
         from django.utils import timezone
@@ -556,7 +760,14 @@ def plan_management_home(request):
         context['user_todos_count'] = len(user_todos)
         
         # 风险提醒（右）
-        risk_items = get_user_risk_items(request.user, limit=5)
+        risk_items = get_user_risk_items(
+            request.user,
+            limit=5,
+            filter_department_id=filter_department_id,
+            filter_responsible_person_id=filter_responsible_person_id,
+            filter_start_date=filter_start_date,
+            filter_end_date=filter_end_date
+        )
         context['risk_items'] = risk_items
         context['risk_items_count'] = len(risk_items)
         
@@ -743,19 +954,37 @@ def plan_management_home(request):
             context['subordinate_collaboration_goal_summary'] = subordinate_collaboration_goal_summary
             
             # "全部" = 我负责的 + 下属负责的 + 我协作的 + 下属协作的
-            all_plan_stats = {
-                'total': plan_stats['total'] + subordinate_plan_summary['total'] + collaboration_plan_stats['total'] + subordinate_collaboration_plan_summary['total'],
-                'in_progress': plan_stats['in_progress'] + subordinate_plan_summary['in_progress'] + collaboration_plan_stats['in_progress'] + subordinate_collaboration_plan_summary['in_progress'],
-                'today': plan_stats['today'] + subordinate_plan_summary['today'] + collaboration_plan_stats['today'] + subordinate_collaboration_plan_summary['today'],
-                'overdue': plan_stats['overdue'] + subordinate_plan_summary['overdue'] + collaboration_plan_stats['overdue'] + subordinate_collaboration_plan_summary['overdue'],
-            }
-            
-            all_goal_stats = {
-                'total': goal_stats['total'] + subordinate_goal_summary['total'] + collaboration_goal_stats['total'] + subordinate_collaboration_goal_summary['total'],
-                'in_progress': goal_stats['in_progress'] + subordinate_goal_summary['in_progress'] + collaboration_goal_stats['in_progress'] + subordinate_collaboration_goal_summary['in_progress'],
-                'overdue': goal_stats['overdue'] + subordinate_goal_summary['overdue'] + collaboration_goal_stats['overdue'] + subordinate_collaboration_goal_summary['overdue'],
-                'this_month': goal_stats['this_month'] + subordinate_goal_summary['this_month'] + collaboration_goal_stats['this_month'] + subordinate_collaboration_goal_summary['this_month'],
-            }
+            # 但如果筛选了负责人或部门，只显示筛选后的数据（不合并下属和协作数据）
+            if filter_responsible_person_id or filter_department_id:
+                # 有筛选条件时，"全部"只显示筛选后的数据
+                all_plan_stats = {
+                    'total': plan_stats['total'] + collaboration_plan_stats['total'],
+                    'in_progress': plan_stats['in_progress'] + collaboration_plan_stats['in_progress'],
+                    'today': plan_stats['today'] + collaboration_plan_stats['today'],
+                    'overdue': plan_stats['overdue'] + collaboration_plan_stats['overdue'],
+                }
+                
+                all_goal_stats = {
+                    'total': goal_stats['total'] + collaboration_goal_stats['total'],
+                    'in_progress': goal_stats['in_progress'] + collaboration_goal_stats['in_progress'],
+                    'overdue': goal_stats['overdue'] + collaboration_goal_stats['overdue'],
+                    'this_month': goal_stats['this_month'] + collaboration_goal_stats['this_month'],
+                }
+            else:
+                # 没有筛选条件时，合并所有数据
+                all_plan_stats = {
+                    'total': plan_stats['total'] + subordinate_plan_summary['total'] + collaboration_plan_stats['total'] + subordinate_collaboration_plan_summary['total'],
+                    'in_progress': plan_stats['in_progress'] + subordinate_plan_summary['in_progress'] + collaboration_plan_stats['in_progress'] + subordinate_collaboration_plan_summary['in_progress'],
+                    'today': plan_stats['today'] + subordinate_plan_summary['today'] + collaboration_plan_stats['today'] + subordinate_collaboration_plan_summary['today'],
+                    'overdue': plan_stats['overdue'] + subordinate_plan_summary['overdue'] + collaboration_plan_stats['overdue'] + subordinate_collaboration_plan_summary['overdue'],
+                }
+                
+                all_goal_stats = {
+                    'total': goal_stats['total'] + subordinate_goal_summary['total'] + collaboration_goal_stats['total'] + subordinate_collaboration_goal_summary['total'],
+                    'in_progress': goal_stats['in_progress'] + subordinate_goal_summary['in_progress'] + collaboration_goal_stats['in_progress'] + subordinate_collaboration_goal_summary['in_progress'],
+                    'overdue': goal_stats['overdue'] + subordinate_goal_summary['overdue'] + collaboration_goal_stats['overdue'] + subordinate_collaboration_goal_summary['overdue'],
+                    'this_month': goal_stats['this_month'] + subordinate_goal_summary['this_month'] + collaboration_goal_stats['this_month'] + subordinate_collaboration_goal_summary['this_month'],
+                }
             
             context['all_plan_stats'] = all_plan_stats
             context['all_goal_stats'] = all_goal_stats
@@ -904,6 +1133,14 @@ def plan_management_home(request):
         context.setdefault('can_view_management', False)
         context.setdefault('is_department_manager', False)
         context.setdefault('subordinates_count', 0)
+        # 确保 is_manager 变量被定义
+        is_manager = False
+        # 确保 subordinates 变量被定义
+        subordinates = User.objects.none()
+        # 确保 risk_items 变量被定义
+        risk_items = []
+        # 确保 all_todo_items 变量被定义
+        all_todo_items = []
         context.setdefault('subordinate_plan_stats', [])
         context.setdefault('subordinate_goal_stats', [])
         context.setdefault('all_plan_stats', {'total': 0, 'in_progress': 0, 'today': 0, 'overdue': 0})
@@ -925,73 +1162,29 @@ def plan_management_home(request):
         context.setdefault('subordinate_collaboration_plan_summary', {'total': 0, 'in_progress': 0, 'today': 0, 'overdue': 0})
         context.setdefault('subordinate_collaboration_goal_summary', {'total': 0, 'in_progress': 0, 'overdue': 0, 'this_month': 0})
         context.setdefault('category_data', {
-            'all': {'plan_status_dist': None, 'goal_status_dist': None, 'risk_items': [], 'todo_items': [], 'my_work': {}, 'recent_activities': {}},
-            'mine': {'plan_status_dist': None, 'goal_status_dist': None, 'risk_items': [], 'todo_items': [], 'my_work': {}, 'recent_activities': {}},
-            'collaboration': {'plan_status_dist': None, 'goal_status_dist': None, 'risk_items': [], 'todo_items': [], 'my_work': {}, 'recent_activities': {}},
+            'all': {'plan_status_dist': None, 'goal_status_dist': None, 'risk_items': [], 'todo_items': [], 'my_work': {}},
+            'mine': {'plan_status_dist': None, 'goal_status_dist': None, 'risk_items': [], 'todo_items': [], 'my_work': {}},
+            'collaboration': {'plan_status_dist': None, 'goal_status_dist': None, 'risk_items': [], 'todo_items': [], 'my_work': {}},
         })
     
     # ========== 安全字段检查（统一获取，避免重复）==========
     plan_fields = {f.name for f in Plan._meta.get_fields()}
     goal_fields = {f.name for f in StrategicGoal._meta.get_fields()}
     
-    # ========== 计划状态分布（用于图表）==========
-    # 个人计划：owner = request.user 或 responsible_person = request.user 或 created_by = request.user
-    # （兼容旧数据：有些个人计划的 owner 可能为 None）
+    # ========== 计划状态分布（已清除）==========
+    context['plan_status_dist'] = None
+    
+    # ========== 目标状态分布（已清除）==========
+    context['goal_status_dist'] = None
+    
+    # 保留状态标签映射用于其他用途（如果需要）
     from django.db.models import Q
-    plan_filter_kwargs = {}
-    if 'level' in plan_fields:
-        plan_filter_kwargs['level'] = 'personal'
-    
-    # 构建查询条件：owner、responsible_person 或 created_by 是当前用户
-    user_plan_conditions = Q()
-    if 'owner' in plan_fields:
-        user_plan_conditions |= Q(owner=request.user)
-    if 'responsible_person' in plan_fields:
-        user_plan_conditions |= Q(responsible_person=request.user)
-    if 'created_by' in plan_fields:
-        user_plan_conditions |= Q(created_by=request.user)
-    
-    user_plans_qs = Plan.objects.filter(**plan_filter_kwargs).filter(user_plan_conditions) if plan_filter_kwargs and user_plan_conditions else Plan.objects.none()
-    plan_status_rows = user_plans_qs.values('status').annotate(count=Count('id')) if plan_filter_kwargs and user_plan_conditions else []
-    
-    # 兼容：拿到"状态码 -> 显示名"的映射
     plan_status_label_map = {}
     try:
-        # Django choices 常见写法：STATUS_CHOICES = [(code,label),...]
         for code, label in getattr(Plan, 'STATUS_CHOICES', Plan._meta.get_field('status').choices):
             plan_status_label_map[code] = label
     except Exception:
-        # 兜底：没有 choices 就用原值
         plan_status_label_map = {}
-    
-    plan_status_dist = {}
-    for row in plan_status_rows:
-        code = row['status']
-        cnt = row['count']
-        plan_status_dist[str(code)] = {
-            'label': plan_status_label_map.get(code, str(code)),
-            'count': cnt
-        }
-    context['plan_status_dist'] = plan_status_dist or None
-    
-    # ========== 目标状态分布（用于图表）==========
-    # 个人目标：owner = request.user 或 responsible_person = request.user 或 created_by = request.user
-    # （兼容旧数据：有些个人目标的 owner 可能为 None）
-    goal_filter_kwargs = {}
-    if 'level' in goal_fields:
-        goal_filter_kwargs['level'] = 'personal'
-    
-    # 构建查询条件：owner、responsible_person 或 created_by 是当前用户
-    user_goal_conditions = Q()
-    if 'owner' in goal_fields:
-        user_goal_conditions |= Q(owner=request.user)
-    if 'responsible_person' in goal_fields:
-        user_goal_conditions |= Q(responsible_person=request.user)
-    if 'created_by' in goal_fields:
-        user_goal_conditions |= Q(created_by=request.user)
-    
-    user_goals_qs = StrategicGoal.objects.filter(**goal_filter_kwargs).filter(user_goal_conditions) if goal_filter_kwargs and user_goal_conditions else StrategicGoal.objects.none()
-    goal_status_rows = user_goals_qs.values('status').annotate(count=Count('id')) if goal_filter_kwargs and user_goal_conditions else []
     
     goal_status_label_map = {}
     try:
@@ -999,16 +1192,6 @@ def plan_management_home(request):
             goal_status_label_map[code] = label
     except Exception:
         goal_status_label_map = {}
-    
-    goal_status_dist = {}
-    for row in goal_status_rows:
-        code = row['status']
-        cnt = row['count']
-        goal_status_dist[str(code)] = {
-            'label': goal_status_label_map.get(code, str(code)),
-            'count': cnt
-        }
-    context['goal_status_dist'] = goal_status_dist or None
     
     # ========== 我的工作 ==========
     my_work = {}
@@ -1021,11 +1204,13 @@ def plan_management_home(request):
         plan_related_fields.append('related_goal')
     
     my_plans_qs = Plan.objects.filter(responsible_person=request.user).order_by('-updated_time') if 'responsible_person' in plan_fields else Plan.objects.none()
+    # 应用筛选条件
+    my_plans_qs = apply_filters_to_queryset(my_plans_qs, 'plan')
     my_plans = my_plans_qs.select_related(*plan_related_fields)[:5] if plan_related_fields and my_plans_qs else []
     my_work['my_plans'] = [{
         'title': p.name,
-        'status': p.get_status_display() if hasattr(p, 'get_status_display') else str(getattr(p, 'status', '')),
-        'progress': getattr(p, 'progress', 0) or 0,
+        'progress': float(getattr(p, 'progress', 0) or 0),
+        'progress_status': calculate_plan_progress_status(p),
         'url': reverse('plan_pages:plan_detail', args=[p.id])
     } for p in my_plans]
     my_work['my_plans_count'] = my_plans_qs.count()
@@ -1038,11 +1223,17 @@ def plan_management_home(request):
         goal_related_fields.append('parent_goal')
     
     my_goals_qs = StrategicGoal.objects.filter(responsible_person=request.user).order_by('-updated_time') if 'responsible_person' in goal_fields else StrategicGoal.objects.none()
+    # 应用筛选条件
+    my_goals_qs = apply_filters_to_queryset(my_goals_qs, 'goal')
     my_goals = my_goals_qs.select_related(*goal_related_fields)[:5] if goal_related_fields and my_goals_qs else []
+    
     my_work['my_goals'] = [{
         'title': g.name,
-        'status': g.get_status_display() if hasattr(g, 'get_status_display') else str(getattr(g, 'status', '')),
+        'target_value': float(g.target_value) if g.target_value else 0,
+        'current_value': float(g.current_value) if g.current_value else 0,
+        'indicator_unit': g.indicator_unit or '',
         'completion_rate': float(getattr(g, 'completion_rate', 0) or 0),
+        'progress_status': calculate_goal_progress_status(g),
         'url': reverse('plan_pages:strategic_goal_detail', args=[g.id])
     } for g in my_goals]
     my_work['my_goals_count'] = my_goals_qs.count()
@@ -1061,351 +1252,479 @@ def plan_management_home(request):
     context['my_work'] = my_work
     
     # ========== 最近活动 ==========
-    recent_activities = {}
-    
-    # 最近创建的计划（个人计划，安全字段检查）
-    plan_filter_kwargs = {}
-    if 'level' in plan_fields:
-        plan_filter_kwargs['level'] = 'personal'
-    if 'owner' in plan_fields:
-        plan_filter_kwargs['owner'] = request.user
-    
-    plan_related_fields = []
-    if 'created_by' in plan_fields:
-        plan_related_fields.append('created_by')
-    if 'responsible_person' in plan_fields:
-        plan_related_fields.append('responsible_person')
-    
-    recent_plans_qs = Plan.objects.filter(**plan_filter_kwargs) if plan_filter_kwargs else Plan.objects.none()
-    recent_plans = recent_plans_qs.select_related(*plan_related_fields).order_by('-created_time')[:5] if plan_related_fields and recent_plans_qs else []
-    recent_activities['recent_plans'] = [{
-        'title': p.name,
-        'creator': (p.created_by.get_full_name() if getattr(p, 'created_by', None) else '系统'),
-        'time': getattr(p, 'created_time', None),
-        'url': reverse('plan_pages:plan_detail', args=[p.id])
-    } for p in recent_plans]
-    
-    # 最近更新的目标（个人目标，安全字段检查）
-    goal_filter_kwargs = {}
-    if 'level' in goal_fields:
-        goal_filter_kwargs['level'] = 'personal'
-    if 'owner' in goal_fields:
-        goal_filter_kwargs['owner'] = request.user
-    
-    goal_related_fields = []
-    if 'created_by' in goal_fields:
-        goal_related_fields.append('created_by')
-    if 'responsible_person' in goal_fields:
-        goal_related_fields.append('responsible_person')
-    if 'parent_goal' in goal_fields:
-        goal_related_fields.append('parent_goal')
-    
-    recent_goals_qs = StrategicGoal.objects.filter(**goal_filter_kwargs) if goal_filter_kwargs else StrategicGoal.objects.none()
-    recent_goals = recent_goals_qs.select_related(*goal_related_fields).order_by('-updated_time')[:5] if goal_related_fields and recent_goals_qs else []
-    recent_activities['recent_goals'] = [{
-        'title': g.name,
-        'updater': (
-            g.responsible_person.get_full_name() if getattr(g, 'responsible_person', None)
-            else (g.created_by.get_full_name() if getattr(g, 'created_by', None) else '系统')
-        ),
-        'time': getattr(g, 'updated_time', None),
-        'completion_rate': float(getattr(g, 'completion_rate', 0) or 0),
-        'url': reverse('plan_pages:strategic_goal_detail', args=[g.id])
-    } for g in recent_goals]
-    
-    # 最近审批记录（如果 PlanDecision 存在才查；避免 import/模型不存在直接炸）
-    recent_activities['recent_approvals'] = []
-    try:
-        
-        # 检查 plan__created_by 关系是否存在
-        has_plan_created_by = 'plan' in decision_fields and hasattr(PlanDecision._meta.get_field('plan'), 'related_model')
-        filter_kwargs = {}
-        if has_plan_created_by:
-            plan_model = PlanDecision._meta.get_field('plan').related_model
-            if plan_model and 'created_by' in {f.name for f in plan_model._meta.get_fields()}:
-                filter_kwargs['plan__created_by'] = request.user
-        
-        recent_approvals_qs = PlanDecision.objects.filter(**filter_kwargs) if filter_kwargs else PlanDecision.objects.none()
-        recent_approvals = recent_approvals_qs.select_related(*decision_related_fields).order_by('-requested_at')[:5] if decision_related_fields and recent_approvals_qs else []
-        
-        recent_activities['recent_approvals'] = [{
-            'plan_title': (a.plan.name if getattr(a, 'plan', None) else '未知计划'),
-            'approver': (a.decided_by.get_full_name() if getattr(a, 'decided_by', None) else '待审批'),
-            'result': (a.get_decision_display() if hasattr(a, 'get_decision_display') else str(getattr(a, 'decision', '待审批'))),
-            'time': getattr(a, 'decided_at', None) or getattr(a, 'requested_at', None),
-            'url': (reverse('plan_pages:plan_detail', args=[a.plan.id]) if getattr(a, 'plan', None) else '#')
-        } for a in recent_approvals]
-    except Exception:
-        # 没有审批模型/不在该 app，就跳过
-        pass
-    
-    context['recent_activities'] = recent_activities
-    
     # ========== 为每个分类准备完整数据 ==========
     # 由于代码量很大，我们为每个分类准备数据字典
-    # 每个分类需要：plan_status_dist, goal_status_dist, risk_items, todo_items, my_work, recent_activities
+    # 每个分类需要：plan_status_dist, goal_status_dist, risk_items, todo_items, my_work
+    
+    # 确保is_manager已定义（必须在subordinates之前）
+    # 优先从 context 获取，如果没有则重新计算
+    if 'is_manager' not in locals() and 'is_department_manager' in context:
+        is_manager = context['is_department_manager']
+    elif 'is_manager' not in locals():
+        from backend.apps.system_management.services import is_department_manager
+        is_manager = is_department_manager(request.user)
     
     # 确保subordinates变量已定义（如果还没有）
     if 'subordinates' not in locals():
+        from backend.apps.system_management.services import get_subordinate_users
         subordinates = get_subordinate_users(request.user) if is_manager else User.objects.none()
     
-    # 确保is_manager和subordinates_count已定义
-    if 'is_manager' not in locals():
-        is_manager = is_department_manager(request.user)
+    # 确保subordinates_count已定义
     if 'subordinates_count' not in context:
         context['subordinates_count'] = subordinates.count() if is_manager else 0
     
     # 分类数据字典
     category_data = {}
     
-    # 1. 全部分类的数据（合并所有）
-    # 计划状态分布：合并所有分类的计划
-    all_plans_qs = Plan.objects.filter(
-        Q(owner=request.user) | Q(responsible_person=request.user) | Q(created_by=request.user) |
-        Q(participants=request.user)
-    ).distinct()
+    # 预先定义所有需要的查询集（用于"全部"分类）
+    # 下属负责的查询集
+    subordinate_responsible_plans_qs = Plan.objects.none()
+    subordinate_responsible_goals_qs = StrategicGoal.objects.none()
     if is_manager and subordinates.exists():
-        all_plans_qs = all_plans_qs | Plan.objects.filter(
-            Q(owner__in=subordinates) | Q(responsible_person__in=subordinates) | Q(created_by__in=subordinates) |
-            Q(participants__in=subordinates)
-        ).distinct()
+        subordinate_responsible_plans_qs = Plan.objects.filter(responsible_person__in=subordinates)
+        subordinate_responsible_goals_qs = StrategicGoal.objects.filter(responsible_person__in=subordinates)
+        # 应用筛选条件
+        subordinate_responsible_plans_qs = apply_filters_to_queryset(subordinate_responsible_plans_qs, 'plan')
+        subordinate_responsible_goals_qs = apply_filters_to_queryset(subordinate_responsible_goals_qs, 'goal')
     
-    all_plan_status_rows = all_plans_qs.values('status').annotate(count=Count('id'))
-    all_plan_status_dist = {}
-    for row in all_plan_status_rows:
-        code = row['status']
-        cnt = row['count']
-        all_plan_status_dist[str(code)] = {
-            'label': plan_status_label_map.get(code, str(code)),
-            'count': cnt
-        }
+    # 我协作的查询集
+    my_collaboration_plans_qs = Plan.objects.filter(participants=request.user).exclude(responsible_person=request.user)
+    my_collaboration_goals_qs = StrategicGoal.objects.filter(participants=request.user).exclude(responsible_person=request.user)
+    # 应用筛选条件
+    my_collaboration_plans_qs = apply_filters_to_queryset(my_collaboration_plans_qs, 'plan')
+    my_collaboration_goals_qs = apply_filters_to_queryset(my_collaboration_goals_qs, 'goal')
     
-    # 目标状态分布：合并所有分类的目标
-    all_goals_qs = StrategicGoal.objects.filter(
-        Q(owner=request.user) | Q(responsible_person=request.user) | Q(created_by=request.user) |
-        Q(participants=request.user)
-    ).distinct()
+    # 下属协作的查询集
+    subordinate_collaboration_plans_qs = Plan.objects.none()
+    subordinate_collaboration_goals_qs = StrategicGoal.objects.none()
     if is_manager and subordinates.exists():
-        all_goals_qs = all_goals_qs | StrategicGoal.objects.filter(
-            Q(owner__in=subordinates) | Q(responsible_person__in=subordinates) | Q(created_by__in=subordinates) |
-            Q(participants__in=subordinates)
-        ).distinct()
+        subordinate_collaboration_plans_qs = Plan.objects.filter(participants__in=subordinates).exclude(responsible_person__in=subordinates)
+        subordinate_collaboration_goals_qs = StrategicGoal.objects.filter(participants__in=subordinates).exclude(responsible_person__in=subordinates)
+        # 应用筛选条件
+        subordinate_collaboration_plans_qs = apply_filters_to_queryset(subordinate_collaboration_plans_qs, 'plan')
+        subordinate_collaboration_goals_qs = apply_filters_to_queryset(subordinate_collaboration_goals_qs, 'goal')
     
-    all_goal_status_rows = all_goals_qs.values('status').annotate(count=Count('id'))
-    all_goal_status_dist = {}
-    for row in all_goal_status_rows:
-        code = row['status']
-        cnt = row['count']
-        all_goal_status_dist[str(code)] = {
-            'label': goal_status_label_map.get(code, str(code)),
-            'count': cnt
+    # 1. 全部分类的数据（合并所有：我负责的+我协作的+下属负责的+下属协作的）
+    # 计划状态分布和目标状态分布已清除
+    
+    # 全部分类的风险项：合并所有相关风险
+    # 确保 risk_items 已定义
+    if 'risk_items' not in locals():
+        risk_items = context.get('risk_items', [])
+    all_risk_items = list(risk_items)  # 我负责的风险（owner=user）
+    
+    # 如果筛选了负责人，只显示该负责人的风险，不再添加下属的风险
+    # 如果筛选了部门，只显示该部门的风险
+    # 如果没有筛选，才添加下属的风险
+    if not filter_responsible_person_id and not filter_department_id:
+        if is_manager and subordinates.exists():
+            all_risk_items.extend(get_subordinates_risk_items(
+                subordinates,
+                limit=10,
+                filter_department_id=filter_department_id,
+                filter_responsible_person_id=filter_responsible_person_id,
+                filter_start_date=filter_start_date,
+                filter_end_date=filter_end_date
+            ))
+    # 排序并去重（基于对象ID）
+    seen_objects = set()
+    unique_risk_items = []
+    for item in all_risk_items:
+        obj = item.get('object')
+        if obj:
+            obj_key = (item['type'], obj.id)
+            if obj_key not in seen_objects:
+                seen_objects.add(obj_key)
+                unique_risk_items.append(item)
+    # 重新排序
+    unique_risk_items.sort(key=lambda x: x.get('days_overdue', 0), reverse=True)
+    
+    # 全部分类的待办项：合并所有相关待办
+    # 使用完整的 user_todos 变量（包含我负责的 + 我协作的），而不是从 context 中获取（只包含5条）
+    if 'user_todos' not in locals():
+        user_todos = context.get('user_todos', [])
+    # 将 user_todos 转换为统一的格式
+    all_category_todos = []
+    for todo in user_todos:
+        todo_item = {
+            'title': todo.get('title', ''),
+            'description': todo.get('description', ''),
+            'url': todo.get('url', '#'),
+            'type': todo.get('type', ''),
+            'priority': todo.get('priority', 'medium'),
+            'deadline': todo.get('deadline'),
+            'is_overdue': todo.get('is_overdue', False),
+            'overdue_days': todo.get('overdue_days', 0),
+            'meta': todo.get('meta', todo.get('description', '')),
         }
+        all_category_todos.append(todo_item)
+    
+    # 如果筛选了负责人，只显示该负责人的待办，不再添加下属的待办
+    # 如果筛选了部门，只显示该部门的待办
+    # 如果没有筛选，才添加下属负责的待办和下属协作的待办
+    if not filter_responsible_person_id and not filter_department_id:
+        if is_manager and subordinates.exists():
+            # 添加下属负责的待办
+            for subordinate in subordinates[:10]:
+                sub_todos = get_responsible_todos(
+                    subordinate,
+                    filter_department_id=filter_department_id,
+                    filter_responsible_person_id=filter_responsible_person_id,
+                    filter_start_date=filter_start_date,
+                    filter_end_date=filter_end_date
+                )
+                for todo in sub_todos:
+                    todo_item = {
+                        'title': todo.get('title', ''),
+                        'description': todo.get('description', ''),
+                        'url': todo.get('url', '#'),
+                        'type': todo.get('type', ''),
+                        'priority': todo.get('priority', 'medium'),
+                        'deadline': todo.get('deadline'),
+                        'is_overdue': todo.get('is_overdue', False),
+                        'overdue_days': todo.get('overdue_days', 0),
+                        'meta': f'负责人：{subordinate.get_full_name() or subordinate.username}',
+                    }
+                    all_category_todos.append(todo_item)
+            
+            # 添加下属协作的待办
+            for subordinate in subordinates[:10]:
+                sub_collab_todos = get_user_todos(
+                    subordinate,
+                    filter_department_id=filter_department_id,
+                    filter_responsible_person_id=filter_responsible_person_id,
+                    filter_start_date=filter_start_date,
+                    filter_end_date=filter_end_date
+                )
+                # 从下属的待办中筛选出协作的（参与者但不是负责人）
+                for todo in sub_collab_todos:
+                    obj = todo.get('object')
+                    if obj:
+                        # 如果是计划或目标，检查是否是协作的（参与者但不是负责人）
+                        if hasattr(obj, 'participants') and subordinate in obj.participants.all():
+                            if hasattr(obj, 'responsible_person') and obj.responsible_person != subordinate:
+                                todo_item = {
+                                    'title': todo.get('title', ''),
+                                    'description': todo.get('description', ''),
+                                    'url': todo.get('url', '#'),
+                                    'type': todo.get('type', ''),
+                                    'priority': todo.get('priority', 'medium'),
+                                    'deadline': todo.get('deadline'),
+                                    'is_overdue': todo.get('is_overdue', False),
+                                    'overdue_days': todo.get('overdue_days', 0),
+                                    'meta': f'下属协作：{subordinate.get_full_name() or subordinate.username}',
+                                }
+                                all_category_todos.append(todo_item)
+    # 排序
+    priority_order = {'high': 0, 'medium': 1, 'low': 2}
+    all_category_todos.sort(key=lambda x: (priority_order.get(x.get('priority', 'low'), 2), x.get('deadline') or timezone.now()))
+    
+    # 全部分类的我的工作：合并所有相关计划和目标
+    all_work_plans = list(my_work.get('my_plans', []))
+    all_work_goals = list(my_work.get('my_goals', []))
+    all_work_plans_count = my_work.get('my_plans_count', 0)
+    all_work_goals_count = my_work.get('my_goals_count', 0)
+    
+    # 如果筛选了负责人，只显示该负责人的工作，不再添加下属的工作
+    # 如果筛选了部门，只显示该部门的工作
+    # 如果没有筛选，才添加下属负责的工作
+    if not filter_responsible_person_id and not filter_department_id:
+        if is_manager and subordinates.exists():
+            # 添加下属负责的计划和目标
+            for plan in subordinate_responsible_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time')[:5]:
+                all_work_plans.append({
+                    'title': plan.name,
+                    'progress': float(getattr(plan, 'progress', 0) or 0),
+                    'progress_status': calculate_plan_progress_status(plan),
+                    'url': reverse('plan_pages:plan_detail', args=[plan.id])
+                })
+            for goal in subordinate_responsible_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time')[:5]:
+                all_work_goals.append({
+                    'title': goal.name,
+                    'status': goal.get_status_display() if hasattr(goal, 'get_status_display') else str(getattr(goal, 'status', '')),
+                    'completion_rate': float(getattr(goal, 'completion_rate', 0) or 0),
+                    'url': reverse('plan_pages:strategic_goal_detail', args=[goal.id])
+                })
+            all_work_plans_count += subordinate_responsible_plans_qs.count()
+            all_work_goals_count += subordinate_responsible_goals_qs.count()
+    
+    # 添加我协作的计划和目标
+    for plan in my_collaboration_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time')[:5]:
+        all_work_plans.append({
+            'title': plan.name,
+            'status': plan.get_status_display() if hasattr(plan, 'get_status_display') else str(getattr(plan, 'status', '')),
+            'progress': getattr(plan, 'progress', 0) or 0,
+            'url': reverse('plan_pages:plan_detail', args=[plan.id])
+        })
+    for goal in my_collaboration_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time')[:5]:
+        all_work_goals.append({
+            'title': goal.name,
+            'status': goal.get_status_display() if hasattr(goal, 'get_status_display') else str(getattr(goal, 'status', '')),
+            'completion_rate': float(getattr(goal, 'completion_rate', 0) or 0),
+            'url': reverse('plan_pages:strategic_goal_detail', args=[goal.id])
+        })
+    all_work_plans_count += my_collaboration_plans_qs.count()
+    all_work_goals_count += my_collaboration_goals_qs.count()
+    
+    # 如果筛选了负责人，只显示该负责人的工作，不再添加下属的工作
+    # 如果筛选了部门，只显示该部门的工作
+    # 如果没有筛选，才添加下属协作的工作
+    if not filter_responsible_person_id and not filter_department_id:
+        if is_manager and subordinates.exists():
+            # 添加下属协作的计划和目标
+            for plan in subordinate_collaboration_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time')[:5]:
+                all_work_plans.append({
+                    'title': plan.name,
+                    'progress': float(getattr(plan, 'progress', 0) or 0),
+                    'progress_status': calculate_plan_progress_status(plan),
+                    'url': reverse('plan_pages:plan_detail', args=[plan.id])
+                })
+            for goal in subordinate_collaboration_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time')[:5]:
+                all_work_goals.append({
+                    'title': goal.name,
+                    'status': goal.get_status_display() if hasattr(goal, 'get_status_display') else str(getattr(goal, 'status', '')),
+                    'completion_rate': float(getattr(goal, 'completion_rate', 0) or 0),
+                    'url': reverse('plan_pages:strategic_goal_detail', args=[goal.id])
+                })
+            all_work_plans_count += subordinate_collaboration_plans_qs.count()
+            all_work_goals_count += subordinate_collaboration_goals_qs.count()
+    
+    all_work = {
+        'my_plans': all_work_plans[:5],
+        'my_plans_count': all_work_plans_count,
+        'my_goals': all_work_goals[:5],
+        'my_goals_count': all_work_goals_count,
+        'participating_plans': [],
+        'participating_plans_count': 0,
+    }
     
     category_data['all'] = {
-        'plan_status_dist': all_plan_status_dist or None,
-        'goal_status_dist': all_goal_status_dist or None,
-        'risk_items': risk_items,  # 使用现有的风险项
-        'todo_items': all_todo_items[:10],  # 使用现有的待办项
-        'my_work': my_work,  # 使用现有的我的工作
-        'recent_activities': recent_activities,  # 使用现有的最近活动
+        'plan_status_dist': None,
+        'goal_status_dist': None,
+        'risk_items': unique_risk_items[:5],
+        'todo_items': all_category_todos[:10],
+        'my_work': all_work,
+        'goal_cards': context.get('all_goal_cards', []),
+        'plan_cards': context.get('all_plan_cards', []),
     }
     
     # 2. 我负责的分类的数据
-    my_responsible_plans_qs = Plan.objects.filter(responsible_person=request.user)
-    my_responsible_plan_status_rows = my_responsible_plans_qs.values('status').annotate(count=Count('id'))
-    my_responsible_plan_status_dist = {}
-    for row in my_responsible_plan_status_rows:
-        code = row['status']
-        cnt = row['count']
-        my_responsible_plan_status_dist[str(code)] = {
-            'label': plan_status_label_map.get(code, str(code)),
-            'count': cnt
-        }
-    
-    my_responsible_goals_qs = StrategicGoal.objects.filter(responsible_person=request.user)
-    my_responsible_goal_status_rows = my_responsible_goals_qs.values('status').annotate(count=Count('id'))
-    my_responsible_goal_status_dist = {}
-    for row in my_responsible_goal_status_rows:
-        code = row['status']
-        cnt = row['count']
-        my_responsible_goal_status_dist[str(code)] = {
-            'label': goal_status_label_map.get(code, str(code)),
-            'count': cnt
-        }
-    
+    # 计划状态分布和目标状态分布已清除
     # 我负责的风险项和待办项（只包含我负责的）
-    from backend.apps.plan_management.services.risk_query_service import get_user_risk_items
-    my_responsible_risk_items = [item for item in risk_items if hasattr(item.get('object'), 'responsible_person') and item['object'].responsible_person == request.user]
-    my_responsible_todos = [todo for todo in all_todo_items if todo.get('responsible') == request.user.get_full_name() or todo.get('responsible') == request.user.username]
+    my_responsible_risk_items = get_responsible_risk_items(
+        request.user,
+        limit=5,
+        filter_department_id=filter_department_id,
+        filter_responsible_person_id=filter_responsible_person_id,
+        filter_start_date=filter_start_date,
+        filter_end_date=filter_end_date
+    )
+    my_responsible_todos_raw = get_responsible_todos(
+        request.user,
+        filter_department_id=filter_department_id,
+        filter_responsible_person_id=filter_responsible_person_id,
+        filter_start_date=filter_start_date,
+        filter_end_date=filter_end_date
+    )
+    
+    # 处理待办项，添加responsible字段用于显示
+    my_responsible_todos = []
+    for todo in my_responsible_todos_raw:
+        todo_item = {
+            'title': todo.get('title', ''),
+            'description': todo.get('description', ''),
+            'url': todo.get('url', '#'),
+            'type': todo.get('type', ''),
+            'priority': todo.get('priority', 'medium'),
+            'deadline': todo.get('deadline'),
+            'is_overdue': todo.get('is_overdue', False),
+            'overdue_days': todo.get('overdue_days', 0),
+            'meta': todo.get('description', ''),
+        }
+        if todo.get('object'):
+            obj = todo['object']
+            if hasattr(obj, 'get_full_name'):
+                todo_item['responsible'] = obj.get_full_name() or obj.username
+            elif hasattr(obj, 'username'):
+                todo_item['responsible'] = obj.username
+        my_responsible_todos.append(todo_item)
     
     category_data['mine'] = {
-        'plan_status_dist': my_responsible_plan_status_dist or None,
-        'goal_status_dist': my_responsible_goal_status_dist or None,
+        'plan_status_dist': None,
+        'goal_status_dist': None,
         'risk_items': my_responsible_risk_items[:5],
         'todo_items': my_responsible_todos[:10],
         'my_work': my_work,  # 使用现有的我的工作
-        'recent_activities': recent_activities,  # 使用现有的最近活动
+        'goal_cards': context.get('my_goal_cards', []),
+        'plan_cards': context.get('my_plan_cards', []),
     }
     
     # 3. 下属负责的分类的数据（仅部门负责人）
     if is_manager and subordinates.exists():
-        subordinate_responsible_plans_qs = Plan.objects.filter(responsible_person__in=subordinates)
-        subordinate_responsible_plan_status_rows = subordinate_responsible_plans_qs.values('status').annotate(count=Count('id'))
-        subordinate_responsible_plan_status_dist = {}
-        for row in subordinate_responsible_plan_status_rows:
-            code = row['status']
-            cnt = row['count']
-            subordinate_responsible_plan_status_dist[str(code)] = {
-                'label': plan_status_label_map.get(code, str(code)),
-                'count': cnt
-            }
+        # subordinate_responsible_plans_qs 和 subordinate_responsible_goals_qs 已在上面定义
         
-        subordinate_responsible_goals_qs = StrategicGoal.objects.filter(responsible_person__in=subordinates)
-        subordinate_responsible_goal_status_rows = subordinate_responsible_goals_qs.values('status').annotate(count=Count('id'))
-        subordinate_responsible_goal_status_dist = {}
-        for row in subordinate_responsible_goal_status_rows:
-            code = row['status']
-            cnt = row['count']
-            subordinate_responsible_goal_status_dist[str(code)] = {
-                'label': goal_status_label_map.get(code, str(code)),
-                'count': cnt
-            }
-        
+        # 计划状态分布和目标状态分布已清除
         # 下属负责的风险项和待办项
-        subordinate_responsible_risk_items = [item for item in risk_items if hasattr(item.get('object'), 'responsible_person') and item['object'].responsible_person in subordinates]
+        subordinate_responsible_risk_items = get_subordinates_risk_items(
+            subordinates,
+            limit=5,
+            filter_department_id=filter_department_id,
+            filter_responsible_person_id=filter_responsible_person_id,
+            filter_start_date=filter_start_date,
+            filter_end_date=filter_end_date
+        )
+        
+        # 下属负责的待办项（汇总所有下属的待办）
         subordinate_responsible_todos = []
+        for subordinate in subordinates[:10]:  # 最多查询10个下属
+            sub_todos = get_responsible_todos(
+                subordinate,
+                filter_department_id=filter_department_id,
+                filter_responsible_person_id=filter_responsible_person_id,
+                filter_start_date=filter_start_date,
+                filter_end_date=filter_end_date
+            )
+            for todo in sub_todos:
+                todo_item = {
+                    'title': todo.get('title', ''),
+                    'description': todo.get('description', ''),
+                    'url': todo.get('url', '#'),
+                    'type': todo.get('type', ''),
+                    'priority': todo.get('priority', 'medium'),
+                    'deadline': todo.get('deadline'),
+                    'is_overdue': todo.get('is_overdue', False),
+                    'overdue_days': todo.get('overdue_days', 0),
+                    'meta': f'负责人：{subordinate.get_full_name() or subordinate.username}',
+                }
+                subordinate_responsible_todos.append(todo_item)
+        
+        # 按优先级和时间排序
+        priority_order = {'high': 0, 'medium': 1, 'low': 2}
+        subordinate_responsible_todos.sort(key=lambda x: (priority_order.get(x['priority'], 2), x.get('deadline') or timezone.now()))
         
         # 下属负责的工作
+        subordinate_plans = subordinate_responsible_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time')[:5]
+        subordinate_goals = subordinate_responsible_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time')[:5]
+        
         subordinate_work = {
-            'my_plans': [],
+            'my_plans': [{
+                'title': p.name,
+                'progress': float(getattr(p, 'progress', 0) or 0),
+                'progress_status': calculate_plan_progress_status(p),
+                'url': reverse('plan_pages:plan_detail', args=[p.id])
+            } for p in subordinate_plans],
             'my_plans_count': subordinate_responsible_plans_qs.count(),
-            'my_goals': [],
+            'my_goals': [{
+                'title': g.name,
+                'target_value': float(g.target_value) if g.target_value else 0,
+                'current_value': float(g.current_value) if g.current_value else 0,
+                'indicator_unit': g.indicator_unit or '',
+                'completion_rate': float(getattr(g, 'completion_rate', 0) or 0),
+                'progress_status': calculate_goal_progress_status(g),
+                'url': reverse('plan_pages:strategic_goal_detail', args=[g.id])
+            } for g in subordinate_goals],
             'my_goals_count': subordinate_responsible_goals_qs.count(),
             'participating_plans': [],
             'participating_plans_count': 0,
         }
         
-        # 下属负责的最近活动
-        subordinate_recent_activities = {
-            'recent_plans': [],
-            'recent_goals': [],
-            'recent_approvals': [],
-        }
-        
         category_data['subordinate'] = {
-            'plan_status_dist': subordinate_responsible_plan_status_dist or None,
-            'goal_status_dist': subordinate_responsible_goal_status_dist or None,
+            'plan_status_dist': None,
+            'goal_status_dist': None,
             'risk_items': subordinate_responsible_risk_items[:5],
             'todo_items': subordinate_responsible_todos[:10],
             'my_work': subordinate_work,
-            'recent_activities': subordinate_recent_activities,
+            'goal_cards': context.get('subordinate_goal_cards', []),
+            'plan_cards': context.get('subordinate_plan_cards', []),
         }
     
     # 4. 我协作的分类的数据
-    my_collaboration_plans_qs = Plan.objects.filter(participants=request.user).exclude(responsible_person=request.user)
-    my_collaboration_plan_status_rows = my_collaboration_plans_qs.values('status').annotate(count=Count('id'))
-    my_collaboration_plan_status_dist = {}
-    for row in my_collaboration_plan_status_rows:
-        code = row['status']
-        cnt = row['count']
-        my_collaboration_plan_status_dist[str(code)] = {
-            'label': plan_status_label_map.get(code, str(code)),
-            'count': cnt
-        }
+    # my_collaboration_plans_qs 和 my_collaboration_goals_qs 已在上面定义
     
-    my_collaboration_goals_qs = StrategicGoal.objects.filter(participants=request.user).exclude(responsible_person=request.user)
-    my_collaboration_goal_status_rows = my_collaboration_goals_qs.values('status').annotate(count=Count('id'))
-    my_collaboration_goal_status_dist = {}
-    for row in my_collaboration_goal_status_rows:
-        code = row['status']
-        cnt = row['count']
-        my_collaboration_goal_status_dist[str(code)] = {
-            'label': goal_status_label_map.get(code, str(code)),
-            'count': cnt
-        }
-    
-    # 我协作的风险项和待办项
+    # 计划状态分布和目标状态分布已清除
+    # 我协作的风险项和待办项（协作的项目通常不显示风险，因为负责人不同）
     my_collaboration_risk_items = []
     my_collaboration_todos = []
     
     # 我协作的工作
+    my_collaboration_plans = my_collaboration_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time')[:5]
+    my_collaboration_goals = my_collaboration_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time')[:5]
+    
     my_collaboration_work = {
-        'my_plans': [],
+        'my_plans': [{
+            'title': p.name,
+            'progress': float(getattr(p, 'progress', 0) or 0),
+            'progress_status': calculate_plan_progress_status(p),
+            'url': reverse('plan_pages:plan_detail', args=[p.id])
+        } for p in my_collaboration_plans],
         'my_plans_count': my_collaboration_plans_qs.count(),
-        'my_goals': [],
+        'my_goals': [{
+            'title': g.name,
+            'target_value': float(g.target_value) if g.target_value else 0,
+            'current_value': float(g.current_value) if g.current_value else 0,
+            'indicator_unit': g.indicator_unit or '',
+            'completion_rate': float(getattr(g, 'completion_rate', 0) or 0),
+            'progress_status': calculate_goal_progress_status(g),
+            'url': reverse('plan_pages:strategic_goal_detail', args=[g.id])
+        } for g in my_collaboration_goals],
         'my_goals_count': my_collaboration_goals_qs.count(),
         'participating_plans': [],
         'participating_plans_count': 0,
     }
     
-    # 我协作的最近活动
-    my_collaboration_recent_activities = {
-        'recent_plans': [],
-        'recent_goals': [],
-        'recent_approvals': [],
-    }
-    
     category_data['collaboration'] = {
-        'plan_status_dist': my_collaboration_plan_status_dist or None,
-        'goal_status_dist': my_collaboration_goal_status_dist or None,
+        'plan_status_dist': None,
+        'goal_status_dist': None,
         'risk_items': my_collaboration_risk_items[:5],
         'todo_items': my_collaboration_todos[:10],
         'my_work': my_collaboration_work,
-        'recent_activities': my_collaboration_recent_activities,
+        'goal_cards': context.get('collaboration_goal_cards', []),
+        'plan_cards': context.get('collaboration_plan_cards', []),
     }
     
     # 5. 下属协作的分类的数据（仅部门负责人）
     if is_manager and subordinates.exists():
-        subordinate_collaboration_plans_qs = Plan.objects.filter(participants__in=subordinates).exclude(responsible_person__in=subordinates)
-        subordinate_collaboration_plan_status_rows = subordinate_collaboration_plans_qs.values('status').annotate(count=Count('id'))
-        subordinate_collaboration_plan_status_dist = {}
-        for row in subordinate_collaboration_plan_status_rows:
-            code = row['status']
-            cnt = row['count']
-            subordinate_collaboration_plan_status_dist[str(code)] = {
-                'label': plan_status_label_map.get(code, str(code)),
-                'count': cnt
-            }
+        # subordinate_collaboration_plans_qs 和 subordinate_collaboration_goals_qs 已在上面定义
         
-        subordinate_collaboration_goals_qs = StrategicGoal.objects.filter(participants__in=subordinates).exclude(responsible_person__in=subordinates)
-        subordinate_collaboration_goal_status_rows = subordinate_collaboration_goals_qs.values('status').annotate(count=Count('id'))
-        subordinate_collaboration_goal_status_dist = {}
-        for row in subordinate_collaboration_goal_status_rows:
-            code = row['status']
-            cnt = row['count']
-            subordinate_collaboration_goal_status_dist[str(code)] = {
-                'label': goal_status_label_map.get(code, str(code)),
-                'count': cnt
-            }
-        
+        # 计划状态分布和目标状态分布已清除
         # 下属协作的风险项和待办项
         subordinate_collaboration_risk_items = []
         subordinate_collaboration_todos = []
         
         # 下属协作的工作
+        sub_collab_plans = subordinate_collaboration_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time')[:5]
+        sub_collab_goals = subordinate_collaboration_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time')[:5]
+        
         subordinate_collaboration_work = {
-            'my_plans': [],
+            'my_plans': [{
+                'title': p.name,
+                'progress': float(getattr(p, 'progress', 0) or 0),
+                'progress_status': calculate_plan_progress_status(p),
+                'url': reverse('plan_pages:plan_detail', args=[p.id])
+            } for p in sub_collab_plans],
             'my_plans_count': subordinate_collaboration_plans_qs.count(),
-            'my_goals': [],
+            'my_goals': [{
+                'title': g.name,
+                'target_value': float(g.target_value) if g.target_value else 0,
+                'current_value': float(g.current_value) if g.current_value else 0,
+                'indicator_unit': g.indicator_unit or '',
+                'completion_rate': float(getattr(g, 'completion_rate', 0) or 0),
+                'progress_status': calculate_goal_progress_status(g),
+                'url': reverse('plan_pages:strategic_goal_detail', args=[g.id])
+            } for g in sub_collab_goals],
             'my_goals_count': subordinate_collaboration_goals_qs.count(),
             'participating_plans': [],
             'participating_plans_count': 0,
         }
         
-        # 下属协作的最近活动
-        subordinate_collaboration_recent_activities = {
-            'recent_plans': [],
-            'recent_goals': [],
-            'recent_approvals': [],
-        }
-        
         category_data['subordinate_collaboration'] = {
-            'plan_status_dist': subordinate_collaboration_plan_status_dist or None,
-            'goal_status_dist': subordinate_collaboration_goal_status_dist or None,
+            'plan_status_dist': None,
+            'goal_status_dist': None,
             'risk_items': subordinate_collaboration_risk_items[:5],
             'todo_items': subordinate_collaboration_todos[:10],
             'my_work': subordinate_collaboration_work,
-            'recent_activities': subordinate_collaboration_recent_activities,
+            'goal_cards': context.get('subordinate_collaboration_goal_cards', []),
+            'plan_cards': context.get('subordinate_collaboration_plan_cards', []),
         }
     
     context['category_data'] = category_data
@@ -1710,6 +2029,66 @@ def strategic_goal_list(request):
     paginator = Paginator(goals, 10)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
+    
+    # 为每个目标计算进度状态
+    from django.utils import timezone
+    from datetime import date
+    today = date.today()
+    
+    for goal in page_obj:
+        # 计算完成进度
+        completion_progress = float(goal.completion_rate) if goal.completion_rate else 0
+        
+        # 判断进度状态
+        if goal.end_date and goal.end_date < today:
+            # 已过期
+            if completion_progress >= 100:
+                goal.progress_status = 'completed'
+                goal.progress_status_label = '已完成'
+                goal.progress_status_class = 'bg-success'
+            else:
+                goal.progress_status = 'overdue'
+                goal.progress_status_label = '已逾期'
+                goal.progress_status_class = 'bg-danger'
+        elif goal.start_date and goal.start_date > today:
+            # 未开始
+            goal.progress_status = 'not_started'
+            goal.progress_status_label = '未开始'
+            goal.progress_status_class = 'bg-secondary'
+        else:
+            # 进行中，计算时间进度并比较完成进度
+            if goal.start_date and goal.end_date:
+                total_days = (goal.end_date - goal.start_date).days + 1
+                if total_days > 0:
+                    elapsed_days = max((today - goal.start_date).days + 1, 0)
+                    time_progress = min((elapsed_days / total_days) * 100, 100)
+                else:
+                    time_progress = 0
+            else:
+                time_progress = 0
+            
+            # 比较完成进度和时间进度
+            progress_diff = completion_progress - time_progress
+            if completion_progress >= 100:
+                goal.progress_status = 'ahead_completed'
+                goal.progress_status_label = '提前完成'
+                goal.progress_status_class = 'bg-success'
+            elif progress_diff >= 10:
+                goal.progress_status = 'ahead'
+                goal.progress_status_label = '提前'
+                goal.progress_status_class = 'bg-info'
+            elif progress_diff >= -10:
+                goal.progress_status = 'on_track'
+                goal.progress_status_label = '正常'
+                goal.progress_status_class = 'bg-primary'
+            elif progress_diff >= -20:
+                goal.progress_status = 'behind'
+                goal.progress_status_label = '滞后'
+                goal.progress_status_class = 'bg-warning'
+            else:
+                goal.progress_status = 'seriously_behind'
+                goal.progress_status_label = '严重滞后'
+                goal.progress_status_class = 'bg-danger'
     
     # 统计信息（所有状态）
     total_count = StrategicGoal.objects.count()
@@ -3958,7 +4337,7 @@ def strategic_goal_detail(request, goal_id):
         'audit_logs': audit_logs,  # 审计信息
         'approval_instances': approval_instances,  # 审批信息
         'attachments': attachments,  # 附件信息
-        'can_edit': _permission_granted('plan_management.manage_goal', permission_set) and goal.status in ['draft', 'published'],
+        'can_edit': _permission_granted('plan_management.manage_goal', permission_set) and goal.status == 'draft',
         'can_delete': _permission_granted('plan_management.manage_goal', permission_set) and goal.status == 'draft' and not goal.has_related_plans(),
         'can_publish': can_publish,
         'can_accept': can_accept,  # P2-2
@@ -3981,9 +4360,9 @@ def strategic_goal_edit(request, goal_id):
     
     goal = get_object_or_404(StrategicGoal, id=goal_id)
     
-    # 检查是否可以编辑
-    if goal.status not in ['draft', 'published']:
-        messages.error(request, '只有制定中或已发布状态的目标可以编辑')
+    # 检查是否可以编辑（只有草稿状态可以编辑）
+    if goal.status != 'draft':
+        messages.error(request, '只有制定中状态的目标可以编辑，已发布的目标需要通过调整申请流程进行修改')
         return redirect('plan_pages:strategic_goal_detail', goal_id=goal_id)
     
     if request.method == 'POST':

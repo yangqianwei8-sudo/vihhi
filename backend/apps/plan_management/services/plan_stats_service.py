@@ -10,12 +10,16 @@ from typing import Dict, Any
 from ..models import Plan
 
 
-def get_user_plan_stats(user) -> Dict[str, Any]:
+def get_user_plan_stats(user, filter_department_id=None, filter_responsible_person_id=None, filter_start_date=None, filter_end_date=None) -> Dict[str, Any]:
     """
     获取用户的计划统计（个人计划）
     
     Args:
         user: User 对象
+        filter_department_id: 筛选部门ID（可选）
+        filter_responsible_person_id: 筛选负责人ID（可选）
+        filter_start_date: 筛选开始日期（可选，格式：'YYYY-MM-DD'）
+        filter_end_date: 筛选结束日期（可选，格式：'YYYY-MM-DD'）
     
     Returns:
         Dict: 计划统计
@@ -30,8 +34,40 @@ def get_user_plan_stats(user) -> Dict[str, Any]:
     today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
     today_end = timezone.make_aware(datetime.combine(today, datetime.max.time()))
     
-    # 个人计划
-    my_plans = Plan.objects.filter(level='personal', owner=user)
+    # 根据筛选条件决定查询逻辑
+    # 如果筛选了负责人或部门，查询所有符合条件的计划（不限制owner）
+    # 如果没有筛选，查询当前用户拥有的个人计划
+    if filter_responsible_person_id or filter_department_id:
+        # 筛选了负责人或部门，查询所有符合条件的计划
+        my_plans = Plan.objects.filter(level='personal')
+        if filter_responsible_person_id:
+            try:
+                my_plans = my_plans.filter(responsible_person_id=filter_responsible_person_id)
+            except ValueError:
+                pass
+        if filter_department_id:
+            try:
+                my_plans = my_plans.filter(responsible_department_id=filter_department_id)
+            except ValueError:
+                pass
+    else:
+        # 没有筛选，查询当前用户拥有的个人计划
+        my_plans = Plan.objects.filter(level='personal', owner=user)
+    
+    # 应用日期筛选条件
+    if filter_start_date:
+        try:
+            start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
+            my_plans = my_plans.filter(created_time__gte=start_date)
+        except ValueError:
+            pass
+    if filter_end_date:
+        try:
+            end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
+            end_datetime = datetime.combine(end_date, datetime.max.time())
+            my_plans = my_plans.filter(created_time__lte=end_datetime)
+        except ValueError:
+            pass
     
     # 总计划数
     total = my_plans.count()
@@ -65,12 +101,16 @@ def get_user_plan_stats(user) -> Dict[str, Any]:
     }
 
 
-def get_user_collaboration_plan_stats(user) -> Dict[str, Any]:
+def get_user_collaboration_plan_stats(user, filter_department_id=None, filter_responsible_person_id=None, filter_start_date=None, filter_end_date=None) -> Dict[str, Any]:
     """
     获取用户协作的计划统计（作为参与者）
     
     Args:
         user: User 对象
+        filter_department_id: 筛选部门ID（可选）
+        filter_responsible_person_id: 筛选负责人ID（可选）
+        filter_start_date: 筛选开始日期（可选，格式：'YYYY-MM-DD'）
+        filter_end_date: 筛选结束日期（可选，格式：'YYYY-MM-DD'）
     
     Returns:
         Dict: 协作计划统计
@@ -84,8 +124,40 @@ def get_user_collaboration_plan_stats(user) -> Dict[str, Any]:
     today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
     today_end = timezone.make_aware(datetime.combine(today, datetime.max.time()))
     
-    # 用户作为参与者的计划（排除自己负责的）
-    collaboration_plans = Plan.objects.filter(participants=user).exclude(responsible_person=user)
+    # 根据筛选条件决定查询逻辑
+    # 如果筛选了负责人或部门，查询所有符合条件的计划（不限制参与者）
+    # 如果没有筛选，查询当前用户作为参与者的计划（排除自己负责的）
+    if filter_responsible_person_id or filter_department_id:
+        # 筛选了负责人或部门，查询所有符合条件的计划
+        collaboration_plans = Plan.objects.all()
+        if filter_responsible_person_id:
+            try:
+                collaboration_plans = collaboration_plans.filter(responsible_person_id=filter_responsible_person_id)
+            except ValueError:
+                pass
+        if filter_department_id:
+            try:
+                collaboration_plans = collaboration_plans.filter(responsible_department_id=filter_department_id)
+            except ValueError:
+                pass
+    else:
+        # 没有筛选，查询当前用户作为参与者的计划（排除自己负责的）
+        collaboration_plans = Plan.objects.filter(participants=user).exclude(responsible_person=user)
+    
+    # 应用日期筛选条件
+    if filter_start_date:
+        try:
+            start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
+            collaboration_plans = collaboration_plans.filter(created_time__gte=start_date)
+        except ValueError:
+            pass
+    if filter_end_date:
+        try:
+            end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
+            end_datetime = datetime.combine(end_date, datetime.max.time())
+            collaboration_plans = collaboration_plans.filter(created_time__lte=end_datetime)
+        except ValueError:
+            pass
     
     # 总计划数
     total = collaboration_plans.count()

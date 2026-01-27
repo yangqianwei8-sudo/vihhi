@@ -1,81 +1,98 @@
 {% extends "shared/list_page_base.html" %}
-
-{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
-
 {% load static %}
 
+{% comment %}
+跟进记录列表页面模板 (Opportunity Followup List Template)
 
+功能说明：
+- 展示商机跟进记录的列表页面
+- 支持按关联商机、跟进方式等筛选
+- 支持查看关联商机的操作
+{% endcomment %}
+
+{# 主标题和副标题 #}
+{% block pm_title %}{{ page_title|default:"跟进记录" }}{% endblock pm_title %}
+{% block pm_subtitle %}{{ description|default:"商机跟进记录管理" }}{% endblock pm_subtitle %}
+
+{# 筛选器区域 #}
 {% block list_filters_content %}
-  <div class="col-md-3">
-    <label class="form-label">关联商机</label>
-    <select name="opportunity_id" class="list-filter-input">
-        <option value="">全部商机</option>
-        {% for opp in opportunities %}
-        <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>
-          {{ opp.name }} ({{ opp.opportunity_number|default:'未编号' }})
-        </option>
-        {% endfor %}
-      </select>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">关联商机</label>
+    <select name="opportunity_id" class="form-select">
+      <option value="">全部商机</option>
+      {% for opp in opportunities %}
+      <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>
+        {{ opp.name }} ({{ opp.opportunity_number|default:'未编号' }})
+      </option>
+      {% endfor %}
+    </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">跟进方式</label>
-    <select name="follow_type" class="list-filter-input">
-        <option value="">全部</option>
-        {% for value, label in follow_type_choices %}
-        <option value="{{ value }}" {% if follow_type == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">跟进方式</label>
+    <select name="follow_type" class="form-select">
+      <option value="">全部</option>
+      {% for value, label in follow_type_choices %}
+      <option value="{{ value }}" {% if follow_type == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
   </div>
 {% endblock list_filters_content %}
+
+{# 表格头部 #}
 {% block list_table_headers %}
-<th>跟进日期</th>
-        <th>关联商机</th>
-        <th>跟进方式</th>
-        <th>跟进内容</th>
-        <th>跟进人</th>
-        <th>创建时间</th>
-        <th>操作</th>
+  <th>跟进日期</th>
+  <th>关联商机</th>
+  <th>跟进方式</th>
+  <th>跟进内容</th>
+  <th>跟进人</th>
+  <th>创建时间</th>
+  <th>操作</th>
 {% endblock list_table_headers %}
+
+{# 表格行 #}
 {% block list_table_rows %}
-{% for followup in page_obj %}
-      <tr>
-        <td>{{ followup.follow_date|date:'Y-m-d' }}</td>
-        <td>
-          <a href="{% url 'opportunity_pages:opportunity_detail' followup.opportunity.id %}">
-            {{ followup.opportunity.name }}
+  {% if page_obj %}
+    {% for followup in page_obj %}
+    <tr>
+      <td>{{ followup.follow_date|date:'Y-m-d' }}</td>
+      <td>
+        <a href="{% url 'opportunity_pages:opportunity_detail' followup.opportunity.id %}" class="text-dark text-decoration-none fw-medium">
+          {{ followup.opportunity.name }}
+        </a>
+      </td>
+      <td>
+        <span class="badge bg-info">{{ followup.get_follow_type_display }}</span>
+      </td>
+      <td>{{ followup.content|truncatewords:20 }}</td>
+      <td>{{ followup.created_by.get_full_name|default:followup.created_by.username }}</td>
+      <td>{{ followup.created_time|date:'Y-m-d H:i' }}</td>
+      <td>
+        <div class="list-page-table-actions">
+          <a href="{% url 'opportunity_pages:opportunity_detail' followup.opportunity.id %}" class="action-view" title="查看商机">
+            <i class="bi bi-eye"></i>
           </a>
-        </td>
-        <td>
-          <span class="list-badge">{{ followup.get_follow_type_display }}</span>
-        </td>
-        <td>{{ followup.content|truncatewords:20 }}</td>
-        <td>{{ followup.created_by.get_full_name|default:followup.created_by.username }}</td>
-        <td>{{ followup.created_time|date:'Y-m-d H:i' }}</td>
-        <td>
-          <div class="list-actions">
-            <a href="{% url 'opportunity_pages:opportunity_detail' followup.opportunity.id %}" class="list-btn" title="查看商机">查看商机</a>
-          </div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="7" class="list-empty">
-          <div class="list-empty-icon">▢</div>
-          <div class="list-empty-text">暂无跟进记录</div>
-          <div class="list-empty-hint">请创建第一个跟进记录开始使用</div>
-        </td>
-      </tr>
-      {% endfor %}
+        </div>
+      </td>
+      {# 列设置单元格 - 保持列对齐 #}
+      {% if column_settings_btn|default:False %}<td></td>{% endif %}
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="{% if column_settings_btn|default:False %}8{% else %}7{% endif %}" class="list-empty">
+        <div class="list-empty-icon">📝</div>
+        <div class="list-empty-text">暂无跟进记录</div>
+        {% block list_empty_hint %}
+        <div class="list-empty-hint">请创建第一个跟进记录开始使用</div>
+        {% endblock list_empty_hint %}
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+    <tr>
+      <td colspan="{% if column_settings_btn|default:False %}8{% else %}7{% endif %}" class="list-empty">
+        <div class="list-empty-icon">📝</div>
+        <div class="list-empty-text">暂无数据</div>
+      </td>
+    </tr>
+  {% endif %}
 {% endblock list_table_rows %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-{% endblock extra_css %}
-
-{% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'business_pages:opportunity_management' %}">商机管理</a></li>
-<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
-{% endblock breadcrumb_items %}
-
-
-

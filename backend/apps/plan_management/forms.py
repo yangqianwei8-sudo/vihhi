@@ -117,6 +117,10 @@ class StrategicGoalForm(forms.ModelForm):
         # 设置部门查询集
         self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
         
+        # 确保 name 和 level 字段为必填
+        self.fields['name'].required = True
+        self.fields['level'].required = True
+        
         # 设置上级目标查询集（排除自己和自己的下级目标）
         if self.instance and self.instance.pk:
             exclude_ids = [self.instance.pk]

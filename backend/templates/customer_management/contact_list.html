@@ -1,9 +1,14 @@
 {% extends "shared/list_page_base.html" %}
 {% load static %}
 
+{% block pm_title %}人员关系管理{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有联系人{% endblock pm_subtitle %}
 
-
-
+{% block pm_actions %}
+{% if can_create %}
+<a href="{% url 'business_pages:contact_create' %}" class="list-btn list-btn-primary">新增联系人</a>
+{% endif %}
+{% endblock pm_actions %}
 
 {% block list_table_rows %}
 {% for contact in page_obj %}
@@ -23,39 +28,53 @@
         </td>
         <td>
           {% if contact.role %}
-          <span class="list-badge">{{ contact.get_role_display }}</span>
+          <span class="badge bg-secondary">{{ contact.get_role_display }}</span>
           {% else %}
-          <span style="color: #999999;">未设置</span>
+          <span class="text-muted">未设置</span>
           {% endif %}
         </td>
         <td>
-          <span class="list-badge">{{ contact.get_relationship_level_display }}</span>
+          <span class="badge bg-secondary">{{ contact.get_relationship_level_display }}</span>
         </td>
         <td>{{ contact.position|default:"未填写" }}</td>
         <td>{{ contact.phone|default:"未填写" }}</td>
-        <td style="color: #666666;">{{ contact.email|default:"未填写" }}</td>
-        <td style="color: #666666;">{{ contact.created_time|date:"Y-m-d" }}</td>
+        <td class="text-muted">{{ contact.email|default:"未填写" }}</td>
+        <td class="text-muted">{{ contact.created_time|date:"Y-m-d" }}</td>
         <td>
-          <div class="list-actions">
-            <a href="{% url 'business_pages:contact_detail' contact.id %}" class="list-btn" title="查看">查看</a>
+          <div class="list-page-table-actions">
+            <a href="{% url 'business_pages:contact_detail' contact.id %}" class="action-view" title="查看">
+              <i class="bi bi-eye"></i>
+            </a>
             {% if can_create %}
-            <a href="{% url 'business_pages:contact_edit' contact.id %}" class="list-btn" title="编辑">编辑</a>
+            <span class="action-separator">|</span>
+            <a href="{% url 'business_pages:contact_edit' contact.id %}" class="action-edit" title="编辑">
+              <i class="bi bi-pencil"></i>
+            </a>
             {% endif %}
           </div>
         </td>
+        {% if column_settings_btn|default:False %}<td></td>{% endif %}
       </tr>
       {% empty %}
       <tr>
-        <td colspan="10" class="list-empty">
-          <div class="list-empty-icon">▢</div>
+        <td colspan="{% if column_settings_btn|default:False %}11{% else %}10{% endif %}" class="list-empty">
+          <div class="list-empty-icon">📋</div>
           <div class="list-empty-text">暂无联系人数据</div>
-          <div class="list-empty-hint">请创建第一个联系人开始使用</div>
+          {% block list_empty_hint %}
+          <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">请创建第一个联系人开始使用</p>
+          {% endblock list_empty_hint %}
         </td>
       </tr>
       {% endfor %}
 {% endblock list_table_rows %}
+
+{% block list_table_checkbox_header %}
+<th style="width: 50px;">
+  <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
+</th>
+{% endblock list_table_checkbox_header %}
+
 {% block list_table_headers %}
-<th><input type="checkbox" id="selectAll" class="form-check-input"></th>
 <th>客户名称</th>
 <th>联系人姓名</th>
 <th>人员角色</th>
@@ -66,24 +85,10 @@
 <th>创建时间</th>
 <th>操作</th>
 {% endblock list_table_headers %}
-{% block list_page_title %}人员关系管理{% endblock list_page_title %}
-{% block list_page_subtitle_content %}<span class="pm-subtitle">查看和管理所有联系人</span>{% endblock list_page_subtitle_content %}
-
-{% block pm_actions %}
-{% if can_create %}
-<a href="{% url 'business_pages:contact_create' %}" class="list-btn list-btn-primary">
-  新增联系人
-</a>
-{% endif %}
-{% endblock pm_actions %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
-{% endblock extra_css %}
 
 
 
-{% block extra_js %}
+{% block module_extra_js %}
 <script>
 // 全选/取消全选
 document.getElementById('selectAll')?.addEventListener('change', function() {
@@ -130,4 +135,4 @@ function updateSelectAllState() {
 // 初始化
 updateSelectedCount();
 </script>
-{% endblock extra_js %}
+{% endblock module_extra_js %}

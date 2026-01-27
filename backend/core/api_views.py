@@ -7,7 +7,13 @@ from django.utils import timezone
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.conf import settings
 import json
+import base64
+import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 def api_root(request, format=None):
@@ -200,3 +206,189 @@ def mark_notification_read(request):
         logger = logging.getLogger(__name__)
         logger.error(f'标记通知已读失败: {e}', exc_info=True)
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def deepseek_seal_recognition(request):
+    """
+    DeepSeek盖章文件识别API
+    接收图片文件，使用DeepSeek API进行盖章识别
+    
+    请求方式: POST
+    请求参数:
+        - file: 图片文件（multipart/form-data）
+        - 或 image_url: 图片URL（可选）
+    
+    返回格式:
+        {
+            "success": true,
+            "result": "识别结果文本",
+            "seal_detected": true/false,
+            "details": {...}
+        }
+    """
+    try:
+        # 检查API密钥配置
+        api_key = getattr(settings, 'DEEPSEEK_API_KEY', '')
+        if not api_key:
+            return Response({
+                'success': False,
+                'error': 'DeepSeek API密钥未配置，请联系管理员'
+            }, status=500)
+        
+        api_base_url = getattr(settings, 'DEEPSEEK_API_BASE_URL', 'https://api.deepseek.com')
+        model = getattr(settings, 'DEEPSEEK_MODEL', 'deepseek-chat')
+        
+        # 获取图片数据
+        image_data = None
+        image_base64 = None
+        
+        # 方式1: 从文件上传获取
+        if 'file' in request.FILES:
+            uploaded_file = request.FILES['file']
+            # 读取文件内容
+            image_data = uploaded_file.read()
+            # 转换为base64
+            image_base64 = base64.b64encode(image_data).decode('utf-8')
+        # 方式2: 从POST数据获取base64编码的图片
+        elif 'image_base64' in request.data:
+            image_base64 = request.data['image_base64']
+        # 方式3: 从URL获取（需要下载）
+        elif 'image_url' in request.data:
+            image_url = request.data['image_url']
+            try:
+                response = requests.get(image_url, timeout=10)
+                response.raise_for_status()
+                image_data = response.content
+                image_base64 = base64.b64encode(image_data).decode('utf-8')
+            except Exception as e:
+                return Response({
+                    'success': False,
+                    'error': f'无法下载图片: {str(e)}'
+                }, status=400)
+        else:
+            return Response({
+                'success': False,
+                'error': '请提供图片文件(file)、base64编码图片(image_base64)或图片URL(image_url)'
+            }, status=400)
+        
+        if not image_base64:
+            return Response({
+                'success': False,
+                'error': '无法获取图片数据'
+            }, status=400)
+        
+        # 构建DeepSeek API请求
+        # 尝试使用视觉模型进行图像识别
+        api_url = f"{api_base_url}/v1/chat/completions"
+        
+        # 构建提示词，专门用于盖章识别
+        prompt = """请仔细分析这张图片，识别其中的盖章信息。请回答以下问题：
+1. 图片中是否包含盖章？
+2. 如果包含盖章，请描述：
+   - 盖章的位置（大致位置，如：左上角、右下角等）
+   - 盖章的类型（如：公章、合同章、财务章等）
+   - 盖章的文字内容（如果可见）
+   - 盖章的清晰度
+   - 盖章是否完整
+3. 如果图片中没有盖章，请说明。
+4. 请提供任何其他相关的识别信息。
+
+请用中文回答，格式清晰。"""
+        
+        # 构建请求体 - 尝试使用视觉输入格式（兼容OpenAI格式）
+        # 注意：如果DeepSeek API不支持视觉输入，可能需要使用OCR预处理
+        payload = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_base64}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "temperature": 0.7,
+            "max_tokens": 2000
+        }
+        
+        # 发送请求到DeepSeek API
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        logger.info(f"调用DeepSeek API进行盖章识别，模型: {model}, API地址: {api_url}")
+        response = requests.post(api_url, json=payload, headers=headers, timeout=30)
+        
+        # 检查响应状态
+        if response.status_code != 200:
+            error_detail = response.text
+            logger.error(f"DeepSeek API返回错误: {response.status_code}, {error_detail}")
+            # 如果是不支持视觉输入的错误，提供更友好的提示
+            if response.status_code == 400:
+                try:
+                    error_json = response.json()
+                    error_msg = error_json.get('error', {}).get('message', '')
+                    if 'image' in error_msg.lower() or 'vision' in error_msg.lower():
+                        return Response({
+                            'success': False,
+                            'error': '当前DeepSeek模型不支持视觉输入。建议使用OCR预处理图片后，再使用文本分析功能。',
+                            'error_code': 'vision_not_supported',
+                            'raw_error': error_msg
+                        }, status=400)
+                except:
+                    pass
+            
+            response.raise_for_status()
+        
+        result = response.json()
+        
+        # 解析响应
+        if 'choices' in result and len(result['choices']) > 0:
+            recognition_text = result['choices'][0]['message']['content']
+            
+            # 简单判断是否检测到盖章（可以根据实际需求优化）
+            seal_detected = any(keyword in recognition_text for keyword in [
+                '盖章', '公章', '合同章', '财务章', '印章', '章印', '有章', '包含章'
+            ])
+            
+            return Response({
+                'success': True,
+                'result': recognition_text,
+                'seal_detected': seal_detected,
+                'details': {
+                    'model': model,
+                    'usage': result.get('usage', {}),
+                    'raw_response': result
+                }
+            })
+        else:
+            return Response({
+                'success': False,
+                'error': 'DeepSeek API返回格式异常',
+                'raw_response': result
+            }, status=500)
+            
+    except requests.exceptions.RequestException as e:
+        logger.error(f'DeepSeek API请求失败: {e}', exc_info=True)
+        return Response({
+            'success': False,
+            'error': f'API请求失败: {str(e)}'
+        }, status=500)
+    except Exception as e:
+        logger.error(f'盖章识别处理失败: {e}', exc_info=True)
+        return Response({
+            'success': False,
+            'error': f'处理失败: {str(e)}'
+        }, status=500)

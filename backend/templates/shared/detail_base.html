@@ -104,7 +104,15 @@
         <div class="detail-field">
           <label class="detail-field-label">所属部门</label>
           <div class="detail-field-value">
-            {% if object.responsible_department %}{{ object.responsible_department.name }}{% else %}-{% endif %}
+            {% if object.responsible_department %}
+              {{ object.responsible_department.name }}
+            {% elif plan.responsible_department %}
+              {{ plan.responsible_department.name }}
+            {% elif goal.responsible_department %}
+              {{ goal.responsible_department.name }}
+            {% else %}
+              -
+            {% endif %}
           </div>
         </div>
       </div>
@@ -113,7 +121,15 @@
         <div class="detail-field">
           <label class="detail-field-label">负责人</label>
           <div class="detail-field-value">
-            {% if object.responsible_person %}{{ object.responsible_person.get_full_name|default:object.responsible_person.username }}{% else %}-{% endif %}
+            {% if object.responsible_person %}
+              {{ object.responsible_person.get_full_name|default:object.responsible_person.username }}
+            {% elif plan.responsible_person %}
+              {{ plan.responsible_person.get_full_name|default:plan.responsible_person.username }}
+            {% elif goal.responsible_person %}
+              {{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}
+            {% else %}
+              -
+            {% endif %}
           </div>
         </div>
       </div>

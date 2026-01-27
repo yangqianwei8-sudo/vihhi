@@ -5,8 +5,47 @@
 (function() {
     'use strict';
     
+    // 获取CSRF token的工具函数
+    function getCsrfToken() {
+        // 方法1: 从cookie获取
+        const match = document.cookie.match(/csrftoken=([^;]+)/);
+        if (match) {
+            return decodeURIComponent(match[1]);
+        }
+        // 方法2: 从隐藏的input获取
+        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (csrfInput && csrfInput.value) {
+            return csrfInput.value;
+        }
+        // 方法3: 从meta标签获取
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        if (csrfMeta && csrfMeta.content) {
+            return csrfMeta.content;
+        }
+        return '';
+    }
+    
     // 等待DOM加载完成
     function initNotificationWidget() {
+        // 检查是否在登录页面，如果是则不初始化通知组件
+        const isLoginPage = window.location.pathname === '/login/' || 
+                           window.location.pathname === '/login' ||
+                           document.querySelector('.login-wrapper') ||
+                           document.querySelector('.login-container');
+        
+        if (isLoginPage) {
+            return; // 登录页面不显示通知组件
+        }
+        
+        // 检查用户是否已登录（通过检查是否有CSRF token或session）
+        const hasAuth = document.cookie.includes('sessionid') || 
+                       document.cookie.includes('csrftoken') ||
+                       document.querySelector('input[name="csrfmiddlewaretoken"]');
+        
+        if (!hasAuth) {
+            return; // 未登录用户不显示通知组件
+        }
+        
         // 查找导航栏
         const navbar = document.querySelector('.navbar') || document.querySelector('nav') || document.querySelector('.navbar-nav');
         if (!navbar) {
@@ -253,13 +292,10 @@
                         <div class="notification-content">
                             <div class="notification-title">
                                 ${escapeHtml(notif.title)}
-                                ${!notif.is_read ? '<span class="notification-unread-dot"></span>' : ''}
+                                ${!notif.is_read ? '<span class="notification-unread-badge">未读</span>' : ''}
                             </div>
                             <div class="notification-text">${escapeHtml(notif.content)}</div>
                             <div class="notification-time">${timeStr}</div>
-                        </div>
-                        <div class="notification-actions">
-                            ${!notif.is_read ? '<button class="btn-mark-read" title="标记为已读">✓</button>' : ''}
                         </div>
                     </div>
                 `;
@@ -267,41 +303,55 @@
             
             list.innerHTML = html;
             
-            // 绑定点击事件
+            // 绑定点击事件 - 点击整个通知项
             list.querySelectorAll('.notification-item').forEach(item => {
                 const notifId = parseInt(item.dataset.id);
                 const url = item.dataset.url;
                 const isRead = item.dataset.isRead === 'true';
                 
-                // 点击通知内容区域跳转
-                const contentArea = item.querySelector('.notification-content');
-                if (contentArea) {
-                    contentArea.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        // 如果未读，先标记为已读，然后跳转
-                        if (!isRead && url && url !== '#') {
-                            // 先标记为已读，然后跳转
-                            markAsReadAndNavigate(notifId, url);
-                        } else if (url && url !== '#') {
-                            // 已读或没有URL，直接跳转
+                // 点击整个通知项
+                item.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    // 如果未读，先立即更新UI（乐观更新），然后调用API
+                    if (!isRead) {
+                        // 立即从本地数组中移除该通知（因为只显示未读通知）
+                        const originalNotifications = [...notifications];
+                        notifications = notifications.filter(n => n.id !== notifId);
+                        
+                        // 立即重新渲染（通知会从列表中消失，因为已从数组中移除）
+                        renderNotifications();
+                        
+                        // 立即更新徽章
+                        const unreadCount = notifications.filter(n => !n.is_read).length;
+                        updateBadge(unreadCount);
+                        
+                        // 然后调用API标记为已读
+                        markAsRead(notifId).then(data => {
+                            // API调用成功，确保数据同步
+                            console.log('通知已标记为已读:', data);
+                        }).catch(error => {
+                            // 如果API失败，回滚UI状态
+                            console.error('标记已读失败，回滚UI:', error);
+                            notifications = originalNotifications;
+                            renderNotifications();
+                            const unreadCount = originalNotifications.filter(n => !n.is_read).length;
+                            updateBadge(unreadCount);
+                            // 显示错误提示
+                            alert('标记已读失败，请刷新页面重试');
+                        });
+                    }
+                    
+                    // 如果有URL，延迟跳转（让用户看到UI更新）
+                    if (url && url !== '#') {
+                        // 延迟跳转，让用户看到通知从列表中消失
+                        setTimeout(() => {
                             window.location.href = url;
-                        } else if (!isRead) {
-                            // 没有URL但未读，只标记为已读
-                            markAsRead(notifId);
-                        }
-                    });
-                    contentArea.style.cursor = 'pointer';
-                }
-                
-                // 点击标记已读按钮
-                const markReadBtn = item.querySelector('.btn-mark-read');
-                if (markReadBtn) {
-                    markReadBtn.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        markAsRead(notifId);
-                    });
-                }
+                        }, 200);
+                    }
+                });
+                item.style.cursor = 'pointer';
             });
             
             // 绑定全部已读按钮
@@ -315,62 +365,78 @@
             }
         }
         
-        // 标记为已读
+        // 标记为已读（只调用API，不更新UI，UI已在点击事件中更新）
         function markAsRead(notificationId) {
+            // 获取CSRF token
+            const csrfToken = getCsrfToken();
+            
+            // 构建请求头
+            const headers = {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+            };
+            
+            // 如果有CSRF token，添加到请求头
+            if (csrfToken) {
+                headers['X-CSRFToken'] = csrfToken;
+            }
+            
             // 使用正确的API路径：/api/plan/notifications/{id}/mark-read/
             return fetch(`/api/plan/notifications/${notificationId}/mark-read/`, {
                 method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/json',
-                },
+                headers: headers,
                 credentials: 'same-origin',
             })
             .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                return response.json();
+                // 先尝试解析JSON，即使状态码不是200
+                return response.json().then(data => {
+                    if (!response.ok) {
+                        // 如果有错误信息，使用错误信息
+                        const errorMsg = data.detail || data.error || data.message || `HTTP ${response.status}: ${response.statusText}`;
+                        throw new Error(errorMsg);
+                    }
+                    return data;
+                }).catch(parseError => {
+                    // 如果JSON解析失败，使用状态码错误
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    throw parseError;
+                });
             })
             .then(data => {
                 // API返回格式：{ok: true, id: 4, is_read: true}
-                if (data.ok || data.success) {
-                    // 从本地数组中移除该通知（因为只显示未读通知，已读的通知应该消失）
-                    notifications = notifications.filter(n => n.id !== notificationId);
-                    // 重新渲染
-                    renderNotifications();
-                    // 更新徽章
-                    const unreadCount = notifications.filter(n => !n.is_read).length;
-                    updateBadge(unreadCount);
+                if (!(data.ok || data.success)) {
+                    throw new Error(data.detail || data.error || 'API返回失败');
                 }
                 return data;
             })
             .catch(error => {
-                // 标记已读失败，静默处理，但仍然返回以便调用者可以继续
+                // 标记已读失败，抛出错误以便调用者处理
                 console.error('标记通知已读失败:', error);
-                return { ok: false };
-            });
-        }
-        
-        // 标记为已读并跳转
-        function markAsReadAndNavigate(notificationId, url) {
-            // 先标记为已读
-            markAsRead(notificationId).then(() => {
-                // 标记完成后跳转（无论成功与否都跳转，确保用户体验）
-                if (url && url !== '#') {
-                    window.location.href = url;
-                }
+                throw error;
             });
         }
         
         // 全部标记为已读
         function markAllAsRead() {
+            // 获取CSRF token
+            const csrfToken = getCsrfToken();
+            
+            // 构建请求头
+            const headers = {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+            };
+            
+            // 如果有CSRF token，添加到请求头
+            if (csrfToken) {
+                headers['X-CSRFToken'] = csrfToken;
+            }
+            
             fetch('/api/plan/notifications/mark-all-read/', {
                 method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/json',
-                },
+                headers: headers,
                 credentials: 'same-origin',
             })
             .then(response => {
@@ -692,33 +758,15 @@
                 gap: 8px;
             }
             
-            .notification-actions {
-                flex-shrink: 0;
-                margin-left: 8px;
-            }
-            
-            .btn-mark-read {
+            .notification-unread-badge {
+                display: inline-block;
                 background: #0d6efd;
                 color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 4px 8px;
-                font-size: 12px;
-                cursor: pointer;
-                transition: background 0.2s;
-            }
-            
-            .btn-mark-read:hover {
-                background: #0b5ed7;
-            }
-            
-            .notification-unread-dot {
-                display: inline-block;
-                width: 8px;
-                height: 8px;
-                background: #0d6efd;
-                border-radius: 50%;
+                font-size: 11px;
+                padding: 2px 6px;
+                border-radius: 3px;
                 margin-left: 8px;
+                font-weight: 500;
             }
         `;
         

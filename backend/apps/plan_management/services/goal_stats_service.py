@@ -5,17 +5,21 @@ P2-5: 目标统计服务
 """
 from django.utils import timezone
 from django.db.models import Count, Q
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Dict, Any
 from ..models import StrategicGoal
 
 
-def get_user_goal_stats(user) -> Dict[str, Any]:
+def get_user_goal_stats(user, filter_department_id=None, filter_responsible_person_id=None, filter_start_date=None, filter_end_date=None) -> Dict[str, Any]:
     """
     获取用户的目标统计（个人目标）
     
     Args:
         user: User 对象
+        filter_department_id: 筛选部门ID（可选）
+        filter_responsible_person_id: 筛选负责人ID（可选）
+        filter_start_date: 筛选开始日期（可选，格式：'YYYY-MM-DD'）
+        filter_end_date: 筛选结束日期（可选，格式：'YYYY-MM-DD'）
     
     Returns:
         Dict: 目标统计
@@ -29,8 +33,40 @@ def get_user_goal_stats(user) -> Dict[str, Any]:
     this_month_start = today.replace(day=1)
     this_month_end = (this_month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
     
-    # 个人目标
-    my_goals = StrategicGoal.objects.filter(level='personal', owner=user)
+    # 根据筛选条件决定查询逻辑
+    # 如果筛选了负责人或部门，查询所有符合条件的目标（不限制owner）
+    # 如果没有筛选，查询当前用户拥有的个人目标
+    if filter_responsible_person_id or filter_department_id:
+        # 筛选了负责人或部门，查询所有符合条件的目标
+        my_goals = StrategicGoal.objects.filter(level='personal')
+        if filter_responsible_person_id:
+            try:
+                my_goals = my_goals.filter(responsible_person_id=filter_responsible_person_id)
+            except ValueError:
+                pass
+        if filter_department_id:
+            try:
+                my_goals = my_goals.filter(responsible_department_id=filter_department_id)
+            except ValueError:
+                pass
+    else:
+        # 没有筛选，查询当前用户拥有的个人目标
+        my_goals = StrategicGoal.objects.filter(level='personal', owner=user)
+    
+    # 应用日期筛选条件
+    if filter_start_date:
+        try:
+            start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
+            my_goals = my_goals.filter(created_time__gte=start_date)
+        except ValueError:
+            pass
+    if filter_end_date:
+        try:
+            end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
+            end_datetime = datetime.combine(end_date, datetime.max.time())
+            my_goals = my_goals.filter(created_time__lte=end_datetime)
+        except ValueError:
+            pass
     
     # 总目标数
     total = my_goals.count()
@@ -64,12 +100,16 @@ def get_user_goal_stats(user) -> Dict[str, Any]:
     }
 
 
-def get_user_collaboration_goal_stats(user) -> Dict[str, Any]:
+def get_user_collaboration_goal_stats(user, filter_department_id=None, filter_responsible_person_id=None, filter_start_date=None, filter_end_date=None) -> Dict[str, Any]:
     """
     获取用户协作的目标统计（作为参与者）
     
     Args:
         user: User 对象
+        filter_department_id: 筛选部门ID（可选）
+        filter_responsible_person_id: 筛选负责人ID（可选）
+        filter_start_date: 筛选开始日期（可选，格式：'YYYY-MM-DD'）
+        filter_end_date: 筛选结束日期（可选，格式：'YYYY-MM-DD'）
     
     Returns:
         Dict: 协作目标统计
@@ -82,8 +122,40 @@ def get_user_collaboration_goal_stats(user) -> Dict[str, Any]:
     this_month_start = today.replace(day=1)
     this_month_end = (this_month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
     
-    # 用户作为参与者的目标（排除自己负责的）
-    collaboration_goals = StrategicGoal.objects.filter(participants=user).exclude(responsible_person=user)
+    # 根据筛选条件决定查询逻辑
+    # 如果筛选了负责人或部门，查询所有符合条件的目标（不限制参与者）
+    # 如果没有筛选，查询当前用户作为参与者的目标（排除自己负责的）
+    if filter_responsible_person_id or filter_department_id:
+        # 筛选了负责人或部门，查询所有符合条件的目标
+        collaboration_goals = StrategicGoal.objects.all()
+        if filter_responsible_person_id:
+            try:
+                collaboration_goals = collaboration_goals.filter(responsible_person_id=filter_responsible_person_id)
+            except ValueError:
+                pass
+        if filter_department_id:
+            try:
+                collaboration_goals = collaboration_goals.filter(responsible_department_id=filter_department_id)
+            except ValueError:
+                pass
+    else:
+        # 没有筛选，查询当前用户作为参与者的目标（排除自己负责的）
+        collaboration_goals = StrategicGoal.objects.filter(participants=user).exclude(responsible_person=user)
+    
+    # 应用日期筛选条件
+    if filter_start_date:
+        try:
+            start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
+            collaboration_goals = collaboration_goals.filter(created_time__gte=start_date)
+        except ValueError:
+            pass
+    if filter_end_date:
+        try:
+            end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
+            end_datetime = datetime.combine(end_date, datetime.max.time())
+            collaboration_goals = collaboration_goals.filter(created_time__lte=end_datetime)
+        except ValueError:
+            pass
     
     # 总目标数
     total = collaboration_goals.count()

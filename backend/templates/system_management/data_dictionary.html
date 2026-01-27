@@ -1,0 +1,277 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}数据字典 - 维海生产系统{% endblock %}
+
+{% block module_styles %}
+  {{ block.super }}
+  <style>
+    .dict-main-content {
+      padding: 24px;
+    }
+
+    .dict-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .dict-stat-card {
+      background: var(--vh-card-bg, #FFFFFF);
+      border: 1px solid var(--vh-border-secondary, #E0E0E0);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .dict-stat-label {
+      font-size: 13px;
+      color: var(--vh-text-tertiary, #666666);
+      margin-bottom: 8px;
+    }
+
+    .dict-stat-value {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--vh-primary, #1F2A57);
+    }
+
+    .dict-list-card {
+      background: var(--vh-card-bg, #FFFFFF);
+      border: 1px solid var(--vh-border-secondary, #E0E0E0);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .dict-list-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--vh-border-secondary, #E0E0E0);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dict-list-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--vh-text-primary, #1A1A1A);
+    }
+
+    .dict-list-body {
+      padding: 20px;
+    }
+
+    .dict-group {
+      margin-bottom: 24px;
+    }
+
+    .dict-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .dict-group-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--vh-text-primary, #1A1A1A);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--vh-border-secondary, #E0E0E0);
+    }
+
+    .dict-item {
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      background: var(--vh-bg-secondary, #F5F5F5);
+      border-radius: 6px;
+      border: 1px solid var(--vh-border-secondary, #E0E0E0);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+
+    .dict-item:hover {
+      background: var(--vh-hover-bg, #E8E8E8);
+      border-color: var(--vh-primary, #1F2A57);
+    }
+
+    .dict-item-info {
+      flex: 1;
+    }
+
+    .dict-item-name {
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--vh-text-primary, #1A1A1A);
+      margin-bottom: 4px;
+    }
+
+    .dict-item-meta {
+      font-size: 12px;
+      color: var(--vh-text-tertiary, #666666);
+      display: flex;
+      gap: 16px;
+    }
+
+    .dict-item-code {
+      font-family: monospace;
+    }
+
+    .dict-item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dict-item-child {
+      margin-left: 24px;
+      margin-top: 8px;
+      padding-left: 16px;
+      border-left: 2px solid var(--vh-border-secondary, #E0E0E0);
+    }
+
+    .dict-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--vh-text-tertiary, #666666);
+    }
+
+    .dict-empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .btn-sm {
+      padding: 4px 12px;
+      font-size: 12px;
+    }
+  </style>
+{% endblock module_styles %}
+
+{% block pm_title %}数据字典{% endblock pm_title %}
+
+{% block pm_subtitle %}
+  <div class="pm-subtitle">维护系统基础数据、编码规则与引用关系，为业务表单提供统一标准</div>
+{% endblock pm_subtitle %}
+
+{% block pm_actions %}
+  <a href="{% url 'admin:system_management_datadictionary_add' %}" class="btn btn-primary btn-sm" target="_blank">
+    <i class="bi bi-plus-circle"></i> 新增字典
+  </a>
+  <a href="{% url 'admin:system_management_datadictionary_changelist' %}" class="btn btn-outline-secondary btn-sm" target="_blank">
+    <i class="bi bi-gear"></i> 管理后台
+  </a>
+{% endblock pm_actions %}
+
+{% block pm_content %}
+<div class="dict-main-content">
+  <!-- 字典类型选择器 -->
+  {% if dict_type_nav %}
+  <div class="dict-type-selector mb-4" style="background: var(--vh-card-bg, #FFFFFF); border: 1px solid var(--vh-border-secondary, #E0E0E0); border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+    <div style="font-size: 14px; font-weight: 600; color: var(--vh-text-primary, #1A1A1A); margin-bottom: 12px;">选择字典类型：</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+      {% for type_item in dict_type_nav %}
+      <a href="{{ type_item.url }}" 
+         style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; transition: all 0.2s ease; {% if type_item.active %}background: var(--vh-primary, #1F2A57); color: #fff; font-weight: 600;{% else %}background: var(--vh-bg-secondary, #F5F5F5); color: var(--vh-text-primary, #1A1A1A); border: 1px solid var(--vh-border-secondary, #E0E0E0);{% endif %}">
+        <span>{{ type_item.icon }}</span>
+        <span>{{ type_item.label }}</span>
+        {% if type_item.badge %}
+        <span style="background: {% if type_item.active %}rgba(255,255,255,0.3){% else %}var(--vh-primary, #1F2A57){% endif %}; color: {% if type_item.active %}#fff{% else %}#fff{% endif %}; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: 600;">{{ type_item.badge }}</span>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- 统计卡片 -->
+  <div class="dict-stats">
+    <div class="dict-stat-card">
+      <div class="dict-stat-label">字典总数</div>
+      <div class="dict-stat-value">{{ total_count }}</div>
+    </div>
+    <div class="dict-stat-card">
+      <div class="dict-stat-label">启用数量</div>
+      <div class="dict-stat-value">{{ active_count }}</div>
+    </div>
+    <div class="dict-stat-card">
+      <div class="dict-stat-label">类型数量</div>
+      <div class="dict-stat-value">{{ type_count }}</div>
+    </div>
+  </div>
+
+  <!-- 字典列表 -->
+  <div class="dict-list-card">
+    <div class="dict-list-header">
+      <div class="dict-list-title">{{ selected_type_name }}字典</div>
+      <div class="text-muted small">共 {{ dict_tree|length }} 个分组</div>
+    </div>
+    <div class="dict-list-body">
+      {% if dict_tree %}
+        {% for group in dict_tree %}
+          <div class="dict-group">
+            {% if group.children %}
+              <div class="dict-group-title">{{ group.item.name|default:"根节点" }}</div>
+            {% endif %}
+            
+            <div class="dict-item">
+              <div class="dict-item-info">
+                <div class="dict-item-name">{{ group.item.name|default:"根节点" }}</div>
+                <div class="dict-item-meta">
+                  <span class="dict-item-code">编码: {{ group.item.code }}</span>
+                  <span>值: {{ group.item.value }}</span>
+                  {% if group.item.description %}
+                    <span>描述: {{ group.item.description }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="dict-item-actions">
+                <a href="{% url 'admin:system_management_datadictionary_change' group.item.id %}" 
+                   class="btn btn-sm btn-outline-primary" target="_blank">
+                  <i class="bi bi-pencil"></i> 编辑
+                </a>
+              </div>
+            </div>
+
+            {% if group.children %}
+              {% for child in group.children %}
+                <div class="dict-item dict-item-child">
+                  <div class="dict-item-info">
+                    <div class="dict-item-name">{{ child.name }}</div>
+                    <div class="dict-item-meta">
+                      <span class="dict-item-code">编码: {{ child.code }}</span>
+                      <span>值: {{ child.value }}</span>
+                      {% if child.description %}
+                        <span>描述: {{ child.description }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="dict-item-actions">
+                    <a href="{% url 'admin:system_management_datadictionary_change' child.id %}" 
+                       class="btn btn-sm btn-outline-primary" target="_blank">
+                      <i class="bi bi-pencil"></i> 编辑
+                    </a>
+                  </div>
+                </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="dict-empty">
+          <div class="dict-empty-icon">📚</div>
+          <div>该类型下暂无字典数据</div>
+          <div class="mt-3">
+            <a href="{% url 'admin:system_management_datadictionary_add' %}?dict_type={{ selected_type }}" 
+               class="btn btn-primary btn-sm" target="_blank">
+              <i class="bi bi-plus-circle"></i> 添加字典
+            </a>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock pm_content %}
+

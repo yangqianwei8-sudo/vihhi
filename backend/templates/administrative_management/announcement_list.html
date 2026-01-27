@@ -55,7 +55,7 @@
   <th>分类</th>
   <th>优先级</th>
   <th>发布范围</th>
-  <th>发布日期</th>
+  <th>发布时间</th>
   <th>发布人</th>
   <th>查看次数</th>
   <th>置顶</th>
@@ -80,13 +80,15 @@
         {% if announcement.type == 'team_notification' %}
         <span class="badge bg-info me-1">团队通知</span>
         {% endif %}
-        {{ announcement.title }}
+        <a href="{% url 'admin_pages:announcement_detail' announcement.id %}" class="text-decoration-none" title="查看详情">
+          {{ announcement.title }}
+        </a>
       </td>
       <td>
-        {% if announcement.type == 'announcement' %}
-        {{ announcement.get_category_display }}
+        {% if announcement.get_category_display %}
+          {{ announcement.get_category_display }}
         {% else %}
-        {{ announcement.category|default:"-" }}
+          {{ announcement.category|default:"-" }}
         {% endif %}
       </td>
       <td>
@@ -105,7 +107,15 @@
         指定用户
         {% endif %}
       </td>
-      <td>{{ announcement.publish_date|date:"Y-m-d" }}</td>
+      <td>
+        {% if announcement.publish_time %}
+          {{ announcement.publish_time|date:"Y-m-d H:i" }}
+        {% elif announcement.publish_date %}
+          {{ announcement.publish_date|date:"Y-m-d" }} 00:00
+        {% else %}
+          -
+        {% endif %}
+      </td>
       <td>
         {% if announcement.publisher %}
         {{ announcement.publisher.get_full_name|default:announcement.publisher.username }}
@@ -148,7 +158,9 @@
           </a>
           {% else %}
           {# 项目团队通知只能查看，不能编辑 #}
-          <span class="text-muted" title="项目团队通知">📢</span>
+          <a href="{% url 'admin_pages:announcement_detail' announcement.id %}" class="action-view" title="查看详情">
+            <i class="bi bi-eye"></i>
+          </a>
           {% endif %}
         </div>
       </td>
@@ -170,6 +182,37 @@
 
 {% block extra_js %}
   {{ block.super }}
+  
+  <!-- 筛选器清除功能 -->
+  <script>
+  (function() {
+    'use strict';
+    
+    // 确保筛选表单正确处理空值
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+      filterForm.addEventListener('submit', function(e) {
+        // 获取所有筛选字段
+        const formData = new FormData(filterForm);
+        const params = new URLSearchParams();
+        
+        // 只添加非空值到URL参数
+        for (const [key, value] of formData.entries()) {
+          if (value && value.trim() !== '') {
+            params.append(key, value);
+          }
+        }
+        
+        // 构建新的URL
+        const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        
+        // 阻止默认提交，使用新的URL跳转
+        e.preventDefault();
+        window.location.href = newUrl;
+      });
+    }
+  })();
+  </script>
   
   <!-- 公告列表专用复选框初始化 -->
   <script>

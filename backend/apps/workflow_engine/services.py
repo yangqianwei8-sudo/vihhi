@@ -356,6 +356,18 @@ class ApprovalEngine:
         ).prefetch_related('records').order_by('-created_time')
     
     @staticmethod
+    def get_my_historical_approvals(user: User):
+        """获取用户作为审批人审批过的历史记录（返回QuerySet，支持分页）"""
+        # 获取用户审批过的所有审批实例（通过审批记录关联）
+        # 只包含已完成的审批（status不是pending）
+        return ApprovalInstance.objects.filter(
+            records__approver=user,
+            status__in=['approved', 'rejected', 'withdrawn', 'cancelled']
+        ).distinct().select_related(
+            'workflow', 'applicant', 'current_node', 'content_type'
+        ).prefetch_related('records').order_by('-created_time')
+    
+    @staticmethod
     def _send_approval_notification(instance: ApprovalInstance, approver: User, node: ApprovalNode):
         """发送审批通知（给审批人）"""
         try:
@@ -363,8 +375,13 @@ class ApprovalEngine:
             from backend.apps.production_management.models import ProjectTeamNotification
             
             # 获取关联对象信息
-            content_obj = instance.content_type.get_object_for_this_type(id=instance.object_id)
-            obj_name = str(content_obj)[:50]
+            try:
+                content_obj = instance.content_type.get_object_for_this_type(id=instance.object_id)
+                obj_name = str(content_obj)[:50]
+            except Exception as e:
+                logger.warning(f'获取审批对象失败: {instance.content_type.model}#{instance.object_id}, 错误: {str(e)}')
+                obj_name = f"{instance.content_type.model}#{instance.object_id}"
+                content_obj = None
             
             # 生成通知标题和内容
             title = f"待审批：{instance.workflow.name}"
@@ -376,6 +393,40 @@ class ApprovalEngine:
             except:
                 # 如果前端页面不存在，使用后台管理系统
                 action_url = reverse('admin:workflow_engine_approvalinstance_change', args=[instance.id])
+            
+            # 创建 ApprovalNotification 类型的通知（通知中心使用）
+            try:
+                from backend.apps.plan_management.compat import safe_approval_notification
+                
+                # 根据业务对象类型确定 object_type（必须是 OBJECT_TYPE_CHOICES 中的值）
+                object_type_map = {
+                    'plan': 'plan',
+                    'strategicgoal': 'goal',
+                    'sealborrowing': 'notification',  # 使用 notification 类型
+                    'sealusage': 'notification',  # 使用 notification 类型
+                }
+                object_type = object_type_map.get(instance.content_type.model, 'plan')
+                
+                # 对于审批通知，将审批实例ID存储在 object_id 中，以便序列化器能正确生成跳转链接
+                # 格式：approval_instance_id:business_object_id
+                approval_object_id = f"approval_{instance.id}:{instance.object_id}"
+                
+                # 创建审批通知（注意：模型没有 url 字段，url 由序列化器动态生成）
+                notification = safe_approval_notification(
+                    user=approver,
+                    event='submit',  # 提交审批事件
+                    title=title,
+                    content=message,
+                    object_type=object_type,
+                    object_id=approval_object_id,  # 存储审批实例ID和业务对象ID
+                    is_read=False,
+                )
+                if notification:
+                    logger.info(f'已创建审批通知（ApprovalNotification）: {instance.instance_number}, 审批人: {approver.username}, 通知ID: {notification.id}')
+                else:
+                    logger.warning(f'创建ApprovalNotification通知返回None: {instance.instance_number}, 审批人: {approver.username}')
+            except Exception as e:
+                logger.error(f'创建ApprovalNotification通知失败: {str(e)}', exc_info=True)
             
             # 尝试获取关联的项目（如果关联对象是项目）
             project = None
@@ -449,8 +500,13 @@ class ApprovalEngine:
             from backend.apps.production_management.models import ProjectTeamNotification
             
             # 获取关联对象信息
-            content_obj = instance.content_type.get_object_for_this_type(id=instance.object_id)
-            obj_name = str(content_obj)[:50]
+            try:
+                content_obj = instance.content_type.get_object_for_this_type(id=instance.object_id)
+                obj_name = str(content_obj)[:50]
+            except Exception as e:
+                logger.warning(f'获取审批对象失败: {instance.content_type.model}#{instance.object_id}, 错误: {str(e)}')
+                obj_name = f"{instance.content_type.model}#{instance.object_id}"
+                content_obj = None
             
             # 生成通知标题和内容
             if approval_status == 'approved':
@@ -460,6 +516,7 @@ class ApprovalEngine:
                     message += f"\n审批意见：{instance.final_comment}"
                 message += f"\n审批人：{approver.get_full_name() or approver.username}"
                 message += f"\n审批时间：{instance.completed_time.strftime('%Y-%m-%d %H:%M') if instance.completed_time else ''}"
+                event_type = 'approve'  # 审批通过事件
             elif approval_status == 'rejected':
                 title = f"[审批结果] {instance.workflow.name}已被驳回"
                 message = f"您的申请《{obj_name}》已被驳回"
@@ -467,6 +524,7 @@ class ApprovalEngine:
                     message += f"\n驳回原因：{instance.final_comment}"
                 message += f"\n审批人：{approver.get_full_name() or approver.username}"
                 message += f"\n审批时间：{instance.completed_time.strftime('%Y-%m-%d %H:%M') if instance.completed_time else ''}"
+                event_type = 'reject'  # 审批驳回事件
             else:
                 logger.warning(f'未知的审批状态: {approval_status}')
                 return
@@ -476,9 +534,9 @@ class ApprovalEngine:
             try:
                 # 尝试根据业务对象类型生成详情页链接
                 if instance.content_type.model == 'plan':
-                    action_url = reverse('plan_management:plan_detail', args=[instance.object_id])
+                    action_url = reverse('plan_pages:plan_detail', args=[instance.object_id])
                 elif instance.content_type.model == 'strategicgoal':
-                    action_url = reverse('plan_management:strategic_goal_detail', args=[instance.object_id])
+                    action_url = reverse('plan_pages:goal_detail', args=[instance.object_id])
                 else:
                     # 默认跳转到审批详情页
                     action_url = reverse('workflow_engine:approval_detail', args=[instance.id])
@@ -487,6 +545,40 @@ class ApprovalEngine:
                     action_url = reverse('workflow_engine:approval_detail', args=[instance.id])
                 except:
                     pass
+            
+            # 创建 ApprovalNotification 类型的通知（通知中心使用）
+            try:
+                from backend.apps.plan_management.compat import safe_approval_notification
+                
+                # 根据业务对象类型确定 object_type（必须是 OBJECT_TYPE_CHOICES 中的值）
+                object_type_map = {
+                    'plan': 'plan',
+                    'strategicgoal': 'goal',
+                    'sealborrowing': 'notification',  # 使用 notification 类型
+                    'sealusage': 'notification',  # 使用 notification 类型
+                }
+                object_type = object_type_map.get(instance.content_type.model, 'plan')
+                
+                # 对于审批通知，将审批实例ID存储在 object_id 中，以便序列化器能正确生成跳转链接
+                # 格式：approval_instance_id:business_object_id
+                approval_object_id = f"approval_{instance.id}:{instance.object_id}"
+                
+                # 创建审批结果通知（注意：模型没有 url 字段，url 由序列化器动态生成）
+                notification = safe_approval_notification(
+                    user=instance.applicant,  # 发送给提交人
+                    event=event_type,  # 'approve' 或 'reject'
+                    title=title,
+                    content=message,
+                    object_type=object_type,
+                    object_id=approval_object_id,  # 存储审批实例ID和业务对象ID
+                    is_read=False,
+                )
+                if notification:
+                    logger.info(f'已创建审批结果通知（ApprovalNotification）: {instance.instance_number}, 提交人: {instance.applicant.username}, 状态: {approval_status}, 通知ID: {notification.id}')
+                else:
+                    logger.warning(f'创建ApprovalNotification审批结果通知返回None: {instance.instance_number}, 提交人: {instance.applicant.username}, 状态: {approval_status}')
+            except Exception as e:
+                logger.error(f'创建ApprovalNotification审批结果通知失败: {str(e)}', exc_info=True)
             
             # 尝试获取关联的项目（如果关联对象是项目）
             project = None

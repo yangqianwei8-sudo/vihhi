@@ -2996,11 +2996,15 @@ def seal_usage_create(request):
     if request.method == 'POST':
         form = SealUsageForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
-            usage = form.save(commit=False)
+            usage = form.save(commit=True)  # commit=True会自动保存文件
             # 设置默认用印人为当前用户（如果未指定）
             if not usage.used_by:
                 usage.used_by = request.user
-            usage.save()
+                usage.save()
+            # 如果提供了用印时间，从用印时间中提取日期设置到用印日期
+            if usage.usage_time and not usage.usage_date:
+                usage.usage_date = usage.usage_time.date()
+                usage.save()
             
             # 启动审批流程
             try:
@@ -3021,6 +3025,43 @@ def seal_usage_create(request):
                         applicant=request.user,
                         comment=f'申请用印：{usage.seal.seal_name}，用印事由：{usage.usage_reason[:50]}'
                     )
+                    
+                    # 抄送行政主管
+                    try:
+                        from backend.apps.system_management.models import Role
+                        from backend.apps.project_center.models import ProjectTeamNotification
+                        from django.urls import reverse
+                        
+                        # 查找行政主管角色（admin_office）
+                        admin_office_role = Role.objects.filter(code='admin_office', is_active=True).first()
+                        if admin_office_role:
+                            # 获取所有行政主管用户
+                            admin_office_users = admin_office_role.users.filter(is_active=True)
+                            
+                            # 为每个行政主管发送通知
+                            action_url = reverse('admin_pages:seal_usage_detail', args=[usage.id])
+                            for admin_user in admin_office_users:
+                                ProjectTeamNotification.objects.create(
+                                    project=None,
+                                    recipient=admin_user,
+                                    operator=request.user,
+                                    title=f'用印申请通知 - {usage.usage_number}',
+                                    message=f'{request.user.get_full_name() or request.user.username} 提交了用印申请：{usage.seal.seal_name}，用印事由：{usage.usage_reason[:100]}',
+                                    category='approval',
+                                    action_url=action_url,
+                                    is_read=False,
+                                    context={
+                                        'approval_instance_id': approval_instance.id,
+                                        'approval_instance_number': approval_instance.instance_number,
+                                        'seal_usage_id': usage.id,
+                                        'seal_usage_number': usage.usage_number,
+                                    }
+                                )
+                            logger.info(f'已抄送行政主管: {usage.usage_number}, 抄送人数: {admin_office_users.count()}')
+                    except Exception as e:
+                        logger.warning(f'抄送行政主管失败: {str(e)}')
+                        # 抄送失败不影响主流程
+                    
                     messages.success(request, f'用印申请 {usage.usage_number} 提交成功！审批流程已启动，审批单号：{approval_instance.instance_number}')
                 else:
                     # 如果没有配置审批流程，使用原有的逻辑
@@ -3032,10 +3073,10 @@ def seal_usage_create(request):
             
             return redirect('admin_pages:seal_usage_list')
     else:
+        now = timezone.now()
         form = SealUsageForm(user=request.user, initial={
             'used_by': request.user,
-            'usage_date': timezone.now().date(),
-            'usage_time': timezone.now(),
+            'usage_time': now,
         })
     
     context = _context(
@@ -3099,6 +3140,36 @@ def seal_usage_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # 获取审批实例信息（用于显示审批状态）
+    if page_obj:
+        try:
+            from backend.apps.workflow_engine.models import ApprovalInstance
+            from django.contrib.contenttypes.models import ContentType
+            
+            content_type = ContentType.objects.get_for_model(SealUsage)
+            usage_ids = [usage.id for usage in page_obj]
+            
+            approval_instances = ApprovalInstance.objects.filter(
+                content_type=content_type,
+                object_id__in=usage_ids,
+                workflow__code='seal_usage_approval'
+            ).select_related('workflow', 'current_node').order_by('-created_time')
+            
+            # 为每个用印申请获取最新的审批实例，并添加到usage对象上
+            approval_instances_map = {}
+            for instance in approval_instances:
+                if instance.object_id not in approval_instances_map:
+                    approval_instances_map[instance.object_id] = instance
+            
+            # 为每个usage对象添加approval_instance属性
+            for usage in page_obj:
+                usage.approval_instance = approval_instances_map.get(usage.id)
+        except Exception as e:
+            logger.exception('获取审批实例信息失败: %s', str(e))
+            # 如果获取失败，为每个usage对象设置None
+            for usage in page_obj:
+                usage.approval_instance = None
+    
     # 获取筛选选项
     seal_choices = Seal.objects.filter(is_active=True).order_by('seal_name')
     
@@ -3138,6 +3209,54 @@ def seal_usage_detail(request, usage_id):
         messages.error(request, '您没有权限查看此用印记录')
         return redirect('admin_pages:seal_usage_list')
     
+    # 获取审批流程相关信息
+    approval_instance = None
+    records = []
+    can_approve = False
+    
+    try:
+        from backend.apps.workflow_engine.models import ApprovalInstance, ApprovalRecord
+        from django.contrib.contenttypes.models import ContentType
+        
+        content_type = ContentType.objects.get_for_model(usage)
+        approval_instance = ApprovalInstance.objects.filter(
+            content_type=content_type,
+            object_id=usage.id,
+            workflow__code='seal_usage_approval'
+        ).select_related('workflow', 'applicant', 'current_node').order_by('-created_time').first()
+        
+        if approval_instance:
+            # 获取审批记录
+            records = ApprovalRecord.objects.filter(
+                instance=approval_instance
+            ).select_related('approver', 'node').order_by('created_time')
+            
+            # 处理过时记录（节点已由他人处理完成）
+            # 获取每个节点的最终状态
+            from collections import defaultdict
+            node_final_status = defaultdict(str)
+            for record in records:
+                if record.result in ['approved', 'rejected']:
+                    node_final_status[record.node_id] = record.result
+            
+            # 为每个记录添加 is_obsolete 属性
+            for record in records:
+                if record.result == 'pending' and node_final_status.get(record.node_id) in ['approved', 'rejected']:
+                    record.is_obsolete = True
+                else:
+                    record.is_obsolete = False
+            
+            # 检查当前用户是否可以审批
+            from backend.apps.workflow_engine.services import ApprovalEngine
+            can_approve = ApprovalEngine.can_user_approve(approval_instance, request.user)
+    except Exception as e:
+        logger.exception('获取审批流程信息失败: %s', str(e))
+    
+    # 获取所有用户列表（用于转交）
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    all_users = User.objects.filter(is_active=True).order_by('username')[:100]
+    
     context = _context(
         f"用印记录详情 - {usage.usage_number}",
         "📋",
@@ -3149,6 +3268,10 @@ def seal_usage_detail(request, usage_id):
         'object': usage,  # 用于 detail_base.html（基础模板会自动检测 usage_number）
         'usage': usage,
         'seal': usage.seal,
+        'instance': approval_instance,  # 审批实例
+        'records': records,  # 审批记录
+        'can_approve': can_approve,  # 是否可以审批
+        'all_users': all_users,  # 用于转交的用户列表
     })
     return render(request, "administrative_management/seal_usage_detail.html", context)
 
@@ -4510,6 +4633,46 @@ def announcement_management(request):
                 self.type = data.get('type')
                 self.obj = data.get('obj')
             
+            def get_category_display(self):
+                """获取分类的中文显示名称"""
+                category = self._data.get('category', '')
+                if not category:
+                    return '-'
+                
+                # 如果是普通公告，使用 Announcement 的分类映射
+                if self.type == 'announcement':
+                    category_map = {
+                        'system': '系统公告',
+                        'notice': '通知',
+                        'policy': '政策制度',
+                        'culture': '企业文化',
+                        'other': '其他',
+                    }
+                    return category_map.get(category, category)
+                
+                # 如果是团队通知，使用 ProjectTeamNotification 的分类映射
+                elif self.type == 'team_notification':
+                    category_map = {
+                        'team_change': '团队变更',
+                        'quality_alert': '质量提醒',
+                        'approval': '审批通知',
+                    }
+                    return category_map.get(category, category)
+                
+                # 默认返回原值
+                return category
+            
+            def get_target_scope_display(self):
+                """获取发布范围的中文显示名称"""
+                scope = self._data.get('target_scope', '')
+                scope_map = {
+                    'all': '全部',
+                    'department': '指定部门',
+                    'specific_roles': '指定角色',
+                    'specific_users': '指定用户',
+                }
+                return scope_map.get(scope, scope or '-')
+            
             def __getattr__(self, name):
                 if name in self._data:
                     return self._data[name]
@@ -4519,11 +4682,6 @@ def announcement_management(request):
                 # 提供默认值
                 if name == 'is_popup':
                     return False
-                if name == 'get_category_display':
-                    return lambda: self._data.get('category', '')
-                if name == 'get_target_scope_display':
-                    scope_map = {'all': '全部', 'department': '指定部门', 'specific_roles': '指定角色', 'specific_users': '指定用户'}
-                    return lambda: scope_map.get(self._data.get('target_scope', ''), '')
                 return None
         
         # 将字典转换为包装对象
@@ -4595,37 +4753,106 @@ def announcement_management(request):
 @login_required
 def announcement_detail(request, announcement_id):
     """公告通知详情"""
-    announcement = get_object_or_404(Announcement, id=announcement_id)
-    
-    # 增加查看次数（仅首次查看）
-    if request.user.is_authenticated:
-        try:
-            AnnouncementRead.objects.get_or_create(
-                announcement=announcement,
-                user=request.user
-            )
-            # 更新查看次数
-            announcement.view_count = announcement.read_records.count()
-            announcement.save(update_fields=['view_count'])
-        except Exception:
-            pass
-    
-    # 获取阅读记录（最近20条）
+    # 先尝试查询 Announcement 类型的公告
     try:
-        read_records = announcement.read_records.select_related('user').order_by('-read_time')[:20]
-    except Exception:
-        read_records = []
+        announcement = Announcement.objects.get(id=announcement_id)
+        notification_type = 'announcement'
+        
+        # 增加查看次数（仅首次查看）
+        if request.user.is_authenticated:
+            try:
+                AnnouncementRead.objects.get_or_create(
+                    announcement=announcement,
+                    user=request.user
+                )
+                # 更新查看次数
+                announcement.view_count = announcement.read_records.count()
+                announcement.save(update_fields=['view_count'])
+            except Exception:
+                pass
+        
+        # 获取阅读记录（最近20条）
+        try:
+            read_records = announcement.read_records.select_related('user').order_by('-read_time')[:20]
+        except Exception:
+            read_records = []
+        
+        page_title = f"公告详情 - {announcement.title}"
+        description = "查看公告通知的详细内容和阅读记录"
+        
+    except Announcement.DoesNotExist:
+        # 如果找不到 Announcement，尝试查询 ProjectTeamNotification
+        from backend.apps.production_management.models import ProjectTeamNotification
+        
+        try:
+            team_notification = ProjectTeamNotification.objects.get(
+                id=announcement_id,
+                recipient=request.user  # 确保用户只能查看自己的通知
+            )
+            notification_type = 'team_notification'
+            
+            # 标记为已读（如果还未读）
+            if not team_notification.is_read:
+                team_notification.is_read = True
+                from django.utils import timezone
+                team_notification.read_time = timezone.now()
+                team_notification.save(update_fields=['is_read', 'read_time'])
+            
+            # 创建一个类似 Announcement 的对象，用于模板兼容
+            class TeamNotificationWrapper:
+                def __init__(self, notif):
+                    self.id = notif.id
+                    self.title = notif.title
+                    self.content = notif.message
+                    self.category = notif.category
+                    self.priority = 'normal'
+                    self.target_scope = 'specific_users'
+                    self.publish_date = notif.created_time.date()
+                    self.publish_time = notif.created_time
+                    self.publisher = notif.operator
+                    self.is_top = False
+                    self.is_popup = False
+                    self.is_active = True
+                    self.view_count = 0
+                    self.expiry_date = None
+                    self.attachment = None
+                    self.created_time = notif.created_time
+                    self.is_read = notif.is_read
+                    self.action_url = notif.action_url
+                    self._notif = notif  # 保留原始对象引用，以防需要访问其他属性
+                
+                def get_category_display(self):
+                    category_map = {
+                        'team_change': '团队变更',
+                        'quality_alert': '质量提醒',
+                        'approval': '审批通知',
+                    }
+                    return category_map.get(self.category, self.category)
+                
+                def get_target_scope_display(self):
+                    return '指定用户'
+            
+            announcement = TeamNotificationWrapper(team_notification)
+            read_records = []  # 团队通知没有阅读记录列表
+            
+            page_title = f"团队通知详情 - {announcement.title}"
+            description = "查看团队通知的详细内容"
+            
+        except ProjectTeamNotification.DoesNotExist:
+            from django.http import Http404
+            raise Http404("No Announcement or TeamNotification matches the given query.")
     
     context = _context(
-        f"公告详情 - {announcement.title}",
+        page_title,
         "📢",
-        f"查看公告通知的详细内容和阅读记录",
+        description,
         request=request,
         use_administrative_nav=True
     )
     context.update({
         'announcement': announcement,
         'read_records': read_records,
+        'notification_type': notification_type,
     })
     return render(request, "administrative_management/announcement_detail.html", context)
 

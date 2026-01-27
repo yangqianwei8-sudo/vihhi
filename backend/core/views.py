@@ -135,8 +135,7 @@ HOME_NAV_STRUCTURE = [
     {'label': '人事管理', 'icon': '👤', 'url_name': 'personnel_pages:personnel_management_home', 'permission': 'personnel_management.view'},
     {'label': '行政管理', 'icon': '🏢', 'url_name': 'admin_pages:administrative_management_home', 'permission': 'administrative_management.view'},
     {'label': '审批引擎', 'icon': '✅', 'url_name': 'workflow_engine:workflow_home', 'permission': 'workflow_engine.view'},
-    {'label': '系统管理', 'icon': '⚙️', 'url_name': 'system_pages:system_settings', 'permission': 'system_management.view'},
-    {'label': '示例表单', 'icon': '📝', 'url_name': 'system_pages:example_form', 'admin_only': True},
+    {'label': '系统管理', 'icon': '⚙️', 'url_name': 'system_pages:system_management_home', 'permission': 'system_management.view'},
     # 注意：权限管理仅保留在Django Admin后台管理中，不添加到前端导航栏
 ]
 
@@ -225,7 +224,7 @@ SCENE_GROUPS = [
         'icon': 'fa-cogs',
         'items': [
             {'label': '行政管理', 'icon': 'fa-building', 'url_name': 'admin_pages:administrative_management_home', 'permission': 'administrative_management.view'},
-            {'label': '系统管理', 'icon': 'fa-server', 'url_name': 'system_pages:system_settings', 'permission': 'system_management.view'},
+            {'label': '系统管理', 'icon': 'fa-server', 'url_name': 'system_pages:system_management_home', 'permission': 'system_management.view'},
         ]
     },
 ]
@@ -954,13 +953,18 @@ def login_view(request):
             messages.error(request, '请输入用户名和密码')
     
     # GET请求：渲染前端登录页面
+    # 清除所有之前的消息（登录页面不应该显示系统消息）
+    storage = messages.get_messages(request)
+    list(storage)  # 消费所有消息，清除它们
+    
     return render(request, 'login.html')
 
 
 def logout_view(request):
     """登出页面"""
     logout(request)
-    messages.success(request, '您已成功退出登录')
+    # 不在登录页面显示退出消息，避免登录页面显示系统消息
+    # messages.success(request, '您已成功退出登录')
     return redirect('login')
 
 

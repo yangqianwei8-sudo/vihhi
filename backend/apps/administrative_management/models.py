@@ -1407,7 +1407,7 @@ class SealUsage(models.Model):
     usage_date = models.DateField(default=timezone.now, verbose_name='用印日期')
     usage_time = models.DateTimeField(default=timezone.now, verbose_name='用印时间')
     usage_reason = models.TextField(verbose_name='用印事由')
-    usage_count = models.IntegerField(default=1, verbose_name='用印数量')
+    usage_count = models.IntegerField(default=1, verbose_name='用印份数')
     document_name = models.CharField(max_length=200, blank=True, verbose_name='文件名称')
     document_file = models.FileField(upload_to='seal_usage/documents/', null=True, blank=True, verbose_name='用印文件')
     used_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='seal_usages', verbose_name='用印人')
@@ -1443,6 +1443,48 @@ class SealUsage(models.Model):
             else:
                 seq = 1
             self.usage_number = f'SEAL-USE-{date_str}-{seq:04d}'
+        super().save(*args, **kwargs)
+
+
+class SealUsageFile(models.Model):
+    """用印文件"""
+    usage = models.ForeignKey(
+        SealUsage,
+        on_delete=models.CASCADE,
+        related_name='files',
+        verbose_name='用印记录'
+    )
+    file = models.FileField(
+        upload_to='seal_usage/documents/',
+        verbose_name='文件'
+    )
+    file_name = models.CharField(max_length=200, blank=True, verbose_name='文件名称')
+    uploaded_time = models.DateTimeField(default=timezone.now, verbose_name='上传时间')
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_seal_usage_files',
+        verbose_name='上传人'
+    )
+    
+    class Meta:
+        db_table = 'admin_seal_usage_file'
+        verbose_name = '用印文件'
+        verbose_name_plural = verbose_name
+        ordering = ['-uploaded_time']
+        indexes = [
+            models.Index(fields=['usage', 'uploaded_time']),
+        ]
+    
+    def __str__(self):
+        return f"{self.usage.usage_number} - {self.file_name or self.file.name}"
+    
+    def save(self, *args, **kwargs):
+        # 如果没有设置文件名称，使用文件名
+        if not self.file_name and self.file:
+            self.file_name = self.file.name
         super().save(*args, **kwargs)
 
 

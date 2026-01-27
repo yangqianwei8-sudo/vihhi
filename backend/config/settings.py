@@ -186,10 +186,11 @@ WECOM_CORP_ID = os.getenv('WECOM_CORP_ID')
 WECOM_AGENT_SECRET = os.getenv('WECOM_AGENT_SECRET')
 WECOM_DEFAULT_TO_USER = os.getenv('WECOM_DEFAULT_TO_USER', '')
 
-# DeepSeek API配置（用于合同识别）
+# DeepSeek API配置（用于合同识别和盖章文件识别）
 # DeepSeek API文档：https://platform.deepseek.com/api-docs/
 # 需要在DeepSeek官网注册账号并获取API Key
-DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY', '')
+# 默认API密钥（可通过环境变量DEEPSEEK_API_KEY覆盖）
+DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY', 'sk-e6a6f205440a4d22b38a25d2a3e5afcc')
 DEEPSEEK_API_BASE_URL = os.getenv('DEEPSEEK_API_BASE_URL', 'https://api.deepseek.com')
 DEEPSEEK_MODEL = os.getenv('DEEPSEEK_MODEL', 'deepseek-chat')  # 或 deepseek-v2
 

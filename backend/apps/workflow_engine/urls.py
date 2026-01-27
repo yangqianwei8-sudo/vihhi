@@ -24,5 +24,6 @@ urlpatterns = [
     path('approvals/', views_pages.approval_list, name='approval_list'),
     path('approvals/<int:instance_id>/', views_pages.approval_detail, name='approval_detail'),
     path('approvals/<int:instance_id>/action/', views_pages.approval_action, name='approval_action'),
+    path('approvals/<int:instance_id>/withdraw/', views_pages.approval_withdraw, name='approval_withdraw'),
 ]
 

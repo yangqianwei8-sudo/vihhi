@@ -1,1708 +1,226 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-<style>
-    .lead-tabs {
-        display: flex;
-        gap: var(--spacing-sm);
-        margin-bottom: var(--spacing-md);
-        border-bottom: 2px solid var(--vh-primary);
-    }
-
-    .lead-tab {
-        padding: var(--spacing-sm) var(--spacing-md);
-        background: transparent;
-        border: none;
-        border-bottom: 2px solid transparent;
-        color: var(--vh-text-muted);
-        cursor: pointer;
-        font-size: var(--font-size-base);
-        transition: all var(--transition-base);
-        margin-bottom: -2px;
-    }
-
-    .lead-tab:hover {
-        color: var(--vh-primary);
-    }
-
-    .lead-tab.active {
-        color: var(--vh-primary);
-        border-bottom-color: var(--vh-primary);
-        font-weight: 500;
-    }
-
-    .lead-filters {
-        background: var(--vh-card-bg);
-        border-radius: var(--radius-md);
-        padding: var(--spacing-md);
-        margin-bottom: var(--spacing-md);
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--vh-border);
-    }
-
-    .filter-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--spacing-md);
-        align-items: center;
-        margin-bottom: var(--spacing-sm);
-    }
-
-    .filter-row:last-child {
-        margin-bottom: 0;
-    }
-
-    .filter-item {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-    }
-
-    .filter-item label {
-        font-size: var(--font-size-sm);
-        color: var(--vh-text-muted);
-        white-space: nowrap;
-    }
-
-    .filter-item select,
-    .filter-item input {
-        font-size: var(--font-size-sm);
-        padding: var(--spacing-xs) var(--spacing-sm);
-        border: 1px solid var(--vh-border);
-        border-radius: var(--radius-sm);
-    }
-
-    .lead-actions {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: var(--spacing-md);
-        flex-wrap: wrap;
-        gap: var(--spacing-sm);
-    }
-
-    .lead-action-buttons {
-        display: flex;
-        gap: var(--spacing-sm);
-        flex-wrap: wrap;
-    }
-
-    .lead-table {
-        background: var(--vh-card-bg);
-        border-radius: var(--radius-md);
-        overflow: hidden;
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--vh-border);
-    }
-
-    .lead-table table {
-        margin-bottom: 0;
-    }
-
-    .lead-table thead th {
-        background: var(--vh-surface);
-        border-bottom: 2px solid var(--vh-primary);
-        font-weight: 600;
-        color: var(--vh-text);
-        font-size: var(--font-size-sm);
-        padding: calc(var(--spacing-sm) * 0.7) calc(var(--spacing-md) * 0.7);
-        white-space: nowrap;
-        position: relative;
-        line-height: 1.4;
-    }
-
-    .lead-table tbody td {
-        font-size: var(--font-size-sm);
-        padding: calc(var(--spacing-md) * 0.7);
-        vertical-align: middle;
-        border-bottom: 2px solid var(--vh-primary);
-        line-height: 1.4;
-    }
-
-    .lead-table tbody tr {
-        line-height: 1.4;
-    }
-
-    .lead-table tbody tr:hover {
-        background-color: var(--vh-surface);
-    }
-
-    .lead-table tbody tr.selected {
-        background-color: var(--vh-primary-soft);
-    }
-
-    .contact-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, var(--vh-primary), var(--vh-primary-light));
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--vh-card-bg);
-        font-weight: 600;
-        font-size: var(--font-size-sm);
-        margin-right: var(--spacing-sm);
-    }
-
-    .days-badge {
-        padding: var(--spacing-xs) var(--spacing-sm);
-        border-radius: var(--radius-sm);
-        font-size: var(--font-size-xs);
-        font-weight: 500;
-    }
-
-    .days-high {
-        background: var(--vh-error-soft);
-        color: var(--vh-error);
-    }
-
-    .days-medium {
-        background: var(--vh-warning-soft);
-        color: var(--vh-warning);
-    }
-
-    .days-low {
-        background: var(--vh-success-soft);
-        color: var(--vh-success);
-    }
-
-    /* 自定义显示列样式 */
-    .column-settings-btn {
-        position: absolute;
-        top: var(--spacing-xs);
-        right: var(--spacing-xs);
-        cursor: pointer;
-        color: var(--vh-warning);
-        font-size: var(--font-size-base);
-        padding: var(--spacing-xs);
-        border-radius: var(--radius-sm);
-        transition: all var(--transition-base);
-        z-index: 10;
-    }
-
-    .column-settings-btn:hover {
-        color: var(--vh-warning-dark);
-        background: var(--vh-warning-soft);
-        transform: scale(1.1);
-    }
-
-    .column-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-        padding: var(--spacing-xs) var(--spacing-md);
-        background: var(--vh-surface);
-        border: 1px solid var(--vh-border);
-        border-radius: var(--radius-sm);
-        font-size: var(--font-size-sm);
-        cursor: move;
-        margin: var(--spacing-xs);
-    }
-
-    .column-tag .remove-btn {
-        cursor: pointer;
-        color: var(--vh-text-muted);
-        font-size: var(--font-size-md);
-        line-height: 1;
-        padding: 0;
-        background: none;
-        border: none;
-        margin-left: var(--spacing-xs);
-    }
-
-    .column-tag .remove-btn:hover {
-        color: var(--vh-error);
-    }
-
-    .available-column-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-        padding: var(--spacing-xs) var(--spacing-md);
-        background: var(--vh-card-bg);
-        border: 1px solid var(--vh-border);
-        border-radius: var(--radius-sm);
-        font-size: var(--font-size-sm);
-        cursor: pointer;
-        margin: var(--spacing-xs);
-        transition: all var(--transition-base);
-    }
-
-    .available-column-tag:hover {
-        background: var(--vh-primary-soft);
-        border-color: var(--vh-primary);
-        color: var(--vh-primary);
-    }
-
-    .available-column-tag .add-btn {
-        color: var(--vh-success);
-        font-size: var(--font-size-md);
-        line-height: 1;
-    }
-
-    .column-list-container {
-        min-height: 150px;
-        max-height: 300px;
-        overflow-y: auto;
-        padding: var(--spacing-md);
-        background: var(--vh-surface);
-        border-radius: var(--radius-md);
-        border: 1px solid var(--vh-border);
-        margin-bottom: var(--spacing-md);
-    }
-
-    .column-list-container.empty {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--vh-text-muted);
-        font-size: var(--font-size-sm);
-    }
-
-    /* 自定义筛选字段样式 */
-    .filter-field-row {
-        cursor: move;
-        transition: background-color var(--transition-base);
-    }
-
-    .filter-field-row:hover {
-        background-color: var(--vh-surface);
-    }
-
-    .filter-field-row.dragging {
-        opacity: 0.5;
-    }
-
-    .filter-field-drag-handle {
-        color: var(--vh-text-muted);
-        font-size: 1.2rem;
-        cursor: move;
-        padding: 0 8px;
-    }
-
-    .filter-field-drag-handle:hover {
-        color: var(--vh-primary);
-    }
-
-    .filter-field-checkbox {
-        cursor: pointer;
-    }
-
-    .filter-field-label {
-        font-weight: 500;
-        color: var(--vh-text);
-    }
-
-    .filter-item[style*="display: none"] {
-        display: none !important;
-    }
-</style>
-{% endblock %}
-
-{% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_list' %}">客户管理</a></li>
-<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
-{% endblock %}
-
-{% block content %}
-<div class="container-fluid py-4">
-
-    <div class="lead-tabs">
-        <a href="?tab=all{% if search %}&search={{ search }}{% endif %}" class="lead-tab {% if tab == 'all' %}active{% endif %}">
-            全部客户线索
-        </a>
-        <a href="?tab=not_friend{% if search %}&search={{ search }}{% endif %}" class="lead-tab {% if tab == 'not_friend' %}active{% endif %}">
-            未加好友
-        </a>
-        <a href="?tab=friend_added{% if search %}&search={{ search }}{% endif %}" class="lead-tab {% if tab == 'friend_added' %}active{% endif %}">
-            已加好友
-        </a>
-    </div>
-
-    <div class="lead-filters">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="mb-0">筛选条件</h6>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#filterFieldsModal" title="自定义筛选字段">
-                <i class="bi bi-gear"></i> 自定义筛选字段
-            </button>
-        </div>
-        <form method="get" id="filterForm">
-            <input type="hidden" name="tab" value="{{ tab }}">
-
-            <div class="filter-row" id="filterFieldsContainer">
-                <div class="filter-item" data-filter-field="follow_status">
-                    <label>跟进状态:</label>
-                    <select name="follow_status" class="form-select form-select-sm" style="width: 150px;">
-                        <option value="">全部</option>
-                        {% for value, label in follow_status_choices %}
-                        <option value="{{ value }}" {% if follow_status == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="filter-item" data-filter-field="channel">
-                    <label>渠道:</label>
-                    <select name="channel" class="form-select form-select-sm" style="width: 150px;">
-                        <option value="">全部</option>
-                        {% for value, label in channel_choices %}
-                        <option value="{{ value }}" {% if channel == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="filter-item" data-filter-field="responsible_user">
-                    <label>负责人:</label>
-                    <select name="responsible_user" class="form-select form-select-sm" style="width: 150px;">
-                        <option value="">全部</option>
-                        {% for user in responsible_users %}
-                        <option value="{{ user.id }}" {% if responsible_user_id == user.id|stringformat:"s" %}selected{% endif %}>{{ user.get_full_name|default:user.username }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="filter-item" data-filter-field="lead_source">
-                    <label>线索来源:</label>
-                    <select name="lead_source" class="form-select form-select-sm" style="width: 150px;">
-                        <option value="">全部</option>
-                        {% for value, label in channel_choices %}
-                        <option value="{{ value }}" {% if lead_source == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="filter-item" data-filter-field="created_time">
-                    <label>创建时间:</label>
-                    <select name="created_time" class="form-select form-select-sm" style="width: 150px;">
-                        <option value="">全部</option>
-                        <option value="today" {% if created_time == 'today' %}selected{% endif %}>今天</option>
-                        <option value="week" {% if created_time == 'week' %}selected{% endif %}>最近7天</option>
-                        <option value="month" {% if created_time == 'month' %}selected{% endif %}>最近30天</option>
-                    </select>
-                </div>
-
-                <div class="filter-item" data-filter-field="region" style="display: none;">
-                    <label>地区:</label>
-                    <select name="region" class="form-select form-select-sm" style="width: 150px;">
-                        <option value="">全部</option>
-
-                    </select>
-                </div>
-
-                <div class="filter-item" data-filter-field="actual_followup_time" style="display: none;">
-                    <label>实际跟进时间:</label>
-                    <select name="actual_followup_time" class="form-select form-select-sm" style="width: 150px;">
-                        <option value="">全部</option>
-                        <option value="today">今天</option>
-                        <option value="week">最近7天</option>
-                        <option value="month">最近30天</option>
-                    </select>
-                </div>
-
-                <div class="filter-item" data-filter-field="created_by" style="display: none;">
-                    <label>创建人:</label>
-                    <select name="created_by" class="form-select form-select-sm" style="width: 150px;">
-                        <option value="">全部</option>
-                        {% for user in responsible_users %}
-                        <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="filter-item" data-filter-field="updated_time" style="display: none;">
-                    <label>更新于:</label>
-                    <select name="updated_time" class="form-select form-select-sm" style="width: 150px;">
-                        <option value="">全部</option>
-                        <option value="today">今天</option>
-                        <option value="week">最近7天</option>
-                        <option value="month">最近30天</option>
-                    </select>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <div class="lead-actions">
-        <div class="lead-action-buttons">
-            {% if can_create %}
-            <a href="{% url 'business_pages:customer_lead_create' %}" class="btn btn-primary btn-sm">+ 新增客户线索</a>
-            {% endif %}
-            <div class="btn-group">
-                <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                    导出
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="?export=csv{% if search %}&search={{ search }}{% endif %}{% if follow_status %}&follow_status={{ follow_status }}{% endif %}{% if channel %}&channel={{ channel }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if lead_source %}&lead_source={{ lead_source }}{% endif %}{% if created_time %}&created_time={{ created_time }}{% endif %}">导出为 CSV</a></li>
-                    <li><a class="dropdown-item" href="?export=xlsx{% if search %}&search={{ search }}{% endif %}{% if follow_status %}&follow_status={{ follow_status }}{% endif %}{% if channel %}&channel={{ channel }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if lead_source %}&lead_source={{ lead_source }}{% endif %}{% if created_time %}&created_time={{ created_time }}{% endif %}">导出为 Excel</a></li>
-                </ul>
-            </div>
-            <button class="btn btn-outline-secondary btn-sm">导入</button>
-        </div>
-
-        <div class="d-flex align-items-center gap-2">
-            <span class="text-muted" style="font-size: var(--font-size-sm);">已选<span id="selectedCount">0</span>个</span>
-            <div id="bulkActions" style="display: none;" class="d-flex gap-2">
-                <select id="bulkActionSelect" class="form-select form-select-sm" style="width: 120px;">
-                    <option value="">批量操作</option>
-                    <option value="assign">分配负责人</option>
-                    <option value="update_status">更新状态</option>
-                    <option value="convert">转化为客户</option>
-                    <option value="delete">删除</option>
-                </select>
-                <button id="executeBulkAction" class="btn btn-primary btn-sm">执行</button>
-            </div>
-            <div class="input-group input-group-sm" style="width: 350px;">
-                <select name="search_field" class="form-select form-select-sm" style="width: 120px;">
-                    <option value="all" {% if not request.GET.search_field or request.GET.search_field == 'all' %}selected{% endif %}>全部字段</option>
-                    <option value="company_name" {% if request.GET.search_field == 'company_name' %}selected{% endif %}>公司名称</option>
-                    <option value="contact_name" {% if request.GET.search_field == 'contact_name' %}selected{% endif %}>联系人</option>
-                    <option value="contact_phone" {% if request.GET.search_field == 'contact_phone' %}selected{% endif %}>联系电话</option>
-                </select>
-                <input type="text" name="search" class="form-control" placeholder="请输入搜索内容" value="{{ search }}">
-                <button class="btn btn-outline-secondary" type="submit" form="filterForm">
-                    搜索
-                </button>
-                <button class="btn btn-outline-secondary" type="button"data-click="handle_onclick_0">
-                    刷新
-                </button>
-            </div>
-        </div>
-    </div>
-
-    {% if page_obj %}
-    <div class="lead-table">
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th style="width: 40px;">
-                            <input type="checkbox" id="selectAll">
-                        </th>
-                        <th data-column="contact_name" class="column-header">
-                            联系人
-                            <i class="bi bi-gear column-settings-btn" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="自定义显示列"></i>
-                            <a href="?sort=contact_name&order={% if sort_by == 'contact_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% if search_field %}&search_field={{ search_field }}{% endif %}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}{% if follow_status %}&follow_status={{ follow_status }}{% endif %}{% if channel %}&channel={{ channel }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if lead_source %}&lead_source={{ lead_source }}{% endif %}{% if created_time %}&created_time={{ created_time }}{% endif %}" class="text-muted ms-1" title="排序">
-                                <i class="bi bi-arrow-{% if sort_by == 'contact_name' and order == 'asc' %}up{% elif sort_by == 'contact_name' and order == 'desc' %}down{% else %}down-up{% endif %}"></i>
-                            </a>
-                        </th>
-                        <th data-column="company_name" class="column-header">
-                            公司名称
-                            <i class="bi bi-gear column-settings-btn" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="自定义显示列"></i>
-                            <a href="?sort=company_name&order={% if sort_by == 'company_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% if search_field %}&search_field={{ search_field }}{% endif %}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}{% if follow_status %}&follow_status={{ follow_status }}{% endif %}{% if channel %}&channel={{ channel }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if lead_source %}&lead_source={{ lead_source }}{% endif %}{% if created_time %}&created_time={{ created_time }}{% endif %}" class="text-muted ms-1" title="排序">
-                                <i class="bi bi-arrow-{% if sort_by == 'company_name' and order == 'asc' %}up{% elif sort_by == 'company_name' and order == 'desc' %}down{% else %}down-up{% endif %}"></i>
-                            </a>
-                        </th>
-                        <th data-column="lead_source" class="column-header">
-                            线索来源
-                            <i class="bi bi-gear column-settings-btn" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="自定义显示列"></i>
-                        </th>
-                        <th data-column="region" class="column-header">
-                            地区
-                            <i class="bi bi-gear column-settings-btn" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="自定义显示列"></i>
-                        </th>
-                        <th data-column="responsible_user" class="column-header">
-                            负责人
-                            <i class="bi bi-gear column-settings-btn" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="自定义显示列"></i>
-                        </th>
-                        <th data-column="follow_status" class="column-header">
-                            跟进状态
-                            <i class="bi bi-gear column-settings-btn" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="自定义显示列"></i>
-                        </th>
-                        <th data-column="latest_followup_note" class="column-header">
-                            最新跟进记录
-                            <i class="bi bi-gear column-settings-btn" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="自定义显示列"></i>
-                        </th>
-                        <th data-column="actual_followup_time" class="column-header">
-                            实际跟进时间
-                            <i class="bi bi-gear column-settings-btn" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="自定义显示列"></i>
-                            <a href="?sort=actual_followup_time&order={% if sort_by == 'actual_followup_time' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% if search_field %}&search_field={{ search_field }}{% endif %}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}{% if follow_status %}&follow_status={{ follow_status }}{% endif %}{% if channel %}&channel={{ channel }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if lead_source %}&lead_source={{ lead_source }}{% endif %}{% if created_time %}&created_time={{ created_time }}{% endif %}" class="text-muted ms-1" title="排序">
-                                <i class="bi bi-arrow-{% if sort_by == 'actual_followup_time' and order == 'asc' %}up{% elif sort_by == 'actual_followup_time' and order == 'desc' %}down{% else %}down-up{% endif %}"></i>
-                            </a>
-                        </th>
-                        <th data-column="days_not_followed" class="column-header">
-                            未跟进天数
-                            <i class="bi bi-gear column-settings-btn" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="自定义显示列"></i>
-                            <a href="?sort=days_not_followed&order={% if sort_by == 'days_not_followed' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% if search_field %}&search_field={{ search_field }}{% endif %}{% endif %}{% if tab %}&tab={{ tab }}{% endif %}{% if follow_status %}&follow_status={{ follow_status }}{% endif %}{% if channel %}&channel={{ channel }}{% endif %}{% if responsible_user_id %}&responsible_user={{ responsible_user_id }}{% endif %}{% if lead_source %}&lead_source={{ lead_source }}{% endif %}{% if created_time %}&created_time={{ created_time }}{% endif %}" class="text-muted ms-1" title="排序">
-                                <i class="bi bi-arrow-{% if sort_by == 'days_not_followed' and order == 'asc' %}up{% elif sort_by == 'days_not_followed' and order == 'desc' %}down{% else %}down-up{% endif %}"></i>
-                            </a>
-                        </th>
-                        <th data-column="actions" class="column-header">操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for lead in page_obj %}
-                    <tr data-lead-id="{{ lead.id }}">
-                        <td>
-                            <input type="checkbox" class="lead-checkbox" value="{{ lead.id }}">
-                        </td>
-                        <td data-column="contact_name" class="column-cell">{{ lead.contact_name|default:"—" }}</td>
-                        <td data-column="company_name" class="column-cell">{{ lead.company_name }}</td>
-                        <td data-column="lead_source" class="column-cell">{{ lead.get_lead_source_display }}</td>
-                        <td data-column="region" class="column-cell">{{ lead.get_region_display|default:"—" }}</td>
-                        <td data-column="responsible_user" class="column-cell">{{ lead.responsible_user.get_full_name|default:lead.responsible_user.username|default:"—" }}</td>
-                        <td data-column="follow_status" class="column-cell">
-                            <span class="status-badge {{ lead.follow_status }}">
-                                {{ lead.get_follow_status_display }}
-                            </span>
-                        </td>
-                        <td data-column="latest_followup_note" class="column-cell">{{ lead.latest_followup_note|truncatewords:10|default:"暂无跟进记录" }}</td>
-                        <td data-column="actual_followup_time" class="column-cell">{{ lead.actual_followup_time|date:"Y/m/d H:i"|default:"—" }}</td>
-                        <td data-column="days_not_followed" class="column-cell">
-                            {% if lead.days_not_followed > 0 %}
-                            <span class="days-badge {% if lead.days_not_followed > 300 %}days-high{% elif lead.days_not_followed > 100 %}days-medium{% else %}days-low{% endif %}">
-                                {{ lead.days_not_followed }}
-                            </span>
-                            {% else %}
-                            <span class="text-muted">—</span>
-                            {% endif %}
-                        </td>
-                        <td data-column="actions" class="column-cell">
-                            <div class="btn-group btn-group-sm">
-                                <a href="{% url 'business_pages:customer_lead_detail' lead.id %}" class="btn btn-outline-primary">查看</a>
-                                {% if not lead.responsible_user %}
-                                <a href="{% url 'business_pages:customer_lead_claim' lead.id %}" class="btn btn-outline-success" title="认领线索">认领</a>
-                                {% endif %}
-                                {% if can_create %}
-                                <div class="btn-group btn-group-sm">
-                                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                                        更多
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        {% if lead.responsible_user %}
-                                        <li><a class="dropdown-item" href="#"data-click="handle_onclick_1">分配负责人</a></li>
-                                        {% endif %}
-                                        {% if not lead.converted_client %}
-                                        <li><a class="dropdown-item" href="#"data-click="handle_onclick_2">转化为客户</a></li>
-                                        {% endif %}
-                                        <li><a class="dropdown-item" href="{% url 'business_pages:customer_lead_followup_create' lead.id %}">添加跟进</a></li>
-                                        {% if can_create %}
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="{% url 'business_pages:customer_lead_delete' lead.id %}">删除</a></li>
-                                        {% endif %}
-                                    </ul>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="modal fade" id="columnSettingsModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">自定义显示列</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <ul class="nav nav-tabs mb-3">
-                            <li class="nav-item">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#fieldSettings">字段设置</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#otherSettings">其他设置</a>
-                            </li>
-                        </ul>
-
-                        <div class="tab-content">
-                            <div class="tab-pane fade show active" id="fieldSettings">
-                                <p class="text-muted small mb-3">拖动区块调整显示顺序</p>
-
-                                <div>
-                                    <label class="form-label fw-bold">已选列</label>
-                                    <div id="selectedColumns" class="column-list-container">
-
-                                    </div>
-                                </div>
-
-                                <div class="mt-4">
-                                    <label class="form-label fw-bold">可用字段</label>
-                                    <div id="availableColumns" class="column-list-container">
-
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="tab-pane fade" id="otherSettings">
-                                <p class="text-muted">其他设置功能待开发</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" id="resetColumns">重置</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                        <button type="button" class="btn btn-primary" id="saveColumns">确定</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="modal fade" id="filterFieldsModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i class="bi bi-info-circle text-primary me-2"></i>自定义筛选字段
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="text-muted small mb-3">
-                            <i class="bi bi-info-circle"></i> 最多支持10个筛选字段
-                        </p>
-
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 60px;">是否启用</th>
-                                        <th>支持筛选的字段</th>
-                                        <th style="width: 100px;">拖动调整顺序</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="filterFieldsList">
-
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" id="resetFilterFields">重置</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                        <button type="button" class="btn btn-primary" id="saveFilterFields">保存</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="modal fade" id="bulkActionModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">批量操作</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form id="bulkActionForm" method="post" action="{% url 'business_pages:customer_lead_bulk_action' %}">
-                        {% csrf_token %}
-                        <div class="modal-body">
-                            <div id="bulkActionContent"></div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                            <button type="submit" class="btn btn-primary">确认</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        {% if page_obj.has_other_pages %}
-        <div class="pagination-wrapper p-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <span class="text-muted">共{{ page_obj.paginator.count }}条</span>
-                </div>
-                <nav aria-label="线索列表分页">
-                    <ul class="pagination justify-content-center mb-0">
-                        {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if tab %}&tab={{ tab }}{% endif %}{% if search %}&search={{ search }}{% endif %}">&lt;</a>
-                        </li>
-                        {% endif %}
-
-                        {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ num }}</span>
-                        </li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% if tab %}&tab={{ tab }}{% endif %}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a>
-                        </li>
-                        {% elif num == 1 or num == page_obj.paginator.num_pages %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% if tab %}&tab={{ tab }}{% endif %}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a>
-                        </li>
-                        {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
-                        <li class="page-item disabled">
-                            <span class="page-link">...</span>
-                        </li>
-                        {% endif %}
-                        {% endfor %}
-
-                        {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if tab %}&tab={{ tab }}{% endif %}{% if search %}&search={{ search }}{% endif %}">&gt;</a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-                <div>
-                    <select class="form-select form-select-sm" style="width: 80px;"data-change="handle_onchange_3">
-                        <option value="?page=1&per_page=10" {% if page_obj.paginator.per_page == 10 %}selected{% endif %}>10条/页</option>
-                        <option value="?page=1&per_page=20" {% if page_obj.paginator.per_page == 20 %}selected{% endif %}>20条/页</option>
-                        <option value="?page=1&per_page=50" {% if page_obj.paginator.per_page == 50 %}selected{% endif %}>50条/页</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-    {% else %}
-    <div class="info-card">
-        <div class="info-card-body">
-            <p class="text-muted text-center py-5">暂无线索数据</p>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if follow_status_stats or lead_source_stats %}
-    <div class="row g-2 mt-3 align-items-start">
-        {% if follow_status_stats %}
-        <div class="col-md-6">
-            <div class="info-card">
-                <div class="info-card-header">
-                    <h5 class="info-card-title">跟进状态分布</h5>
-                </div>
-                <div class="info-card-body">
-                    <canvas id="followStatusChart" style="max-height: 300px;"></canvas>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        {% if lead_source_stats %}
-        <div class="col-md-6">
-            <div class="info-card">
-                <div class="info-card-header">
-                    <h5 class="info-card-title">线索来源分布</h5>
-                </div>
-                <div class="info-card-body">
-                    <canvas id="leadSourceChart" style="max-height: 300px;"></canvas>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
-</div>
-
-<script>
-    // 安全的HTML设置函数
-    function setSafeHTML(element, html) {
-        if (!element) return;
-        // 如果内容不包含HTML标签，使用textContent
-        if (!/<[^>]+>/.test(html)) {
-            element.textContent = html;
-        } else {
-            // 对于包含HTML的内容，使用innerHTML（假设内容已清理）
-            // 在生产环境中，应该使用DOMPurify等库清理HTML
-            element.innerHTML = html;
-        }
-    }
-
-    // 安全的文本设置函数（推荐使用）
-    function setSafeText(element, text) {
-        if (element) {
-            element.textContent = text;
-        }
-    }
-
-    function getCsrfToken() {
-        const token = document.querySelector('[name=csrfmiddlewaretoken]');
-        return token ? token.value : '';
-    }
-    // 筛选表单自动提交
-    document.querySelectorAll('#filterForm select').forEach(select => {
-        select.addEventListener('change', function() {
-            document.getElementById('filterForm').submit();
-        });
-    });
-
-    // 全选功能
-    document.getElementById('selectAll')?.addEventListener('change', function() {
-        const checkboxes = document.querySelectorAll('.lead-checkbox');
-        checkboxes.forEach(cb => cb.checked = this.checked);
-        updateSelectedCount();
-    });
-
-    // 更新选中数量
-    function updateSelectedCount() {
-        const selected = document.querySelectorAll('.lead-checkbox:checked').length;
-        document.getElementById('selectedCount').textContent = selected;
-        const bulkActions = document.getElementById('bulkActions');
-        if (selected > 0) {
-            bulkActions.style.display = 'flex';
-        } else {
-            bulkActions.style.display = 'none';
-        }
-    }
-
-    // 监听复选框变化
-    document.querySelectorAll('.lead-checkbox').forEach(cb => {
-        cb.addEventListener('change', updateSelectedCount);
-    });
-
-    // 批量操作
-    document.getElementById('executeBulkAction')?.addEventListener('click', function() {
-        const action = document.getElementById('bulkActionSelect').value;
-        if (!action) {
-            alert('请选择操作类型');
-            return;
-        }
-
-        const selectedIds = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
-        if (selectedIds.length === 0) {
-            alert('请至少选择一条线索');
-            return;
-        }
-
-        const form = document.getElementById('bulkActionForm');
-        const content = document.getElementById('bulkActionContent');
-
-        // 添加隐藏的lead_ids字段
-        // TODO: 使用DOMPurify清理HTML
-            form.innerHTML = '<input type="hidden" name="action" value="' + action + '">';
-        selectedIds.forEach(id => {
-            form.innerHTML += '<input type="hidden" name="lead_ids" value="' + id + '">';
-        });
-        form.innerHTML += '{% csrf_token %}';
-
-        // 根据操作类型显示不同的表单内容
-        if (action === 'assign') {
-            // TODO: 使用DOMPurify清理HTML
-            content.innerHTML = `
-                <div class="mb-3">
-                    <label class="form-label">选择负责人</label>
-                    <select name="responsible_user" class="form-select" required>
-                        <option value="">请选择负责人</option>
-                        {% for user in responsible_users %}
-                        <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            `;
-        } else if (action === 'update_status') {
-            // TODO: 使用DOMPurify清理HTML
-            content.innerHTML = `
-                <div class="mb-3">
-                    <label class="form-label">选择跟进状态</label>
-                    <select name="follow_status" class="form-select" required>
-                        <option value="">请选择状态</option>
-                        {% for value, label in follow_status_choices %}
-                        <option value="{{ value }}">{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            `;
-        } else if (action === 'delete') {
-            // TODO: 使用DOMPurify清理HTML
-            content.innerHTML = `
-                <div class="alert alert-warning">
-                    <i class="bi bi-exclamation-triangle"></i> 确认删除选中的 ${selectedIds.length} 条线索吗？此操作不可恢复。
-                </div>
-            `;
-        } else if (action === 'convert') {
-            // TODO: 使用DOMPurify清理HTML
-            content.innerHTML = `
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i> 确认将选中的 ${selectedIds.length} 条线索转化为客户吗？
-                </div>
-            `;
-        }
-
-        // 重新添加表单字段
-        const actionInput = document.createElement('input');
-        actionInput.type = 'hidden';
-        actionInput.name = 'action';
-        actionInput.value = action;
-        form.appendChild(actionInput);
-
-        selectedIds.forEach(id => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'lead_ids';
-            input.value = id;
-            form.appendChild(input);
-        });
-
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrfmiddlewaretoken';
-        csrfInput.value = getCsrfToken();
-        form.appendChild(csrfInput);
-
-        // 显示模态框
-        const modal = new bootstrap.Modal(document.getElementById('bulkActionModal'));
-        modal.show();
-    });
-
-    // 初始化选中数量
-    updateSelectedCount();
-
-    document.querySelectorAll('.lead-checkbox').forEach(cb => {
-        cb.addEventListener('change', updateSelectedCount);
-    });
-
-    // 加载提示优化
-    document.getElementById('filterForm')?.addEventListener('submit', function() {
-        const submitBtn = this.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            // TODO: 使用DOMPurify清理HTML
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>加载中...';
-        }
-    });
-
-    // 表单提交后恢复按钮状态
-    window.addEventListener('pageshow', function(event) {
-        const submitBtn = document.querySelector('#filterForm button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = '筛选';
-        }
-    });
-
-    // ==================== 自定义显示列功能 ====================
-    // 定义所有可用列
-    const allColumns = {
-        'contact_name': { label: '联系人', default: true },
-        'company_name': { label: '公司名称', default: true },
-        'lead_source': { label: '线索来源', default: true },
-        'region': { label: '地区', default: true },
-        'responsible_user': { label: '负责人', default: true },
-        'follow_status': { label: '跟进状态', default: true },
-        'latest_followup_note': { label: '最新跟进记录', default: true },
-        'actual_followup_time': { label: '实际跟进时间', default: true },
-        'days_not_followed': { label: '未跟进天数', default: true },
-        'created_by': { label: '创建人', default: false },
-        'created_time': { label: '创建时间', default: false },
-        'updated_time': { label: '更新时间', default: false },
-        'is_friend_added': { label: '是否已加好友', default: false },
-        'channel': { label: '渠道', default: false },
-        'contact_phone': { label: '联系电话', default: false },
-        'contact_email': { label: '联系邮箱', default: false },
-    };
-
-    // 获取存储的列设置
-    function getStoredColumns() {
-        const stored = localStorage.getItem('customer_lead_columns');
-        if (stored) {
-            try {
-                return JSON.parse(stored);
-            } catch (e) {
-            }
-        }
-        // 返回默认列
-        return Object.keys(allColumns).filter(key => allColumns[key].default);
-    }
-
-    // 保存列设置
-    function saveColumns(columns) {
-        localStorage.setItem('customer_lead_columns', JSON.stringify(columns));
-    }
-
-    // 应用列显示/隐藏和顺序
-    function applyColumnVisibility() {
-        const visibleColumns = getStoredColumns();
-
-        // 获取表头行和所有数据行
-        const headerRow = document.querySelector('thead tr');
-        const dataRows = document.querySelectorAll('tbody tr');
-
-        if (!headerRow) return;
-
-        // 重新排列表头
-        const headers = Array.from(headerRow.querySelectorAll('.column-header'));
-        const checkboxHeader = headerRow.querySelector('th:first-child');
-        const actionHeader = headers.find(h => h.getAttribute('data-column') === 'actions');
-
-        // 清空表头（保留复选框）
-        headerRow.textContent = '';
-        if (checkboxHeader) {
-            headerRow.appendChild(checkboxHeader);
-        }
-
-        // 按顺序添加可见的列头
-        visibleColumns.forEach(col => {
-            const header = headers.find(h => h.getAttribute('data-column') === col);
-            if (header) {
-                headerRow.appendChild(header);
-            }
-        });
-
-        // 添加操作列头
-        if (actionHeader) {
-            headerRow.appendChild(actionHeader);
-        }
-
-        // 重新排列数据行
-        dataRows.forEach(row => {
-            const cells = Array.from(row.querySelectorAll('.column-cell'));
-            const checkboxCell = row.querySelector('td:first-child');
-            const actionCell = cells.find(c => c.getAttribute('data-column') === 'actions');
-
-            // 清空行（保留复选框）
-            row.textContent = '';
-            if (checkboxCell) {
-                row.appendChild(checkboxCell);
-            }
-
-            // 按顺序添加可见的单元格
-            visibleColumns.forEach(col => {
-                const cell = cells.find(c => c.getAttribute('data-column') === col);
-                if (cell) {
-                    row.appendChild(cell);
-                }
-            });
-
-            // 添加操作单元格
-            if (actionCell) {
-                row.appendChild(actionCell);
-            }
-        });
-    }
-
-    // Sortable 实例管理
-    let columnsSortable = null;
-
-    // 渲染已选列
-    function renderSelectedColumns(columns) {
-        const container = document.getElementById('selectedColumns');
-        if (!container) return;
-
-        if (columns.length === 0) {
-            // TODO: 使用DOMPurify清理HTML
-            container.innerHTML = '<div class="empty">请从下方添加字段</div>';
-            container.classList.add('empty');
-            // 销毁 Sortable 实例
-            if (columnsSortable) {
-                columnsSortable.destroy();
-                columnsSortable = null;
-            }
-            return;
-        }
-
-        container.classList.remove('empty');
-        container.innerHTML = columns.map(col => {
-            const colInfo = allColumns[col];
-            if (!colInfo) return '';
-            return `
-                <span class="column-tag" data-column="${col}">
-                    <i class="bi bi-grip-vertical"></i>
-                    ${colInfo.label}
-                    <button type="button" class="remove-btn"data-click="handle_onclick_4"${col}')">×</button>
-                </span>
-            `;
-        }).join('');
-
-        // 销毁旧的 Sortable 实例
-        if (columnsSortable) {
-            columnsSortable.destroy();
-            columnsSortable = null;
-        }
-
-        // 初始化拖拽排序（使用SortableJS）
-        if (typeof Sortable !== 'undefined') {
-            columnsSortable = new Sortable(container, {
-                animation: 150,
-                handle: '.bi-grip-vertical',
-                onEnd: function(evt) {
-                    const newOrder = Array.from(container.querySelectorAll('.column-tag')).map(tag =>
-                        tag.getAttribute('data-column')
-                    );
-                    currentColumns = newOrder;
-                }
-            });
-        }
-    }
-
-    // 渲染可用字段
-    function renderAvailableColumns(selectedColumns) {
-        const container = document.getElementById('availableColumns');
-        if (!container) return;
-
-        const available = Object.keys(allColumns).filter(col => !selectedColumns.includes(col));
-
-        if (available.length === 0) {
-            // TODO: 使用DOMPurify清理HTML
-            container.innerHTML = '<div class="empty">所有字段已添加</div>';
-            container.classList.add('empty');
-            return;
-        }
-
-        container.classList.remove('empty');
-        container.innerHTML = available.map(col => {
-            const colInfo = allColumns[col];
-            return `
-                <span class="available-column-tag"data-click="handle_onclick_5"${col}')">
-                    <i class="bi bi-plus-circle add-btn"></i>
-                    ${colInfo.label}
-                </span>
-            `;
-        }).join('');
-    }
-
-    // 添加列
-    let currentColumns = getStoredColumns();
-
-    window.addColumn = function(column) {
-        if (!currentColumns.includes(column)) {
-            currentColumns.push(column);
-            renderSelectedColumns(currentColumns);
-            renderAvailableColumns(currentColumns);
-        }
-    };
-
-    // 移除列
-    window.removeColumn = function(column) {
-        currentColumns = currentColumns.filter(col => col !== column);
-        renderSelectedColumns(currentColumns);
-        renderAvailableColumns(currentColumns);
-    };
-
-    // 重置列
-    document.getElementById('resetColumns')?.addEventListener('click', function() {
-        currentColumns = Object.keys(allColumns).filter(key => allColumns[key].default);
-        renderSelectedColumns(currentColumns);
-        renderAvailableColumns(currentColumns);
-    });
-
-    // 保存列设置
-    document.getElementById('saveColumns')?.addEventListener('click', function() {
-        // 如果通过拖拽改变了顺序，从DOM中获取最新顺序
-        const container = document.getElementById('selectedColumns');
-        if (container && columnsSortable) {
-            const newOrder = Array.from(container.querySelectorAll('.column-tag')).map(tag =>
-                tag.getAttribute('data-column')
-            );
-            if (newOrder.length > 0) {
-                currentColumns = newOrder;
-            }
-        }
-
-        saveColumns(currentColumns);
-        applyColumnVisibility();
-        const modal = bootstrap.Modal.getInstance(document.getElementById('columnSettingsModal'));
-        modal.hide();
-    });
-
-    // 打开模态框时初始化
-    document.getElementById('columnSettingsModal')?.addEventListener('show.bs.modal', function() {
-        currentColumns = getStoredColumns();
-        renderSelectedColumns(currentColumns);
-        renderAvailableColumns(currentColumns);
-    });
-
-    // 页面加载时应用列设置
-    applyColumnVisibility();
-
-    // ==================== 自定义筛选字段功能 ====================
-    // 定义所有可用的筛选字段（基础定义）
-    const baseFilterFields = {
-        'follow_status': { label: '跟进状态', default: true },
-        'channel': { label: '渠道', default: true },
-        'responsible_user': { label: '负责人', default: true },
-        'lead_source': { label: '线索来源', default: false },
-        'created_time': { label: '创建时间', default: false },
-        'region': { label: '地区', default: false },
-        'actual_followup_time': { label: '实际跟进时间', default: false },
-        'created_by': { label: '创建人', default: false },
-        'updated_time': { label: '更新于', default: false },
-    };
-
-    // 从HTML中自动发现所有筛选字段，并合并到allFilterFields中
-    function initializeFilterFields() {
-        const container = document.getElementById('filterFieldsContainer');
-        if (!container) return baseFilterFields;
-
-        const allFilterFields = { ...baseFilterFields };
-        const filterItems = container.querySelectorAll('.filter-item[data-filter-field]');
-
-        filterItems.forEach(item => {
-            const fieldKey = item.getAttribute('data-filter-field');
-            if (fieldKey) {
-                // 从label中提取字段名称（移除冒号）
-                const labelElement = item.querySelector('label');
-                let label = fieldKey; // 默认使用字段key
-
-                if (labelElement) {
-                    label = labelElement.textContent.replace(/[:：]/g, '').trim();
-                }
-
-                // 如果字段已存在，更新标签（确保使用HTML中的最新标签）
-                // 如果字段不存在，添加新字段
-                allFilterFields[fieldKey] = {
-                    label: label,
-                    default: allFilterFields[fieldKey] ? allFilterFields[fieldKey].default : false
-                };
-            }
-        });
-
-        return allFilterFields;
-    }
-
-    // 初始化筛选字段（包含从HTML中发现的字段）
-    // 注意：这个函数需要在DOM加载完成后调用，所以放在页面底部
-    let allFilterFields = initializeFilterFields();
-
-    // 页面加载完成后重新初始化，确保获取到所有字段
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            allFilterFields = initializeFilterFields();
-        });
-    } else {
-        // DOM已经加载完成，立即初始化
-        allFilterFields = initializeFilterFields();
-    }
-
-    // 获取存储的筛选字段设置
-    function getStoredFilterFields() {
-        const stored = localStorage.getItem('customer_lead_filter_fields');
-        if (stored) {
-            try {
-                const data = JSON.parse(stored);
-                // 过滤掉不存在的字段
-                const validEnabled = (data.enabled || []).filter(key => {
-                    // 如果字段在allFilterFields中，或者HTML中存在该字段，则有效
-                    if (allFilterFields[key]) return true;
-                    const container = document.getElementById('filterFieldsContainer');
-                    if (container) {
-                        return container.querySelector(`.filter-item[data-filter-field="${key}"]`) !== null;
-                    }
-                    return false;
-                });
-
-                const validOrder = (data.order || []).filter(key => {
-                    // 如果字段在allFilterFields中，或者HTML中存在该字段，则有效
-                    if (allFilterFields[key]) return true;
-                    const container = document.getElementById('filterFieldsContainer');
-                    if (container) {
-                        return container.querySelector(`.filter-item[data-filter-field="${key}"]`) !== null;
-                    }
-                    return false;
-                });
-
-                // 如果有效顺序为空，使用默认值
-                const finalOrder = validOrder.length > 0 ? validOrder : Object.keys(allFilterFields).filter(key => allFilterFields[key].default);
-
-                return {
-                    enabled: validEnabled,
-                    order: finalOrder
-                };
-            } catch (e) {
-            }
-        }
-        // 返回默认设置
-        const defaultEnabled = Object.keys(allFilterFields).filter(key => allFilterFields[key].default);
-        return {
-            enabled: defaultEnabled,
-            order: defaultEnabled
-        };
-    }
-
-    // 保存筛选字段设置
-    function saveFilterFields(enabled, order) {
-        localStorage.setItem('customer_lead_filter_fields', JSON.stringify({
-            enabled: enabled,
-            order: order
-        }));
-    }
-
-    // 应用筛选字段显示/隐藏和顺序
-    function applyFilterFieldsVisibility() {
-        const settings = getStoredFilterFields();
-        const container = document.getElementById('filterFieldsContainer');
-        if (!container) return;
-
-        // 获取所有筛选项（保留元素引用，不删除）
-        const filterItems = Array.from(container.querySelectorAll('.filter-item'));
-
-        // 创建一个映射，方便查找
-        const itemsMap = {};
-        filterItems.forEach(item => {
-            const fieldKey = item.getAttribute('data-filter-field');
-            if (fieldKey) {
-                itemsMap[fieldKey] = item;
-            }
-        });
-
-        // 先移除所有元素（但保留引用），避免重复添加
-        filterItems.forEach(item => {
-            if (item.parentNode === container) {
-                container.removeChild(item);
-            }
-        });
-
-        // 按用户设置的顺序重新排列
-        const orderedItems = [];
-
-        // 1. 先添加用户设置顺序中的字段（只添加启用的）
-        settings.order.forEach(fieldKey => {
-            const item = itemsMap[fieldKey];
-            if (item) {
-                orderedItems.push({ item: item, fieldKey: fieldKey });
-            }
-        });
-
-        // 2. 添加未在顺序中的字段（可能是新添加的字段）
-        Object.keys(itemsMap).forEach(fieldKey => {
-            if (!settings.order.includes(fieldKey)) {
-                orderedItems.push({ item: itemsMap[fieldKey], fieldKey: fieldKey });
-            }
-        });
-
-        // 3. 按顺序重新添加到容器，并根据启用状态显示/隐藏
-        orderedItems.forEach(({ item, fieldKey }) => {
-            if (settings.enabled.includes(fieldKey)) {
-                item.style.display = ''; // 显示启用的字段
-            } else {
-                item.style.display = 'none'; // 隐藏未启用的字段
-            }
-            container.appendChild(item);
-        });
-    }
-
-    // 当前筛选字段设置
-    let currentFilterFieldsEnabled = [];
-    let currentFilterFieldsOrder = [];
-    let filterFieldsSortable = null;
-
-    // 渲染筛选字段列表
-    function renderFilterFieldsList() {
-        const container = document.getElementById('filterFieldsList');
-        if (!container) return;
-
-        // 使用全局变量，如果为空则从存储中获取
-        let enabled = currentFilterFieldsEnabled.length > 0 ? currentFilterFieldsEnabled : null;
-        let order = currentFilterFieldsOrder.length > 0 ? currentFilterFieldsOrder : null;
-
-        if (!enabled || !order) {
-            const settings = getStoredFilterFields();
-            enabled = enabled || settings.enabled;
-            order = order || settings.order;
-            // 更新全局变量
-            currentFilterFieldsEnabled = [...enabled];
-            currentFilterFieldsOrder = [...order];
-        }
-
-        container.textContent = '';
-
-        // 先渲染顺序中的字段
-        order.forEach(fieldKey => {
-            // 如果字段不在allFilterFields中，尝试从HTML中获取信息
-            let fieldInfo = allFilterFields[fieldKey];
-            if (!fieldInfo) {
-                const filterContainer = document.getElementById('filterFieldsContainer');
-                if (filterContainer) {
-                    const item = filterContainer.querySelector(`.filter-item[data-filter-field="${fieldKey}"]`);
-                    if (item) {
-                        const labelElement = item.querySelector('label');
-                        let label = fieldKey; // 默认使用字段key
-                        if (labelElement) {
-                            label = labelElement.textContent.replace(/[:：]/g, '').trim();
-                        }
-                        fieldInfo = { label: label, default: false };
-                        // 添加到allFilterFields中以便后续使用
-                        allFilterFields[fieldKey] = fieldInfo;
-                    } else {
-                        // 如果HTML中也没有，跳过这个字段
-                        return;
-                    }
-                } else {
-                    return;
-                }
-            }
-
-            const isEnabled = enabled.includes(fieldKey);
-            const row = document.createElement('tr');
-            row.className = 'filter-field-row';
-            row.setAttribute('data-field-key', fieldKey);
-            // TODO: 使用DOMPurify清理HTML
-            row.innerHTML = `
-                <td>
-                    <input type="checkbox" class="form-check-input filter-field-checkbox"
-                           ${isEnabled ? 'checked' : ''}
-                           data-field-key="${fieldKey}">
-                </td>
-                <td class="filter-field-label">${fieldInfo.label}</td>
-                <td>
-                    <i class="bi bi-grip-vertical filter-field-drag-handle"></i>
-                </td>
-            `;
-            container.appendChild(row);
-        });
-
-        // 添加未在顺序中的字段
-        Object.keys(allFilterFields).forEach(fieldKey => {
-            if (!order.includes(fieldKey)) {
-                const fieldInfo = allFilterFields[fieldKey];
-                const isEnabled = enabled.includes(fieldKey);
-                const row = document.createElement('tr');
-                row.className = 'filter-field-row';
-                row.setAttribute('data-field-key', fieldKey);
-                // TODO: 使用DOMPurify清理HTML
-            row.innerHTML = `
-                    <td>
-                        <input type="checkbox" class="form-check-input filter-field-checkbox"
-                               ${isEnabled ? 'checked' : ''}
-                               data-field-key="${fieldKey}">
-                    </td>
-                    <td class="filter-field-label">${fieldInfo.label}</td>
-                    <td>
-                        <i class="bi bi-grip-vertical filter-field-drag-handle"></i>
-                    </td>
-                `;
-                container.appendChild(row);
-            }
-        });
-
-        // 销毁旧的 Sortable 实例
-        if (filterFieldsSortable) {
-            filterFieldsSortable.destroy();
-            filterFieldsSortable = null;
-        }
-
-        // 初始化拖拽排序（使用SortableJS）
-        if (typeof Sortable !== 'undefined') {
-            filterFieldsSortable = new Sortable(container, {
-                animation: 150,
-                handle: '.filter-field-drag-handle',
-                onStart: function(evt) {
-                    evt.item.classList.add('dragging');
-                },
-                onEnd: function(evt) {
-                    evt.item.classList.remove('dragging');
-                    // 更新顺序
-                    const newOrder = Array.from(container.querySelectorAll('.filter-field-row')).map(row =>
-                        row.getAttribute('data-field-key')
-                    );
-                    currentFilterFieldsOrder = newOrder;
-                }
-            });
-        }
-
-        // 绑定复选框事件
-        container.querySelectorAll('.filter-field-checkbox').forEach(checkbox => {
-            // 移除旧的事件监听器（通过克隆节点）
-            const newCheckbox = checkbox.cloneNode(true);
-            checkbox.parentNode.replaceChild(newCheckbox, checkbox);
-
-            newCheckbox.addEventListener('change', function() {
-                const fieldKey = this.getAttribute('data-field-key');
-                if (this.checked) {
-                    if (!currentFilterFieldsEnabled.includes(fieldKey)) {
-                        currentFilterFieldsEnabled.push(fieldKey);
-                    }
-                } else {
-                    currentFilterFieldsEnabled = currentFilterFieldsEnabled.filter(key => key !== fieldKey);
-                }
-            });
-        });
-    }
-
-    // 重置筛选字段
-    document.getElementById('resetFilterFields')?.addEventListener('click', function() {
-        const defaultEnabled = Object.keys(allFilterFields).filter(key => allFilterFields[key].default);
-        currentFilterFieldsEnabled = [...defaultEnabled];
-        currentFilterFieldsOrder = [...defaultEnabled];
-        renderFilterFieldsList();
-    });
-
-    // 保存筛选字段设置
-    document.getElementById('saveFilterFields')?.addEventListener('click', function() {
-        // 如果顺序为空，从DOM中获取当前顺序
-        if (currentFilterFieldsOrder.length === 0) {
-            const container = document.getElementById('filterFieldsList');
-            if (container) {
-                currentFilterFieldsOrder = Array.from(container.querySelectorAll('.filter-field-row')).map(row =>
-                    row.getAttribute('data-field-key')
-                ).filter(key => key); // 过滤掉null/undefined
-            }
-        }
-
-        // 确保顺序中包含所有启用的字段
-        let finalOrder = currentFilterFieldsOrder.filter(key =>
-            key && currentFilterFieldsEnabled.includes(key)
-        );
-
-        // 添加新启用的字段到末尾
-        currentFilterFieldsEnabled.forEach(key => {
-            if (key && !finalOrder.includes(key)) {
-                finalOrder.push(key);
-            }
-        });
-
-        // 确保所有已定义的字段都在顺序中（即使未启用），但只包含有效的字段
-        Object.keys(allFilterFields).forEach(key => {
-            if (key && !finalOrder.includes(key)) {
-                finalOrder.push(key);
-            }
-        });
-
-        // 过滤掉无效的字段
-        const validEnabled = currentFilterFieldsEnabled.filter(key => key);
-        const validOrder = finalOrder.filter(key => key);
-
-        saveFilterFields(validEnabled, validOrder);
-        applyFilterFieldsVisibility();
-        const modal = bootstrap.Modal.getInstance(document.getElementById('filterFieldsModal'));
-        modal.hide();
-    });
-
-    // 打开模态框时初始化
-    document.getElementById('filterFieldsModal')?.addEventListener('show.bs.modal', function() {
-        const settings = getStoredFilterFields();
-        currentFilterFieldsEnabled = [...settings.enabled];
-        currentFilterFieldsOrder = [...settings.order];
-        renderFilterFieldsList();
-    });
-
-    // 页面加载时应用筛选字段设置
-    applyFilterFieldsVisibility();
-</script>
-
-<script src="{% static 'js/lib/Sortable.min.js' %}"></script>
-
-{% if follow_status_stats or lead_source_stats %}
-<script src="{% static 'js/lib/chart.umd.min.js' %}"></script>
-<script>
-    // 跟进状态分布图表
-    {% if follow_status_stats %}
-    const followStatusCtx = document.getElementById('followStatusChart');
-    if (followStatusCtx) {
-        const followStatusData = {
-            labels: [{% for code, stat in follow_status_stats.items %}'{{ stat.label }}'{% if not forloop.last %},{% endif %}{% endfor %}],
-            datasets: [{
-                data: [{% for code, stat in follow_status_stats.items %}{{ stat.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
-                backgroundColor: [
-                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
-                ]
-            }]
-        };
-        new Chart(followStatusCtx, {
-            type: 'doughnut',
-            data: followStatusData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    title: {
-                        display: true,
-                        text: '跟进状态分布'
-                    }
-                }
-            }
-        });
-    }
-    {% endif %}
-
-    // 线索来源分布图表
-    {% if lead_source_stats %}
-    const leadSourceCtx = document.getElementById('leadSourceChart');
-    if (leadSourceCtx) {
-        const leadSourceData = {
-            labels: [{% for code, stat in lead_source_stats.items %}'{{ stat.label }}'{% if not forloop.last %},{% endif %}{% endfor %}],
-            datasets: [{
-                label: '线索数量',
-                data: [{% for code, stat in lead_source_stats.items %}{{ stat.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
-                backgroundColor: '#36A2EB'
-            }]
-        };
-        new Chart(leadSourceCtx, {
-            type: 'bar',
-            data: leadSourceData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    title: {
-                        display: true,
-                        text: '线索来源分布'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-    }
-    {% endif %}
-
-    // 事件处理器: handle_onclick_0
-    document.addEventListener('DOMContentLoaded', function() {
-        const element = document.querySelector('.btn');
-        if (element) {
-            element.addEventListener('click', function(e) {
-                location.reload()
-            });
-        }
-    });
-
-    // 事件处理器: handle_onclick_1
-    document.addEventListener('DOMContentLoaded', function() {
-        const element = document.querySelector('.dropdown-item');
-        if (element) {
-            element.addEventListener('click', function(e) {
-                assignLead({{ lead.id }})
-            });
-        }
-    });
-
-    // 事件处理器: handle_onclick_2
-    document.addEventListener('DOMContentLoaded', function() {
-        const element = document.querySelector('.dropdown-item');
-        if (element) {
-            element.addEventListener('click', function(e) {
-                convertLead({{ lead.id }})
-            });
-        }
-    });
-
-    // 事件处理器: handle_onchange_3
-    document.addEventListener('DOMContentLoaded', function() {
-        const element = document.querySelector('.form-select');
-        if (element) {
-            element.addEventListener('change', function(e) {
-                location.href=this.value
-            });
-        }
-    });
-
-    // 事件处理器: handle_onclick_4
-    document.addEventListener('DOMContentLoaded', function() {
-        const element = document.querySelector('.remove-btn');
-        if (element) {
-            element.addEventListener('click', function(e) {
-                removeColumn(
-            });
-        }
-    });
-
-    // 事件处理器: handle_onclick_5
-    document.addEventListener('DOMContentLoaded', function() {
-        const element = document.querySelector('.available-column-tag');
-        if (element) {
-            element.addEventListener('click', function(e) {
-                addColumn(
-            });
-        }
-    });
-
-</script>
+{% block pm_title %}{{ page_title|default:"客户线索" }}{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有客户线索{% endblock pm_subtitle %}
+
+{% block pm_actions %}
+{% if can_create %}
+<a href="{% url 'business_pages:customer_lead_create' %}" class="list-btn list-btn-primary">新增客户线索</a>
 {% endif %}
-{% endblock %}
+{% endblock pm_actions %}
+
+{% block list_filters_content %}
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">搜索</label>
+    <div class="input-group">
+      <select name="search_field" class="form-select form-select-sm" style="max-width: 120px;">
+        <option value="all" {% if not request.GET.search_field or request.GET.search_field == 'all' %}selected{% endif %}>全部字段</option>
+        <option value="company_name" {% if request.GET.search_field == 'company_name' %}selected{% endif %}>公司名称</option>
+        <option value="contact_name" {% if request.GET.search_field == 'contact_name' %}selected{% endif %}>联系人</option>
+        <option value="contact_phone" {% if request.GET.search_field == 'contact_phone' %}selected{% endif %}>联系电话</option>
+      </select>
+      <input type="text" name="search" class="form-control form-control-sm" value="{{ search }}" placeholder="请输入关键词">
+    </div>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">跟进状态</label>
+    <select name="follow_status" class="form-select form-select-sm">
+      <option value="">全部</option>
+      {% for value, label in follow_status_choices %}
+      <option value="{{ value }}" {% if follow_status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">渠道</label>
+    <select name="channel" class="form-select form-select-sm">
+      <option value="">全部</option>
+      {% for value, label in channel_choices %}
+      <option value="{{ value }}" {% if channel == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">负责人</label>
+    <select name="responsible_user" class="form-select form-select-sm">
+      <option value="">全部</option>
+      {% for user in responsible_users %}
+      <option value="{{ user.id }}" {% if responsible_user_id == user.id|stringformat:"s" %}selected{% endif %}>
+        {{ user.get_full_name|default:user.username }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">线索来源</label>
+    <select name="lead_source" class="form-select form-select-sm">
+      <option value="">全部</option>
+      {% for value, label in channel_choices %}
+      <option value="{{ value }}" {% if lead_source == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">创建时间</label>
+    <select name="created_time" class="form-select form-select-sm">
+      <option value="">全部</option>
+      <option value="today" {% if created_time == 'today' %}selected{% endif %}>今天</option>
+      <option value="week" {% if created_time == 'week' %}selected{% endif %}>最近7天</option>
+      <option value="month" {% if created_time == 'month' %}selected{% endif %}>最近30天</option>
+    </select>
+  </div>
+{% endblock list_filters_content %}
+
+{% block list_table_checkbox_header %}
+<th style="width: 50px;">
+  <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
+</th>
+{% endblock list_table_checkbox_header %}
+
+{% block list_table_headers %}
+<th>联系人</th>
+<th>公司名称</th>
+<th>线索来源</th>
+<th>地区</th>
+<th>负责人</th>
+<th>跟进状态</th>
+<th>最新跟进记录</th>
+<th>实际跟进时间</th>
+<th>未跟进天数</th>
+<th>操作</th>
+{% endblock list_table_headers %}
+
+{% block list_table_rows %}
+{% for lead in page_obj %}
+<tr>
+  <td>
+    <input type="checkbox" class="form-check-input row-checkbox" name="lead_ids" value="{{ lead.id }}" id="lead_{{ lead.id }}">
+  </td>
+  <td>{{ lead.contact_name|default:"—" }}</td>
+  <td>{{ lead.company_name }}</td>
+  <td>
+    <span class="badge bg-secondary">{{ lead.get_lead_source_display }}</span>
+  </td>
+  <td>{{ lead.get_region_display|default:"—" }}</td>
+  <td>
+    {% if lead.responsible_user %}
+    {{ lead.responsible_user.get_full_name|default:lead.responsible_user.username }}
+    {% else %}
+    <span class="text-muted">未分配</span>
+    {% endif %}
+  </td>
+  <td>
+    <span class="badge bg-secondary">{{ lead.get_follow_status_display }}</span>
+  </td>
+  <td>{{ lead.latest_followup_note|truncatewords:10|default:"暂无跟进记录" }}</td>
+  <td class="text-muted">{{ lead.actual_followup_time|date:"Y-m-d H:i"|default:"—" }}</td>
+  <td>
+    {% if lead.days_not_followed > 0 %}
+    <span class="badge {% if lead.days_not_followed > 300 %}bg-danger{% elif lead.days_not_followed > 100 %}bg-warning{% else %}bg-success{% endif %}">
+      {{ lead.days_not_followed }}天
+    </span>
+    {% else %}
+    <span class="text-muted">—</span>
+    {% endif %}
+  </td>
+  <td>
+    <div class="list-page-table-actions">
+      <a href="{% url 'business_pages:customer_lead_detail' lead.id %}" class="action-view" title="查看">
+        <i class="bi bi-eye"></i>
+      </a>
+      {% if not lead.responsible_user %}
+      <span class="action-separator">|</span>
+      <a href="{% url 'business_pages:customer_lead_claim' lead.id %}" class="action-edit" title="认领线索">
+        <i class="bi bi-person-check"></i>
+      </a>
+      {% endif %}
+      {% if can_create %}
+      <span class="action-separator">|</span>
+      <a href="{% url 'business_pages:customer_lead_followup_create' lead.id %}" class="action-edit" title="添加跟进">
+        <i class="bi bi-plus-circle"></i>
+      </a>
+      {% if lead.responsible_user %}
+      <span class="action-separator">|</span>
+      <a href="#" class="action-edit" title="分配负责人" onclick="alert('分配负责人功能待实现'); return false;">
+        <i class="bi bi-person-gear"></i>
+      </a>
+      {% endif %}
+      {% if not lead.converted_client %}
+      <span class="action-separator">|</span>
+      <a href="#" class="action-edit" title="转化为客户" onclick="alert('转化为客户功能待实现'); return false;">
+        <i class="bi bi-arrow-right-circle"></i>
+      </a>
+      {% endif %}
+      <span class="action-separator">|</span>
+      <a href="{% url 'business_pages:customer_lead_delete' lead.id %}" class="action-delete" title="删除" onclick="return confirm('确定要删除此客户线索吗？');">
+        <i class="bi bi-trash"></i>
+      </a>
+      {% endif %}
+    </div>
+  </td>
+  {% if column_settings_btn|default:False %}<td></td>{% endif %}
+</tr>
+{% empty %}
+<tr>
+  <td colspan="{% if column_settings_btn|default:False %}12{% else %}11{% endif %}" class="list-empty">
+    <div class="list-empty-icon">📋</div>
+    <div class="list-empty-text">暂无客户线索数据</div>
+    {% block list_empty_hint %}
+    <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">请创建第一个客户线索开始使用</p>
+    {% endblock list_empty_hint %}
+  </td>
+</tr>
+{% endfor %}
+{% endblock list_table_rows %}
+
+{% block module_extra_js %}
+<script>
+// 全选/取消全选
+document.getElementById('selectAll')?.addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+    updateSelectedCount();
+});
+
+// 行复选框变化
+document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        updateSelectedCount();
+        updateSelectAllState();
+    });
+});
+
+// 更新选中数量
+function updateSelectedCount() {
+    const selected = document.querySelectorAll('.row-checkbox:checked').length;
+    const countEl = document.getElementById('selectedCount');
+    if (countEl) {
+        countEl.textContent = selected;
+    }
+}
+
+// 更新全选状态
+function updateSelectAllState() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    const selectAll = document.getElementById('selectAll');
+    if (checkboxes.length > 0 && selectAll) {
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        const someChecked = Array.from(checkboxes).some(cb => cb.checked);
+        selectAll.checked = allChecked;
+        selectAll.indeterminate = someChecked && !allChecked;
+    }
+}
+
+// 初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        updateSelectedCount();
+        updateSelectAllState();
+    });
+} else {
+    updateSelectedCount();
+    updateSelectAllState();
+}
+</script>
+{% endblock module_extra_js %}

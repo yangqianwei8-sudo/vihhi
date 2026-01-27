@@ -10,7 +10,7 @@ from django.core.paginator import Paginator
 
 from collections import defaultdict, OrderedDict
 
-from backend.apps.system_management.models import Department, Role, User, SystemFeedback
+from backend.apps.system_management.models import Department, Role, User, SystemFeedback, DataDictionary
 from backend.apps.permission_management.models import PermissionItem
 from backend.apps.system_management.serializers import (
     AccountProfileSerializer,
@@ -141,6 +141,68 @@ def account_settings(request):
 
 
 @login_required
+def system_management_home(request):
+    """系统管理首页"""
+    from django.urls import reverse
+    permission_set = get_user_permission_codes(request.user)
+    
+    # 统计卡片
+    summary_cards = []
+    try:
+        users_count = User.objects.count()
+        departments_count = Department.objects.count()
+        roles_count = Role.objects.count()
+        
+        summary_cards = [
+            {"label": "用户总数", "value": users_count, "hint": "系统注册用户数"},
+            {"label": "部门数量", "value": departments_count, "hint": "组织架构部门数"},
+            {"label": "角色数量", "value": roles_count, "hint": "系统角色数"},
+        ]
+    except Exception:
+        pass
+    
+    # 功能模块
+    sections = [
+        {
+            "title": "用户与权限管理",
+            "description": "管理用户账号、角色和权限配置。",
+            "items": [
+                {"label": "系统设置", "description": "系统配置与参数管理。", "url": reverse("system_pages:system_settings"), "icon": "⚙️"},
+                {"label": "权限矩阵", "description": "查看角色与权限的对应关系。", "url": reverse("system_pages:permission_matrix"), "icon": "📊"},
+                {"label": "数据字典", "description": "维护系统数据字典与基础数据。", "url": reverse("system_pages:data_dictionary"), "icon": "📚"},
+                {"label": "操作日志", "description": "查看系统操作日志记录。", "url": reverse("system_pages:operation_logs"), "icon": "📋"},
+            ],
+        },
+        {
+            "title": "个人设置",
+            "description": "管理个人账号和偏好设置。",
+            "items": [
+                {"label": "账号设置", "description": "管理个人资料、密码和通知设置。", "url": reverse("system_pages:account_settings"), "icon": "👤"},
+            ],
+        },
+    ]
+    
+    context = _context(
+        "系统管理",
+        "⚙️",
+        "系统配置、用户权限与数据管理，保障系统稳定运行。",
+        summary_cards=summary_cards,
+        sections=sections,
+        request=request
+    )
+    
+    # 添加侧边栏导航
+    context['sidebar_nav'] = _build_system_management_sidebar_nav(
+        permission_set, 
+        request_path=request.path,
+        active_id='system_management_home',
+        user=request.user,
+    )
+    
+    return render(request, "shared/center_dashboard.html", context)
+
+
+@login_required
 def system_settings(request):
     # 仅系统管理员可以访问系统设置
     is_system_admin = request.user.is_superuser or request.user.roles.filter(code='system_admin').exists()
@@ -230,25 +292,75 @@ def data_dictionary(request):
     if not is_system_admin:
         from django.core.exceptions import PermissionDenied
         raise PermissionDenied("仅系统管理员可以访问数据字典。")
-    summary_cards = []
-    context = _context(
-        "数据字典",
-        "📚",
-        "维护系统基础数据、编码规则与引用关系，为业务表单提供统一标准。",
-        summary_cards=summary_cards,
-        sections=[
-            {
-                "title": "数据维护",
-                "description": "按类别维护和发布字典条目。",
-                "items": [
-                    {"label": "基础资料", "description": "行业、专业、阶段等基础数据。", "url": "#", "icon": "📘"},
-                    {"label": "编码规则", "description": "维护编码方案与生成规则。", "url": "#", "icon": "🧮"},
-                    {"label": "版本管理", "description": "管理字典版本与发布记录。", "url": "#", "icon": "🗃"},
-                ],
-            }
-        ],
+    
+    permission_set = get_user_permission_codes(request.user)
+    
+    # 获取选中的字典类型
+    selected_type = request.GET.get('type', 'project')
+    if selected_type not in dict(DataDictionary.DICT_TYPE_CHOICES):
+        selected_type = 'project'
+    
+    # 构建字典类型导航数据（用于主内容区域的类型选择器）
+    dict_type_nav = []
+    for type_code, type_name in DataDictionary.DICT_TYPE_CHOICES:
+        count = DataDictionary.objects.filter(dict_type=type_code, is_active=True).count()
+        dict_type_nav.append({
+            'label': type_name,
+            'url': f'?type={type_code}',
+            'active': type_code == selected_type,
+            'badge': str(count) if count > 0 else None,
+            'icon': '📚'
+        })
+    
+    # 获取选中类型的字典列表（按父级分组）
+    dictionaries = DataDictionary.objects.filter(
+        dict_type=selected_type,
+        is_active=True
+    ).select_related('parent').order_by('order', 'id')
+    
+    # 按父级分组
+    root_items = []
+    child_map = defaultdict(list)
+    
+    for item in dictionaries:
+        if item.parent is None:
+            root_items.append(item)
+        else:
+            child_map[item.parent.id].append(item)
+    
+    # 构建树形结构
+    dict_tree = []
+    for root in root_items:
+        dict_tree.append({
+            'item': root,
+            'children': sorted(child_map.get(root.id, []), key=lambda x: (x.order, x.id))
+        })
+    
+    # 统计信息
+    total_count = DataDictionary.objects.filter(is_active=True).count()
+    active_count = DataDictionary.objects.filter(is_active=True).count()
+    type_count = len([item for item in dict_type_nav if item.get('badge') and int(item['badge']) > 0])
+    
+    context = {
+        'page_title': '数据字典',
+        'dict_type_nav': dict_type_nav,  # 字典类型导航（用于主内容区域）
+        'selected_type': selected_type,
+        'selected_type_name': dict(DataDictionary.DICT_TYPE_CHOICES).get(selected_type, ''),
+        'dict_tree': dict_tree,
+        'total_count': total_count,
+        'active_count': active_count,
+        'type_count': type_count,
+    }
+    
+    # 添加系统管理的侧边栏导航
+    context['sidebar_nav'] = _build_system_management_sidebar_nav(
+        permission_set, 
+        request_path=request.path,
+        active_id='data_dictionary',
+        user=request.user,
     )
-    return render(request, "shared/center_dashboard.html", context)
+    
+    return render(request, "system_management/data_dictionary.html", context)
 
 
 @login_required
@@ -438,6 +550,12 @@ def _build_system_management_sidebar_nav(permission_set, request_path=None, acti
         user = active_id
         active_id = None
     menu_structure = [
+        {
+            'id': 'system_management_home',
+            'label': '系统管理首页',
+            'icon': '🏠',
+            'url_name': 'system_pages:system_management_home',
+        },
         {
             'id': 'system_settings',
             'label': '系统设置',

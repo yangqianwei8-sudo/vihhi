@@ -108,6 +108,7 @@ def _build_workflow_engine_sidebar_nav(permission_set, request_path=None, user=N
                 'icon': group.get('icon', ''),
                 'url': url,
                 'active': is_active,
+                'badge': None,  # 添加 badge 字段以避免模板警告
             })
             continue
         
@@ -140,6 +141,7 @@ def _build_workflow_engine_sidebar_nav(permission_set, request_path=None, user=N
                 'icon': item.get('icon', ''),
                 'url': url,
                 'active': is_active,
+                'badge': None,  # 添加 badge 字段以避免模板警告
             })
         
         if children:
@@ -151,6 +153,7 @@ def _build_workflow_engine_sidebar_nav(permission_set, request_path=None, user=N
                 'active': any(child.get('active') for child in children),
                 'expanded': group.get('expanded', False) or any(child.get('active') for child in children),
                 'children': children,
+                'badge': None,  # 添加 badge 字段以避免模板警告
             })
     
     return sidebar_nav
@@ -383,6 +386,9 @@ def workflow_home(request):
     
     # 添加 sidebar_nav（如果 _context 中已设置，这里可以覆盖或保留）
     page_context['sidebar_menu'] = _build_workflow_engine_sidebar_nav(permission_codes, request_path=request.path, user=request.user)
+    
+    # 添加 top_actions 以避免模板警告（如果需要，可以在这里添加操作按钮）
+    page_context.setdefault('top_actions', [])
     
     return render(request, "workflow_engine/workflow_home.html", page_context)
 
@@ -743,18 +749,53 @@ def approval_list(request):
     tab = request.GET.get('tab', 'pending')
     per_page = request.GET.get('per_page', 20)
     
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '')
+    workflow_id = request.GET.get('workflow', '')
+    
     # 待我审批
     pending_approvals = ApprovalEngine.get_pending_approvals(request.user)
     
-    # 我的申请（历史审批）- 使用QuerySet过滤，支持分页
+    # 历史审批 - 用户作为审批人审批过的所有记录（已完成的）
+    historical_approvals = ApprovalEngine.get_my_historical_approvals(request.user)
+    
+    # 我提交的审批（所有我作为申请人提交的审批）
     my_applications = ApprovalEngine.get_my_applications(request.user)
-    historical_approvals = my_applications.exclude(status='pending')
+    my_submitted_approvals = my_applications
     
     # 根据标签页选择数据
     if tab == 'historical':
         items = historical_approvals
+    elif tab == 'my_submitted':
+        items = my_submitted_approvals
     else:
         items = pending_approvals
+    
+    # 应用筛选条件
+    if search:
+        from django.db.models import Q
+        items = items.filter(
+            Q(instance_number__icontains=search) |
+            Q(workflow__name__icontains=search) |
+            Q(applicant__username__icontains=search) |
+            Q(applicant__first_name__icontains=search) |
+            Q(applicant__last_name__icontains=search)
+        )
+    
+    if status_filter:
+        items = items.filter(status=status_filter)
+    
+    if workflow_id:
+        try:
+            workflow_id_int = int(workflow_id)
+            items = items.filter(workflow_id=workflow_id_int)
+        except (ValueError, TypeError):
+            pass
+    
+    # 获取所有流程列表（用于筛选下拉框）
+    from backend.apps.workflow_engine.models import WorkflowTemplate
+    workflows = WorkflowTemplate.objects.filter(status='active').order_by('name')
     
     # 分页
     paginator = Paginator(items, per_page)
@@ -771,9 +812,13 @@ def approval_list(request):
         'tab': tab,
         'pending_approvals': pending_approvals,
         'historical_approvals': historical_approvals,
+        'my_submitted_approvals': my_submitted_approvals,
         'page_obj': page_obj,
         'pending_count': pending_approvals.count(),
         'historical_count': historical_approvals.count(),
+        'my_submitted_count': my_submitted_approvals.count(),
+        'column_settings_btn': True,  # 启用列设置按钮
+        'workflows': workflows,  # 流程列表，用于筛选
     })
     
     return render(request, 'workflow_engine/approval_list.html', context)
@@ -982,6 +1027,10 @@ def approval_action(request, instance_id):
                     messages.error(request, '转交操作失败')
                 # 审批结果走通知中心，不写入 success messages
             
+            # 支持自定义重定向URL（通过 next 参数）
+            next_url = request.POST.get('next') or request.GET.get('next')
+            if next_url:
+                return redirect(next_url)
             return redirect('workflow_engine:approval_list')
             
         except Exception as e:
@@ -990,5 +1039,45 @@ def approval_action(request, instance_id):
             logger.exception('审批操作失败: %s', str(e))
             messages.error(request, f'审批操作失败：{str(e)}')
     
+    # 支持自定义重定向URL（通过 next 参数）
+    next_url = request.GET.get('next')
+    if next_url:
+        return redirect(next_url)
     return redirect('workflow_engine:approval_list')
+
+
+@login_required
+def approval_withdraw(request, instance_id):
+    """撤回审批"""
+    instance = get_object_or_404(ApprovalInstance, id=instance_id)
+    
+    # 检查权限：只有申请人可以撤回
+    if instance.applicant != request.user:
+        messages.error(request, '您没有权限撤回此审批')
+        return redirect('workflow_engine:approval_list')
+    
+    # 检查是否可以撤回
+    if instance.status != 'pending':
+        messages.error(request, '只有审批中的申请才能撤回')
+        return redirect('workflow_engine:approval_list')
+    
+    if not instance.workflow.allow_withdraw:
+        messages.error(request, '此流程不允许撤回')
+        return redirect('workflow_engine:approval_list')
+    
+    from .services import ApprovalEngine
+    
+    try:
+        success = ApprovalEngine.withdraw(instance, request.user)
+        if success:
+            messages.success(request, '审批已成功撤回')
+        else:
+            messages.error(request, '撤回失败')
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception('撤回审批失败: %s', str(e))
+        messages.error(request, f'撤回失败：{str(e)}')
+    
+    return redirect('workflow_engine:approval_list') + '?tab=my_submitted'
 

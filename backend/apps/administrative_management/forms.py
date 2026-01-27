@@ -595,6 +595,22 @@ class SealBorrowingForm(forms.ModelForm):
         return instance
 
 
+class MultipleFileInput(forms.ClearableFileInput):
+    """支持多文件上传的自定义widget"""
+    def __init__(self, attrs=None):
+        super().__init__(attrs)
+        if attrs is not None:
+            self.attrs = attrs.copy()
+        else:
+            self.attrs = {}
+        self.attrs['multiple'] = True
+    
+    def value_from_datadict(self, data, files, name):
+        if hasattr(files, 'getlist'):
+            return files.getlist(name)
+        return files.get(name)
+
+
 class SealUsageForm(forms.ModelForm):
     """用印申请表单"""
     
@@ -621,24 +637,31 @@ class SealUsageForm(forms.ModelForm):
         })
     )
     
+    # 多文件上传字段
+    document_files = forms.FileField(
+        required=False,
+        label='用印文件',
+        widget=MultipleFileInput(attrs={
+            'class': 'form-control',
+            'accept': '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png'
+        }),
+        help_text='可以上传多个文件（支持PDF、DOC、DOCX、XLS、XLSX、JPG、PNG格式）'
+    )
+    
     class Meta:
         model = SealUsage
         fields = [
             # 固定字段（前三个）：所属部门、负责人、表单编号
             'responsible_department', 'responsible_person', 'form_number',
             # 其他字段
-            'seal', 'usage_type', 'usage_date', 'usage_time',
-            'usage_reason', 'usage_count', 'document_name', 'document_file',
+            'seal', 'usage_type', 'document_name', 'usage_time',
+            'usage_reason', 'usage_count',
             'used_by', 'witness', 'notes'
         ]
         widgets = {
             'seal': forms.Select(attrs={'class': 'form-select'}),
             'usage_type': forms.Select(attrs={'class': 'form-select'}),
-            'usage_date': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'usage_time': forms.DateTimeInput(attrs={
+            'usage_time': forms.DateTimeInput(format='%Y-%m-%dT%H:%M', attrs={
                 'class': 'form-control',
                 'type': 'datetime-local'
             }),
@@ -651,15 +674,11 @@ class SealUsageForm(forms.ModelForm):
                 'class': 'form-control',
                 'min': 1,
                 'value': 1,
-                'placeholder': '用印数量'
+                'placeholder': '用印份数'
             }),
             'document_name': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': '文件名称（可选）'
-            }),
-            'document_file': forms.FileInput(attrs={
-                'class': 'form-control',
-                'accept': '.pdf,.doc,.docx,.jpg,.png'
+                'placeholder': '请输入文件名称'
             }),
             'used_by': forms.Select(attrs={'class': 'form-select'}),
             'witness': forms.Select(attrs={'class': 'form-select'}),
@@ -673,6 +692,7 @@ class SealUsageForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        self.user = user  # 保存user以便在save方法中使用
         
         # 设置固定字段的查询集和初始值
         self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
@@ -690,11 +710,36 @@ class SealUsageForm(forms.ModelForm):
         else:
             self.fields['form_number'].initial = '系统将自动生成'
         
-        # 只显示可用状态的印章
-        self.fields['seal'].queryset = Seal.objects.filter(
-            status='available',
+        # 显示所有启用的印章（包括可用和借用中的）
+        # 这样用户可以看到所有印章，即使有些被借用
+        seals_queryset = Seal.objects.filter(
             is_active=True
+        ).exclude(
+            status__in=['lost', 'destroyed']  # 排除遗失和销毁的印章
         ).order_by('seal_name')
+        
+        self.fields['seal'].queryset = seals_queryset
+        
+        # 自定义选项显示，在印章名称后标注状态
+        # 创建自定义的choice列表，包含状态信息
+        choices = []
+        for seal in seals_queryset:
+            status_display = seal.get_status_display()
+            if seal.status == 'available':
+                display_name = f"{seal.seal_name} (可用)"
+            elif seal.status == 'borrowed':
+                display_name = f"{seal.seal_name} (借用中)"
+            else:
+                display_name = f"{seal.seal_name} ({status_display})"
+            choices.append((seal.id, display_name))
+        
+        self.fields['seal'].widget.choices = choices
+        
+        # 设置帮助文本，说明会显示所有启用的印章
+        self.fields['seal'].help_text = '显示所有启用的印章（包括可用和借用中的）'
+        
+        # 文件名称：设置为必填字段
+        self.fields['document_name'].required = True
         
         # 用印人：默认为当前用户
         if user:
@@ -711,7 +756,6 @@ class SealUsageForm(forms.ModelForm):
         # 设置必填字段
         self.fields['seal'].required = True
         self.fields['usage_type'].required = True
-        self.fields['usage_date'].required = True
         self.fields['usage_time'].required = True
         self.fields['usage_reason'].required = True
         self.fields['used_by'].required = True
@@ -720,8 +764,26 @@ class SealUsageForm(forms.ModelForm):
         # 固定字段不保存到模型（因为模型中没有这些字段）
         # 只保存其他字段
         instance = super().save(commit=False)
+        
+        # 如果提供了用印时间，从用印时间中提取日期设置到用印日期
+        if instance.usage_time and not instance.usage_date:
+            instance.usage_date = instance.usage_time.date()
+        
         if commit:
             instance.save()
+            
+            # 处理多文件上传
+            if 'document_files' in self.files:
+                from backend.apps.administrative_management.models import SealUsageFile
+                files = self.files.getlist('document_files')
+                for file in files:
+                    SealUsageFile.objects.create(
+                        usage=instance,
+                        file=file,
+                        file_name=file.name,
+                        uploaded_by=self.user if hasattr(self, 'user') and self.user else None
+                    )
+        
         return instance
 
 

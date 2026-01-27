@@ -1,8 +1,8 @@
 {% extends "shared/list_page_base.html" %}
+{% load static %}
 
-
-
-
+{% block pm_title %}{{ page_title|default:"商务费用申请" }}{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有商务费用申请{% endblock pm_subtitle %}
 
 {% block list_table_headers %}
 <th>申请单号</th>
@@ -25,51 +25,42 @@
             {{ expense.client.name }}
           </a>
           {% else %}
-          <span style="color: #999999;">未指定</span>
+          <span class="text-muted">未指定</span>
           {% endif %}
         </td>
         <td>
-          <span class="list-badge">{{ expense.get_expense_type_display }}</span>
+          <span class="badge bg-secondary">{{ expense.get_expense_type_display }}</span>
         </td>
         <td style="text-align: right; font-weight: 600;">¥{{ expense.amount|floatformat:2 }}</td>
-        <td style="color: #666666;">{{ expense.expense_date|date:"Y-m-d" }}</td>
+        <td class="text-muted">{{ expense.expense_date|date:"Y-m-d" }}</td>
         <td>
-          <span class="list-badge list-badge-{{ expense.approval_status }}">
-            {{ expense.get_approval_status_display }}
-          </span>
+          <span class="badge bg-secondary">{{ expense.get_approval_status_display }}</span>
         </td>
         <td>{{ expense.created_by.get_full_name|default:expense.created_by.username }}</td>
-        <td style="color: #666666;">{{ expense.created_time|date:"Y-m-d" }}</td>
+        <td class="text-muted">{{ expense.created_time|date:"Y-m-d" }}</td>
         <td>
-          <div class="list-actions">
-            <a href="#" class="list-btn" title="查看">查看</a>
+          <div class="list-page-table-actions">
+            <a href="#" class="action-view" title="查看">
+              <i class="bi bi-eye"></i>
+            </a>
           </div>
         </td>
+        {% if column_settings_btn|default:False %}<td></td>{% endif %}
       </tr>
       {% empty %}
       <tr>
-        <td colspan="9" class="list-empty">
-          <div class="list-empty-icon">▢</div>
+        <td colspan="{% if column_settings_btn|default:False %}10{% else %}9{% endif %}" class="list-empty">
+          <div class="list-empty-icon">📋</div>
           <div class="list-empty-text">暂无业务费申请记录</div>
-          <div class="list-empty-hint">请创建第一个业务费申请开始使用</div>
+          {% block list_empty_hint %}
+          <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">请创建第一个业务费申请开始使用</p>
+          {% endblock list_empty_hint %}
         </td>
       </tr>
       {% endfor %}
 {% endblock list_table_rows %}
-{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
 
-{% load static %}
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-<link rel="stylesheet" href="{% static 'css/components/list-filters.css' %}">
-
-{% endblock extra_css %}
-{% block breadcrumb_items %}
-<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
-
-{% endblock breadcrumb_items %}
-
-{% block extra_js %}
+{% block module_extra_js %}
     {% include "customer_management/includes/filter_fields_settings_modal.html" %}
 
     <!-- 引入筛选字段设置功能模块 -->
@@ -91,4 +82,4 @@
     </script>
     <!-- 引入列表筛选功能模块 -->
     <script src="{% static 'js/list-filters.js' %}"></script>
-{% endblock extra_js %}
+{% endblock module_extra_js %}

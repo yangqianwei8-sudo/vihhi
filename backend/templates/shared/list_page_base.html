@@ -399,13 +399,10 @@
         const csrfToken = getCsrfToken();
         if (!csrfToken) {
           showMessage('无法获取CSRF token，请刷新页面后重试', 'error');
-          this.disabled = false;
-          this.innerHTML = originalHtml;
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
           return;
         }
-        
-        // 保存按钮引用（用于在回调中使用）
-        const btn = this;
         
         // 发送批量删除请求
         const formData = new FormData();
@@ -602,6 +599,15 @@
                 {% block list_table_headers %}
                   {# 子模板需要在此定义表头 #}
                 {% endblock list_table_headers %}
+                {% block list_table_column_settings_header %}
+                  {% if column_settings_btn|default:False %}
+                  <th class="column-settings-header" style="width: auto; min-width: 32px; position: relative; text-align: center;">
+                    <button type="button" class="btn btn-link btn-sm p-0" id="tableColumnSettingsBtn" title="自定义显示列" style="text-decoration: none; color: #FFC107 !important; border: none; background: none; padding: 0;">
+                      <i class="bi bi-gear-fill" style="color: #FFC107 !important; font-size: 1.1rem;"></i>
+                    </button>
+                  </th>
+                  {% endif %}
+                {% endblock list_table_column_settings_header %}
               </tr>
             </thead>
             <tbody>
@@ -615,6 +621,12 @@
                       {# 子模板可以添加空状态提示文字 #}
                     {% endblock list_empty_hint %}
                   </td>
+                  {# 如果启用了列设置按钮，需要添加对应的空单元格来保持列对齐 #}
+                  {% block list_table_column_settings_cell %}
+                    {% if column_settings_btn|default:False %}
+                    <td></td>
+                    {% endif %}
+                  {% endblock list_table_column_settings_cell %}
                 </tr>
               {% endblock list_table_rows %}
             </tbody>

@@ -1,156 +1,178 @@
 {% extends "shared/list_page_base.html" %}
-
-{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
-
 {% load static %}
 
+{% comment %}
+商机列表页面模板 (Opportunity List Template)
 
+功能说明：
+- 展示商机记录的列表页面
+- 支持按状态、紧急程度、客户、负责商务等多维度筛选
+- 支持商机的查看、编辑、删除操作
+{% endcomment %}
+
+{# 主标题和副标题 #}
+{% block pm_title %}{{ page_title|default:"商机列表" }}{% endblock pm_title %}
+{% block pm_subtitle %}{{ description|default:"查看和管理所有商机" }}{% endblock pm_subtitle %}
+
+{# 统计卡片 #}
 {% block list_stats_content %}
-<div class="row g-3">
-    <div class="col-md-2">
-      <div class="list-stat-card">
-        <div class="list-stat-label">商机总数</div>
-    </div>
-    <div class="col-md-2">
-      <div class="list-stat-card">
-        <div class="list-stat-label">活跃商机</div>
-    </div>
-    <div class="col-md-2">
-      <div class="list-stat-card">
-        <div class="list-stat-label">预计金额（万元）</div>
-    </div>
-    <div class="col-md-2">
-      <div class="list-stat-card">
-        <div class="list-stat-label">加权金额（万元）</div>
-    </div>
-    <div class="col-md-2">
-      <div class="list-stat-card">
-        <div class="list-stat-label">本月新增</div>
-    </div>
-</div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">商机总数</div>
+    <div class="list-stat-value">{{ total_opportunities|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">活跃商机</div>
+    <div class="list-stat-value">{{ active_opportunities|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">预计金额（万元）</div>
+    <div class="list-stat-value">{{ total_estimated|floatformat:2|default:"0.00" }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">加权金额（万元）</div>
+    <div class="list-stat-value">{{ total_weighted_amount|floatformat:2|default:"0.00" }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">本月新增</div>
+    <div class="list-stat-value">{{ monthly_new|default:0 }}</div>
+  </div>
 {% endblock list_stats_content %}
+
+{# 筛选器区域 #}
 {% block list_filters_content %}
-  <div class="col-md-3">
-    <label class="form-label">商机状态</label>
-    <select name="status" class="list-filter-input">
-        <option value="">全部状态</option>
-        {% for value, label in status_choices %}
-        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">商机状态</label>
+    <select name="status" class="form-select">
+      <option value="">全部状态</option>
+      {% for value, label in status_choices %}
+      <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">紧急程度</label>
-    <select name="urgency" class="list-filter-input">
-        <option value="">全部</option>
-        {% for value, label in urgency_choices %}
-        <option value="{{ value }}" {% if urgency == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">紧急程度</label>
+    <select name="urgency" class="form-select">
+      <option value="">全部</option>
+      {% for value, label in urgency_choices %}
+      <option value="{{ value }}" {% if urgency == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">关联客户</label>
-    <select name="client_id" class="list-filter-input">
-        <option value="">全部客户</option>
-        {% for client in clients %}
-        <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
-        {% endfor %}
-      </select>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">关联客户</label>
+    <select name="client_id" class="form-select">
+      <option value="">全部客户</option>
+      {% for client in clients %}
+      <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
+      {% endfor %}
+    </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">负责商务</label>
-    <select name="business_manager_id" class="list-filter-input">
-        <option value="">全部</option>
-        {% for manager in business_managers %}
-        <option value="{{ manager.id }}" {% if business_manager_id == manager.id|stringformat:"s" %}selected{% endif %}>{{ manager.get_full_name|default:manager.username }}</option>
-        {% endfor %}
-      </select>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">负责商务</label>
+    <select name="business_manager_id" class="form-select">
+      <option value="">全部</option>
+      {% for manager in business_managers %}
+      <option value="{{ manager.id }}" {% if business_manager_id == manager.id|stringformat:"s" %}selected{% endif %}>{{ manager.get_full_name|default:manager.username }}</option>
+      {% endfor %}
+    </select>
   </div>
 {% endblock list_filters_content %}
+
+{# 表格头部 #}
 {% block list_table_headers %}
-<th>商机编号</th>
-        <th>商机名称</th>
-        <th>关联客户</th>
-        <th>负责商务</th>
-        <th>商机状态</th>
-        <th>预计金额（万元）</th>
-        <th>成功概率</th>
-        <th>加权金额（万元）</th>
-        <th>紧急程度</th>
-        <th>预计签约时间</th>
-        <th>创建时间</th>
-        <th>操作</th>
+  <th>商机编号</th>
+  <th>商机名称</th>
+  <th>关联客户</th>
+  <th>负责商务</th>
+  <th>商机状态</th>
+  <th>预计金额（万元）</th>
+  <th>成功概率</th>
+  <th>加权金额（万元）</th>
+  <th>紧急程度</th>
+  <th>预计签约时间</th>
+  <th>创建时间</th>
+  <th>操作</th>
 {% endblock list_table_headers %}
+
+{# 表格行 #}
 {% block list_table_rows %}
-{% for opportunity in page_obj %}
-      <tr>
-        <td><code>{{ opportunity.opportunity_number|default:'未编号' }}</code></td>
-        <td>
-          <a href="{% url 'opportunity_pages:opportunity_detail' opportunity.id %}">
-            {{ opportunity.name }}
+  {% if page_obj %}
+    {% for opportunity in page_obj %}
+    <tr>
+      <td><code>{{ opportunity.opportunity_number|default:'未编号' }}</code></td>
+      <td>
+        <a href="{% url 'opportunity_pages:opportunity_detail' opportunity.id %}" class="text-dark text-decoration-none fw-medium">
+          {{ opportunity.name }}
+        </a>
+      </td>
+      <td>
+        {% if opportunity.client %}
+        <a href="{% url 'business_pages:customer_detail' opportunity.client.id %}" class="text-dark text-decoration-none">
+          {{ opportunity.client.name }}
+        </a>
+        {% else %}
+        <span class="text-muted">-</span>
+        {% endif %}
+      </td>
+      <td>{{ opportunity.business_manager.get_full_name|default:opportunity.business_manager.username }}</td>
+      <td>
+        {% with s=opportunity.status %}
+        <span class="badge {% if s == 'won' %}bg-success{% elif s == 'lost' %}bg-danger{% elif s == 'cancelled' %}bg-secondary{% else %}bg-primary{% endif %}">
+          {{ opportunity.get_status_display|default:opportunity.status }}
+        </span>
+        {% endwith %}
+      </td>
+      <td style="text-align: right;">{{ opportunity.estimated_amount|floatformat:2 }}</td>
+      <td style="text-align: center;">{{ opportunity.success_probability }}%</td>
+      <td style="text-align: right; font-weight: 600;">{{ opportunity.weighted_amount|floatformat:2 }}</td>
+      <td>
+        {% if opportunity.urgency == 'very_urgent' %}
+        <span class="badge bg-danger">紧急</span>
+        {% elif opportunity.urgency == 'urgent' %}
+        <span class="badge bg-warning text-dark">较急</span>
+        {% else %}
+        <span class="badge bg-secondary">一般</span>
+        {% endif %}
+      </td>
+      <td>{{ opportunity.expected_sign_date|date:'Y-m-d'|default:'未设置' }}</td>
+      <td>{{ opportunity.created_time|date:'Y-m-d H:i' }}</td>
+      <td>
+        <div class="list-page-table-actions">
+          <a href="{% url 'opportunity_pages:opportunity_detail' opportunity.id %}" class="action-view" title="查看详情">
+            <i class="bi bi-eye"></i>
           </a>
-        </td>
-        <td>
-          {% if opportunity.client %}
-          <a href="{% url 'business_pages:customer_detail' opportunity.client.id %}">
-            {{ opportunity.client.name }}
+          {% if can_create or opportunity.business_manager == user %}
+          <span class="action-separator">|</span>
+          <a href="{% url 'opportunity_pages:opportunity_edit' opportunity.id %}" class="action-edit" title="编辑">
+            <i class="bi bi-pencil"></i>
           </a>
-          {% else %}
-          <span style="color: #999999;">-</span>
+          <span class="action-separator">|</span>
+          <a href="{% url 'opportunity_pages:opportunity_delete' opportunity.id %}" class="action-delete" title="删除" onclick="return confirm('确定要删除此商机吗？');">
+            <i class="bi bi-trash"></i>
+          </a>
           {% endif %}
-        </td>
-        <td>{{ opportunity.business_manager.get_full_name|default:opportunity.business_manager.username }}</td>
-        <td>
-          {% with s=opportunity.status %}
-          <span class="list-badge list-badge-{{ s }}">
-            {{ opportunity.get_status_display|default:opportunity.status }}
-          </span>
-          {% endwith %}
-        </td>
-        <td style="text-align: right;">{{ opportunity.estimated_amount|floatformat:2 }}</td>
-        <td style="text-align: center;">{{ opportunity.success_probability }}%</td>
-        <td style="text-align: right; font-weight: 600;">{{ opportunity.weighted_amount|floatformat:2 }}</td>
-        <td>
-          {% if opportunity.urgency == 'very_urgent' %}
-          <span class="list-badge" style="background: #842029; color: #FFFFFF;">紧急</span>
-          {% elif opportunity.urgency == 'urgent' %}
-          <span class="list-badge" style="background: #856404; color: #FFFFFF;">较急</span>
-          {% else %}
-          <span class="list-badge" style="background: #E8E8E8; color: #666666;">一般</span>
-          {% endif %}
-        </td>
-        <td>{{ opportunity.expected_sign_date|date:'Y-m-d'|default:'未设置' }}</td>
-        <td>{{ opportunity.created_time|date:'Y-m-d H:i' }}</td>
-        <td>
-          <div class="list-actions">
-            <a href="{% url 'opportunity_pages:opportunity_detail' opportunity.id %}" class="list-btn" title="查看">查看</a>
-            {% if can_create or opportunity.business_manager == user %}
-            <a href="{% url 'opportunity_pages:opportunity_edit' opportunity.id %}" class="list-btn" title="编辑">编辑</a>
-            <a href="{% url 'opportunity_pages:opportunity_delete' opportunity.id %}" class="list-btn" title="删除" onclick="return confirm('确定要删除此商机吗？');">删除</a>
-            {% endif %}
-          </div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="12" class="list-empty">
-          <div class="list-empty-icon">▢</div>
-          <div class="list-empty-text">暂无商机数据</div>
-          <div class="list-empty-hint">请创建第一个商机开始使用</div>
-        </td>
-      </tr>
-      {% endfor %}
+        </div>
+      </td>
+      {# 列设置单元格 - 保持列对齐 #}
+      {% if column_settings_btn|default:False %}<td></td>{% endif %}
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="{% if column_settings_btn|default:False %}13{% else %}12{% endif %}" class="list-empty">
+        <div class="list-empty-icon">💼</div>
+        <div class="list-empty-text">暂无商机数据</div>
+        {% block list_empty_hint %}
+        <div class="list-empty-hint">请创建第一个商机开始使用</div>
+        {% endblock list_empty_hint %}
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+    <tr>
+      <td colspan="{% if column_settings_btn|default:False %}13{% else %}12{% endif %}" class="list-empty">
+        <div class="list-empty-icon">💼</div>
+        <div class="list-empty-text">暂无数据</div>
+      </td>
+    </tr>
+  {% endif %}
 {% endblock list_table_rows %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-{% endblock extra_css %}
-
-
-
-{% block breadcrumb_items %}
-<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
-{% endblock breadcrumb_items %}
-
-
-

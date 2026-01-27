@@ -510,7 +510,7 @@
                   <a href="{% url 'plan_pages:strategic_goal_detail' goal_item.id %}" class="goal-action-btn btn-primary">
                     <i class="bi bi-eye"></i> 查看
                   </a>
-                  {% if goal_item.status in 'draft,published' %}
+                  {% if goal_item.status == 'draft' %}
                   <a href="{% url 'plan_pages:strategic_goal_edit' goal_item.id %}" class="goal-action-btn">
                     <i class="bi bi-pencil"></i> 编辑
                   </a>
@@ -596,8 +596,13 @@
               <label class="form-label required">
                 <i class="bi bi-bullseye"></i> 目标值
               </label>
-              <input type="number" name="target_value" class="form-control" step="0.01" required placeholder="0.00">
-              <div class="form-hint">继承指标：{{ goal.indicator_name }} ({{ goal.indicator_unit }})</div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <input type="number" name="target_value" class="form-control" step="0.01" required placeholder="0.00" style="flex: 1;">
+                {% if goal.indicator_unit %}
+                <span style="font-size: 0.9rem; color: var(--vh-text-muted, #6B7280); white-space: nowrap; padding: 0 8px;">{{ goal.indicator_unit }}</span>
+                {% endif %}
+              </div>
+              <div class="form-hint">继承指标：{{ goal.indicator_name }}{% if goal.indicator_unit %} ({{ goal.indicator_unit }}){% endif %}</div>
             </div>
 
             <div class="form-group">

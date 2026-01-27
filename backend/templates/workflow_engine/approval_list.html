@@ -1,15 +1,23 @@
 {% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block list_page_title %}审批引擎 ----我的审批列表{% endblock %}
+{% comment %}
+审批列表页面模板 (Approval List Template)
+
+功能说明：
+- 展示待审批、历史审批和我提交的审批列表
+- 支持标签页切换
+- 支持批量审批操作
+- 支持单个审批操作
+{% endcomment %}
 
 {% block module_styles %}
   {{ block.super }}
   <style>
-    /* 审批状态徽章样式 - 使用 scoped 样式避免覆盖通用样式 */
+    /* 审批状态徽章样式 */
     .approval-status-badge {
         padding: 4px 8px;
-        border-radius: 4px;
+        border-radius: 0;
         font-size: 0.85rem;
         font-weight: 500;
     }
@@ -30,336 +38,700 @@
         color: #383d41;
     }
     
-    /* 标签页样式 */
-    .approval-tabs {
+    /* 批量操作工具栏样式 */
+    .list-page-batch-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0;
         margin-bottom: 16px;
+    }
+    .list-page-batch-actions-info {
+        font-weight: 500;
+        color: #495057;
+    }
+    .list-page-batch-actions-buttons {
+        display: flex;
+        gap: 8px;
     }
   </style>
 {% endblock module_styles %}
 
-{% block list_stats_content %}
-  {# 统计卡片 - 直接放在 list-page-stats 中，CSS会自动一行排列 #}
-  <div class="list-stat-card">
-    <div class="list-stat-label">待我审批</div>
-    <div class="list-stat-value">{{ pending_count|default:0 }}</div>
-  </div>
-  <div class="list-stat-card">
-    <div class="list-stat-label">历史审批</div>
-    <div class="list-stat-value">{{ historical_count|default:0 }}</div>
-  </div>
-{% endblock list_stats_content %}
+{# 主标题和副标题 #}
+{% block pm_title %}{{ page_title|default:"我的审批列表" }}{% endblock pm_title %}
+{% block pm_subtitle %}{{ description|default:"查看待审批和我的申请" }}{% endblock pm_subtitle %}
 
-{% block list_action_bar_content %}
-<div class="list-page-actions-bar">
-    <div class="approval-tabs">
-        <ul class="nav nav-tabs">
-            <li class="nav-item">
-                <a class="nav-link {% if not tab or tab == 'pending' %}active{% endif %}" href="?tab=pending">
-                    待我审批 
-                    {% if pending_count %}
-                    <span class="badge bg-danger">{{ pending_count }}</span>
-                    {% endif %}
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {% if tab == 'historical' %}active{% endif %}" href="?tab=historical">
-                    历史审批
-                    {% if historical_count %}
-                    <span class="badge bg-secondary">{{ historical_count }}</span>
-                    {% endif %}
-                </a>
-            </li>
-        </ul>
+{# 操作栏 - 导出按钮 #}
+{% block pm_actions %}
+  <a href="#" class="btn btn-outline-primary btn-sm" onclick="alert('导出功能开发中'); return false;">
+    <i class="bi bi-download"></i> 导出数据
+  </a>
+{% endblock pm_actions %}
+
+
+{# 内容区域 - 包含标签页、统计、筛选、表格等 #}
+{% block pm_content %}
+  {# 隐藏的 CSRF token 字段，确保批量删除功能可以获取到 token #}
+  {% csrf_token %}
+
+  {# 统计卡片区域 - 显示关键指标 #}
+  {% block list_stats_section %}
+  <div class="list-stats-section">
+    <div class="list-page-stats">
+      {% block list_stats_content %}
+      <div class="list-stat-card">
+        <div class="list-stat-label">待我审批</div>
+        <div class="list-stat-value">{{ pending_count|default:0 }}</div>
+      </div>
+      <div class="list-stat-card">
+        <div class="list-stat-label">历史审批</div>
+        <div class="list-stat-value">{{ historical_count|default:0 }}</div>
+      </div>
+      {% endblock list_stats_content %}
     </div>
-    <div class="list-page-action-buttons">
-        <a href="#" class="btn btn-outline-primary btn-sm" onclick="alert('导出功能开发中'); return false;">
-            <i class="bi bi-download"></i> 导出数据
+  </div>
+  {% endblock list_stats_section %}
+
+  {# 标签页导航 - 放在统计卡片之后，筛选器之前 #}
+  <div class="list-page-tabs-section" style="margin-bottom: 16px;">
+    <ul class="nav nav-tabs">
+      <li class="nav-item">
+        <a class="nav-link {% if not tab or tab == 'pending' %}active{% endif %}" href="?tab=pending{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.workflow %}&workflow={{ request.GET.workflow }}{% endif %}">
+          待我审批 
+          {% if pending_count %}
+          <span class="badge bg-danger">{{ pending_count }}</span>
+          {% endif %}
         </a>
-    </div>
-</div>
-{% endblock list_action_bar_content %}
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if tab == 'historical' %}active{% endif %}" href="?tab=historical{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.workflow %}&workflow={{ request.GET.workflow }}{% endif %}">
+          历史审批
+          {% if historical_count %}
+          <span class="badge bg-secondary">{{ historical_count }}</span>
+          {% endif %}
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if tab == 'my_submitted' %}active{% endif %}" href="?tab=my_submitted{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.workflow %}&workflow={{ request.GET.workflow }}{% endif %}">
+          我提交的审批
+          {% if my_submitted_count %}
+          <span class="badge bg-info">{{ my_submitted_count }}</span>
+          {% endif %}
+        </a>
+      </li>
+    </ul>
+  </div>
 
-{% block list_toolbar_content %}
-{% if not tab or tab == 'pending' %}
-{% if pending_count > 0 %}
-<form id="batchApproveForm" method="post" action="{% url 'workflow_engine:approval_list' %}" style="display: none;">
-    {% csrf_token %}
-    <input type="hidden" name="action" id="batchAction" value="">
-    <div class="list-page-batch-actions">
-        <div class="list-page-batch-actions-info">
-            <span id="selectedCount">0</span> 项已选择
+  {# 筛选器区域 #}
+  {% block list_filters_section %}
+  <div class="list-page-filters">
+    <div class="list-page-filter-row">
+      <form id="filterForm" method="get">
+        {% block list_filters_content %}
+        {# 保持tab参数 #}
+        <input type="hidden" name="tab" value="{{ tab|default:'pending' }}">
+        
+        {# 搜索框 #}
+        <div class="list-page-filter-item">
+          <label class="list-page-filter-label">搜索</label>
+          <input type="text" name="search" class="form-control" placeholder="搜索审批编号、流程名称、申请人..." value="{{ request.GET.search|default:'' }}">
         </div>
-        <div class="list-page-batch-actions-buttons">
-            <button type="button" class="btn btn-sm btn-success" id="batchApproveBtn">
-                <i class="bi bi-check-circle"></i> 批量通过
-            </button>
-            <button type="button" class="btn btn-sm btn-danger" id="batchRejectBtn">
-                <i class="bi bi-x-circle"></i> 批量驳回
-            </button>
+        
+        {# 状态筛选（仅历史审批和我提交的审批显示） #}
+        {% if tab == 'historical' or tab == 'my_submitted' %}
+        <div class="list-page-filter-item">
+          <label class="list-page-filter-label">状态</label>
+          <select name="status" class="form-select">
+            <option value="">全部状态</option>
+            <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>审批中</option>
+            <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>已通过</option>
+            <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>已驳回</option>
+            <option value="withdrawn" {% if request.GET.status == 'withdrawn' %}selected{% endif %}>已撤回</option>
+          </select>
         </div>
-    </div>
-</form>
-{% endif %}
-{% endif %}
-{% endblock list_toolbar_content %}
-
-{% block list_filters_content %}
-  {# 筛选器可以在这里添加 #}
-{% endblock list_filters_content %}
-
-{% block list_table_headers %}
-{% if not tab or tab == 'pending' %}
-<th style="width: 50px;">
-    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
-</th>
-{% endif %}
-<th style="width: 12%;">审批编号</th>
-<th style="width: 15%;">流程名称</th>
-<th style="width: 10%;">申请人</th>
-<th style="width: 10%;">申请时间</th>
-<th style="width: 8%;">状态</th>
-<th style="width: 12%;">当前节点</th>
-<th style="width: 15%;">关联对象</th>
-<th style="width: 18%;">操作</th>
-{% endblock list_table_headers %}
-
-{% block list_table_rows %}
-{% if page_obj %}
-    {% for item in page_obj %}
-    <tr>
-        {% if not tab or tab == 'pending' %}
-        <td>
-            <input type="checkbox" class="form-check-input row-checkbox" name="instance_ids" value="{{ item.id }}" id="instance_{{ item.id }}">
-        </td>
         {% endif %}
         
-        {% if not tab or tab == 'pending' %}
-            {# 待我审批列表 #}
-            <td><code>{{ item.instance_number }}</code></td>
-            <td>
-                <strong>{{ item.workflow.name }}</strong>
-                {% if item.workflow.category %}
-                <br><small class="text-muted">{{ item.workflow.category }}</small>
+        {# 流程筛选 #}
+        <div class="list-page-filter-item">
+          <label class="list-page-filter-label">流程</label>
+          <select name="workflow" class="form-select">
+            <option value="">全部流程</option>
+            {% for workflow in workflows %}
+            <option value="{{ workflow.id }}" {% if request.GET.workflow == workflow.id|stringformat:"s" %}selected{% endif %}>{{ workflow.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endblock list_filters_content %}
+      </form>
+      {% block list_filter_actions %}
+      <!-- 筛选和重置按钮 - 自动添加到所有筛选表单 -->
+      <div class="list-page-filter-actions">
+        <button type="submit" form="filterForm" class="btn btn-primary">
+          <i class="bi bi-funnel"></i> 筛选
+        </button>
+        <button type="reset" form="filterForm" class="btn btn-secondary">
+          <i class="bi bi-arrow-counterclockwise"></i> 重置
+        </button>
+      </div>
+      {% endblock list_filter_actions %}
+    </div>
+  </div>
+  {% endblock list_filters_section %}
+
+  {# 批量操作工具栏 - 放在筛选器之后，表格之前 #}
+  {% if not tab or tab == 'pending' %}
+    {% if pending_count > 0 %}
+    <form id="batchApproveForm" method="post" action="{% url 'workflow_engine:approval_list' %}" style="display: none;">
+      {% csrf_token %}
+      <input type="hidden" name="action" id="batchAction" value="">
+      <div class="list-page-batch-actions">
+        <div class="list-page-batch-actions-info">
+          <span id="selectedCount">0</span> 项已选择
+        </div>
+        <div class="list-page-batch-actions-buttons">
+          <button type="button" class="btn btn-sm btn-success" id="batchApproveBtn">
+            <i class="bi bi-check-circle"></i> 批量通过
+          </button>
+          <button type="button" class="btn btn-sm btn-danger" id="batchRejectBtn">
+            <i class="bi bi-x-circle"></i> 批量驳回
+          </button>
+        </div>
+      </div>
+    </form>
+    {% endif %}
+  {% endif %}
+
+    {# 表格区域 #}
+  {% block list_table_section %}
+    {% block list_table_content %}
+      <div class="list-table-container">
+        <table class="list-table">
+          <thead>
+            <tr>
+              {% block list_table_checkbox_header %}
+                {% if not tab or tab == 'pending' %}
+                  <th style="width: 50px;">
+                    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
+                  </th>
+                {% elif tab == 'my_submitted' %}
+                  <th style="width: 50px;">
+                    <!-- 我提交的审批不需要复选框，但保留列宽以保持对齐 -->
+                  </th>
                 {% endif %}
-            </td>
-            <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
-            <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
-            <td>
-                <span class="approval-status-badge badge-pending">待审批</span>
-            </td>
-            <td>
-                {% if item.current_node %}
-                <span class="badge bg-info">{{ item.current_node.name }}</span>
-                {% else %}
-                <span class="text-muted">-</span>
+              {% endblock list_table_checkbox_header %}
+              {% block list_table_headers %}
+                <th style="width: 12%;">审批编号</th>
+                <th style="width: 15%;">流程名称</th>
+                <th style="width: 10%;">申请人</th>
+                <th style="width: 10%;">申请时间</th>
+                <th style="width: 8%;">状态</th>
+                <th style="width: 12%;">当前节点</th>
+                <th style="width: 15%;">关联对象</th>
+                <th style="width: 18%;">操作</th>
+              {% endblock list_table_headers %}
+              {% block list_table_column_settings_header %}
+                {% if column_settings_btn|default:False %}
+                  <th class="column-settings-header" style="width: auto; min-width: 32px; position: relative; text-align: center;">
+                    <button type="button" class="btn btn-link btn-sm p-0" id="tableColumnSettingsBtn" title="自定义显示列" style="text-decoration: none; color: #FFC107 !important; border: none; background: none; padding: 0;">
+                      <i class="bi bi-gear-fill" style="color: #FFC107 !important; font-size: 1.1rem;"></i>
+                    </button>
+                  </th>
                 {% endif %}
-            </td>
-            <td>
-                {% if item.content_object %}
-                    {% if item.content_type.model == 'outgoingdocument' %}
-                    <div><strong>{{ item.content_object.document_number }}</strong></div>
-                    <small class="text-muted">{{ item.content_object.title|truncatewords:5 }}</small>
-                    {% else %}
-                    {{ item.content_object }}
-                    {% endif %}
-                {% else %}
-                <span class="text-muted">-</span>
-                {% endif %}
-            </td>
-            <td>
-                <div class="list-page-table-actions">
-                    <a href="#" class="action-edit" data-bs-toggle="modal" data-bs-target="#approvalModal{{ item.id }}" onclick="loadApprovalModal({{ item.id }}); return false;" title="立即审批">
-                        <i class="bi bi-check-circle"></i>
-                    </a>
-                    <span class="action-separator">|</span>
-                    <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
-                        <i class="bi bi-eye"></i>
-                    </a>
-                </div>
-            </td>
-        {% elif tab == 'historical' %}
-            {# 历史审批列表 #}
-            <td><code>{{ item.instance_number }}</code></td>
-            <td>
-                <strong>{{ item.workflow.name }}</strong>
-                {% if item.workflow.category %}
-                <br><small class="text-muted">{{ item.workflow.category }}</small>
-                {% endif %}
-            </td>
-            <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
-            <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
-            <td>
-                {% if item.status == 'approved' %}
-                    <span class="approval-status-badge badge-approved">已通过</span>
-                {% elif item.status == 'rejected' %}
-                    <span class="approval-status-badge badge-rejected">已驳回</span>
-                {% elif item.status == 'withdrawn' %}
-                    <span class="approval-status-badge badge-withdrawn">已撤回</span>
-                {% else %}
-                    <span class="badge bg-secondary">{{ item.get_status_display }}</span>
-                {% endif %}
-            </td>
-            <td>
-                {% if item.current_node %}
-                <span class="badge bg-info">{{ item.current_node.name }}</span>
-                {% else %}
-                <span class="text-muted">-</span>
-                {% endif %}
-            </td>
-            <td>
-                {% if item.content_object %}
-                    {% if item.content_type.model == 'outgoingdocument' %}
-                    <div><strong>{{ item.content_object.document_number }}</strong></div>
-                    <small class="text-muted">{{ item.content_object.title|truncatewords:5 }}</small>
-                    {% else %}
-                    {{ item.content_object }}
-                    {% endif %}
-                {% else %}
-                <span class="text-muted">-</span>
-                {% endif %}
-            </td>
-            <td>
-                <div class="list-page-table-actions">
-                    <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
-                        <i class="bi bi-eye"></i>
-                    </a>
-                </div>
-            </td>
-        {% endif %}
+              {% endblock list_table_column_settings_header %}
+            </tr>
+          </thead>
+          <tbody>
+
+{# 表格行 #}
+{% block list_table_rows %}
+  {% if page_obj %}
+    {% for item in page_obj %}
+    <tr>
+      {% if not tab or tab == 'pending' %}
+      <td>
+        <input type="checkbox" class="form-check-input row-checkbox" name="instance_ids" value="{{ item.id }}" id="instance_{{ item.id }}">
+      </td>
+      {% elif tab == 'my_submitted' %}
+      <td>
+        <!-- 我提交的审批不需要复选框 -->
+      </td>
+      {% endif %}
+      
+      {% if not tab or tab == 'pending' %}
+        {# 待我审批列表 #}
+        <td><code>{{ item.instance_number }}</code></td>
+        <td>
+          <strong>{{ item.workflow.name }}</strong>
+          {% if item.workflow.category %}
+          <br><small class="text-muted">{{ item.workflow.category }}</small>
+          {% endif %}
+        </td>
+        <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
+        <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
+        <td>
+          <span class="approval-status-badge badge-pending">待审批</span>
+        </td>
+        <td>
+          {% if item.current_node %}
+          <span class="badge bg-info">{{ item.current_node.name }}</span>
+          {% else %}
+          <span class="text-muted">-</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if item.content_object %}
+            {% if item.content_type.model == 'outgoingdocument' %}
+            <div><strong>{{ item.content_object.document_number }}</strong></div>
+            <small class="text-muted">{{ item.content_object.title|truncatewords:5 }}</small>
+            {% else %}
+            {{ item.content_object }}
+            {% endif %}
+          {% else %}
+          <span class="text-muted">-</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="list-page-table-actions">
+            <a href="#" class="action-edit" data-bs-toggle="modal" data-bs-target="#approvalModal{{ item.id }}" onclick="loadApprovalModal({{ item.id }}); return false;" title="立即审批">
+              <i class="bi bi-check-circle"></i>
+            </a>
+            <span class="action-separator">|</span>
+            <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
+              <i class="bi bi-eye"></i>
+            </a>
+          </div>
+        </td>
+              {% block list_table_column_settings_cell %}
+                {% if column_settings_btn|default:False %}<td></td>{% endif %}
+              {% endblock list_table_column_settings_cell %}
+      {% elif tab == 'historical' %}
+        {# 历史审批列表 #}
+        <td><code>{{ item.instance_number }}</code></td>
+        <td>
+          <strong>{{ item.workflow.name }}</strong>
+          {% if item.workflow.category %}
+          <br><small class="text-muted">{{ item.workflow.category }}</small>
+          {% endif %}
+        </td>
+        <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
+        <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
+        <td>
+          {% if item.status == 'approved' %}
+            <span class="approval-status-badge badge-approved">已通过</span>
+          {% elif item.status == 'rejected' %}
+            <span class="approval-status-badge badge-rejected">已驳回</span>
+          {% elif item.status == 'withdrawn' %}
+            <span class="approval-status-badge badge-withdrawn">已撤回</span>
+          {% else %}
+            <span class="badge bg-secondary">{{ item.get_status_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if item.current_node %}
+          <span class="badge bg-info">{{ item.current_node.name }}</span>
+          {% else %}
+          <span class="text-muted">-</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if item.content_object %}
+            {% if item.content_type.model == 'outgoingdocument' %}
+            <div><strong>{{ item.content_object.document_number }}</strong></div>
+            <small class="text-muted">{{ item.content_object.title|truncatewords:5 }}</small>
+            {% else %}
+            {{ item.content_object }}
+            {% endif %}
+          {% else %}
+          <span class="text-muted">-</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="list-page-table-actions">
+            <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
+              <i class="bi bi-eye"></i>
+            </a>
+          </div>
+        </td>
+              {% block list_table_column_settings_cell %}
+                {% if column_settings_btn|default:False %}<td></td>{% endif %}
+              {% endblock list_table_column_settings_cell %}
+      {% elif tab == 'my_submitted' %}
+        {# 我提交的审批列表 #}
+        <td><code>{{ item.instance_number }}</code></td>
+        <td>
+          <strong>{{ item.workflow.name }}</strong>
+          {% if item.workflow.category %}
+          <br><small class="text-muted">{{ item.workflow.category }}</small>
+          {% endif %}
+        </td>
+        <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
+        <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
+        <td>
+          {% if item.status == 'pending' %}
+            <span class="approval-status-badge badge-pending">审批中</span>
+          {% elif item.status == 'approved' %}
+            <span class="approval-status-badge badge-approved">已通过</span>
+          {% elif item.status == 'rejected' %}
+            <span class="approval-status-badge badge-rejected">已驳回</span>
+          {% elif item.status == 'withdrawn' %}
+            <span class="approval-status-badge badge-withdrawn">已撤回</span>
+          {% else %}
+            <span class="badge bg-secondary">{{ item.get_status_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if item.current_node %}
+          <span class="badge bg-info">{{ item.current_node.name }}</span>
+          {% else %}
+          <span class="text-muted">-</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if item.content_object %}
+            {% if item.content_type.model == 'outgoingdocument' %}
+            <div><strong>{{ item.content_object.document_number }}</strong></div>
+            <small class="text-muted">{{ item.content_object.title|truncatewords:5 }}</small>
+            {% else %}
+            {{ item.content_object }}
+            {% endif %}
+          {% else %}
+          <span class="text-muted">-</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="list-page-table-actions">
+            <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
+              <i class="bi bi-eye"></i>
+            </a>
+            {% if item.status == 'pending' and item.workflow.allow_withdraw %}
+            <span class="action-separator">|</span>
+            <a href="#" class="action-delete" onclick="if(confirm('确定要撤回此审批吗？')) { window.location.href='{% url 'workflow_engine:approval_withdraw' item.id %}'; } return false;" title="撤回">
+              <i class="bi bi-arrow-counterclockwise"></i>
+            </a>
+            {% endif %}
+          </div>
+        </td>
+              {% block list_table_column_settings_cell %}
+                {% if column_settings_btn|default:False %}<td></td>{% endif %}
+              {% endblock list_table_column_settings_cell %}
+      {% endif %}
     </tr>
     {% empty %}
     <tr>
-        <td colspan="{% if not tab or tab == 'pending' %}9{% else %}8{% endif %}" class="list-empty">
-            <div class="list-empty-icon">📋</div>
-            <div class="list-empty-text">
-                {% if not tab or tab == 'pending' %}
-                暂无待审批事项
-                {% elif tab == 'historical' %}
-                暂无历史审批记录
-                {% else %}
-                暂无数据
-                {% endif %}
-            </div>
-            {% block list_empty_hint %}
-            {% if not tab or tab == 'pending' %}
-            <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
-                💡 提示：如果您刚刚完成了审批，审批事项可能已进入下一节点或已完成。<br>
-                您可以在"历史审批"标签中查看所有已审批的记录。
-            </p>
-            {% elif tab == 'historical' %}
-            <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
-                您审批过的记录将显示在这里
-            </p>
-            {% endif %}
-            {% endblock list_empty_hint %}
-        </td>
+      <td colspan="{% if not tab or tab == 'pending' %}{% if column_settings_btn|default:False %}10{% else %}9{% endif %}{% elif tab == 'my_submitted' %}{% if column_settings_btn|default:False %}10{% else %}9{% endif %}{% else %}{% if column_settings_btn|default:False %}9{% else %}8{% endif %}{% endif %}" class="list-empty">
+        <div class="list-empty-icon">📋</div>
+        <div class="list-empty-text">
+          {% if not tab or tab == 'pending' %}
+          暂无待审批事项
+          {% elif tab == 'historical' %}
+          暂无历史审批记录
+          {% elif tab == 'my_submitted' %}
+          暂无我提交的审批
+          {% else %}
+          暂无数据
+          {% endif %}
+        </div>
+        {% block list_empty_hint %}
+        {% if not tab or tab == 'pending' %}
+        <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
+          💡 提示：如果您刚刚完成了审批，审批事项可能已进入下一节点或已完成。<br>
+          您可以在"历史审批"标签中查看所有已审批的记录。
+        </p>
+        {% elif tab == 'historical' %}
+        <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
+          您审批过的记录将显示在这里
+        </p>
+        {% elif tab == 'my_submitted' %}
+        <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
+          您提交的所有审批申请将显示在这里，包括审批中、已通过、已驳回等状态
+        </p>
+        {% endif %}
+        {% endblock list_empty_hint %}
+      </td>
     </tr>
     {% endfor %}
-{% else %}
+  {% else %}
     <tr>
-        <td colspan="{% if not tab or tab == 'pending' %}9{% else %}8{% endif %}" class="list-empty">
-            <div class="list-empty-icon">📋</div>
-            <div class="list-empty-text">暂无数据</div>
-        </td>
+      <td colspan="{% if not tab or tab == 'pending' %}{% if column_settings_btn|default:False %}10{% else %}9{% endif %}{% elif tab == 'my_submitted' %}{% if column_settings_btn|default:False %}10{% else %}9{% endif %}{% else %}{% if column_settings_btn|default:False %}9{% else %}8{% endif %}{% endif %}" class="list-empty">
+        <div class="list-empty-icon">📋</div>
+        <div class="list-empty-text">暂无数据</div>
+      </td>
     </tr>
-{% endif %}
-{% endblock list_table_rows %}
+  {% endif %}
+            {% endblock list_table_rows %}
+          </tbody>
+        </table>
+      </div>
+    {% endblock list_table_content %}
+  {% endblock list_table_section %}
 
-{% block list_pagination_content %}
-{{ block.super }}
-
-{# 审批模态框 - 放在分页之后，pm_content 块内 #}
-{% if not tab or tab == 'pending' %}
-{% for instance in page_obj %}
-<div class="modal fade" id="approvalModal{{ instance.id }}" tabindex="-1" aria-labelledby="approvalModalLabel{{ instance.id }}" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="approvalModalLabel{{ instance.id }}">
-                    <i class="bi bi-check-circle"></i> 审批操作 - {{ instance.workflow.name }}
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="post" action="{% url 'workflow_engine:approval_action' instance.id %}">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <!-- 审批信息 -->
-                    <div class="mb-3">
-                        <h6 class="text-muted mb-2">审批信息</h6>
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <small class="text-muted">审批编号：</small>
-                                <div><code>{{ instance.instance_number }}</code></div>
-                            </div>
-                            <div class="col-md-6">
-                                <small class="text-muted">申请人：</small>
-                                <div>{{ instance.applicant.username }}{% if instance.applicant.get_full_name %} ({{ instance.applicant.get_full_name }}){% endif %}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <small class="text-muted">当前节点：</small>
-                                <div>{{ instance.current_node.name|default:"-" }}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <small class="text-muted">申请时间：</small>
-                                <div>{{ instance.apply_time|date:"Y-m-d H:i" }}</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {% if instance.content_object %}
-                    <div class="mb-3">
-                        <h6 class="text-muted mb-2">关联内容</h6>
-                        {% if instance.content_type.model == 'outgoingdocument' %}
-                        <div>
-                            <small class="text-muted">发文编号：</small>
-                            <div class="fw-bold text-primary">{{ instance.content_object.document_number }}</div>
-                        </div>
-                        <div class="mt-2">
-                            <small class="text-muted">标题：</small>
-                            <div>{{ instance.content_object.title }}</div>
-                        </div>
-                        {% else %}
-                        <div>{{ instance.content_object }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                    
-                    {% if instance.apply_comment %}
-                    <div class="mb-3">
-                        <h6 class="text-muted mb-2">申请说明</h6>
-                        <div class="p-2 bg-light rounded">{{ instance.apply_comment }}</div>
-                    </div>
-                    {% endif %}
-                    
-                    <hr>
-                    
-                    <!-- 审批操作 -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">审批意见 <span class="text-muted">(可选)</span></label>
-                        <textarea name="comment" class="form-control" rows="4" placeholder="请输入审批意见..."></textarea>
-                    </div>
-                    
-                    <input type="hidden" name="redirect_to" value="{% url 'workflow_engine:approval_list' %}">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    {% if instance.workflow.allow_reject %}
-                    <button type="submit" name="action" value="reject" class="btn btn-danger">
-                        <i class="bi bi-x-circle"></i> 驳回
-                    </button>
-                    {% endif %}
-                    <button type="submit" name="action" value="approve" class="btn btn-success">
-                        <i class="bi bi-check-circle"></i> 通过
-                    </button>
-                </div>
-            </form>
+    {# 分页区域 #}
+    {% block list_pagination_section %}
+    <div class="list-pagination-section">
+      <div class="list-pagination">
+        <div class="list-pagination-info">
+          {% if page_obj %}
+            显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条
+          {% else %}
+            暂无数据
+          {% endif %}
         </div>
+        <div class="list-pagination-controls">
+          {% if page_obj and page_obj.paginator.num_pages > 1 %}
+            <nav aria-label="分页导航">
+              <ul class="pagination">
+                {% if page_obj.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">上一页</a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <span class="page-link">上一页</span>
+                  </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                  {% if page_obj.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link">{{ num }}</span>
+                    </li>
+                  {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                      <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">下一页</a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <span class="page-link">下一页</span>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+          {% else %}
+            {# 即使只有一页也显示分页信息 #}
+            <nav aria-label="分页导航">
+              <ul class="pagination">
+                <li class="page-item disabled">
+                  <span class="page-link">上一页</span>
+                </li>
+                <li class="page-item active">
+                  <span class="page-link">1</span>
+                </li>
+                <li class="page-item disabled">
+                  <span class="page-link">下一页</span>
+                </li>
+              </ul>
+            </nav>
+          {% endif %}
+        </div>
+      </div>
     </div>
-</div>
-{% endfor %}
-{% endif %}
-{% endblock list_pagination_content %}
+    {% endblock list_pagination_section %}
 
+  {# 审批模态框 - 放在 pm_content 块末尾 #}
+  {% if not tab or tab == 'pending' %}
+    {% for instance in page_obj %}
+    <div class="modal fade" id="approvalModal{{ instance.id }}" tabindex="-1" aria-labelledby="approvalModalLabel{{ instance.id }}" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="approvalModalLabel{{ instance.id }}">
+              <i class="bi bi-check-circle"></i> 审批操作 - {{ instance.workflow.name }}
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <form method="post" action="{% url 'workflow_engine:approval_action' instance.id %}">
+            {% csrf_token %}
+            <div class="modal-body">
+              <!-- 审批信息 -->
+              <div class="mb-3">
+                <h6 class="text-muted mb-2">审批信息</h6>
+                <div class="row g-2">
+                  <div class="col-md-6">
+                    <small class="text-muted">审批编号：</small>
+                    <div><code>{{ instance.instance_number }}</code></div>
+                  </div>
+                  <div class="col-md-6">
+                    <small class="text-muted">申请人：</small>
+                    <div>{{ instance.applicant.username }}{% if instance.applicant.get_full_name %} ({{ instance.applicant.get_full_name }}){% endif %}</div>
+                  </div>
+                  <div class="col-md-6">
+                    <small class="text-muted">当前节点：</small>
+                    <div>{{ instance.current_node.name|default:"-" }}</div>
+                  </div>
+                  <div class="col-md-6">
+                    <small class="text-muted">申请时间：</small>
+                    <div>{{ instance.apply_time|date:"Y-m-d H:i" }}</div>
+                  </div>
+                </div>
+              </div>
+              
+              {% if instance.content_object %}
+              <div class="mb-3">
+                <h6 class="text-muted mb-2">关联内容</h6>
+                {% if instance.content_type.model == 'outgoingdocument' %}
+                <div>
+                  <small class="text-muted">发文编号：</small>
+                  <div class="fw-bold text-primary">{{ instance.content_object.document_number }}</div>
+                </div>
+                <div class="mt-2">
+                  <small class="text-muted">标题：</small>
+                  <div>{{ instance.content_object.title }}</div>
+                </div>
+                {% else %}
+                <div>{{ instance.content_object }}</div>
+                {% endif %}
+              </div>
+              {% endif %}
+              
+              {% if instance.apply_comment %}
+              <div class="mb-3">
+                <h6 class="text-muted mb-2">申请说明</h6>
+                <div class="p-2 bg-light rounded">{{ instance.apply_comment }}</div>
+              </div>
+              {% endif %}
+              
+              <hr>
+              
+              <!-- 审批操作 -->
+              <div class="mb-3">
+                <label class="form-label fw-bold">审批意见 <span class="text-muted">(可选)</span></label>
+                <textarea name="comment" class="form-control" rows="4" placeholder="请输入审批意见..."></textarea>
+              </div>
+              
+              <input type="hidden" name="redirect_to" value="{% url 'workflow_engine:approval_list' %}">
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+              {% if instance.workflow.allow_reject %}
+              <button type="submit" name="action" value="reject" class="btn btn-danger">
+                <i class="bi bi-x-circle"></i> 驳回
+              </button>
+              {% endif %}
+              <button type="submit" name="action" value="approve" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> 通过
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  {# 列设置模态框 - 放在 pm_content 块末尾 #}
+  {% if column_settings_btn|default:False %}
+  <div class="modal fade" id="fieldsSettingsModal" tabindex="-1" aria-labelledby="fieldsSettingsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="fieldsSettingsModalLabel">
+          <i class="bi bi-gear-fill"></i> 自定义显示列
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">
+          勾选要显示的列，拖动可调整顺序。取消勾选的列将被隐藏。
+        </p>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th style="width: 60px;">显示</th>
+                <th>列名称</th>
+                <th style="width: 50px;">排序</th>
+              </tr>
+            </thead>
+            <tbody id="columnSettingsList">
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input column-toggle" data-column="checkbox" checked disabled>
+                </td>
+                <td>选择</td>
+                <td><i class="bi bi-grip-vertical text-muted"></i></td>
+              </tr>
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input column-toggle" data-column="instance_number" checked>
+                </td>
+                <td>审批编号</td>
+                <td><i class="bi bi-grip-vertical text-muted"></i></td>
+              </tr>
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input column-toggle" data-column="workflow_name" checked>
+                </td>
+                <td>流程名称</td>
+                <td><i class="bi bi-grip-vertical text-muted"></i></td>
+              </tr>
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input column-toggle" data-column="applicant" checked>
+                </td>
+                <td>申请人</td>
+                <td><i class="bi bi-grip-vertical text-muted"></i></td>
+              </tr>
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input column-toggle" data-column="apply_time" checked>
+                </td>
+                <td>申请时间</td>
+                <td><i class="bi bi-grip-vertical text-muted"></i></td>
+              </tr>
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input column-toggle" data-column="status" checked>
+                </td>
+                <td>状态</td>
+                <td><i class="bi bi-grip-vertical text-muted"></i></td>
+              </tr>
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input column-toggle" data-column="current_node" checked>
+                </td>
+                <td>当前节点</td>
+                <td><i class="bi bi-grip-vertical text-muted"></i></td>
+              </tr>
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input column-toggle" data-column="content_object" checked>
+                </td>
+                <td>关联对象</td>
+                <td><i class="bi bi-grip-vertical text-muted"></i></td>
+              </tr>
+              <tr>
+                <td>
+                  <input type="checkbox" class="form-check-input column-toggle" data-column="actions" checked disabled>
+                </td>
+                <td>操作</td>
+                <td><i class="bi bi-grip-vertical text-muted"></i></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-outline-secondary" id="resetColumnSettings">重置为默认</button>
+        <button type="button" class="btn btn-primary" id="saveColumnSettings">保存设置</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock pm_content %}
+
+{# JavaScript #}
 {% block module_extra_js %}
 {{ block.super }}
 <script>
@@ -467,5 +839,187 @@ function loadApprovalModal(instanceId) {
         // 可以在这里加载额外的数据
     }
 }
+
+// 列设置功能
+{% if column_settings_btn|default:False %}
+(function() {
+    'use strict';
+    
+    const STORAGE_KEY = 'approval_list_column_settings';
+    
+    // 获取所有列的定义
+    function getColumnDefinitions() {
+        return [
+            { key: 'checkbox', name: '选择', required: true },
+            { key: 'instance_number', name: '审批编号', required: false },
+            { key: 'workflow_name', name: '流程名称', required: false },
+            { key: 'applicant', name: '申请人', required: false },
+            { key: 'apply_time', name: '申请时间', required: false },
+            { key: 'status', name: '状态', required: false },
+            { key: 'current_node', name: '当前节点', required: false },
+            { key: 'content_object', name: '关联对象', required: false },
+            { key: 'actions', name: '操作', required: true }
+        ];
+    }
+    
+    // 加载保存的列设置
+    function loadColumnSettings() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (e) {
+            console.warn('加载列设置失败:', e);
+        }
+        return null;
+    }
+    
+    // 保存列设置
+    function saveColumnSettings(settings) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+            return true;
+        } catch (e) {
+            console.error('保存列设置失败:', e);
+            return false;
+        }
+    }
+    
+    // 应用列设置到表格
+    function applyColumnSettings() {
+        const settings = loadColumnSettings();
+        if (!settings) return;
+        
+        const table = document.querySelector('.list-table');
+        if (!table) return;
+        
+        const thead = table.querySelector('thead');
+        const tbody = table.querySelector('tbody');
+        if (!thead || !tbody) return;
+        
+        // 获取表头
+        const headerRow = thead.querySelector('tr');
+        if (!headerRow) return;
+        
+        const headers = Array.from(headerRow.querySelectorAll('th'));
+        const columnKeys = ['checkbox', 'instance_number', 'workflow_name', 'applicant', 'apply_time', 'status', 'current_node', 'content_object', 'actions'];
+        
+        headers.forEach((th, index) => {
+            if (index < columnKeys.length) {
+                const key = columnKeys[index];
+                const visible = settings[key] !== false;
+                th.style.display = visible ? '' : 'none';
+            }
+        });
+        
+        // 获取表格行
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach(row => {
+            const cells = Array.from(row.querySelectorAll('td'));
+            cells.forEach((td, index) => {
+                if (index < columnKeys.length) {
+                    const key = columnKeys[index];
+                    const visible = settings[key] !== false;
+                    td.style.display = visible ? '' : 'none';
+                }
+            });
+        });
+    }
+    
+    // 初始化列设置模态框
+    function initColumnSettingsModal() {
+        const modal = document.getElementById('fieldsSettingsModal');
+        if (!modal) return;
+        
+        const settings = loadColumnSettings();
+        const toggles = modal.querySelectorAll('.column-toggle');
+        
+        toggles.forEach(toggle => {
+            const column = toggle.dataset.column;
+            if (settings && settings.hasOwnProperty(column)) {
+                toggle.checked = settings[column] !== false;
+            } else {
+                toggle.checked = true; // 默认显示
+            }
+        });
+    }
+    
+    // 保存按钮事件
+    const saveBtn = document.getElementById('saveColumnSettings');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+            const settings = {};
+            const toggles = document.querySelectorAll('#columnSettingsList .column-toggle');
+            
+            toggles.forEach(toggle => {
+                const column = toggle.dataset.column;
+                settings[column] = toggle.checked;
+            });
+            
+            if (saveColumnSettings(settings)) {
+                applyColumnSettings();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('fieldsSettingsModal'));
+                if (modal) modal.hide();
+                alert('列设置已保存');
+            } else {
+                alert('保存失败，请重试');
+            }
+        });
+    }
+    
+    // 重置按钮事件
+    const resetBtn = document.getElementById('resetColumnSettings');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            if (confirm('确定要重置为默认设置吗？')) {
+                localStorage.removeItem(STORAGE_KEY);
+                const toggles = document.querySelectorAll('#columnSettingsList .column-toggle');
+                toggles.forEach(toggle => {
+                    if (!toggle.disabled) {
+                        toggle.checked = true;
+                    }
+                });
+                applyColumnSettings();
+                alert('已重置为默认设置');
+            }
+        });
+    }
+    
+    // 绑定按钮点击事件，手动打开模态框
+    const settingsBtn = document.getElementById('tableColumnSettingsBtn');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const modalElement = document.getElementById('fieldsSettingsModal');
+            if (modalElement) {
+                initColumnSettingsModal();
+                const modal = new bootstrap.Modal(modalElement, {
+                    backdrop: true,
+                    keyboard: true
+                });
+                modal.show();
+            } else {
+                console.error('列设置模态框未找到');
+            }
+        });
+    }
+    
+    // 模态框显示时初始化
+    const modalElement = document.getElementById('fieldsSettingsModal');
+    if (modalElement) {
+        modalElement.addEventListener('show.bs.modal', function() {
+            initColumnSettingsModal();
+        });
+    }
+    
+    // 页面加载时应用设置
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', applyColumnSettings);
+    } else {
+        applyColumnSettings();
+    }
+})();
+{% endif %}
 </script>
 {% endblock module_extra_js %}

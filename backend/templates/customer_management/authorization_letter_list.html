@@ -1,8 +1,14 @@
 {% extends "shared/list_page_base.html" %}
+{% load static %}
 
+{% block pm_title %}{{ page_title|default:"业务委托书" }}{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有业务委托书{% endblock pm_subtitle %}
 
-
-
+{% block pm_actions %}
+{% if can_create %}
+<a href="{% url 'business_pages:authorization_letter_create' %}" class="list-btn list-btn-primary">新增业务委托书</a>
+{% endif %}
+{% endblock pm_actions %}
 
 {% block list_table_rows %}
 {% for letter in page_obj %}
@@ -14,9 +20,7 @@
         <td style="text-align: right;">{% if letter.provisional_price %}¥{{ letter.provisional_price|floatformat:2 }}{% else %}--{% endif %}</td>
         <td>{{ letter.letter_date|date:"Y-m-d" }}</td>
         <td>
-          <span class="list-badge list-badge-{{ letter.status }}">
-            {{ letter.get_status_display }}
-          </span>
+          <span class="badge bg-secondary">{{ letter.get_status_display }}</span>
         </td>
         <td>
           {% if letter.opportunity %}
@@ -24,32 +28,44 @@
             {{ letter.opportunity.name }}
           </a>
           {% else %}
-          <span style="color: #999999;">未关联</span>
+          <span class="text-muted">未关联</span>
           {% endif %}
         </td>
         <td>{{ letter.created_by.get_full_name|default:letter.created_by.username }}</td>
         <td>
-          <div class="list-actions">
-            <a href="{% url 'business_pages:authorization_letter_detail' letter.id %}" class="list-btn" title="查看">查看</a>
+          <div class="list-page-table-actions">
+            <a href="{% url 'business_pages:authorization_letter_detail' letter.id %}" class="action-view" title="查看">
+              <i class="bi bi-eye"></i>
+            </a>
             {% if letter.can_edit %}
-            <a href="{% url 'business_pages:authorization_letter_edit' letter.id %}" class="list-btn" title="编辑">编辑</a>
+            <span class="action-separator">|</span>
+            <a href="{% url 'business_pages:authorization_letter_edit' letter.id %}" class="action-edit" title="编辑">
+              <i class="bi bi-pencil"></i>
+            </a>
             {% endif %}
             {% if letter.can_delete %}
-            <a href="{% url 'business_pages:authorization_letter_delete' letter.id %}" class="list-btn" title="删除">删除</a>
+            <span class="action-separator">|</span>
+            <a href="{% url 'business_pages:authorization_letter_delete' letter.id %}" class="action-delete" title="删除">
+              <i class="bi bi-trash"></i>
+            </a>
             {% endif %}
           </div>
         </td>
+        {% if column_settings_btn|default:False %}<td></td>{% endif %}
       </tr>
       {% empty %}
       <tr>
-        <td colspan="10" class="list-empty">
-          <div class="list-empty-icon">▢</div>
+        <td colspan="{% if column_settings_btn|default:False %}11{% else %}10{% endif %}" class="list-empty">
+          <div class="list-empty-icon">📋</div>
           <div class="list-empty-text">暂无委托书数据</div>
-          <div class="list-empty-hint">请创建第一个委托书开始使用</div>
+          {% block list_empty_hint %}
+          <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">请创建第一个委托书开始使用</p>
+          {% endblock list_empty_hint %}
         </td>
       </tr>
       {% endfor %}
 {% endblock list_table_rows %}
+
 {% block list_table_headers %}
 <th>委托书编号</th>
 <th>项目名称</th>
@@ -62,85 +78,4 @@
 <th>创建人</th>
 <th>操作</th>
 {% endblock list_table_headers %}
-{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
-
-{% block extra_css %}
-
-{% endblock extra_css %}
-
-{% block authorization_letter_content %}
-<div class="container-fluid py-4">
-    <!-- 页面标题区域 -->
-    <div class="list-page-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding: 6px 0;">
-        <div>
-            <h2 class="mb-0">
-                业务委托书管理
-            </h2>
-        </div>
-        <div class="list-page-actions" style="display: flex; gap: 8px; align-items: center;">
-            {% if can_create %}
-            <a href="{% url 'business_pages:authorization_letter_create' %}" class="btn btn-primary">
-                + 新增业务委托书
-            </a>
-            {% endif %}
-        </div>
-    </div>
-
-
-    <!-- 筛选栏 -->
-    <div class="filter-bar">
-        <form method="get" action="{% url 'business_pages:authorization_letter_list' %}" class="row g-3">
-            <div class="col-md-12">
-                <div class="row g-2">
-                    <div class="col-md-3">
-                        <input type="text" name="search" class="form-control" placeholder="搜索委托书编号、项目名称、委托单位..." value="{{ search }}">
-                    </div>
-                    <div class="col-md-2">
-                        <select name="status" class="form-select">
-                            <option value="">全部状态</option>
-                            {% for value, label in status_choices %}
-                            <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <input type="text" name="client_name" class="form-control" placeholder="委托方名称" value="{{ client_name }}">
-                    </div>
-                    <div class="col-md-2">
-                        <select name="opportunity_id" class="form-select">
-                            <option value="">全部商机</option>
-                            {% for opp in opportunities %}
-                            <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>{{ opp.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="input-group">
-                            <input type="date" name="date_from" class="form-control" placeholder="开始日期" value="{{ date_from }}">
-                            <span class="input-group-text">至</span>
-                            <input type="date" name="date_to" class="form-control" placeholder="结束日期" value="{{ date_to }}">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-12">
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">搜索</button>
-                    <a href="{% url 'business_pages:authorization_letter_list' %}" class="btn btn-outline-secondary">重置</a>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <!-- 委托书列表 -->
-    <div class="letter-table">
-        
-        {% else %}
-        <div class="p-5 text-center text-muted">
-            <p>暂无委托书数据</p>
-        </div>
-        {% endif %}
-    </div>
-</div>
-{% endblock authorization_letter_content %}
 

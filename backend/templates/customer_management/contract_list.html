@@ -1,38 +1,35 @@
 {% extends "shared/list_page_base.html" %}
+{% load static %}
 
-{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
+{% block pm_title %}{{ page_title|default:"合同列表" }}{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有合同{% endblock pm_subtitle %}
 
 {% block breadcrumb_items %}
     <li class="breadcrumb-item"><a href="{% url 'business_pages:contract_management_list' %}">合同管理</a></li>
     <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
 {% endblock breadcrumb_items %}
 
-
-
-{% load static %}
-
-
 {% block list_filters_content %}
-  <div class="col-md-3">
-    <label class="form-label">状态</label>
-    <select name="status" class="list-filter-input">
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">状态</label>
+    <select name="status" class="form-select form-select-sm">
         <option value="">全部状态</option>
         <option value="pending_review" {% if selected_status == 'pending_review' %}selected{% endif %}>待审核</option>
         <option value="reviewing" {% if selected_status == 'reviewing' %}selected{% endif %}>审核中</option>
       </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">合同类型</label>
-    <select name="contract_type" class="list-filter-input">
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">合同类型</label>
+    <select name="contract_type" class="form-select form-select-sm">
         <option value="">全部类型</option>
         {% for value, label in type_choices %}
         <option value="{{ value }}" {% if selected_type == value %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">客户</label>
-    <select name="client_id" class="list-filter-input">
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">客户</label>
+    <select name="client_id" class="form-select form-select-sm">
         <option value="">全部客户</option>
         {% for client in clients %}
         <option value="{{ client.id }}" {% if selected_client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
@@ -65,21 +62,19 @@
             {{ contract.client.name }}
           </a>
           {% else %}
-          <span style="color: #999999;">未指定</span>
+          <span class="text-muted">未指定</span>
           {% endif %}
         </td>
         <td>
           {% if contract.project %}
           {{ contract.project.project_number|default:contract.project.name }}
           {% else %}
-          <span style="color: #999999;">未关联</span>
+          <span class="text-muted">未关联</span>
           {% endif %}
         </td>
         <td>{{ contract.get_contract_type_display }}</td>
         <td>
-          <span class="list-badge list-badge-{{ contract.status }}">
-            {{ contract.get_status_display }}
-          </span>
+          <span class="badge bg-secondary">{{ contract.get_status_display }}</span>
         </td>
         <td style="text-align: right;">{% if contract.contract_amount %}¥{{ contract.contract_amount|floatformat:2 }}{% else %}--{% endif %}</td>
         <td style="text-align: right;">{% if contract.payment_amount %}¥{{ contract.payment_amount|floatformat:2 }}{% else %}¥0.00{% endif %}</td>
@@ -87,29 +82,32 @@
         <td>{{ contract.contract_date|date:"Y-m-d"|default:"未设置" }}</td>
         <td>{{ contract.created_by.get_full_name|default:contract.created_by.username }}</td>
         <td>
-          <div class="list-actions">
-            <a href="{% url 'contract_pages:contract_detail' contract.id %}" class="list-btn" title="查看">查看</a>
+          <div class="list-page-table-actions">
+            <a href="{% url 'contract_pages:contract_detail' contract.id %}" class="action-view" title="查看">
+              <i class="bi bi-eye"></i>
+            </a>
             {% if contract.can_edit %}
-            <a href="{% url 'contract_pages:contract_edit' contract.id %}" class="list-btn" title="编辑">编辑</a>
+            <span class="action-separator">|</span>
+            <a href="{% url 'contract_pages:contract_edit' contract.id %}" class="action-edit" title="编辑">
+              <i class="bi bi-pencil"></i>
+            </a>
             {% endif %}
           </div>
         </td>
+        {% if column_settings_btn|default:False %}<td></td>{% endif %}
       </tr>
       {% empty %}
       <tr>
-        <td colspan="12" class="list-empty">
-          <div class="list-empty-icon">▢</div>
+        <td colspan="{% if column_settings_btn|default:False %}13{% else %}12{% endif %}" class="list-empty">
+          <div class="list-empty-icon">📋</div>
           <div class="list-empty-text">暂无合同数据</div>
-          <div class="list-empty-hint">请创建第一个合同开始使用</div>
+          {% block list_empty_hint %}
+          <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">请创建第一个合同开始使用</p>
+          {% endblock list_empty_hint %}
         </td>
       </tr>
       {% endfor %}
 {% endblock list_table_rows %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-
-{% endblock extra_css %}
 
 
 

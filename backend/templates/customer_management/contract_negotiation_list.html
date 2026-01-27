@@ -1,39 +1,36 @@
 {% extends "shared/list_page_base.html" %}
+{% load static %}
 
-{% block list_page_title %}{{ page_title }} - 维海科技信息化管理平台{% endblock list_page_title %}
+{% block pm_title %}合同洽谈记录{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有合同洽谈记录{% endblock pm_subtitle %}
 
 {% block breadcrumb_items %}
     <li class="breadcrumb-item"><a href="{% url 'business_pages:contract_management_list' %}">合同管理</a></li>
     <li class="breadcrumb-item active" aria-current="page">合同洽谈记录</li>
 {% endblock breadcrumb_items %}
 
-
-
-{% load static %}
-
-
 {% block list_filters_content %}
-  <div class="col-md-3">
-    <label class="form-label">洽谈类型</label>
-    <select name="negotiation_type" class="list-filter-input">
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">洽谈类型</label>
+    <select name="negotiation_type" class="form-select form-select-sm">
         <option value="">全部类型</option>
         {% for value, label in negotiation_type_choices %}
         <option value="{{ value }}" {% if selected_type == value %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">状态</label>
-    <select name="status" class="list-filter-input">
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">状态</label>
+    <select name="status" class="form-select form-select-sm">
         <option value="">全部状态</option>
         {% for value, label in status_choices %}
         <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">客户</label>
-    <select name="client_id" class="list-filter-input">
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">客户</label>
+    <select name="client_id" class="form-select form-select-sm">
         <option value="">全部客户</option>
         {% for client in clients %}
         <option value="{{ client.id }}" {% if selected_client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
@@ -59,12 +56,10 @@
         <td><code>{{ negotiation.negotiation_number|default:"未编号" }}</code></td>
         <td>{{ negotiation.title }}</td>
         <td>
-          <span class="list-badge">{{ negotiation.get_negotiation_type_display }}</span>
+          <span class="badge bg-secondary">{{ negotiation.get_negotiation_type_display }}</span>
         </td>
         <td>
-          <span class="list-badge list-badge-{{ negotiation.status }}">
-            {{ negotiation.get_status_display }}
-          </span>
+          <span class="badge bg-secondary">{{ negotiation.get_status_display }}</span>
         </td>
         <td>
           {% if negotiation.client %}
@@ -72,7 +67,7 @@
             {{ negotiation.client.name }}
           </a>
           {% else %}
-          <span style="color: #999999;">未指定</span>
+          <span class="text-muted">未指定</span>
           {% endif %}
         </td>
         <td>
@@ -81,7 +76,7 @@
             {{ negotiation.contract.contract_number|default:"未编号" }}
           </a>
           {% else %}
-          <span style="color: #999999;">未关联</span>
+          <span class="text-muted">未关联</span>
           {% endif %}
         </td>
         <td>{{ negotiation.negotiation_date|date:"Y-m-d" }}</td>
@@ -93,26 +88,26 @@
         </td>
         <td>{{ negotiation.created_by.get_full_name|default:negotiation.created_by.username }}</td>
         <td>
-          <div class="list-actions">
-            <a href="{% url 'contract_pages:contract_negotiation_detail' negotiation.id %}" class="list-btn" title="查看">查看</a>
+          <div class="list-page-table-actions">
+            <a href="{% url 'contract_pages:contract_negotiation_detail' negotiation.id %}" class="action-view" title="查看">
+              <i class="bi bi-eye"></i>
+            </a>
           </div>
         </td>
+        {% if column_settings_btn|default:False %}<td></td>{% endif %}
       </tr>
       {% empty %}
       <tr>
-        <td colspan="10" class="list-empty">
-          <div class="list-empty-icon">▢</div>
+        <td colspan="{% if column_settings_btn|default:False %}11{% else %}10{% endif %}" class="list-empty">
+          <div class="list-empty-icon">📋</div>
           <div class="list-empty-text">暂无洽谈记录</div>
-          <div class="list-empty-hint">请创建第一个洽谈记录开始使用</div>
+          {% block list_empty_hint %}
+          <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">请创建第一个洽谈记录开始使用</p>
+          {% endblock list_empty_hint %}
         </td>
       </tr>
       {% endfor %}
 {% endblock list_table_rows %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-
-{% endblock extra_css %}
 
 
 

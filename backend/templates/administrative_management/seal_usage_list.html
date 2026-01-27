@@ -42,7 +42,8 @@
   <th>用印类型</th>
   <th>用印日期</th>
   <th>用印人</th>
-  <th>用印数量</th>
+  <th>审批状态</th>
+  <th>用印份数</th>
   <th>文件名称</th>
   <th>操作</th>
 {% endblock list_table_headers %}
@@ -72,6 +73,30 @@
         </small>
       </td>
       <td>{{ usage.used_by.get_full_name|default:usage.used_by.username }}</td>
+      <td>
+        {% if usage.approval_instance %}
+          {% with instance=usage.approval_instance %}
+          {% if instance.status == 'pending' %}
+          <span class="status-badge pending">审批中</span>
+          {% elif instance.status == 'approved' %}
+          <span class="status-badge approved">已通过</span>
+          {% elif instance.status == 'rejected' %}
+          <span class="status-badge rejected">已驳回</span>
+          {% elif instance.status == 'withdrawn' %}
+          <span class="badge bg-secondary">已撤回</span>
+          {% elif instance.status == 'cancelled' %}
+          <span class="badge bg-secondary">已取消</span>
+          {% else %}
+          <span class="badge bg-secondary">{{ instance.get_status_display }}</span>
+          {% endif %}
+          {% if instance.current_node %}
+          <br><small class="text-muted" style="font-size: 0.75rem;">{{ instance.current_node.name }}</small>
+          {% endif %}
+          {% endwith %}
+        {% else %}
+          <span class="badge bg-light text-dark">未提交审批</span>
+        {% endif %}
+      </td>
       <td>{{ usage.usage_count }}</td>
       <td>{{ usage.document_name|default:"-" }}</td>
       <td>
@@ -85,7 +110,7 @@
     {% endfor %}
   {% else %}
     <tr>
-      <td colspan="9" class="list-empty">
+      <td colspan="10" class="list-empty">
         <div class="list-empty-icon">📋</div>
         <div class="list-empty-text">暂无用印记录数据</div>
       </td>
