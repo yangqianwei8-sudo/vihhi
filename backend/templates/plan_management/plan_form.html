@@ -21,6 +21,73 @@
     margin-bottom: 0.5rem;
   }
   
+  /* 展开/折叠按钮样式 */
+  .plan-item-header {
+    cursor: pointer;
+    user-select: none;
+  }
+  
+  .toggle-expand-btn {
+    color: #dc3545 !important;
+    text-decoration: none !important;
+    border: none !important;
+    background: none !important;
+    padding: 0.25rem 0.5rem !important;
+    min-width: 28px !important;
+    height: 28px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.1rem !important;
+    line-height: 1 !important;
+  }
+  
+  .toggle-expand-btn:hover {
+    color: #c82333 !important;
+    background-color: #f8d7da !important;
+    border-radius: 4px !important;
+  }
+  
+  .toggle-expand-btn:focus {
+    color: #dc3545 !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25) !important;
+  }
+  
+  .toggle-expand-btn i {
+    color: #dc3545 !important;
+    font-size: 1.1rem !important;
+  }
+  
+  .toggle-expand-btn:hover i {
+    color: #c82333 !important;
+  }
+  
+  /* 确保按钮在所有情况下都显示红色 */
+  .plan-item-header .toggle-expand-btn,
+  .plan-item-header .toggle-expand-btn.btn-link,
+  .plan-item-header .toggle-expand-btn.btn-sm {
+    color: #dc3545 !important;
+  }
+  
+  .plan-item-header .toggle-expand-btn i,
+  .plan-item-header .toggle-expand-btn.btn-link i {
+    color: #dc3545 !important;
+  }
+  
+  .toggle-expand-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  }
+  
+  .toggle-expand-btn i {
+    transition: transform 0.2s ease;
+  }
+  
+  .plan-item-details {
+    transition: opacity 0.2s ease;
+  }
+  
   /* 表单页面移动端优化 */
   @media (max-width: 768px) {
     .form-row {
@@ -86,9 +153,11 @@
 {% block form_subtitle %}{{ form_page_subtitle_text|default:"请填写计划基本信息" }}{% endblock %}
 
 {% block form_actions %}
-<button type="button" class="btn btn-primary" id="headerSubmitButton">创建</button>
+<button type="button" class="btn btn-primary" id="headerSubmitButton">{{ submit_text|default:"创建" }}</button>
 <button type="button" class="btn btn-secondary" id="draftButton">暂存草稿</button>
-{% if list_url %}
+{% if cancel_url %}
+  <a href="{{ cancel_url }}" class="btn btn-secondary">取消</a>
+{% elif list_url %}
   <a href="{{ list_url }}" class="btn btn-secondary">取消</a>
 {% elif list_url_name %}
   <a href="{% url list_url_name %}" class="btn btn-secondary">取消</a>
@@ -106,28 +175,13 @@
 {# 详细信息卡片：其他字段 #}
 {% block form_fields %}
 {# 创建模式：所有字段都在FormSet中，基本信息区域只保留所属部门、负责人、表单编号 #}
-{# 编辑模式：显示计划的其他字段 #}
+{# 编辑模式：显示计划的其他字段，字段顺序与创建模式保持一致 #}
 {% if plan or form.instance.pk %}
-  {# 编辑模式：显示计划的其他字段 #}
-  {% if form.name %}
-  <div class="row mb-3">
-    <div class="col-12 form-field-wrapper">
-      <label for="{{ form.name.id_for_label }}" class="form-label">
-        {{ form.name.label }}
-        {% if form.name.field.required %}<span class="text-danger">*</span>{% endif %}
-      </label>
-      {{ form.name }}
-      {% if form.name.errors %}
-      <div class="text-danger small">{{ form.name.errors }}</div>
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
-  
-  {# 计划层级和计划周期 #}
-  <div class="row mb-3">
+  {# 编辑模式：显示计划的其他字段，字段顺序与创建模式保持一致 #}
+  {# 第一行：计划层级、计划周期、开始时间、结束时间、父计划（与创建模式一致） #}
+  <div class="row mb-3 form-row-5">
     {% if form.level %}
-    <div class="col-md-6 form-field-wrapper">
+    <div class="col-5-fields form-field-wrapper">
       <label for="{{ form.level.id_for_label }}" class="form-label">
         {{ form.level.label }}
         {% if form.level.field.required %}<span class="text-danger">*</span>{% endif %}
@@ -139,7 +193,7 @@
     </div>
     {% endif %}
     {% if form.plan_period %}
-    <div class="col-md-6 form-field-wrapper">
+    <div class="col-5-fields form-field-wrapper">
       <label for="{{ form.plan_period.id_for_label }}" class="form-label">
         {{ form.plan_period.label }}
         {% if form.plan_period.field.required %}<span class="text-danger">*</span>{% endif %}
@@ -153,12 +207,71 @@
       {% endif %}
     </div>
     {% endif %}
+    {% if form.start_time %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.start_time.id_for_label }}" class="form-label">
+        开始时间
+        {% if form.start_time.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.start_time }}
+      {% if form.start_time.errors %}
+      <div class="text-danger small">{{ form.start_time.errors }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if form.end_time %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.end_time.id_for_label }}" class="form-label">
+        结束时间
+        {% if form.end_time.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.end_time }}
+      {% if form.end_time.errors %}
+      <div class="text-danger small">{{ form.end_time.errors }}</div>
+      {% endif %}
+      <div class="form-text text-muted small">根据开始时间和计划周期自动计算</div>
+    </div>
+    {% endif %}
+    {% if form.parent_plan %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.parent_plan.id_for_label }}" class="form-label">父计划</label>
+      {{ form.parent_plan }}
+      {% if form.parent_plan.errors %}
+      <div class="text-danger small">{{ form.parent_plan.errors }}</div>
+      {% endif %}
+      <div class="form-text text-muted small">用于计划分解，选择上级计划（仅显示公司级别计划）</div>
+    </div>
+    {% endif %}
   </div>
   
-  {# 关联信息 #}
-  <div class="row mb-3">
+  {# 第二行：计划名称、计划目标、关联战略目标、关联项目（与创建模式一致） #}
+  <div class="row mb-3 form-row-5">
+    {% if form.name %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.name.id_for_label }}" class="form-label">
+        {{ form.name.label }}
+        {% if form.name.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.name }}
+      {% if form.name.errors %}
+      <div class="text-danger small">{{ form.name.errors }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if form.plan_objective %}
+    <div class="col-5-fields form-field-wrapper">
+      <label for="{{ form.plan_objective.id_for_label }}" class="form-label">
+        {{ form.plan_objective.label }}
+        {% if form.plan_objective.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.plan_objective }}
+      {% if form.plan_objective.errors %}
+      <div class="text-danger small">{{ form.plan_objective.errors }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
     {% if form.related_goal %}
-    <div class="col-md-4 form-field-wrapper">
+    <div class="col-5-fields form-field-wrapper">
       <label for="{{ form.related_goal.id_for_label }}" class="form-label">
         {{ form.related_goal.label }}
         {% if form.related_goal.field.required %}<span class="text-danger">*</span>{% endif %}
@@ -170,7 +283,7 @@
     </div>
     {% endif %}
     {% if form.related_project %}
-    <div class="col-md-4 form-field-wrapper">
+    <div class="col-5-fields form-field-wrapper">
       <label for="{{ form.related_project.id_for_label }}" class="form-label">
         {{ form.related_project.label }}
       </label>
@@ -180,9 +293,10 @@
       {% endif %}
     </div>
     {% endif %}
+    <div class="col-5-fields form-field-wrapper"></div>
   </div>
   
-  {# 计划内容 #}
+  {# 第三行：计划内容（与创建模式一致） #}
   {% if form.content %}
   <div class="row mb-3">
     <div class="col-12 form-field-wrapper">
@@ -198,23 +312,7 @@
   </div>
   {% endif %}
   
-  {# 计划目标 #}
-  {% if form.plan_objective %}
-  <div class="row mb-3">
-    <div class="col-12 form-field-wrapper">
-      <label for="{{ form.plan_objective.id_for_label }}" class="form-label">
-        {{ form.plan_objective.label }}
-        {% if form.plan_objective.field.required %}<span class="text-danger">*</span>{% endif %}
-      </label>
-      {{ form.plan_objective }}
-      {% if form.plan_objective.errors %}
-      <div class="text-danger small">{{ form.plan_objective.errors }}</div>
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
-  
-  {# 验收标准 #}
+  {# 第四行：验收标准（与创建模式一致） #}
   {% if form.acceptance_criteria %}
   <div class="row mb-3">
     <div class="col-12 form-field-wrapper">
@@ -230,7 +328,7 @@
   </div>
   {% endif %}
   
-  {# 协作计划 #}
+  {# 第五行：协作计划（与创建模式一致） #}
   {% if form.collaboration_plan %}
   <div class="row mb-3">
     <div class="col-12 form-field-wrapper">
@@ -245,7 +343,7 @@
   </div>
   {% endif %}
   
-  {# 协作人员 #}
+  {# 第六行：协作人员（与创建模式一致） #}
   {% if form.participants %}
   <div class="row mb-3">
     <div class="col-12 form-field-wrapper">
@@ -281,12 +379,23 @@
   {% for planitem_form in formset %}
   <div class="plan-item-card mb-4 p-3 border rounded" data-form-index="{{ forloop.counter0 }}">
     {{ planitem_form.id }}
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h5 class="mb-0">计划 {{ forloop.counter }}</h5>
+    <div class="d-flex justify-content-between align-items-center mb-3 plan-item-header">
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-sm btn-link p-0 toggle-expand-btn" 
+                onclick="togglePlanItem(this)" 
+                title="展开/折叠"
+                data-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+                style="color: #dc3545 !important; min-width: 28px; height: 28px;">
+          <i class="bi bi-chevron-{% if forloop.first %}up{% else %}down{% endif %}" style="color: #dc3545 !important; font-size: 1.2rem;"></i>
+        </button>
+        <h5 class="mb-0">计划 {{ forloop.counter }}</h5>
+      </div>
       <button type="button" class="btn btn-sm btn-dark" onclick="removePlanItem(this)" title="删除">
         <i class="fas fa-trash"></i> 删除
       </button>
     </div>
+    {# 详细字段容器（可折叠） #}
+    <div class="plan-item-details" style="display: {% if forloop.first %}block{% else %}none{% endif %};">
     {# 第一行：计划级别、计划周期、开始时间、结束时间、父计划 #}
     <div class="row mb-3 form-row-5">
       {# 计划级别 #}
@@ -360,7 +469,7 @@
       </div>
     </div>
 
-    {# 第二行：计划名称、关联战略目标、关联项目 #}
+    {# 第二行：计划名称、计划目标、关联战略目标、关联项目 #}
     <div class="row mb-3 form-row-5">
       <div class="col-5-fields form-field-wrapper">
         <label for="{{ planitem_form.name.id_for_label }}" class="form-label">
@@ -372,6 +481,15 @@
         {% endif %}
         {% if planitem_form.non_field_errors %}
         <div class="text-danger small">{{ planitem_form.non_field_errors }}</div>
+        {% endif %}
+      </div>
+      <div class="col-5-fields form-field-wrapper">
+        <label for="{{ planitem_form.plan_objective.id_for_label }}" class="form-label">
+          计划目标 <span class="text-danger">*</span>
+        </label>
+        {{ planitem_form.plan_objective }}
+        {% if planitem_form.plan_objective.errors %}
+        <div class="text-danger small">{{ planitem_form.plan_objective.errors }}</div>
         {% endif %}
       </div>
       <div class="col-5-fields form-field-wrapper">
@@ -391,7 +509,6 @@
         {% endif %}
       </div>
       <div class="col-5-fields form-field-wrapper"></div>
-      <div class="col-5-fields form-field-wrapper"></div>
     </div>
     
     {# 计划内容：多行文本字段，占据整行 #}
@@ -403,19 +520,6 @@
         {{ planitem_form.content }}
         {% if planitem_form.content.errors %}
         <div class="text-danger small">{{ planitem_form.content.errors }}</div>
-        {% endif %}
-      </div>
-    </div>
-    
-    {# 计划目标：多行文本字段，占据整行 #}
-    <div class="row mb-3">
-      <div class="col-12 form-field-wrapper">
-        <label for="{{ planitem_form.plan_objective.id_for_label }}" class="form-label">
-          计划目标 <span class="text-danger">*</span>
-        </label>
-        {{ planitem_form.plan_objective }}
-        {% if planitem_form.plan_objective.errors %}
-        <div class="text-danger small">{{ planitem_form.plan_objective.errors }}</div>
         {% endif %}
       </div>
     </div>
@@ -458,6 +562,7 @@
     <div style="display: none;">
       {{ planitem_form.DELETE }}
     </div>
+    </div>{# 结束 plan-item-details #}
   </div>
   {% endfor %}
   {% else %}
@@ -524,7 +629,7 @@
           const name = card.querySelector('input[name*="name"]');
           const relatedGoal = card.querySelector('select[name*="related_goal"]');
           const content = card.querySelector('textarea[name*="content"]');
-          const planObjective = card.querySelector('textarea[name*="plan_objective"]');
+          const planObjective = card.querySelector('input[name*="plan_objective"]');
           const startTime = card.querySelector('input[name*="start_time"]');
           const endTime = card.querySelector('input[name*="end_time"]');
           
@@ -748,12 +853,22 @@
       }
       
       newCard.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="mb-0">计划 ${planItemFormCount + 1}</h5>
+        <div class="d-flex justify-content-between align-items-center mb-3 plan-item-header">
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-link p-0 toggle-expand-btn" 
+                    onclick="togglePlanItem(this)" 
+                    title="展开/折叠"
+                    data-expanded="false"
+                    style="color: #dc3545 !important; min-width: 28px; height: 28px;">
+              <i class="bi bi-chevron-down" style="color: #dc3545 !important; font-size: 1.2rem;"></i>
+            </button>
+            <h5 class="mb-0">计划 ${planItemFormCount + 1}</h5>
+          </div>
           <button type="button" class="btn btn-sm btn-dark" onclick="removePlanItem(this)" title="删除">
             <i class="fas fa-trash"></i> 删除
           </button>
         </div>
+        <div class="plan-item-details" style="display: none;">
         <div class="row mb-3 form-row-5">
           <div class="col-5-fields form-field-wrapper">
             <label class="form-label">计划级别 <span class="text-danger">*</span></label>
@@ -794,11 +909,18 @@
         </div>
         <div class="row mb-3 form-row-5">
           <div class="col-5-fields form-field-wrapper">
-            <label class="form-label">计划名称</label>
+            <label class="form-label">计划名称 <span class="text-danger">*</span></label>
             <input type="text" name="${planItemFormPrefix}-${planItemFormCount}-name" 
                    class="form-control" 
                    placeholder="请输入计划名称" maxlength="200" 
                    id="id_${planItemFormPrefix}-${planItemFormCount}-name">
+          </div>
+          <div class="col-5-fields form-field-wrapper">
+            <label class="form-label">计划目标 <span class="text-danger">*</span></label>
+            <input type="text" name="${planItemFormPrefix}-${planItemFormCount}-plan_objective" 
+                   class="form-control" 
+                   placeholder="请输入计划目标" maxlength="1000" 
+                   id="id_${planItemFormPrefix}-${planItemFormCount}-plan_objective">
           </div>
           <div class="col-5-fields form-field-wrapper">
             <label class="form-label">关联战略目标 <span class="text-danger">*</span></label>
@@ -816,7 +938,6 @@
                    id="id_${planItemFormPrefix}-${planItemFormCount}-related_project">
           </div>
           <div class="col-5-fields form-field-wrapper"></div>
-          <div class="col-5-fields form-field-wrapper"></div>
         </div>
         <div class="row mb-3">
           <div class="col-12 form-field-wrapper">
@@ -825,15 +946,6 @@
                       class="form-control" 
                       rows="2" placeholder="请输入计划内容" maxlength="5000" 
                       id="id_${planItemFormPrefix}-${planItemFormCount}-content"></textarea>
-          </div>
-        </div>
-        <div class="row mb-3">
-          <div class="col-12 form-field-wrapper">
-            <label class="form-label">计划目标 <span class="text-danger">*</span></label>
-            <textarea name="${planItemFormPrefix}-${planItemFormCount}-plan_objective" 
-                      class="form-control" 
-                      rows="2" placeholder="请输入计划目标" maxlength="1000" 
-                      id="id_${planItemFormPrefix}-${planItemFormCount}-plan_objective"></textarea>
           </div>
         </div>
         <div class="row mb-3">
@@ -870,6 +982,7 @@
         <input type="checkbox" name="${planItemFormPrefix}-${planItemFormCount}-DELETE" 
                id="id_${planItemFormPrefix}-${planItemFormCount}-DELETE" 
                style="display: none;">
+        </div>
       `;
       
       container.appendChild(newCard);
@@ -916,6 +1029,8 @@
         card.remove();
       }
       updatePlanItemFormIndexes();
+      // 重新初始化展开/折叠状态，确保第一个可见的计划项是展开的
+      initExpandCollapseState();
     }
     
     function initEndTimeCalculationForExistingItems() {
@@ -969,17 +1084,81 @@
       });
     }
     
+    // 展开/折叠计划项
+    function togglePlanItem(btn) {
+      const card = btn.closest('.plan-item-card');
+      if (!card) return;
+      
+      const details = card.querySelector('.plan-item-details');
+      const icon = btn.querySelector('i');
+      const isExpanded = btn.dataset.expanded === 'true';
+      
+      if (isExpanded) {
+        // 折叠
+        details.style.display = 'none';
+        btn.dataset.expanded = 'false';
+        icon.classList.remove('bi-chevron-up');
+        icon.classList.add('bi-chevron-down');
+      } else {
+        // 展开
+        details.style.display = 'block';
+        btn.dataset.expanded = 'true';
+        icon.classList.remove('bi-chevron-down');
+        icon.classList.add('bi-chevron-up');
+      }
+    }
+    
+    // 初始化展开/折叠状态
+    function initExpandCollapseState() {
+      const container = document.getElementById('planItemsContainer');
+      if (!container) return;
+      
+      const cards = container.querySelectorAll('.plan-item-card');
+      cards.forEach(function(card, index) {
+        const deleteCheckbox = card.querySelector('input[type="checkbox"][name*="DELETE"]');
+        if (deleteCheckbox && deleteCheckbox.checked) return; // 跳过已删除的项
+        
+        const toggleBtn = card.querySelector('.toggle-expand-btn');
+        const details = card.querySelector('.plan-item-details');
+        
+        if (toggleBtn && details) {
+          if (index === 0) {
+            // 第一个展开
+            details.style.display = 'block';
+            toggleBtn.dataset.expanded = 'true';
+            const icon = toggleBtn.querySelector('i');
+            if (icon) {
+              icon.classList.remove('bi-chevron-down');
+              icon.classList.add('bi-chevron-up');
+            }
+          } else {
+            // 其余折叠
+            details.style.display = 'none';
+            toggleBtn.dataset.expanded = 'false';
+            const icon = toggleBtn.querySelector('i');
+            if (icon) {
+              icon.classList.remove('bi-chevron-up');
+              icon.classList.add('bi-chevron-down');
+            }
+          }
+        }
+      });
+    }
+    
     // 暴露全局函数
     window.addPlanItem = addPlanItem;
     window.removePlanItem = removePlanItem;
+    window.togglePlanItem = togglePlanItem;
     
     document.addEventListener('DOMContentLoaded', function() {
       updatePlanItemFormIndexes();
       initEndTimeCalculationForExistingItems();
+      initExpandCollapseState();
     });
   })();
   </script>
   {% endif %}
+  
   
   {# 显示周计划重复创建错误模态框 #}
   {% if weekly_plan_error %}

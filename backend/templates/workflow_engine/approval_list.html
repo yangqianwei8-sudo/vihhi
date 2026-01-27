@@ -304,9 +304,6 @@
             </a>
           </div>
         </td>
-              {% block list_table_column_settings_cell %}
-                {% if column_settings_btn|default:False %}<td></td>{% endif %}
-              {% endblock list_table_column_settings_cell %}
       {% elif tab == 'historical' %}
         {# 历史审批列表 #}
         <td><code>{{ item.instance_number }}</code></td>
@@ -355,9 +352,6 @@
             </a>
           </div>
         </td>
-              {% block list_table_column_settings_cell %}
-                {% if column_settings_btn|default:False %}<td></td>{% endif %}
-              {% endblock list_table_column_settings_cell %}
       {% elif tab == 'my_submitted' %}
         {# 我提交的审批列表 #}
         <td><code>{{ item.instance_number }}</code></td>
@@ -406,7 +400,7 @@
             <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
               <i class="bi bi-eye"></i>
             </a>
-            {% if item.status == 'pending' and item.workflow.allow_withdraw %}
+            {% if item.status == 'pending' and item.workflow.allow_withdraw and not item.completed_time %}
             <span class="action-separator">|</span>
             <a href="#" class="action-delete" onclick="if(confirm('确定要撤回此审批吗？')) { window.location.href='{% url 'workflow_engine:approval_withdraw' item.id %}'; } return false;" title="撤回">
               <i class="bi bi-arrow-counterclockwise"></i>
@@ -414,10 +408,10 @@
             {% endif %}
           </div>
         </td>
-              {% block list_table_column_settings_cell %}
-                {% if column_settings_btn|default:False %}<td></td>{% endif %}
-              {% endblock list_table_column_settings_cell %}
       {% endif %}
+      {% block list_table_column_settings_cell %}
+        {% if column_settings_btn|default:False %}<td></td>{% endif %}
+      {% endblock list_table_column_settings_cell %}
     </tr>
     {% empty %}
     <tr>

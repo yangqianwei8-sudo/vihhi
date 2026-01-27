@@ -1198,7 +1198,7 @@ class PlanItemForm(forms.ModelForm):
     
     class Meta:
         model = Plan
-        fields = ['name', 'related_goal', 'related_project', 'content', 'plan_objective', 'acceptance_criteria', 'collaboration_plan', 'start_time', 'end_time']
+        fields = ['name', 'plan_objective', 'related_goal', 'related_project', 'content', 'acceptance_criteria', 'collaboration_plan', 'start_time', 'end_time']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control form-control-sm',
@@ -1219,10 +1219,9 @@ class PlanItemForm(forms.ModelForm):
                 'rows': 2,
                 'maxlength': '5000'
             }),
-            'plan_objective': forms.Textarea(attrs={
+            'plan_objective': forms.TextInput(attrs={
                 'class': 'form-control form-control-sm',
                 'placeholder': '请输入计划目标',
-                'rows': 2,
                 'maxlength': '1000'
             }),
             'acceptance_criteria': forms.Textarea(attrs={

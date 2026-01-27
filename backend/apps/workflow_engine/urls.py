@@ -25,5 +25,8 @@ urlpatterns = [
     path('approvals/<int:instance_id>/', views_pages.approval_detail, name='approval_detail'),
     path('approvals/<int:instance_id>/action/', views_pages.approval_action, name='approval_action'),
     path('approvals/<int:instance_id>/withdraw/', views_pages.approval_withdraw, name='approval_withdraw'),
+    
+    # 我的申请
+    path('my-applications/', views_pages.my_application_list, name='my_application_list'),
 ]
 

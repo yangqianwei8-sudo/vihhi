@@ -1187,7 +1187,7 @@ def _with_nav(context, permission_set, active_id=None, user=None, request_path=N
         request_path = request.path
     production_menu = _build_production_management_sidebar_nav(permission_set, request_path, user)
     context['sidebar_nav'] = production_menu
-    # 转换为 scene_groups 格式以支持 base_with_sidebar.html
+    # 转换为 scene_groups 格式（用于侧边栏导航）
     # scene_groups 格式: [{'title': str, 'icon': str, 'items': [{'label': str, 'icon': str, 'url': str}]}]
     scene_groups = []
     try:
@@ -1210,7 +1210,7 @@ def _with_nav(context, permission_set, active_id=None, user=None, request_path=N
         logger.warning(f'构建 scene_groups 失败: {e}', exc_info=True)
         scene_groups = []
     context['scene_groups'] = scene_groups
-    context['user'] = user  # base_with_sidebar.html 也需要 user 变量
+    context['user'] = user  # 模板中可能需要 user 变量
     
     # 为所有可能的侧边栏变量设置默认值，避免模板错误
     # 这些变量可能在其他模块的模板中被引用

@@ -7,79 +7,84 @@
 
     // 初始化复选框功能
     function initCheckboxFeature() {
-        console.log('[复选框] 开始初始化...');
-        
         const selectAllCheckbox = document.getElementById('selectAll');
         const rowCheckboxes = document.querySelectorAll('.row-checkbox');
         
-        console.log('[复选框] 全选复选框:', selectAllCheckbox);
-        console.log('[复选框] 行复选框数量:', rowCheckboxes.length);
-        
         // 如果没有全选复选框，不初始化（说明页面没有复选框功能）
         if (!selectAllCheckbox) {
-            console.warn('[复选框] 未找到全选复选框，跳过初始化');
+            return; // 静默返回，不输出警告
+        }
+
+        // 如果全选复选框已初始化，检查是否有新的行复选框需要绑定
+        if (selectAllCheckbox.dataset.checkboxInitialized === 'true') {
+            // 检查是否有未初始化的行复选框
+            const uninitializedCheckboxes = Array.from(rowCheckboxes).filter(function(cb) {
+                return cb.dataset.checkboxInitialized !== 'true';
+            });
+            
+            if (uninitializedCheckboxes.length > 0) {
+                bindRowCheckboxes(uninitializedCheckboxes);
+            }
             return;
         }
 
-        // 检查复选框是否被禁用
-        if (selectAllCheckbox.disabled) {
-            console.warn('[复选框] 全选复选框被禁用');
-        }
-
-        // 检查复选框的样式
-        const selectAllStyles = window.getComputedStyle(selectAllCheckbox);
-        console.log('[复选框] 全选复选框样式:', {
-            pointerEvents: selectAllStyles.pointerEvents,
-            cursor: selectAllStyles.cursor,
-            opacity: selectAllStyles.opacity,
-            display: selectAllStyles.display,
-            visibility: selectAllStyles.visibility,
-            zIndex: selectAllStyles.zIndex
-        });
+        // 标记为已初始化
+        selectAllCheckbox.dataset.checkboxInitialized = 'true';
 
         // 如果有行复选框，绑定事件
         if (rowCheckboxes.length > 0) {
-            console.log('[复选框] 找到', rowCheckboxes.length, '个行复选框，开始绑定事件');
-            
             // 全选/取消全选
             selectAllCheckbox.addEventListener('change', function(e) {
-                console.log('[复选框] 全选复选框被点击，状态:', this.checked);
-                rowCheckboxes.forEach(function(checkbox) {
+                const currentRowCheckboxes = document.querySelectorAll('.row-checkbox');
+                currentRowCheckboxes.forEach(function(checkbox) {
                     checkbox.checked = this.checked;
                 }, this);
                 updateSelectedCount();
             });
 
-            // 单个复选框变化
-            rowCheckboxes.forEach(function(checkbox, index) {
-                // 检查每个复选框的样式
-                const checkboxStyles = window.getComputedStyle(checkbox);
-                if (checkboxStyles.pointerEvents === 'none') {
-                    console.warn('[复选框] 行复选框', index, 'pointer-events为none');
-                }
-                
-                checkbox.addEventListener('change', function(e) {
-                    console.log('[复选框] 行复选框', index, '被点击，状态:', this.checked);
-                    updateSelectAllState();
-                    updateSelectedCount();
-                });
-                
-                // 添加点击事件监听（作为备用）
-                checkbox.addEventListener('click', function(e) {
-                    console.log('[复选框] 行复选框', index, '被点击（click事件）');
-                });
-            });
+            // 绑定行复选框
+            bindRowCheckboxes(Array.from(rowCheckboxes));
 
             // 初始化选中数量
             updateSelectedCount();
-            console.log('[复选框] 初始化完成');
         } else {
-            console.warn('[复选框] 未找到行复选框');
-            // 即使没有行复选框，也要确保全选复选框可以点击（虽然不会有任何效果）
+            // 即使没有行复选框，也要绑定全选复选框事件（等待数据加载）
             selectAllCheckbox.addEventListener('change', function() {
-                console.log('[复选框] 全选复选框被点击（无行复选框）');
+                const currentRowCheckboxes = document.querySelectorAll('.row-checkbox');
+                if (currentRowCheckboxes.length > 0) {
+                    currentRowCheckboxes.forEach(function(checkbox) {
+                        checkbox.checked = this.checked;
+                    }, this);
+                    updateSelectedCount();
+                }
             });
         }
+    }
+    
+    // 绑定行复选框事件（独立函数，便于重用）
+    function bindRowCheckboxes(checkboxes) {
+        checkboxes.forEach(function(checkbox, index) {
+            // 如果已初始化，跳过
+            if (checkbox.dataset.checkboxInitialized === 'true') {
+                return;
+            }
+            
+            // 标记为已初始化
+            checkbox.dataset.checkboxInitialized = 'true';
+            
+            checkbox.addEventListener('change', function(e) {
+                updateSelectAllState();
+                updateSelectedCount();
+            });
+            
+            // 添加点击事件监听（作为备用）
+            checkbox.addEventListener('click', function(e) {
+                setTimeout(function() {
+                    updateSelectAllState();
+                    updateSelectedCount();
+                }, 0);
+            });
+        });
     }
 
     // 更新全选状态
@@ -156,17 +161,72 @@
             console.error(e.stack);
         }
     }
+    
+    // 使用 MutationObserver 监听 DOM 变化，当有新的行复选框添加时重新初始化
+    function setupMutationObserver() {
+        const tableBody = document.querySelector('.list-table tbody') || 
+                         document.querySelector('table tbody') ||
+                         document.querySelector('tbody');
+        
+        if (!tableBody) {
+            return null;
+        }
+        
+        const observer = new MutationObserver(function(mutations) {
+            let shouldReinit = false;
+            
+            mutations.forEach(function(mutation) {
+                // 检查是否有新节点添加
+                if (mutation.addedNodes.length > 0) {
+                    mutation.addedNodes.forEach(function(node) {
+                        if (node.nodeType === 1) { // Element node
+                            // 检查是否是行复选框或包含行复选框的元素
+                            if (node.classList && node.classList.contains('row-checkbox')) {
+                                shouldReinit = true;
+                            } else if (node.querySelector && node.querySelector('.row-checkbox')) {
+                                shouldReinit = true;
+                            }
+                        }
+                    });
+                }
+            });
+            
+            if (shouldReinit) {
+                setTimeout(tryInit, 50);
+            }
+        });
+        
+        observer.observe(tableBody, {
+            childList: true,
+            subtree: true
+        });
+        
+        return observer;
+    }
 
     // 立即尝试初始化（如果DOM已准备好）
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', tryInit);
+        document.addEventListener('DOMContentLoaded', function() {
+            tryInit();
+            setupMutationObserver();
+        });
     } else {
         // DOM已准备好，立即初始化
         tryInit();
+        setupMutationObserver();
     }
 
     // 延迟初始化（防止某些情况下DOM还没完全渲染）
-    setTimeout(tryInit, 100);
-    setTimeout(tryInit, 500);
-    setTimeout(tryInit, 1000);
+    setTimeout(function() {
+        tryInit();
+        setupMutationObserver();
+    }, 100);
+    setTimeout(function() {
+        tryInit();
+        setupMutationObserver();
+    }, 500);
+    setTimeout(function() {
+        tryInit();
+        setupMutationObserver();
+    }, 1000);
 })();

@@ -382,6 +382,31 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
         ],
     },
     {
+        'id': 'seal_usage',
+        'label': '用印管理',
+        'icon': '📝',
+        'permission': 'administrative_management.seal.view',
+        'expanded': False,
+        'children': [
+            {
+                'id': 'seal_usage_create',
+                'label': '申请用印',
+                'url_name': 'admin_pages:seal_usage_create',
+                'permission': 'administrative_management.seal.view',  # 有查看权限即可申请用印
+                'path_keywords': ['seal.*usage', 'usage'],
+                'icon': 'bi-file-earmark-text',
+            },
+            {
+                'id': 'seal_usage_list',
+                'label': '用印列表',
+                'url_name': 'admin_pages:seal_usage_list',
+                'permission': 'administrative_management.seal.view',
+                'path_keywords': ['seals/usages', 'usage'],
+                'icon': 'bi-list-check',
+            },
+        ],
+    },
+    {
         'id': 'seal',
         'label': '印章管理',
         'icon': '🔐',
@@ -390,11 +415,19 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
         'children': [
             {
                 'id': 'seal_management',
-                'label': '印章管理',
+                'label': '印章列表',
                 'url_name': 'admin_pages:seal_management',
                 'permission': 'administrative_management.seal.view',
                 'path_keywords': ['seal'],
                 'icon': 'bi-shield-lock',
+            },
+            {
+                'id': 'seal_create',
+                'label': '新增印章',
+                'url_name': 'admin_pages:seal_create',
+                'permission': 'administrative_management.seal.create',
+                'path_keywords': ['seal.*create', 'seals/create'],
+                'icon': 'bi-plus-circle',
             },
             {
                 'id': 'seal_borrowing_create',
@@ -411,22 +444,6 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'permission': 'administrative_management.seal.view',  # 有查看权限即可归还
                 'path_keywords': ['seal.*return', 'return'],
                 'icon': 'bi-box-arrow-in-left',
-            },
-            {
-                'id': 'seal_usage_create',
-                'label': '申请用印',
-                'url_name': 'admin_pages:seal_usage_create',
-                'permission': 'administrative_management.seal.view',  # 有查看权限即可申请用印
-                'path_keywords': ['seal.*usage', 'usage'],
-                'icon': 'bi-file-earmark-text',
-            },
-            {
-                'id': 'seal_create',
-                'label': '新增印章',
-                'url_name': 'admin_pages:seal_create',
-                'permission': 'administrative_management.seal.create',
-                'path_keywords': ['seal.*create', 'seals/create'],
-                'icon': 'bi-plus-circle',
             },
         ],
     },
@@ -497,9 +514,9 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
         ],
     },
     {
-        'id': 'purchase',
-        'label': '采购管理',
-        'icon': '🛒',
+        'id': 'supplier',
+        'label': '供应商管理',
+        'icon': '🚚',
         'permission': 'administrative_management.supplies.view',
         'expanded': False,
         'children': [
@@ -519,6 +536,15 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'path_keywords': ['suppliers/create'],
                 'icon': 'bi-plus-circle',
             },
+        ],
+    },
+    {
+        'id': 'purchase',
+        'label': '采购管理',
+        'icon': '🛒',
+        'permission': 'administrative_management.supplies.view',
+        'expanded': False,
+        'children': [
             {
                 'id': 'purchase_contract',
                 'label': '采购合同',
@@ -535,6 +561,15 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'path_keywords': ['purchases/contracts/create'],
                 'icon': 'bi-plus-circle',
             },
+        ],
+    },
+    {
+        'id': 'payment',
+        'label': '支付管理',
+        'icon': '💳',
+        'permission': 'administrative_management.supplies.view',
+        'expanded': False,
+        'children': [
             {
                 'id': 'purchase_payment',
                 'label': '采购付款',
@@ -6613,7 +6648,7 @@ def supplier_list(request):
 def supplier_create(request):
     """创建供应商"""
     permission_codes = get_user_permission_codes(request.user)
-    if not _permission_granted('administrative_management.supplier.create', permission_codes):
+    if not _permission_granted('administrative_management.supplies.view', permission_codes):
         messages.error(request, '您没有权限创建供应商')
         return redirect('admin_pages:supplier_list')
     

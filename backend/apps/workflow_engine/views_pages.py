@@ -56,6 +56,14 @@ WORKFLOW_ENGINE_MENU = [
                 'permission': 'workflow_engine.view',
                 'path_keywords': ['approval', 'approvals'],
             },
+            {
+                'id': 'my_application_list',
+                'label': '我的申请',
+                'icon': '📝',
+                'url_name': 'workflow_engine:my_application_list',
+                'permission': 'workflow_engine.view',
+                'path_keywords': ['my-application', 'my_applications'],
+            },
         ],
     },
 ]
@@ -825,6 +833,80 @@ def approval_list(request):
 
 
 @login_required
+def my_application_list(request):
+    """我的申请列表"""
+    from .services import ApprovalEngine
+    from django.core.paginator import Paginator
+    
+    # 获取分页参数
+    per_page = request.GET.get('per_page', 20)
+    
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '')
+    workflow_id = request.GET.get('workflow', '')
+    
+    # 我提交的审批（所有我作为申请人提交的审批）
+    my_applications = ApprovalEngine.get_my_applications(request.user)
+    
+    # 应用筛选条件
+    if search:
+        from django.db.models import Q
+        my_applications = my_applications.filter(
+            Q(instance_number__icontains=search) |
+            Q(workflow__name__icontains=search) |
+            Q(applicant__username__icontains=search) |
+            Q(applicant__first_name__icontains=search) |
+            Q(applicant__last_name__icontains=search)
+        )
+    
+    if status_filter:
+        my_applications = my_applications.filter(status=status_filter)
+    
+    if workflow_id:
+        try:
+            workflow_id_int = int(workflow_id)
+            my_applications = my_applications.filter(workflow_id=workflow_id_int)
+        except (ValueError, TypeError):
+            pass
+    
+    # 获取所有流程列表（用于筛选下拉框）
+    from backend.apps.workflow_engine.models import WorkflowTemplate
+    workflows = WorkflowTemplate.objects.filter(status='active').order_by('name')
+    
+    # 统计各状态数量
+    total_count = my_applications.count()
+    pending_count = my_applications.filter(status='pending').count()
+    approved_count = my_applications.filter(status='approved').count()
+    rejected_count = my_applications.filter(status='rejected').count()
+    withdrawn_count = my_applications.filter(status='withdrawn').count()
+    
+    # 分页
+    paginator = Paginator(my_applications, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = _context(
+        "我的申请",
+        "📝",
+        "查看我提交的所有审批申请",
+        request=request,
+    )
+    context.update({
+        'page_obj': page_obj,
+        'total_count': total_count,
+        'pending_count': pending_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
+        'withdrawn_count': withdrawn_count,
+        'column_settings_btn': True,  # 启用列设置按钮
+        'workflows': workflows,  # 流程列表，用于筛选
+    })
+    
+    return render(request, 'workflow_engine/my_application_list.html', context)
+
+
+@login_required
 def approval_detail(request, instance_id):
     """审批详情"""
     # 先尝试获取实例
@@ -1056,14 +1138,39 @@ def approval_withdraw(request, instance_id):
         messages.error(request, '您没有权限撤回此审批')
         return redirect('workflow_engine:approval_list')
     
-    # 检查是否可以撤回
-    if instance.status != 'pending':
-        messages.error(request, '只有审批中的申请才能撤回')
-        return redirect('workflow_engine:approval_list')
+    # 检查是否可以撤回 - 按优先级顺序检查，确保已结束的流程无法撤回
     
+    # 第一优先级：检查已完成时间（最严格的检查）
+    if instance.completed_time:
+        messages.error(request, f'审批已完成（完成时间：{instance.completed_time.strftime("%Y-%m-%d %H:%M:%S")}），无法撤回')
+        return redirect(reverse('workflow_engine:approval_list') + '?tab=my_submitted')
+    
+    # 第二优先级：检查状态 - 明确禁止已结束的流程被撤回
+    if instance.status == 'approved':
+        messages.error(request, '审批已通过，无法撤回')
+        return redirect(reverse('workflow_engine:approval_list') + '?tab=my_submitted')
+    
+    if instance.status == 'rejected':
+        messages.error(request, '审批已驳回，无法撤回')
+        return redirect(reverse('workflow_engine:approval_list') + '?tab=my_submitted')
+    
+    if instance.status == 'withdrawn':
+        messages.error(request, '审批已撤回，无法重复撤回')
+        return redirect(reverse('workflow_engine:approval_list') + '?tab=my_submitted')
+    
+    if instance.status == 'cancelled':
+        messages.error(request, '审批已取消，无法撤回')
+        return redirect(reverse('workflow_engine:approval_list') + '?tab=my_submitted')
+    
+    # 第三优先级：只有审批中的状态才能撤回
+    if instance.status != 'pending':
+        messages.error(request, f'只有审批中的申请才能撤回，当前状态：{instance.get_status_display()}')
+        return redirect(reverse('workflow_engine:approval_list') + '?tab=my_submitted')
+    
+    # 第四优先级：检查流程是否允许撤回
     if not instance.workflow.allow_withdraw:
         messages.error(request, '此流程不允许撤回')
-        return redirect('workflow_engine:approval_list')
+        return redirect(reverse('workflow_engine:approval_list') + '?tab=my_submitted')
     
     from .services import ApprovalEngine
     
@@ -1079,5 +1186,6 @@ def approval_withdraw(request, instance_id):
         logger.exception('撤回审批失败: %s', str(e))
         messages.error(request, f'撤回失败：{str(e)}')
     
-    return redirect('workflow_engine:approval_list') + '?tab=my_submitted'
+    # 使用 reverse() 生成URL字符串，然后拼接查询参数
+    return redirect(reverse('workflow_engine:approval_list') + '?tab=my_submitted')
 

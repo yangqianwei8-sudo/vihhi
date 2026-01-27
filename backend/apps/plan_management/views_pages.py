@@ -1844,29 +1844,92 @@ def plan_list(request):
     page_obj = paginator.get_page(page_number)
     
     # 为分页后的计划对象添加can_delete和can_edit属性（只在当前页计算，提高效率）
+    # 与详情页逻辑保持一致
     can_manage = _permission_granted('plan_management.plan.manage', permission_set)
-    # 批量获取待审批决策，提高效率
     plan_ids = [p.id for p in page_obj]
-    pending_decision_plan_ids = set(
-        PlanDecision.objects.filter(
-            plan_id__in=plan_ids, 
-            decided_at__isnull=True
-        ).values_list('plan_id', flat=True)
+    
+    # 批量获取待审批决策（PlanDecision，向后兼容）
+    pending_decisions = PlanDecision.objects.filter(
+        plan_id__in=plan_ids, 
+        decided_at__isnull=True
     )
+    pending_decision_plan_ids = set(pending_decisions.values_list('plan_id', flat=True))
+    
+    # 批量获取待审批启动决策的计划ID
+    pending_start_decision_plan_ids = set(
+        pending_decisions.filter(request_type='start').values_list('plan_id', flat=True)
+    )
+    
+    # 批量获取待审批取消决策的计划ID
+    pending_cancel_decision_plan_ids = set(
+        pending_decisions.filter(request_type='cancel').values_list('plan_id', flat=True)
+    )
+    
+    # 批量获取待审批审批实例（审批引擎）
+    from django.contrib.contenttypes.models import ContentType
+    from backend.apps.workflow_engine.models import ApprovalInstance
+    from backend.apps.plan_management.services.plan_approval import PlanApprovalService
+    
+    plan_content_type = ContentType.objects.get_for_model(Plan)
+    pending_approval_plan_ids = set(
+        ApprovalInstance.objects.filter(
+            content_type=plan_content_type,
+            object_id__in=plan_ids,
+            status__in=['pending', 'in_progress']
+        ).values_list('object_id', flat=True)
+    )
+    
+    # 批量获取待审批启动审批的计划ID
+    pending_start_approval_plan_ids = set(
+        ApprovalInstance.objects.filter(
+            content_type=plan_content_type,
+            object_id__in=plan_ids,
+            workflow__code=PlanApprovalService.PLAN_START_WORKFLOW_CODE,
+            status__in=['pending', 'in_progress']
+        ).values_list('object_id', flat=True)
+    )
+    
+    # 批量获取待审批取消审批的计划ID
+    pending_cancel_approval_plan_ids = set(
+        ApprovalInstance.objects.filter(
+            content_type=plan_content_type,
+            object_id__in=plan_ids,
+            workflow__code=PlanApprovalService.PLAN_CANCEL_WORKFLOW_CODE,
+            status__in=['pending', 'in_progress']
+        ).values_list('object_id', flat=True)
+    )
+    
     for plan in page_obj:
+        # can_edit 逻辑：与详情页保持一致
         # 负责人可以编辑自己负责的草稿计划，或者有管理权限的用户可以编辑
-        # 但是如果有待审批的决策，则不允许编辑（提交给领导后不能修改）
-        has_pending = plan.id in pending_decision_plan_ids
+        # 但是如果有待审批的启动审批或取消审批，则不允许编辑
+        has_pending_start_approval = plan.id in pending_start_approval_plan_ids
+        has_pending_cancel_approval = plan.id in pending_cancel_approval_plan_ids
+        has_pending_start_decision = plan.id in pending_start_decision_plan_ids
+        has_pending_cancel_decision = plan.id in pending_cancel_decision_plan_ids
+        
+        # 合并结果：任一方式有 pending 都算有 pending（与详情页逻辑一致）
+        has_pending_start = has_pending_start_approval or has_pending_start_decision
+        has_pending_cancel = has_pending_cancel_approval or has_pending_cancel_decision
+        
         plan.can_edit = (
             (plan.responsible_person == request.user or can_manage) and 
             plan.status in ['draft', 'cancelled'] and 
-            not has_pending
+            not has_pending_start and 
+            not has_pending_cancel
         )
+        
+        # can_delete 逻辑：与详情页保持一致
+        # 需要管理权限、状态为 draft、没有子计划、没有待审批决策和审批实例
+        has_pending_approval = plan.id in pending_approval_plan_ids
+        has_pending_decision_for_delete = plan.id in pending_decision_plan_ids
+        
         plan.can_delete = (
             can_manage and 
             plan.status == 'draft' and 
             plan.get_child_plans_count() == 0 and
-            not plan.decisions.filter(decision__isnull=True).exists()
+            not has_pending_decision_for_delete and
+            not has_pending_approval
         )
     
     # 统计信息：基于当前权限过滤后的 plans，与列表数据一致
@@ -3029,6 +3092,8 @@ def plan_edit(request, plan_id):
                 context['page_title'] = f"编辑计划 - {plan.name}"
                 context['submit_text'] = "保存"
                 context['cancel_url'] = reverse('plan_pages:plan_detail', args=[plan.id])
+                context['cancel_url_name'] = None  # 优先使用 cancel_url
+                context['list_url_name'] = None  # 优先使用 cancel_url
                 context['form_js_file'] = 'js/plan_form_date_calculator.js'
                 context['form_page_subtitle_text'] = '请修改计划信息'
                 context['form_validation_errors'] = [error_msg]
@@ -3052,6 +3117,8 @@ def plan_edit(request, plan_id):
                 context['page_title'] = f"编辑计划 - {plan.name}"
                 context['submit_text'] = "保存"
                 context['cancel_url'] = reverse('plan_pages:plan_detail', args=[plan.id])
+                context['cancel_url_name'] = None  # 优先使用 cancel_url
+                context['list_url_name'] = None  # 优先使用 cancel_url
                 context['form_js_file'] = 'js/plan_form_date_calculator.js'
                 context['form_page_subtitle_text'] = '请修改计划信息'
                 context['form_validation_errors'] = [error_msg]
@@ -3109,6 +3176,8 @@ def plan_edit(request, plan_id):
             context['page_title'] = f"编辑计划 - {plan.name}"
             context['submit_text'] = "保存"
             context['cancel_url'] = reverse('plan_pages:plan_detail', args=[plan.id])
+            context['cancel_url_name'] = None  # 优先使用 cancel_url
+            context['list_url_name'] = None  # 优先使用 cancel_url
             context['form_js_file'] = 'js/plan_form_date_calculator.js'
             context['form_page_subtitle_text'] = '请修改计划信息'
             context['form_validation_errors'] = error_messages
@@ -3131,6 +3200,8 @@ def plan_edit(request, plan_id):
     context['page_title'] = f"编辑计划 - {plan.name}"
     context['submit_text'] = "保存"
     context['cancel_url'] = reverse('plan_pages:plan_detail', args=[plan.id])
+    context['cancel_url_name'] = None  # 优先使用 cancel_url
+    context['list_url_name'] = None  # 优先使用 cancel_url
     context['form_js_file'] = 'js/plan_form_date_calculator.js'
     context['form_page_subtitle_text'] = '请修改计划信息'
     return render(request, "plan_management/plan_form.html", context)

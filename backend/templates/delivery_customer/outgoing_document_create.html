@@ -1,157 +1,154 @@
-{% extends "shared/base_with_sidebar.html" %}
+{% extends "shared/create_form_base.html" %}
 {% load static %}
 
-{% block title %}创建发文 - 维海科技信息化管理平台{% endblock %}
+{% block form_title %}创建发文{% endblock %}
+{% block form_subtitle %}创建新的发文记录{% endblock %}
 
-{% block page_title %}创建发文{% endblock %}
-{% block page_subtitle %}创建新的发文记录{% endblock %}
-
-{% block page_content %}
-<div class="card shadow-sm">
-    <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-
-            <div class="mb-4">
-                <h5 class="mb-3">基本信息</h5>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">项目编号</label>
-                        <select name="project" class="form-select" id="project_select" onchange="updateProjectName()">
-                            <option value="">请选择项目</option>
-                            {% for project in projects %}
-                            <option value="{{ project.id }}" data-number="{{ project.project_number }}" data-name="{{ project.name }}">
-                                {{ project.project_number }} - {{ project.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">项目名称</label>
-                        <input type="text" class="form-control" id="project_name_display" readonly placeholder="选择项目后自动显示">
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">阶段</label>
-                        <select name="stage" class="form-select" id="stage_select" onchange="updateCategoryOptions()">
-                            <option value="">请选择阶段</option>
-                            {% for code, label in stage_choices %}
-                            <option value="{{ code }}">{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">文件分类</label>
-                        <select name="file_category" class="form-select" id="category_select">
-                            <option value="">请选择文件分类</option>
-                            {% for category in categories %}
-                            <option value="{{ category.id }}" data-stage="{{ category.stage }}" style="display: none;">{{ category.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">文件标题 <span class="text-danger">*</span></label>
-                    <input type="text" name="title" class="form-control" required>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">文件内容</label>
-                    <textarea name="content" class="form-control" rows="4" placeholder="要求采用deepseek概述100字以内"></textarea>
-                    <small class="form-text text-muted">要求采用deepseek概述100字以内</small>
-                </div>
-            </div>
-
-            <div class="mb-4">
-                <h5 class="mb-3">收文单位信息</h5>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">收文单位 <span class="text-danger">*</span></label>
-                        <input type="text" name="recipient" class="form-control" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">联系人</label>
-                        <input type="text" name="recipient_contact" class="form-control">
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">联系电话</label>
-                        <input type="text" name="recipient_phone" class="form-control">
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">收文地址</label>
-                    <textarea name="recipient_address" class="form-control" rows="2"></textarea>
-                </div>
-            </div>
-
-            <div class="mb-4">
-                <h5 class="mb-3">报送方式</h5>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="delivery_methods" value="email" id="delivery_method_email">
-                            <label class="form-check-label" for="delivery_method_email">
-                                邮件
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="delivery_methods" value="express" id="delivery_method_express">
-                            <label class="form-check-label" for="delivery_method_express">
-                                快递
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="delivery_methods" value="hand_delivery" id="delivery_method_hand_delivery">
-                            <label class="form-check-label" for="delivery_method_hand_delivery">
-                                送达
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="delivery_methods" value="yisign" id="delivery_method_yisign">
-                            <label class="form-check-label" for="delivery_method_yisign">
-                                易签宝
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mb-4">
-                <h5 class="mb-3">附件</h5>
-                <input type="file" name="attachment" class="form-control">
-            </div>
-
-            <div class="mb-4">
-                <h5 class="mb-3">备注</h5>
-                <textarea name="notes" class="form-control" rows="3"></textarea>
-            </div>
-
-            <div class="d-flex justify-content-end gap-2">
-                <a href="{% url 'delivery_pages:outgoing_document_list' %}" class="btn btn-secondary">
-                    取消
-                </a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-circle"></i> 创建
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+{% block form_header_actions %}
+  <a href="{% url 'delivery_pages:outgoing_document_list' %}" class="btn btn-secondary">返回列表</a>
 {% endblock %}
 
-{% block extra_js %}
+{% block form_first_row_extra_fields %}
+  {# 项目编号 #}
+  <div class="col-md-4 form-field-wrapper">
+    <label for="project_select" class="form-label">项目编号</label>
+    <select name="project" class="form-select" id="project_select" onchange="updateProjectName()">
+      <option value="">请选择项目</option>
+      {% for project in projects %}
+      <option value="{{ project.id }}" data-number="{{ project.project_number }}" data-name="{{ project.name }}">
+        {{ project.project_number }} - {{ project.name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  
+  {# 项目名称（只读显示） #}
+  <div class="col-md-4 form-field-wrapper">
+    <label for="project_name_display" class="form-label">项目名称</label>
+    <input type="text" class="form-control" id="project_name_display" readonly placeholder="选择项目后自动显示">
+  </div>
+{% endblock %}
+
+{% block form_second_row_extra_fields %}
+  {# 阶段 #}
+  <div class="col-md-6 form-field-wrapper">
+    <label for="stage_select" class="form-label">阶段</label>
+    <select name="stage" class="form-select" id="stage_select" onchange="updateCategoryOptions()">
+      <option value="">请选择阶段</option>
+      {% for code, label in stage_choices %}
+      <option value="{{ code }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  
+  {# 文件分类 #}
+  <div class="col-md-6 form-field-wrapper">
+    <label for="category_select" class="form-label">文件分类</label>
+    <select name="file_category" class="form-select" id="category_select">
+      <option value="">请选择文件分类</option>
+      {% for category in categories %}
+      <option value="{{ category.id }}" data-stage="{{ category.stage }}" style="display: none;">{{ category.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  
+  {# 文件标题 #}
+  <div class="col-12 form-field-wrapper">
+    <label for="title" class="form-label">文件标题 <span class="text-danger">*</span></label>
+    <input type="text" name="title" class="form-control" id="title" required>
+  </div>
+  
+  {# 文件内容 #}
+  <div class="col-12 form-field-wrapper">
+    <label for="content" class="form-label">文件内容</label>
+    <textarea name="content" class="form-control" id="content" rows="4" placeholder="要求采用deepseek概述100字以内"></textarea>
+    <small class="form-text text-muted">要求采用deepseek概述100字以内</small>
+  </div>
+{% endblock %}
+
+{% block form_fields %}
+  {# 收文单位信息 #}
+  <div class="row mb-3">
+    <div class="col-md-6 form-field-wrapper">
+      <label for="recipient" class="form-label">收文单位 <span class="text-danger">*</span></label>
+      <input type="text" name="recipient" class="form-control" id="recipient" required>
+    </div>
+    <div class="col-md-6 form-field-wrapper">
+      <label for="recipient_contact" class="form-label">联系人</label>
+      <input type="text" name="recipient_contact" class="form-control" id="recipient_contact">
+    </div>
+  </div>
+  
+  <div class="row mb-3">
+    <div class="col-md-6 form-field-wrapper">
+      <label for="recipient_phone" class="form-label">联系电话</label>
+      <input type="text" name="recipient_phone" class="form-control" id="recipient_phone">
+    </div>
+  </div>
+  
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="recipient_address" class="form-label">收文地址</label>
+      <textarea name="recipient_address" class="form-control" id="recipient_address" rows="2"></textarea>
+    </div>
+  </div>
+  
+  {# 报送方式 #}
+  <div class="row mb-3">
+    <div class="col-md-6 form-field-wrapper">
+      <label class="form-label">报送方式</label>
+      <div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" name="delivery_methods" value="email" id="delivery_method_email">
+          <label class="form-check-label" for="delivery_method_email">邮件</label>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" name="delivery_methods" value="express" id="delivery_method_express">
+          <label class="form-check-label" for="delivery_method_express">快递</label>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 form-field-wrapper">
+      <label class="form-label">&nbsp;</label>
+      <div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" name="delivery_methods" value="hand_delivery" id="delivery_method_hand_delivery">
+          <label class="form-check-label" for="delivery_method_hand_delivery">送达</label>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" name="delivery_methods" value="yisign" id="delivery_method_yisign">
+          <label class="form-check-label" for="delivery_method_yisign">易签宝</label>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  {# 附件 #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="attachment" class="form-label">附件</label>
+      <input type="file" name="attachment" class="form-control" id="attachment">
+    </div>
+  </div>
+  
+  {# 备注 #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="notes" class="form-label">备注</label>
+      <textarea name="notes" class="form-control" id="notes" rows="3"></textarea>
+    </div>
+  </div>
+{% endblock %}
+
+{% block form_actions %}
+  <a href="{% url 'delivery_pages:outgoing_document_list' %}" class="btn btn-secondary">取消</a>
+  <button type="button" class="btn btn-primary" id="headerSubmitButton">
+    <i class="bi bi-check-circle"></i> 创建
+  </button>
+{% endblock %}
+
+{% block module_extra_js %}
+{{ block.super }}
 <script>
 // 更新文件分类选项（根据选择的阶段）
 function updateCategoryOptions() {
@@ -192,6 +189,12 @@ function updateProjectName() {
 document.addEventListener('DOMContentLoaded', function() {
     updateCategoryOptions();
     updateProjectName();
+    
+    // 设置表单的 enctype 以支持文件上传
+    const form = document.getElementById('createForm');
+    if (form) {
+        form.setAttribute('enctype', 'multipart/form-data');
+    }
 });
 </script>
 {% endblock %}

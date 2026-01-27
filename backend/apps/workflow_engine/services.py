@@ -311,10 +311,34 @@ class ApprovalEngine:
     @staticmethod
     def withdraw(instance: ApprovalInstance, user: User) -> bool:
         """撤回审批"""
+        # 明确禁止已结束的流程被撤回
+        if instance.status == 'approved':
+            logger.warning(f'尝试撤回已通过的审批: {instance.instance_number}')
+            return False
+        
+        if instance.status == 'rejected':
+            logger.warning(f'尝试撤回已驳回的审批: {instance.instance_number}')
+            return False
+        
+        if instance.status == 'withdrawn':
+            logger.warning(f'尝试重复撤回已撤回的审批: {instance.instance_number}')
+            return False
+        
+        if instance.status == 'cancelled':
+            logger.warning(f'尝试撤回已取消的审批: {instance.instance_number}')
+            return False
+        
         if instance.status != 'pending':
+            logger.warning(f'尝试撤回非审批中状态的审批: {instance.instance_number}, 状态: {instance.status}')
+            return False
+        
+        # 额外检查：如果已完成时间已设置，说明审批已结束，不允许撤回
+        if instance.completed_time:
+            logger.warning(f'尝试撤回已完成的审批: {instance.instance_number}, completed_time: {instance.completed_time}')
             return False
         
         if instance.applicant != user:
+            logger.warning(f'非申请人尝试撤回审批: {instance.instance_number}, 申请人: {instance.applicant}, 操作人: {user}')
             return False
         
         with transaction.atomic():
