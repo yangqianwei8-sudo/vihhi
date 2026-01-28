@@ -395,10 +395,56 @@ class GoalProgressUpdateForm(forms.ModelForm):
 class GoalAdjustmentForm(forms.ModelForm):
     """目标调整申请表单"""
     
+    # 添加负责人和部门字段（用于显示，从目标中获取）
+    responsible_person = forms.ModelChoiceField(
+        queryset=User.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'disabled': True,
+        }),
+        label='负责人',
+    )
+    
+    responsible_department = forms.ModelChoiceField(
+        queryset=Department.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'disabled': True,
+        }),
+        label='所属部门',
+    )
+    
+    # 目标编号字段（只读显示）
+    goal_number_display = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'readonly': True,
+        }),
+        label='目标编号',
+    )
+    
     class Meta:
         model = GoalAdjustment
-        fields = ['adjustment_reason', 'adjustment_content', 'new_target_value', 'new_end_date']
+        fields = [
+            'adjustment_type',
+            'adjustment_reason',
+            'adjustment_content',
+            # 时间调整字段
+            'new_start_date',
+            'new_end_date',
+            # 负责人调整字段
+            'new_responsible_person',
+            # 目标值调整字段
+            'new_target_value',
+        ]
         widgets = {
+            'adjustment_type': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True,
+            }),
             'adjustment_reason': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': '3',
@@ -408,27 +454,49 @@ class GoalAdjustmentForm(forms.ModelForm):
             'adjustment_content': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': '4',
-                'placeholder': '请输入调整内容',
-                'required': True
+                'placeholder': '请输入调整内容（根据调整类型填写）',
             }),
-            'new_target_value': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'placeholder': '新目标值（可选）'
-            }),
+            'new_start_date': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'class': 'form-control',
+                    'type': 'date',
+                    'placeholder': '新开始日期'
+                }
+            ),
             'new_end_date': forms.DateInput(
                 format='%Y-%m-%d',
                 attrs={
                     'class': 'form-control',
                     'type': 'date',
-                    'placeholder': '新结束日期（可选）'
+                    'placeholder': '新结束日期'
                 }
             ),
+            'new_responsible_person': forms.Select(attrs={
+                'class': 'form-select',
+            }),
+            'new_target_value': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '新目标值'
+            }),
         }
     
     def __init__(self, *args, **kwargs):
         self.goal = kwargs.pop('goal', None)
         super().__init__(*args, **kwargs)
+        
+        # 如果有关联的目标，设置负责人和部门的初始值
+        if self.goal:
+            if self.goal.responsible_person:
+                self.fields['responsible_person'].initial = self.goal.responsible_person
+            if self.goal.responsible_department:
+                self.fields['responsible_department'].initial = self.goal.responsible_department
+            self.fields['goal_number_display'].initial = self.goal.goal_number
+        
+        # 设置新负责人查询集
+        self.fields['new_responsible_person'].queryset = User.objects.filter(is_active=True)
+        self.fields['new_responsible_person'].required = False
     
     def clean(self):
         cleaned_data = super().clean()
@@ -442,15 +510,40 @@ class GoalAdjustmentForm(forms.ModelForm):
             if self.fields['responsible_department'].widget.attrs.get('disabled'):
                 if not cleaned_data.get('responsible_department') and self.fields['responsible_department'].initial:
                     cleaned_data['responsible_department'] = self.fields['responsible_department'].initial
-        new_target_value = cleaned_data.get('new_target_value')
-        new_end_date = cleaned_data.get('new_end_date')
         
-        if new_target_value is not None and new_target_value <= 0:
-            raise ValidationError({'new_target_value': '新目标值必须大于0'})
+        adjustment_type = cleaned_data.get('adjustment_type')
         
-        if self.goal and new_end_date:
-            if new_end_date < self.goal.start_date:
-                raise ValidationError({'new_end_date': '新结束日期不能早于开始日期'})
+        # 根据调整类型验证必填字段
+        if adjustment_type == 'time':
+            # 时间调整：至少需要填写新开始日期或新结束日期
+            new_start_date = cleaned_data.get('new_start_date')
+            new_end_date = cleaned_data.get('new_end_date')
+            if not new_start_date and not new_end_date:
+                raise ValidationError('时间调整至少需要填写新开始日期或新结束日期')
+            if new_start_date and new_end_date and new_start_date > new_end_date:
+                raise ValidationError('新开始日期不能晚于新结束日期')
+            if self.goal and new_end_date and self.goal.start_date and new_end_date < self.goal.start_date:
+                raise ValidationError({'new_end_date': '新结束日期不能早于原开始日期'})
+        
+        elif adjustment_type == 'responsible':
+            # 负责人调整：必须填写新负责人
+            new_responsible_person = cleaned_data.get('new_responsible_person')
+            if not new_responsible_person:
+                raise ValidationError({'new_responsible_person': '负责人调整必须选择新负责人'})
+        
+        elif adjustment_type == 'target_value':
+            # 目标值调整：必须填写新目标值
+            new_target_value = cleaned_data.get('new_target_value')
+            if not new_target_value:
+                raise ValidationError({'new_target_value': '目标值调整必须填写新目标值'})
+            if new_target_value is not None and new_target_value <= 0:
+                raise ValidationError({'new_target_value': '新目标值必须大于0'})
+        
+        elif adjustment_type == 'content':
+            # 内容调整：必须填写调整内容
+            adjustment_content = cleaned_data.get('adjustment_content')
+            if not adjustment_content:
+                raise ValidationError({'adjustment_content': '内容调整必须填写调整内容'})
         
         return cleaned_data
     
@@ -1097,30 +1190,102 @@ class PlanIssueForm(forms.ModelForm):
 class PlanAdjustmentForm(forms.ModelForm):
     """计划调整申请表单"""
     
+    # 添加负责人和部门字段（用于显示，从计划中获取）
+    responsible_person = forms.ModelChoiceField(
+        queryset=User.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'disabled': True,
+        }),
+        label='负责人',
+    )
+    
+    responsible_department = forms.ModelChoiceField(
+        queryset=Department.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'disabled': True,
+        }),
+        label='所属部门',
+    )
+    
+    # 计划编号字段（只读显示）
+    plan_number_display = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'readonly': True,
+        }),
+        label='计划编号',
+    )
+    
     class Meta:
         model = PlanAdjustment
         fields = [
+            'adjustment_type',
             'adjustment_reason',
             'adjustment_content',
+            # 时间调整字段
+            'new_start_time',
             'new_end_time',
+            # 负责人调整字段
+            'new_responsible_person',
+            # 计划目标调整字段
+            'new_plan_objective',
+            # 协作人员调整字段
+            'new_participants',
+            # 验收标准调整字段
+            'new_acceptance_criteria',
         ]
         widgets = {
+            'adjustment_type': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True,
+            }),
             'adjustment_reason': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': '4',
+                'rows': '3',
                 'placeholder': '请输入调整原因',
                 'required': True
             }),
             'adjustment_content': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': '4',
-                'placeholder': '请输入调整内容',
-                'required': True
+                'placeholder': '请输入调整内容（根据调整类型填写）',
             }),
-            'new_end_time': forms.DateTimeInput(attrs={
+            'new_start_time': forms.DateTimeInput(
+                format='%Y-%m-%dT%H:%M',
+                attrs={
+                    'class': 'form-control',
+                    'type': 'datetime-local',
+                    'placeholder': '新开始时间'
+                }
+            ),
+            'new_end_time': forms.DateTimeInput(
+                format='%Y-%m-%dT%H:%M',
+                attrs={
+                    'class': 'form-control',
+                    'type': 'datetime-local',
+                    'placeholder': '新结束时间'
+                }
+            ),
+            'new_responsible_person': forms.Select(attrs={
+                'class': 'form-select',
+            }),
+            'new_plan_objective': forms.Textarea(attrs={
                 'class': 'form-control',
-                'type': 'datetime-local',
-                'placeholder': '请选择新的截止时间'
+                'rows': '4',
+                'placeholder': '请输入新计划目标'
+            }),
+            'new_participants': forms.SelectMultiple(attrs={
+                'class': 'form-select',
+            }),
+            'new_acceptance_criteria': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': '4',
+                'placeholder': '请输入新验收标准'
             }),
         }
     
@@ -1128,14 +1293,21 @@ class PlanAdjustmentForm(forms.ModelForm):
         self.plan = kwargs.pop('plan', None)
         super().__init__(*args, **kwargs)
         
-        # 如果有关联的计划，设置默认的新截止时间
-        if self.plan and self.plan.end_time:
-            # 将datetime转换为datetime-local格式（YYYY-MM-DDTHH:mm）
-            end_time = self.plan.end_time
-            if timezone.is_aware(end_time):
-                end_time = timezone.localtime(end_time)
-            dt_str = end_time.strftime('%Y-%m-%dT%H:%M')
-            self.fields['new_end_time'].initial = dt_str
+        # 如果有关联的计划，设置负责人和部门的初始值
+        if self.plan:
+            if self.plan.responsible_person:
+                self.fields['responsible_person'].initial = self.plan.responsible_person
+            if self.plan.responsible_department:
+                self.fields['responsible_department'].initial = self.plan.responsible_department
+            self.fields['plan_number_display'].initial = self.plan.plan_number
+        
+        # 设置新负责人查询集
+        self.fields['new_responsible_person'].queryset = User.objects.filter(is_active=True)
+        self.fields['new_responsible_person'].required = False
+        
+        # 设置新协作人员查询集
+        self.fields['new_participants'].queryset = User.objects.filter(is_active=True)
+        self.fields['new_participants'].required = False
     
     def clean(self):
         cleaned_data = super().clean()
@@ -1149,21 +1321,61 @@ class PlanAdjustmentForm(forms.ModelForm):
             if self.fields['responsible_department'].widget.attrs.get('disabled'):
                 if not cleaned_data.get('responsible_department') and self.fields['responsible_department'].initial:
                     cleaned_data['responsible_department'] = self.fields['responsible_department'].initial
-        new_end_time = cleaned_data.get('new_end_time')
         
         if not self.plan:
             raise ValidationError('计划信息缺失')
         
-        # 验证新截止时间必须晚于原截止时间
-        if new_end_time and self.plan.end_time:
-            # 将datetime转换为timezone-aware进行比较
-            if timezone.is_naive(new_end_time):
-                new_end_time = timezone.make_aware(new_end_time)
-            
-            if new_end_time <= self.plan.end_time:
-                raise ValidationError({
-                    'new_end_time': '新截止时间必须晚于原截止时间'
-                })
+        adjustment_type = cleaned_data.get('adjustment_type')
+        
+        # 根据调整类型验证必填字段
+        if adjustment_type == 'time':
+            # 时间调整：至少需要填写新开始时间或新结束时间
+            new_start_time = cleaned_data.get('new_start_time')
+            new_end_time = cleaned_data.get('new_end_time')
+            if not new_start_time and not new_end_time:
+                raise ValidationError('时间调整至少需要填写新开始时间或新结束时间')
+            if new_start_time and new_end_time:
+                if timezone.is_naive(new_start_time):
+                    new_start_time = timezone.make_aware(new_start_time)
+                if timezone.is_naive(new_end_time):
+                    new_end_time = timezone.make_aware(new_end_time)
+                if new_start_time > new_end_time:
+                    raise ValidationError('新开始时间不能晚于新结束时间')
+            if new_end_time and self.plan.end_time:
+                if timezone.is_naive(new_end_time):
+                    new_end_time = timezone.make_aware(new_end_time)
+                if new_end_time <= self.plan.end_time:
+                    raise ValidationError({'new_end_time': '新结束时间必须晚于原结束时间'})
+        
+        elif adjustment_type == 'responsible':
+            # 负责人调整：必须填写新负责人
+            new_responsible_person = cleaned_data.get('new_responsible_person')
+            if not new_responsible_person:
+                raise ValidationError({'new_responsible_person': '负责人调整必须选择新负责人'})
+        
+        elif adjustment_type == 'plan_objective':
+            # 计划目标调整：必须填写新计划目标
+            new_plan_objective = cleaned_data.get('new_plan_objective')
+            if not new_plan_objective:
+                raise ValidationError({'new_plan_objective': '计划目标调整必须填写新计划目标'})
+        
+        elif adjustment_type == 'collaboration':
+            # 协作人员调整：必须选择新协作人员
+            new_participants = cleaned_data.get('new_participants')
+            if not new_participants:
+                raise ValidationError({'new_participants': '协作人员调整必须选择新协作人员'})
+        
+        elif adjustment_type == 'acceptance_criteria':
+            # 验收标准调整：必须填写新验收标准
+            new_acceptance_criteria = cleaned_data.get('new_acceptance_criteria')
+            if not new_acceptance_criteria:
+                raise ValidationError({'new_acceptance_criteria': '验收标准调整必须填写新验收标准'})
+        
+        elif adjustment_type == 'content':
+            # 内容调整：必须填写调整内容
+            adjustment_content = cleaned_data.get('adjustment_content')
+            if not adjustment_content:
+                raise ValidationError({'adjustment_content': '内容调整必须填写调整内容'})
         
         # 验证计划状态：只有执行中的计划可以申请调整
         if self.plan.status != 'in_progress':
@@ -1189,6 +1401,9 @@ class PlanAdjustmentForm(forms.ModelForm):
         
         if commit:
             instance.save()
+            # 保存多对多关系（协作人员）
+            if 'new_participants' in self.cleaned_data:
+                instance.new_participants.set(self.cleaned_data['new_participants'])
         
         return instance
 

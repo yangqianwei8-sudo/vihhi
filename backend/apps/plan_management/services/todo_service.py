@@ -14,9 +14,66 @@ P2-4: 待办中心服务
 """
 from django.utils import timezone
 from django.urls import reverse
+from django.db.models import Q
 from datetime import date, datetime, timedelta
 from typing import List, Dict, Any, Optional
+import re
 from ..models import StrategicGoal, Plan, TodoTask
+
+
+def extract_date_from_text(text):
+    """
+    从文本中提取日期
+    支持格式：
+    - 2026年1月28日
+    - 2026-1-28 或 2026-01-28
+    - 2026/1/28 或 2026/01/28
+    - 2026.1.28 或 2026.01.28
+    """
+    if not text:
+        return None
+    
+    # 格式1：2026年1月28日
+    pattern1 = r'(\d{4})年(\d{1,2})月(\d{1,2})日'
+    match = re.search(pattern1, text)
+    if match:
+        try:
+            year, month, day = int(match.group(1)), int(match.group(2)), int(match.group(3))
+            return date(year, month, day)
+        except (ValueError, IndexError):
+            pass
+    
+    # 格式2：2026-1-28 或 2026-01-28
+    pattern2 = r'(\d{4})-(\d{1,2})-(\d{1,2})'
+    match = re.search(pattern2, text)
+    if match:
+        try:
+            year, month, day = int(match.group(1)), int(match.group(2)), int(match.group(3))
+            return date(year, month, day)
+        except (ValueError, IndexError):
+            pass
+    
+    # 格式3：2026/1/28 或 2026/01/28
+    pattern3 = r'(\d{4})/(\d{1,2})/(\d{1,2})'
+    match = re.search(pattern3, text)
+    if match:
+        try:
+            year, month, day = int(match.group(1)), int(match.group(2)), int(match.group(3))
+            return date(year, month, day)
+        except (ValueError, IndexError):
+            pass
+    
+    # 格式4：2026.1.28 或 2026.01.28
+    pattern4 = r'(\d{4})\.(\d{1,2})\.(\d{1,2})'
+    match = re.search(pattern4, text)
+    if match:
+        try:
+            year, month, day = int(match.group(1)), int(match.group(2)), int(match.group(3))
+            return date(year, month, day)
+        except (ValueError, IndexError):
+            pass
+    
+    return None
 
 
 def get_user_todos(user, filter_department_id=None, filter_responsible_person_id=None, filter_start_date=None, filter_end_date=None) -> List[Dict[str, Any]]:
@@ -179,6 +236,115 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
         
         if not should_include:
             continue
+        
+        # 检查"日计划分解"类型的待办是否已完成
+        if todo.task_type == 'plan_decomposition_daily':
+            try:
+                # 确定目标日期：优先使用deadline，其次从标题/描述中提取
+                target_date = None
+                
+                if todo.deadline:
+                    target_date = todo.deadline.date()
+                else:
+                    # 尝试从标题或描述中提取日期
+                    # 格式：【日计划分解】请创建2026年1月28日的工作计划
+                    combined_text = f"{todo.title} {todo.description or ''}"
+                    target_date = extract_date_from_text(combined_text)
+                    
+                    # 如果还是提取不到，默认检查"明天"的日计划
+                    if not target_date:
+                        target_date = today + timedelta(days=1)
+                
+                if target_date:
+                    target_start = timezone.make_aware(datetime.combine(target_date, datetime.min.time()))
+                    target_end = timezone.make_aware(datetime.combine(target_date, datetime.max.time()))
+                    
+                    # 方法1：如果待办事项的related_object_id指向的就是一个日计划，且该计划已发布，认为已完成
+                    if todo.related_object_type == 'plan' and todo.related_object_id:
+                        try:
+                            related_plan = Plan.objects.filter(id=todo.related_object_id).first()
+                            if related_plan:
+                                # 如果关联的计划本身就是日计划且已发布
+                                if related_plan.plan_period == 'daily' and related_plan.status == 'published':
+                                    # 如果提取到了日期，检查日期是否匹配；如果没提取到，只要已发布就认为已完成
+                                    if related_plan.start_time:
+                                        if related_plan.start_time.date() == target_date:
+                                            continue
+                                    else:
+                                        # 没有start_time时，只要日计划已发布就认为已完成
+                                        continue
+                                # 如果关联的计划是父计划（如周计划、月计划），检查其子计划
+                                else:
+                                    daily_child_plans = related_plan.child_plans.filter(
+                                        plan_period='daily',
+                                        start_time__gte=target_start,
+                                        start_time__lte=target_end,
+                                        status='published'
+                                    )
+                                    if daily_child_plans.exists():
+                                        continue
+                        except Exception:
+                            pass
+                    
+                    # 方法2：检查用户是否有对应日期的已发布日计划
+                    # 放宽条件：检查用户作为owner或responsible_person的日计划
+                    user_daily_plans = Plan.objects.filter(
+                        Q(owner=user) | Q(responsible_person=user),
+                        plan_period='daily',
+                        start_time__gte=target_start,
+                        start_time__lte=target_end,
+                        status='published'
+                    )
+                    
+                    if user_daily_plans.exists():
+                        continue
+                    
+                    # 方法2b：进一步放宽检查
+                    # 只有当待办事项有关联对象，且关联对象就是目标日期的已发布日计划时，才认为已完成
+                    # 这样可以处理待办事项直接关联到日计划的情况
+                    if todo.related_object_id:
+                        try:
+                            related_id = int(todo.related_object_id) if str(todo.related_object_id).isdigit() else None
+                            if related_id:
+                                # 检查关联对象是否是目标日期的已发布日计划
+                                related_daily_plan = Plan.objects.filter(
+                                    id=related_id,
+                                    plan_period='daily',
+                                    start_time__gte=target_start,
+                                    start_time__lte=target_end,
+                                    status='published'
+                                ).first()
+                                if related_daily_plan:
+                                    continue
+                        except (ValueError, AttributeError):
+                            pass
+                
+                # 方法3：如果没有日期信息（deadline为空且无法从文本提取），检查用户是否有任何已发布的日计划
+                # 这样可以处理日常性待办事项没有明确日期的情况
+                # 注意：这个方法只适用于没有deadline且无法从文本提取日期的情况
+                # 进一步限制：只有当待办事项有关联对象，且关联对象是已发布的日计划时，才认为已完成
+                if not todo.deadline:
+                    combined_text = f"{todo.title} {todo.description or ''}"
+                    extracted_date = extract_date_from_text(combined_text)
+                    if not extracted_date:
+                        # 完全没有日期信息时，只有当待办事项有关联对象，且关联对象是已发布的日计划时，才认为已完成
+                        if todo.related_object_id and todo.related_object_type == 'plan':
+                            try:
+                                related_id = int(todo.related_object_id) if str(todo.related_object_id).isdigit() else None
+                                if related_id:
+                                    related_plan = Plan.objects.filter(
+                                        id=related_id,
+                                        plan_period='daily',
+                                        status='published'
+                                    ).first()
+                                    if related_plan:
+                                        continue
+                            except (ValueError, AttributeError):
+                                pass
+            except Exception:
+                # 如果查询出错，继续处理该待办事项
+                pass
+        
         # 检查是否逾期（如果模型有 check_overdue 方法则调用，否则使用 save 方法自动检查）
         if hasattr(todo, 'check_overdue'):
             todo.check_overdue()
@@ -290,10 +456,10 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                     level='personal',
                     status='published',
                     owner=filter_user
-                ).select_related('parent_goal', 'responsible_person')
-                # 应用部门筛选
+                ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
+                # 应用部门筛选（基于owner的部门）
                 if filter_department_id:
-                    pending_goals = pending_goals.filter(responsible_department_id=filter_department_id)
+                    pending_goals = pending_goals.filter(owner__department_id=filter_department_id)
             else:
                 pending_goals = StrategicGoal.objects.none()
         except (ValueError, AttributeError):
@@ -308,7 +474,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                 level='personal',
                 status='published',
                 owner__in=department_users
-            ).select_related('parent_goal', 'responsible_person')
+            ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
         except (ValueError, AttributeError):
             pending_goals = StrategicGoal.objects.none()
     else:
@@ -317,7 +483,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             level='personal',
             status='published',
             owner=user
-        ).select_related('parent_goal', 'responsible_person')
+        ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
     
     for goal in pending_goals:
         todos.append({
@@ -344,10 +510,10 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                     level='personal',
                     status='published',
                     owner=filter_user
-                ).select_related('parent_plan', 'responsible_person')
-                # 应用部门筛选
+                ).exclude(status__in=['completed', 'cancelled']).select_related('parent_plan', 'responsible_person')
+                # 应用部门筛选（基于owner的部门）
                 if filter_department_id:
-                    pending_plans = pending_plans.filter(responsible_department_id=filter_department_id)
+                    pending_plans = pending_plans.filter(owner__department_id=filter_department_id)
             else:
                 pending_plans = Plan.objects.none()
         except (ValueError, AttributeError):
@@ -362,7 +528,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                 level='personal',
                 status='published',
                 owner__in=department_users
-            ).select_related('parent_plan', 'responsible_person')
+            ).exclude(status__in=['completed', 'cancelled']).select_related('parent_plan', 'responsible_person')
         except (ValueError, AttributeError):
             pending_plans = Plan.objects.none()
     else:
@@ -371,7 +537,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             level='personal',
             status='published',
             owner=user
-        ).select_related('parent_plan', 'responsible_person')
+        ).exclude(status__in=['completed', 'cancelled']).select_related('parent_plan', 'responsible_person')
     
     for plan in pending_plans:
         todos.append({
@@ -398,10 +564,10 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                     level='personal',
                     status='accepted',
                     owner=filter_user
-                ).select_related('parent_goal', 'responsible_person')
-                # 应用部门筛选
+                ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
+                # 应用部门筛选（基于owner的部门）
                 if filter_department_id:
-                    accepted_goals = accepted_goals.filter(responsible_department_id=filter_department_id)
+                    accepted_goals = accepted_goals.filter(owner__department_id=filter_department_id)
             else:
                 accepted_goals = StrategicGoal.objects.none()
         except (ValueError, AttributeError):
@@ -416,7 +582,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                 level='personal',
                 status='accepted',
                 owner__in=department_users
-            ).select_related('parent_goal', 'responsible_person')
+            ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
         except (ValueError, AttributeError):
             accepted_goals = StrategicGoal.objects.none()
     else:
@@ -425,7 +591,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             level='personal',
             status='accepted',
             owner=user
-        ).select_related('parent_goal', 'responsible_person')
+        ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
     
     for goal in accepted_goals:
         todos.append({
@@ -452,10 +618,10 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                     level='personal',
                     status='accepted',
                     owner=filter_user
-                ).select_related('parent_plan', 'responsible_person')
-                # 应用部门筛选
+                ).exclude(status__in=['completed', 'cancelled']).select_related('parent_plan', 'responsible_person')
+                # 应用部门筛选（基于owner的部门）
                 if filter_department_id:
-                    accepted_plans = accepted_plans.filter(responsible_department_id=filter_department_id)
+                    accepted_plans = accepted_plans.filter(owner__department_id=filter_department_id)
             else:
                 accepted_plans = Plan.objects.none()
         except (ValueError, AttributeError):
@@ -470,7 +636,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                 level='personal',
                 status='accepted',
                 owner__in=department_users
-            ).select_related('parent_plan', 'responsible_person')
+            ).exclude(status__in=['completed', 'cancelled']).select_related('parent_plan', 'responsible_person')
         except (ValueError, AttributeError):
             accepted_plans = Plan.objects.none()
     else:
@@ -479,7 +645,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             level='personal',
             status='accepted',
             owner=user
-        ).select_related('parent_plan', 'responsible_person')
+        ).exclude(status__in=['completed', 'cancelled']).select_related('parent_plan', 'responsible_person')
     
     for plan in accepted_plans:
         todos.append({
@@ -497,32 +663,41 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
     today_end = timezone.make_aware(datetime.combine(today, datetime.max.time()))
     
     # 根据筛选条件决定查询逻辑
-    # 今日应执行计划：responsible_person=筛选的负责人（因为计划在执行中，负责人需要执行）
+    # 今日应执行计划：owner=筛选的负责人（因为个人计划由owner执行）
     if filter_responsible_person_id:
-        # 筛选了负责人，查询该负责人负责的今日应执行计划
+        # 筛选了负责人，查询该负责人拥有的今日应执行计划
         try:
-            today_plans = Plan.objects.filter(
-                level='personal',
-                status='in_progress',
-                responsible_person_id=filter_responsible_person_id,
-                start_time__lte=today_end,
-                end_time__gte=today_start
-            ).select_related('responsible_person')
-            # 应用部门筛选
-            if filter_department_id:
-                today_plans = today_plans.filter(responsible_department_id=filter_department_id)
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            filter_user = User.objects.filter(id=filter_responsible_person_id).first()
+            if filter_user:
+                today_plans = Plan.objects.filter(
+                    level='personal',
+                    status='in_progress',
+                    owner=filter_user,
+                    start_time__lte=today_end,
+                    end_time__gte=today_start
+                ).exclude(status__in=['completed', 'cancelled']).select_related('responsible_person')
+                # 应用部门筛选（基于owner的部门）
+                if filter_department_id:
+                    today_plans = today_plans.filter(owner__department_id=filter_department_id)
+            else:
+                today_plans = Plan.objects.none()
         except (ValueError, AttributeError):
             today_plans = Plan.objects.none()
     elif filter_department_id:
         # 筛选了部门，查询该部门所有用户的今日应执行计划
         try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            department_users = User.objects.filter(department_id=filter_department_id, is_active=True)
             today_plans = Plan.objects.filter(
                 level='personal',
                 status='in_progress',
-                responsible_department_id=filter_department_id,
+                owner__in=department_users,
                 start_time__lte=today_end,
                 end_time__gte=today_start
-            ).select_related('responsible_person')
+            ).exclude(status__in=['completed', 'cancelled']).select_related('responsible_person')
         except (ValueError, AttributeError):
             today_plans = Plan.objects.none()
     else:
@@ -533,9 +708,29 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             owner=user,
             start_time__lte=today_end,
             end_time__gte=today_start
-        ).select_related('responsible_person')
+        ).exclude(status__in=['completed', 'cancelled']).select_related('responsible_person')
     
     for plan in today_plans:
+        # 检查是否已完成日计划分解：如果存在当天的日计划子计划且状态为published，则认为已完成分解
+        has_completed_daily_decomposition = False
+        try:
+            # 查找当天的日计划子计划（plan_period='daily'，start_time在当天，状态为published）
+            daily_child_plans = plan.child_plans.filter(
+                plan_period='daily',
+                start_time__gte=today_start,
+                start_time__lte=today_end,
+                status='published'
+            )
+            if daily_child_plans.exists():
+                has_completed_daily_decomposition = True
+        except Exception:
+            # 如果查询出错，继续处理
+            pass
+        
+        # 如果已完成日计划分解，则跳过该计划
+        if has_completed_daily_decomposition:
+            continue
+        
         todos.append({
             'type': 'plan_today',
             'title': f'今日应执行：{plan.name}',
@@ -548,30 +743,39 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
     
     # ========== 6. 风险计划（逾期）==========
     # 根据筛选条件决定查询逻辑
-    # 逾期计划：responsible_person=筛选的负责人（因为计划逾期，负责人需要处理）
+    # 逾期计划：owner=筛选的负责人（因为个人计划由owner处理）
     if filter_responsible_person_id:
-        # 筛选了负责人，查询该负责人负责的逾期计划
+        # 筛选了负责人，查询该负责人拥有的逾期计划
         try:
-            overdue_plans = Plan.objects.filter(
-                level='personal',
-                status__in=['draft', 'published', 'accepted', 'in_progress'],
-                responsible_person_id=filter_responsible_person_id,
-                end_time__lt=now
-            ).select_related('responsible_person')
-            # 应用部门筛选
-            if filter_department_id:
-                overdue_plans = overdue_plans.filter(responsible_department_id=filter_department_id)
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            filter_user = User.objects.filter(id=filter_responsible_person_id).first()
+            if filter_user:
+                overdue_plans = Plan.objects.filter(
+                    level='personal',
+                    status__in=['draft', 'published', 'accepted', 'in_progress'],
+                    owner=filter_user,
+                    end_time__lt=now
+                ).exclude(status__in=['completed', 'cancelled']).select_related('responsible_person')
+                # 应用部门筛选（基于owner的部门）
+                if filter_department_id:
+                    overdue_plans = overdue_plans.filter(owner__department_id=filter_department_id)
+            else:
+                overdue_plans = Plan.objects.none()
         except (ValueError, AttributeError):
             overdue_plans = Plan.objects.none()
     elif filter_department_id:
         # 筛选了部门，查询该部门所有用户的逾期计划
         try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            department_users = User.objects.filter(department_id=filter_department_id, is_active=True)
             overdue_plans = Plan.objects.filter(
                 level='personal',
                 status__in=['draft', 'published', 'accepted', 'in_progress'],
-                responsible_department_id=filter_department_id,
+                owner__in=department_users,
                 end_time__lt=now
-            ).select_related('responsible_person')
+            ).exclude(status__in=['completed', 'cancelled']).select_related('responsible_person')
         except (ValueError, AttributeError):
             overdue_plans = Plan.objects.none()
     else:
@@ -581,7 +785,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             status__in=['draft', 'published', 'accepted', 'in_progress'],
             owner=user,
             end_time__lt=now
-        ).select_related('responsible_person')
+        ).exclude(status__in=['completed', 'cancelled']).select_related('responsible_person')
     
     for plan in overdue_plans:
         days_overdue = (now.date() - plan.end_time.date()).days
@@ -597,30 +801,39 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
     
     # ========== 7. 风险目标（逾期）==========
     # 根据筛选条件决定查询逻辑
-    # 逾期目标：responsible_person=筛选的负责人（因为目标逾期，负责人需要处理）
+    # 逾期目标：owner=筛选的负责人（因为个人目标由owner处理）
     if filter_responsible_person_id:
-        # 筛选了负责人，查询该负责人负责的逾期目标
+        # 筛选了负责人，查询该负责人拥有的逾期目标
         try:
-            overdue_goals = StrategicGoal.objects.filter(
-                level='personal',
-                status__in=['published', 'accepted', 'in_progress'],
-                responsible_person_id=filter_responsible_person_id,
-                end_date__lt=today
-            ).select_related('parent_goal', 'responsible_person')
-            # 应用部门筛选
-            if filter_department_id:
-                overdue_goals = overdue_goals.filter(responsible_department_id=filter_department_id)
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            filter_user = User.objects.filter(id=filter_responsible_person_id).first()
+            if filter_user:
+                overdue_goals = StrategicGoal.objects.filter(
+                    level='personal',
+                    status__in=['published', 'accepted', 'in_progress'],
+                    owner=filter_user,
+                    end_date__lt=today
+                ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
+                # 应用部门筛选（基于owner的部门）
+                if filter_department_id:
+                    overdue_goals = overdue_goals.filter(owner__department_id=filter_department_id)
+            else:
+                overdue_goals = StrategicGoal.objects.none()
         except (ValueError, AttributeError):
             overdue_goals = StrategicGoal.objects.none()
     elif filter_department_id:
         # 筛选了部门，查询该部门所有用户的逾期目标
         try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            department_users = User.objects.filter(department_id=filter_department_id, is_active=True)
             overdue_goals = StrategicGoal.objects.filter(
                 level='personal',
                 status__in=['published', 'accepted', 'in_progress'],
-                responsible_department_id=filter_department_id,
+                owner__in=department_users,
                 end_date__lt=today
-            ).select_related('parent_goal', 'responsible_person')
+            ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
         except (ValueError, AttributeError):
             overdue_goals = StrategicGoal.objects.none()
     else:
@@ -630,7 +843,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             status__in=['published', 'accepted', 'in_progress'],
             owner=user,
             end_date__lt=today
-        ).select_related('parent_goal', 'responsible_person')
+        ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
     
     for goal in overdue_goals:
         days_overdue = (today - goal.end_date).days
@@ -643,6 +856,66 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             'object': goal,
             'created_at': goal.end_date,
         })
+    
+    # ========== 去重：确保同一计划/目标只出现在一个待办类别中 ==========
+    # 优先级：待接收 > 待执行 > 今日应执行 > 风险计划/目标
+    seen_objects = {}  # {object_id: todo_item}
+    
+    # 定义待办类型的优先级（数字越小优先级越高）
+    todo_type_priority = {
+        'goal_accept': 1,
+        'plan_accept': 1,
+        'goal_execute': 2,
+        'plan_execute': 2,
+        'plan_today': 3,
+        'goal_risk': 4,
+        'plan_risk': 4,
+    }
+    
+    # 按优先级排序，然后去重
+    todos_with_priority = []
+    for todo in todos:
+        obj = todo.get('object')
+        if obj and hasattr(obj, 'id'):
+            obj_id = obj.id
+            todo_type = todo.get('type', '')
+            priority = todo_type_priority.get(todo_type, 99)
+            
+            # 如果是计划或目标相关的待办，检查是否已存在
+            if todo_type in ['plan_accept', 'plan_execute', 'plan_today', 'plan_risk']:
+                if obj_id not in seen_objects:
+                    seen_objects[obj_id] = todo
+                    todos_with_priority.append((priority, todo))
+                else:
+                    # 如果已存在，比较优先级，保留优先级更高的
+                    existing_priority = todo_type_priority.get(seen_objects[obj_id].get('type', ''), 99)
+                    if priority < existing_priority:
+                        # 移除旧的，添加新的
+                        todos_with_priority = [(p, t) for p, t in todos_with_priority if t.get('object').id != obj_id]
+                        seen_objects[obj_id] = todo
+                        todos_with_priority.append((priority, todo))
+            elif todo_type in ['goal_accept', 'goal_execute', 'goal_risk']:
+                if obj_id not in seen_objects:
+                    seen_objects[obj_id] = todo
+                    todos_with_priority.append((priority, todo))
+                else:
+                    # 如果已存在，比较优先级，保留优先级更高的
+                    existing_priority = todo_type_priority.get(seen_objects[obj_id].get('type', ''), 99)
+                    if priority < existing_priority:
+                        # 移除旧的，添加新的
+                        todos_with_priority = [(p, t) for p, t in todos_with_priority if t.get('object').id != obj_id]
+                        seen_objects[obj_id] = todo
+                        todos_with_priority.append((priority, todo))
+            else:
+                # 其他类型的待办（如数据库待办），直接添加
+                todos_with_priority.append((priority, todo))
+        else:
+            # 没有关联对象的待办，直接添加
+            priority = todo_type_priority.get(todo.get('type', ''), 99)
+            todos_with_priority.append((priority, todo))
+    
+    # 提取待办项（去掉优先级）
+    todos = [todo for _, todo in todos_with_priority]
     
     # ========== 排序：优先级 > 创建时间 ==========
     priority_order = {'high': 0, 'medium': 1, 'low': 2}
@@ -717,6 +990,114 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
     ).select_related('user').order_by('deadline')
     
     for todo in db_todos:
+        # 检查"日计划分解"类型的待办是否已完成
+        if todo.task_type == 'plan_decomposition_daily':
+            try:
+                # 确定目标日期：优先使用deadline，其次从标题/描述中提取
+                target_date = None
+                
+                if todo.deadline:
+                    target_date = todo.deadline.date()
+                else:
+                    # 尝试从标题或描述中提取日期
+                    # 格式：【日计划分解】请创建2026年1月28日的工作计划
+                    combined_text = f"{todo.title} {todo.description or ''}"
+                    target_date = extract_date_from_text(combined_text)
+                    
+                    # 如果还是提取不到，默认检查"明天"的日计划
+                    if not target_date:
+                        target_date = today + timedelta(days=1)
+                
+                if target_date:
+                    target_start = timezone.make_aware(datetime.combine(target_date, datetime.min.time()))
+                    target_end = timezone.make_aware(datetime.combine(target_date, datetime.max.time()))
+                    
+                    # 方法1：如果待办事项的related_object_id指向的就是一个日计划，且该计划已发布，认为已完成
+                    if todo.related_object_type == 'plan' and todo.related_object_id:
+                        try:
+                            related_plan = Plan.objects.filter(id=todo.related_object_id).first()
+                            if related_plan:
+                                # 如果关联的计划本身就是日计划且已发布
+                                if related_plan.plan_period == 'daily' and related_plan.status == 'published':
+                                    # 如果提取到了日期，检查日期是否匹配；如果没提取到，只要已发布就认为已完成
+                                    if related_plan.start_time:
+                                        if related_plan.start_time.date() == target_date:
+                                            continue
+                                    else:
+                                        # 没有start_time时，只要日计划已发布就认为已完成
+                                        continue
+                                # 如果关联的计划是父计划（如周计划、月计划），检查其子计划
+                                else:
+                                    daily_child_plans = related_plan.child_plans.filter(
+                                        plan_period='daily',
+                                        start_time__gte=target_start,
+                                        start_time__lte=target_end,
+                                        status='published'
+                                    )
+                                    if daily_child_plans.exists():
+                                        continue
+                        except Exception:
+                            pass
+                    
+                    # 方法2：检查用户是否有对应日期的已发布日计划
+                    # 放宽条件：检查用户作为owner或responsible_person的日计划
+                    user_daily_plans = Plan.objects.filter(
+                        Q(owner=responsible_user) | Q(responsible_person=responsible_user),
+                        plan_period='daily',
+                        start_time__gte=target_start,
+                        start_time__lte=target_end,
+                        status='published'
+                    )
+                    
+                    if user_daily_plans.exists():
+                        continue
+                    
+                    # 方法2b：进一步放宽检查
+                    # 只有当待办事项有关联对象，且关联对象就是目标日期的已发布日计划时，才认为已完成
+                    # 这样可以处理待办事项直接关联到日计划的情况
+                    if todo.related_object_id:
+                        try:
+                            related_id = int(todo.related_object_id) if str(todo.related_object_id).isdigit() else None
+                            if related_id:
+                                # 检查关联对象是否是目标日期的已发布日计划
+                                related_daily_plan = Plan.objects.filter(
+                                    id=related_id,
+                                    plan_period='daily',
+                                    start_time__gte=target_start,
+                                    start_time__lte=target_end,
+                                    status='published'
+                                ).first()
+                                if related_daily_plan:
+                                    continue
+                        except (ValueError, AttributeError):
+                            pass
+                
+                # 方法3：如果没有日期信息（deadline为空且无法从文本提取），检查用户是否有任何已发布的日计划
+                # 这样可以处理日常性待办事项没有明确日期的情况
+                # 注意：这个方法只适用于没有deadline且无法从文本提取日期的情况
+                # 进一步限制：只有当待办事项有关联对象，且关联对象是已发布的日计划时，才认为已完成
+                if not todo.deadline:
+                    combined_text = f"{todo.title} {todo.description or ''}"
+                    extracted_date = extract_date_from_text(combined_text)
+                    if not extracted_date:
+                        # 完全没有日期信息时，只有当待办事项有关联对象，且关联对象是已发布的日计划时，才认为已完成
+                        if todo.related_object_id and todo.related_object_type == 'plan':
+                            try:
+                                related_id = int(todo.related_object_id) if str(todo.related_object_id).isdigit() else None
+                                if related_id:
+                                    related_plan = Plan.objects.filter(
+                                        id=related_id,
+                                        plan_period='daily',
+                                        status='published'
+                                    ).first()
+                                    if related_plan:
+                                        continue
+                            except (ValueError, AttributeError):
+                                pass
+            except Exception:
+                # 如果查询出错，继续处理该待办事项
+                pass
+        
         if hasattr(todo, 'check_overdue'):
             todo.check_overdue()
         elif todo.deadline and todo.status == 'pending' and todo.deadline < now:
@@ -790,10 +1171,12 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
         })
     
     # ========== 待接收目标（负责人负责的）==========
+    # 个人目标应该由 owner 接收，所以查询 owner=responsible_user 的目标
     pending_goals = StrategicGoal.objects.filter(
-        responsible_person=responsible_user,
-        status='published'
-    ).select_related('parent_goal', 'responsible_person', 'owner')
+        level='personal',
+        status='published',
+        owner=responsible_user
+    ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person', 'owner')
     pending_goals = apply_filters(pending_goals, 'goal')
     
     for goal in pending_goals:
@@ -808,10 +1191,12 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
         })
     
     # ========== 待接收计划（负责人负责的）==========
+    # 个人计划应该由 owner 接收，所以查询 owner=responsible_user 的计划
     pending_plans = Plan.objects.filter(
-        responsible_person=responsible_user,
-        status='published'
-    ).select_related('parent_plan', 'responsible_person', 'owner')
+        level='personal',
+        status='published',
+        owner=responsible_user
+    ).exclude(status__in=['completed', 'cancelled']).select_related('parent_plan', 'responsible_person', 'owner')
     pending_plans = apply_filters(pending_plans, 'plan')
     
     for plan in pending_plans:
@@ -826,10 +1211,12 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
         })
     
     # ========== 待执行目标（负责人负责的）==========
+    # 个人目标应该由 owner 执行，所以查询 owner=responsible_user 的目标
     accepted_goals = StrategicGoal.objects.filter(
-        responsible_person=responsible_user,
-        status='accepted'
-    ).select_related('parent_goal', 'responsible_person', 'owner')
+        level='personal',
+        status='accepted',
+        owner=responsible_user
+    ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person', 'owner')
     accepted_goals = apply_filters(accepted_goals, 'goal')
     
     for goal in accepted_goals:
@@ -844,10 +1231,12 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
         })
     
     # ========== 待执行计划（负责人负责的）==========
+    # 个人计划应该由 owner 执行，所以查询 owner=responsible_user 的计划
     accepted_plans = Plan.objects.filter(
-        responsible_person=responsible_user,
-        status='accepted'
-    ).select_related('parent_plan', 'responsible_person', 'owner')
+        level='personal',
+        status='accepted',
+        owner=responsible_user
+    ).exclude(status__in=['completed', 'cancelled']).select_related('parent_plan', 'responsible_person', 'owner')
     accepted_plans = apply_filters(accepted_plans, 'plan')
     
     for plan in accepted_plans:
@@ -865,15 +1254,37 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
     today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
     today_end = timezone.make_aware(datetime.combine(today, datetime.max.time()))
     
+    # 个人计划应该由 owner 执行，所以查询 owner=responsible_user 的计划
     today_plans = Plan.objects.filter(
-        responsible_person=responsible_user,
+        level='personal',
         status='in_progress',
+        owner=responsible_user,
         start_time__lte=today_end,
         end_time__gte=today_start
-    ).select_related('responsible_person', 'owner')
+    ).exclude(status__in=['completed', 'cancelled']).select_related('responsible_person', 'owner')
     today_plans = apply_filters(today_plans, 'plan')
     
     for plan in today_plans:
+        # 检查是否已完成日计划分解：如果存在当天的日计划子计划且状态为published，则认为已完成分解
+        has_completed_daily_decomposition = False
+        try:
+            # 查找当天的日计划子计划（plan_period='daily'，start_time在当天，状态为published）
+            daily_child_plans = plan.child_plans.filter(
+                plan_period='daily',
+                start_time__gte=today_start,
+                start_time__lte=today_end,
+                status='published'
+            )
+            if daily_child_plans.exists():
+                has_completed_daily_decomposition = True
+        except Exception:
+            # 如果查询出错，继续处理
+            pass
+        
+        # 如果已完成日计划分解，则跳过该计划
+        if has_completed_daily_decomposition:
+            continue
+        
         todos.append({
             'type': 'plan_today',
             'title': f'今日应执行：{plan.name}',
@@ -885,11 +1296,13 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
         })
     
     # ========== 风险计划（负责人负责的，逾期）==========
+    # 个人计划应该由 owner 处理，所以查询 owner=responsible_user 的计划
     overdue_plans = Plan.objects.filter(
-        responsible_person=responsible_user,
+        level='personal',
         status__in=['draft', 'published', 'accepted', 'in_progress'],
+        owner=responsible_user,
         end_time__lt=now
-    ).select_related('responsible_person', 'owner')
+    ).exclude(status__in=['completed', 'cancelled']).select_related('responsible_person', 'owner')
     overdue_plans = apply_filters(overdue_plans, 'plan')
     
     for plan in overdue_plans:
@@ -905,11 +1318,13 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
         })
     
     # ========== 风险目标（负责人负责的，逾期）==========
+    # 个人目标应该由 owner 处理，所以查询 owner=responsible_user 的目标
     overdue_goals = StrategicGoal.objects.filter(
-        responsible_person=responsible_user,
+        level='personal',
         status__in=['published', 'accepted', 'in_progress'],
+        owner=responsible_user,
         end_date__lt=today
-    ).select_related('parent_goal', 'responsible_person', 'owner')
+    ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person', 'owner')
     overdue_goals = apply_filters(overdue_goals, 'goal')
     
     for goal in overdue_goals:
@@ -923,6 +1338,66 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
             'object': goal,
             'created_at': goal.end_date,
         })
+    
+    # ========== 去重：确保同一计划/目标只出现在一个待办类别中 ==========
+    # 优先级：待接收 > 待执行 > 今日应执行 > 风险计划/目标
+    seen_objects = {}  # {object_id: todo_item}
+    
+    # 定义待办类型的优先级（数字越小优先级越高）
+    todo_type_priority = {
+        'goal_accept': 1,
+        'plan_accept': 1,
+        'goal_execute': 2,
+        'plan_execute': 2,
+        'plan_today': 3,
+        'goal_risk': 4,
+        'plan_risk': 4,
+    }
+    
+    # 按优先级排序，然后去重
+    todos_with_priority = []
+    for todo in todos:
+        obj = todo.get('object')
+        if obj and hasattr(obj, 'id'):
+            obj_id = obj.id
+            todo_type = todo.get('type', '')
+            priority = todo_type_priority.get(todo_type, 99)
+            
+            # 如果是计划或目标相关的待办，检查是否已存在
+            if todo_type in ['plan_accept', 'plan_execute', 'plan_today', 'plan_risk']:
+                if obj_id not in seen_objects:
+                    seen_objects[obj_id] = todo
+                    todos_with_priority.append((priority, todo))
+                else:
+                    # 如果已存在，比较优先级，保留优先级更高的
+                    existing_priority = todo_type_priority.get(seen_objects[obj_id].get('type', ''), 99)
+                    if priority < existing_priority:
+                        # 移除旧的，添加新的
+                        todos_with_priority = [(p, t) for p, t in todos_with_priority if t.get('object').id != obj_id]
+                        seen_objects[obj_id] = todo
+                        todos_with_priority.append((priority, todo))
+            elif todo_type in ['goal_accept', 'goal_execute', 'goal_risk']:
+                if obj_id not in seen_objects:
+                    seen_objects[obj_id] = todo
+                    todos_with_priority.append((priority, todo))
+                else:
+                    # 如果已存在，比较优先级，保留优先级更高的
+                    existing_priority = todo_type_priority.get(seen_objects[obj_id].get('type', ''), 99)
+                    if priority < existing_priority:
+                        # 移除旧的，添加新的
+                        todos_with_priority = [(p, t) for p, t in todos_with_priority if t.get('object').id != obj_id]
+                        seen_objects[obj_id] = todo
+                        todos_with_priority.append((priority, todo))
+            else:
+                # 其他类型的待办（如数据库待办），直接添加
+                todos_with_priority.append((priority, todo))
+        else:
+            # 没有关联对象的待办，直接添加
+            priority = todo_type_priority.get(todo.get('type', ''), 99)
+            todos_with_priority.append((priority, todo))
+    
+    # 提取待办项（去掉优先级）
+    todos = [todo for _, todo in todos_with_priority]
     
     # ========== 排序：优先级 > 创建时间 ==========
     priority_order = {'high': 0, 'medium': 1, 'low': 2}

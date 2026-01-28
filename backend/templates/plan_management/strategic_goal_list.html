@@ -104,6 +104,7 @@
 
 {% block list_table_headers %}
   <th>目标编号</th>
+  <th>状态</th>
   <th>目标名称</th>
   <th>目标层级</th>
   <th>目标类型</th>
@@ -126,6 +127,23 @@
         <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ goal.id }}" id="item_{{ goal.id }}">
       </td>
       <td><code>{{ goal.goal_number }}</code></td>
+      <td>
+        {% if goal.status == 'draft' %}
+          <span class="badge bg-secondary">制定中</span>
+        {% elif goal.status == 'published' %}
+          <span class="badge bg-info">已发布</span>
+        {% elif goal.status == 'accepted' %}
+          <span class="badge bg-primary">已接收</span>
+        {% elif goal.status == 'in_progress' %}
+          <span class="badge bg-warning">执行中</span>
+        {% elif goal.status == 'completed' %}
+          <span class="badge bg-success">已完成</span>
+        {% elif goal.status == 'cancelled' %}
+          <span class="badge bg-danger">已取消</span>
+        {% else %}
+          <span class="badge bg-secondary">{{ goal.get_status_display }}</span>
+        {% endif %}
+      </td>
       <td>
         <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="text-dark text-decoration-none fw-medium">
           {{ goal.name }}
@@ -192,7 +210,7 @@
     {% endfor %}
   {% else %}
     <tr>
-      <td colspan="13" class="list-empty">
+      <td colspan="14" class="list-empty">
         <div class="list-empty-icon">🎯</div>
         <div class="list-empty-text">暂无目标数据</div>
       </td>
@@ -204,7 +222,7 @@
   <div class="list-empty-hint">请创建第一个目标开始使用</div>
 {% endblock list_empty_hint %}
 
-{% block extra_js %}
+{% block module_extra_js %}
   <!-- 配置列表筛选功能 -->
   <script>
   window.listFiltersConfig = {
@@ -215,34 +233,4 @@
   </script>
   <!-- 引入列表筛选功能模块 -->
   <script src="{% static 'js/list-filters.js' %}"></script>
-  
-  <!-- 复选框功能调试 -->
-  <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('复选框功能调试：');
-    const selectAll = document.getElementById('selectAll');
-    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-    console.log('全选复选框:', selectAll);
-    console.log('行复选框数量:', rowCheckboxes.length);
-    console.log('list-checkbox.js 是否加载:', typeof window.getSelectedIds === 'function');
-    
-    // 如果JavaScript没有加载，手动初始化
-    if (selectAll && rowCheckboxes.length > 0 && typeof window.getSelectedIds !== 'function') {
-      console.warn('list-checkbox.js 未加载，手动初始化复选框功能');
-      selectAll.addEventListener('change', function() {
-        rowCheckboxes.forEach(function(cb) {
-          cb.checked = this.checked;
-        }, this);
-      });
-      rowCheckboxes.forEach(function(cb) {
-        cb.addEventListener('change', function() {
-          const allChecked = Array.from(rowCheckboxes).every(function(c) {
-            return c.checked;
-          });
-          selectAll.checked = allChecked;
-        });
-      });
-    }
-  });
-  </script>
-{% endblock extra_js %}
+{% endblock module_extra_js %}

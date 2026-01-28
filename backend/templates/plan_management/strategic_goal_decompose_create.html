@@ -1,0 +1,219 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block pm_title %}新建目标分解{% endblock pm_title %}
+{% block pm_subtitle %}选择父目标后创建子目标{% endblock pm_subtitle %}
+
+{% block module_styles %}
+  {{ block.super }}
+  <style>
+    .parent-goal-selector {
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .goal-card {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 0;
+      height: 100%;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .goal-card:hover {
+      border-color: #0d6efd;
+      box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15);
+    }
+    .goal-card.selected {
+      border-color: #0d6efd;
+      background: #e7f1ff;
+    }
+    .goal-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .goal-card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin: 0;
+    }
+    .goal-card-number {
+      font-size: 0.85rem;
+      color: #6b7280;
+      font-family: monospace;
+    }
+    .goal-card-info {
+      font-size: 0.9rem;
+      color: #6b7280;
+      margin-top: 8px;
+      flex: 1;
+    }
+    
+    .goal-card-info > div {
+      margin-bottom: 4px;
+      line-height: 1.5;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status-published { background: #d1e7dd; color: #0f5132; }
+    .status-in_progress { background: #fff3cd; color: #856404; }
+    
+    /* 确保页面布局不受其他样式影响 */
+    .pm-content {
+      padding: 0 !important;
+    }
+    
+    /* 重置可能冲突的样式 */
+    .goal-card-info > div {
+      margin-bottom: 4px;
+      line-height: 1.6;
+    }
+    
+    .goal-card-info > div:last-child {
+      margin-bottom: 0;
+    }
+    
+    /* 确保行间距正确 */
+    .row.g-3 {
+      margin-left: -12px;
+      margin-right: -12px;
+    }
+    
+    .row.g-3 > * {
+      padding-left: 12px;
+      padding-right: 12px;
+      margin-bottom: 12px;
+    }
+    
+    /* 确保卡片高度一致 */
+    .row.g-3 > [class*="col-"] {
+      display: flex;
+    }
+    
+    /* 防止内容溢出 */
+    .parent-goal-selector {
+      overflow: visible;
+    }
+    
+    .goal-card-title {
+      word-break: break-word;
+      white-space: normal;
+    }
+  </style>
+{% endblock %}
+
+{% block pm_content %}
+<div style="padding: 24px;">
+  <div class="parent-goal-selector">
+    <h5 class="mb-4">
+      <i class="bi bi-diagram-3"></i> 选择父目标
+    </h5>
+    
+    {% if available_parent_goals %}
+    <form method="get" action="{% url 'plan_pages:strategic_goal_create' %}" id="parentGoalForm">
+      <input type="hidden" name="parent_goal_id" id="parentGoalId" value="">
+      
+      <div class="row g-3">
+        {% for goal in available_parent_goals %}
+        <div class="col-md-4 col-lg-3">
+          <div class="goal-card" data-goal-id="{{ goal.id }}" onclick="selectGoal({{ goal.id }})">
+            <div class="goal-card-header">
+              <div>
+                <h6 class="goal-card-title">{{ goal.name }}</h6>
+                <code class="goal-card-number">{{ goal.goal_number }}</code>
+              </div>
+              <span class="status-badge status-{{ goal.status }}">
+                {{ goal.get_status_display }}
+              </span>
+            </div>
+            <div class="goal-card-info">
+              <div>
+                <strong>层级：</strong>{{ goal.get_level_display }}
+              </div>
+              <div>
+                <strong>类型：</strong>{{ goal.get_goal_type_display }}
+              </div>
+              <div>
+                <strong>周期：</strong>{{ goal.get_goal_period_display }}
+              </div>
+              {% if goal.responsible_person %}
+              <div>
+                <strong>负责人：</strong>{{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}
+              </div>
+              {% endif %}
+              {% if goal.start_date and goal.end_date %}
+              <div>
+                <strong>时间：</strong>{{ goal.start_date|date:"Y-m-d" }} ~ {{ goal.end_date|date:"Y-m-d" }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      
+      <div class="mt-4 text-center">
+        <button type="submit" class="btn btn-primary btn-lg" id="createBtn" disabled>
+          <i class="bi bi-plus-circle"></i> 创建子目标
+        </button>
+        <a href="{% url 'plan_pages:strategic_goal_decompose_list' %}" class="btn btn-secondary btn-lg ms-2">
+          <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+      </div>
+    </form>
+    {% else %}
+    <div class="text-center py-5">
+      <div class="mb-3">
+        <i class="bi bi-inbox" style="font-size: 3rem; color: #dee2e6;"></i>
+      </div>
+      <p class="text-muted">暂无可用的父目标</p>
+      <a href="{% url 'plan_pages:strategic_goal_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> 创建新目标
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+let selectedGoalId = null;
+
+function selectGoal(goalId) {
+  // 移除所有选中状态
+  document.querySelectorAll('.goal-card').forEach(card => {
+    card.classList.remove('selected');
+  });
+  
+  // 添加选中状态
+  const selectedCard = document.querySelector(`[data-goal-id="${goalId}"]`);
+  if (selectedCard) {
+    selectedCard.classList.add('selected');
+    selectedGoalId = goalId;
+    document.getElementById('parentGoalId').value = goalId;
+    document.getElementById('createBtn').disabled = false;
+  }
+}
+
+// 如果URL中有parent_goal_id参数，自动选中
+{% if parent_goal %}
+selectedGoalId = {{ parent_goal.id }};
+selectGoal(selectedGoalId);
+{% endif %}
+</script>
+{% endblock %}

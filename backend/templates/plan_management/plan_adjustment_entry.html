@@ -1,0 +1,148 @@
+{% extends "shared/list_page_base.html" %}
+{% load static %}
+
+{% block page_title %}计划调整列表{% endblock page_title %}
+{% block page_subtitle %}选择要申请调整的计划{% endblock page_subtitle %}
+
+{% block list_stats_content %}
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="list-stat-card">
+        <div class="list-stat-label">可调整计划总数</div>
+        <div class="list-stat-value">{{ total_count|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="list-stat-card">
+        <div class="list-stat-label">可申请调整</div>
+        <div class="list-stat-value">{{ can_apply_count|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="list-stat-card">
+        <div class="list-stat-label">待审批中</div>
+        <div class="list-stat-value">{{ pending_count|default:0 }}</div>
+      </div>
+    </div>
+  </div>
+{% endblock list_stats_content %}
+
+{% block list_filters_content %}
+  <div class="col-md-3">
+    <label class="form-label">搜索</label>
+    <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="计划编号、名称、负责人">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">状态</label>
+    <select name="status" class="form-select">
+      <option value="">全部状态</option>
+      {% for value, label in STATUS_CHOICES %}
+      <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">计划层级</label>
+    <select name="level" class="form-select">
+      <option value="">全部层级</option>
+      {% for value, label in LEVEL_CHOICES %}
+      <option value="{{ value }}" {% if level_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">计划周期</label>
+    <select name="plan_period" class="form-select">
+      <option value="">全部周期</option>
+      {% for value, label in PLAN_PERIOD_CHOICES %}
+      <option value="{{ value }}" {% if plan_period_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">负责人</label>
+    <select name="responsible" class="form-select">
+      <option value="">全部负责人</option>
+      {% for u in all_responsible_persons %}
+      <option value="{{ u.id }}" {% if responsible_filter|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>
+        {{ u.get_full_name|default:u.username }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+{% endblock list_filters_content %}
+
+{% block list_table_headers %}
+  <th>计划编号</th>
+  <th>计划名称</th>
+  <th>计划层级</th>
+  <th>计划周期</th>
+  <th>负责人</th>
+  <th>时间范围</th>
+  <th>进度</th>
+  <th>状态</th>
+  <th>操作</th>
+{% endblock list_table_headers %}
+
+{% block list_table_rows %}
+  {% for item in page_obj %}
+  {% with plan=item.plan can_apply=item.can_apply has_pending_adjustment=item.has_pending_adjustment %}
+  <tr>
+    <td><code>{{ plan.plan_number }}</code></td>
+    <td>
+      <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="text-dark text-decoration-none fw-medium">
+        {{ plan.name }}
+      </a>
+    </td>
+    <td>{{ plan.get_level_display }}</td>
+    <td>{{ plan.get_plan_period_display }}</td>
+    <td>
+      {{ plan.responsible_person.get_full_name|default:plan.responsible_person.username }}
+      {% if plan.responsible_department %}
+      <div style="font-size: 12px; color: #999999;">{{ plan.responsible_department.name }}</div>
+      {% endif %}
+    </td>
+    <td>
+      {% if plan.start_time and plan.end_time %}
+      <div style="font-size: 12px; color: #666666;">
+        {{ plan.start_time|date:"Y-m-d" }} ~ {{ plan.end_time|date:"Y-m-d" }}
+      </div>
+      {% else %}
+      <span style="color: #999999;">-</span>
+      {% endif %}
+    </td>
+    <td>
+      <div class="list-progress">
+        <div class="list-progress-fill" style="width: {{ plan.completion_rate }}%"></div>
+        <span class="list-progress-text">{{ plan.completion_rate }}%</span>
+      </div>
+    </td>
+    <td>
+      <span class="list-badge list-badge-{{ plan.status }}">{{ plan.get_status_display }}</span>
+    </td>
+    <td>
+      <div class="btn-group btn-group-sm">
+        {% if can_apply %}
+          {% if has_pending_adjustment %}
+            <span class="btn btn-sm btn-secondary" style="opacity: 0.7; cursor: not-allowed;" title="已有待审批的调整申请">审批中</span>
+          {% else %}
+            <a href="{% url 'plan_pages:plan_adjustment_create' plan.id %}" class="btn btn-sm btn-primary" title="申请调整">申请调整</a>
+          {% endif %}
+        {% else %}
+          <span class="btn btn-sm" style="opacity: 0.5; cursor: not-allowed;" title="您没有权限申请调整该计划">无权限</span>
+        {% endif %}
+        <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="btn btn-sm btn-secondary" title="查看详情">查看</a>
+      </div>
+    </td>
+  </tr>
+  {% endwith %}
+  {% empty %}
+  <tr>
+    <td colspan="9" class="list-empty-state">
+      <div class="list-empty-state-icon">📝</div>
+      <div class="list-empty-state-text">暂无可以申请调整的计划</div>
+      <div class="list-empty-state-hint">请先创建并发布计划</div>
+    </td>
+  </tr>
+  {% endfor %}
+{% endblock list_table_rows %}

@@ -1492,34 +1492,41 @@ def supply_category_list(request):
         messages.error(request, '您没有权限查看用品分类')
         return redirect('admin_pages:administrative_home')
     
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    is_active_filter = request.GET.get('is_active', '')
+    
     try:
+        # 基础查询
         categories = SupplyCategory.objects.select_related('parent').order_by('sort_order', 'name')
         
-        # 构建树形结构
-        def build_tree(categories_list):
-            tree = []
-            category_dict = {cat.id: cat for cat in categories_list}
-            
-            for category in categories_list:
-                if category.parent is None:
-                    tree.append(category)
-                else:
-                    if category.parent.id not in category_dict:
-                        tree.append(category)
-                    else:
-                        if not hasattr(category.parent, 'children_list'):
-                            category.parent.children_list = []
-                        category.parent.children_list.append(category)
-            
-            return tree
+        # 应用筛选
+        if search:
+            categories = categories.filter(
+                Q(name__icontains=search) |
+                Q(code__icontains=search) |
+                Q(description__icontains=search)
+            )
         
-        category_tree = build_tree(list(categories))
+        if is_active_filter == 'true':
+            categories = categories.filter(is_active=True)
+        elif is_active_filter == 'false':
+            categories = categories.filter(is_active=False)
+        
+        # 分页处理
+        per_page = 50
+        page_number = request.GET.get('page', 1)
+        try:
+            paginator = Paginator(categories, per_page)
+            page_obj = paginator.get_page(page_number)
+        except Exception:
+            page_obj = None
         
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
         logger.exception('获取用品分类列表失败: %s', str(e))
-        category_tree = []
+        page_obj = None
     
     # 统计信息
     try:
@@ -1543,7 +1550,10 @@ def supply_category_list(request):
         use_administrative_nav=True
     )
     context.update({
-        'category_tree': category_tree,
+        'page_obj': page_obj,
+        'page': page_obj,  # 兼容模板中的变量名
+        'search': search,
+        'is_active': is_active_filter,
     })
     return render(request, "administrative_management/supply_category_list.html", context)
 
@@ -5655,7 +5665,7 @@ def affair_create(request):
         return redirect('admin_pages:affair_list')
     
     if request.method == 'POST':
-        form = AdministrativeAffairForm(request.POST, request.FILES)
+        form = AdministrativeAffairForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             affair = form.save(commit=False)
             affair.created_by = request.user
@@ -5674,7 +5684,7 @@ def affair_create(request):
             messages.success(request, f'行政事务 {affair.affair_number} 创建成功！')
             return redirect('admin_pages:affair_detail', affair_id=affair.id)
     else:
-        form = AdministrativeAffairForm()
+        form = AdministrativeAffairForm(user=request.user)
     
     context = _context(
         "创建行政事务",
@@ -5686,6 +5696,7 @@ def affair_create(request):
     context.update({
         'form': form,
         'is_create': True,
+        'list_url_name': 'admin_pages:affair_list',
     })
     return render(request, "administrative_management/affair_form.html", context)
 
@@ -5709,7 +5720,7 @@ def affair_update(request, affair_id):
     
     if request.method == 'POST':
         old_status = affair.status
-        form = AdministrativeAffairForm(request.POST, request.FILES, instance=affair)
+        form = AdministrativeAffairForm(request.POST, request.FILES, instance=affair, user=request.user)
         if form.is_valid():
             affair = form.save()
             form.save_m2m()
@@ -5727,7 +5738,7 @@ def affair_update(request, affair_id):
             messages.success(request, f'行政事务 {affair.affair_number} 更新成功！')
             return redirect('admin_pages:affair_detail', affair_id=affair.id)
     else:
-        form = AdministrativeAffairForm(instance=affair)
+        form = AdministrativeAffairForm(instance=affair, user=request.user)
     
     context = _context(
         f"编辑行政事务 - {affair.title}",
@@ -5740,6 +5751,7 @@ def affair_update(request, affair_id):
         'form': form,
         'affair': affair,
         'is_create': False,
+        'list_url_name': 'admin_pages:affair_list',
     })
     return render(request, "administrative_management/affair_form.html", context)
 

@@ -77,7 +77,49 @@ def sidebar_menu(request):
             # 如果获取菜单失败，返回空菜单
             return {'sidebar_menu': []}
         
-        return {'sidebar_menu': sidebar_menu_items}
+        # 设置模块标题和副标题
+        module_titles = {
+            'administrative_management': {
+                'title': '行政管理',
+                'subtitle': 'Administrative Management'
+            },
+            'plan_management': {
+                'title': '计划管理',
+                'subtitle': 'Plan Management'
+            },
+            'customer_management': {
+                'title': '客户管理',
+                'subtitle': 'Customer Management'
+            },
+            'production_management': {
+                'title': '生产管理',
+                'subtitle': 'Production Management'
+            },
+            'financial_management': {
+                'title': '财务管理',
+                'subtitle': 'Financial Management'
+            },
+            'personnel_management': {
+                'title': '人事管理',
+                'subtitle': 'Personnel Management'
+            },
+            'workflow_engine': {
+                'title': '审批引擎',
+                'subtitle': 'Workflow Engine'
+            },
+            'system_management': {
+                'title': '系统管理',
+                'subtitle': 'System Management'
+            },
+        }
+        
+        module_info = module_titles.get(current_module, {})
+        
+        return {
+            'sidebar_menu': sidebar_menu_items,
+            'sidebar_title': module_info.get('title', ''),
+            'sidebar_subtitle': module_info.get('subtitle', ''),
+        }
     
     except Exception as e:
         import logging

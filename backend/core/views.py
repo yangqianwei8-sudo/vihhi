@@ -1,4 +1,5 @@
 from datetime import timedelta, datetime
+import json
 
 from django.shortcuts import render, redirect
 
@@ -675,6 +676,691 @@ def home(request):
         except Exception as e:
             logger.exception('获取风险预警失败: %s', str(e))
         
+        # ========== 员工风险对比数据（来源于 plan/home 的风险预警）==========
+        employee_risk_data = []
+        try:
+            from backend.apps.system_management.models import User
+            from backend.apps.plan_management.services.risk_query_service import get_responsible_risk_items
+            
+            # 统计所有员工：优先从 Employee 模型获取，如果没有则从 User 模型获取
+            # 使用字典确保每个 user_id 只保留一个员工记录
+            employee_users_dict = {}  # key: user_id, value: employee_info
+            
+            try:
+                from backend.apps.personnel_management.models import Employee
+                # 获取所有员工（不限制 status，统计全部）
+                # 按 user_id 和 created_time 排序，确保每个 user_id 只保留最新的记录
+                all_employees = Employee.objects.filter(
+                    user__isnull=False
+                ).select_related('user', 'department').order_by('user_id', '-created_time')
+                
+                # 使用字典来确保每个 user_id 只保留一个员工记录（保留最新的）
+                for emp in all_employees:
+                    if emp.user:
+                        user_id = emp.user.id
+                        # 如果该 user_id 还没有记录，或者当前记录更新，则更新
+                        if user_id not in employee_users_dict:
+                            employee_users_dict[user_id] = {
+                                'user': emp.user,
+                                'name': emp.name,
+                                'department': emp.department.name if emp.department else '未分配部门',
+                                'status': emp.status,
+                            }
+                        # 如果已存在，检查是否需要更新（保留最新的 Employee 记录）
+                        # 由于已经按 created_time 降序排序，第一个就是最新的
+                
+            except Exception as e:
+                logger.warning(f'从 Employee 模型获取员工失败: {e}')
+            
+            # 如果 Employee 模型没有数据或数据很少，则从 User 模型补充获取
+            # 获取所有活跃用户（不限制 user_type，统计全部）
+            all_users = User.objects.filter(is_active=True).select_related('department')
+            
+            for user in all_users:
+                # 如果该用户还没有被添加到字典中，则添加
+                if user.id not in employee_users_dict:
+                    employee_users_dict[user.id] = {
+                        'user': user,
+                        'name': user.get_full_name() or user.username,
+                        'department': user.department.name if user.department else '未分配部门',
+                        'status': 'active',  # User 模型没有 status，默认为 active
+                    }
+            
+            # 转换为列表（此时已经确保每个 user_id 只有一个记录）
+            employee_users = list(employee_users_dict.values())
+            
+            # 验证：确保没有重复的 user_id
+            user_ids_in_list = [emp_info['user'].id for emp_info in employee_users]
+            if len(user_ids_in_list) != len(set(user_ids_in_list)):
+                logger.error(f'警告：employee_users 列表中有重复用户！总数量: {len(user_ids_in_list)}, 去重后: {len(set(user_ids_in_list))}')
+                # 强制去重
+                unique_dict = {}
+                for emp_info in employee_users:
+                    user_id = emp_info['user'].id
+                    if user_id not in unique_dict:
+                        unique_dict[user_id] = emp_info
+                employee_users = list(unique_dict.values())
+            
+            # 使用 plan/home 的风险预警服务统计每个员工的风险
+            # 再次使用集合确保最终数据不重复
+            processed_user_ids = set()
+            
+            for emp_info in employee_users:
+                user = emp_info['user']
+                user_name = emp_info['name']
+                department_name = emp_info['department']
+                
+                # 防止重复处理同一个用户
+                if user.id in processed_user_ids:
+                    logger.warning(f'跳过重复用户: {user_name} (ID: {user.id})')
+                    continue
+                processed_user_ids.add(user.id)
+                
+                # 使用 plan/home 的风险预警服务获取该员工的风险项
+                # plan/home 的逻辑：合并 owner 和 responsible_person 的风险
+                try:
+                    from backend.apps.plan_management.services.risk_query_service import get_user_risk_items, get_responsible_risk_items
+                    
+                    # 获取 owner 的风险
+                    owner_risk_items = get_user_risk_items(
+                        user=user,
+                        limit=1000
+                    )
+                    
+                    # 获取 responsible_person 的风险
+                    responsible_risk_items = get_responsible_risk_items(
+                        responsible_user=user,
+                        limit=1000
+                    )
+                    
+                    # 合并并去重（与 plan/home 逻辑完全一致）
+                    all_risk_items = owner_risk_items + responsible_risk_items
+                    seen_objects = set()
+                    risk_items = []
+                    for item in all_risk_items:
+                        obj = item.get('object')
+                        if obj:
+                            obj_key = (item['type'], obj.id)
+                            if obj_key not in seen_objects:
+                                seen_objects.add(obj_key)
+                                risk_items.append(item)
+                    
+                    # 统计风险指标
+                    # 确保正确统计风险类型
+                    goal_risk_count = 0
+                    plan_risk_count = 0
+                    for item in risk_items:
+                        risk_type = item.get('type', '')
+                        if risk_type == 'goal_risk':
+                            goal_risk_count += 1
+                        elif risk_type == 'plan_risk':
+                            plan_risk_count += 1
+                    total_risk_count = len(risk_items)
+                    
+                    # 验证：goal_risk_count + plan_risk_count 应该等于 total_risk_count
+                    if goal_risk_count + plan_risk_count != total_risk_count:
+                        logger.warning(f'员工 {user_name} 风险统计不一致: goal_risk={goal_risk_count}, plan_risk={plan_risk_count}, total={total_risk_count}')
+                    
+                    # 统计逾期天数
+                    total_days_overdue = sum(item.get('days_overdue', 0) for item in risk_items)
+                    avg_days_overdue = total_days_overdue / total_risk_count if total_risk_count > 0 else 0
+                    
+                    # 统计进度差距（实际进度与时间进度的差距）
+                    total_progress_gap = 0
+                    for item in risk_items:
+                        actual = item.get('actual_progress', 0)
+                        time_progress = item.get('time_progress', 0)
+                        if time_progress > 0:
+                            gap = max(0, time_progress - actual)
+                            total_progress_gap += gap
+                    avg_progress_gap = total_progress_gap / total_risk_count if total_risk_count > 0 else 0
+                    
+                    # 计算风险分数（基于风险数量和严重程度）
+                    # 风险分数 = 风险数量 * 10 + 平均逾期天数 * 5 + 平均进度差距 * 2
+                    total_risk_score = total_risk_count * 10 + avg_days_overdue * 5 + avg_progress_gap * 2
+                    
+                    employee_risk_data.append({
+                        'user_id': user.id,
+                        'user_name': user_name,
+                        'username': user.username,
+                        'department': department_name,
+                        'goal_risk_count': goal_risk_count,  # 风险目标数
+                        'plan_risk_count': plan_risk_count,  # 风险计划数
+                        'total_risk_count': total_risk_count,  # 总风险数
+                        'avg_days_overdue': round(avg_days_overdue, 1),  # 平均逾期天数
+                        'avg_progress_gap': round(avg_progress_gap, 1),  # 平均进度差距
+                        'total_risk_score': round(total_risk_score, 1),  # 总风险分数
+                    })
+                except Exception as e:
+                    logger.warning(f'获取员工 {user_name} 的风险数据失败: {e}')
+                    # 如果获取失败，添加空数据
+                    employee_risk_data.append({
+                        'user_id': user.id,
+                        'user_name': user_name,
+                        'username': user.username,
+                        'department': department_name,
+                        'goal_risk_count': 0,
+                        'plan_risk_count': 0,
+                        'total_risk_count': 0,
+                        'avg_days_overdue': 0,
+                        'avg_progress_gap': 0,
+                        'total_risk_score': 0,
+                    })
+            
+            # 最终去重：先按 user_id 去重，再按 user_name 去重（防止同名不同ID的情况）
+            # 第一步：按 user_id 去重，保留风险分数最高的
+            seen_user_ids = {}
+            for emp_data in employee_risk_data:
+                user_id = emp_data['user_id']
+                if user_id not in seen_user_ids:
+                    seen_user_ids[user_id] = emp_data
+                else:
+                    # 如果已存在，保留风险分数更高的
+                    existing_score = seen_user_ids[user_id].get('total_risk_score', 0)
+                    new_score = emp_data.get('total_risk_score', 0)
+                    if new_score > existing_score:
+                        logger.warning(f'发现重复 user_id，保留风险分数更高的: {emp_data.get("user_name")} (ID: {user_id})')
+                        seen_user_ids[user_id] = emp_data
+                    else:
+                        logger.warning(f'发现重复 user_id，保留已存在的: {seen_user_ids[user_id].get("user_name")} (ID: {user_id})')
+            
+            # 转换为列表
+            employee_risk_data = list(seen_user_ids.values())
+            
+            # 第二步：按 user_name 去重（防止同名不同ID的情况，如"杨乾维"）
+            # 如果多个用户有相同的 user_name，只保留风险分数最高的
+            seen_user_names = {}
+            for emp_data in employee_risk_data:
+                user_name = emp_data.get('user_name', '').strip()
+                user_id = emp_data['user_id']
+                
+                if not user_name:
+                    # 如果没有 user_name，使用 username
+                    user_name = emp_data.get('username', '').strip()
+                
+                if user_name:
+                    if user_name not in seen_user_names:
+                        seen_user_names[user_name] = emp_data
+                    else:
+                        # 如果已存在同名用户，保留风险分数更高的
+                        existing_score = seen_user_names[user_name].get('total_risk_score', 0)
+                        new_score = emp_data.get('total_risk_score', 0)
+                        if new_score > existing_score:
+                            logger.warning(f'发现重复用户名，保留风险分数更高的: {user_name} (原ID: {seen_user_names[user_name]["user_id"]}, 新ID: {user_id})')
+                            seen_user_names[user_name] = emp_data
+                        else:
+                            logger.warning(f'发现重复用户名，保留已存在的: {user_name} (保留ID: {seen_user_names[user_name]["user_id"]}, 跳过ID: {user_id})')
+                else:
+                    # 如果没有 user_name 也没有 username，按 user_id 保留
+                    logger.warning(f'用户没有名称，使用 user_id: {user_id}')
+            
+            # 转换为最终列表并按风险分数排序
+            employee_risk_data = list(seen_user_names.values())
+            employee_risk_data.sort(key=lambda x: x.get('total_risk_score', 0), reverse=True)
+            
+            # 最终验证：确保没有重复的 user_id 和 user_name
+            final_user_ids = [emp['user_id'] for emp in employee_risk_data]
+            final_user_names = [emp.get('user_name', emp.get('username', '')) for emp in employee_risk_data]
+            
+            if len(final_user_ids) != len(set(final_user_ids)):
+                logger.error(f'错误：最终数据中仍有重复 user_id！总数量: {len(final_user_ids)}, 去重后: {len(set(final_user_ids))}')
+            
+            if len(final_user_names) != len(set(final_user_names)):
+                logger.error(f'错误：最终数据中仍有重复 user_name！总数量: {len(final_user_names)}, 去重后: {len(set(final_user_names))}')
+                # 强制按 user_name 去重
+                unique_by_name = {}
+                for emp_data in employee_risk_data:
+                    user_name = emp_data.get('user_name', emp_data.get('username', '')).strip()
+                    if user_name and user_name not in unique_by_name:
+                        unique_by_name[user_name] = emp_data
+                    elif not user_name:
+                        # 没有名称的，按 user_id 保留
+                        user_id = emp_data['user_id']
+                        if user_id not in unique_by_name:
+                            unique_by_name[str(user_id)] = emp_data
+                employee_risk_data = list(unique_by_name.values())
+                employee_risk_data.sort(key=lambda x: x.get('total_risk_score', 0), reverse=True)
+            
+        except Exception as e:
+            logger.exception('获取员工风险数据失败: %s', str(e))
+            employee_risk_data = []
+        
+        # ========== 员工待办事项统计 ==========
+        employee_todo_data = []
+        try:
+            # 使用与风险预警相同的员工列表
+            if employee_users:
+                processed_todo_user_ids = set()
+                
+                for emp_info in employee_users:
+                    user = emp_info['user']
+                    user_name = emp_info['name']
+                    department_name = emp_info['department']
+                    
+                    # 防止重复处理同一个用户
+                    if user.id in processed_todo_user_ids:
+                        continue
+                    processed_todo_user_ids.add(user.id)
+                    
+                    try:
+                        from backend.apps.plan_management.services.todo_service import get_user_todos, get_responsible_todos
+                        
+                        # 获取 owner 的待办
+                        owner_todos = get_user_todos(user=user)
+                        
+                        # 获取 responsible_person 的待办
+                        responsible_todos = get_responsible_todos(responsible_user=user)
+                        
+                        # 合并并去重
+                        all_todos = owner_todos + responsible_todos
+                        seen_todos = set()
+                        unique_todos = []
+                        for todo in all_todos:
+                            obj = todo.get('object')
+                            if obj:
+                                todo_key = (todo.get('type', ''), obj.id)
+                                if todo_key not in seen_todos:
+                                    seen_todos.add(todo_key)
+                                    unique_todos.append(todo)
+                            else:
+                                # 如果没有 object，使用 title 和 type 作为唯一标识
+                                todo_key = (todo.get('type', ''), todo.get('title', ''))
+                                if todo_key not in seen_todos:
+                                    seen_todos.add(todo_key)
+                                    unique_todos.append(todo)
+                        
+                        # 统计待办指标
+                        total_todos = len(unique_todos)
+                        high_priority_count = sum(1 for t in unique_todos if t.get('priority') == 'high')
+                        medium_priority_count = sum(1 for t in unique_todos if t.get('priority') == 'medium')
+                        low_priority_count = sum(1 for t in unique_todos if t.get('priority') == 'low')
+                        overdue_count = sum(1 for t in unique_todos if t.get('is_overdue', False))
+                        
+                        # 统计逾期天数
+                        total_days_overdue = sum(t.get('overdue_days', 0) for t in unique_todos if t.get('is_overdue', False))
+                        avg_days_overdue = total_days_overdue / overdue_count if overdue_count > 0 else 0
+                        
+                        # 统计待办类型分布
+                        goal_accept_count = sum(1 for t in unique_todos if t.get('type') == 'goal_accept')
+                        plan_accept_count = sum(1 for t in unique_todos if t.get('type') == 'plan_accept')
+                        goal_execute_count = sum(1 for t in unique_todos if t.get('type') == 'goal_execute')
+                        plan_execute_count = sum(1 for t in unique_todos if t.get('type') == 'plan_execute')
+                        plan_today_count = sum(1 for t in unique_todos if t.get('type') == 'plan_today')
+                        plan_risk_count = sum(1 for t in unique_todos if t.get('type') == 'plan_risk')
+                        
+                        # 计算待办分数（用于排序和对比）
+                        # 待办分数 = 总待办数 * 5 + 高优先级 * 10 + 逾期数 * 15 + 平均逾期天数 * 2
+                        todo_score = total_todos * 5 + high_priority_count * 10 + overdue_count * 15 + avg_days_overdue * 2
+                        
+                        employee_todo_data.append({
+                            'user_id': user.id,
+                            'user_name': user_name,
+                            'username': user.username,
+                            'department': department_name,
+                            'total_todos': total_todos,
+                            'high_priority_count': high_priority_count,
+                            'medium_priority_count': medium_priority_count,
+                            'low_priority_count': low_priority_count,
+                            'overdue_count': overdue_count,
+                            'avg_days_overdue': round(avg_days_overdue, 1),
+                            'goal_accept_count': goal_accept_count,
+                            'plan_accept_count': plan_accept_count,
+                            'goal_execute_count': goal_execute_count,
+                            'plan_execute_count': plan_execute_count,
+                            'plan_today_count': plan_today_count,
+                            'plan_risk_count': plan_risk_count,
+                            'todo_score': round(todo_score, 1),
+                        })
+                    except Exception as e:
+                        logger.warning(f'获取员工 {user_name} 的待办数据失败: {e}')
+                        # 如果获取失败，添加空数据
+                        employee_todo_data.append({
+                            'user_id': user.id,
+                            'user_name': user_name,
+                            'username': user.username,
+                            'department': department_name,
+                            'total_todos': 0,
+                            'high_priority_count': 0,
+                            'medium_priority_count': 0,
+                            'low_priority_count': 0,
+                            'overdue_count': 0,
+                            'avg_days_overdue': 0,
+                            'goal_accept_count': 0,
+                            'plan_accept_count': 0,
+                            'goal_execute_count': 0,
+                            'plan_execute_count': 0,
+                            'plan_today_count': 0,
+                            'plan_risk_count': 0,
+                            'todo_score': 0,
+                        })
+                
+                # 去重：按 user_id 去重，保留待办分数最高的
+                seen_todo_user_ids = {}
+                for emp_data in employee_todo_data:
+                    user_id = emp_data['user_id']
+                    if user_id not in seen_todo_user_ids:
+                        seen_todo_user_ids[user_id] = emp_data
+                    else:
+                        existing_score = seen_todo_user_ids[user_id].get('todo_score', 0)
+                        new_score = emp_data.get('todo_score', 0)
+                        if new_score > existing_score:
+                            seen_todo_user_ids[user_id] = emp_data
+                
+                # 按 user_name 去重
+                seen_todo_user_names = {}
+                for emp_data in seen_todo_user_ids.values():
+                    user_name = emp_data.get('user_name', '').strip()
+                    if not user_name:
+                        user_name = emp_data.get('username', '').strip()
+                    
+                    if user_name:
+                        if user_name not in seen_todo_user_names:
+                            seen_todo_user_names[user_name] = emp_data
+                        else:
+                            existing_score = seen_todo_user_names[user_name].get('todo_score', 0)
+                            new_score = emp_data.get('todo_score', 0)
+                            if new_score > existing_score:
+                                seen_todo_user_names[user_name] = emp_data
+                
+                # 转换为最终列表并按待办分数排序
+                employee_todo_data = list(seen_todo_user_names.values())
+                employee_todo_data.sort(key=lambda x: x.get('todo_score', 0), reverse=True)
+                
+        except Exception as e:
+            logger.exception('获取员工待办数据失败: %s', str(e))
+            employee_todo_data = []
+        
+        # ========== 员工工作计划统计 ==========
+        employee_plan_data = []
+        try:
+            # 使用与风险预警相同的员工列表
+            if employee_users:
+                processed_plan_user_ids = set()
+                from django.utils import timezone
+                from backend.apps.plan_management.models import Plan
+                from django.db.models import Q
+                
+                now = timezone.now()
+                today = now.date()
+                
+                for emp_info in employee_users:
+                    user = emp_info['user']
+                    user_name = emp_info['name']
+                    department_name = emp_info['department']
+                    
+                    # 防止重复处理同一个用户
+                    if user.id in processed_plan_user_ids:
+                        continue
+                    processed_plan_user_ids.add(user.id)
+                    
+                    try:
+                        # 获取 owner、responsible_person、created_by 的计划（与统计卡片保持一致）
+                        all_plans = Plan.objects.filter(
+                            Q(owner=user) | Q(responsible_person=user) | Q(created_by=user)
+                        ).distinct()
+                        
+                        # 统计计划指标
+                        total_plans = all_plans.count()
+                        draft_count = all_plans.filter(status='draft').count()
+                        published_count = all_plans.filter(status='published').count()
+                        accepted_count = all_plans.filter(status='accepted').count()
+                        in_progress_count = all_plans.filter(status='in_progress').count()
+                        completed_count = all_plans.filter(status='completed').count()
+                        cancelled_count = all_plans.filter(status='cancelled').count()
+                        
+                        # 统计逾期计划
+                        overdue_plans = all_plans.filter(
+                            status__in=['draft', 'published', 'accepted', 'in_progress'],
+                            end_time__lt=now
+                        )
+                        overdue_count = overdue_plans.count()
+                        
+                        # 统计逾期天数
+                        total_days_overdue = sum(plan.overdue_days or 0 for plan in overdue_plans if hasattr(plan, 'overdue_days'))
+                        avg_days_overdue = total_days_overdue / overdue_count if overdue_count > 0 else 0
+                        
+                        # 统计今日应执行的计划
+                        today_plans = all_plans.filter(
+                            status__in=['draft', 'published', 'accepted', 'in_progress'],
+                            start_time__lte=now,
+                            end_time__gte=now
+                        )
+                        today_count = today_plans.count()
+                        
+                        # 统计平均进度
+                        active_plans = all_plans.filter(status__in=['draft', 'published', 'accepted', 'in_progress'])
+                        total_progress = sum(float(plan.progress or 0) for plan in active_plans if hasattr(plan, 'progress'))
+                        avg_progress = total_progress / active_plans.count() if active_plans.count() > 0 else 0
+                        
+                        # 计算计划分数（用于排序和对比）
+                        # 计划分数 = 总计划数 * 3 + 执行中 * 5 + 逾期数 * 10 + 平均逾期天数 * 2 - 已完成 * 1
+                        plan_score = total_plans * 3 + in_progress_count * 5 + overdue_count * 10 + avg_days_overdue * 2 - completed_count * 1
+                        
+                        employee_plan_data.append({
+                            'user_id': user.id,
+                            'user_name': user_name,
+                            'username': user.username,
+                            'department': department_name,
+                            'total_plans': total_plans,
+                            'draft_count': draft_count,
+                            'published_count': published_count,
+                            'accepted_count': accepted_count,
+                            'in_progress_count': in_progress_count,
+                            'completed_count': completed_count,
+                            'cancelled_count': cancelled_count,
+                            'overdue_count': overdue_count,
+                            'avg_days_overdue': round(avg_days_overdue, 1),
+                            'today_count': today_count,
+                            'avg_progress': round(avg_progress, 1),
+                            'plan_score': round(plan_score, 1),
+                        })
+                    except Exception as e:
+                        logger.warning(f'获取员工 {user_name} 的工作计划数据失败: {e}')
+                        # 如果获取失败，添加空数据
+                        employee_plan_data.append({
+                            'user_id': user.id,
+                            'user_name': user_name,
+                            'username': user.username,
+                            'department': department_name,
+                            'total_plans': 0,
+                            'draft_count': 0,
+                            'published_count': 0,
+                            'accepted_count': 0,
+                            'in_progress_count': 0,
+                            'completed_count': 0,
+                            'cancelled_count': 0,
+                            'overdue_count': 0,
+                            'avg_days_overdue': 0,
+                            'today_count': 0,
+                            'avg_progress': 0,
+                            'plan_score': 0,
+                        })
+                
+                # 去重：按 user_id 去重，保留计划分数最高的
+                seen_plan_user_ids = {}
+                for emp_data in employee_plan_data:
+                    user_id = emp_data['user_id']
+                    if user_id not in seen_plan_user_ids:
+                        seen_plan_user_ids[user_id] = emp_data
+                    else:
+                        existing_score = seen_plan_user_ids[user_id].get('plan_score', 0)
+                        new_score = emp_data.get('plan_score', 0)
+                        if new_score > existing_score:
+                            seen_plan_user_ids[user_id] = emp_data
+                
+                # 按 user_name 去重
+                seen_plan_user_names = {}
+                for emp_data in seen_plan_user_ids.values():
+                    user_name = emp_data.get('user_name', '').strip()
+                    if not user_name:
+                        user_name = emp_data.get('username', '').strip()
+                    
+                    if user_name:
+                        if user_name not in seen_plan_user_names:
+                            seen_plan_user_names[user_name] = emp_data
+                        else:
+                            existing_score = seen_plan_user_names[user_name].get('plan_score', 0)
+                            new_score = emp_data.get('plan_score', 0)
+                            if new_score > existing_score:
+                                seen_plan_user_names[user_name] = emp_data
+                
+                # 转换为最终列表并按计划分数排序
+                employee_plan_data = list(seen_plan_user_names.values())
+                employee_plan_data.sort(key=lambda x: x.get('plan_score', 0), reverse=True)
+                
+        except Exception as e:
+            logger.exception('获取员工工作计划数据失败: %s', str(e))
+            employee_plan_data = []
+        
+        # ========== 员工战略目标统计 ==========
+        employee_goal_data = []
+        try:
+            # 使用与风险预警相同的员工列表
+            if employee_users:
+                processed_goal_user_ids = set()
+                from django.utils import timezone
+                from backend.apps.plan_management.models import StrategicGoal
+                from django.db.models import Q
+                from datetime import timedelta
+                
+                now = timezone.now()
+                today = now.date()
+                
+                for emp_info in employee_users:
+                    user = emp_info['user']
+                    user_name = emp_info['name']
+                    department_name = emp_info['department']
+                    
+                    # 防止重复处理同一个用户
+                    if user.id in processed_goal_user_ids:
+                        continue
+                    processed_goal_user_ids.add(user.id)
+                    
+                    try:
+                        # 获取 owner、responsible_person、created_by 的目标（与统计卡片保持一致）
+                        all_goals = StrategicGoal.objects.filter(
+                            Q(owner=user) | Q(responsible_person=user) | Q(created_by=user)
+                        ).distinct()
+                        
+                        # 统计目标指标
+                        total_goals = all_goals.count()
+                        draft_count = all_goals.filter(status='draft').count()
+                        published_count = all_goals.filter(status='published').count()
+                        accepted_count = all_goals.filter(status='accepted').count()
+                        in_progress_count = all_goals.filter(status='in_progress').count()
+                        completed_count = all_goals.filter(status='completed').count()
+                        cancelled_count = all_goals.filter(status='cancelled').count()
+                        
+                        # 统计逾期目标
+                        overdue_goals = all_goals.filter(
+                            status__in=['draft', 'published', 'accepted', 'in_progress'],
+                            end_date__lt=today
+                        )
+                        overdue_count = overdue_goals.count()
+                        
+                        # 统计逾期天数
+                        total_days_overdue = 0
+                        for goal in overdue_goals:
+                            if goal.end_date:
+                                days_overdue = (today - goal.end_date).days
+                                total_days_overdue += max(0, days_overdue)
+                        avg_days_overdue = total_days_overdue / overdue_count if overdue_count > 0 else 0
+                        
+                        # 统计本月需完成的目标
+                        month_start = today.replace(day=1)
+                        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+                        this_month_goals = all_goals.filter(
+                            status__in=['draft', 'published', 'accepted', 'in_progress'],
+                            end_date__gte=month_start,
+                            end_date__lte=month_end
+                        )
+                        this_month_count = this_month_goals.count()
+                        
+                        # 统计平均完成率
+                        active_goals = all_goals.filter(status__in=['draft', 'published', 'accepted', 'in_progress'])
+                        total_completion = sum(float(goal.completion_rate or 0) for goal in active_goals if hasattr(goal, 'completion_rate'))
+                        avg_completion = total_completion / active_goals.count() if active_goals.count() > 0 else 0
+                        
+                        # 计算目标分数（用于排序和对比）
+                        # 目标分数 = 总目标数 * 3 + 执行中 * 5 + 逾期数 * 10 + 平均逾期天数 * 2 - 已完成 * 1
+                        goal_score = total_goals * 3 + in_progress_count * 5 + overdue_count * 10 + avg_days_overdue * 2 - completed_count * 1
+                        
+                        employee_goal_data.append({
+                            'user_id': user.id,
+                            'user_name': user_name,
+                            'username': user.username,
+                            'department': department_name,
+                            'total_goals': total_goals,
+                            'draft_count': draft_count,
+                            'published_count': published_count,
+                            'accepted_count': accepted_count,
+                            'in_progress_count': in_progress_count,
+                            'completed_count': completed_count,
+                            'cancelled_count': cancelled_count,
+                            'overdue_count': overdue_count,
+                            'avg_days_overdue': round(avg_days_overdue, 1),
+                            'this_month_count': this_month_count,
+                            'avg_completion': round(avg_completion, 1),
+                            'goal_score': round(goal_score, 1),
+                        })
+                    except Exception as e:
+                        logger.warning(f'获取员工 {user_name} 的战略目标数据失败: {e}')
+                        # 如果获取失败，添加空数据
+                        employee_goal_data.append({
+                            'user_id': user.id,
+                            'user_name': user_name,
+                            'username': user.username,
+                            'department': department_name,
+                            'total_goals': 0,
+                            'draft_count': 0,
+                            'published_count': 0,
+                            'accepted_count': 0,
+                            'in_progress_count': 0,
+                            'completed_count': 0,
+                            'cancelled_count': 0,
+                            'overdue_count': 0,
+                            'avg_days_overdue': 0,
+                            'this_month_count': 0,
+                            'avg_completion': 0,
+                            'goal_score': 0,
+                        })
+                
+                # 去重：按 user_id 去重，保留目标分数最高的
+                seen_goal_user_ids = {}
+                for emp_data in employee_goal_data:
+                    user_id = emp_data['user_id']
+                    if user_id not in seen_goal_user_ids:
+                        seen_goal_user_ids[user_id] = emp_data
+                    else:
+                        existing_score = seen_goal_user_ids[user_id].get('goal_score', 0)
+                        new_score = emp_data.get('goal_score', 0)
+                        if new_score > existing_score:
+                            seen_goal_user_ids[user_id] = emp_data
+                
+                # 按 user_name 去重
+                seen_goal_user_names = {}
+                for emp_data in seen_goal_user_ids.values():
+                    user_name = emp_data.get('user_name', '').strip()
+                    if not user_name:
+                        user_name = emp_data.get('username', '').strip()
+                    
+                    if user_name:
+                        if user_name not in seen_goal_user_names:
+                            seen_goal_user_names[user_name] = emp_data
+                        else:
+                            existing_score = seen_goal_user_names[user_name].get('goal_score', 0)
+                            new_score = emp_data.get('goal_score', 0)
+                            if new_score > existing_score:
+                                seen_goal_user_names[user_name] = emp_data
+                
+                # 转换为最终列表并按目标分数排序
+                employee_goal_data = list(seen_goal_user_names.values())
+                employee_goal_data.sort(key=lambda x: x.get('goal_score', 0), reverse=True)
+                
+        except Exception as e:
+            logger.exception('获取员工战略目标数据失败: %s', str(e))
+            employee_goal_data = []
+        
         # ========== 待办事项 ==========
         todo_items = []
         pending_tasks_count = len(task_board.get('pending', []))
@@ -750,16 +1436,6 @@ def home(request):
         
         # ========== 顶部操作栏 ==========
         top_actions = []
-        try:
-            if _permission_granted('plan_management.plan.create', permission_set):
-                top_actions.append({
-                    'label': '创建计划',
-                    'icon': '📋',
-                    'url': reverse('plan_pages:plan_create')
-                })
-        except Exception:
-            pass
-        
         try:
             if _permission_granted('production_management.create', permission_set):
                 top_actions.append({
@@ -841,6 +1517,14 @@ def home(request):
             'risk_warnings': risk_warnings[:5],
             'overdue_tasks_count': overdue_tasks_count,
             'stale_tasks_count': stale_tasks_count,
+            'employee_risk_data': employee_risk_data,  # 员工风险对比数据
+            'employee_risk_data_json': json.dumps(employee_risk_data, ensure_ascii=False),  # JSON格式用于前端
+            'employee_todo_data': employee_todo_data,  # 员工待办对比数据
+            'employee_todo_data_json': json.dumps(employee_todo_data, ensure_ascii=False),  # JSON格式用于前端
+            'employee_plan_data': employee_plan_data,  # 员工工作计划对比数据
+            'employee_plan_data_json': json.dumps(employee_plan_data, ensure_ascii=False),  # JSON格式用于前端
+            'employee_goal_data': employee_goal_data,  # 员工战略目标对比数据
+            'employee_goal_data_json': json.dumps(employee_goal_data, ensure_ascii=False),  # JSON格式用于前端
             'todo_items': todo_items,
             'pending_tasks_count': pending_tasks_count,
             'recent_activities': recent_activities,

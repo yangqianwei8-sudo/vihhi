@@ -925,10 +925,34 @@ class ExpenseReimbursementForm(forms.ModelForm):
 
 class AdministrativeAffairForm(forms.ModelForm):
     """行政事务表单"""
+
+    # 固定字段：所属部门、负责人、表单编号（必须字段）
+    responsible_department = forms.ModelChoiceField(
+        queryset=Department.objects.none(),
+        required=True,
+        label='所属部门',
+        widget=forms.Select(attrs={'class': 'form-select', 'disabled': True})
+    )
+    responsible_person = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        required=True,
+        label='负责人',
+        widget=forms.Select(attrs={'class': 'form-select', 'disabled': True})
+    )
+    form_number = forms.CharField(
+        required=False,
+        label='事务编号',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'readonly': True,
+            'placeholder': '系统自动生成'
+        })
+    )
     
     class Meta:
         model = AdministrativeAffair
         fields = [
+            # 其他字段（固定字段 responsible_department, responsible_person, form_number 不在模型中，在表单类中直接定义）
             'title', 'affair_type', 'content', 'priority', 'responsible_user',
             'participants', 'planned_start_time', 'planned_end_time', 'attachment'
         ]
@@ -961,11 +985,34 @@ class AdministrativeAffairForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+
+        # 设置固定字段的查询集和初始值
+        self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
+        self.fields['responsible_person'].queryset = User.objects.filter(is_active=True)
+
+        if user:
+            if user.department:
+                self.fields['responsible_department'].initial = user.department
+            self.fields['responsible_person'].initial = user
+
+        if self.instance and self.instance.pk:
+            self.fields['form_number'].initial = self.instance.affair_number
+        else:
+            self.fields['form_number'].initial = '系统将自动生成'
+
         self.fields['responsible_user'].queryset = User.objects.filter(is_active=True).order_by('username')
         self.fields['participants'].queryset = User.objects.filter(is_active=True).order_by('username')
         self.fields['participants'].required = False
         self.fields['attachment'].required = False
+
+    def save(self, commit=True):
+        # 固定字段不保存到模型（因为模型中没有这些字段）
+        instance = super().save(commit=False)
+        if commit:
+            instance.save()
+        return instance
 
 
 class AffairProgressRecordForm(forms.ModelForm):

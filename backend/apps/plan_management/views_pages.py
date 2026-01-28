@@ -321,35 +321,91 @@ def _build_plan_management_menu(permission_set, active_id=None):
 PLAN_MANAGEMENT_MENU_STRUCTURE = [
     {
         'id': 'plan_home',
-        'label': '计划管理首页',
+        'label': '首页',
         'icon': '🏠',
         'url_name': 'plan_pages:plan_management_home',
         'permission': 'plan_management.view',
     },
     {
-        'id': 'strategic_goal',
-        'label': '战略目标',
+        'id': 'strategic_goal_management',
+        'label': '目标制订',
         'icon': '🎯',
         'permission': 'plan_management.manage_goal',
         'expanded': True,  # 默认展开
         'children': [
             {'id': 'strategic_goal_list', 'label': '目标列表', 'icon': '🎯', 'url_name': 'plan_pages:strategic_goal_list', 'permission': 'plan_management.manage_goal'},
             {'id': 'strategic_goal_create', 'label': '创建目标', 'icon': '➕', 'url_name': 'plan_pages:strategic_goal_create', 'permission': 'plan_management.manage_goal'},
-            {'id': 'strategic_goal_decompose', 'label': '目标分解', 'icon': '📊', 'url_name': 'plan_pages:strategic_goal_decompose_entry', 'permission': 'plan_management.manage_goal'},
-            {'id': 'strategic_goal_track', 'label': '目标跟踪', 'icon': '📈', 'url_name': 'plan_pages:strategic_goal_track_entry', 'permission': 'plan_management.view_goal_progress'},
+        ]
+    },
+    {
+        'id': 'strategic_goal_decompose',
+        'label': '目标分解',
+        'icon': '📊',
+        'permission': 'plan_management.manage_goal',
+        'expanded': True,  # 默认展开
+        'children': [
+            {'id': 'strategic_goal_decompose_list', 'label': '目标分解列表', 'icon': '📋', 'url_name': 'plan_pages:strategic_goal_decompose_list', 'permission': 'plan_management.manage_goal'},
+        ]
+    },
+    {
+        'id': 'strategic_goal_track',
+        'label': '目标跟踪',
+        'icon': '📈',
+        'permission': 'plan_management.view_goal_progress',
+        'expanded': True,  # 默认展开
+        'children': [
+            {'id': 'strategic_goal_track_list', 'label': '目标跟踪列表', 'icon': '📋', 'url_name': 'plan_pages:strategic_goal_track_entry', 'permission': 'plan_management.view_goal_progress'},
+        ]
+    },
+    {
+        'id': 'goal_adjustment',
+        'label': '目标调整',
+        'icon': '🔄',
+        'permission': 'plan_management.manage_goal',
+        'expanded': True,  # 默认展开
+        'children': [
+            {'id': 'goal_adjustment_list', 'label': '目标调整列表', 'icon': '📋', 'url_name': 'plan_pages:goal_adjustment_list', 'permission': 'plan_management.manage_goal'},
         ]
     },
     {
         'id': 'plan_management',
-        'label': '计划管理',
+        'label': '计划制订',
         'icon': '📅',
         'permission': 'plan_management.view',
         'expanded': True,  # 默认展开
         'children': [
             {'id': 'plan_list', 'label': '计划列表', 'icon': '📋', 'url_name': 'plan_pages:plan_list', 'permission': 'plan_management.view'},
             {'id': 'plan_create', 'label': '创建计划', 'icon': '➕', 'url_name': 'plan_pages:plan_create', 'permission': 'plan_management.plan.create'},
-            {'id': 'plan_decompose', 'label': '计划分解', 'icon': '📊', 'url_name': 'plan_pages:plan_decompose_entry', 'permission': 'plan_management.view'},
-            {'id': 'plan_track', 'label': '计划跟踪', 'icon': '📈', 'url_name': 'plan_pages:plan_track_entry', 'permission': 'plan_management.view'},
+        ]
+    },
+    {
+        'id': 'plan_decompose',
+        'label': '计划分解',
+        'icon': '📊',
+        'permission': 'plan_management.view',
+        'expanded': True,  # 默认展开
+        'children': [
+            {'id': 'plan_decompose_list', 'label': '计划分解列表', 'icon': '📋', 'url_name': 'plan_pages:plan_decompose_entry', 'permission': 'plan_management.view'},
+        ]
+    },
+    {
+        'id': 'plan_track',
+        'label': '计划跟踪',
+        'icon': '📈',
+        'permission': 'plan_management.view',
+        'expanded': True,  # 默认展开
+        'children': [
+            {'id': 'plan_track_list', 'label': '计划跟踪列表', 'icon': '📋', 'url_name': 'plan_pages:plan_track_entry', 'permission': 'plan_management.view'},
+        ]
+    },
+    {
+        'id': 'plan_adjustment',
+        'label': '计划调整',
+        'icon': '🔄',
+        'permission': 'plan_management.view',
+        'expanded': True,  # 默认展开
+        'children': [
+            {'id': 'plan_adjustment_list', 'label': '计划调整列表', 'icon': '📋', 'url_name': 'plan_pages:plan_adjustment_list', 'permission': 'plan_management.view'},
         ]
     },
     {
@@ -362,7 +418,6 @@ PLAN_MANAGEMENT_MENU_STRUCTURE = [
             {'id': 'plan_completion_analysis', 'label': '完成度分析', 'icon': '✅', 'url_name': 'plan_pages:plan_completion_analysis', 'permission': 'plan_management.view_analysis'},
             {'id': 'plan_goal_achievement', 'label': '目标达成分析', 'icon': '🎯', 'url_name': 'plan_pages:plan_goal_achievement', 'permission': 'plan_management.view_analysis'},
             {'id': 'plan_statistics', 'label': '统计报表', 'icon': '📊', 'url_name': 'plan_pages:plan_statistics', 'permission': 'plan_management.view_analysis'},
-            {'id': 'plan_approval', 'label': '计划审批', 'icon': '📝', 'url_name': 'plan_pages:plan_approval_list', 'permission': 'plan_management.approve_plan'},
         ]
     },
 ]
@@ -750,24 +805,51 @@ def plan_management_home(request):
                     todo_items.append(todo_item)
         
         # 合并所有待办，优先显示今日、本周、本月
-        all_todo_items = daily_todos[:3] + weekly_todos[:3] + monthly_todos[:3] + todo_items[:5]
+        all_todo_items = daily_todos + weekly_todos + monthly_todos + todo_items  # 显示全部，不限制数量
         
-        context['todo_items'] = all_todo_items[:10]  # 最多显示10条
+        context['todo_items'] = all_todo_items  # 显示全部，不限制数量
         context['daily_todos_count'] = len(daily_todos)
         context['weekly_todos_count'] = len(weekly_todos)
         context['monthly_todos_count'] = len(monthly_todos)
-        context['user_todos'] = user_todos[:5]  # 保留旧字段以兼容
+        context['user_todos'] = user_todos  # 显示全部，不限制数量
         context['user_todos_count'] = len(user_todos)
         
         # 风险提醒（右）
-        risk_items = get_user_risk_items(
+        # 修复：合并owner和responsible_person的风险，确保显示完整
+        owner_risk_items = get_user_risk_items(
             request.user,
-            limit=5,
+            limit=1000,  # 获取全部风险项，不限制数量
             filter_department_id=filter_department_id,
             filter_responsible_person_id=filter_responsible_person_id,
             filter_start_date=filter_start_date,
             filter_end_date=filter_end_date
         )
+        
+        responsible_risk_items = get_responsible_risk_items(
+            request.user,
+            limit=1000,  # 获取全部风险项，不限制数量
+            filter_department_id=filter_department_id,
+            filter_responsible_person_id=filter_responsible_person_id,
+            filter_start_date=filter_start_date,
+            filter_end_date=filter_end_date
+        )
+        
+        # 合并并去重
+        all_risk_items = owner_risk_items + responsible_risk_items
+        seen_objects = set()
+        unique_risk_items = []
+        for item in all_risk_items:
+            obj = item.get('object')
+            if obj:
+                obj_key = (item['type'], obj.id)
+                if obj_key not in seen_objects:
+                    seen_objects.add(obj_key)
+                    unique_risk_items.append(item)
+        
+        # 按逾期天数排序
+        unique_risk_items.sort(key=lambda x: x.get('days_overdue', 0), reverse=True)
+        risk_items = unique_risk_items  # 显示全部，不限制数量
+        
         context['risk_items'] = risk_items
         context['risk_items_count'] = len(risk_items)
         
@@ -1141,6 +1223,22 @@ def plan_management_home(request):
         risk_items = []
         # 确保 all_todo_items 变量被定义
         all_todo_items = []
+        # 确保导入的函数被定义（如果导入失败）
+        try:
+            from backend.apps.plan_management.services.risk_query_service import get_user_risk_items, get_responsible_risk_items, get_subordinates_risk_items
+            from backend.apps.plan_management.services.todo_service import get_user_todos, get_responsible_todos
+        except ImportError:
+            # 如果导入失败，定义默认的空函数
+            def get_user_risk_items(*args, **kwargs):
+                return []
+            def get_responsible_risk_items(*args, **kwargs):
+                return []
+            def get_subordinates_risk_items(*args, **kwargs):
+                return []
+            def get_user_todos(*args, **kwargs):
+                return []
+            def get_responsible_todos(*args, **kwargs):
+                return []
         context.setdefault('subordinate_plan_stats', [])
         context.setdefault('subordinate_goal_stats', [])
         context.setdefault('all_plan_stats', {'total': 0, 'in_progress': 0, 'today': 0, 'overdue': 0})
@@ -1206,7 +1304,7 @@ def plan_management_home(request):
     my_plans_qs = Plan.objects.filter(responsible_person=request.user).order_by('-updated_time') if 'responsible_person' in plan_fields else Plan.objects.none()
     # 应用筛选条件
     my_plans_qs = apply_filters_to_queryset(my_plans_qs, 'plan')
-    my_plans = my_plans_qs.select_related(*plan_related_fields)[:5] if plan_related_fields and my_plans_qs else []
+    my_plans = list(my_plans_qs.select_related(*plan_related_fields)) if plan_related_fields and my_plans_qs else []  # 显示全部，不限制数量
     my_work['my_plans'] = [{
         'title': p.name,
         'progress': float(getattr(p, 'progress', 0) or 0),
@@ -1225,7 +1323,7 @@ def plan_management_home(request):
     my_goals_qs = StrategicGoal.objects.filter(responsible_person=request.user).order_by('-updated_time') if 'responsible_person' in goal_fields else StrategicGoal.objects.none()
     # 应用筛选条件
     my_goals_qs = apply_filters_to_queryset(my_goals_qs, 'goal')
-    my_goals = my_goals_qs.select_related(*goal_related_fields)[:5] if goal_related_fields and my_goals_qs else []
+    my_goals = list(my_goals_qs.select_related(*goal_related_fields)) if goal_related_fields and my_goals_qs else []  # 显示全部，不限制数量
     
     my_work['my_goals'] = [{
         'title': g.name,
@@ -1277,12 +1375,18 @@ def plan_management_home(request):
     category_data = {}
     
     # 预先定义所有需要的查询集（用于"全部"分类）
-    # 下属负责的查询集
+    # 下属负责的查询集（与统计卡片保持一致：owner、responsible_person、created_by）
     subordinate_responsible_plans_qs = Plan.objects.none()
     subordinate_responsible_goals_qs = StrategicGoal.objects.none()
     if is_manager and subordinates.exists():
-        subordinate_responsible_plans_qs = Plan.objects.filter(responsible_person__in=subordinates)
-        subordinate_responsible_goals_qs = StrategicGoal.objects.filter(responsible_person__in=subordinates)
+        from django.db.models import Q
+        # 与统计卡片保持一致：包含 owner、responsible_person、created_by
+        subordinate_responsible_plans_qs = Plan.objects.filter(
+            Q(owner__in=subordinates) | Q(responsible_person__in=subordinates) | Q(created_by__in=subordinates)
+        ).distinct()
+        subordinate_responsible_goals_qs = StrategicGoal.objects.filter(
+            Q(owner__in=subordinates) | Q(responsible_person__in=subordinates) | Q(created_by__in=subordinates)
+        ).distinct()
         # 应用筛选条件
         subordinate_responsible_plans_qs = apply_filters_to_queryset(subordinate_responsible_plans_qs, 'plan')
         subordinate_responsible_goals_qs = apply_filters_to_queryset(subordinate_responsible_goals_qs, 'goal')
@@ -1308,10 +1412,33 @@ def plan_management_home(request):
     # 计划状态分布和目标状态分布已清除
     
     # 全部分类的风险项：合并所有相关风险
+    # 修复：包含owner + responsible_person + 下属负责的风险
     # 确保 risk_items 已定义
     if 'risk_items' not in locals():
         risk_items = context.get('risk_items', [])
-    all_risk_items = list(risk_items)  # 我负责的风险（owner=user）
+    
+    # 从context获取风险（已在首页计算，包含owner和responsible的风险）
+    # 但为了确保完整性，我们重新获取所有相关风险
+    owner_risk_items = get_user_risk_items(
+        request.user,
+        limit=10,
+        filter_department_id=filter_department_id,
+        filter_responsible_person_id=filter_responsible_person_id,
+        filter_start_date=filter_start_date,
+        filter_end_date=filter_end_date
+    )
+    
+    responsible_risk_items = get_responsible_risk_items(
+        request.user,
+        limit=10,
+        filter_department_id=filter_department_id,
+        filter_responsible_person_id=filter_responsible_person_id,
+        filter_start_date=filter_start_date,
+        filter_end_date=filter_end_date
+    )
+    
+    # 合并owner和responsible的风险
+    all_risk_items = owner_risk_items + responsible_risk_items
     
     # 如果筛选了负责人，只显示该负责人的风险，不再添加下属的风险
     # 如果筛选了部门，只显示该部门的风险
@@ -1326,6 +1453,7 @@ def plan_management_home(request):
                 filter_start_date=filter_start_date,
                 filter_end_date=filter_end_date
             ))
+    
     # 排序并去重（基于对象ID）
     seen_objects = set()
     unique_risk_items = []
@@ -1336,6 +1464,7 @@ def plan_management_home(request):
             if obj_key not in seen_objects:
                 seen_objects.add(obj_key)
                 unique_risk_items.append(item)
+    
     # 重新排序
     unique_risk_items.sort(key=lambda x: x.get('days_overdue', 0), reverse=True)
     
@@ -1431,14 +1560,14 @@ def plan_management_home(request):
     if not filter_responsible_person_id and not filter_department_id:
         if is_manager and subordinates.exists():
             # 添加下属负责的计划和目标
-            for plan in subordinate_responsible_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time')[:5]:
+            for plan in subordinate_responsible_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time'):  # 显示全部，不限制数量
                 all_work_plans.append({
                     'title': plan.name,
                     'progress': float(getattr(plan, 'progress', 0) or 0),
                     'progress_status': calculate_plan_progress_status(plan),
                     'url': reverse('plan_pages:plan_detail', args=[plan.id])
                 })
-            for goal in subordinate_responsible_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time')[:5]:
+            for goal in subordinate_responsible_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time'):  # 显示全部，不限制数量
                 all_work_goals.append({
                     'title': goal.name,
                     'status': goal.get_status_display() if hasattr(goal, 'get_status_display') else str(getattr(goal, 'status', '')),
@@ -1449,14 +1578,14 @@ def plan_management_home(request):
             all_work_goals_count += subordinate_responsible_goals_qs.count()
     
     # 添加我协作的计划和目标
-    for plan in my_collaboration_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time')[:5]:
+    for plan in my_collaboration_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time'):  # 显示全部，不限制数量
         all_work_plans.append({
             'title': plan.name,
             'status': plan.get_status_display() if hasattr(plan, 'get_status_display') else str(getattr(plan, 'status', '')),
             'progress': getattr(plan, 'progress', 0) or 0,
             'url': reverse('plan_pages:plan_detail', args=[plan.id])
         })
-    for goal in my_collaboration_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time')[:5]:
+    for goal in my_collaboration_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time'):  # 显示全部，不限制数量
         all_work_goals.append({
             'title': goal.name,
             'status': goal.get_status_display() if hasattr(goal, 'get_status_display') else str(getattr(goal, 'status', '')),
@@ -1472,14 +1601,14 @@ def plan_management_home(request):
     if not filter_responsible_person_id and not filter_department_id:
         if is_manager and subordinates.exists():
             # 添加下属协作的计划和目标
-            for plan in subordinate_collaboration_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time')[:5]:
+            for plan in subordinate_collaboration_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time'):  # 显示全部，不限制数量
                 all_work_plans.append({
                     'title': plan.name,
                     'progress': float(getattr(plan, 'progress', 0) or 0),
                     'progress_status': calculate_plan_progress_status(plan),
                     'url': reverse('plan_pages:plan_detail', args=[plan.id])
                 })
-            for goal in subordinate_collaboration_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time')[:5]:
+            for goal in subordinate_collaboration_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time'):  # 显示全部，不限制数量
                 all_work_goals.append({
                     'title': goal.name,
                     'status': goal.get_status_display() if hasattr(goal, 'get_status_display') else str(getattr(goal, 'status', '')),
@@ -1501,8 +1630,8 @@ def plan_management_home(request):
     category_data['all'] = {
         'plan_status_dist': None,
         'goal_status_dist': None,
-        'risk_items': unique_risk_items[:5],
-        'todo_items': all_category_todos[:10],
+        'risk_items': unique_risk_items,  # 显示全部，不限制数量
+        'todo_items': all_category_todos,  # 显示全部，不限制数量
         'my_work': all_work,
         'goal_cards': context.get('all_goal_cards', []),
         'plan_cards': context.get('all_plan_cards', []),
@@ -1513,7 +1642,7 @@ def plan_management_home(request):
     # 我负责的风险项和待办项（只包含我负责的）
     my_responsible_risk_items = get_responsible_risk_items(
         request.user,
-        limit=5,
+        limit=1000,  # 获取全部风险项，不限制数量
         filter_department_id=filter_department_id,
         filter_responsible_person_id=filter_responsible_person_id,
         filter_start_date=filter_start_date,
@@ -1552,8 +1681,8 @@ def plan_management_home(request):
     category_data['mine'] = {
         'plan_status_dist': None,
         'goal_status_dist': None,
-        'risk_items': my_responsible_risk_items[:5],
-        'todo_items': my_responsible_todos[:10],
+        'risk_items': my_responsible_risk_items,  # 显示全部，不限制数量
+        'todo_items': my_responsible_todos,  # 显示全部，不限制数量
         'my_work': my_work,  # 使用现有的我的工作
         'goal_cards': context.get('my_goal_cards', []),
         'plan_cards': context.get('my_plan_cards', []),
@@ -1567,7 +1696,7 @@ def plan_management_home(request):
         # 下属负责的风险项和待办项
         subordinate_responsible_risk_items = get_subordinates_risk_items(
             subordinates,
-            limit=5,
+            limit=1000,  # 获取全部风险项，不限制数量
             filter_department_id=filter_department_id,
             filter_responsible_person_id=filter_responsible_person_id,
             filter_start_date=filter_start_date,
@@ -1576,7 +1705,7 @@ def plan_management_home(request):
         
         # 下属负责的待办项（汇总所有下属的待办）
         subordinate_responsible_todos = []
-        for subordinate in subordinates[:10]:  # 最多查询10个下属
+        for subordinate in subordinates:  # 查询所有下属，不限制数量
             sub_todos = get_responsible_todos(
                 subordinate,
                 filter_department_id=filter_department_id,
@@ -1603,8 +1732,8 @@ def plan_management_home(request):
         subordinate_responsible_todos.sort(key=lambda x: (priority_order.get(x['priority'], 2), x.get('deadline') or timezone.now()))
         
         # 下属负责的工作
-        subordinate_plans = subordinate_responsible_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time')[:5]
-        subordinate_goals = subordinate_responsible_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time')[:5]
+        subordinate_plans = list(subordinate_responsible_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time'))  # 显示全部，不限制数量
+        subordinate_goals = list(subordinate_responsible_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time'))  # 显示全部，不限制数量
         
         subordinate_work = {
             'my_plans': [{
@@ -1631,8 +1760,8 @@ def plan_management_home(request):
         category_data['subordinate'] = {
             'plan_status_dist': None,
             'goal_status_dist': None,
-            'risk_items': subordinate_responsible_risk_items[:5],
-            'todo_items': subordinate_responsible_todos[:10],
+            'risk_items': subordinate_responsible_risk_items,  # 显示全部，不限制数量
+            'todo_items': subordinate_responsible_todos,  # 显示全部，不限制数量
             'my_work': subordinate_work,
             'goal_cards': context.get('subordinate_goal_cards', []),
             'plan_cards': context.get('subordinate_plan_cards', []),
@@ -1642,8 +1771,50 @@ def plan_management_home(request):
     # my_collaboration_plans_qs 和 my_collaboration_goals_qs 已在上面定义
     
     # 计划状态分布和目标状态分布已清除
-    # 我协作的风险项和待办项（协作的项目通常不显示风险，因为负责人不同）
+    # 我协作的风险项和待办项
+    # 修复：计算用户参与但非负责人的进度落后计划和目标
+    from backend.apps.plan_management.services.risk_query_service import (
+        _build_risk_item, _is_progress_behind_goal, _is_progress_behind_plan,
+        _get_goal_actual_progress, _get_plan_actual_progress,
+        _calculate_time_progress_goal, _calculate_time_progress_plan
+    )
+    from django.utils import timezone
+    now = timezone.now()
+    today = now.date()
+    
     my_collaboration_risk_items = []
+    
+    # 查询用户参与但非负责人的未完成计划
+    collaboration_plans = Plan.objects.filter(
+        participants=request.user,
+        level='personal',
+        status__in=['draft', 'published', 'accepted', 'in_progress']
+    ).exclude(responsible_person=request.user).distinct().select_related('responsible_person').prefetch_related('progress_records')
+    
+    # 过滤出进度落后的计划
+    for plan in collaboration_plans:
+        if _is_progress_behind_plan(plan, now):
+            actual_progress = _get_plan_actual_progress(plan)
+            time_progress = _calculate_time_progress_plan(plan, now)
+            my_collaboration_risk_items.append(_build_risk_item('plan_risk', plan, actual_progress, time_progress, plan.status))
+    
+    # 查询用户参与但非负责人的未完成目标
+    collaboration_goals = StrategicGoal.objects.filter(
+        participants=request.user,
+        level='personal',
+        status__in=['published', 'accepted', 'in_progress']
+    ).exclude(responsible_person=request.user).distinct().select_related('responsible_person').prefetch_related('progress_records')
+    
+    # 过滤出进度落后的目标
+    for goal in collaboration_goals:
+        if _is_progress_behind_goal(goal, today):
+            actual_progress = _get_goal_actual_progress(goal)
+            time_progress = _calculate_time_progress_goal(goal, today)
+            my_collaboration_risk_items.append(_build_risk_item('goal_risk', goal, actual_progress, time_progress, goal.status))
+    
+    # 排序（按优先级分数降序）
+    my_collaboration_risk_items.sort(key=lambda x: x.get('_priority_score', 0), reverse=True)
+    
     my_collaboration_todos = []
     
     # 我协作的工作
@@ -1675,8 +1846,8 @@ def plan_management_home(request):
     category_data['collaboration'] = {
         'plan_status_dist': None,
         'goal_status_dist': None,
-        'risk_items': my_collaboration_risk_items[:5],
-        'todo_items': my_collaboration_todos[:10],
+        'risk_items': my_collaboration_risk_items,  # 显示全部，不限制数量
+        'todo_items': my_collaboration_todos,  # 显示全部，不限制数量
         'my_work': my_collaboration_work,
         'goal_cards': context.get('collaboration_goal_cards', []),
         'plan_cards': context.get('collaboration_plan_cards', []),
@@ -1688,12 +1859,42 @@ def plan_management_home(request):
         
         # 计划状态分布和目标状态分布已清除
         # 下属协作的风险项和待办项
+        # 修复：计算下属参与但非负责人的进度落后计划和目标
         subordinate_collaboration_risk_items = []
+        
+        # 使用已定义的查询集，筛选进度落后的项
+        if subordinate_collaboration_plans_qs.exists():
+            collaboration_plans = subordinate_collaboration_plans_qs.filter(
+                level='personal',
+                status__in=['draft', 'published', 'accepted', 'in_progress']
+            ).distinct().select_related('responsible_person').prefetch_related('progress_records')
+            
+            for plan in collaboration_plans:
+                if _is_progress_behind_plan(plan, now):
+                    actual_progress = _get_plan_actual_progress(plan)
+                    time_progress = _calculate_time_progress_plan(plan, now)
+                    subordinate_collaboration_risk_items.append(_build_risk_item('plan_risk', plan, actual_progress, time_progress, plan.status))
+        
+        if subordinate_collaboration_goals_qs.exists():
+            collaboration_goals = subordinate_collaboration_goals_qs.filter(
+                level='personal',
+                status__in=['published', 'accepted', 'in_progress']
+            ).distinct().select_related('responsible_person').prefetch_related('progress_records')
+            
+            for goal in collaboration_goals:
+                if _is_progress_behind_goal(goal, today):
+                    actual_progress = _get_goal_actual_progress(goal)
+                    time_progress = _calculate_time_progress_goal(goal, today)
+                    subordinate_collaboration_risk_items.append(_build_risk_item('goal_risk', goal, actual_progress, time_progress, goal.status))
+        
+        # 排序（按优先级分数降序）
+        subordinate_collaboration_risk_items.sort(key=lambda x: x.get('_priority_score', 0), reverse=True)
+        
         subordinate_collaboration_todos = []
         
         # 下属协作的工作
-        sub_collab_plans = subordinate_collaboration_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time')[:5]
-        sub_collab_goals = subordinate_collaboration_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time')[:5]
+        sub_collab_plans = list(subordinate_collaboration_plans_qs.select_related('responsible_person', 'related_goal').order_by('-updated_time'))  # 显示全部，不限制数量
+        sub_collab_goals = list(subordinate_collaboration_goals_qs.select_related('responsible_person', 'parent_goal').order_by('-updated_time'))  # 显示全部，不限制数量
         
         subordinate_collaboration_work = {
             'my_plans': [{
@@ -1720,8 +1921,8 @@ def plan_management_home(request):
         category_data['subordinate_collaboration'] = {
             'plan_status_dist': None,
             'goal_status_dist': None,
-            'risk_items': subordinate_collaboration_risk_items[:5],
-            'todo_items': subordinate_collaboration_todos[:10],
+            'risk_items': subordinate_collaboration_risk_items,  # 显示全部，不限制数量
+            'todo_items': subordinate_collaboration_todos,  # 显示全部，不限制数量
             'my_work': subordinate_collaboration_work,
             'goal_cards': context.get('subordinate_collaboration_goal_cards', []),
             'plan_cards': context.get('subordinate_collaboration_plan_cards', []),
@@ -2891,10 +3092,10 @@ def plan_detail(request, plan_id):
     can_submit_approval = (has_create_permission or is_responsible) and is_valid_status and not has_pending_start
     can_request_cancel = (has_create_permission or is_responsible) and plan.status == 'in_progress' and not has_pending_cancel
     
-    # 检查是否可以申请调整
+    # 检查是否可以申请调整：已发布或执行中的计划可以申请调整
     can_manage = _permission_granted('plan_management.plan.manage', permission_set) or request.user.is_superuser
     is_responsible = plan.responsible_person == request.user
-    can_request_adjustment = (can_manage or is_responsible) and plan.status == 'in_progress'
+    can_request_adjustment = (can_manage or is_responsible) and plan.status in ['published', 'in_progress']
     has_pending_adjustment = PlanAdjustment.objects.filter(plan=plan, status='pending').exists()
     
     # P2-3: 接收计划（published → accepted）
@@ -3003,7 +3204,8 @@ def plan_detail(request, plan_id):
         'all_users': all_users,  # 所有用户列表（用于转交）
         'can_approve': can_approve,
         # 计划调整申请权限
-        'can_request_adjustment': can_request_adjustment and not has_pending_adjustment,
+        'can_request_adjustment': can_request_adjustment,
+        'has_pending_adjustment': has_pending_adjustment,  # 是否已有待审批的调整申请
         # P2-3: 接收和开始执行权限
         'can_accept': can_accept,
         'can_start_execution': can_start_execution,
@@ -3243,8 +3445,8 @@ def plan_decompose_entry(request):
     if status_filter:
         plans = plans.filter(status=status_filter)
     else:
-        # P1: 默认只显示执行中的计划
-        plans = plans.filter(status='in_progress')
+        # 默认显示已发布和执行中的计划
+        plans = plans.filter(status__in=['published', 'in_progress'])
     
     # P2-3: level 过滤（优先使用 level）
     if level_filter:
@@ -3367,8 +3569,8 @@ def plan_track_entry(request):
     if status_filter:
         plans = plans.filter(status=status_filter)
     else:
-        # 默认显示执行中的计划
-        plans = plans.filter(status='in_progress')
+        # 默认显示已发布和执行中的计划
+        plans = plans.filter(status__in=['published', 'in_progress'])
     
     if level_filter:
         plans = plans.filter(level=level_filter)
@@ -4182,7 +4384,23 @@ def strategic_goal_create(request):
             context['form_validation_errors'] = error_messages
             return render(request, "goal_management/goal_form.html", context)
     else:
-        form = StrategicGoalForm(user=request.user)
+        # 检查是否有 parent_goal_id 参数（从新建目标分解页面传递）
+        parent_goal_id = request.GET.get('parent_goal_id')
+        initial_data = {}
+        if parent_goal_id:
+            try:
+                parent_goal = StrategicGoal.objects.get(id=parent_goal_id)
+                initial_data['parent_goal'] = parent_goal
+                # 继承父目标的一些属性
+                initial_data['goal_type'] = parent_goal.goal_type
+                initial_data['goal_period'] = parent_goal.goal_period
+                initial_data['indicator_name'] = parent_goal.indicator_name
+                initial_data['indicator_type'] = parent_goal.indicator_type
+                initial_data['indicator_unit'] = parent_goal.indicator_unit
+            except StrategicGoal.DoesNotExist:
+                pass
+        
+        form = StrategicGoalForm(user=request.user, initial=initial_data)
     
     context = _context("创建战略目标", "➕", "创建新的战略目标", request=request)
     context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_create')
@@ -4389,6 +4607,17 @@ def strategic_goal_detail(request, goal_id):
     # P2-2: 检查是否可以开始执行
     can_start_execution = goal.status == 'accepted'
     
+    # 检查是否可以申请调整：已发布或执行中的目标，且用户有权限
+    can_manage = _permission_granted('plan_management.manage_goal', permission_set) or request.user.is_superuser
+    is_responsible = goal.responsible_person == request.user
+    can_create_adjustment = (can_manage or is_responsible) and goal.status in ['published', 'in_progress']
+    
+    # 检查是否已有待审批的调整申请
+    has_pending_adjustment = GoalAdjustment.objects.filter(
+        goal=goal,
+        status='pending'
+    ).exists()
+    
     context = _context(
         f"战略目标详情 - {goal.name}",
         "🎯",
@@ -4413,6 +4642,8 @@ def strategic_goal_detail(request, goal_id):
         'can_publish': can_publish,
         'can_accept': can_accept,  # P2-2
         'can_start_execution': can_start_execution,  # P2-2
+        'can_create_adjustment': can_create_adjustment,  # 是否可以申请调整
+        'has_pending_adjustment': has_pending_adjustment,  # 是否已有待审批的调整申请
         'valid_transitions': goal.get_valid_transitions(),
         'progress_percent': goal.completion_rate,  # 用于进度条
     })
@@ -4480,6 +4711,164 @@ def strategic_goal_edit(request, goal_id):
     context['page_title'] = "编辑战略目标"
     context['submit_text'] = "保存"
     return render(request, "goal_management/goal_form.html", context)
+
+
+@login_required
+def strategic_goal_decompose_list(request):
+    """目标分解列表页面 - 显示可分解的目标列表"""
+    permission_set = get_user_permission_codes(request.user)
+    
+    # 权限检查
+    if not _permission_granted('plan_management.manage_goal', permission_set):
+        messages.error(request, '您没有权限进行目标分解')
+        return redirect('plan_pages:strategic_goal_list')
+    
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '')
+    level_filter = request.GET.get('level', '')
+    goal_type_filter = request.GET.get('goal_type', '')
+    goal_period_filter = request.GET.get('goal_period', '')
+    responsible_filter = request.GET.get('responsible', '')
+    
+    # 查询可分解的目标（显示所有目标，包括子目标）
+    goals = StrategicGoal.objects.select_related(
+        'responsible_person', 'responsible_department', 'parent_goal', 'created_by'
+    )
+    
+    # 应用筛选
+    if search:
+        goals = goals.filter(
+            Q(goal_number__icontains=search) |
+            Q(name__icontains=search) |
+            Q(responsible_person__username__icontains=search) |
+            Q(responsible_person__full_name__icontains=search)
+        )
+    
+    if status_filter:
+        goals = goals.filter(status=status_filter)
+    else:
+        # 默认只显示已发布或执行中的目标
+        goals = goals.filter(status__in=['published', 'in_progress'])
+    
+    if level_filter:
+        goals = goals.filter(level=level_filter)
+    
+    if goal_type_filter:
+        goals = goals.filter(goal_type=goal_type_filter)
+    
+    if goal_period_filter:
+        goals = goals.filter(goal_period=goal_period_filter)
+    
+    if responsible_filter:
+        goals = goals.filter(responsible_person_id=responsible_filter)
+    
+    # 排序：优先显示执行中的目标
+    goals = goals.order_by('-status', '-created_time')
+    
+    # 分页
+    page_size = request.GET.get('page_size', '10')
+    try:
+        per_page = int(page_size)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+    
+    paginator = Paginator(goals, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # 统计信息（显示所有目标，包括子目标）
+    base_goals = StrategicGoal.objects.all()
+    total_count = base_goals.count()
+    published_count = base_goals.filter(status='published').count()
+    in_progress_count = base_goals.filter(status='in_progress').count()
+    completed_count = base_goals.filter(status='completed').count()
+    
+    # 获取所有用户（用于筛选）
+    all_users = User.objects.filter(is_active=True).order_by('username')
+    
+    # 获取选择项数据
+    status_options = StrategicGoal.STATUS_CHOICES
+    goal_type_choices = StrategicGoal.GOAL_TYPE_CHOICES
+    goal_period_choices = StrategicGoal.GOAL_PERIOD_CHOICES
+    level_choices = StrategicGoal.LEVEL_CHOICES
+    
+    context = _context(
+        "目标分解列表",
+        "📊",
+        "选择要分解的目标",
+        request=request,
+    )
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_decompose_list')
+    context.update({
+        'page_obj': page_obj,
+        'goals': list(page_obj),
+        'all_users': all_users,
+        'search': search,
+        'status_filter': status_filter,
+        'level_filter': level_filter,
+        'goal_type_filter': goal_type_filter,
+        'goal_period_filter': goal_period_filter,
+        'responsible_filter': responsible_filter,
+        'total_count': total_count,
+        'published_count': published_count,
+        'in_progress_count': in_progress_count,
+        'completed_count': completed_count,
+        'status_options': status_options,
+        'goal_type_choices': goal_type_choices,
+        'goal_period_choices': goal_period_choices,
+        'level_choices': level_choices,
+    })
+    return render(request, "plan_management/strategic_goal_decompose_list.html", context)
+
+
+@login_required
+def strategic_goal_decompose_create(request):
+    """新建目标分解页面 - 选择父目标后创建子目标"""
+    permission_set = get_user_permission_codes(request.user)
+    
+    # 权限检查
+    if not _permission_granted('plan_management.manage_goal', permission_set):
+        messages.error(request, '您没有权限创建目标分解')
+        return redirect('plan_pages:strategic_goal_list')
+    
+    # 获取父目标ID（从URL参数或表单提交）
+    parent_goal_id = request.GET.get('parent_goal_id') or request.POST.get('parent_goal_id')
+    
+    # 获取所有可用的父目标（顶级目标或已发布/执行中的目标）
+    available_parent_goals = StrategicGoal.objects.select_related(
+        'responsible_person', 'responsible_department'
+    ).filter(
+        Q(parent_goal__isnull=True) | Q(status__in=['published', 'in_progress'])
+    ).order_by('-created_time')
+    
+    parent_goal = None
+    if parent_goal_id:
+        try:
+            parent_goal = StrategicGoal.objects.select_related(
+                'responsible_person', 'responsible_department'
+            ).get(id=parent_goal_id)
+        except StrategicGoal.DoesNotExist:
+            messages.error(request, '选择的父目标不存在')
+    
+    # 如果是POST请求，跳转到目标创建页面并设置父目标
+    if request.method == 'POST' and parent_goal_id:
+        return redirect(f"{reverse('plan_pages:strategic_goal_create')}?parent_goal_id={parent_goal_id}")
+    
+    context = _context(
+        "新建目标分解",
+        "➕",
+        "选择父目标后创建子目标",
+        request=request,
+    )
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='strategic_goal_decompose_create')
+    context.update({
+        'parent_goal': parent_goal,
+        'available_parent_goals': available_parent_goals,
+    })
+    return render(request, "plan_management/strategic_goal_decompose_create.html", context)
 
 
 @login_required
@@ -4643,7 +5032,7 @@ def strategic_goal_track_entry(request):
     
     # 显示选择页面（显示所有目标，但标记哪些可以跟踪）
     context = _context(
-        "目标跟踪",
+        "目标跟踪列表",
         "📈",
         "选择要跟踪的战略目标",
         request=request,
@@ -5748,9 +6137,9 @@ def plan_adjustment_create(request, plan_id):
         messages.error(request, '您没有权限申请调整该计划')
         return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
-    # 检查计划状态：只有执行中的计划可以申请调整
-    if plan.status != 'in_progress':
-        messages.error(request, '只有执行中的计划可以申请调整')
+    # 检查计划状态：已发布或执行中的计划可以申请调整
+    if plan.status not in ['published', 'in_progress']:
+        messages.error(request, '只有已发布或执行中的计划可以申请调整')
         return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
     # 检查是否已有待审批的调整申请
@@ -5787,7 +6176,7 @@ def plan_adjustment_create(request, plan_id):
     context = _context(
         f"申请调整 - {plan.name}",
         "📝",
-        "申请调整计划截止时间",
+        "申请调整计划",
         request=request,
     )
     context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_list')
@@ -5795,10 +6184,121 @@ def plan_adjustment_create(request, plan_id):
         context['form_validation_errors'] = error_messages
     context['form'] = form
     context['plan'] = plan
-    context['page_title'] = f"申请调整 - {plan.name}"
-    context['submit_text'] = "提交申请"
+    context['list_url_name'] = 'plan_pages:plan_adjustment_list'
+    context['cancel_url_name'] = 'plan_pages:plan_detail'
     
     return render(request, "plan_management/plan_adjustment_form.html", context)
+
+
+@login_required
+def plan_adjustment_entry(request):
+    """计划调整申请入口页面 - 选择要申请调整的计划"""
+    permission_set = get_user_permission_codes(request.user)
+    
+    # 权限检查
+    if not _permission_granted('plan_management.view', permission_set):
+        messages.error(request, '您没有权限申请调整计划')
+        return redirect('plan_pages:plan_list')
+    
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '')
+    level_filter = request.GET.get('level', '')
+    plan_period_filter = request.GET.get('plan_period', '')
+    responsible_filter = request.GET.get('responsible', '')
+    
+    # 获取所有已发布或执行中的计划（可以申请调整的计划）
+    plans = Plan.objects.select_related(
+        'responsible_person', 'responsible_department', 'related_goal'
+    ).filter(status__in=['published', 'in_progress']).order_by('-created_time')
+    
+    # 如果没有计划，跳转到列表页
+    if not plans.exists():
+        messages.info(request, '暂无可以申请调整的计划')
+        return redirect('plan_pages:plan_list')
+    
+    # 应用筛选
+    if search:
+        plans = plans.filter(
+            Q(plan_number__icontains=search) |
+            Q(name__icontains=search) |
+            Q(responsible_person__username__icontains=search) |
+            Q(responsible_person__full_name__icontains=search)
+        )
+    
+    if status_filter:
+        plans = plans.filter(status=status_filter)
+    
+    if level_filter:
+        plans = plans.filter(level=level_filter)
+    
+    if plan_period_filter:
+        plans = plans.filter(plan_period=plan_period_filter)
+    
+    if responsible_filter:
+        plans = plans.filter(responsible_person_id=responsible_filter)
+    
+    # 检查每个计划是否有待审批的调整申请
+    plans_with_adjustment_status = []
+    can_manage = _permission_granted('plan_management.plan.manage', permission_set) or request.user.is_superuser
+    for plan in plans:
+        # 权限检查：计划管理员或计划负责人
+        is_responsible = plan.responsible_person == request.user
+        can_apply = can_manage or is_responsible
+        
+        # 检查是否已有待审批的调整申请
+        has_pending_adjustment = PlanAdjustment.objects.filter(
+            plan=plan,
+            status='pending'
+        ).exists()
+        
+        plans_with_adjustment_status.append({
+            'plan': plan,
+            'can_apply': can_apply,
+            'has_pending_adjustment': has_pending_adjustment,
+        })
+    
+    # 统计信息（基于所有计划，在分页前计算）
+    total_count = len(plans_with_adjustment_status)
+    can_apply_count = sum(1 for item in plans_with_adjustment_status if item['can_apply'] and not item['has_pending_adjustment'])
+    pending_count = sum(1 for item in plans_with_adjustment_status if item['has_pending_adjustment'])
+    
+    # 分页
+    paginator = Paginator(plans_with_adjustment_status, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # 获取筛选选项
+    all_responsible_persons = User.objects.filter(
+        responsible_plans__status__in=['published', 'in_progress']
+    ).distinct().order_by('username')
+    
+    context = _context(
+        "计划调整列表",
+        "📋",
+        "选择要申请调整的计划",
+        request=request,
+    )
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_adjustment_create')
+    context.update({
+        'page_title': '计划调整列表',
+        'page_subtitle': '选择要申请调整的计划',
+        'page_obj': page_obj,
+        'plans_with_adjustment_status': list(page_obj),
+        'search': search,
+        'status_filter': status_filter,
+        'level_filter': level_filter,
+        'plan_period_filter': plan_period_filter,
+        'responsible_filter': responsible_filter,
+        'total_count': total_count,
+        'can_apply_count': can_apply_count,
+        'pending_count': pending_count,
+        'all_responsible_persons': all_responsible_persons,
+        'STATUS_CHOICES': Plan.STATUS_CHOICES,
+        'LEVEL_CHOICES': Plan.LEVEL_CHOICES,
+        'PLAN_PERIOD_CHOICES': Plan.PLAN_PERIOD_CHOICES,
+    })
+    return render(request, "plan_management/plan_adjustment_entry.html", context)
 
 
 @login_required
@@ -5831,28 +6331,221 @@ def plan_adjustment_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # 统计信息
-    total_count = adjustments.count()
-    pending_count = PlanAdjustment.objects.filter(status='pending').count()
-    approved_count = PlanAdjustment.objects.filter(status='approved').count()
-    rejected_count = PlanAdjustment.objects.filter(status='rejected').count()
+    # 统计信息（基于权限过滤后的查询集）
+    base_adjustments = PlanAdjustment.objects.all()
+    if not can_approve:
+        base_adjustments = base_adjustments.filter(created_by=request.user)
+    
+    total_count = base_adjustments.count()
+    pending_count = base_adjustments.filter(status='pending').count()
+    approved_count = base_adjustments.filter(status='approved').count()
+    rejected_count = base_adjustments.filter(status='rejected').count()
     
     context = _context(
-        "计划调整申请",
-        "📝",
+        "计划调整列表",
+        "📋",
         "查看和管理计划调整申请",
         request=request,
     )
-    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_list')
-    context['page_obj'] = page_obj
-    context['status_filter'] = status_filter
-    context['can_approve'] = can_approve
-    context['total_count'] = total_count
-    context['pending_count'] = pending_count
-    context['approved_count'] = approved_count
-    context['rejected_count'] = rejected_count
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='plan_adjustment_list')
+    context.update({
+        'page_title': '计划调整列表',
+        'description': '查看和管理计划调整申请',
+        'page_obj': page_obj,
+        'status_filter': status_filter,
+        'can_approve': can_approve,
+        'total_count': total_count,
+        'pending_count': pending_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
+    })
     
     return render(request, "plan_management/plan_adjustment_list.html", context)
+
+
+@login_required
+def goal_adjustment_create(request, goal_id):
+    """创建目标调整申请"""
+    permission_set = get_user_permission_codes(request.user)
+    goal = get_object_or_404(StrategicGoal, id=goal_id)
+    
+    # 权限检查：目标管理员或目标负责人
+    can_manage = _permission_granted('plan_management.manage_goal', permission_set) or request.user.is_superuser
+    is_responsible = goal.responsible_person == request.user
+    
+    if not (can_manage or is_responsible):
+        messages.error(request, '您没有权限申请调整该目标')
+        return redirect('plan_pages:strategic_goal_detail', goal_id=goal_id)
+    
+    # 检查目标状态：已发布或执行中的目标可以申请调整
+    if goal.status not in ['published', 'in_progress']:
+        messages.error(request, '只有已发布或执行中的目标可以申请调整')
+        return redirect('plan_pages:strategic_goal_detail', goal_id=goal_id)
+    
+    # 检查是否已有待审批的调整申请
+    pending_adjustment = GoalAdjustment.objects.filter(
+        goal=goal,
+        status='pending'
+    ).exists()
+    
+    if pending_adjustment:
+        messages.error(request, '该目标已有待审批的调整申请，请等待审批完成后再提交新的申请')
+        return redirect('plan_pages:strategic_goal_detail', goal_id=goal_id)
+    
+    if request.method == 'POST':
+        form = GoalAdjustmentForm(request.POST, goal=goal)
+        if form.is_valid():
+            adjustment = form.save(commit=False)
+            adjustment.goal = goal
+            adjustment.created_by = request.user
+            adjustment.save()
+            messages.success(request, '目标调整申请已提交，等待审批')
+            return redirect('plan_pages:goal_adjustment_list')
+        else:
+            # 使用 context 传递错误，不写入 messages
+            error_messages = []
+            if form.errors:
+                error_messages.append(_form_errors_plain(form))
+            if not error_messages:
+                error_messages.append('表单验证失败，请检查输入')
+    else:
+        form = GoalAdjustmentForm(goal=goal)
+        error_messages = []
+    
+    context = _context(
+        f"申请调整 - {goal.name}",
+        "📝",
+        "申请调整目标",
+        request=request,
+    )
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='goal_adjustment_list')
+    if error_messages:
+        context['form_validation_errors'] = error_messages
+    context['form'] = form
+    context['goal'] = goal
+    context['list_url_name'] = 'plan_pages:goal_adjustment_list'
+    context['cancel_url_name'] = 'plan_pages:strategic_goal_detail'
+    
+    return render(request, "plan_management/goal_adjustment_form.html", context)
+
+
+@login_required
+def goal_adjustment_list(request):
+    """目标调整申请列表 - 显示所有已发布或执行中的目标"""
+    permission_set = get_user_permission_codes(request.user)
+    
+    # 权限检查：至少需要管理目标权限
+    if not _permission_granted('plan_management.manage_goal', permission_set):
+        messages.error(request, '您没有权限查看目标调整申请列表')
+        return redirect('plan_pages:strategic_goal_list')
+    
+    # 获取筛选参数
+    search = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '')
+    goal_filter = request.GET.get('goal', '')
+    adjustment_status_filter = request.GET.get('adjustment_status', '')
+    
+    # 获取所有已发布或执行中的目标
+    goals = StrategicGoal.objects.select_related(
+        'responsible_person', 'responsible_department'
+    ).filter(status__in=['published', 'in_progress']).order_by('-created_time')
+    
+    # 应用筛选
+    if search:
+        goals = goals.filter(
+            Q(goal_number__icontains=search) |
+            Q(name__icontains=search) |
+            Q(responsible_person__username__icontains=search) |
+            Q(responsible_person__full_name__icontains=search)
+        )
+    
+    if goal_filter:
+        goals = goals.filter(id=goal_filter)
+    
+    # 获取每个目标的最新调整申请
+    from django.db.models import Prefetch, Max
+    goals_with_adjustments = []
+    for goal in goals:
+        # 获取该目标的所有调整申请
+        adjustments = GoalAdjustment.objects.filter(goal=goal).select_related(
+            'created_by', 'approved_by'
+        ).order_by('-created_time')
+        
+        # 权限过滤：普通用户只能看到自己申请的调整
+        can_approve = _permission_granted('plan_management.manage_goal', permission_set) or request.user.is_superuser
+        if not can_approve:
+            adjustments = adjustments.filter(created_by=request.user)
+        
+        # 获取最新调整申请（不在这里筛选状态，在后续统一筛选）
+        latest_adjustment = adjustments.first() if adjustments.exists() else None
+        
+        goals_with_adjustments.append({
+            'goal': goal,
+            'latest_adjustment': latest_adjustment,
+            'adjustment_count': adjustments.count(),
+        })
+    
+    # 如果选择了调整申请状态筛选
+    if adjustment_status_filter:
+        if adjustment_status_filter == 'none':
+            # 只显示没有调整申请的目标
+            goals_with_adjustments = [item for item in goals_with_adjustments if not item['latest_adjustment']]
+        else:
+            # 只显示有调整申请且符合状态的目标
+            goals_with_adjustments = [item for item in goals_with_adjustments if item['latest_adjustment'] and item['latest_adjustment'].status == adjustment_status_filter]
+    
+    # 分页
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    paginator = Paginator(goals_with_adjustments, 20)
+    page_number = request.GET.get('page')
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+    
+    # 统计信息（基于所有已发布或执行中的目标）
+    base_goals = StrategicGoal.objects.filter(status__in=['published', 'in_progress'])
+    total_count = base_goals.count()
+    
+    # 统计调整申请数量
+    all_adjustments = GoalAdjustment.objects.all()
+    can_approve = _permission_granted('plan_management.manage_goal', permission_set) or request.user.is_superuser
+    if not can_approve:
+        all_adjustments = all_adjustments.filter(created_by=request.user)
+    
+    pending_count = all_adjustments.filter(status='pending').count()
+    approved_count = all_adjustments.filter(status='approved').count()
+    rejected_count = all_adjustments.filter(status='rejected').count()
+    
+    # 获取所有目标（用于筛选）
+    all_goals = StrategicGoal.objects.select_related('responsible_person').order_by('-created_time')
+    
+    context = _context(
+        "目标调整列表",
+        "🔄",
+        "查看和管理目标调整申请",
+        request=request,
+    )
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='goal_adjustment_list')
+    context.update({
+        'page_title': '目标调整列表',
+        'description': '查看和管理目标调整申请',
+        'page_obj': page_obj,
+        'goals_with_adjustments': list(page_obj),
+        'search': search,
+        'status_filter': status_filter,
+        'goal_filter': goal_filter,
+        'adjustment_status_filter': adjustment_status_filter,
+        'can_approve': can_approve,
+        'total_count': total_count,
+        'pending_count': pending_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
+        'all_goals': all_goals,
+    })
+    return render(request, "plan_management/goal_adjustment_list.html", context)
 
 
 @login_required

@@ -24,28 +24,6 @@
 {% endblock module_home_core_cards %}
 
 {% block module_home_stats_row %}
-  <!-- 状态分布统计 -->
-  {% if workflow_status_dist or approval_status_dist %}
-  <div class="module-home-stats-row">
-    {% if workflow_status_dist %}
-    <div class="module-home-stats-card">
-      <div class="module-home-stats-card-title">流程状态分布</div>
-      <div class="module-home-chart-container">
-        <canvas id="workflowStatusChart"></canvas>
-      </div>
-    </div>
-    {% endif %}
-    
-    {% if approval_status_dist %}
-    <div class="module-home-stats-card">
-      <div class="module-home-stats-card-title">审批状态分布</div>
-      <div class="module-home-chart-container">
-        <canvas id="approvalStatusChart"></canvas>
-      </div>
-    </div>
-    {% endif %}
-  </div>
-  {% endif %}
 {% endblock module_home_stats_row %}
 
 {% block module_home_warning_todo_row %}
@@ -89,7 +67,7 @@
       <div class="module-home-card-title">
         我的申请
         {% if my_pending_count %}
-        <span style="font-size: 12px; font-weight: 400; color: #666;">(待审批 {{ my_pending_count }})</span>
+        <span style="font-size: 12px; font-weight: 400; color: #666;">({{ my_pending_count }})</span>
         {% endif %}
       </div>
       <ul class="module-home-todo-list">
@@ -120,104 +98,8 @@
 {% endblock module_home_warning_todo_row %}
 
 {% block module_home_work_activities_row %}
-  <!-- 最近活动 -->
-  {% if recent_activities.recent_approvals %}
-  <div class="module-home-stats-row">
-    <div class="module-home-activities-card">
-      <div class="module-home-card-title">最近审批活动</div>
-      <ul class="module-home-activity-list">
-        {% for activity in recent_activities.recent_approvals %}
-        <li class="module-home-activity-item">
-          <a href="{{ activity.url|default:'#' }}" class="module-home-item-link">
-            <div class="module-home-activity-title">{{ activity.title }}</div>
-            <div class="module-home-activity-meta">
-              {{ activity.approver }} · {{ activity.result }} · {{ activity.time|date:"Y-m-d H:i" }}
-            </div>
-          </a>
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-  </div>
-  {% endif %}
 {% endblock module_home_work_activities_row %}
 
 {% block module_home_scripts %}
   {{ block.super }}
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-  <script>
-    // 流程状态分布图表
-    {% if workflow_status_dist %}
-    (function() {
-      const ctx = document.getElementById('workflowStatusChart');
-      if (ctx) {
-        const data = JSON.parse('{{ workflow_status_dist|escapejs }}');
-        const labels = Object.values(data).map(item => item.label);
-        const counts = Object.values(data).map(item => item.count);
-        
-        new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: labels,
-            datasets: [{
-              data: counts,
-              backgroundColor: [
-                '#4CAF50', // 激活
-                '#FF9800', // 草稿
-                '#F44336', // 停用
-                '#9E9E9E'  // 其他
-              ]
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'bottom'
-              }
-            }
-          }
-        });
-      }
-    })();
-    {% endif %}
-    
-    // 审批状态分布图表
-    {% if approval_status_dist %}
-    (function() {
-      const ctx = document.getElementById('approvalStatusChart');
-      if (ctx) {
-        const data = JSON.parse('{{ approval_status_dist|escapejs }}');
-        const labels = Object.values(data).map(item => item.label);
-        const counts = Object.values(data).map(item => item.count);
-        
-        new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: labels,
-            datasets: [{
-              data: counts,
-              backgroundColor: [
-                '#FF9800', // 待审批
-                '#4CAF50', // 已通过
-                '#F44336', // 已驳回
-                '#9E9E9E'  // 已取消
-              ]
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'bottom'
-              }
-            }
-          }
-        });
-      }
-    })();
-    {% endif %}
-  </script>
 {% endblock module_home_scripts %}

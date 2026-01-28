@@ -1,0 +1,375 @@
+{% extends "shared/create_form_base.html" %}
+{% load static %}
+
+{% block form_title %}申请调整 - {{ goal.name }}{% endblock %}
+{% block form_subtitle %}申请调整目标{% endblock %}
+
+{% block form_header_actions %}
+  {% if cancel_url_name %}
+    <a href="{% url cancel_url_name goal_id=goal.id %}" class="btn btn-secondary">返回详情</a>
+  {% elif list_url_name %}
+    <a href="{% url list_url_name %}" class="btn btn-secondary">返回列表</a>
+  {% else %}
+    <a href="{% url 'plan_pages:strategic_goal_list' %}" class="btn btn-secondary">返回列表</a>
+  {% endif %}
+{% endblock %}
+
+{% block module_styles %}
+  {{ block.super }}
+  <style>
+    .goal-detail-section {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .goal-detail-section h5 {
+      color: #495057;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #dee2e6;
+    }
+    .goal-detail-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .goal-detail-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .goal-detail-label {
+      font-size: 12px;
+      color: #6c757d;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .goal-detail-value {
+      font-size: 14px;
+      color: #212529;
+      font-weight: 500;
+    }
+    .adjustment-type-section {
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .dynamic-field-group {
+      display: none;
+    }
+    .dynamic-field-group.active {
+      display: block;
+    }
+  </style>
+{% endblock %}
+
+{% block form_first_row_fields %}
+  {# 基本信息：所属部门、负责人、目标编号 #}
+  {% if form.responsible_department %}
+  <div class="col-md-4 form-field-wrapper">
+    <label for="{{ form.responsible_department.id_for_label }}" class="form-label">
+      {{ form.responsible_department.label }}
+      {% if form.responsible_department.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.responsible_department }}
+    {% if form.responsible_department.errors %}
+    <div class="text-danger small">{{ form.responsible_department.errors }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if form.responsible_person %}
+  <div class="col-md-4 form-field-wrapper">
+    <label for="{{ form.responsible_person.id_for_label }}" class="form-label">
+      {{ form.responsible_person.label }}
+      {% if form.responsible_person.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.responsible_person }}
+    {% if form.responsible_person.errors %}
+    <div class="text-danger small">{{ form.responsible_person.errors }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="col-md-4 form-field-wrapper">
+    <label for="{{ form.goal_number_display.id_for_label }}" class="form-label">
+      {{ form.goal_number_display.label }}
+    </label>
+    {{ form.goal_number_display }}
+  </div>
+{% endblock %}
+
+{% block form_second_row_fields %}
+  {# 原目标详情展示 #}
+  <div class="goal-detail-section">
+    <h5>原目标详情</h5>
+    
+    {# 基本信息 #}
+    <div style="margin-bottom: 20px;">
+      <h6 style="color: #6c757d; font-size: 14px; margin-bottom: 12px; font-weight: 600;">基本信息</h6>
+      <div class="goal-detail-row">
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">所属部门</span>
+          <span class="goal-detail-value">{{ goal.responsible_department.name|default:"-" }}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">负责人</span>
+          <span class="goal-detail-value">{{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">目标编号</span>
+          <span class="goal-detail-value"><code>{{ goal.goal_number }}</code></span>
+        </div>
+      </div>
+    </div>
+
+    {# 详细信息 #}
+    <div>
+      <h6 style="color: #6c757d; font-size: 14px; margin-bottom: 12px; font-weight: 600;">详细信息</h6>
+      <div class="goal-detail-row">
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">目标名称</span>
+          <span class="goal-detail-value">{{ goal.name }}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">目标层级</span>
+          <span class="goal-detail-value">{{ goal.get_level_display }}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">目标类型</span>
+          <span class="goal-detail-value">{{ goal.get_goal_type_display }}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">目标周期</span>
+          <span class="goal-detail-value">{{ goal.get_goal_period_display }}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">目标状态</span>
+          <span class="goal-detail-value">{{ goal.get_status_display }}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">目标指标名称</span>
+          <span class="goal-detail-value">{{ goal.indicator_name|default:"-" }}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">指标类型</span>
+          <span class="goal-detail-value">{{ goal.get_indicator_type_display|default:"-" }}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">指标单位</span>
+          <span class="goal-detail-value">{{ goal.indicator_unit|default:"-" }}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">目标值</span>
+          <span class="goal-detail-value">{{ goal.target_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">当前值</span>
+          <span class="goal-detail-value">{{ goal.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">开始日期</span>
+          <span class="goal-detail-value">{{ goal.start_date|date:"Y-m-d"|default:"-" }}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">结束日期</span>
+          <span class="goal-detail-value">{{ goal.end_date|date:"Y-m-d"|default:"-" }}</span>
+        </div>
+        <div class="goal-detail-item">
+          <span class="goal-detail-label">上级目标</span>
+          <span class="goal-detail-value">
+            {% if goal.parent_goal %}
+              <a href="{% url 'plan_pages:strategic_goal_detail' goal.parent_goal.id %}" class="text-decoration-none">
+                {{ goal.parent_goal.name }} ({{ goal.parent_goal.goal_number }})
+              </a>
+            {% else %}
+              -
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block form_fields %}
+  {# 调整详情信息 #}
+  <div class="adjustment-type-section">
+    <h5>调整详情信息</h5>
+    
+    {# 调整类型 #}
+    <div class="row mb-3">
+      <div class="col-12 form-field-wrapper">
+        <label for="{{ form.adjustment_type.id_for_label }}" class="form-label">
+          {{ form.adjustment_type.label }}
+          {% if form.adjustment_type.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        {{ form.adjustment_type }}
+        {% if form.adjustment_type.errors %}
+        <div class="text-danger small">{{ form.adjustment_type.errors }}</div>
+        {% endif %}
+        {% if form.adjustment_type.help_text %}
+        <div class="form-text">{{ form.adjustment_type.help_text }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# 根据调整类型动态显示的字段 #}
+    {# 时间调整字段 #}
+    <div class="dynamic-field-group" id="time-adjustment-fields">
+      <div class="row mb-3">
+        <div class="col-md-6 form-field-wrapper">
+          <label for="{{ form.new_start_date.id_for_label }}" class="form-label">
+            {{ form.new_start_date.label }}
+            {% if form.new_start_date.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ form.new_start_date }}
+          {% if form.new_start_date.errors %}
+          <div class="text-danger small">{{ form.new_start_date.errors }}</div>
+          {% endif %}
+          {% if form.new_start_date.help_text %}
+          <div class="form-text">{{ form.new_start_date.help_text }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-6 form-field-wrapper">
+          <label for="{{ form.new_end_date.id_for_label }}" class="form-label">
+            {{ form.new_end_date.label }}
+            {% if form.new_end_date.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ form.new_end_date }}
+          {% if form.new_end_date.errors %}
+          <div class="text-danger small">{{ form.new_end_date.errors }}</div>
+          {% endif %}
+          {% if form.new_end_date.help_text %}
+          <div class="form-text">{{ form.new_end_date.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# 内容调整字段 #}
+    <div class="dynamic-field-group" id="content-adjustment-fields">
+      <div class="row mb-3">
+        <div class="col-12 form-field-wrapper">
+          <label for="{{ form.adjustment_content.id_for_label }}" class="form-label">
+            {{ form.adjustment_content.label }}
+            {% if form.adjustment_content.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ form.adjustment_content }}
+          {% if form.adjustment_content.errors %}
+          <div class="text-danger small">{{ form.adjustment_content.errors }}</div>
+          {% endif %}
+          {% if form.adjustment_content.help_text %}
+          <div class="form-text">{{ form.adjustment_content.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# 负责人调整字段 #}
+    <div class="dynamic-field-group" id="responsible-adjustment-fields">
+      <div class="row mb-3">
+        <div class="col-12 form-field-wrapper">
+          <label for="{{ form.new_responsible_person.id_for_label }}" class="form-label">
+            {{ form.new_responsible_person.label }}
+            {% if form.new_responsible_person.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ form.new_responsible_person }}
+          {% if form.new_responsible_person.errors %}
+          <div class="text-danger small">{{ form.new_responsible_person.errors }}</div>
+          {% endif %}
+          {% if form.new_responsible_person.help_text %}
+          <div class="form-text">{{ form.new_responsible_person.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# 目标值调整字段 #}
+    <div class="dynamic-field-group" id="target-value-adjustment-fields">
+      <div class="row mb-3">
+        <div class="col-12 form-field-wrapper">
+          <label for="{{ form.new_target_value.id_for_label }}" class="form-label">
+            {{ form.new_target_value.label }}
+            {% if form.new_target_value.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ form.new_target_value }}
+          {% if form.new_target_value.errors %}
+          <div class="text-danger small">{{ form.new_target_value.errors }}</div>
+          {% endif %}
+          {% if form.new_target_value.help_text %}
+          <div class="form-text">{{ form.new_target_value.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# 调整原因 #}
+    <div class="row mb-3">
+      <div class="col-12 form-field-wrapper">
+        <label for="{{ form.adjustment_reason.id_for_label }}" class="form-label">
+          {{ form.adjustment_reason.label }}
+          {% if form.adjustment_reason.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        {{ form.adjustment_reason }}
+        {% if form.adjustment_reason.errors %}
+        <div class="text-danger small">{{ form.adjustment_reason.errors }}</div>
+        {% endif %}
+        {% if form.adjustment_reason.help_text %}
+        <div class="form-text">{{ form.adjustment_reason.help_text }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block form_actions %}
+  <a href="{% if cancel_url_name %}{% url cancel_url_name goal_id=goal.id %}{% elif list_url_name %}{% url list_url_name %}{% else %}{% url 'plan_pages:strategic_goal_list' %}{% endif %}" class="btn btn-secondary">取消</a>
+  <button type="button" class="btn btn-primary" id="headerSubmitButton">提交申请</button>
+{% endblock %}
+
+{% block module_scripts %}
+  {{ block.super }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const adjustmentTypeSelect = document.getElementById('id_adjustment_type');
+      const timeFields = document.getElementById('time-adjustment-fields');
+      const contentFields = document.getElementById('content-adjustment-fields');
+      const responsibleFields = document.getElementById('responsible-adjustment-fields');
+      const targetValueFields = document.getElementById('target-value-adjustment-fields');
+
+      function toggleFields() {
+        // 隐藏所有字段组
+        [timeFields, contentFields, responsibleFields, targetValueFields].forEach(group => {
+          if (group) {
+            group.classList.remove('active');
+          }
+        });
+
+        // 根据选择的调整类型显示对应字段
+        const selectedType = adjustmentTypeSelect ? adjustmentTypeSelect.value : '';
+        if (selectedType === 'time' && timeFields) {
+          timeFields.classList.add('active');
+        } else if (selectedType === 'content' && contentFields) {
+          contentFields.classList.add('active');
+        } else if (selectedType === 'responsible' && responsibleFields) {
+          responsibleFields.classList.add('active');
+        } else if (selectedType === 'target_value' && targetValueFields) {
+          targetValueFields.classList.add('active');
+        }
+      }
+
+      // 初始显示
+      toggleFields();
+
+      // 监听调整类型变化
+      if (adjustmentTypeSelect) {
+        adjustmentTypeSelect.addEventListener('change', toggleFields);
+      }
+    });
+  </script>
+{% endblock %}

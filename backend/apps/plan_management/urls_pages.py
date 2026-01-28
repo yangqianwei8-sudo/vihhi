@@ -39,14 +39,17 @@ urlpatterns = [
     path("decisions/<int:decision_id>/reject/", views_pages.decision_reject, name="decision_reject"),
     
     # 计划调整申请
+    path("plan-adjustments/entry/", views_pages.plan_adjustment_entry, name="plan_adjustment_entry"),
     path("plans/<int:plan_id>/adjustment/create/", views_pages.plan_adjustment_create, name="plan_adjustment_create"),
-    path("adjustments/", views_pages.plan_adjustment_list, name="plan_adjustment_list"),
-    path("adjustments/<int:adjustment_id>/approve/", views_pages.plan_adjustment_approve, name="plan_adjustment_approve"),
-    path("adjustments/<int:adjustment_id>/reject/", views_pages.plan_adjustment_reject, name="plan_adjustment_reject"),
+    path("plan-adjustments/", views_pages.plan_adjustment_list, name="plan_adjustment_list"),
+    path("plan-adjustments/<int:adjustment_id>/approve/", views_pages.plan_adjustment_approve, name="plan_adjustment_approve"),
+    path("plan-adjustments/<int:adjustment_id>/reject/", views_pages.plan_adjustment_reject, name="plan_adjustment_reject"),
     
     # 战略目标
     path("strategic-goals/", views_pages.strategic_goal_list, name="strategic_goal_list"),
     path("strategic-goals/create/", views_pages.strategic_goal_create, name="strategic_goal_create"),
+    path("strategic-goals/decompose/list/", views_pages.strategic_goal_decompose_list, name="strategic_goal_decompose_list"),
+    path("strategic-goals/decompose/create/", views_pages.strategic_goal_decompose_create, name="strategic_goal_decompose_create"),
     path("strategic-goals/decompose/", views_pages.strategic_goal_decompose_entry, name="strategic_goal_decompose_entry"),
     path("strategic-goals/track/", views_pages.strategic_goal_track_entry, name="strategic_goal_track_entry"),
     path("strategic-goals/<int:goal_id>/", views_pages.strategic_goal_detail, name="strategic_goal_detail"),
@@ -55,6 +58,10 @@ urlpatterns = [
     path("strategic-goals/<int:goal_id>/decompose/", views_pages.strategic_goal_decompose, name="strategic_goal_decompose"),
     path("strategic-goals/<int:goal_id>/track/", views_pages.strategic_goal_track, name="strategic_goal_track"),
     path("strategic-goals/<int:parent_goal_id>/create-child/", views_pages.create_child_goal, name="create_child_goal"),
+    
+    # 目标调整申请
+    path("strategic-goals/<int:goal_id>/adjustment/create/", views_pages.goal_adjustment_create, name="goal_adjustment_create"),
+    path("goal-adjustments/", views_pages.goal_adjustment_list, name="goal_adjustment_list"),
     
     # 计划分析
     path("analysis/completion/", views_pages.plan_completion_analysis, name="plan_completion_analysis"),

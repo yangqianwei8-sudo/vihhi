@@ -1,173 +1,167 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/create_form_base.html" %}
+{% load static %}
 
-{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+{% block form_title %}{% if is_create %}创建行政事务{% else %}编辑行政事务{% endif %}{% endblock form_title %}
+{% block form_subtitle %}{% if is_create %}请填写行政事务信息{% else %}{% if affair %}{{ affair.affair_number }}{% endif %}{% endif %}{% endblock form_subtitle %}
 
-{% block breadcrumb_items %}
-{% if is_create %}
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:affair_list' %}">行政事务</a></li>
-<li class="breadcrumb-item active" aria-current="page">创建</li>
-{% else %}
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:affair_list' %}">行政事务</a></li>
-<li class="breadcrumb-item"><a href="{% url 'admin_pages:affair_detail' affair.id %}">{{ affair.affair_number }}</a></li>
-<li class="breadcrumb-item active" aria-current="page">编辑</li>
-{% endif %}
-{% endblock %}
+{% block form_first_row_extra_fields %}
+  {# 第一排额外字段：事务标题 #}
+  <div class="col-md-12 form-field-wrapper">
+    <label for="{{ form.title.id_for_label }}" class="form-label">
+      {{ form.title.label }}
+      {% if form.title.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.title }}
+    {% if form.title.errors %}
+    <div class="text-danger small">{{ form.title.errors }}</div>
+    {% endif %}
+    {% if form.title.help_text %}
+    <div class="form-text">{{ form.title.help_text }}</div>
+    {% endif %}
+  </div>
+{% endblock form_first_row_extra_fields %}
 
-{% block extra_css %}
-<style>
-    .form-card {
-        background: var(--vh-card-bg);
-        border-radius: var(--radius-xl);
-        padding: var(--spacing-lg);
-        margin-bottom: var(--spacing-lg);
-        box-shadow: var(--shadow-lg);
-        border: 1px solid rgba(20, 47, 91, 0.08);
-    }
-    .form-card h5 {
-        margin-bottom: var(--spacing-md);
-        padding-bottom: var(--spacing-md);
-        border-bottom: 2px solid var(--vh-primary);
-        font-weight: 600;
-        color: var(--vh-text);
-    }
-    .form-label.required::after {
-        content: " *";
-        color: var(--vh-error);
-    }
-    .btn-submit {
-        padding: 12px 32px;
-        font-size: var(--font-size-md);
-        font-weight: 600;
-    }
-</style>
-{% endblock %}
-
-{% block content %}
-<div class="container-fluid py-4">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="page-title">{{ page_title }}</h1>
-            <p class="page-description">{{ description }}</p>
-        </div>
+{% block form_fields %}
+  {# 事务类型、优先级、负责人 #}
+  <div class="row mb-3">
+    <div class="col-md-4 form-field-wrapper">
+      <label for="{{ form.affair_type.id_for_label }}" class="form-label">
+        {{ form.affair_type.label }}
+        {% if form.affair_type.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.affair_type }}
+      {% if form.affair_type.errors %}
+      <div class="text-danger small">{{ form.affair_type.errors }}</div>
+      {% endif %}
+      {% if form.affair_type.help_text %}
+      <div class="form-text">{{ form.affair_type.help_text }}</div>
+      {% endif %}
     </div>
+    <div class="col-md-4 form-field-wrapper">
+      <label for="{{ form.priority.id_for_label }}" class="form-label">
+        {{ form.priority.label }}
+        {% if form.priority.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.priority }}
+      {% if form.priority.errors %}
+      <div class="text-danger small">{{ form.priority.errors }}</div>
+      {% endif %}
+      {% if form.priority.help_text %}
+      <div class="form-text">{{ form.priority.help_text }}</div>
+      {% endif %}
+    </div>
+    <div class="col-md-4 form-field-wrapper">
+      <label for="{{ form.responsible_user.id_for_label }}" class="form-label">
+        {{ form.responsible_user.label }}
+        {% if form.responsible_user.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.responsible_user }}
+      {% if form.responsible_user.errors %}
+      <div class="text-danger small">{{ form.responsible_user.errors }}</div>
+      {% endif %}
+      {% if form.responsible_user.help_text %}
+      <div class="form-text">{{ form.responsible_user.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
 
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
+  {# 事务内容（多行文本，占整行） #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.content.id_for_label }}" class="form-label">
+        {{ form.content.label }}
+        {% if form.content.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.content }}
+      {% if form.content.errors %}
+      <div class="text-danger small">{{ form.content.errors }}</div>
+      {% endif %}
+      {% if form.content.help_text %}
+      <div class="form-text">{{ form.content.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
 
-        <div class="form-card">
-            <h5>基本信息</h5>
-            <div class="row g-3">
-                <div class="col-md-12">
-                    <label class="form-label required">事务标题</label>
-                    {{ form.title }}
-                    {% if form.title.errors %}
-                    <div class="text-danger small mt-1">{{ form.title.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label required">事务类型</label>
-                    {{ form.affair_type }}
-                    {% if form.affair_type.errors %}
-                    <div class="text-danger small mt-1">{{ form.affair_type.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label required">优先级</label>
-                    {{ form.priority }}
-                    {% if form.priority.errors %}
-                    <div class="text-danger small mt-1">{{ form.priority.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label required">负责人</label>
-                    {{ form.responsible_user }}
-                    {% if form.responsible_user.errors %}
-                    <div class="text-danger small mt-1">{{ form.responsible_user.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-12">
-                    <label class="form-label required">事务内容</label>
-                    {{ form.content }}
-                    {% if form.content.errors %}
-                    <div class="text-danger small mt-1">{{ form.content.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+  {# 参与人员（多选字段，占整行） #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.participants.id_for_label }}" class="form-label">
+        {{ form.participants.label }}
+        {% if form.participants.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.participants }}
+      {% if form.participants.errors %}
+      <div class="text-danger small">{{ form.participants.errors }}</div>
+      {% endif %}
+      {% if form.participants.help_text %}
+      <div class="form-text">{{ form.participants.help_text }}</div>
+      {% endif %}
+      <small class="text-muted">按住Ctrl键可多选</small>
+    </div>
+  </div>
 
-        <div class="form-card">
-            <h5>参与人员</h5>
-            <div class="row g-3">
-                <div class="col-md-12">
-                    <label class="form-label">参与人（可选）</label>
-                    {{ form.participants }}
-                    {% if form.participants.errors %}
-                    <div class="text-danger small mt-1">{{ form.participants.errors }}</div>
-                    {% endif %}
-                    <small class="text-muted">按住Ctrl键可多选</small>
-                </div>
-            </div>
-        </div>
+  {# 时间安排 #}
+  <div class="row mb-3">
+    <div class="col-md-6 form-field-wrapper">
+      <label for="{{ form.planned_start_time.id_for_label }}" class="form-label">
+        {{ form.planned_start_time.label }}
+        {% if form.planned_start_time.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.planned_start_time }}
+      {% if form.planned_start_time.errors %}
+      <div class="text-danger small">{{ form.planned_start_time.errors }}</div>
+      {% endif %}
+      {% if form.planned_start_time.help_text %}
+      <div class="form-text">{{ form.planned_start_time.help_text }}</div>
+      {% endif %}
+    </div>
+    <div class="col-md-6 form-field-wrapper">
+      <label for="{{ form.planned_end_time.id_for_label }}" class="form-label">
+        {{ form.planned_end_time.label }}
+        {% if form.planned_end_time.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.planned_end_time }}
+      {% if form.planned_end_time.errors %}
+      <div class="text-danger small">{{ form.planned_end_time.errors }}</div>
+      {% endif %}
+      {% if form.planned_end_time.help_text %}
+      <div class="form-text">{{ form.planned_end_time.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
 
-        <div class="form-card">
-            <h5>时间安排</h5>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label required">计划开始时间</label>
-                    {{ form.planned_start_time }}
-                    {% if form.planned_start_time.errors %}
-                    <div class="text-danger small mt-1">{{ form.planned_start_time.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label required">计划完成时间</label>
-                    {{ form.planned_end_time }}
-                    {% if form.planned_end_time.errors %}
-                    <div class="text-danger small mt-1">{{ form.planned_end_time.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+  {# 附件 #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.attachment.id_for_label }}" class="form-label">
+        {{ form.attachment.label }}
+        {% if form.attachment.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.attachment }}
+      {% if form.attachment.errors %}
+      <div class="text-danger small">{{ form.attachment.errors }}</div>
+      {% endif %}
+      {% if form.attachment.help_text %}
+      <div class="form-text">{{ form.attachment.help_text }}</div>
+      {% endif %}
+      {% if not is_create and affair.attachment %}
+      <div class="mt-2">
+        <small class="text-muted">当前附件：</small>
+        <a href="{{ affair.attachment.url }}" target="_blank" class="ms-2">
+          <i class="bi bi-file-earmark"></i> {{ affair.attachment.name|slice:"20:" }}
+        </a>
+      </div>
+      {% endif %}
+      <small class="text-muted">支持 PDF、Word、Excel、图片等格式</small>
+    </div>
+  </div>
+{% endblock form_fields %}
 
-        <div class="form-card">
-            <h5>附件</h5>
-            <div class="row g-3">
-                <div class="col-md-12">
-                    <label class="form-label">事务附件</label>
-                    {{ form.attachment }}
-                    {% if form.attachment.errors %}
-                    <div class="text-danger small mt-1">{{ form.attachment.errors }}</div>
-                    {% endif %}
-                    {% if not is_create and affair.attachment %}
-                    <div class="mt-2">
-                        <small class="text-muted">当前附件：</small>
-                        <a href="{{ affair.attachment.url }}" target="_blank" class="ms-2">
-                            <i class="bi bi-file-earmark"></i> {{ affair.attachment.name|slice:"20:" }}
-                        </a>
-                    </div>
-                    {% endif %}
-                    <small class="text-muted">支持 PDF、Word、Excel、图片等格式</small>
-                </div>
-            </div>
-        </div>
-
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger">
-            {{ form.non_field_errors }}
-        </div>
-        {% endif %}
-
-        <div class="d-flex justify-content-between align-items-center mt-4">
-            <a href="{% if is_create %}{% url 'admin_pages:affair_list' %}{% else %}{% url 'admin_pages:affair_detail' affair.id %}{% endif %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> 取消
-            </a>
-            <div>
-                <button type="submit" class="btn btn-primary btn-submit">
-                    <i class="bi bi-check-circle"></i> 保存
-                </button>
-            </div>
-        </div>
-    </form>
-</div>
-{% endblock %}
+{% block form_actions %}
+  <button type="button" id="headerSubmitButton" class="btn btn-primary">
+    <i class="bi bi-check-circle"></i> 保存
+  </button>
+  <a href="{% if list_url_name %}{% url list_url_name %}{% else %}{% url 'admin_pages:affair_list' %}{% endif %}" class="btn btn-secondary">
+    <i class="bi bi-x-circle"></i> 取消
+  </a>
+{% endblock form_actions %}

@@ -451,17 +451,43 @@ class GoalAdjustment(models.Model):
         ('rejected', '已拒绝'),
     ]
     
+    ADJUSTMENT_TYPE_CHOICES = [
+        ('time', '时间调整'),
+        ('content', '内容调整'),
+        ('responsible', '负责人调整'),
+        ('target_value', '目标值调整'),
+    ]
+    
     goal = models.ForeignKey(
         StrategicGoal,
         on_delete=models.CASCADE,
         related_name='adjustments',
         verbose_name='目标'
     )
+    adjustment_type = models.CharField(
+        max_length=20,
+        choices=ADJUSTMENT_TYPE_CHOICES,
+        default='content',
+        verbose_name='调整类型'
+    )
     adjustment_reason = models.TextField(verbose_name='调整原因')
-    adjustment_content = models.TextField(verbose_name='调整内容')
+    adjustment_content = models.TextField(verbose_name='调整内容', blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='审批状态')
     
-    # 调整后的值（如果调整）
+    # 调整后的值（根据调整类型使用不同字段）
+    # 时间调整
+    new_start_date = models.DateField(null=True, blank=True, verbose_name='新开始日期')
+    new_end_date = models.DateField(null=True, blank=True, verbose_name='新结束日期')
+    # 负责人调整
+    new_responsible_person = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='adjusted_goals',
+        verbose_name='新负责人'
+    )
+    # 目标值调整
     new_target_value = models.DecimalField(
         max_digits=20, 
         decimal_places=2, 
@@ -469,7 +495,6 @@ class GoalAdjustment(models.Model):
         blank=True,
         verbose_name='新目标值'
     )
-    new_end_date = models.DateField(null=True, blank=True, verbose_name='新结束日期')
     
     # 审批信息
     approved_by = models.ForeignKey(
@@ -1254,23 +1279,62 @@ class PlanAdjustment(models.Model):
         ('rejected', '已拒绝'),
     ]
     
+    ADJUSTMENT_TYPE_CHOICES = [
+        ('time', '时间调整'),
+        ('content', '内容调整'),
+        ('responsible', '负责人调整'),
+        ('plan_objective', '计划目标调整'),
+        ('collaboration', '协作人员调整'),
+        ('acceptance_criteria', '验收标准调整'),
+    ]
+    
     plan = models.ForeignKey(
         Plan,
         on_delete=models.CASCADE,
         related_name='adjustments',
         verbose_name='计划'
     )
+    adjustment_type = models.CharField(
+        max_length=20,
+        choices=ADJUSTMENT_TYPE_CHOICES,
+        default='content',
+        verbose_name='调整类型'
+    )
     adjustment_reason = models.TextField(verbose_name='调整原因')
-    adjustment_content = models.TextField(verbose_name='调整内容')
+    adjustment_content = models.TextField(verbose_name='调整内容', blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='审批状态')
     
-    # 调整后的值（如果调整）
+    # 调整后的值（根据调整类型使用不同字段）
+    # 时间调整
+    new_start_time = models.DateTimeField(null=True, blank=True, verbose_name='新开始时间')
+    new_end_time = models.DateTimeField(null=True, blank=True, verbose_name='新结束时间')
+    # 负责人调整
+    new_responsible_person = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='adjusted_plans',
+        verbose_name='新负责人'
+    )
+    # 计划目标调整
+    new_plan_objective = models.TextField(max_length=1000, blank=True, verbose_name='新计划目标')
+    # 协作人员调整
+    new_participants = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name='adjusted_plan_participants',
+        verbose_name='新协作人员'
+    )
+    # 验收标准调整
+    new_acceptance_criteria = models.TextField(max_length=1000, blank=True, verbose_name='新验收标准')
+    
+    # 保留原字段用于兼容
     original_end_time = models.DateTimeField(
         default=timezone.now,
         verbose_name='原截止时间',
         help_text='记录调整前的截止时间'
     )
-    new_end_time = models.DateTimeField(null=True, blank=True, verbose_name='新截止时间')
     
     # 审批信息
     approved_by = models.ForeignKey(

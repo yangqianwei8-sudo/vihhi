@@ -309,6 +309,16 @@
 {% block detail_delete_url %}{% url 'plan_pages:strategic_goal_delete' goal.id %}{% endblock %}
 
 {% block detail_other_actions %}
+  {# 申请调整按钮 #}
+  {% if can_create_adjustment and not has_pending_adjustment %}
+  <a href="{% url 'plan_pages:goal_adjustment_create' goal.id %}" class="btn btn-light">
+    <i class="fas fa-edit"></i> 申请调整
+  </a>
+  {% elif has_pending_adjustment %}
+  <button type="button" class="btn btn-secondary" disabled title="已有待审批的调整申请">
+    <i class="fas fa-clock"></i> 调整申请审批中
+  </button>
+  {% endif %}
   {# 跟踪按钮 #}
   <a href="{% url 'plan_pages:strategic_goal_track' goal.id %}" class="btn btn-info">
     <i class="fas fa-chart-line"></i>

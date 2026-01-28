@@ -1,205 +1,429 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/create_form_base.html" %}
 {% load static %}
 
-{% block pm_title %}{{ page_title|default:"申请调整" }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">{{ plan.name }}</span>{% endblock %}
+{% block form_title %}申请调整 - {{ plan.name }}{% endblock %}
+{% block form_subtitle %}申请调整计划{% endblock %}
 
-{% block pm_actions %}
-<a href="{% url 'plan_pages:plan_detail' plan.id %}" class="list-btn">
-  返回详情
-</a>
+{% block form_header_actions %}
+  <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="btn btn-secondary">返回详情</a>
 {% endblock %}
 
 {% block module_styles %}
-<link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
-<style>
-  .form-container {
-    background: #FFFFFF;
-    border: 1px solid #E0E0E0;
-    border-radius: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    padding: 24px;
-  }
-
-  .form-group {
-    margin-bottom: 20px;
-  }
-
-  .form-label {
-    font-size: 12px;
-    color: #666666;
-    margin-bottom: 6px;
-    display: block;
-    font-weight: 500;
-  }
-
-  .form-label.required::after {
-    content: ' *';
-    color: #999999;
-  }
-
-  .form-control {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #E0E0E0;
-    border-radius: 0;
-    font-size: 14px;
-    color: #333333;
-    background: #FFFFFF;
-  }
-
-  .form-control:focus {
-    outline: none;
-    border-color: #999999;
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
-  }
-
-  .form-text {
-    font-size: 12px;
-    color: #999999;
-    margin-top: 4px;
-  }
-
-  .form-error {
-    font-size: 12px;
-    color: #dc3545;
-    margin-top: 4px;
-  }
-
-  .form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    margin-top: 24px;
-    padding-top: 20px;
-    border-top: 1px solid #E0E0E0;
-  }
-
-  .form-btn {
-    padding: 10px 20px;
-    border-radius: 0;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid;
-  }
-
-  .form-btn-secondary {
-    background: #FFFFFF;
-    color: #666666;
-    border-color: #E0E0E0;
-  }
-
-  .form-btn-primary {
-    background: #1A1A1A;
-    color: #FFFFFF;
-    border-color: #1A1A1A;
-  }
-
-  .form-btn-primary:hover {
-    background: #333333;
-    border-color: #333333;
-  }
-
-  .info-box {
-    background: #F5F5F5;
-    border: 1px solid #E0E0E0;
-    border-radius: 0;
-    padding: 16px;
-    margin-bottom: 20px;
-  }
-
-  .info-box-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1A1A1A;
-    margin-bottom: 8px;
-  }
-
-  .info-box-content {
-    font-size: 12px;
-    color: #666666;
-    line-height: 1.6;
-  }
-</style>
+  {{ block.super }}
+  <style>
+    .plan-detail-section {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .plan-detail-section h5 {
+      color: #495057;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #dee2e6;
+    }
+    .plan-detail-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .plan-detail-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .plan-detail-label {
+      font-size: 12px;
+      color: #6c757d;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .plan-detail-value {
+      font-size: 14px;
+      color: #212529;
+      font-weight: 500;
+    }
+    .adjustment-type-section {
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .dynamic-field-group {
+      display: none;
+    }
+    .dynamic-field-group.active {
+      display: block;
+    }
+  </style>
 {% endblock %}
 
-{% block pm_content %}
-<div class="form-container">
-  <div class="info-box">
-    <div class="info-box-title">📋 计划信息</div>
-    <div class="info-box-content">
-      <strong>计划编号：</strong>{{ plan.plan_number }}<br>
-      <strong>计划名称：</strong>{{ plan.name }}<br>
-      <strong>当前截止时间：</strong>{{ plan.end_time|date:"Y-m-d H:i" }}
-    </div>
-  </div>
-
-  {% if form_validation_errors %}
-  <div style="background: #FAFAFA; border: 1px solid #E0E0E0; padding: 12px; margin-bottom: 20px;">
-    <div style="font-size: 14px; font-weight: 600; color: #dc3545; margin-bottom: 8px;">提交失败</div>
-    <ul style="font-size: 12px; color: #666666; margin: 0; padding-left: 20px;">
-      {% for err in form_validation_errors %}
-      <li>{{ err }}</li>
-      {% endfor %}
-    </ul>
+{% block form_first_row_fields %}
+  {# 基本信息：所属部门、负责人、计划编号 #}
+  {% if form.responsible_department %}
+  <div class="col-md-4 form-field-wrapper">
+    <label for="{{ form.responsible_department.id_for_label }}" class="form-label">
+      {{ form.responsible_department.label }}
+      {% if form.responsible_department.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.responsible_department }}
+    {% if form.responsible_department.errors %}
+    <div class="text-danger small">{{ form.responsible_department.errors }}</div>
+    {% endif %}
   </div>
   {% endif %}
 
-  {% if form.non_field_errors %}
-  <div style="background: #FAFAFA; border: 1px solid #E0E0E0; padding: 12px; margin-bottom: 20px;">
-    <div style="font-size: 14px; font-weight: 600; color: #1A1A1A; margin-bottom: 8px;">提交失败</div>
-    <div style="font-size: 12px; color: #666666;">{{ form.non_field_errors }}</div>
+  {% if form.responsible_person %}
+  <div class="col-md-4 form-field-wrapper">
+    <label for="{{ form.responsible_person.id_for_label }}" class="form-label">
+      {{ form.responsible_person.label }}
+      {% if form.responsible_person.field.required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    {{ form.responsible_person }}
+    {% if form.responsible_person.errors %}
+    <div class="text-danger small">{{ form.responsible_person.errors }}</div>
+    {% endif %}
   </div>
   {% endif %}
 
-  <form method="post" novalidate>
-    {% csrf_token %}
+  <div class="col-md-4 form-field-wrapper">
+    <label for="{{ form.plan_number_display.id_for_label }}" class="form-label">
+      {{ form.plan_number_display.label }}
+    </label>
+    {{ form.plan_number_display }}
+  </div>
+{% endblock %}
 
-    <div class="form-group">
-      <label class="form-label required" for="{{ form.adjustment_reason.id_for_label }}">
-        {{ form.adjustment_reason.label }}
-      </label>
-      {{ form.adjustment_reason }}
-      {% if form.adjustment_reason.help_text %}
-      <div class="form-text">{{ form.adjustment_reason.help_text }}</div>
-      {% endif %}
-      {% if form.adjustment_reason.errors %}
-      <div class="form-error">{{ form.adjustment_reason.errors }}</div>
-      {% endif %}
+{% block form_second_row_fields %}
+  {# 原计划详情展示 #}
+  <div class="plan-detail-section">
+    <h5>原计划详情</h5>
+    
+    {# 基本信息 #}
+    <div style="margin-bottom: 20px;">
+      <h6 style="color: #6c757d; font-size: 14px; margin-bottom: 12px; font-weight: 600;">基本信息</h6>
+      <div class="plan-detail-row">
+        <div class="plan-detail-item">
+          <span class="plan-detail-label">所属部门</span>
+          <span class="plan-detail-value">{{ plan.responsible_department.name|default:"-" }}</span>
+        </div>
+        <div class="plan-detail-item">
+          <span class="plan-detail-label">负责人</span>
+          <span class="plan-detail-value">{{ plan.responsible_person.get_full_name|default:plan.responsible_person.username }}</span>
+        </div>
+        <div class="plan-detail-item">
+          <span class="plan-detail-label">计划编号</span>
+          <span class="plan-detail-value"><code>{{ plan.plan_number }}</code></span>
+        </div>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label class="form-label required" for="{{ form.adjustment_content.id_for_label }}">
-        {{ form.adjustment_content.label }}
-      </label>
-      {{ form.adjustment_content }}
-      {% if form.adjustment_content.help_text %}
-      <div class="form-text">{{ form.adjustment_content.help_text }}</div>
-      {% endif %}
-      {% if form.adjustment_content.errors %}
-      <div class="form-error">{{ form.adjustment_content.errors }}</div>
-      {% endif %}
+    {# 详细信息 #}
+    <div>
+      <h6 style="color: #6c757d; font-size: 14px; margin-bottom: 12px; font-weight: 600;">详细信息</h6>
+      <div class="plan-detail-row">
+        <div class="plan-detail-item">
+          <span class="plan-detail-label">计划层级</span>
+          <span class="plan-detail-value">{{ plan.get_level_display }}</span>
+        </div>
+        <div class="plan-detail-item">
+          <span class="plan-detail-label">计划周期</span>
+          <span class="plan-detail-value">{{ plan.get_plan_period_display }}</span>
+        </div>
+        <div class="plan-detail-item">
+          <span class="plan-detail-label">开始时间</span>
+          <span class="plan-detail-value">{{ plan.start_time|date:"Y-m-d H:i"|default:"-" }}</span>
+        </div>
+        <div class="plan-detail-item">
+          <span class="plan-detail-label">结束时间</span>
+          <span class="plan-detail-value">{{ plan.end_time|date:"Y-m-d H:i"|default:"-" }}</span>
+        </div>
+        <div class="plan-detail-item">
+          <span class="plan-detail-label">父计划</span>
+          <span class="plan-detail-value">
+            {% if plan.parent_plan %}
+              <a href="{% url 'plan_pages:plan_detail' plan.parent_plan.id %}" class="text-decoration-none">
+                {{ plan.parent_plan.name }} ({{ plan.parent_plan.plan_number }})
+              </a>
+            {% else %}
+              -
+            {% endif %}
+          </span>
+        </div>
+        <div class="plan-detail-item">
+          <span class="plan-detail-label">计划名称</span>
+          <span class="plan-detail-value">{{ plan.name }}</span>
+        </div>
+        <div class="plan-detail-item">
+          <span class="plan-detail-label">计划目标</span>
+          <span class="plan-detail-value">{{ plan.plan_objective|default:"-"|truncatewords:20 }}</span>
+        </div>
+        <div class="plan-detail-item">
+          <span class="plan-detail-label">关联战略目标</span>
+          <span class="plan-detail-value">
+            {% if plan.related_goal %}
+              <a href="{% url 'plan_pages:strategic_goal_detail' plan.related_goal.id %}" class="text-decoration-none">
+                {{ plan.related_goal.name }} ({{ plan.related_goal.goal_number }})
+              </a>
+            {% else %}
+              -
+            {% endif %}
+          </span>
+        </div>
+        <div class="plan-detail-item">
+          <span class="plan-detail-label">关联项目</span>
+          <span class="plan-detail-value">{{ plan.related_project|default:"-" }}</span>
+        </div>
+        <div class="plan-detail-item" style="grid-column: 1 / -1;">
+          <span class="plan-detail-label">计划内容</span>
+          <span class="plan-detail-value">{{ plan.content|default:"-"|truncatewords:50 }}</span>
+        </div>
+        <div class="plan-detail-item" style="grid-column: 1 / -1;">
+          <span class="plan-detail-label">验收标准</span>
+          <span class="plan-detail-value">{{ plan.acceptance_criteria|default:"-"|truncatewords:30 }}</span>
+        </div>
+        <div class="plan-detail-item" style="grid-column: 1 / -1;">
+          <span class="plan-detail-label">协作计划</span>
+          <span class="plan-detail-value">{{ plan.collaboration_plan|default:"-"|truncatewords:30 }}</span>
+        </div>
+        <div class="plan-detail-item" style="grid-column: 1 / -1;">
+          <span class="plan-detail-label">协作人员</span>
+          <span class="plan-detail-value">
+            {% if plan.participants.all %}
+              {% for participant in plan.participants.all %}
+                {{ participant.get_full_name|default:participant.username }}{% if not forloop.last %}、{% endif %}
+              {% endfor %}
+            {% else %}
+              -
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block form_fields %}
+  {# 调整详情信息 #}
+  <div class="adjustment-type-section">
+    <h5>调整详情信息</h5>
+    
+    {# 调整类型 #}
+    <div class="row mb-3">
+      <div class="col-12 form-field-wrapper">
+        <label for="{{ form.adjustment_type.id_for_label }}" class="form-label">
+          {{ form.adjustment_type.label }}
+          {% if form.adjustment_type.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        {{ form.adjustment_type }}
+        {% if form.adjustment_type.errors %}
+        <div class="text-danger small">{{ form.adjustment_type.errors }}</div>
+        {% endif %}
+        {% if form.adjustment_type.help_text %}
+        <div class="form-text">{{ form.adjustment_type.help_text }}</div>
+        {% endif %}
+      </div>
     </div>
 
-    <div class="form-group">
-      <label class="form-label required" for="{{ form.new_end_time.id_for_label }}">
-        {{ form.new_end_time.label }}
-      </label>
-      {{ form.new_end_time }}
-      {% if form.new_end_time.help_text %}
-      <div class="form-text">{{ form.new_end_time.help_text }}</div>
-      {% endif %}
-      {% if form.new_end_time.errors %}
-      <div class="form-error">{{ form.new_end_time.errors }}</div>
-      {% endif %}
+    {# 根据调整类型动态显示的字段 #}
+    {# 时间调整字段 #}
+    <div class="dynamic-field-group" id="time-adjustment-fields">
+      <div class="row mb-3">
+        <div class="col-md-6 form-field-wrapper">
+          <label for="{{ form.new_start_time.id_for_label }}" class="form-label">
+            {{ form.new_start_time.label }}
+            {% if form.new_start_time.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ form.new_start_time }}
+          {% if form.new_start_time.errors %}
+          <div class="text-danger small">{{ form.new_start_time.errors }}</div>
+          {% endif %}
+          {% if form.new_start_time.help_text %}
+          <div class="form-text">{{ form.new_start_time.help_text }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-6 form-field-wrapper">
+          <label for="{{ form.new_end_time.id_for_label }}" class="form-label">
+            {{ form.new_end_time.label }}
+            {% if form.new_end_time.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ form.new_end_time }}
+          {% if form.new_end_time.errors %}
+          <div class="text-danger small">{{ form.new_end_time.errors }}</div>
+          {% endif %}
+          {% if form.new_end_time.help_text %}
+          <div class="form-text">{{ form.new_end_time.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
     </div>
 
-    <div class="form-actions">
-      <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="form-btn form-btn-secondary">取消</a>
-      <button type="submit" class="form-btn form-btn-primary">{{ submit_text|default:"提交申请" }}</button>
+    {# 内容调整字段 #}
+    <div class="dynamic-field-group" id="content-adjustment-fields">
+      <div class="row mb-3">
+        <div class="col-12 form-field-wrapper">
+          <label for="{{ form.adjustment_content.id_for_label }}" class="form-label">
+            {{ form.adjustment_content.label }}
+            {% if form.adjustment_content.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ form.adjustment_content }}
+          {% if form.adjustment_content.errors %}
+          <div class="text-danger small">{{ form.adjustment_content.errors }}</div>
+          {% endif %}
+          {% if form.adjustment_content.help_text %}
+          <div class="form-text">{{ form.adjustment_content.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
     </div>
-  </form>
-</div>
+
+    {# 负责人调整字段 #}
+    <div class="dynamic-field-group" id="responsible-adjustment-fields">
+      <div class="row mb-3">
+        <div class="col-12 form-field-wrapper">
+          <label for="{{ form.new_responsible_person.id_for_label }}" class="form-label">
+            {{ form.new_responsible_person.label }}
+            {% if form.new_responsible_person.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ form.new_responsible_person }}
+          {% if form.new_responsible_person.errors %}
+          <div class="text-danger small">{{ form.new_responsible_person.errors }}</div>
+          {% endif %}
+          {% if form.new_responsible_person.help_text %}
+          <div class="form-text">{{ form.new_responsible_person.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# 计划目标调整字段 #}
+    <div class="dynamic-field-group" id="plan-objective-adjustment-fields">
+      <div class="row mb-3">
+        <div class="col-12 form-field-wrapper">
+          <label for="{{ form.new_plan_objective.id_for_label }}" class="form-label">
+            {{ form.new_plan_objective.label }}
+            {% if form.new_plan_objective.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ form.new_plan_objective }}
+          {% if form.new_plan_objective.errors %}
+          <div class="text-danger small">{{ form.new_plan_objective.errors }}</div>
+          {% endif %}
+          {% if form.new_plan_objective.help_text %}
+          <div class="form-text">{{ form.new_plan_objective.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# 协作人员调整字段 #}
+    <div class="dynamic-field-group" id="collaboration-adjustment-fields">
+      <div class="row mb-3">
+        <div class="col-12 form-field-wrapper">
+          <label for="{{ form.new_participants.id_for_label }}" class="form-label">
+            {{ form.new_participants.label }}
+            {% if form.new_participants.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ form.new_participants }}
+          {% if form.new_participants.errors %}
+          <div class="text-danger small">{{ form.new_participants.errors }}</div>
+          {% endif %}
+          {% if form.new_participants.help_text %}
+          <div class="form-text">{{ form.new_participants.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# 验收标准调整字段 #}
+    <div class="dynamic-field-group" id="acceptance-criteria-adjustment-fields">
+      <div class="row mb-3">
+        <div class="col-12 form-field-wrapper">
+          <label for="{{ form.new_acceptance_criteria.id_for_label }}" class="form-label">
+            {{ form.new_acceptance_criteria.label }}
+            {% if form.new_acceptance_criteria.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ form.new_acceptance_criteria }}
+          {% if form.new_acceptance_criteria.errors %}
+          <div class="text-danger small">{{ form.new_acceptance_criteria.errors }}</div>
+          {% endif %}
+          {% if form.new_acceptance_criteria.help_text %}
+          <div class="form-text">{{ form.new_acceptance_criteria.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# 调整原因 #}
+    <div class="row mb-3">
+      <div class="col-12 form-field-wrapper">
+        <label for="{{ form.adjustment_reason.id_for_label }}" class="form-label">
+          {{ form.adjustment_reason.label }}
+          {% if form.adjustment_reason.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        {{ form.adjustment_reason }}
+        {% if form.adjustment_reason.errors %}
+        <div class="text-danger small">{{ form.adjustment_reason.errors }}</div>
+        {% endif %}
+        {% if form.adjustment_reason.help_text %}
+        <div class="form-text">{{ form.adjustment_reason.help_text }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block form_actions %}
+  <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="btn btn-secondary">取消</a>
+  <button type="button" class="btn btn-primary" id="headerSubmitButton">提交申请</button>
+{% endblock %}
+
+{% block module_scripts %}
+  {{ block.super }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const adjustmentTypeSelect = document.getElementById('id_adjustment_type');
+      const timeFields = document.getElementById('time-adjustment-fields');
+      const contentFields = document.getElementById('content-adjustment-fields');
+      const responsibleFields = document.getElementById('responsible-adjustment-fields');
+      const planObjectiveFields = document.getElementById('plan-objective-adjustment-fields');
+      const collaborationFields = document.getElementById('collaboration-adjustment-fields');
+      const acceptanceCriteriaFields = document.getElementById('acceptance-criteria-adjustment-fields');
+
+      function toggleFields() {
+        // 隐藏所有字段组
+        [timeFields, contentFields, responsibleFields, planObjectiveFields, collaborationFields, acceptanceCriteriaFields].forEach(group => {
+          if (group) {
+            group.classList.remove('active');
+          }
+        });
+
+        // 根据选择的调整类型显示对应字段
+        const selectedType = adjustmentTypeSelect ? adjustmentTypeSelect.value : '';
+        if (selectedType === 'time' && timeFields) {
+          timeFields.classList.add('active');
+        } else if (selectedType === 'content' && contentFields) {
+          contentFields.classList.add('active');
+        } else if (selectedType === 'responsible' && responsibleFields) {
+          responsibleFields.classList.add('active');
+        } else if (selectedType === 'plan_objective' && planObjectiveFields) {
+          planObjectiveFields.classList.add('active');
+        } else if (selectedType === 'collaboration' && collaborationFields) {
+          collaborationFields.classList.add('active');
+        } else if (selectedType === 'acceptance_criteria' && acceptanceCriteriaFields) {
+          acceptanceCriteriaFields.classList.add('active');
+        }
+      }
+
+      // 初始显示
+      toggleFields();
+
+      // 监听调整类型变化
+      if (adjustmentTypeSelect) {
+        adjustmentTypeSelect.addEventListener('change', toggleFields);
+      }
+    });
+  </script>
 {% endblock %}

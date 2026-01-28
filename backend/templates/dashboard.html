@@ -20,145 +20,960 @@
       </div>
     </div>
 
-    <!-- 统计卡片 -->
-    {% if stats_cards %}
-      <div class="row mb-4">
-        {% for card in stats_cards %}
-          <div class="col-md-3 mb-3">
-            <div class="card">
-              <div class="card-body">
-                <h5 class="card-title">{{ card.title }}</h5>
-                <h2 class="mb-0">{{ card.value }}</h2>
-                {% if card.url %}
-                  <a href="{{ card.url }}" class="btn btn-sm btn-outline-primary mt-2">查看详情</a>
-                {% endif %}
+    <!-- 风险预警卡片 -->
+    {% if employee_risk_data %}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">⚠️ 员工风险预警对比</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <!-- 图表区域 -->
+              <div class="col-lg-8">
+                <canvas id="employeeRiskChart" height="400"></canvas>
+              </div>
+              <!-- 详细数据表格 -->
+              <div class="col-lg-4">
+                <h6 class="mb-3">详细数据</h6>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                  <table class="table table-sm table-hover">
+                    <thead class="table-light sticky-top">
+                      <tr>
+                        <th>员工</th>
+                        <th>风险分</th>
+                        <th>详情</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for emp in employee_risk_data %}
+                      <tr>
+                        <td>
+                          <div class="fw-bold">{{ emp.user_name }}</div>
+                          <small class="text-muted">{{ emp.department }}</small>
+                        </td>
+                        <td>
+                          <span class="badge {% if emp.total_risk_score >= 20 %}bg-danger{% elif emp.total_risk_score >= 10 %}bg-warning{% else %}bg-info{% endif %}">
+                            {{ emp.total_risk_score }}
+                          </span>
+                        </td>
+                        <td>
+                          <small>
+                            <div>风险目标: {{ emp.goal_risk_count }}</div>
+                            <div>风险计划: {{ emp.plan_risk_count }}</div>
+                            <div>总风险: {{ emp.total_risk_count }}</div>
+                            <div>平均逾期: {{ emp.avg_days_overdue }}天</div>
+                          </small>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 统计摘要 -->
+            <div class="row mt-3">
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0 text-danger">{{ employee_risk_data|length }}</div>
+                  <small class="text-muted">总员工数</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0 text-warning" id="high-risk-count">0</div>
+                  <small class="text-muted">高风险员工</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0" id="total-risk-count">0</div>
+                  <small class="text-muted">总风险项数</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0" id="total-risk-score">0</div>
+                  <small class="text-muted">总风险分</small>
+                </div>
               </div>
             </div>
           </div>
-        {% endfor %}
+        </div>
       </div>
+    </div>
     {% endif %}
 
-    <!-- 核心卡片 -->
-    {% if core_cards %}
-      <div class="row mb-4">
-        {% for card in core_cards %}
-          <div class="col-md-4 mb-3">
-            <div class="card">
-              <div class="card-body">
-                <div class="d-flex align-items-center mb-2">
-                  <span class="fs-2 me-2">{{ card.icon|default:"📊" }}</span>
-                  <h5 class="card-title mb-0">{{ card.label }}</h5>
+    <!-- 员工待办事项对比卡片 -->
+    {% if employee_todo_data %}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">📋 员工待办事项对比</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <!-- 图表区域 -->
+              <div class="col-lg-8">
+                <canvas id="employeeTodoChart" height="400"></canvas>
+              </div>
+              <!-- 详细数据表格 -->
+              <div class="col-lg-4">
+                <h6 class="mb-3">详细数据</h6>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                  <table class="table table-sm table-hover">
+                    <thead class="table-light sticky-top">
+                      <tr>
+                        <th>员工</th>
+                        <th>待办分</th>
+                        <th>详情</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for emp in employee_todo_data %}
+                      <tr>
+                        <td>
+                          <div class="fw-bold">{{ emp.user_name }}</div>
+                          <small class="text-muted">{{ emp.department }}</small>
+                        </td>
+                        <td>
+                          <span class="badge {% if emp.todo_score >= 100 %}bg-danger{% elif emp.todo_score >= 50 %}bg-warning{% else %}bg-info{% endif %}">
+                            {{ emp.todo_score }}
+                          </span>
+                        </td>
+                        <td>
+                          <small>
+                            <div>总待办: {{ emp.total_todos }}</div>
+                            <div>高优先级: {{ emp.high_priority_count }}</div>
+                            <div>逾期: {{ emp.overdue_count }}</div>
+                            <div>平均逾期: {{ emp.avg_days_overdue }}天</div>
+                          </small>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
                 </div>
-                <h3 class="mb-2">{{ card.value }}</h3>
-                {% if card.subvalue %}
-                  <p class="text-muted mb-0">{{ card.subvalue }}</p>
-                {% endif %}
-                {% if card.url %}
-                  <a href="{{ card.url }}" class="btn btn-sm btn-outline-primary mt-2">查看详情</a>
-                {% endif %}
+              </div>
+            </div>
+            
+            <!-- 统计摘要 -->
+            <div class="row mt-3">
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0 text-primary">{{ employee_todo_data|length }}</div>
+                  <small class="text-muted">总员工数</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0 text-danger" id="high-todo-count">0</div>
+                  <small class="text-muted">高待办员工</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0" id="total-todo-count">0</div>
+                  <small class="text-muted">总待办数</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0 text-warning" id="total-overdue-count">0</div>
+                  <small class="text-muted">总逾期数</small>
+                </div>
               </div>
             </div>
           </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    <!-- 任务看板 -->
-    {% if task_board %}
-      <div class="row mb-4">
-        <div class="col-md-4">
-          <div class="card">
-            <div class="card-header">
-              <h5 class="mb-0">待处理</h5>
-            </div>
-            <div class="card-body">
-              {% for task in task_board.pending %}
-                <div class="mb-2">
-                  <a href="{{ task.url }}">{{ task.title }}</a>
-                  <small class="text-muted d-block">{{ task.project_name }}</small>
-                </div>
-              {% empty %}
-                <p class="text-muted">暂无待处理任务</p>
-              {% endfor %}
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card">
-            <div class="card-header">
-              <h5 class="mb-0">进行中</h5>
-            </div>
-            <div class="card-body">
-              {% for task in task_board.in_progress %}
-                <div class="mb-2">
-                  <a href="{{ task.url }}">{{ task.title }}</a>
-                  <small class="text-muted d-block">{{ task.project_name }}</small>
-                </div>
-              {% empty %}
-                <p class="text-muted">暂无进行中任务</p>
-              {% endfor %}
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card">
-            <div class="card-header">
-              <h5 class="mb-0">已完成</h5>
-            </div>
-            <div class="card-body">
-              {% for task in task_board.completed %}
-                <div class="mb-2">
-                  <a href="{{ task.url }}">{{ task.title }}</a>
-                  <small class="text-muted d-block">{{ task.project_name }}</small>
-                </div>
-              {% empty %}
-                <p class="text-muted">暂无已完成任务</p>
-              {% endfor %}
-            </div>
-          </div>
         </div>
       </div>
+    </div>
     {% endif %}
 
-    <!-- 运营中心模块卡片 -->
-    {% if operation_center_sections %}
-      <div class="row mb-4">
-        <div class="col-12">
-          <h4 class="mb-3">运营中心</h4>
-        </div>
-        {% for section in operation_center_sections %}
-          <div class="col-md-4 mb-3">
-            <div class="card">
-              <div class="card-body">
-                <div class="d-flex align-items-center mb-2">
-                  <span class="fs-2 me-2">{{ section.icon|default:"📊" }}</span>
-                  <h5 class="card-title mb-0">{{ section.title }}</h5>
+    <!-- 员工工作计划对比卡片 -->
+    {% if employee_plan_data %}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-success text-white">
+            <h5 class="mb-0">📅 员工工作计划对比</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <!-- 图表区域 -->
+              <div class="col-lg-8">
+                <canvas id="employeePlanChart" height="400"></canvas>
+              </div>
+              <!-- 详细数据表格 -->
+              <div class="col-lg-4">
+                <h6 class="mb-3">详细数据</h6>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                  <table class="table table-sm table-hover">
+                    <thead class="table-light sticky-top">
+                      <tr>
+                        <th>员工</th>
+                        <th>计划分</th>
+                        <th>详情</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for emp in employee_plan_data %}
+                      <tr>
+                        <td>
+                          <div class="fw-bold">{{ emp.user_name }}</div>
+                          <small class="text-muted">{{ emp.department }}</small>
+                        </td>
+                        <td>
+                          <span class="badge {% if emp.plan_score >= 50 %}bg-danger{% elif emp.plan_score >= 20 %}bg-warning{% else %}bg-info{% endif %}">
+                            {{ emp.plan_score }}
+                          </span>
+                        </td>
+                        <td>
+                          <small>
+                            <div>总计划: {{ emp.total_plans }}</div>
+                            <div>执行中: {{ emp.in_progress_count }}</div>
+                            <div>逾期: {{ emp.overdue_count }}</div>
+                            <div>今日: {{ emp.today_count }}</div>
+                            <div>平均进度: {{ emp.avg_progress }}%</div>
+                          </small>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
                 </div>
-                <p class="text-muted">{{ section.description }}</p>
-                {% if section.stats %}
-                  <div class="d-flex gap-3">
-                    {% for key, value in section.stats.items %}
-                      <div>
-                        <small class="text-muted d-block">{{ key }}</small>
-                        <strong>{{ value }}</strong>
-                      </div>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-                {% if section.url %}
-                  <a href="{{ section.url }}" class="btn btn-sm btn-outline-primary mt-2">进入模块</a>
-                {% endif %}
+              </div>
+            </div>
+            
+            <!-- 统计摘要 -->
+            <div class="row mt-3">
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0 text-success">{{ employee_plan_data|length }}</div>
+                  <small class="text-muted">总员工数</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0 text-primary" id="high-plan-count">0</div>
+                  <small class="text-muted">高计划员工</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0" id="total-plan-count">0</div>
+                  <small class="text-muted">总计划数</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0 text-warning" id="total-overdue-plan-count">0</div>
+                  <small class="text-muted">总逾期数</small>
+                </div>
               </div>
             </div>
           </div>
-        {% endfor %}
+        </div>
       </div>
+    </div>
     {% endif %}
+
+    <!-- 员工战略目标对比卡片 -->
+    {% if employee_goal_data %}
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0">🎯 员工战略目标对比</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <!-- 图表区域 -->
+              <div class="col-lg-8">
+                <canvas id="employeeGoalChart" height="400"></canvas>
+              </div>
+              <!-- 详细数据表格 -->
+              <div class="col-lg-4">
+                <h6 class="mb-3">详细数据</h6>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                  <table class="table table-sm table-hover">
+                    <thead class="table-light sticky-top">
+                      <tr>
+                        <th>员工</th>
+                        <th>目标分</th>
+                        <th>详情</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for emp in employee_goal_data %}
+                      <tr>
+                        <td>
+                          <div class="fw-bold">{{ emp.user_name }}</div>
+                          <small class="text-muted">{{ emp.department }}</small>
+                        </td>
+                        <td>
+                          <span class="badge {% if emp.goal_score >= 50 %}bg-danger{% elif emp.goal_score >= 20 %}bg-warning{% else %}bg-info{% endif %}">
+                            {{ emp.goal_score }}
+                          </span>
+                        </td>
+                        <td>
+                          <small>
+                            <div>总目标: {{ emp.total_goals }}</div>
+                            <div>执行中: {{ emp.in_progress_count }}</div>
+                            <div>逾期: {{ emp.overdue_count }}</div>
+                            <div>本月需完成: {{ emp.this_month_count }}</div>
+                            <div>平均完成率: {{ emp.avg_completion }}%</div>
+                          </small>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 统计摘要 -->
+            <div class="row mt-3">
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0 text-info">{{ employee_goal_data|length }}</div>
+                  <small class="text-muted">总员工数</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0 text-primary" id="high-goal-count">0</div>
+                  <small class="text-muted">高目标员工</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0" id="total-goal-count">0</div>
+                  <small class="text-muted">总目标数</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center p-2 bg-light rounded">
+                  <div class="h5 mb-0 text-warning" id="total-overdue-goal-count">0</div>
+                  <small class="text-muted">总逾期数</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
   </div>
 {% endblock %}
 
 {% block extra_js %}
   {{ block.super }}
   <script src="{% static 'js/sidebar.js' %}"></script>
+  <script src="{% static 'js/lib/chart.umd.min.js' %}"></script>
+  {% if employee_risk_data %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const ctx = document.getElementById('employeeRiskChart');
+      if (!ctx) return;
+      
+      const employeeData = {{ employee_risk_data_json|safe }};
+      
+      // 计算统计摘要（来源于 plan/home 的风险预警）
+      let highRiskCount = 0;
+      let totalRiskCount = 0;
+      let totalRiskScore = 0;
+      
+      employeeData.forEach(emp => {
+        if (emp.total_risk_score >= 20) {
+          highRiskCount++;
+        }
+        totalRiskCount += (emp.total_risk_count || 0);
+        totalRiskScore += (emp.total_risk_score || 0);
+      });
+      
+      // 更新统计摘要显示
+      document.getElementById('high-risk-count').textContent = highRiskCount;
+      document.getElementById('total-risk-count').textContent = totalRiskCount;
+      document.getElementById('total-risk-score').textContent = Math.round(totalRiskScore);
+      
+      // 准备图表数据（来源于 plan/home 的风险预警）
+      const labels = employeeData.map(emp => emp.user_name);
+      const goalRiskData = employeeData.map(emp => emp.goal_risk_count || 0);
+      const planRiskData = employeeData.map(emp => emp.plan_risk_count || 0);
+      const totalRiskData = employeeData.map(emp => emp.total_risk_count || 0);
+      const riskScoreData = employeeData.map(emp => emp.total_risk_score || 0);
+      
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '风险目标数',
+              data: goalRiskData,
+              backgroundColor: 'rgba(220, 53, 69, 0.8)',
+              borderColor: 'rgba(220, 53, 69, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '风险计划数',
+              data: planRiskData,
+              backgroundColor: 'rgba(255, 193, 7, 0.8)',
+              borderColor: 'rgba(255, 193, 7, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '总风险数',
+              data: totalRiskData,
+              backgroundColor: 'rgba(255, 87, 34, 0.8)',
+              borderColor: 'rgba(255, 87, 34, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '风险分数',
+              data: riskScoreData,
+              backgroundColor: 'rgba(156, 39, 176, 0.8)',
+              borderColor: 'rgba(156, 39, 176, 1)',
+              borderWidth: 2,
+              type: 'line',
+              tension: 0.4,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: '员工风险指标对比图',
+              font: {
+                size: 16,
+                weight: 'bold'
+              }
+            },
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                afterLabel: function(context) {
+                  const index = context.dataIndex;
+                  const emp = employeeData[index];
+                  return [
+                    '部门: ' + emp.department,
+                    '总风险: ' + (emp.total_risk_count || 0),
+                    '平均逾期: ' + (emp.avg_days_overdue || 0) + '天',
+                    '平均进度差距: ' + (emp.avg_progress_gap || 0) + '%'
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: false,
+              ticks: {
+                maxRotation: 0,
+                minRotation: 0
+              }
+            },
+            y: {
+              beginAtZero: true,
+              position: 'left',
+              title: {
+                display: true,
+                text: '风险数量'
+              }
+            },
+            y1: {
+              beginAtZero: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: '风险分数'
+              },
+              grid: {
+                drawOnChartArea: false
+              }
+            }
+          },
+          interaction: {
+            mode: 'index',
+            intersect: false
+          }
+        }
+      });
+    });
+  </script>
+  {% endif %}
+  
+  {% if employee_todo_data %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const ctx = document.getElementById('employeeTodoChart');
+      if (!ctx) return;
+      
+      const employeeData = {{ employee_todo_data_json|safe }};
+      
+      // 计算统计摘要
+      let highTodoCount = 0;
+      let totalTodoCount = 0;
+      let totalOverdueCount = 0;
+      
+      employeeData.forEach(emp => {
+        if (emp.todo_score >= 100) {
+          highTodoCount++;
+        }
+        totalTodoCount += (emp.total_todos || 0);
+        totalOverdueCount += (emp.overdue_count || 0);
+      });
+      
+      // 更新统计摘要显示
+      document.getElementById('high-todo-count').textContent = highTodoCount;
+      document.getElementById('total-todo-count').textContent = totalTodoCount;
+      document.getElementById('total-overdue-count').textContent = totalOverdueCount;
+      
+      // 准备图表数据
+      const labels = employeeData.map(emp => emp.user_name);
+      const totalTodosData = employeeData.map(emp => emp.total_todos || 0);
+      const highPriorityData = employeeData.map(emp => emp.high_priority_count || 0);
+      const overdueData = employeeData.map(emp => emp.overdue_count || 0);
+      const todoScoreData = employeeData.map(emp => emp.todo_score || 0);
+      
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '总待办数',
+              data: totalTodosData,
+              backgroundColor: 'rgba(13, 110, 253, 0.8)',
+              borderColor: 'rgba(13, 110, 253, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '高优先级',
+              data: highPriorityData,
+              backgroundColor: 'rgba(220, 53, 69, 0.8)',
+              borderColor: 'rgba(220, 53, 69, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '逾期数',
+              data: overdueData,
+              backgroundColor: 'rgba(255, 193, 7, 0.8)',
+              borderColor: 'rgba(255, 193, 7, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '待办分数',
+              data: todoScoreData,
+              backgroundColor: 'rgba(156, 39, 176, 0.8)',
+              borderColor: 'rgba(156, 39, 176, 1)',
+              borderWidth: 2,
+              type: 'line',
+              tension: 0.4,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: '员工待办事项对比图',
+              font: {
+                size: 16,
+                weight: 'bold'
+              }
+            },
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                afterLabel: function(context) {
+                  const index = context.dataIndex;
+                  const emp = employeeData[index];
+                  return [
+                    '部门: ' + emp.department,
+                    '总待办: ' + (emp.total_todos || 0),
+                    '高优先级: ' + (emp.high_priority_count || 0),
+                    '中优先级: ' + (emp.medium_priority_count || 0),
+                    '低优先级: ' + (emp.low_priority_count || 0),
+                    '逾期: ' + (emp.overdue_count || 0),
+                    '平均逾期: ' + (emp.avg_days_overdue || 0) + '天'
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: false,
+              ticks: {
+                maxRotation: 0,
+                minRotation: 0
+              }
+            },
+            y: {
+              beginAtZero: true,
+              position: 'left',
+              title: {
+                display: true,
+                text: '待办数量'
+              }
+            },
+            y1: {
+              beginAtZero: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: '待办分数'
+              },
+              grid: {
+                drawOnChartArea: false
+              }
+            }
+          },
+          interaction: {
+            mode: 'index',
+            intersect: false
+          }
+        }
+      });
+    });
+  </script>
+  {% endif %}
+  
+  {% if employee_plan_data %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const ctx = document.getElementById('employeePlanChart');
+      if (!ctx) return;
+      
+      const employeeData = {{ employee_plan_data_json|safe }};
+      
+      // 计算统计摘要
+      let highPlanCount = 0;
+      let totalPlanCount = 0;
+      let totalOverduePlanCount = 0;
+      
+      employeeData.forEach(emp => {
+        if (emp.plan_score >= 50) {
+          highPlanCount++;
+        }
+        totalPlanCount += (emp.total_plans || 0);
+        totalOverduePlanCount += (emp.overdue_count || 0);
+      });
+      
+      // 更新统计摘要显示
+      document.getElementById('high-plan-count').textContent = highPlanCount;
+      document.getElementById('total-plan-count').textContent = totalPlanCount;
+      document.getElementById('total-overdue-plan-count').textContent = totalOverduePlanCount;
+      
+      // 准备图表数据
+      const labels = employeeData.map(emp => emp.user_name);
+      const totalPlansData = employeeData.map(emp => emp.total_plans || 0);
+      const inProgressData = employeeData.map(emp => emp.in_progress_count || 0);
+      const overdueData = employeeData.map(emp => emp.overdue_count || 0);
+      const todayData = employeeData.map(emp => emp.today_count || 0);
+      const planScoreData = employeeData.map(emp => emp.plan_score || 0);
+      
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '总计划数',
+              data: totalPlansData,
+              backgroundColor: 'rgba(25, 135, 84, 0.8)',
+              borderColor: 'rgba(25, 135, 84, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '执行中',
+              data: inProgressData,
+              backgroundColor: 'rgba(13, 110, 253, 0.8)',
+              borderColor: 'rgba(13, 110, 253, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '逾期数',
+              data: overdueData,
+              backgroundColor: 'rgba(255, 193, 7, 0.8)',
+              borderColor: 'rgba(255, 193, 7, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '今日应执行',
+              data: todayData,
+              backgroundColor: 'rgba(220, 53, 69, 0.8)',
+              borderColor: 'rgba(220, 53, 69, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '计划分数',
+              data: planScoreData,
+              backgroundColor: 'rgba(156, 39, 176, 0.8)',
+              borderColor: 'rgba(156, 39, 176, 1)',
+              borderWidth: 2,
+              type: 'line',
+              tension: 0.4,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: '员工工作计划对比图',
+              font: {
+                size: 16,
+                weight: 'bold'
+              }
+            },
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                afterLabel: function(context) {
+                  const index = context.dataIndex;
+                  const emp = employeeData[index];
+                  return [
+                    '部门: ' + emp.department,
+                    '总计划: ' + (emp.total_plans || 0),
+                    '草稿: ' + (emp.draft_count || 0),
+                    '已发布: ' + (emp.published_count || 0),
+                    '已接受: ' + (emp.accepted_count || 0),
+                    '执行中: ' + (emp.in_progress_count || 0),
+                    '已完成: ' + (emp.completed_count || 0),
+                    '逾期: ' + (emp.overdue_count || 0),
+                    '平均逾期: ' + (emp.avg_days_overdue || 0) + '天',
+                    '平均进度: ' + (emp.avg_progress || 0) + '%'
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: false,
+              ticks: {
+                maxRotation: 0,
+                minRotation: 0
+              }
+            },
+            y: {
+              beginAtZero: true,
+              position: 'left',
+              title: {
+                display: true,
+                text: '计划数量'
+              }
+            },
+            y1: {
+              beginAtZero: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: '计划分数'
+              },
+              grid: {
+                drawOnChartArea: false
+              }
+            }
+          },
+          interaction: {
+            mode: 'index',
+            intersect: false
+          }
+        }
+      });
+    });
+  </script>
+  {% endif %}
+  
+  {% if employee_goal_data %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const ctx = document.getElementById('employeeGoalChart');
+      if (!ctx) return;
+      
+      const employeeData = {{ employee_goal_data_json|safe }};
+      
+      // 计算统计摘要
+      let highGoalCount = 0;
+      let totalGoalCount = 0;
+      let totalOverdueGoalCount = 0;
+      
+      employeeData.forEach(emp => {
+        if (emp.goal_score >= 50) {
+          highGoalCount++;
+        }
+        totalGoalCount += (emp.total_goals || 0);
+        totalOverdueGoalCount += (emp.overdue_count || 0);
+      });
+      
+      // 更新统计摘要显示
+      document.getElementById('high-goal-count').textContent = highGoalCount;
+      document.getElementById('total-goal-count').textContent = totalGoalCount;
+      document.getElementById('total-overdue-goal-count').textContent = totalOverdueGoalCount;
+      
+      // 准备图表数据
+      const labels = employeeData.map(emp => emp.user_name);
+      const totalGoalsData = employeeData.map(emp => emp.total_goals || 0);
+      const inProgressData = employeeData.map(emp => emp.in_progress_count || 0);
+      const overdueData = employeeData.map(emp => emp.overdue_count || 0);
+      const thisMonthData = employeeData.map(emp => emp.this_month_count || 0);
+      const goalScoreData = employeeData.map(emp => emp.goal_score || 0);
+      
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '总目标数',
+              data: totalGoalsData,
+              backgroundColor: 'rgba(13, 202, 240, 0.8)',
+              borderColor: 'rgba(13, 202, 240, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '执行中',
+              data: inProgressData,
+              backgroundColor: 'rgba(13, 110, 253, 0.8)',
+              borderColor: 'rgba(13, 110, 253, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '逾期数',
+              data: overdueData,
+              backgroundColor: 'rgba(255, 193, 7, 0.8)',
+              borderColor: 'rgba(255, 193, 7, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '本月需完成',
+              data: thisMonthData,
+              backgroundColor: 'rgba(220, 53, 69, 0.8)',
+              borderColor: 'rgba(220, 53, 69, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '目标分数',
+              data: goalScoreData,
+              backgroundColor: 'rgba(156, 39, 176, 0.8)',
+              borderColor: 'rgba(156, 39, 176, 1)',
+              borderWidth: 2,
+              type: 'line',
+              tension: 0.4,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: '员工战略目标对比图',
+              font: {
+                size: 16,
+                weight: 'bold'
+              }
+            },
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                afterLabel: function(context) {
+                  const index = context.dataIndex;
+                  const emp = employeeData[index];
+                  return [
+                    '部门: ' + emp.department,
+                    '总目标: ' + (emp.total_goals || 0),
+                    '草稿: ' + (emp.draft_count || 0),
+                    '已发布: ' + (emp.published_count || 0),
+                    '已接受: ' + (emp.accepted_count || 0),
+                    '执行中: ' + (emp.in_progress_count || 0),
+                    '已完成: ' + (emp.completed_count || 0),
+                    '逾期: ' + (emp.overdue_count || 0),
+                    '平均逾期: ' + (emp.avg_days_overdue || 0) + '天',
+                    '本月需完成: ' + (emp.this_month_count || 0),
+                    '平均完成率: ' + (emp.avg_completion || 0) + '%'
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: false,
+              ticks: {
+                maxRotation: 0,
+                minRotation: 0
+              }
+            },
+            y: {
+              beginAtZero: true,
+              position: 'left',
+              title: {
+                display: true,
+                text: '目标数量'
+              }
+            },
+            y1: {
+              beginAtZero: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: '目标分数'
+              },
+              grid: {
+                drawOnChartArea: false
+              }
+            }
+          },
+          interaction: {
+            mode: 'index',
+            intersect: false
+          }
+        }
+      });
+    });
+  </script>
+  {% endif %}
 {% endblock %}
