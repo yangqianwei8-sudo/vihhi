@@ -5,7 +5,7 @@
 审批列表页面模板 (Approval List Template)
 
 功能说明：
-- 展示待审批、历史审批和我提交的审批列表
+- 展示待审批、历史审批列表（“我提交的审批”请到“我的申请”页面）
 - 支持标签页切换
 - 支持批量审批操作
 - 支持单个审批操作
@@ -95,35 +95,7 @@
   </div>
   {% endblock list_stats_section %}
 
-  {# 标签页导航 - 放在统计卡片之后，筛选器之前 #}
-  <div class="list-page-tabs-section" style="margin-bottom: 16px;">
-    <ul class="nav nav-tabs">
-      <li class="nav-item">
-        <a class="nav-link {% if not tab or tab == 'pending' %}active{% endif %}" href="?tab=pending{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.workflow %}&workflow={{ request.GET.workflow }}{% endif %}">
-          待我审批 
-          {% if pending_count %}
-          <span class="badge bg-danger">{{ pending_count }}</span>
-          {% endif %}
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if tab == 'historical' %}active{% endif %}" href="?tab=historical{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.workflow %}&workflow={{ request.GET.workflow }}{% endif %}">
-          历史审批
-          {% if historical_count %}
-          <span class="badge bg-secondary">{{ historical_count }}</span>
-          {% endif %}
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if tab == 'my_submitted' %}active{% endif %}" href="?tab=my_submitted{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.workflow %}&workflow={{ request.GET.workflow }}{% endif %}">
-          我提交的审批
-          {% if my_submitted_count %}
-          <span class="badge bg-info">{{ my_submitted_count }}</span>
-          {% endif %}
-        </a>
-      </li>
-    </ul>
-  </div>
+  {# 已移除“待我审批/历史审批/我提交的审批”Tab 导航：改由左侧菜单切换 #}
 
   {# 筛选器区域 #}
   {% block list_filters_section %}
@@ -140,8 +112,7 @@
           <input type="text" name="search" class="form-control" placeholder="搜索审批编号、流程名称、申请人..." value="{{ request.GET.search|default:'' }}">
         </div>
         
-        {# 状态筛选（仅历史审批和我提交的审批显示） #}
-        {% if tab == 'historical' or tab == 'my_submitted' %}
+        {# 状态筛选（统一展示，避免“展开/折叠式”筛选体验） #}
         <div class="list-page-filter-item">
           <label class="list-page-filter-label">状态</label>
           <select name="status" class="form-select">
@@ -152,7 +123,6 @@
             <option value="withdrawn" {% if request.GET.status == 'withdrawn' %}selected{% endif %}>已撤回</option>
           </select>
         </div>
-        {% endif %}
         
         {# 流程筛选 #}
         <div class="list-page-filter-item">
@@ -216,10 +186,6 @@
                   <th style="width: 50px;">
                     <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
                   </th>
-                {% elif tab == 'my_submitted' %}
-                  <th style="width: 50px;">
-                    <!-- 我提交的审批不需要复选框，但保留列宽以保持对齐 -->
-                  </th>
                 {% endif %}
               {% endblock list_table_checkbox_header %}
               {% block list_table_headers %}
@@ -253,10 +219,6 @@
       {% if not tab or tab == 'pending' %}
       <td>
         <input type="checkbox" class="form-check-input row-checkbox" name="instance_ids" value="{{ item.id }}" id="instance_{{ item.id }}">
-      </td>
-      {% elif tab == 'my_submitted' %}
-      <td>
-        <!-- 我提交的审批不需要复选框 -->
       </td>
       {% endif %}
       
@@ -352,62 +314,6 @@
             </a>
           </div>
         </td>
-      {% elif tab == 'my_submitted' %}
-        {# 我提交的审批列表 #}
-        <td><code>{{ item.instance_number }}</code></td>
-        <td>
-          <strong>{{ item.workflow.name }}</strong>
-          {% if item.workflow.category %}
-          <br><small class="text-muted">{{ item.workflow.category }}</small>
-          {% endif %}
-        </td>
-        <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
-        <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
-        <td>
-          {% if item.status == 'pending' %}
-            <span class="approval-status-badge badge-pending">审批中</span>
-          {% elif item.status == 'approved' %}
-            <span class="approval-status-badge badge-approved">已通过</span>
-          {% elif item.status == 'rejected' %}
-            <span class="approval-status-badge badge-rejected">已驳回</span>
-          {% elif item.status == 'withdrawn' %}
-            <span class="approval-status-badge badge-withdrawn">已撤回</span>
-          {% else %}
-            <span class="badge bg-secondary">{{ item.get_status_display }}</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if item.current_node %}
-          <span class="badge bg-info">{{ item.current_node.name }}</span>
-          {% else %}
-          <span class="text-muted">-</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if item.content_object %}
-            {% if item.content_type.model == 'outgoingdocument' %}
-            <div><strong>{{ item.content_object.document_number }}</strong></div>
-            <small class="text-muted">{{ item.content_object.title|truncatewords:5 }}</small>
-            {% else %}
-            {{ item.content_object }}
-            {% endif %}
-          {% else %}
-          <span class="text-muted">-</span>
-          {% endif %}
-        </td>
-        <td>
-          <div class="list-page-table-actions">
-            <a href="{% url 'workflow_engine:approval_detail' item.id %}" class="action-view" title="查看详情">
-              <i class="bi bi-eye"></i>
-            </a>
-            {% if item.status == 'pending' and item.workflow.allow_withdraw and not item.completed_time %}
-            <span class="action-separator">|</span>
-            <a href="#" class="action-delete" onclick="if(confirm('确定要撤回此审批吗？')) { window.location.href='{% url 'workflow_engine:approval_withdraw' item.id %}'; } return false;" title="撤回">
-              <i class="bi bi-arrow-counterclockwise"></i>
-            </a>
-            {% endif %}
-          </div>
-        </td>
       {% endif %}
       {% block list_table_column_settings_cell %}
         {% if column_settings_btn|default:False %}<td></td>{% endif %}
@@ -415,15 +321,13 @@
     </tr>
     {% empty %}
     <tr>
-      <td colspan="{% if not tab or tab == 'pending' %}{% if column_settings_btn|default:False %}10{% else %}9{% endif %}{% elif tab == 'my_submitted' %}{% if column_settings_btn|default:False %}10{% else %}9{% endif %}{% else %}{% if column_settings_btn|default:False %}9{% else %}8{% endif %}{% endif %}" class="list-empty">
+      <td colspan="{% if not tab or tab == 'pending' %}{% if column_settings_btn|default:False %}10{% else %}9{% endif %}{% else %}{% if column_settings_btn|default:False %}9{% else %}8{% endif %}{% endif %}" class="list-empty">
         <div class="list-empty-icon">📋</div>
         <div class="list-empty-text">
           {% if not tab or tab == 'pending' %}
           暂无待审批事项
           {% elif tab == 'historical' %}
           暂无历史审批记录
-          {% elif tab == 'my_submitted' %}
-          暂无我提交的审批
           {% else %}
           暂无数据
           {% endif %}
@@ -438,10 +342,6 @@
         <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
           您审批过的记录将显示在这里
         </p>
-        {% elif tab == 'my_submitted' %}
-        <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">
-          您提交的所有审批申请将显示在这里，包括审批中、已通过、已驳回等状态
-        </p>
         {% endif %}
         {% endblock list_empty_hint %}
       </td>
@@ -449,7 +349,7 @@
     {% endfor %}
   {% else %}
     <tr>
-      <td colspan="{% if not tab or tab == 'pending' %}{% if column_settings_btn|default:False %}10{% else %}9{% endif %}{% elif tab == 'my_submitted' %}{% if column_settings_btn|default:False %}10{% else %}9{% endif %}{% else %}{% if column_settings_btn|default:False %}9{% else %}8{% endif %}{% endif %}" class="list-empty">
+      <td colspan="{% if not tab or tab == 'pending' %}{% if column_settings_btn|default:False %}10{% else %}9{% endif %}{% else %}{% if column_settings_btn|default:False %}9{% else %}8{% endif %}{% endif %}" class="list-empty">
         <div class="list-empty-icon">📋</div>
         <div class="list-empty-text">暂无数据</div>
       </td>
