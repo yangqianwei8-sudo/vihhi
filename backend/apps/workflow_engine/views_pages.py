@@ -178,7 +178,9 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
     }
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
-        context['user'] = request.user
+        # 注意：Django 的 auth 上下文处理器已经自动提供了 context['user'] = request.user
+        # 这里不需要再次设置，避免覆盖或混淆
+        # context['user'] = request.user  # 已移除：让 Django 上下文处理器自动处理
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
         sidebar_nav = _build_workflow_engine_sidebar_nav(permission_set, request.path, request.user)
         context['sidebar_menu'] = sidebar_nav
