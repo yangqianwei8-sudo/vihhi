@@ -55,6 +55,10 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
+            # 如果当前登录的用户与要登录的用户不同，先退出
+            if request.user.is_authenticated and request.user.id != user.id:
+                logout(request)
+            # 登录新用户（login函数会自动处理会话）
             login(request, user)
             return Response({
                 'success': True,

@@ -39,7 +39,7 @@ SETTLEMENT_MENU = [
         'children': [
             {
                 'id': 'settlement_home',
-                'label': '回款管理首页',
+                'label': '首页',
                 'icon': '👥',
                 'url_name': 'settlement_pages:settlement_home',
                 'permission': None,

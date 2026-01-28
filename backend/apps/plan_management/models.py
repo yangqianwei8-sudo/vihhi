@@ -1740,6 +1740,46 @@ class TodoTask(models.Model):
     is_overdue = models.BooleanField(default=False, verbose_name='是否逾期')
     overdue_days = models.IntegerField(default=0, verbose_name='逾期天数')
     completed_at = models.DateTimeField(null=True, blank=True, verbose_name='完成时间')
+    completed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='completed_todo_tasks',
+        verbose_name='完成人'
+    )
+    completion_note = models.TextField(blank=True, verbose_name='完成说明', help_text='人工完成时建议填写说明')
+    completion_evidence = models.TextField(blank=True, verbose_name='完成证据', help_text='可填写链接/编号/截图说明等，用于巡检核验')
+    completion_via = models.CharField(
+        max_length=20,
+        blank=True,
+        default='',
+        verbose_name='完成方式',
+        help_text='auto=系统自动闭环，manual=人工提交'
+    )
+    VERIFICATION_STATUS_CHOICES = [
+        ('pending', '待核验'),
+        ('verified', '已核验'),
+        ('suspected', '疑似虚假完成'),
+    ]
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VERIFICATION_STATUS_CHOICES,
+        default='pending',
+        verbose_name='核验状态'
+    )
+    verification_checked_at = models.DateTimeField(null=True, blank=True, verbose_name='核验时间')
+    verification_reason = models.TextField(blank=True, verbose_name='核验说明/原因')
+    cancelled_at = models.DateTimeField(null=True, blank=True, verbose_name='取消时间')
+    cancelled_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cancelled_todo_tasks',
+        verbose_name='取消人'
+    )
+    cancel_reason = models.TextField(blank=True, verbose_name='取消原因')
     auto_generated = models.BooleanField(default=True, verbose_name='是否系统自动生成')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')

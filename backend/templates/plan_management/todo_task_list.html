@@ -1,0 +1,220 @@
+{% extends "shared/list_page_base.html" %}
+{% load static %}
+
+{% block pm_title %}待办事项列表{% endblock pm_title %}
+{% block pm_subtitle %}查看并闭环我的计划待办（TodoTask）{% endblock pm_subtitle %}
+
+{% block list_page_actions %}{% endblock list_page_actions %}
+
+{% block list_stats_content %}
+  <div class="list-stat-card">
+    <div class="list-stat-label">总数</div>
+    <div class="list-stat-value">{{ total_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">待处理</div>
+    <div class="list-stat-value">{{ pending_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">已逾期</div>
+    <div class="list-stat-value">{{ overdue_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">已完成</div>
+    <div class="list-stat-value">{{ completed_count|default:0 }}</div>
+  </div>
+  <div class="list-stat-card">
+    <div class="list-stat-label">已取消</div>
+    <div class="list-stat-value">{{ cancelled_count|default:0 }}</div>
+  </div>
+{% endblock list_stats_content %}
+
+{% block list_filters_content %}
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">搜索</label>
+    <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="标题 / 描述">
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">状态</label>
+    <select name="status" class="form-select">
+      <option value="">全部状态</option>
+      {% for value, label in status_options %}
+      <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">类型</label>
+    <select name="task_type" class="form-select">
+      <option value="">全部类型</option>
+      {% for value, label in task_type_options %}
+      <option value="{{ value }}" {% if task_type_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">截止开始</label>
+    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">截止结束</label>
+    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+  </div>
+{% endblock list_filters_content %}
+
+{% block list_table_headers %}
+  <th>标题</th>
+  <th>类型</th>
+  <th>截止时间</th>
+  <th>状态</th>
+  <th>核验</th>
+  <th>逾期</th>
+  <th>关联</th>
+  <th>创建时间</th>
+  <th>操作</th>
+{% endblock list_table_headers %}
+
+{% block list_table_rows %}
+  {% if page_obj %}
+    {% for todo in page_obj %}
+    <tr>
+      <td>
+        <div class="fw-medium text-dark">{{ todo.title }}</div>
+        {% if todo.description %}
+          <div class="text-muted small">{{ todo.description|truncatechars:60 }}</div>
+        {% endif %}
+        {% if todo.auto_generated %}
+          <span class="badge bg-light text-dark mt-1">系统生成</span>
+        {% endif %}
+      </td>
+      <td>{{ todo.get_task_type_display }}</td>
+      <td>
+        <small class="text-muted">
+          {{ todo.deadline|date:"Y-m-d H:i" }}
+        </small>
+      </td>
+      <td>
+        {% if todo.status == 'overdue' %}
+          <span class="badge bg-danger">{{ todo.get_status_display }}</span>
+        {% elif todo.status == 'pending' %}
+          <span class="badge bg-warning text-dark">{{ todo.get_status_display }}</span>
+        {% elif todo.status == 'completed' %}
+          <span class="badge bg-success">{{ todo.get_status_display }}</span>
+        {% elif todo.status == 'cancelled' %}
+          <span class="badge bg-secondary">{{ todo.get_status_display }}</span>
+        {% else %}
+          <span class="badge bg-light text-dark">{{ todo.get_status_display|default:todo.status }}</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if todo.status == 'completed' %}
+          {% if todo.verification_status == 'verified' %}
+            <span class="badge bg-success">已核验</span>
+          {% elif todo.verification_status == 'suspected' %}
+            <span class="badge bg-danger">疑似</span>
+            {% if todo.verification_reason %}
+              <div class="text-muted small mt-1">{{ todo.verification_reason|truncatechars:30 }}</div>
+            {% endif %}
+          {% else %}
+            <span class="badge bg-warning text-dark">待核验</span>
+            {% if todo.verification_reason %}
+              <div class="text-muted small mt-1">{{ todo.verification_reason|truncatechars:30 }}</div>
+            {% endif %}
+          {% endif %}
+        {% else %}
+          <span class="text-muted">-</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if todo.is_overdue %}
+          <span class="text-danger">已逾期 {{ todo.overdue_days }} 天</span>
+        {% else %}
+          <span class="text-muted">-</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if todo.related_object_type and todo.related_object_id %}
+          <code>{{ todo.related_object_type }}:{{ todo.related_object_id }}</code>
+        {% else %}
+          <span class="text-muted">-</span>
+        {% endif %}
+      </td>
+      <td><small class="text-muted">{{ todo.created_at|date:"Y-m-d H:i" }}</small></td>
+      <td>
+        {% if todo.status == 'pending' or todo.status == 'overdue' %}
+          <div class="d-flex gap-2">
+            <form method="post" action="{% url 'plan_pages:todo_task_complete' todo.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-sm btn-success">完成</button>
+            </form>
+            {% if todo.auto_generated and not can_manage_todo_cancel %}
+              <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="系统自动生成待办取消需管理员权限">
+                取消(需管理员)
+              </button>
+            {% else %}
+              <form method="post" action="{% url 'plan_pages:todo_task_cancel' todo.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <input type="hidden" name="cancel_reason" value="">
+                <button type="submit" class="btn btn-sm btn-outline-secondary">取消</button>
+              </form>
+            {% endif %}
+          </div>
+        {% else %}
+          {% if todo.status == 'completed' %}
+            <small class="text-muted">
+              完成：{{ todo.completed_at|date:"Y-m-d H:i" }}{% if todo.completed_by %}<br>人：{{ todo.completed_by.get_full_name|default:todo.completed_by.username }}{% endif %}
+            </small>
+          {% elif todo.status == 'cancelled' %}
+            <small class="text-muted">
+              取消：{{ todo.cancelled_at|date:"Y-m-d H:i" }}{% if todo.cancelled_by %}<br>人：{{ todo.cancelled_by.get_full_name|default:todo.cancelled_by.username }}{% endif %}
+              {% if todo.cancel_reason %}<br>因：{{ todo.cancel_reason|truncatechars:30 }}{% endif %}
+            </small>
+          {% else %}
+            <span class="text-muted">-</span>
+          {% endif %}
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+    <tr>
+      <td colspan="9" class="list-empty">
+        <div class="list-empty-icon">📝</div>
+        <div class="list-empty-text">暂无待办事项</div>
+      </td>
+    </tr>
+  {% endif %}
+{% endblock list_table_rows %}
+
+{% block extra_js %}
+  {{ block.super }}
+  <script>
+  window.listFiltersConfig = {
+    selectFieldNames: ['status', 'task_type'],
+    dateStartFieldName: 'date_from',
+    dateEndFieldName: 'date_to'
+  };
+  </script>
+  <script src="{% static 'js/list-filters.js' %}"></script>
+
+  <script>
+  // 方案B：取消必须填写原因（前端强制 + 后端校验）
+  document.addEventListener('submit', function(e) {
+    const form = e.target;
+    if (!form || form.tagName !== 'FORM') return;
+    if (!form.action || form.action.indexOf('/todos/') === -1 || form.action.indexOf('/cancel/') === -1) return;
+    const input = form.querySelector('input[name="cancel_reason"]');
+    if (!input) return;
+    const reason = prompt('请输入取消原因（至少4个字，用于审计与巡检）：', input.value || '');
+    if (!reason || reason.trim().length < 4) {
+      e.preventDefault();
+      alert('取消原因不能为空，且至少4个字');
+      return;
+    }
+    input.value = reason.trim();
+  }, true);
+  </script>
+{% endblock extra_js %}
+

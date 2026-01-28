@@ -1210,7 +1210,16 @@ def _with_nav(context, permission_set, active_id=None, user=None, request_path=N
         logger.warning(f'构建 scene_groups 失败: {e}', exc_info=True)
         scene_groups = []
     context['scene_groups'] = scene_groups
-    context['user'] = user  # 模板中可能需要 user 变量
+    # 不要覆盖 Django auth 上下文处理器提供的 user 变量
+    # 如果 user 参数为 None，优先使用 request.user（如果 request 存在）
+    # 只有在 user 不为 None 且与 request.user 不同时才设置（但这种情况应该避免）
+    if user is None and request:
+        user = request.user
+    # 注意：Django 的 auth 上下文处理器已经自动提供了 context['user'] = request.user
+    # 这里不应该覆盖它，除非确实需要传递不同的用户对象（这种情况应该避免）
+    # 如果确实需要设置，应该使用 context.setdefault('user', user) 而不是直接赋值
+    # 但为了安全，我们完全移除这行，让 Django 的上下文处理器处理
+    # context['user'] = user  # 已移除：避免覆盖 Django auth 上下文处理器提供的 user
     
     # 为所有可能的侧边栏变量设置默认值，避免模板错误
     # 这些变量可能在其他模块的模板中被引用

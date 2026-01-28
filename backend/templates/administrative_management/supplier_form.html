@@ -1,4 +1,6 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/create_form_base.html" %}
+
+{# 供应商创建/编辑页：统一使用 create_form_base.html #}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
@@ -11,167 +13,127 @@
 <li class="breadcrumb-item"><a href="{% url 'admin_pages:supplier_detail' supplier.id %}">{{ supplier.name }}</a></li>
 <li class="breadcrumb-item active" aria-current="page">编辑</li>
 {% endif %}
-{% endblock %}
+{% endblock breadcrumb_items %}
 
-{% block extra_css %}
-<style>
-    .form-card {
-        background: var(--vh-card-bg);
-        border-radius: var(--radius-xl);
-        padding: var(--spacing-lg);
-        box-shadow: var(--shadow-lg);
-        border: 1px solid rgba(20, 47, 91, 0.08);
-        margin-bottom: var(--spacing-lg);
-    }
-    .form-card h5 {
-        margin-bottom: var(--spacing-md);
-        padding-bottom: var(--spacing-sm);
-        border-bottom: 2px solid var(--vh-primary);
-        font-weight: 600;
-        color: var(--vh-text);
-    }
-    .form-label.required::after {
-        content: " *";
-        color: var(--vh-error);
-    }
-</style>
-{% endblock %}
+{% block form_title %}{{ page_title }}{% endblock form_title %}
+{% block form_subtitle %}{{ description }}{% endblock form_subtitle %}
 
-{% block content %}
-<div class="container-fluid py-4">
-    <div class="center-hero">
-        <h1 class="hero-title">{{ page_title }}</h1>
-        <p class="hero-subtitle">{{ description }}</p>
+{% block form_header_actions %}
+  <a href="{% url 'admin_pages:supplier_list' %}" class="btn btn-secondary">返回列表</a>
+{% endblock form_header_actions %}
+
+{% block form_basic_info_card %}
+<div class="form-card form-card-basic-info">
+  <div class="form-card-header">
+    <h3 class="form-card-title">
+      <i class="fas fa-info-circle"></i>
+      基本信息
+    </h3>
+  </div>
+  <div class="form-card-body">
+    <div class="row mb-3">
+      <div class="col-md-6 form-field-wrapper">
+        <label for="{{ form.name.id_for_label }}" class="form-label">
+          供应商名称
+          {% if form.name.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        {{ form.name }}
+        {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors }}</div>{% endif %}
+      </div>
+      <div class="col-md-6 form-field-wrapper">
+        <label for="{{ form.rating.id_for_label }}" class="form-label">评级</label>
+        {{ form.rating }}
+        {% if form.rating.errors %}<div class="text-danger small">{{ form.rating.errors }}</div>{% endif %}
+      </div>
     </div>
-
-    <form method="post">
-        {% csrf_token %}
-
-        <div class="form-card">
-            <h5>基本信息</h5>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label required">供应商名称</label>
-                    {{ form.name }}
-                    {% if form.name.errors %}
-                    <div class="text-danger small mt-1">{{ form.name.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">评级</label>
-                    {{ form.rating }}
-                    {% if form.rating.errors %}
-                    <div class="text-danger small mt-1">{{ form.rating.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="form-card">
-            <h5>联系信息</h5>
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">联系人</label>
-                    {{ form.contact_person }}
-                    {% if form.contact_person.errors %}
-                    <div class="text-danger small mt-1">{{ form.contact_person.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">联系电话</label>
-                    {{ form.contact_phone }}
-                    {% if form.contact_phone.errors %}
-                    <div class="text-danger small mt-1">{{ form.contact_phone.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">联系邮箱</label>
-                    {{ form.contact_email }}
-                    {% if form.contact_email.errors %}
-                    <div class="text-danger small mt-1">{{ form.contact_email.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-12">
-                    <label class="form-label">地址</label>
-                    {{ form.address }}
-                    {% if form.address.errors %}
-                    <div class="text-danger small mt-1">{{ form.address.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="form-card">
-            <h5>财务信息</h5>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">税号</label>
-                    {{ form.tax_id }}
-                    {% if form.tax_id.errors %}
-                    <div class="text-danger small mt-1">{{ form.tax_id.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">开户银行</label>
-                    {{ form.bank_name }}
-                    {% if form.bank_name.errors %}
-                    <div class="text-danger small mt-1">{{ form.bank_name.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">银行账号</label>
-                    {{ form.bank_account }}
-                    {% if form.bank_account.errors %}
-                    <div class="text-danger small mt-1">{{ form.bank_account.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">信用额度</label>
-                    {{ form.credit_limit }}
-                    {% if form.credit_limit.errors %}
-                    <div class="text-danger small mt-1">{{ form.credit_limit.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-12">
-                    <label class="form-label">付款条件</label>
-                    {{ form.payment_terms }}
-                    {% if form.payment_terms.errors %}
-                    <div class="text-danger small mt-1">{{ form.payment_terms.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="form-card">
-            <h5>其他信息</h5>
-            <div class="row g-3">
-                <div class="col-12">
-                    <label class="form-label">描述</label>
-                    {{ form.description }}
-                    {% if form.description.errors %}
-                    <div class="text-danger small mt-1">{{ form.description.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">状态</label>
-                    <div class="form-check form-switch mt-2">
-                        {{ form.is_active }}
-                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                            {% if form.is_active.value %}启用{% else %}停用{% endif %}
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="d-flex justify-content-between">
-            <a href="{% if is_create %}{% url 'admin_pages:supplier_list' %}{% else %}{% url 'admin_pages:supplier_detail' supplier.id %}{% endif %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> 取消
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-check-circle"></i> 保存
-            </button>
-        </div>
-    </form>
+  </div>
 </div>
-{% endblock %}
+{% endblock form_basic_info_card %}
+
+{% block form_fields %}
+  {# ==================== 联系信息 ==================== #}
+  <div class="row mb-3">
+    <div class="col-md-4 form-field-wrapper">
+      <label for="{{ form.contact_person.id_for_label }}" class="form-label">联系人</label>
+      {{ form.contact_person }}
+      {% if form.contact_person.errors %}<div class="text-danger small">{{ form.contact_person.errors }}</div>{% endif %}
+    </div>
+    <div class="col-md-4 form-field-wrapper">
+      <label for="{{ form.contact_phone.id_for_label }}" class="form-label">联系电话</label>
+      {{ form.contact_phone }}
+      {% if form.contact_phone.errors %}<div class="text-danger small">{{ form.contact_phone.errors }}</div>{% endif %}
+    </div>
+    <div class="col-md-4 form-field-wrapper">
+      <label for="{{ form.contact_email.id_for_label }}" class="form-label">联系邮箱</label>
+      {{ form.contact_email }}
+      {% if form.contact_email.errors %}<div class="text-danger small">{{ form.contact_email.errors }}</div>{% endif %}
+    </div>
+  </div>
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.address.id_for_label }}" class="form-label">地址</label>
+      {{ form.address }}
+      {% if form.address.errors %}<div class="text-danger small">{{ form.address.errors }}</div>{% endif %}
+    </div>
+  </div>
+
+  {# ==================== 财务信息 ==================== #}
+  <div class="row mb-3">
+    <div class="col-md-6 form-field-wrapper">
+      <label for="{{ form.tax_id.id_for_label }}" class="form-label">税号</label>
+      {{ form.tax_id }}
+      {% if form.tax_id.errors %}<div class="text-danger small">{{ form.tax_id.errors }}</div>{% endif %}
+    </div>
+    <div class="col-md-6 form-field-wrapper">
+      <label for="{{ form.bank_name.id_for_label }}" class="form-label">开户银行</label>
+      {{ form.bank_name }}
+      {% if form.bank_name.errors %}<div class="text-danger small">{{ form.bank_name.errors }}</div>{% endif %}
+    </div>
+  </div>
+  <div class="row mb-3">
+    <div class="col-md-6 form-field-wrapper">
+      <label for="{{ form.bank_account.id_for_label }}" class="form-label">银行账号</label>
+      {{ form.bank_account }}
+      {% if form.bank_account.errors %}<div class="text-danger small">{{ form.bank_account.errors }}</div>{% endif %}
+    </div>
+    <div class="col-md-6 form-field-wrapper">
+      <label for="{{ form.credit_limit.id_for_label }}" class="form-label">信用额度</label>
+      {{ form.credit_limit }}
+      {% if form.credit_limit.errors %}<div class="text-danger small">{{ form.credit_limit.errors }}</div>{% endif %}
+    </div>
+  </div>
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.payment_terms.id_for_label }}" class="form-label">付款条件</label>
+      {{ form.payment_terms }}
+      {% if form.payment_terms.errors %}<div class="text-danger small">{{ form.payment_terms.errors }}</div>{% endif %}
+    </div>
+  </div>
+
+  {# ==================== 其他信息 ==================== #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.description.id_for_label }}" class="form-label">描述</label>
+      {{ form.description }}
+      {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors }}</div>{% endif %}
+    </div>
+  </div>
+  <div class="row mb-3">
+    <div class="col-md-6 form-field-wrapper">
+      <label class="form-label">状态</label>
+      <div class="form-check form-switch mt-2">
+        {{ form.is_active }}
+        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+          {% if form.is_active.value %}启用{% else %}停用{% endif %}
+        </label>
+      </div>
+      {% if form.is_active.errors %}<div class="text-danger small">{{ form.is_active.errors }}</div>{% endif %}
+    </div>
+  </div>
+{% endblock form_fields %}
+
+{% block form_actions %}
+  <a href="{% if is_create %}{% url 'admin_pages:supplier_list' %}{% else %}{% url 'admin_pages:supplier_detail' supplier.id %}{% endif %}"
+     class="btn btn-secondary">取消</a>
+  <button type="button" class="btn btn-primary" id="headerSubmitButton">保存</button>
+{% endblock form_actions %}

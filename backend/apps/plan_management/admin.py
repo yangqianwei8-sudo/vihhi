@@ -1326,11 +1326,12 @@ class TodoTaskAdmin(BaseModelAdmin):
     
     def mark_as_cancelled(self, request, queryset):
         """批量标记为已取消"""
-        updated = queryset.filter(status__in=['pending', 'overdue']).update(
-            status='cancelled',
-            updated_at=timezone.now()
-        )
-        messages.success(request, f'成功取消 {updated} 个待办')
+        from .services.todo_service import mark_todo_cancelled
+        count = 0
+        for todo in queryset:
+            if mark_todo_cancelled(todo, request.user, reason='管理后台批量取消'):
+                count += 1
+        messages.success(request, f'成功取消 {count} 个待办')
     mark_as_cancelled.short_description = '标记为已取消'
 
 

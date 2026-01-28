@@ -125,7 +125,7 @@ logger = logging.getLogger(__name__)
 CUSTOMER_MANAGEMENT_MENU = [
     {
         'id': 'customer_home',
-        'label': '客户管理首页',
+        'label': '首页',
         'icon': '🏠',
         'url_name': 'customer_pages:customer_management_home',
         'permission': 'customer_management.client.view',
@@ -289,7 +289,7 @@ CUSTOMER_MANAGEMENT_MENU = [
 CONTRACT_MANAGEMENT_MENU = [
     {
         'id': 'contract_home',
-        'label': '合同管理首页',
+        'label': '首页',
         'icon': '🏠',
         'url_name': 'contract_pages:contract_management_home',
         'permission': 'customer_management.contract.view',
@@ -417,7 +417,7 @@ CONTRACT_MANAGEMENT_MENU = [
 OPPORTUNITY_MANAGEMENT_MENU = [
     {
         'id': 'opportunity_home',
-        'label': '商机管理首页',
+        'label': '首页',
         'icon': '🏠',
         'url_name': 'opportunity_pages:opportunity_management_home',
         'permission': 'customer_management.opportunity.view',

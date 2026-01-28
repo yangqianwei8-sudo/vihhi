@@ -17,6 +17,8 @@ from datetime import datetime, timedelta, date
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.apps.system_management.models import User, Department
 
+logger = logging.getLogger(__name__)
+
 
 def calculate_goal_progress_status(goal):
     """计算目标进度状态（辅助函数）"""
@@ -420,6 +422,16 @@ PLAN_MANAGEMENT_MENU_STRUCTURE = [
             {'id': 'plan_statistics', 'label': '统计报表', 'icon': '📊', 'url_name': 'plan_pages:plan_statistics', 'permission': 'plan_management.view_analysis'},
         ]
     },
+    {
+        'id': 'todo_center',
+        'label': '待办事项',
+        'icon': '📝',
+        'permission': 'plan_management.view',
+        'expanded': True,  # 默认展开（按需可改为 False）
+        'children': [
+            {'id': 'todo_task_list', 'label': '待办事项列表', 'icon': '📋', 'url_name': 'plan_pages:todo_task_list', 'permission': 'plan_management.view'},
+        ]
+    },
 ]
 
 
@@ -525,6 +537,12 @@ def plan_management_home(request):
     - 所有数据来自 service，禁止直接 ORM
     """
     permission_codes = get_user_permission_codes(request.user)
+    # 待办“取消”加强：只有具备管理权限者，才允许取消系统自动生成的待办
+    context_can_manage_todo_cancel = (
+        _permission_granted('plan_management.plan.manage', permission_codes)
+        or _permission_granted('plan_management.manage_goal', permission_codes)
+        or request.user.is_superuser
+    )
     
     # 权限检查
     if not _permission_granted('plan_management.view', permission_codes):
@@ -532,6 +550,7 @@ def plan_management_home(request):
         return redirect('admin:index')
     
     context = {}
+    context['can_manage_todo_cancel'] = context_can_manage_todo_cancel
     
     # ========== 获取筛选参数 ==========
     filter_department_id = request.GET.get('filter_department', '').strip()
@@ -745,6 +764,15 @@ def plan_management_home(request):
             if todo.get('is_db_todo'):
                 # 数据库待办事项
                 todo_item['type'] = 'db_todo'
+                # 严格闭环：提供前台手动闭环所需标识
+                try:
+                    todo_obj = todo.get('object')
+                    if todo_obj and hasattr(todo_obj, 'id'):
+                        todo_item['db_todo_id'] = todo_obj.id
+                        todo_item['db_todo_owner_id'] = getattr(todo_obj, 'user_id', None)
+                        todo_item['db_todo_auto_generated'] = bool(getattr(todo_obj, 'auto_generated', True))
+                except Exception:
+                    pass
                 deadline = todo.get('deadline')
                 if deadline:
                     if isinstance(deadline, str):
@@ -1486,6 +1514,16 @@ def plan_management_home(request):
             'overdue_days': todo.get('overdue_days', 0),
             'meta': todo.get('meta', todo.get('description', '')),
         }
+        if todo.get('is_db_todo'):
+            todo_item['type'] = 'db_todo'
+            try:
+                todo_obj = todo.get('object')
+                if todo_obj and hasattr(todo_obj, 'id'):
+                    todo_item['db_todo_id'] = todo_obj.id
+                    todo_item['db_todo_owner_id'] = getattr(todo_obj, 'user_id', None)
+                    todo_item['db_todo_auto_generated'] = bool(getattr(todo_obj, 'auto_generated', True))
+            except Exception:
+                pass
         all_category_todos.append(todo_item)
     
     # 如果筛选了负责人，只显示该负责人的待办，不再添加下属的待办
@@ -1514,6 +1552,16 @@ def plan_management_home(request):
                         'overdue_days': todo.get('overdue_days', 0),
                         'meta': f'负责人：{subordinate.get_full_name() or subordinate.username}',
                     }
+                    if todo.get('is_db_todo'):
+                        todo_item['type'] = 'db_todo'
+                        try:
+                            todo_obj = todo.get('object')
+                            if todo_obj and hasattr(todo_obj, 'id'):
+                                todo_item['db_todo_id'] = todo_obj.id
+                                todo_item['db_todo_owner_id'] = getattr(todo_obj, 'user_id', None)
+                                todo_item['db_todo_auto_generated'] = bool(getattr(todo_obj, 'auto_generated', True))
+                        except Exception:
+                            pass
                     all_category_todos.append(todo_item)
             
             # 添加下属协作的待办
@@ -6160,6 +6208,27 @@ def plan_adjustment_create(request, plan_id):
             adjustment.created_by = request.user
             adjustment.original_end_time = plan.end_time
             adjustment.save()
+            
+            # 保存多对多关系
+            if 'new_participants' in form.cleaned_data:
+                adjustment.new_participants.set(form.cleaned_data['new_participants'])
+            
+            # 如果配置了工作流引擎，自动提交审批
+            try:
+                from backend.apps.plan_management.services.plan_approval_v2 import PlanAdjustmentApprovalService
+                service = PlanAdjustmentApprovalService()
+                comment = f'申请调整计划：{plan.plan_number} - {plan.name}'
+                instance = service.submit_approval(
+                    obj=adjustment,
+                    applicant=request.user,
+                    comment=comment
+                )
+                if instance:
+                    logger.info(f'计划调整申请已提交工作流审批: instance_number={instance.instance_number}, adjustment_id={adjustment.id}')
+            except Exception as e:
+                # 如果工作流未配置或提交失败，使用简单审批（向后兼容）
+                logger.warning(f'工作流审批提交失败，使用简单审批: {str(e)}')
+            
             # 审批相关结果走通知中心，不写入 messages
             return redirect('plan_pages:plan_detail', plan_id=plan_id)
         else:
@@ -6399,6 +6468,23 @@ def goal_adjustment_create(request, goal_id):
             adjustment.goal = goal
             adjustment.created_by = request.user
             adjustment.save()
+            
+            # 如果配置了工作流引擎，自动提交审批
+            try:
+                from backend.apps.plan_management.services.plan_approval_v2 import GoalAdjustmentApprovalService
+                service = GoalAdjustmentApprovalService()
+                comment = f'申请调整目标：{goal.goal_number} - {goal.name}'
+                instance = service.submit_approval(
+                    obj=adjustment,
+                    applicant=request.user,
+                    comment=comment
+                )
+                if instance:
+                    logger.info(f'目标调整申请已提交工作流审批: instance_number={instance.instance_number}, adjustment_id={adjustment.id}')
+            except Exception as e:
+                # 如果工作流未配置或提交失败，使用简单审批（向后兼容）
+                logger.warning(f'工作流审批提交失败，使用简单审批: {str(e)}')
+            
             messages.success(request, '目标调整申请已提交，等待审批')
             return redirect('plan_pages:goal_adjustment_list')
         else:
@@ -6548,6 +6634,278 @@ def goal_adjustment_list(request):
     return render(request, "plan_management/goal_adjustment_list.html", context)
 
 
+def _apply_goal_adjustment(adjustment, approver):
+    """应用目标调整（辅助函数）"""
+    from django.db import transaction
+    from backend.apps.plan_management.models import GoalStatusLog
+    
+    goal = adjustment.goal
+    
+    with transaction.atomic():
+        # 根据调整类型更新目标的相关字段
+        # 时间调整
+        if adjustment.adjustment_type == 'time':
+            if adjustment.new_start_date:
+                goal.start_date = adjustment.new_start_date
+            if adjustment.new_end_date:
+                goal.end_date = adjustment.new_end_date
+            goal.save(update_fields=['start_date', 'end_date'])
+        
+        # 负责人调整
+        elif adjustment.adjustment_type == 'responsible':
+            if adjustment.new_responsible_person:
+                goal.responsible_person = adjustment.new_responsible_person
+                goal.save(update_fields=['responsible_person'])
+        
+        # 目标值调整
+        elif adjustment.adjustment_type == 'target_value':
+            if adjustment.new_target_value is not None:
+                goal.target_value = adjustment.new_target_value
+                goal.save(update_fields=['target_value'])
+        
+        # 内容调整（只更新调整内容，不更新目标字段）
+        # 内容调整通常通过调整内容字段记录，不直接修改目标内容
+        
+        # 记录状态日志
+        GoalStatusLog.objects.create(
+            goal=goal,
+            old_status=goal.status,
+            new_status=goal.status,
+            changed_by=approver,
+            change_reason=f'调整申请已批准：{adjustment.get_adjustment_type_display()}'
+        )
+
+
+def _apply_plan_adjustment(adjustment, approver):
+    """应用计划调整（辅助函数）"""
+    from django.db import transaction
+    from backend.apps.plan_management.models import PlanStatusLog, PlanAdjustment
+    
+    plan = adjustment.plan
+    
+    with transaction.atomic():
+        # 根据调整类型更新计划的相关字段
+        # 时间调整
+        if adjustment.adjustment_type == 'time':
+            if adjustment.new_start_time:
+                plan.start_time = adjustment.new_start_time
+            if adjustment.new_end_time:
+                plan.end_time = adjustment.new_end_time
+            plan.save(update_fields=['start_time', 'end_time'])
+        
+        # 负责人调整
+        elif adjustment.adjustment_type == 'responsible':
+            if adjustment.new_responsible_person:
+                plan.responsible_person = adjustment.new_responsible_person
+                plan.save(update_fields=['responsible_person'])
+        
+        # 计划目标调整
+        elif adjustment.adjustment_type == 'plan_objective':
+            if adjustment.new_plan_objective:
+                plan.plan_objective = adjustment.new_plan_objective
+                plan.save(update_fields=['plan_objective'])
+        
+        # 协作人员调整
+        elif adjustment.adjustment_type == 'collaboration':
+            if adjustment.new_participants.exists():
+                plan.participants.set(adjustment.new_participants.all())
+        
+        # 验收标准调整
+        elif adjustment.adjustment_type == 'acceptance_criteria':
+            if adjustment.new_acceptance_criteria:
+                plan.acceptance_criteria = adjustment.new_acceptance_criteria
+                plan.save(update_fields=['acceptance_criteria'])
+        
+        # 内容调整（只更新调整内容，不更新计划字段）
+        # 内容调整通常通过调整内容字段记录，不直接修改计划内容
+        
+        # 记录状态日志
+        change_reason = f'调整申请已批准：{adjustment.get_adjustment_type_display()}'
+        if adjustment.adjustment_type == 'time' and adjustment.new_end_time:
+            old_end_time = plan.end_time
+            change_reason = f'调整申请已批准：截止时间从 {old_end_time.strftime("%Y-%m-%d %H:%M")} 调整为 {adjustment.new_end_time.strftime("%Y-%m-%d %H:%M")}'
+        
+        PlanStatusLog.objects.create(
+            plan=plan,
+            old_status=plan.status,
+            new_status=plan.status,
+            changed_by=approver,
+            change_reason=change_reason
+        )
+
+
+@login_required
+def goal_adjustment_approve(request, adjustment_id):
+    """审批通过目标调整申请"""
+    permission_set = get_user_permission_codes(request.user)
+    adjustment = get_object_or_404(GoalAdjustment, id=adjustment_id)
+    goal = adjustment.goal
+    
+    # 权限检查：需要管理目标权限
+    can_approve = _permission_granted('plan_management.manage_goal', permission_set) or request.user.is_superuser
+    if not can_approve:
+        messages.error(request, '您没有权限审批调整申请')
+        return redirect('plan_pages:goal_adjustment_list')
+    
+    # 检查申请状态
+    if adjustment.status != 'pending':
+        messages.error(request, '该调整申请已处理，不能重复审批')
+        return redirect('plan_pages:goal_adjustment_list')
+    
+    if request.method == 'POST':
+        approval_notes = request.POST.get('approval_notes', '')
+        
+        # 检查是否有工作流审批实例
+        from django.contrib.contenttypes.models import ContentType
+        from backend.apps.workflow_engine.models import ApprovalInstance
+        from backend.apps.plan_management.services.plan_approval_v2 import GoalAdjustmentApprovalService
+        
+        content_type = ContentType.objects.get_for_model(GoalAdjustment)
+        approval_instance = ApprovalInstance.objects.filter(
+            content_type=content_type,
+            object_id=adjustment.id,
+            workflow__code='goal_adjustment_approval',
+            status__in=['pending', 'in_progress']
+        ).first()
+        
+        if approval_instance:
+            # 使用工作流引擎审批
+            try:
+                service = GoalAdjustmentApprovalService()
+                success = service.approve(
+                    instance_id=approval_instance.id,
+                    approver=request.user,
+                    comment=approval_notes
+                )
+                if success:
+                    # 工作流引擎会自动处理审批完成后的回调
+                    # 这里我们需要在回调中更新调整申请状态
+                    # 如果工作流引擎没有回调，我们需要手动更新
+                    adjustment.refresh_from_db()
+                    if adjustment.status == 'pending':
+                        # 如果工作流引擎没有自动更新，手动更新
+                        adjustment.status = 'approved'
+                        adjustment.approved_by = request.user
+                        adjustment.approved_time = timezone.now()
+                        adjustment.approval_notes = approval_notes
+                        adjustment.save()
+                        _apply_goal_adjustment(adjustment, request.user)
+                else:
+                    messages.error(request, '审批失败，请重试')
+                    return redirect('plan_pages:goal_adjustment_list')
+            except Exception as e:
+                logger.error(f'工作流审批失败: {str(e)}', exc_info=True)
+                messages.error(request, f'审批失败：{str(e)}')
+                return redirect('plan_pages:goal_adjustment_list')
+        else:
+            # 使用简单审批（向后兼容）
+            adjustment.status = 'approved'
+            adjustment.approved_by = request.user
+            adjustment.approved_time = timezone.now()
+            adjustment.approval_notes = approval_notes
+            adjustment.save()
+            _apply_goal_adjustment(adjustment, request.user)
+        
+        # 审批结果走通知中心，不写入 messages
+        return redirect('plan_pages:goal_adjustment_list')
+    
+    context = _context(
+        f"审批调整申请 - {goal.name}",
+        "✅",
+        "审批目标调整申请",
+        request=request,
+    )
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='goal_adjustment_list')
+    context['adjustment'] = adjustment
+    context['goal'] = goal
+    
+    return render(request, "plan_management/goal_adjustment_approve.html", context)
+
+
+@login_required
+def goal_adjustment_reject(request, adjustment_id):
+    """审批拒绝目标调整申请"""
+    permission_set = get_user_permission_codes(request.user)
+    adjustment = get_object_or_404(GoalAdjustment, id=adjustment_id)
+    goal = adjustment.goal
+    
+    # 权限检查：需要管理目标权限
+    can_approve = _permission_granted('plan_management.manage_goal', permission_set) or request.user.is_superuser
+    if not can_approve:
+        messages.error(request, '您没有权限审批调整申请')
+        return redirect('plan_pages:goal_adjustment_list')
+    
+    # 检查申请状态
+    if adjustment.status != 'pending':
+        messages.error(request, '该调整申请已处理，不能重复审批')
+        return redirect('plan_pages:goal_adjustment_list')
+    
+    if request.method == 'POST':
+        approval_notes = request.POST.get('approval_notes', '')
+        
+        # 检查是否有工作流审批实例
+        from django.contrib.contenttypes.models import ContentType
+        from backend.apps.workflow_engine.models import ApprovalInstance
+        from backend.apps.plan_management.services.plan_approval_v2 import GoalAdjustmentApprovalService
+        
+        content_type = ContentType.objects.get_for_model(GoalAdjustment)
+        approval_instance = ApprovalInstance.objects.filter(
+            content_type=content_type,
+            object_id=adjustment.id,
+            workflow__code='goal_adjustment_approval',
+            status__in=['pending', 'in_progress']
+        ).first()
+        
+        if approval_instance:
+            # 使用工作流引擎拒绝
+            try:
+                service = GoalAdjustmentApprovalService()
+                success = service.reject(
+                    instance_id=approval_instance.id,
+                    approver=request.user,
+                    comment=approval_notes
+                )
+                if success:
+                    # 工作流引擎会自动处理审批完成后的回调
+                    adjustment.refresh_from_db()
+                    if adjustment.status == 'pending':
+                        # 如果工作流引擎没有自动更新，手动更新
+                        adjustment.status = 'rejected'
+                        adjustment.approved_by = request.user
+                        adjustment.approved_time = timezone.now()
+                        adjustment.approval_notes = approval_notes
+                        adjustment.save()
+                else:
+                    messages.error(request, '拒绝失败，请重试')
+                    return redirect('plan_pages:goal_adjustment_list')
+            except Exception as e:
+                logger.error(f'工作流拒绝失败: {str(e)}', exc_info=True)
+                messages.error(request, f'拒绝失败：{str(e)}')
+                return redirect('plan_pages:goal_adjustment_list')
+        else:
+            # 使用简单审批（向后兼容）
+            adjustment.status = 'rejected'
+            adjustment.approved_by = request.user
+            adjustment.approved_time = timezone.now()
+            adjustment.approval_notes = approval_notes
+            adjustment.save()
+        
+        # 审批结果走通知中心，不写入 messages
+        return redirect('plan_pages:goal_adjustment_list')
+    
+    context = _context(
+        f"拒绝调整申请 - {goal.name}",
+        "❌",
+        "拒绝目标调整申请",
+        request=request,
+    )
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='goal_adjustment_list')
+    context['adjustment'] = adjustment
+    context['goal'] = goal
+    
+    return render(request, "plan_management/goal_adjustment_reject.html", context)
+
+
 @login_required
 def plan_adjustment_approve(request, adjustment_id):
     """审批通过调整申请"""
@@ -6569,27 +6927,55 @@ def plan_adjustment_approve(request, adjustment_id):
     if request.method == 'POST':
         approval_notes = request.POST.get('approval_notes', '')
         
-        # 更新调整申请状态
-        adjustment.status = 'approved'
-        adjustment.approved_by = request.user
-        adjustment.approved_time = timezone.now()
-        adjustment.approval_notes = approval_notes
-        adjustment.save()
+        # 检查是否有工作流审批实例
+        from django.contrib.contenttypes.models import ContentType
+        from backend.apps.workflow_engine.models import ApprovalInstance
+        from backend.apps.plan_management.services.plan_approval_v2 import PlanAdjustmentApprovalService
         
-        # 更新计划的截止时间
-        if adjustment.new_end_time:
-            old_end_time = plan.end_time
-            plan.end_time = adjustment.new_end_time
-            plan.save(update_fields=['end_time'])
-            
-            # 记录状态日志
-            PlanStatusLog.objects.create(
-                plan=plan,
-                old_status=plan.status,
-                new_status=plan.status,
-                changed_by=request.user,
-                change_reason=f'调整申请已批准：截止时间从 {old_end_time.strftime("%Y-%m-%d %H:%M")} 调整为 {adjustment.new_end_time.strftime("%Y-%m-%d %H:%M")}'
-            )
+        content_type = ContentType.objects.get_for_model(PlanAdjustment)
+        approval_instance = ApprovalInstance.objects.filter(
+            content_type=content_type,
+            object_id=adjustment.id,
+            workflow__code='plan_adjustment_approval',
+            status__in=['pending', 'in_progress']
+        ).first()
+        
+        if approval_instance:
+            # 使用工作流引擎审批
+            try:
+                service = PlanAdjustmentApprovalService()
+                success = service.approve(
+                    instance_id=approval_instance.id,
+                    approver=request.user,
+                    comment=approval_notes
+                )
+                if success:
+                    # 工作流引擎会自动处理审批完成后的回调
+                    adjustment.refresh_from_db()
+                    if adjustment.status == 'pending':
+                        # 如果工作流引擎没有自动更新，手动更新
+                        adjustment.status = 'approved'
+                        adjustment.approved_by = request.user
+                        adjustment.approved_time = timezone.now()
+                        adjustment.approval_notes = approval_notes
+                        adjustment.save()
+                        _apply_plan_adjustment(adjustment, request.user)
+                else:
+                    messages.error(request, '审批失败，请重试')
+                    return redirect('plan_pages:plan_adjustment_list')
+            except Exception as e:
+                logger.error(f'工作流审批失败: {str(e)}', exc_info=True)
+                messages.error(request, f'审批失败：{str(e)}')
+                return redirect('plan_pages:plan_adjustment_list')
+        else:
+            # 使用简单审批（向后兼容）
+            adjustment.status = 'approved'
+            adjustment.approved_by = request.user
+            adjustment.approved_time = timezone.now()
+            adjustment.approval_notes = approval_notes
+            adjustment.save()
+            _apply_plan_adjustment(adjustment, request.user)
+        
         # 审批结果走通知中心，不写入 messages
         return redirect('plan_pages:plan_adjustment_list')
     
@@ -6627,12 +7013,53 @@ def plan_adjustment_reject(request, adjustment_id):
     if request.method == 'POST':
         approval_notes = request.POST.get('approval_notes', '')
         
-        # 更新调整申请状态
-        adjustment.status = 'rejected'
-        adjustment.approved_by = request.user
-        adjustment.approved_time = timezone.now()
-        adjustment.approval_notes = approval_notes
-        adjustment.save()
+        # 检查是否有工作流审批实例
+        from django.contrib.contenttypes.models import ContentType
+        from backend.apps.workflow_engine.models import ApprovalInstance
+        from backend.apps.plan_management.services.plan_approval_v2 import PlanAdjustmentApprovalService
+        
+        content_type = ContentType.objects.get_for_model(PlanAdjustment)
+        approval_instance = ApprovalInstance.objects.filter(
+            content_type=content_type,
+            object_id=adjustment.id,
+            workflow__code='plan_adjustment_approval',
+            status__in=['pending', 'in_progress']
+        ).first()
+        
+        if approval_instance:
+            # 使用工作流引擎拒绝
+            try:
+                service = PlanAdjustmentApprovalService()
+                success = service.reject(
+                    instance_id=approval_instance.id,
+                    approver=request.user,
+                    comment=approval_notes
+                )
+                if success:
+                    # 工作流引擎会自动处理审批完成后的回调
+                    adjustment.refresh_from_db()
+                    if adjustment.status == 'pending':
+                        # 如果工作流引擎没有自动更新，手动更新
+                        adjustment.status = 'rejected'
+                        adjustment.approved_by = request.user
+                        adjustment.approved_time = timezone.now()
+                        adjustment.approval_notes = approval_notes
+                        adjustment.save()
+                else:
+                    messages.error(request, '拒绝失败，请重试')
+                    return redirect('plan_pages:plan_adjustment_list')
+            except Exception as e:
+                logger.error(f'工作流拒绝失败: {str(e)}', exc_info=True)
+                messages.error(request, f'拒绝失败：{str(e)}')
+                return redirect('plan_pages:plan_adjustment_list')
+        else:
+            # 使用简单审批（向后兼容）
+            adjustment.status = 'rejected'
+            adjustment.approved_by = request.user
+            adjustment.approved_time = timezone.now()
+            adjustment.approval_notes = approval_notes
+            adjustment.save()
+        
         # 审批结果走通知中心，不写入 messages
         return redirect('plan_pages:plan_adjustment_list')
     
@@ -6647,4 +7074,206 @@ def plan_adjustment_reject(request, adjustment_id):
     context['plan'] = plan
     
     return render(request, "plan_management/plan_adjustment_reject.html", context)
+
+
+# ==================== 待办事项列表（TodoTask） ====================
+
+@login_required
+def todo_task_list(request):
+    """待办事项列表（仅展示当前用户的 TodoTask）"""
+    permission_set = get_user_permission_codes(request.user)
+    if not _permission_granted('plan_management.view', permission_set):
+        messages.error(request, '您没有权限查看待办事项')
+        return redirect('plan_pages:plan_management_home')
+
+    from backend.apps.plan_management.models import TodoTask
+
+    can_manage_todo_cancel = (
+        _permission_granted('plan_management.plan.manage', permission_set)
+        or _permission_granted('plan_management.manage_goal', permission_set)
+        or request.user.is_superuser
+    )
+
+    qs_base = TodoTask.objects.filter(user=request.user)
+
+    # 统计（不受筛选影响）
+    total_count = qs_base.count()
+    pending_count = qs_base.filter(status='pending').count()
+    overdue_count = qs_base.filter(status='overdue').count()
+    completed_count = qs_base.filter(status='completed').count()
+    cancelled_count = qs_base.filter(status='cancelled').count()
+
+    # 筛选
+    search = (request.GET.get('search') or '').strip()
+    status_filter = (request.GET.get('status') or '').strip()
+    task_type_filter = (request.GET.get('task_type') or '').strip()
+    date_from = (request.GET.get('date_from') or '').strip()
+    date_to = (request.GET.get('date_to') or '').strip()
+
+    qs = qs_base
+    if search:
+        qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search))
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    if task_type_filter:
+        qs = qs.filter(task_type=task_type_filter)
+    if date_from:
+        try:
+            df = datetime.strptime(date_from, '%Y-%m-%d').date()
+            qs = qs.filter(deadline__date__gte=df)
+        except Exception:
+            pass
+    if date_to:
+        try:
+            dt = datetime.strptime(date_to, '%Y-%m-%d').date()
+            qs = qs.filter(deadline__date__lte=dt)
+        except Exception:
+            pass
+
+    qs = qs.order_by('-created_at')
+
+    # 分页
+    page_size = 20
+    try:
+        page_size = max(10, min(100, int(request.GET.get('page_size') or 20)))
+    except Exception:
+        page_size = 20
+
+    paginator = Paginator(qs, page_size)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    # 严格闭环：刷新当前页的逾期状态（不扫全表，避免性能问题）
+    for todo in page_obj:
+        try:
+            changed = todo.check_overdue()
+            if changed:
+                todo.save(update_fields=['is_overdue', 'overdue_days', 'status', 'updated_at'])
+        except Exception:
+            continue
+
+    context = _context("待办事项列表", "📝", "查看并闭环我的计划待办", request=request)
+    context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='todo_task_list')
+    context['filter_form_action'] = reverse('plan_pages:todo_task_list')
+
+    context.update({
+        'page_obj': page_obj,
+        'total_count': total_count,
+        'pending_count': pending_count,
+        'overdue_count': overdue_count,
+        'completed_count': completed_count,
+        'cancelled_count': cancelled_count,
+        'search': search,
+        'status_filter': status_filter,
+        'task_type_filter': task_type_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'status_options': TodoTask.STATUS_CHOICES,
+        'task_type_options': TodoTask.TASK_TYPE_CHOICES,
+        'page_size': page_size,
+        'can_manage_todo_cancel': can_manage_todo_cancel,
+    })
+
+    return render(request, "plan_management/todo_task_list.html", context)
+
+
+# ==================== 待办闭环（数据库待办 TodoTask） ====================
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def todo_task_complete(request, todo_id):
+    """
+    方案B：人工完成必须带“证据”或通过系统核验
+    - GET：展示提交完成证据页面（并提示当前系统核验结果）
+    - POST：提交完成；若未通过系统核验，则必须填写完成说明 + 完成证据，进入“待核验”
+    """
+    from backend.apps.plan_management.models import TodoTask
+    from backend.apps.plan_management.services.todo_service import mark_todo_completed, check_todo_business_evidence
+
+    todo = get_object_or_404(TodoTask, id=todo_id)
+    if todo.user_id != request.user.id:
+        messages.error(request, '您没有权限操作该待办')
+        return redirect(request.GET.get('next') or request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('plan_pages:plan_management_home'))
+
+    next_url = request.GET.get('next') or request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('plan_pages:plan_management_home')
+
+    evidence_ok, evidence_msg = check_todo_business_evidence(todo)
+
+    if request.method == 'GET':
+        permission_set = get_user_permission_codes(request.user)
+        context = _context("完成待办", "✅", "提交完成证据（用于防虚假完成）", request=request)
+        context['sidebar_nav'] = _build_plan_management_sidebar_nav(permission_set, active_id='todo_task_list')
+        context['todo'] = todo
+        context['next'] = next_url
+        context['evidence_ok'] = evidence_ok
+        context['evidence_msg'] = evidence_msg
+        return render(request, "plan_management/todo_task_complete.html", context)
+
+    # POST：提交完成
+    completion_note = (request.POST.get('completion_note') or '').strip()
+    completion_evidence = (request.POST.get('completion_evidence') or '').strip()
+
+    if todo.status in ['completed', 'cancelled']:
+        messages.info(request, '待办已处于终态，无需重复操作')
+        return redirect(next_url)
+
+    # 若系统无法核验，则必须提交证据与说明
+    if not evidence_ok and (not completion_note or not completion_evidence):
+        messages.error(request, '系统未检测到业务证据：请填写“完成说明”和“完成证据”（链接/编号/截图说明等），提交后进入待核验。')
+        return redirect(reverse('plan_pages:todo_task_complete', args=[todo.id]) + f'?next={next_url}')
+
+    v_status = 'verified' if evidence_ok else 'pending'
+    v_reason = '' if evidence_ok else (evidence_msg or '人工提交待核验')
+
+    ok = mark_todo_completed(
+        todo,
+        user=request.user,
+        via='manual',
+        note=completion_note,
+        evidence=completion_evidence,
+        verification_status=v_status,
+        verification_reason=v_reason,
+    )
+    if not ok:
+        messages.info(request, '待办已处于终态，无需重复操作')
+    return redirect(next_url)
+
+
+@login_required
+@require_http_methods(['POST'])
+def todo_task_cancel(request, todo_id):
+    """手动闭环：标记 TodoTask 已取消"""
+    from backend.apps.plan_management.models import TodoTask
+    from backend.apps.plan_management.services.todo_service import mark_todo_cancelled
+
+    todo = get_object_or_404(TodoTask, id=todo_id)
+    if todo.user_id != request.user.id:
+        messages.error(request, '您没有权限操作该待办')
+        return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('plan_pages:plan_management_home'))
+
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('plan_pages:plan_management_home')
+
+    # 取消加强：系统自动生成待办默认不可由普通用户取消（防“随手点掉”）
+    permission_set = get_user_permission_codes(request.user)
+    can_manage_cancel = (
+        _permission_granted('plan_management.plan.manage', permission_set)
+        or _permission_granted('plan_management.manage_goal', permission_set)
+        or request.user.is_superuser
+    )
+    if getattr(todo, 'auto_generated', True) and not can_manage_cancel:
+        messages.error(request, '该待办为系统自动生成，取消需管理员权限')
+        return redirect(next_url)
+
+    reason = (request.POST.get('cancel_reason') or '').strip()
+    # 取消不允许“随意”：必须填写原因（前端也会强制）
+    if not reason:
+        messages.error(request, '取消必须填写原因（用于审计与巡检核验）')
+        return redirect(next_url)
+    if len(reason) < 4:
+        messages.error(request, '取消原因过短，请至少填写4个字')
+        return redirect(next_url)
+    ok = mark_todo_cancelled(todo, user=request.user, reason=reason)
+    if not ok:
+        messages.info(request, '待办已处于终态，无需重复操作')
+    return redirect(next_url)
 

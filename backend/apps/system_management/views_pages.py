@@ -552,7 +552,7 @@ def _build_system_management_sidebar_nav(permission_set, request_path=None, acti
     menu_structure = [
         {
             'id': 'system_management_home',
-            'label': '系统管理首页',
+            'label': '首页',
             'icon': '🏠',
             'url_name': 'system_pages:system_management_home',
         },

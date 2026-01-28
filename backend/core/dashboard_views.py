@@ -216,34 +216,10 @@ def dashboard_todos(request):
     except (ImportError, Exception) as e:
         print(f'导入AdministrativeAffair失败: {e}')
     
-    # 如果没有任何待办事项，返回示例数据
-    if not todos:
-        todos = [
-            {
-                'title': '审批合同：XX项目合同',
-                'description': '需要您审批一份重要合同',
-                'priority': 'high',
-                'time': '2小时前',
-                'url': '#'
-            },
-            {
-                'title': '项目进度更新',
-                'description': '请更新项目进度信息',
-                'priority': 'medium',
-                'time': '5小时前',
-                'url': '#'
-            },
-            {
-                'title': '月度报告提交',
-                'description': '请提交本月工作总结',
-                'priority': 'low',
-                'time': '1天前',
-                'url': '#'
-            }
-        ]
+    # 严格闭环：不返回示例数据，避免产生“虚假待办”
     
     result = {
-        'todos': todos[:100],  # 最多返回100条（已移除限制，显示所有内容）
+        'todos': todos[:100],
         'success': True
     }
     

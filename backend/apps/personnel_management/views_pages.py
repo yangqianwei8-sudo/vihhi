@@ -125,7 +125,7 @@ def _build_personnel_sidebar_nav(permission_set, request_path=None, active_id=No
             'children': [
                 {
                     'id': 'personnel_home',
-                    'label': '人事管理首页',
+                    'label': '首页',
                     'url_name': 'personnel_pages:personnel_home',
                     'permission': None,
                     'icon': '👥',

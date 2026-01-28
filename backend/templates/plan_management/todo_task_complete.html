@@ -1,0 +1,53 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block pm_title %}完成待办{% endblock pm_title %}
+{% block pm_subtitle %}提交完成说明/证据（用于防虚假完成与巡检核验）{% endblock pm_subtitle %}
+
+{% block pm_content %}
+  <div class="card p-3">
+    <div class="mb-2">
+      <div class="fw-semibold">{{ todo.title }}</div>
+      {% if todo.description %}
+        <div class="text-muted small">{{ todo.description }}</div>
+      {% endif %}
+      <div class="text-muted small mt-1">
+        类型：{{ todo.get_task_type_display }} ｜ 截止：{{ todo.deadline|date:"Y-m-d H:i" }}
+      </div>
+    </div>
+
+    <div class="alert {% if evidence_ok %}alert-success{% else %}alert-warning{% endif %} mb-3">
+      {% if evidence_ok %}
+        <div class="fw-semibold">系统核验：通过</div>
+        <div class="small">{{ evidence_msg }}</div>
+        <div class="small text-muted mt-1">你仍可补充说明/证据（可选）。</div>
+      {% else %}
+        <div class="fw-semibold">系统核验：未通过</div>
+        <div class="small">{{ evidence_msg }}</div>
+        <div class="small text-muted mt-1">为保证严格闭环：本次完成必须提交“完成说明 + 完成证据”，提交后进入“待核验”。</div>
+      {% endif %}
+    </div>
+
+    <form method="post" action="{% url 'plan_pages:todo_task_complete' todo.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <div class="mb-3">
+        <label class="form-label">完成说明{% if not evidence_ok %}<span class="text-danger">*</span>{% endif %}</label>
+        <textarea class="form-control" name="completion_note" rows="3" placeholder="简要描述你完成了什么、在哪里完成的">{% if todo.completion_note %}{{ todo.completion_note }}{% endif %}</textarea>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">完成证据{% if not evidence_ok %}<span class="text-danger">*</span>{% endif %}</label>
+        <textarea class="form-control" name="completion_evidence" rows="3" placeholder="链接/编号/截图说明/相关记录ID（至少一种）">{% if todo.completion_evidence %}{{ todo.completion_evidence }}{% endif %}</textarea>
+        <div class="form-text">示例：审批单号、计划编号、进度记录ID、外部链接、截图说明等。</div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success">确认完成</button>
+        <a href="{{ next }}" class="btn btn-outline-secondary">返回</a>
+      </div>
+    </form>
+  </div>
+{% endblock pm_content %}
+

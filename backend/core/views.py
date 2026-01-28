@@ -355,6 +355,9 @@ def home(request):
         
         user = request.user
         
+        # 调试：记录当前用户信息
+        logger.debug(f'home视图 - request.user.id: {user.id if user.is_authenticated else None}, username: {user.get_username() if user.is_authenticated else "anonymous"}')
+        
         # 获取用户权限（可能因为数据库连接失败而抛出异常）
         try:
             permission_set = get_user_permission_codes(user)
@@ -1498,8 +1501,9 @@ def home(request):
             sidebar_nav = []
         
         # 构建上下文
+        # 确保使用 request.user 而不是局部变量 user（防止被覆盖）
         context = {
-            'user': user,
+            'user': request.user,  # 直接使用 request.user，确保是最新的用户对象
             'is_superuser': getattr(user, 'is_superuser', False),
             'centers_navigation': centers_navigation,
             'full_top_nav': centers_navigation,  # 顶部导航菜单（与计划管理模块一致）
@@ -1533,8 +1537,8 @@ def home(request):
             'operation_center_sections': operation_center_sections,  # 运营中心模块卡片
             # 添加左侧栏数据
             'sidebar_nav': sidebar_nav,  # 从 scene_groups 转换而来的侧边栏菜单
-            'sidebar_title': '首页',
-            'sidebar_subtitle': 'Home',
+            'sidebar_title': '总工作台',
+            'sidebar_subtitle': 'Dashboard',
         }
         
         # 尝试渲染模板，如果模板不存在则返回简单HTML
@@ -1616,6 +1620,10 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             if user:
                 if user.is_active:
+                    # 如果当前登录的用户与要登录的用户不同，先退出
+                    if request.user.is_authenticated and request.user.id != user.id:
+                        logout(request)
+                    # 登录新用户（auth_login函数会自动处理会话）
                     auth_login(request, user)
                     # 检查是否需要完善资料
                     # if not user.profile_completed:

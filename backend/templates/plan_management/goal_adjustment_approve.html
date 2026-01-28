@@ -1,0 +1,126 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block pm_title %}审批调整申请{% endblock %}
+{% block pm_subtitle %}<span class="pm-subtitle">{{ goal.name }}</span>{% endblock %}
+
+{% block pm_actions %}
+<a href="{% url 'plan_pages:goal_adjustment_list' %}" class="list-btn">
+  返回列表
+</a>
+{% endblock %}
+
+{% block module_styles %}
+<link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
+{% endblock %}
+
+{% block pm_content %}
+<div class="detail-card">
+  <div class="detail-card-title">📋 调整申请信息</div>
+  <div class="detail-info-grid">
+    <div class="detail-info-item">
+      <div class="detail-info-label">目标编号</div>
+      <div class="detail-info-value">{{ goal.goal_number }}</div>
+    </div>
+    <div class="detail-info-item">
+      <div class="detail-info-label">目标名称</div>
+      <div class="detail-info-value">{{ goal.name }}</div>
+    </div>
+    <div class="detail-info-item">
+      <div class="detail-info-label">调整类型</div>
+      <div class="detail-info-value">{{ adjustment.get_adjustment_type_display }}</div>
+    </div>
+    <div class="detail-info-item">
+      <div class="detail-info-label">申请人</div>
+      <div class="detail-info-value">{% if adjustment.created_by %}{{ adjustment.created_by.get_full_name|default:adjustment.created_by.username }}{% else %}-{% endif %}</div>
+    </div>
+    <div class="detail-info-item">
+      <div class="detail-info-label">申请时间</div>
+      <div class="detail-info-value">{{ adjustment.created_time|date:"Y-m-d H:i" }}</div>
+    </div>
+  </div>
+</div>
+
+{% if adjustment.adjustment_type == 'time' %}
+<div class="detail-card" style="margin-top: 20px;">
+  <div class="detail-card-title">⏰ 时间调整详情</div>
+  <div class="detail-info-grid">
+    <div class="detail-info-item">
+      <div class="detail-info-label">原开始日期</div>
+      <div class="detail-info-value">{{ goal.start_date|date:"Y-m-d" }}</div>
+    </div>
+    <div class="detail-info-item">
+      <div class="detail-info-label">新开始日期</div>
+      <div class="detail-info-value"><strong>{% if adjustment.new_start_date %}{{ adjustment.new_start_date|date:"Y-m-d" }}{% else %}-{% endif %}</strong></div>
+    </div>
+    <div class="detail-info-item">
+      <div class="detail-info-label">原结束日期</div>
+      <div class="detail-info-value">{{ goal.end_date|date:"Y-m-d" }}</div>
+    </div>
+    <div class="detail-info-item">
+      <div class="detail-info-label">新结束日期</div>
+      <div class="detail-info-value"><strong>{% if adjustment.new_end_date %}{{ adjustment.new_end_date|date:"Y-m-d" }}{% else %}-{% endif %}</strong></div>
+    </div>
+  </div>
+</div>
+{% elif adjustment.adjustment_type == 'responsible' %}
+<div class="detail-card" style="margin-top: 20px;">
+  <div class="detail-card-title">👤 负责人调整详情</div>
+  <div class="detail-info-grid">
+    <div class="detail-info-item">
+      <div class="detail-info-label">原负责人</div>
+      <div class="detail-info-value">{{ goal.responsible_person.get_full_name|default:goal.responsible_person.username }}</div>
+    </div>
+    <div class="detail-info-item">
+      <div class="detail-info-label">新负责人</div>
+      <div class="detail-info-value"><strong>{% if adjustment.new_responsible_person %}{{ adjustment.new_responsible_person.get_full_name|default:adjustment.new_responsible_person.username }}{% else %}-{% endif %}</strong></div>
+    </div>
+  </div>
+</div>
+{% elif adjustment.adjustment_type == 'target_value' %}
+<div class="detail-card" style="margin-top: 20px;">
+  <div class="detail-card-title">🎯 目标值调整详情</div>
+  <div class="detail-info-grid">
+    <div class="detail-info-item">
+      <div class="detail-info-label">原目标值</div>
+      <div class="detail-info-value">{{ goal.target_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</div>
+    </div>
+    <div class="detail-info-item">
+      <div class="detail-info-label">新目标值</div>
+      <div class="detail-info-value"><strong>{% if adjustment.new_target_value %}{{ adjustment.new_target_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}{% else %}-{% endif %}</strong></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="detail-card" style="margin-top: 20px;">
+  <div class="detail-card-title">📝 调整原因</div>
+  <div style="padding: 16px; font-size: 12px; color: #333333; line-height: 1.6;">
+    {{ adjustment.adjustment_reason|linebreaks }}
+  </div>
+</div>
+
+{% if adjustment.adjustment_content %}
+<div class="detail-card" style="margin-top: 20px;">
+  <div class="detail-card-title">📄 调整内容</div>
+  <div style="padding: 16px; font-size: 12px; color: #333333; line-height: 1.6;">
+    {{ adjustment.adjustment_content|linebreaks }}
+  </div>
+</div>
+{% endif %}
+
+<form method="post" style="margin-top: 20px;">
+  {% csrf_token %}
+  <div class="detail-card">
+    <div class="detail-card-title">✅ 审批意见</div>
+    <div style="padding: 16px;">
+      <textarea name="approval_notes" rows="4" class="form-control" placeholder="请输入审批意见（可选）"></textarea>
+    </div>
+  </div>
+
+  <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px;">
+    <a href="{% url 'plan_pages:goal_adjustment_list' %}" class="list-btn">取消</a>
+    <button type="submit" class="list-btn list-btn-primary">批准申请</button>
+  </div>
+</form>
+{% endblock %}

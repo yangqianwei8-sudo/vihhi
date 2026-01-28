@@ -300,7 +300,7 @@ def _build_financial_sidebar_nav(permission_set, request_path=None, active_id=No
             'children': [
                 {
                     'id': 'financial_home',
-                    'label': '财务管理首页',
+                    'label': '首页',
                     'icon': '💵',
                     'url_name': 'finance_pages:financial_home',
                     'permission': None,

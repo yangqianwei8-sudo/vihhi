@@ -247,11 +247,28 @@ PERMISSION_DEFINITIONS = [
     
     # 行政事务
     {"code": "administrative_management.affair.view", "module": "行政管理", "action": "affair.view", "name": "行政管理-查看事务", "description": "查看行政事务列表和详情"},
+    {"code": "administrative_management.affair.view_all", "module": "行政管理", "action": "affair.view_all", "name": "行政管理-查看全部事务", "description": "查看全部行政事务（不限负责人/参与人/创建人）"},
     {"code": "administrative_management.affair.create", "module": "行政管理", "action": "affair.create", "name": "行政管理-创建事务", "description": "创建行政事务"},
+    {"code": "administrative_management.affair.manage", "module": "行政管理", "action": "affair.manage", "name": "行政管理-管理事务", "description": "管理行政事务（编辑/开始/完成/取消等管理操作）"},
     
     # 办公用品管理
     {"code": "administrative_management.supplies.view", "module": "行政管理", "action": "supplies.view", "name": "行政管理-查看用品", "description": "查看办公用品管理"},
     {"code": "administrative_management.supplies.manage", "module": "行政管理", "action": "supplies.manage", "name": "行政管理-管理用品", "description": "管理办公用品"},
+    {"code": "administrative_management.supply.create", "module": "行政管理", "action": "supply.create", "name": "行政管理-创建用品", "description": "创建办公用品"},
+    {"code": "administrative_management.supply.manage", "module": "行政管理", "action": "supply.manage", "name": "行政管理-管理单个用品", "description": "编辑办公用品信息"},
+    
+    # 用品采购
+    {"code": "administrative_management.supply.purchase", "module": "行政管理", "action": "supply.purchase", "name": "行政管理-创建采购单", "description": "创建办公用品采购单"},
+    {"code": "administrative_management.supply.purchase_manage", "module": "行政管理", "action": "supply.purchase_manage", "name": "行政管理-管理采购单", "description": "编辑采购单（可受限为仅编辑自己创建的）"},
+    {"code": "administrative_management.supply.purchase_approve", "module": "行政管理", "action": "supply.purchase_approve", "name": "行政管理-审批采购单", "description": "审批办公用品采购单"},
+    {"code": "administrative_management.supply.purchase_receive", "module": "行政管理", "action": "supply.purchase_receive", "name": "行政管理-采购收货确认", "description": "确认采购收货并更新库存"},
+    
+    # 用品领用
+    {"code": "administrative_management.supply.request", "module": "行政管理", "action": "supply.request", "name": "行政管理-创建领用申请", "description": "创建办公用品领用申请"},
+    {"code": "administrative_management.supply.request_manage", "module": "行政管理", "action": "supply.request_manage", "name": "行政管理-管理领用申请", "description": "编辑领用申请（可受限为仅编辑自己创建的）"},
+    {"code": "administrative_management.supply.request_view_all", "module": "行政管理", "action": "supply.request_view_all", "name": "行政管理-查看全部领用申请", "description": "查看全部领用申请（不限申请人）"},
+    {"code": "administrative_management.supply.request_approve", "module": "行政管理", "action": "supply.request_approve", "name": "行政管理-审批领用申请", "description": "审批领用申请"},
+    {"code": "administrative_management.supply.request_issue", "module": "行政管理", "action": "supply.request_issue", "name": "行政管理-发放领用物品", "description": "发放领用物品并扣减库存"},
     
     # 会议室管理
     {"code": "administrative_management.meeting_room.view", "module": "行政管理", "action": "meeting_room.view", "name": "行政管理-查看会议室", "description": "查看会议室列表和详情"},
@@ -261,6 +278,7 @@ PERMISSION_DEFINITIONS = [
     
     # 会议管理
     {"code": "administrative_management.meeting.view", "module": "行政管理", "action": "meeting.view", "name": "行政管理-查看会议", "description": "查看会议管理"},
+    {"code": "administrative_management.meeting.create", "module": "行政管理", "action": "meeting.create", "name": "行政管理-创建会议", "description": "创建会议安排"},
     {"code": "administrative_management.meeting.manage", "module": "行政管理", "action": "meeting.manage", "name": "行政管理-管理会议", "description": "管理会议和会议室"},
     
     # 车辆管理
@@ -297,6 +315,18 @@ PERMISSION_DEFINITIONS = [
     {"code": "administrative_management.travel.create", "module": "行政管理", "action": "travel.create", "name": "行政管理-创建差旅", "description": "创建差旅申请"},
     {"code": "administrative_management.travel.manage", "module": "行政管理", "action": "travel.manage", "name": "行政管理-管理差旅", "description": "编辑和删除差旅申请"},
     {"code": "administrative_management.travel.approve", "module": "行政管理", "action": "travel.approve", "name": "行政管理-审批差旅", "description": "审批差旅申请"},
+    
+    # 报销管理
+    {"code": "administrative_management.expense.view", "module": "行政管理", "action": "expense.view", "name": "行政管理-查看报销", "description": "查看报销申请列表和详情"},
+    {"code": "administrative_management.expense.create", "module": "行政管理", "action": "expense.create", "name": "行政管理-创建报销", "description": "创建报销申请"},
+    {"code": "administrative_management.expense.manage", "module": "行政管理", "action": "expense.manage", "name": "行政管理-管理报销", "description": "编辑报销申请（可受限为仅编辑自己创建的）"},
+    
+    # 供应链（供应商/合同/付款）
+    {"code": "administrative_management.supplier.manage", "module": "行政管理", "action": "supplier.manage", "name": "行政管理-管理供应商", "description": "编辑供应商信息"},
+    {"code": "administrative_management.contract.create", "module": "行政管理", "action": "contract.create", "name": "行政管理-创建采购合同", "description": "创建采购合同"},
+    {"code": "administrative_management.contract.manage", "module": "行政管理", "action": "contract.manage", "name": "行政管理-管理采购合同", "description": "编辑采购合同"},
+    {"code": "administrative_management.payment.create", "module": "行政管理", "action": "payment.create", "name": "行政管理-创建采购付款", "description": "创建采购付款记录"},
+    {"code": "administrative_management.payment.confirm", "module": "行政管理", "action": "payment.confirm", "name": "行政管理-确认采购付款", "description": "确认采购付款（将付款单从待付款更新为已付款）"},
     
     # 公告通知
     {"code": "administrative_management.announcement.view", "module": "行政管理", "action": "announcement.view", "name": "行政管理-查看公告", "description": "查看公告列表和详情"},

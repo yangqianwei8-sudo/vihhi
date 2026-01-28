@@ -21,6 +21,139 @@ import re
 from ..models import StrategicGoal, Plan, TodoTask
 
 
+def check_todo_business_evidence(todo: TodoTask) -> tuple[bool, str]:
+    """
+    业务证据核验（用于：方案B + 巡检）
+    - True: 已能从业务数据中证明该待办确已完成
+    - False: 暂无证据（可能是未做、或证据尚未写入系统）
+    """
+    user = getattr(todo, 'user', None)
+    now = timezone.now()
+    today = now.date()
+
+    try:
+        # 日计划分解：存在目标日期的已发布日计划
+        if todo.task_type == 'plan_decomposition_daily':
+            target_date = None
+            if todo.deadline:
+                target_date = todo.deadline.date()
+            else:
+                combined_text = f"{todo.title} {todo.description or ''}"
+                target_date = extract_date_from_text(combined_text) or (today + timedelta(days=1))
+
+            if not target_date:
+                return False, '未能确定目标日期'
+
+            target_start = timezone.make_aware(datetime.combine(target_date, datetime.min.time()))
+            target_end = timezone.make_aware(datetime.combine(target_date, datetime.max.time()))
+
+            # 关联计划本身或其子计划满足
+            if todo.related_object_type == 'plan' and todo.related_object_id:
+                related_plan = Plan.objects.filter(id=todo.related_object_id).first()
+                if related_plan:
+                    if related_plan.plan_period == 'daily' and related_plan.status == 'published':
+                        if not related_plan.start_time or related_plan.start_time.date() == target_date:
+                            return True, '关联日计划已发布'
+                    # 父计划下存在对应日子计划
+                    try:
+                        if related_plan.child_plans.filter(
+                            plan_period='daily',
+                            start_time__gte=target_start,
+                            start_time__lte=target_end,
+                            status='published'
+                        ).exists():
+                            return True, '存在已发布的日子计划'
+                    except Exception:
+                        pass
+
+            if user and Plan.objects.filter(
+                Q(owner=user) | Q(responsible_person=user),
+                plan_period='daily',
+                start_time__gte=target_start,
+                start_time__lte=target_end,
+                status='published'
+            ).exists():
+                return True, '存在目标日期的已发布日计划'
+
+            return False, '未找到目标日期的已发布日计划'
+
+        # 周计划分解：存在“下周”的周计划（非草稿/非取消）
+        if todo.task_type == 'plan_decomposition_weekly':
+            base_day = todo.deadline.date() if todo.deadline else today
+            days_until_next_monday = (7 - base_day.weekday()) % 7
+            if days_until_next_monday == 0:
+                days_until_next_monday = 7
+            next_monday = base_day + timedelta(days=days_until_next_monday)
+            next_sunday = next_monday + timedelta(days=6)
+            next_start = timezone.make_aware(datetime.combine(next_monday, datetime.min.time()))
+            next_end = timezone.make_aware(datetime.combine(next_sunday, datetime.max.time()))
+            if user and Plan.objects.filter(
+                Q(owner=user) | Q(responsible_person=user),
+                plan_period='weekly',
+                start_time__gte=next_start,
+                start_time__lte=next_end,
+            ).exclude(status__in=['draft', 'cancelled']).exists():
+                return True, '存在下周周计划'
+            return False, '未找到下周周计划'
+
+        # 目标分解：存在以该公司目标为 parent_goal 的个人目标
+        if todo.task_type == 'goal_decomposition' and todo.related_object_type == 'goal' and todo.related_object_id:
+            if user and StrategicGoal.objects.filter(
+                level='personal',
+                owner=user,
+                parent_goal_id=int(todo.related_object_id),
+            ).exclude(status__in=['cancelled']).exists():
+                return True, '存在对应个人目标'
+            return False, '未找到对应个人目标'
+
+        # 计划创建（对齐公司计划）：存在以该公司计划为 parent_plan 的个人计划
+        if todo.task_type == 'plan_creation' and todo.related_object_type == 'plan' and todo.related_object_id:
+            if user and Plan.objects.filter(
+                level='personal',
+                owner=user,
+                parent_plan_id=int(todo.related_object_id),
+            ).exclude(status__in=['cancelled']).exists():
+                return True, '存在对齐的个人计划'
+            return False, '未找到对齐的个人计划'
+
+        # 目标进度更新：存在进度记录（创建时间之后、且记录人是当前用户）
+        if todo.task_type == 'goal_progress_update' and todo.related_object_type == 'goal' and todo.related_object_id:
+            from ..models import GoalProgressRecord
+            if user and GoalProgressRecord.objects.filter(
+                goal_id=int(todo.related_object_id),
+                recorded_by=user,
+                recorded_time__gte=todo.created_at,
+            ).exists():
+                return True, '存在目标进度记录'
+            return False, '未找到目标进度记录'
+
+        # 计划进度更新：存在进度记录（创建时间之后、且记录人是当前用户）
+        if todo.task_type == 'plan_progress_update' and todo.related_object_type == 'plan' and todo.related_object_id:
+            from ..models import PlanProgressRecord
+            if user and PlanProgressRecord.objects.filter(
+                plan_id=int(todo.related_object_id),
+                recorded_by=user,
+                recorded_time__gte=todo.created_at,
+            ).exists():
+                return True, '存在计划进度记录'
+            return False, '未找到计划进度记录'
+
+        # 目标创建：创建人是当前用户，且在待办创建之后创建过公司目标（非草稿/非取消）
+        if todo.task_type == 'goal_creation':
+            if user and StrategicGoal.objects.filter(
+                level='company',
+                created_by=user,
+                created_time__gte=todo.created_at,
+            ).exclude(status__in=['draft', 'cancelled']).exists():
+                return True, '存在新建公司目标'
+            return False, '未找到新建公司目标'
+
+    except Exception as e:
+        return False, f'核验异常：{e}'
+
+    return False, '该类型暂不支持自动核验'
+
+
 def extract_date_from_text(text):
     """
     从文本中提取日期
@@ -269,9 +402,11 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                                     # 如果提取到了日期，检查日期是否匹配；如果没提取到，只要已发布就认为已完成
                                     if related_plan.start_time:
                                         if related_plan.start_time.date() == target_date:
+                                            mark_todo_completed(todo, user=user)
                                             continue
                                     else:
                                         # 没有start_time时，只要日计划已发布就认为已完成
+                                        mark_todo_completed(todo, user=user)
                                         continue
                                 # 如果关联的计划是父计划（如周计划、月计划），检查其子计划
                                 else:
@@ -282,6 +417,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                                         status='published'
                                     )
                                     if daily_child_plans.exists():
+                                        mark_todo_completed(todo, user=user)
                                         continue
                         except Exception:
                             pass
@@ -297,6 +433,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                     )
                     
                     if user_daily_plans.exists():
+                        mark_todo_completed(todo, user=user)
                         continue
                     
                     # 方法2b：进一步放宽检查
@@ -315,6 +452,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                                     status='published'
                                 ).first()
                                 if related_daily_plan:
+                                    mark_todo_completed(todo, user=user)
                                     continue
                         except (ValueError, AttributeError):
                             pass
@@ -338,11 +476,105 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                                         status='published'
                                     ).first()
                                     if related_plan:
+                                        mark_todo_completed(todo, user=user)
                                         continue
                             except (ValueError, AttributeError):
                                 pass
             except Exception:
                 # 如果查询出错，继续处理该待办事项
+                pass
+        
+        # ========== 严格闭环：其他类型 TodoTask 自动完结 ==========
+        # 说明：只对数据库待办（TodoTask）做“落库完结”，派生待办由业务对象状态闭环。
+        
+        # 周计划分解：存在“下周”的周计划（非草稿/非取消）即完结
+        if todo.task_type == 'plan_decomposition_weekly' and todo.status in ['pending', 'overdue']:
+            try:
+                base_day = todo.deadline.date() if todo.deadline else today
+                days_until_next_monday = (7 - base_day.weekday()) % 7
+                if days_until_next_monday == 0:
+                    days_until_next_monday = 7
+                next_monday = base_day + timedelta(days=days_until_next_monday)
+                next_sunday = next_monday + timedelta(days=6)
+                next_start = timezone.make_aware(datetime.combine(next_monday, datetime.min.time()))
+                next_end = timezone.make_aware(datetime.combine(next_sunday, datetime.max.time()))
+                
+                if Plan.objects.filter(
+                    Q(owner=user) | Q(responsible_person=user),
+                    plan_period='weekly',
+                    start_time__gte=next_start,
+                    start_time__lte=next_end,
+                ).exclude(status__in=['draft', 'cancelled']).exists():
+                    mark_todo_completed(todo, user=user)
+                    continue
+            except Exception:
+                pass
+        
+        # 目标分解：存在以该公司目标为 parent_goal 的个人目标即完结
+        if todo.task_type == 'goal_decomposition' and todo.related_object_type == 'goal' and todo.related_object_id and todo.status in ['pending', 'overdue']:
+            try:
+                if StrategicGoal.objects.filter(
+                    level='personal',
+                    owner=user,
+                    parent_goal_id=int(todo.related_object_id),
+                ).exclude(status__in=['cancelled']).exists():
+                    mark_todo_completed(todo, user=user)
+                    continue
+            except Exception:
+                pass
+        
+        # 计划创建（对齐公司计划）：存在以该公司计划为 parent_plan 的个人计划即完结
+        if todo.task_type == 'plan_creation' and todo.related_object_type == 'plan' and todo.related_object_id and todo.status in ['pending', 'overdue']:
+            try:
+                if Plan.objects.filter(
+                    level='personal',
+                    owner=user,
+                    parent_plan_id=int(todo.related_object_id),
+                ).exclude(status__in=['cancelled']).exists():
+                    mark_todo_completed(todo, user=user)
+                    continue
+            except Exception:
+                pass
+        
+        # 目标进度更新：存在进度记录（创建时间之后、且记录人是当前用户）即完结
+        if todo.task_type == 'goal_progress_update' and todo.related_object_type == 'goal' and todo.related_object_id and todo.status in ['pending', 'overdue']:
+            try:
+                from ..models import GoalProgressRecord
+                if GoalProgressRecord.objects.filter(
+                    goal_id=int(todo.related_object_id),
+                    recorded_by=user,
+                    recorded_time__gte=todo.created_at,
+                ).exists():
+                    mark_todo_completed(todo, user=user)
+                    continue
+            except Exception:
+                pass
+        
+        # 计划进度更新：存在进度记录（创建时间之后、且记录人是当前用户）即完结
+        if todo.task_type == 'plan_progress_update' and todo.related_object_type == 'plan' and todo.related_object_id and todo.status in ['pending', 'overdue']:
+            try:
+                from ..models import PlanProgressRecord
+                if PlanProgressRecord.objects.filter(
+                    plan_id=int(todo.related_object_id),
+                    recorded_by=user,
+                    recorded_time__gte=todo.created_at,
+                ).exists():
+                    mark_todo_completed(todo, user=user)
+                    continue
+            except Exception:
+                pass
+        
+        # 目标创建：创建人是当前用户，且在待办创建之后创建过公司目标（非草稿/非取消）即完结
+        if todo.task_type == 'goal_creation' and todo.status in ['pending', 'overdue']:
+            try:
+                if StrategicGoal.objects.filter(
+                    level='company',
+                    created_by=user,
+                    created_time__gte=todo.created_at,
+                ).exclude(status__in=['draft', 'cancelled']).exists():
+                    mark_todo_completed(todo, user=user)
+                    continue
+            except Exception:
                 pass
         
         # 检查是否逾期（如果模型有 check_overdue 方法则调用，否则使用 save 方法自动检查）
@@ -1022,9 +1254,11 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
                                     # 如果提取到了日期，检查日期是否匹配；如果没提取到，只要已发布就认为已完成
                                     if related_plan.start_time:
                                         if related_plan.start_time.date() == target_date:
+                                            mark_todo_completed(todo, user=responsible_user)
                                             continue
                                     else:
                                         # 没有start_time时，只要日计划已发布就认为已完成
+                                        mark_todo_completed(todo, user=responsible_user)
                                         continue
                                 # 如果关联的计划是父计划（如周计划、月计划），检查其子计划
                                 else:
@@ -1035,6 +1269,7 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
                                         status='published'
                                     )
                                     if daily_child_plans.exists():
+                                        mark_todo_completed(todo, user=responsible_user)
                                         continue
                         except Exception:
                             pass
@@ -1050,6 +1285,7 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
                     )
                     
                     if user_daily_plans.exists():
+                        mark_todo_completed(todo, user=responsible_user)
                         continue
                     
                     # 方法2b：进一步放宽检查
@@ -1068,6 +1304,7 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
                                     status='published'
                                 ).first()
                                 if related_daily_plan:
+                                    mark_todo_completed(todo, user=responsible_user)
                                     continue
                         except (ValueError, AttributeError):
                             pass
@@ -1091,11 +1328,96 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
                                         status='published'
                                     ).first()
                                     if related_plan:
+                                        mark_todo_completed(todo, user=responsible_user)
                                         continue
                             except (ValueError, AttributeError):
                                 pass
             except Exception:
                 # 如果查询出错，继续处理该待办事项
+                pass
+        
+        # ========== 严格闭环：其他类型 TodoTask 自动完结（负责人视角）==========
+        if todo.task_type == 'plan_decomposition_weekly' and todo.status in ['pending', 'overdue']:
+            try:
+                base_day = todo.deadline.date() if todo.deadline else today
+                days_until_next_monday = (7 - base_day.weekday()) % 7
+                if days_until_next_monday == 0:
+                    days_until_next_monday = 7
+                next_monday = base_day + timedelta(days=days_until_next_monday)
+                next_sunday = next_monday + timedelta(days=6)
+                next_start = timezone.make_aware(datetime.combine(next_monday, datetime.min.time()))
+                next_end = timezone.make_aware(datetime.combine(next_sunday, datetime.max.time()))
+                if Plan.objects.filter(
+                    Q(owner=responsible_user) | Q(responsible_person=responsible_user),
+                    plan_period='weekly',
+                    start_time__gte=next_start,
+                    start_time__lte=next_end,
+                ).exclude(status__in=['draft', 'cancelled']).exists():
+                    mark_todo_completed(todo, user=responsible_user)
+                    continue
+            except Exception:
+                pass
+        
+        if todo.task_type == 'goal_decomposition' and todo.related_object_type == 'goal' and todo.related_object_id and todo.status in ['pending', 'overdue']:
+            try:
+                if StrategicGoal.objects.filter(
+                    level='personal',
+                    owner=responsible_user,
+                    parent_goal_id=int(todo.related_object_id),
+                ).exclude(status__in=['cancelled']).exists():
+                    mark_todo_completed(todo, user=responsible_user)
+                    continue
+            except Exception:
+                pass
+        
+        if todo.task_type == 'plan_creation' and todo.related_object_type == 'plan' and todo.related_object_id and todo.status in ['pending', 'overdue']:
+            try:
+                if Plan.objects.filter(
+                    level='personal',
+                    owner=responsible_user,
+                    parent_plan_id=int(todo.related_object_id),
+                ).exclude(status__in=['cancelled']).exists():
+                    mark_todo_completed(todo, user=responsible_user)
+                    continue
+            except Exception:
+                pass
+        
+        if todo.task_type == 'goal_progress_update' and todo.related_object_type == 'goal' and todo.related_object_id and todo.status in ['pending', 'overdue']:
+            try:
+                from ..models import GoalProgressRecord
+                if GoalProgressRecord.objects.filter(
+                    goal_id=int(todo.related_object_id),
+                    recorded_by=responsible_user,
+                    recorded_time__gte=todo.created_at,
+                ).exists():
+                    mark_todo_completed(todo, user=responsible_user)
+                    continue
+            except Exception:
+                pass
+        
+        if todo.task_type == 'plan_progress_update' and todo.related_object_type == 'plan' and todo.related_object_id and todo.status in ['pending', 'overdue']:
+            try:
+                from ..models import PlanProgressRecord
+                if PlanProgressRecord.objects.filter(
+                    plan_id=int(todo.related_object_id),
+                    recorded_by=responsible_user,
+                    recorded_time__gte=todo.created_at,
+                ).exists():
+                    mark_todo_completed(todo, user=responsible_user)
+                    continue
+            except Exception:
+                pass
+        
+        if todo.task_type == 'goal_creation' and todo.status in ['pending', 'overdue']:
+            try:
+                if StrategicGoal.objects.filter(
+                    level='company',
+                    created_by=responsible_user,
+                    created_time__gte=todo.created_at,
+                ).exclude(status__in=['draft', 'cancelled']).exists():
+                    mark_todo_completed(todo, user=responsible_user)
+                    continue
+            except Exception:
                 pass
         
         if hasattr(todo, 'check_overdue'):
@@ -1483,7 +1805,16 @@ def create_todo_task(
     return todo
 
 
-def mark_todo_completed(todo: TodoTask, user=None) -> bool:
+def mark_todo_completed(
+    todo: TodoTask,
+    user=None,
+    *,
+    via: str = 'auto',
+    note: str = '',
+    evidence: str = '',
+    verification_status: Optional[str] = None,
+    verification_reason: str = '',
+) -> bool:
     """
     标记待办完成
     
@@ -1497,12 +1828,80 @@ def mark_todo_completed(todo: TodoTask, user=None) -> bool:
     if todo.status in ['completed', 'cancelled']:
         return False
     
+    evidence_ok, evidence_msg = check_todo_business_evidence(todo)
+    if verification_status is None:
+        verification_status = 'verified' if evidence_ok else 'pending'
+    if not verification_reason and verification_status != 'verified':
+        verification_reason = evidence_msg or '待核验'
+
     todo.status = 'completed'
     todo.completed_at = timezone.now()
+    if user:
+        try:
+            todo.completed_by = user
+        except Exception:
+            # 字段不存在或赋值失败不影响完成
+            pass
+    # 完成证据（方案B）
+    if hasattr(todo, 'completion_note'):
+        todo.completion_note = note or ''
+    if hasattr(todo, 'completion_evidence'):
+        todo.completion_evidence = evidence or ''
+    if hasattr(todo, 'completion_via'):
+        todo.completion_via = via or ''
+    if hasattr(todo, 'verification_status'):
+        todo.verification_status = verification_status or 'pending'
+    if hasattr(todo, 'verification_checked_at'):
+        todo.verification_checked_at = timezone.now() if verification_status == 'verified' else None
+    if hasattr(todo, 'verification_reason'):
+        todo.verification_reason = '' if verification_status == 'verified' else (verification_reason or '')
+    todo.is_overdue = False
+    todo.overdue_days = 0
+    # 取消信息清空（严格闭环：完成与取消互斥）
+    if hasattr(todo, 'cancelled_at'):
+        todo.cancelled_at = None
+    if hasattr(todo, 'cancelled_by'):
+        todo.cancelled_by = None
+    if hasattr(todo, 'cancel_reason'):
+        todo.cancel_reason = ''
+    todo.save()
+    
+    return True
+
+
+def mark_todo_cancelled(todo: TodoTask, user=None, reason: str = '') -> bool:
+    """
+    标记待办取消（严格闭环）
+    """
+    if todo.status in ['completed', 'cancelled']:
+        return False
+    todo.status = 'cancelled'
+    if hasattr(todo, 'cancelled_at'):
+        todo.cancelled_at = timezone.now()
+    if user and hasattr(todo, 'cancelled_by'):
+        try:
+            todo.cancelled_by = user
+        except Exception:
+            pass
+    if hasattr(todo, 'cancel_reason'):
+        todo.cancel_reason = reason or ''
+    # 取消与完成互斥：清空完成信息
+    if hasattr(todo, 'completion_note'):
+        todo.completion_note = ''
+    if hasattr(todo, 'completion_evidence'):
+        todo.completion_evidence = ''
+    if hasattr(todo, 'completion_via'):
+        todo.completion_via = ''
+    if hasattr(todo, 'verification_status'):
+        todo.verification_status = 'pending'
+    if hasattr(todo, 'verification_checked_at'):
+        todo.verification_checked_at = None
+    if hasattr(todo, 'verification_reason'):
+        todo.verification_reason = ''
+    # 取消后不再视为逾期
     todo.is_overdue = False
     todo.overdue_days = 0
     todo.save()
-    
     return True
 
 
