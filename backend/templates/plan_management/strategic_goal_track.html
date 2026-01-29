@@ -1,547 +1,216 @@
-{% extends "shared/list_page_base.html" %}
+{% extends "shared/tracking_base.html" %}
 {% load static %}
+{% load admin_tags %}
 
-{% block page_title %}目标跟踪 - {{ goal.name }}{% endblock page_title %}
-{% block page_subtitle %}跟踪战略目标的执行进度{% endblock page_subtitle %}
+{% comment %}
+  战略目标跟踪页面
+  继承 tracking_base.html 模板，使用统一的跟踪功能
+{% endcomment %}
 
-{% block module_styles %}
-  {{ block.super }}
-  <style>
-    .track-form-card {
-      background: #FFFFFF;
-      border: 1px solid #E0E0E0;
-      border-radius: 0;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      margin-bottom: 16px;
-    }
+{% block tracking_title %}目标跟踪 - {{ goal.name }}{% endblock %}
+{% block tracking_page_title %}目标跟踪 - {{ goal.name }} - 维海生产系统{% endblock %}
 
-    .track-form-header {
-      padding: 12px 16px;
-      border-bottom: 1px solid #E0E0E0;
-      background: #F5F5F5;
-    }
-
-    .track-form-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #1A1A1A;
-      margin: 0;
-    }
-
-    .track-form-body {
-      padding: 16px;
-    }
-
-    .track-form-group {
-      margin-bottom: 16px;
-    }
-
-    .track-form-group:last-child {
-      margin-bottom: 0;
-    }
-
-    .track-form-label {
-      font-size: 12px;
-      color: var(--vh-primary);
-      margin-bottom: 6px;
-      display: block;
-    }
-
-    .track-form-label.required::after {
-      content: ' *';
-      color: #999999;
-    }
-
-    .track-form-input {
-      color: var(--vh-primary);
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #E0E0E0;
-      border-radius: 0;
-      font-size: 14px;
-      background: #FFFFFF;
-    }
-
-    .track-form-input:focus {
-      outline: none;
-      border-color: #999999;
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
-    }
-
-    .track-form-input[readonly] {
-      background: #F5F5F5;
-      color: var(--vh-primary);
-    }
-
-    .track-form-submit {
-      padding: 10px 20px;
-      background: #1A1A1A;
-      color: #FFFFFF;
-      border: 1px solid #1A1A1A;
-      border-radius: 0;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .track-form-submit:hover {
-      background: #333333;
-      border-color: #333333;
-    }
-
-    .track-action-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-
-    .track-action-card {
-      background: #FFFFFF;
-      border: 1px solid #E0E0E0;
-      border-radius: 0;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    .track-action-header {
-      padding: 12px 16px;
-      border-bottom: 1px solid #E0E0E0;
-      background: #F5F5F5;
-    }
-
-    .track-action-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #1A1A1A;
-      margin: 0;
-    }
-
-    .track-action-body {
-      padding: 16px;
-    }
-
-    .track-action-text {
-      font-size: 12px;
-      color: var(--vh-primary);
-      margin-bottom: 12px;
-    }
-
-    .track-action-select {
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #E0E0E0;
-      border-radius: 0;
-      font-size: 12px;
-      margin-bottom: 12px;
-      background: #FFFFFF;
-      color: #333333;
-    }
-
-    .track-action-select:focus {
-      outline: none;
-      border-color: #999999;
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
-    }
-
-    .track-action-btn {
-      width: 100%;
-      padding: 8px;
-      background: #1A1A1A;
-      color: #FFFFFF;
-      border: 1px solid #1A1A1A;
-      border-radius: 0;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .track-action-btn:hover {
-      background: #333333;
-      border-color: #333333;
-    }
-
-    .track-extra-section {
-      margin-top: 24px;
-    }
-
-    .track-extra-section-title {
-      font-weight: 600;
-      margin-bottom: 16px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #E0E0E0;
-    }
-
-    @media (max-width: 1200px) {
-      .track-action-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+{% block pm_subtitle %}
+  跟踪战略目标的执行进度
+  {% if goal.level == 'company' %}<span class="badge bg-primary">公司目标</span>{% else %}<span class="badge bg-info">个人目标</span>{% endif %}
+  <span class="badge bg-secondary">{{ goal.get_goal_period_display }}</span>
 {% endblock %}
 
-{% block pm_content %}
-    {% block list_stats_section %}
-    <div class="list-stats-section">
-      {% block list_stats_content %}
-<div class="row g-3">
-    <div class="col-md-3">
-      <div class="list-stat-card">
-        <div class="list-stat-label">目标值</div>
-        <div class="list-stat-value">{{ goal.target_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="list-stat-card">
-        <div class="list-stat-label">当前值</div>
-        <div class="list-stat-value">{{ goal.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="list-stat-card">
-        <div class="list-stat-label">完成率</div>
-        <div class="list-stat-value">{{ goal.completion_rate }}%</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="list-stat-card">
-        <div class="list-stat-label">进度记录</div>
-        <div class="list-stat-value">{{ progress_records|length }}</div>
-      </div>
-    </div>
-  </div>
-      {% endblock list_stats_content %}
-    </div>
-    {% endblock list_stats_section %}
+{% block pm_actions %}
+  <a href="{% url 'plan_pages:strategic_goal_list' %}" class="btn btn-outline-secondary">返回目标列表</a>
+  <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="btn btn-outline-primary">查看详情</a>
+{% endblock %}
 
-    {# 进度更新表单和操作表单 #}
-    {% if can_update_progress %}
+{# 覆盖统计卡片，显示目标编号等信息 #}
+{% block tracking_stats_content %}
+  {{ block.super }}
+  {# 可以在这里添加额外的统计卡片 #}
+{% endblock %}
+
+{# 覆盖进度表单区域，如果是父目标则显示提示信息 #}
+{% block tracking_progress_form_section %}
+  {% if is_parent_goal %}
+    {# 父目标：显示提示信息和子目标汇总 #}
     <div class="track-form-card">
       <div class="track-form-header">
-        <h3 class="track-form-title">更新进度</h3>
+        <h3 class="track-form-title">进度说明</h3>
       </div>
       <div class="track-form-body">
-        <form method="post">
-          {% csrf_token %}
-          <input type="hidden" name="update_progress" value="1">
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-            <div class="track-form-group" style="margin-bottom: 0;">
-              <label class="track-form-label required">当前值</label>
-              {{ progress_form.current_value }}
-              {% if progress_form.current_value.errors %}
-              <div style="font-size: 12px; color: #999999; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
-              {% endif %}
-            </div>
-            <div class="track-form-group" style="margin-bottom: 0;">
-              <label class="track-form-label">预计完成率</label>
-              <input type="text" class="track-form-input" id="predictedRate" readonly placeholder="自动计算">
+        <div style="padding: 16px; background: #FFF3CD; border: 1px solid #FFC107; border-radius: 4px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: start; gap: 12px;">
+            <div style="font-size: 20px;">⚠️</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; margin-bottom: 8px; color: #856404;">此目标有子目标，进度由系统自动从子目标计算</div>
+              <div style="font-size: 13px; color: #856404; line-height: 1.6;">
+                <p style="margin: 0 0 8px 0;">• 父目标的进度值、当前值和完成率均由子目标自动计算得出</p>
+                <p style="margin: 0 0 8px 0;">• 如需更新进度，请更新子目标的进度，系统会自动更新父目标</p>
+                <p style="margin: 0;">• 父目标不允许手动更新进度</p>
+              </div>
             </div>
           </div>
-
-          <div class="track-form-group">
-            <label class="track-form-label required">进度说明</label>
-            {{ progress_form.progress_description }}
-            {% if progress_form.progress_description.errors %}
-            <div style="font-size: 12px; color: #999999; margin-top: 4px;">{{ progress_form.progress_description.errors }}</div>
-            {% endif %}
-          </div>
-
-          <div class="track-form-group">
-            <label class="track-form-label">备注</label>
-            {{ progress_form.notes }}
-          </div>
-
-          <button type="submit" class="track-form-submit">更新进度</button>
-        </form>
+        </div>
+        
+        {% if child_goals_summary and child_goals_summary.display_mode != 'none' %}
+        <div style="padding: 16px; background: #F8F9FA; border: 1px solid #DEE2E6; border-radius: 4px;">
+          <div style="font-weight: 600; margin-bottom: 12px; color: #495057;">子目标汇总信息</div>
+          {% if child_goals_summary.display_mode == 'sum' %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+              <div>
+                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">目标值总和</div>
+                <div style="font-size: 18px; font-weight: 600; color: #1A1A1A;">
+                  {{ child_goals_summary.total_target_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+                </div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">当前值总和</div>
+                <div style="font-size: 18px; font-weight: 600; color: #1A1A1A;">
+                  {{ child_goals_summary.total_current_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+                </div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">平均完成率</div>
+                <div style="font-size: 18px; font-weight: 600; color: #1A1A1A;">
+                  {{ child_goals_summary.avg_completion_rate|floatformat:1 }}%
+                </div>
+              </div>
+            </div>
+          {% elif child_goals_summary.display_mode == 'average' %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+              <div>
+                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">平均值</div>
+                <div style="font-size: 18px; font-weight: 600; color: #1A1A1A;">
+                  {{ child_goals_summary.total_current_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+                </div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">平均完成率</div>
+                <div style="font-size: 18px; font-weight: 600; color: #1A1A1A;">
+                  {{ child_goals_summary.avg_completion_rate|floatformat:1 }}%
+                </div>
+              </div>
+            </div>
+          {% elif child_goals_summary.display_mode == 'text' %}
+            <div>
+              <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">平均完成率</div>
+              <div style="font-size: 18px; font-weight: 600; color: #1A1A1A;">
+                {{ child_goals_summary.avg_completion_rate|floatformat:1 }}%
+              </div>
+            </div>
+          {% endif %}
+        </div>
+        {% endif %}
+        
+        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #E0E0E0;">
+          <a href="{% url 'plan_pages:strategic_goal_decompose' goal.id %}" class="btn btn-outline-primary" style="text-decoration: none;">
+            <i class="bi bi-diagram-3"></i> 查看子目标
+          </a>
+        </div>
       </div>
     </div>
-    {% endif %}
+  {% else %}
+    {# 普通目标：显示正常的更新表单 #}
+    {{ block.super }}
+  {% endif %}
+{% endblock tracking_progress_form_section %}
 
-    {# 状态转换和完成确认 #}
-    {% if valid_transitions or can_complete %}
-    <div class="track-action-grid">
-      {% if valid_transitions %}
-      <div class="track-action-card">
-        <div class="track-action-header">
-          <h6 class="track-action-title">状态转换</h6>
-        </div>
-        <div class="track-action-body">
-          <div class="track-action-text">
-            当前：<span class="list-badge list-badge-{{ goal.status }}">{{ goal.get_status_display }}</span>
-          </div>
-          <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="transition_status" value="1">
-            <select name="new_status" class="track-action-select">
-              {% for status in valid_transitions %}
-              <option value="{{ status }}">
-                {% if status == 'published' %}已发布
-                {% elif status == 'in_progress' %}执行中
-                {% elif status == 'completed' %}已完成
-                {% elif status == 'cancelled' %}已取消
-                {% else %}{{ status }}
-                {% endif %}
-              </option>
-              {% endfor %}
-            </select>
-            <button type="submit" class="track-action-btn">转换状态</button>
-          </form>
-        </div>
-      </div>
+{# 覆盖进度表单字段，根据 indicator_type 显示不同的输入类型 #}
+{% block tracking_progress_form_fields %}
+  {{ block.super }}
+  {# tracking_base.html 会根据 tracking_object.value_type 自动显示相应的字段类型 #}
+{% endblock %}
+
+{# 覆盖记录表格表头（如果需要自定义） #}
+{% block tracking_records_headers %}
+  <th>记录时间</th>
+  <th>记录人</th>
+  <th>当前值</th>
+  <th>完成率</th>
+  <th>进度说明</th>
+  <th>备注</th>
+{% endblock %}
+
+{# 覆盖记录表格数据行 #}
+{% block tracking_records_rows %}
+  {% for record in page_obj %}
+  <tr>
+    <td>
+      <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ record.recorded_time|date:"Y-m-d" }}</div>
+      <div style="font-size: 12px; color: #999999;">{{ record.recorded_time|date:"H:i" }}</div>
+    </td>
+    <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
+    <td>
+      {% if goal.indicator_type == 'text' %}
+        {# 文本型：从 notes 中提取文本内容 #}
+        {% if record.notes|slice:":8" == "[文本进度]" %}
+          <span class="list-badge">{{ record.notes|slice:"8:"|truncatewords:10 }}</span>
+        {% else %}
+          <span class="list-badge">-</span>
+        {% endif %}
+      {% elif goal.indicator_type == 'boolean' %}
+        <span class="list-badge">{% if record.current_value >= 1 %}已完成{% else %}未完成{% endif %}</span>
+      {% elif goal.indicator_type == 'choice' %}
+        {% for choice in goal.value_choices %}
+          {% if choice.value == record.current_value|stringformat:"s" %}
+            <span class="list-badge">{{ choice.label }}</span>
+          {% endif %}
+        {% empty %}
+          <span class="list-badge">{{ record.current_value }}</span>
+        {% endfor %}
+      {% else %}
+        <span class="list-badge">{{ record.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</span>
       {% endif %}
-
-      {% if can_complete %}
-      <div class="track-action-card">
-        <div class="track-action-header">
-          <h6 class="track-action-title">完成确认</h6>
-        </div>
-        <div class="track-action-body">
-          <div class="track-action-text">确认目标已完成？完成后将无法继续更新进度。</div>
-          <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="complete_goal" value="1">
-            <button type="submit" class="track-action-btn">确认完成</button>
-          </form>
-        </div>
+    </td>
+    <td>
+      <div class="list-progress">
+        <div class="list-progress-fill" style="width: {{ record.completion_rate }}%"></div>
+        <span class="list-progress-text">{{ record.completion_rate }}%</span>
       </div>
+    </td>
+    <td>
+      <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ record.progress_description|truncatewords:15 }}</div>
+    </td>
+    <td>
+      {% if goal.indicator_type == 'text' %}
+        {# 文本型：使用 extract_notes 过滤器提取备注部分 #}
+        {% with extracted_notes=record.notes|extract_notes %}
+          {% if extracted_notes %}
+            <div style="font-size: 12px; color: #999999;">{{ extracted_notes|truncatewords:10 }}</div>
+          {% else %}
+            <span style="color: #999999;">-</span>
+          {% endif %}
+        {% endwith %}
+      {% else %}
+        {# 非文本型：正常显示备注 #}
+        {% if record.notes %}
+        <div style="font-size: 12px; color: #999999;">{{ record.notes|truncatewords:10 }}</div>
+        {% else %}
+        <span style="color: #999999;">-</span>
+        {% endif %}
       {% endif %}
-    </div>
-    {% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="6" class="list-empty-state">
+      <div class="list-empty-state-icon">📋</div>
+      <div class="list-empty-state-text">暂无进度记录</div>
+      <div class="list-empty-state-hint">更新进度后将显示在这里</div>
+    </td>
+  </tr>
+  {% endfor %}
+{% endblock %}
 
-    {% block list_filters_section %}
-    <div class="list-filters-section">
-      <form method="get">
-        <div class="row">
-          {% block list_filters_content %}
-  <div class="col-md-3">
-    <label class="form-label">记录人</label>
-    <select name="recorded_by" class="form-select">
-      <option value="">全部记录人</option>
-      {% for user in all_users %}
-      <option value="{{ user.id }}" {% if recorded_by_filter|stringformat:"s" == user.id|stringformat:"s" %}selected{% endif %}>
-        {{ user.get_full_name|default:user.username }}
-      </option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-3">
-    <label class="form-label">开始时间</label>
-    <input type="date" name="date_from" class="form-control" value="{{ date_from|default:'' }}">
-  </div>
-  <div class="col-md-3">
-    <label class="form-label">结束时间</label>
-    <input type="date" name="date_to" class="form-control" value="{{ date_to|default:'' }}">
-  </div>
-{% endblock list_filters_content %}
-          <div class="col-md-auto d-flex align-items-end">
-            <button type="submit" class="list-btn list-btn-primary">查询</button>
-            <a href="{{ request.path }}" class="list-btn list-btn-outline ms-2">重置</a>
-          </div>
-        </div>
-      </form>
-    </div>
-    {% endblock list_filters_section %}
+{# 覆盖状态日志区域（如果需要自定义） #}
+{% block tracking_status_logs_section %}
+  {{ block.super }}
+{% endblock %}
 
-    {% block list_table_section %}
-    <div class="list-table-section">
-      <div class="list-table-wrapper">
-        <table class="list-table">
-          <thead>
-            <tr>{% block list_table_headers %}
-              <th>记录时间</th>
-              <th>记录人</th>
-              <th>当前值</th>
-              <th>完成率</th>
-              <th>进度说明</th>
-              <th>备注</th>
-            {% endblock list_table_headers %}</tr>
-          </thead>
-          <tbody>
-            {% block list_table_rows %}
-              {% for record in page_obj %}
-              <tr>
-                <td>
-                  <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ record.recorded_time|date:"Y-m-d" }}</div>
-                  <div style="font-size: 12px; color: #999999;">{{ record.recorded_time|date:"H:i" }}</div>
-                </td>
-                <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
-                <td>
-                  <span class="list-badge">{{ record.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</span>
-                </td>
-                <td>
-                  <div class="list-progress">
-                    <div class="list-progress-fill" style="width: {{ record.completion_rate }}%"></div>
-                    <span class="list-progress-text">{{ record.completion_rate }}%</span>
-                  </div>
-                </td>
-                <td>
-                  <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ record.progress_description|truncatewords:15 }}</div>
-                </td>
-                <td>
-                  {% if record.notes %}
-                  <div style="font-size: 12px; color: #999999;">{{ record.notes|truncatewords:10 }}</div>
-                  {% else %}
-                  <span style="color: #999999;">-</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="6" class="list-empty-state">
-                  <div class="list-empty-state-icon">📋</div>
-                  <div class="list-empty-state-text">暂无进度记录</div>
-                  <div class="list-empty-state-hint">更新进度后将显示在这里</div>
-                </td>
-              </tr>
-              {% endfor %}
-            {% endblock list_table_rows %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {% endblock list_table_section %}
+{# 覆盖调整申请区域（如果需要自定义） #}
+{% block tracking_adjustments_section %}
+  {{ block.super }}
+{% endblock %}
 
-    {% block list_pagination_section %}
-    {% if page_obj and page_obj.has_other_pages %}
-    <div class="list-pagination-section">
-      {% include "shared/_pagination.html" %}
-    </div>
-    {% endif %}
-    {% endblock list_pagination_section %}
-
-    {# 状态日志表格 #}
-    <div class="track-extra-section">
-      <div class="track-extra-section-title">状态日志（共 {{ status_logs|length }} 条记录）</div>
-      <div class="list-table-section">
-        <div class="list-table-wrapper">
-          <table class="list-table">
-            <thead>
-              <tr>
-                <th>变更时间</th>
-                <th>状态变更</th>
-                <th>变更人</th>
-                <th>变更原因</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for log in status_logs %}
-              <tr>
-                <td>
-                  <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ log.changed_time|date:"Y-m-d" }}</div>
-                  <div style="font-size: 12px; color: #999999;">{{ log.changed_time|date:"H:i" }}</div>
-                </td>
-                <td>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="list-badge">{{ log.old_status }}</span>
-                    <span style="color: #999999;">→</span>
-                    <span class="list-badge">{{ log.new_status }}</span>
-                  </div>
-                </td>
-                <td>
-                  {% if log.changed_by %}
-                  {{ log.changed_by.get_full_name|default:log.changed_by.username }}
-                  {% else %}
-                  <span style="color: #999999;">-</span>
-                  {% endif %}
-                </td>
-                <td>
-                  {% if log.change_reason %}
-                  <div style="font-size: 12px; color: #333333;">{{ log.change_reason|truncatewords:15 }}</div>
-                  {% else %}
-                  <span style="color: #999999;">-</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="4" class="list-empty-state">
-                  <div class="list-empty-state-icon">▢</div>
-                  <div class="list-empty-state-text">暂无状态日志</div>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    {# 调整申请表格 #}
-    <div class="track-extra-section">
-      <div class="track-extra-section-title">调整申请（共 {{ adjustments|length }} 条记录）</div>
-      <div class="list-table-section">
-        <div class="list-table-wrapper">
-          <table class="list-table">
-            <thead>
-              <tr>
-                <th>申请时间</th>
-                <th>状态</th>
-                <th>调整原因</th>
-                <th>审批人</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for adjustment in adjustments %}
-              <tr>
-                <td>
-                  <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ adjustment.created_time|date:"Y-m-d" }}</div>
-                  <div style="font-size: 12px; color: #999999;">{{ adjustment.created_time|date:"H:i" }}</div>
-                </td>
-                <td>
-                  <span class="list-badge list-badge-{{ adjustment.status }}">{{ adjustment.get_status_display }}</span>
-                </td>
-                <td>
-                  <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ adjustment.adjustment_reason|truncatewords:15 }}</div>
-                </td>
-                <td>
-                  {% if adjustment.approved_by %}
-                  {{ adjustment.approved_by.get_full_name|default:adjustment.approved_by.username }}
-                  {% else %}
-                  <span style="color: #999999;">-</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="4" class="list-empty-state">
-                  <div class="list-empty-state-icon">▢</div>
-                  <div class="list-empty-state-text">暂无调整申请</div>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-{% endblock pm_content %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const currentValueInput = document.querySelector('#id_current_value');
-  const predictedRateInput = document.getElementById('predictedRate');
-  const targetValue = {{ goal.target_value }};
-
-  if (currentValueInput && predictedRateInput) {
-    const initialValue = parseFloat(currentValueInput.value) || 0;
-    if (targetValue > 0 && initialValue > 0) {
-      const rate = (initialValue / targetValue) * 100;
-      predictedRateInput.value = Math.min(rate, 100).toFixed(2) + '%';
-    }
-
-    currentValueInput.addEventListener('input', function() {
-      const currentValue = parseFloat(this.value) || 0;
-      if (targetValue > 0) {
-        const rate = (currentValue / targetValue) * 100;
-        predictedRateInput.value = Math.min(rate, 100).toFixed(2) + '%';
-      } else {
-        predictedRateInput.value = '0.00%';
-      }
-    });
-  }
-});
-</script>
+{# 自定义样式（如果需要） #}
+{% block tracking_custom_styles %}
+  {# 可以在这里添加额外的样式 #}
 {% endblock %}

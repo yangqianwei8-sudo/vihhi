@@ -313,13 +313,19 @@ def notify_plan_accepted(plan, actor):
     """
     P2-4: 通知计划被接收（计划接收后）
     
+    注意：此函数已废弃，因为计划状态流转规则已更新，不再有 'accepted' 状态。
+    计划状态流转：draft → published → in_progress → completed
+    
     Args:
-        plan: Plan 对象（status='accepted'）
+        plan: Plan 对象（已废弃，不再使用）
         actor: 接收人（User 对象）
     
     Returns:
-        bool: 是否成功创建通知
+        bool: 是否成功创建通知（始终返回 False，因为已废弃）
     """
+    # 此函数已废弃，因为计划不再有 'accepted' 状态
+    logger.warning(f"notify_plan_accepted 已废弃，计划 #{plan.id} 不再有 'accepted' 状态")
+    return False
     try:
         if plan.status != 'accepted':
             logger.warning(f"计划 #{plan.id} 不是已接收状态，跳过通知")

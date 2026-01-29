@@ -159,7 +159,6 @@ def _build_risk_item(risk_type, obj, actual_progress, time_progress, status):
     """
     status_weight = {
         'in_progress': 100,
-        'accepted': 50,
         'published': 10,
         'draft': 5,
     }.get(status, 0)
@@ -279,14 +278,21 @@ def get_user_risk_items(user, limit=5, filter_department_id=None, filter_respons
         if filter_start_date:
             try:
                 start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
-                qs = qs.filter(created_time__gte=start_date)
+                if model_type == 'plan':
+                    start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+                    qs = qs.filter(end_time__gte=start_datetime)
+                elif model_type == 'goal':
+                    qs = qs.filter(end_date__gte=start_date)
             except ValueError:
                 pass
         if filter_end_date:
             try:
                 end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
-                end_datetime = datetime.combine(end_date, datetime.max.time())
-                qs = qs.filter(created_time__lte=end_datetime)
+                if model_type == 'plan':
+                    end_datetime = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+                    qs = qs.filter(start_time__lte=end_datetime)
+                elif model_type == 'goal':
+                    qs = qs.filter(start_date__lte=end_date)
             except ValueError:
                 pass
         return qs
@@ -294,10 +300,9 @@ def get_user_risk_items(user, limit=5, filter_department_id=None, filter_respons
     # ========== 风险目标（进度落后的）==========
     # 根据筛选条件决定查询逻辑
     if filter_responsible_person_id or filter_department_id:
-        # 筛选了负责人或部门，查询所有符合条件的未完成目标
+        # 筛选了负责人或部门，查询所有符合条件的未完成目标（包括个人和公司级别）
         all_goals = StrategicGoal.objects.filter(
-            level='personal',
-            status__in=['published', 'accepted', 'in_progress']
+            status__in=['published', 'in_progress']
         ).select_related('parent_goal', 'responsible_person').prefetch_related('progress_records')
         all_goals = apply_filters(all_goals, 'goal')
     else:
@@ -305,7 +310,7 @@ def get_user_risk_items(user, limit=5, filter_department_id=None, filter_respons
         all_goals = StrategicGoal.objects.filter(
             level='personal',
             owner=user,
-            status__in=['published', 'accepted', 'in_progress']
+            status__in=['published', 'in_progress']
         ).select_related('parent_goal', 'responsible_person').prefetch_related('progress_records')
     
     # 过滤出进度落后的目标
@@ -318,10 +323,9 @@ def get_user_risk_items(user, limit=5, filter_department_id=None, filter_respons
     # ========== 风险计划（进度落后的）==========
     # 根据筛选条件决定查询逻辑
     if filter_responsible_person_id or filter_department_id:
-        # 筛选了负责人或部门，查询所有符合条件的未完成计划
+        # 筛选了负责人或部门，查询所有符合条件的未完成计划（包括个人和公司级别）
         all_plans = Plan.objects.filter(
-            level='personal',
-            status__in=['draft', 'published', 'accepted', 'in_progress']
+            status__in=['draft', 'published', 'in_progress']
         ).select_related('parent_plan', 'responsible_person').prefetch_related('progress_records')
         all_plans = apply_filters(all_plans, 'plan')
     else:
@@ -329,7 +333,7 @@ def get_user_risk_items(user, limit=5, filter_department_id=None, filter_respons
         all_plans = Plan.objects.filter(
             level='personal',
             owner=user,
-            status__in=['draft', 'published', 'accepted', 'in_progress']
+            status__in=['draft', 'published', 'in_progress']
         ).select_related('parent_plan', 'responsible_person').prefetch_related('progress_records')
     
     # 过滤出进度落后的计划
@@ -397,14 +401,21 @@ def get_responsible_risk_items(responsible_user, limit=5, filter_department_id=N
         if filter_start_date:
             try:
                 start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
-                qs = qs.filter(created_time__gte=start_date)
+                if model_type == 'plan':
+                    start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+                    qs = qs.filter(end_time__gte=start_datetime)
+                elif model_type == 'goal':
+                    qs = qs.filter(end_date__gte=start_date)
             except ValueError:
                 pass
         if filter_end_date:
             try:
                 end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
-                end_datetime = datetime.combine(end_date, datetime.max.time())
-                qs = qs.filter(created_time__lte=end_datetime)
+                if model_type == 'plan':
+                    end_datetime = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+                    qs = qs.filter(start_time__lte=end_datetime)
+                elif model_type == 'goal':
+                    qs = qs.filter(start_date__lte=end_date)
             except ValueError:
                 pass
         return qs
@@ -426,7 +437,7 @@ def get_responsible_risk_items(responsible_user, limit=5, filter_department_id=N
     # ========== 风险计划（负责人负责的，进度落后的）==========
     all_plans = Plan.objects.filter(
         responsible_person=responsible_user,
-        status__in=['draft', 'published', 'accepted', 'in_progress']
+        status__in=['draft', 'published', 'in_progress']
     ).select_related('parent_plan', 'responsible_person', 'owner').prefetch_related('progress_records')
     all_plans = apply_filters(all_plans, 'plan')
     
@@ -499,14 +510,21 @@ def get_subordinates_risk_items(subordinates, limit=5, filter_department_id=None
         if filter_start_date:
             try:
                 start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
-                qs = qs.filter(created_time__gte=start_date)
+                if model_type == 'plan':
+                    start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+                    qs = qs.filter(end_time__gte=start_datetime)
+                elif model_type == 'goal':
+                    qs = qs.filter(end_date__gte=start_date)
             except ValueError:
                 pass
         if filter_end_date:
             try:
                 end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
-                end_datetime = datetime.combine(end_date, datetime.max.time())
-                qs = qs.filter(created_time__lte=end_datetime)
+                if model_type == 'plan':
+                    end_datetime = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+                    qs = qs.filter(start_time__lte=end_datetime)
+                elif model_type == 'goal':
+                    qs = qs.filter(start_date__lte=end_date)
             except ValueError:
                 pass
         return qs
@@ -531,7 +549,7 @@ def get_subordinates_risk_items(subordinates, limit=5, filter_department_id=None
     # 与统计卡片保持一致：包含 owner、responsible_person、created_by
     all_plans = Plan.objects.filter(
         Q(owner__in=subordinates) | Q(responsible_person__in=subordinates) | Q(created_by__in=subordinates),
-        status__in=['draft', 'published', 'accepted', 'in_progress']
+        status__in=['draft', 'published', 'in_progress']
     ).distinct().select_related('parent_plan', 'responsible_person', 'owner').prefetch_related('progress_records')
     all_plans = apply_filters(all_plans, 'plan')
     

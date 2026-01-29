@@ -555,8 +555,36 @@
             </td>
             <td><code>{{ child_goal.goal_number }}</code></td>
             <td>{{ child_goal.get_goal_type_display }}</td>
-            <td>{{ child_goal.target_value }}{% if child_goal.indicator_unit %} {{ child_goal.indicator_unit }}{% endif %}</td>
-            <td>{{ child_goal.current_value }}{% if child_goal.indicator_unit %} {{ child_goal.indicator_unit }}{% endif %}</td>
+            <td>
+              {% if child_goal.indicator_type == 'boolean' %}
+                <span class="text-muted">-</span>
+              {% elif child_goal.indicator_type == 'text' %}
+                <span class="text-muted">文本型</span>
+              {% elif child_goal.indicator_type == 'choice' %}
+                {% for choice in child_goal.value_choices %}
+                  {% if choice.value == child_goal.target_value|stringformat:"s" %}{{ choice.label }}{% endif %}
+                {% empty %}
+                  {{ child_goal.target_value }}
+                {% endfor %}
+              {% else %}
+                {{ child_goal.target_value }}{% if child_goal.indicator_unit %} {{ child_goal.indicator_unit }}{% endif %}
+              {% endif %}
+            </td>
+            <td>
+              {% if child_goal.indicator_type == 'boolean' %}
+                {% if child_goal.current_value >= 1 %}已完成{% else %}未完成{% endif %}
+              {% elif child_goal.indicator_type == 'text' %}
+                <span class="text-muted">-</span>
+              {% elif child_goal.indicator_type == 'choice' %}
+                {% for choice in child_goal.value_choices %}
+                  {% if choice.value == child_goal.current_value|stringformat:"s" %}{{ choice.label }}{% endif %}
+                {% empty %}
+                  {{ child_goal.current_value }}
+                {% endfor %}
+              {% else %}
+                {{ child_goal.current_value }}{% if child_goal.indicator_unit %} {{ child_goal.indicator_unit }}{% endif %}
+              {% endif %}
+            </td>
             <td>
               <div class="progress" style="height: 20px;">
                 <div class="progress-bar" role="progressbar" 
@@ -588,6 +616,43 @@
             </td>
           </tr>
           {% endfor %}
+          {% if child_goals_summary and child_goals_summary.display_mode != 'none' %}
+          <tr class="table-info" style="font-weight: bold;">
+            <td colspan="3" class="text-end">汇总：</td>
+            <td>
+              {% if child_goals_summary.display_mode == 'sum' %}
+                {{ child_goals_summary.total_target_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+              {% elif child_goals_summary.display_mode == 'count' %}
+                共 {{ child_goals_summary.total_target_value }} 个
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if child_goals_summary.display_mode == 'sum' %}
+                {{ child_goals_summary.total_current_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+              {% elif child_goals_summary.display_mode == 'average' %}
+                {{ child_goals_summary.total_current_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+              {% elif child_goals_summary.display_mode == 'count' %}
+                已完成 {{ child_goals_summary.total_current_value }} 个
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="progress" style="height: 20px;">
+                <div class="progress-bar bg-info" role="progressbar" 
+                     style="width: {{ child_goals_summary.avg_completion_rate }}%;" 
+                     aria-valuenow="{{ child_goals_summary.avg_completion_rate }}" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100">
+                  {{ child_goals_summary.avg_completion_rate|floatformat:1 }}%
+                </div>
+              </div>
+            </td>
+            <td colspan="3"></td>
+          </tr>
+          {% endif %}
         </tbody>
       </table>
     </div>

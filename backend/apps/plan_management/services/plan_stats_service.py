@@ -35,11 +35,11 @@ def get_user_plan_stats(user, filter_department_id=None, filter_responsible_pers
     today_end = timezone.make_aware(datetime.combine(today, datetime.max.time()))
     
     # 根据筛选条件决定查询逻辑
-    # 如果筛选了负责人或部门，查询所有符合条件的计划（不限制owner）
-    # 如果没有筛选，查询当前用户拥有的个人计划
+    # 如果筛选了负责人或部门，查询所有符合条件的计划（不限制owner和level）
+    # 如果没有筛选，查询当前用户相关的计划（owner、responsible_person、participants）
     if filter_responsible_person_id or filter_department_id:
-        # 筛选了负责人或部门，查询所有符合条件的计划
-        my_plans = Plan.objects.filter(level='personal')
+        # 筛选了负责人或部门，查询所有符合条件的计划（包括个人和公司级别）
+        my_plans = Plan.objects.all()
         if filter_responsible_person_id:
             try:
                 my_plans = my_plans.filter(responsible_person_id=filter_responsible_person_id)
@@ -51,21 +51,27 @@ def get_user_plan_stats(user, filter_department_id=None, filter_responsible_pers
             except ValueError:
                 pass
     else:
-        # 没有筛选，查询当前用户拥有的个人计划
-        my_plans = Plan.objects.filter(level='personal', owner=user)
+        # 没有筛选，查询当前用户相关的计划（owner、responsible_person、participants）
+        from django.db.models import Q
+        my_plans = Plan.objects.filter(
+            Q(owner=user) | Q(responsible_person=user) | Q(participants=user)
+        ).distinct()
     
-    # 应用日期筛选条件
+    # 应用日期筛选条件（使用执行时间范围：start_time 和 end_time）
     if filter_start_date:
         try:
             start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
-            my_plans = my_plans.filter(created_time__gte=start_date)
+            start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+            # 筛选：结束时间 >= 筛选开始日期（计划在执行时间范围内）
+            my_plans = my_plans.filter(end_time__gte=start_datetime)
         except ValueError:
             pass
     if filter_end_date:
         try:
             end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
-            end_datetime = datetime.combine(end_date, datetime.max.time())
-            my_plans = my_plans.filter(created_time__lte=end_datetime)
+            end_datetime = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+            # 筛选：开始时间 <= 筛选结束日期（计划在执行时间范围内）
+            my_plans = my_plans.filter(start_time__lte=end_datetime)
         except ValueError:
             pass
     
@@ -84,7 +90,7 @@ def get_user_plan_stats(user, filter_department_id=None, filter_responsible_pers
     
     # 逾期计划（需要立刻处理的）
     overdue_qs = my_plans.filter(
-        status__in=['draft', 'published', 'accepted', 'in_progress'],
+        status__in=['draft', 'published', 'in_progress'],
         end_time__lt=now
     )
     
@@ -144,18 +150,21 @@ def get_user_collaboration_plan_stats(user, filter_department_id=None, filter_re
         # 没有筛选，查询当前用户作为参与者的计划（排除自己负责的）
         collaboration_plans = Plan.objects.filter(participants=user).exclude(responsible_person=user)
     
-    # 应用日期筛选条件
+    # 应用日期筛选条件（使用执行时间范围：start_time 和 end_time）
     if filter_start_date:
         try:
             start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
-            collaboration_plans = collaboration_plans.filter(created_time__gte=start_date)
+            start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+            # 筛选：结束时间 >= 筛选开始日期（计划在执行时间范围内）
+            collaboration_plans = collaboration_plans.filter(end_time__gte=start_datetime)
         except ValueError:
             pass
     if filter_end_date:
         try:
             end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
-            end_datetime = datetime.combine(end_date, datetime.max.time())
-            collaboration_plans = collaboration_plans.filter(created_time__lte=end_datetime)
+            end_datetime = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+            # 筛选：开始时间 <= 筛选结束日期（计划在执行时间范围内）
+            collaboration_plans = collaboration_plans.filter(start_time__lte=end_datetime)
         except ValueError:
             pass
     
@@ -174,7 +183,7 @@ def get_user_collaboration_plan_stats(user, filter_department_id=None, filter_re
     
     # 逾期计划
     overdue = collaboration_plans.filter(
-        status__in=['draft', 'published', 'accepted', 'in_progress'],
+        status__in=['draft', 'published', 'in_progress'],
         end_time__lt=now
     ).count()
     
@@ -219,7 +228,7 @@ def get_company_plan_stats(user) -> Dict[str, Any]:
     # 逾期趋势（简单统计）
     now = timezone.now()
     overdue_total = company_plans.filter(
-        status__in=['draft', 'published', 'accepted', 'in_progress'],
+        status__in=['draft', 'published', 'in_progress'],
         end_time__lt=now
     ).count()
     

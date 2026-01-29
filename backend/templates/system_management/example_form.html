@@ -111,6 +111,121 @@
           </div>
         </div>
       </div>
+      
+      {# 目标跟踪模板说明 #}
+      <div class="card mb-4">
+        <div class="card-header">
+          <h4 class="mb-0">
+            <i class="fas fa-bullseye"></i> tracking_base.html 模板说明
+          </h4>
+        </div>
+        <div class="card-body">
+          <h5>模板概述</h5>
+          <p>这是一个通用的目标跟踪和计划跟踪模板，继承自 <code>module_base.html</code>，提供了完整的跟踪功能组件。</p>
+          
+          <h5 class="mt-4">功能特性</h5>
+          <ul>
+            <li><strong>统计卡片展示</strong>：目标值、当前值、完成率、进度记录数</li>
+            <li><strong>进度更新表单</strong>：更新当前值、进度说明、备注</li>
+            <li><strong>状态转换功能</strong>：支持状态转换操作</li>
+            <li><strong>完成确认功能</strong>：确认目标/计划完成</li>
+            <li><strong>进度记录列表</strong>：显示历史进度记录，支持筛选和分页</li>
+            <li><strong>状态日志</strong>：显示状态变更历史</li>
+            <li><strong>调整申请记录</strong>：显示调整申请历史</li>
+          </ul>
+          
+          <h5 class="mt-4">使用示例</h5>
+          <p>查看完整的跟踪示例（支持目标跟踪和计划跟踪，支持多种跟踪类型）：</p>
+          <ul>
+            <li><a href="{% url 'system_pages:tracking_example' %}?category=goal&type=numeric" target="_blank">目标跟踪示例（数字型）</a></li>
+            <li><a href="{% url 'system_pages:tracking_example' %}?category=goal&type=percentage" target="_blank">目标跟踪示例（百分比型）</a></li>
+            <li><a href="{% url 'system_pages:tracking_example' %}?category=plan&type=numeric" target="_blank">计划跟踪示例（数字型）</a></li>
+            <li><a href="{% url 'system_pages:tracking_example' %}?category=plan&type=percentage" target="_blank">计划跟踪示例（百分比型）</a></li>
+            <li><a href="{% url 'system_pages:tracking_example' %}?category=plan&type=boolean" target="_blank">计划跟踪示例（布尔型）</a></li>
+            <li><a href="{% url 'system_pages:tracking_example' %}?category=plan&type=choice" target="_blank">计划跟踪示例（选择型）</a></li>
+            <li><a href="{% url 'system_pages:tracking_example' %}?category=plan&type=text" target="_blank">计划跟踪示例（文本型）</a></li>
+          </ul>
+          
+          <h5 class="mt-4">模板结构</h5>
+          <pre class="bg-light p-3 rounded"><code>{% verbatim %}{% extends "shared/tracking_base.html" %}
+{% load static %}
+
+{% block tracking_title %}我的目标跟踪{% endblock %}
+{% block tracking_page_title %}我的目标跟踪 - {{ goal.name }}{% endblock %}
+
+{% block pm_subtitle %}跟踪目标的执行进度{% endblock %}
+
+{# 可以覆盖相应的 block 来自定义内容 #}
+{% block tracking_stats_content %}
+  {# 自定义统计卡片 #}
+{% endblock %}
+
+{% block tracking_progress_form_fields %}
+  {# 自定义进度表单字段 #}
+{% endblock %}
+{% endverbatim %}</code></pre>
+          
+          <h5 class="mt-4">可用的块（Blocks）</h5>
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>块名称</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>tracking_title</code></td>
+                <td>模块标题</td>
+              </tr>
+              <tr>
+                <td><code>tracking_page_title</code></td>
+                <td>页面标题</td>
+              </tr>
+              <tr>
+                <td><code>tracking_stats_content</code></td>
+                <td>统计卡片内容</td>
+              </tr>
+              <tr>
+                <td><code>tracking_progress_form_fields</code></td>
+                <td>进度更新表单字段</td>
+              </tr>
+              <tr>
+                <td><code>tracking_records_headers</code></td>
+                <td>进度记录表格表头</td>
+              </tr>
+              <tr>
+                <td><code>tracking_records_rows</code></td>
+                <td>进度记录表格数据行</td>
+              </tr>
+              <tr>
+                <td><code>tracking_status_logs_section</code></td>
+                <td>状态日志区域</td>
+              </tr>
+              <tr>
+                <td><code>tracking_adjustments_section</code></td>
+                <td>调整申请区域</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <h5 class="mt-4">上下文变量要求</h5>
+          <div class="alert alert-info">
+            <p class="mb-2"><strong>必需变量：</strong></p>
+            <ul class="mb-0">
+              <li><code>tracking_object</code> - 被跟踪的对象（必须有 target_value, current_value, completion_rate, status, indicator_unit 等属性）</li>
+              <li><code>progress_records</code> - 进度记录列表</li>
+              <li><code>can_update_progress</code> - 是否可以更新进度</li>
+              <li><code>valid_transitions</code> - 有效的状态转换列表</li>
+              <li><code>can_complete</code> - 是否可以完成</li>
+              <li><code>all_users</code> - 所有用户列表（用于筛选）</li>
+            </ul>
+          </div>
+          
+          <h5 class="mt-4">更多信息</h5>
+          <p>详细的使用说明请查看：<code>templates/shared/TRACKING_BASE_USAGE.md</code></p>
+        </div>
+      </div>
     </div>
   </div>
 </div>

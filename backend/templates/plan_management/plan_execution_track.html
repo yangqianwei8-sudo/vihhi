@@ -1,384 +1,293 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/tracking_base.html" %}
 {% load static %}
+{% load admin_tags %}
 
-{% block pm_title %}{{ page_title }}{% endblock %}
+{% comment %}
+  计划执行跟踪页面
+  继承 tracking_base.html 模板，使用统一的跟踪功能
+{% endcomment %}
 
-{% block module_styles %}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
-<style>
-    .progress-timeline {
-        position: relative;
-        padding-left: 30px;
-    }
-    .progress-timeline::before {
-        content: '';
-        position: absolute;
-        left: 10px;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: #dee2e6;
-    }
-    .progress-timeline-item {
-        position: relative;
-        margin-bottom: 24px;
-    }
-    .progress-timeline-item::before {
-        content: '';
-        position: absolute;
-        left: -24px;
-        top: 6px;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: #0d6efd;
-        border: 2px solid #fff;
-        box-shadow: 0 0 0 2px #0d6efd;
-    }
-    .progress-card {
-        background: #fff;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 16px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .status-badge {
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 500;
-    }
-    .status-draft { background: #e9ecef; color: #495057; }
-    .status-pending_approval { background: #cfe2ff; color: #084298; }
-    .status-approving { background: #fff3cd; color: #856404; }
-    .status-approved { background: #d1e7dd; color: #0f5132; }
-    .status-in_progress { background: #fff3cd; color: #856404; }
-    .status-completed { background: #d1e7dd; color: #0f5132; }
-    .status-cancelled { background: #f8d7da; color: #842029; }
-</style>
+{% block tracking_title %}计划跟踪 - {{ plan.name }}{% endblock %}
+{% block tracking_page_title %}计划跟踪 - {{ plan.name }} - 维海生产系统{% endblock %}
+
+{% block pm_subtitle %}
+  跟踪计划的执行进度
+  {% if plan.level == 'company' %}<span class="badge bg-primary">公司计划</span>{% else %}<span class="badge bg-info">个人计划</span>{% endif %}
+  <span class="badge bg-secondary">{{ plan.get_plan_period_display }}</span>
 {% endblock %}
 
+{% block pm_actions %}
+  <a href="{% url 'plan_pages:plan_list' %}" class="btn btn-outline-secondary">返回计划列表</a>
+  <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="btn btn-outline-primary">查看详情</a>
+{% endblock %}
+
+{# 覆盖统计卡片，显示计划编号等信息 #}
+{% block tracking_stats_content %}
+  {{ block.super }}
+  {# 可以在这里添加额外的统计卡片 #}
+{% endblock %}
+
+{# 覆盖进度表单字段，计划使用百分比类型 #}
+{% block tracking_progress_form_fields %}
+  {{ block.super }}
+  {# tracking_base.html 会根据 tracking_object.value_type 自动显示百分比输入框 #}
+  
+  {# 添加计划特有的字段：执行结果和执行问题 #}
+  {% if progress_form.execution_result %}
+  <div class="track-form-group">
+    <label class="track-form-label">执行结果</label>
+    {{ progress_form.execution_result }}
+    {% if progress_form.execution_result.errors %}
+    <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.execution_result.errors }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+  
+  {% if progress_form.execution_issues %}
+  <div class="track-form-group">
+    <label class="track-form-label">执行问题</label>
+    {{ progress_form.execution_issues }}
+    {% if progress_form.execution_issues.errors %}
+    <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.execution_issues.errors }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+{% endblock %}
+
+{# 覆盖记录表格表头，添加计划特有的列 #}
+{% block tracking_records_headers %}
+  <th>记录时间</th>
+  <th>记录人</th>
+  <th>当前值</th>
+  <th>完成率</th>
+  <th>进度说明</th>
+  <th>执行结果</th>
+  <th>执行问题</th>
+  <th>备注</th>
+{% endblock %}
+
+{# 覆盖记录表格数据行，使用基础模板的块结构 #}
+{% block tracking_records_rows %}
+  {% for record in page_obj %}
+  <tr>
+    <td>
+      <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ record.recorded_time|date:"Y-m-d" }}</div>
+      <div style="font-size: 12px; color: #999999;">{{ record.recorded_time|date:"H:i" }}</div>
+    </td>
+    <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
+    <td>
+      {% block tracking_record_current_value_display %}
+      {# 计划跟踪使用百分比类型，显示进度百分比 #}
+      <span class="list-badge">{{ record.current_value }}%</span>
+      {% endblock %}
+    </td>
+    <td>
+      <div class="list-progress">
+        <div class="list-progress-fill" style="width: {{ record.completion_rate }}%"></div>
+        <span class="list-progress-text">{{ record.completion_rate }}%</span>
+      </div>
+    </td>
+    <td>
+      <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ record.progress_description|truncatewords:15 }}</div>
+    </td>
+    <td>
+      {# 计划特有的字段：执行结果 #}
+      {% if record.execution_result %}
+      <div style="font-size: 12px; color: #28a745; max-width: 300px;">{{ record.execution_result|truncatewords:10 }}</div>
+      {% else %}
+      <span style="color: #999999;">-</span>
+      {% endif %}
+    </td>
+    <td>
+      {# 计划特有的字段：执行问题 #}
+      {% if record.execution_issues %}
+      <div style="font-size: 12px; color: #ffc107; max-width: 300px;">{{ record.execution_issues|truncatewords:10 }}</div>
+      {% else %}
+      <span style="color: #999999;">-</span>
+      {% endif %}
+    </td>
+    <td>
+      {% block tracking_record_notes_display %}
+      {# 使用基础模板的备注显示逻辑 #}
+      {% if record.notes %}
+      <div style="font-size: 12px; color: #999999;">{{ record.notes|truncatewords:10 }}</div>
+      {% else %}
+      <span style="color: #999999;">-</span>
+      {% endif %}
+      {% endblock %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="8" class="list-empty-state">
+      <div class="list-empty-state-icon">📋</div>
+      <div class="list-empty-state-text">暂无进度记录</div>
+      <div class="list-empty-state-hint">更新进度后将显示在这里</div>
+    </td>
+  </tr>
+  {% endfor %}
+{% endblock %}
+
+{# 覆盖状态日志区域，使用计划的状态显示 #}
+{% block tracking_status_logs_section %}
+  {% if status_logs %}
+  <div class="track-extra-section">
+    <div class="track-extra-section-title">状态日志（共 {{ status_logs|length }} 条记录）</div>
+    <div class="list-table-section">
+      <div class="list-table-wrapper">
+        <table class="list-table">
+          <thead>
+            <tr>
+              {% block tracking_status_logs_headers %}
+              <th>变更时间</th>
+              <th>状态变更</th>
+              <th>变更人</th>
+              <th>变更原因</th>
+              {% endblock tracking_status_logs_headers %}
+            </tr>
+          </thead>
+          <tbody>
+            {% block tracking_status_logs_rows %}
+            {% for log in status_logs %}
+            <tr>
+              <td>
+                <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ log.changed_time|date:"Y-m-d" }}</div>
+                <div style="font-size: 12px; color: #999999;">{{ log.changed_time|date:"H:i" }}</div>
+              </td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="list-badge">
+                    {% block tracking_status_log_display %}
+                    {% if log.old_status %}
+                      {% if log.old_status == 'draft' %}草稿{% else %}{{ log.old_status|tracking_status_display }}{% endif %}
+                    {% else %}
+                      创建
+                    {% endif %}
+                    {% endblock %}
+                  </span>
+                  <span style="color: #999999;">→</span>
+                  <span class="list-badge">
+                    {% block tracking_status_log_new_display %}
+                    {% if log.new_status == 'draft' %}草稿{% else %}{{ log.new_status|tracking_status_display }}{% endif %}
+                    {% endblock %}
+                  </span>
+                </div>
+              </td>
+              <td>
+                {% if log.changed_by %}
+                {{ log.changed_by.get_full_name|default:log.changed_by.username }}
+                {% else %}
+                <span style="color: #999999;">-</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if log.change_reason %}
+                <div style="font-size: 12px; color: #333333;">{{ log.change_reason|truncatewords:15 }}</div>
+                {% else %}
+                <span style="color: #999999;">-</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="list-empty-state">
+                <div class="list-empty-state-icon">▢</div>
+                <div class="list-empty-state-text">暂无状态日志</div>
+              </td>
+            </tr>
+            {% endfor %}
+            {% endblock tracking_status_logs_rows %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+{% endblock %}
+
+{# 覆盖完成确认按钮名称（计划跟踪使用 complete_plan） #}
+{% block tracking_complete_input %}
+  <input type="hidden" name="complete_plan" value="1">
+{% endblock %}
+
+{# 覆盖完成确认消息（计划跟踪的提示文字） #}
+{% block tracking_complete_message %}确认计划已完成？完成后将无法继续更新进度。{% endblock %}
+
+{# 覆盖调整申请区域（如果需要自定义） #}
+{% block tracking_adjustments_section %}
+  {{ block.super }}
+{% endblock %}
+
+{# 添加问题列表区域（计划特有） #}
+{% block tracking_custom_styles %}
+  {# 可以在这里添加额外的样式 #}
+{% endblock %}
+
+{# 在内容末尾添加问题列表 #}
 {% block pm_content %}
-<div class="container-fluid py-4">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-0">
-                {{ plan.name }}
-            </h2>
-            <p class="text-muted mb-0 mt-1">{{ plan.plan_number }}</p>
-        </div>
-        <div>
-            <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i>返回详情
-            </a>
-        </div>
+  {{ block.super }}
+  
+  {# 问题列表区域 #}
+  {% if issues %}
+  <div class="track-extra-section">
+    <div class="track-extra-section-title">问题列表（共 {{ issues|length }} 个问题）</div>
+    <div class="list-table-section">
+      <div class="list-table-wrapper">
+        <table class="list-table">
+          <thead>
+            <tr>
+              <th>发现时间</th>
+              <th>问题标题</th>
+              <th>严重程度</th>
+              <th>状态</th>
+              <th>负责人</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for issue in issues|slice:":10" %}
+            <tr>
+              <td>
+                <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ issue.discovered_time|date:"Y-m-d" }}</div>
+                <div style="font-size: 12px; color: #999999;">{{ issue.discovered_time|date:"H:i" }}</div>
+              </td>
+              <td>
+                <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ issue.title|truncatewords:15 }}</div>
+              </td>
+              <td>
+                <span class="list-badge list-badge-{% if issue.severity == 'critical' %}danger{% elif issue.severity == 'high' %}warning{% elif issue.severity == 'medium' %}info{% else %}secondary{% endif %}">
+                  {{ issue.get_severity_display }}
+                </span>
+              </td>
+              <td>
+                <span class="list-badge list-badge-{% if issue.status == 'resolved' %}success{% elif issue.status == 'closed' %}secondary{% elif issue.status == 'in_progress' %}warning{% else %}danger{% endif %}">
+                  {{ issue.get_status_display }}
+                </span>
+              </td>
+              <td>
+                {% if issue.assigned_to %}
+                {{ issue.assigned_to.get_full_name|default:issue.assigned_to.username }}
+                {% else %}
+                <span style="color: #999999;">-</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="list-empty-state">
+                <div class="list-empty-state-icon">▢</div>
+                <div class="list-empty-state-text">暂无问题</div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-
-    <div class="row">
-
-        <div class="col-md-8">
-
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">计划概览</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 text-center">
-                            <div class="mb-2">
-                                <strong>执行进度</strong>
-                            </div>
-                            <h4 class="text-primary">{{ plan.progress }}%</h4>
-                        </div>
-                        <div class="col-md-3 text-center">
-                            <div class="mb-2">
-                                <strong>状态</strong>
-                            </div>
-                            <span class="status-badge status-{{ plan.status }}">
-                                {{ plan.get_status_display }}
-                            </span>
-                        </div>
-                        <div class="col-md-3 text-center">
-                            <div class="mb-2">
-                                <strong>开始时间</strong>
-                            </div>
-                            <div class="small">{{ plan.start_time|date:"Y-m-d H:i" }}</div>
-                        </div>
-                        <div class="col-md-3 text-center">
-                            <div class="mb-2">
-                                <strong>结束时间</strong>
-                            </div>
-                            <div class="small">{{ plan.end_time|date:"Y-m-d H:i" }}</div>
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <div class="progress" style="height: 24px;">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ plan.progress }}%">
-                                {{ plan.progress }}%
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {% if can_update_progress %}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">更新进度</h5>
-                </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="update_progress" value="1">
-
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label required">进度百分比</label>
-                                {{ progress_form.progress }}
-                                {% if progress_form.progress.errors %}
-                                <div class="text-danger small mt-1">{{ progress_form.progress.errors }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label required">进度说明</label>
-                                {{ progress_form.progress_description }}
-                                {% if progress_form.progress_description.errors %}
-                                <div class="text-danger small mt-1">{{ progress_form.progress_description.errors }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label">执行结果</label>
-                                {{ progress_form.execution_result }}
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label">执行问题</label>
-                                {{ progress_form.execution_issues }}
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label">备注</label>
-                                {{ progress_form.notes }}
-                            </div>
-                            <div class="col-md-12">
-                                <button type="submit" class="btn btn-success">
-                                    <i class="bi bi-check-circle me-1"></i>更新进度
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">创建问题</h5>
-                </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="create_issue" value="1">
-
-                        <div class="row g-3">
-                            <div class="col-md-12">
-                                <label class="form-label required">问题标题</label>
-                                {{ issue_form.title }}
-                                {% if issue_form.title.errors %}
-                                <div class="text-danger small mt-1">{{ issue_form.title.errors }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label required">问题描述</label>
-                                {{ issue_form.description }}
-                                {% if issue_form.description.errors %}
-                                <div class="text-danger small mt-1">{{ issue_form.description.errors }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">严重程度</label>
-                                {{ issue_form.severity }}
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">负责人</label>
-                                {{ issue_form.assigned_to }}
-                            </div>
-                            <div class="col-md-12">
-                                <button type="submit" class="btn btn-warning">
-                                    <i class="bi bi-exclamation-triangle me-1"></i>创建问题
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            {% if valid_transitions %}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">状态转换</h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted">当前状态：<strong>{{ plan.get_status_display }}</strong></p>
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="transition_status" value="1">
-                        <div class="mb-3">
-                            <label class="form-label">转换到</label>
-                            <select name="new_status" class="form-select">
-                                {% for status in valid_transitions %}
-                                <option value="{{ status }}">
-                                    {% if status == 'pending_approval' %}待审批
-                                    {% elif status == 'approving' %}审批中
-                                    {% elif status == 'approved' %}已审批
-                                    {% elif status == 'in_progress' %}执行中
-                                    {% elif status == 'completed' %}已完成
-                                    {% elif status == 'cancelled' %}已取消
-                                    {% endif %}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-info">
-                            <i class="bi bi-arrow-repeat me-1"></i>转换状态
-                        </button>
-                    </form>
-                </div>
-            </div>
-            {% endif %}
-
-            {% if can_complete %}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">完成确认</h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted">确认计划已完成？</p>
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="complete_plan" value="1">
-                        <button type="submit" class="btn btn-success">
-                            <i class="bi bi-check-circle me-1"></i>确认完成
-                        </button>
-                    </form>
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">进度时间线</h5>
-                </div>
-                <div class="card-body">
-                    {% if progress_records %}
-                    <div class="progress-timeline">
-                        {% for record in progress_records %}
-                        <div class="progress-timeline-item">
-                            <div class="progress-card">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div>
-                                        <strong>{{ record.recorded_time|date:"Y-m-d H:i" }}</strong>
-                                        <span class="text-muted ms-2">by {{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</span>
-                                    </div>
-                                    <div>
-                                        <span class="badge bg-primary">{{ record.progress }}%</span>
-                                    </div>
-                                </div>
-                                <p class="mb-0">{{ record.progress_description }}</p>
-                                {% if record.execution_result %}
-                                <p class="text-success small mt-2 mb-0"><strong>执行结果：</strong>{{ record.execution_result }}</p>
-                                {% endif %}
-                                {% if record.execution_issues %}
-                                <p class="text-warning small mt-2 mb-0"><strong>执行问题：</strong>{{ record.execution_issues }}</p>
-                                {% endif %}
-                                {% if record.notes %}
-                                <p class="text-muted small mt-2 mb-0">{{ record.notes }}</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <p class="text-muted text-center py-4">暂无进度记录</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">问题列表</h5>
-                </div>
-                <div class="card-body">
-                    {% if issues %}
-                    <div class="list-group list-group-flush">
-                        {% for issue in issues %}
-                        <div class="list-group-item px-0">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">{{ issue.title }}</h6>
-                                    <p class="small mb-1">{{ issue.description|truncatewords:15 }}</p>
-                                    <div class="small">
-                                        <span class="badge bg-{% if issue.severity == 'critical' %}danger{% elif issue.severity == 'high' %}warning{% elif issue.severity == 'medium' %}info{% else %}secondary{% endif %}">
-                                            {{ issue.get_severity_display }}
-                                        </span>
-                                        <span class="badge bg-{% if issue.status == 'resolved' %}success{% elif issue.status == 'closed' %}secondary{% elif issue.status == 'in_progress' %}warning{% else %}danger{% endif %} ms-1">
-                                            {{ issue.get_status_display }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="small text-muted mt-1">
-                                {{ issue.discovered_time|date:"Y-m-d H:i" }}
-                                {% if issue.assigned_to %}
-                                | {{ issue.assigned_to.get_full_name|default:issue.assigned_to.username }}
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <div class="mt-3">
-                        <a href="{% url 'plan_pages:plan_issue_list' plan.id %}" class="btn btn-sm btn-outline-danger w-100">
-                            查看所有问题
-                        </a>
-                    </div>
-                    {% else %}
-                    <p class="text-muted text-center py-4 small">暂无问题</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">状态日志</h5>
-                </div>
-                <div class="card-body">
-                    {% if status_logs %}
-                    <div class="list-group list-group-flush">
-                        {% for log in status_logs %}
-                        <div class="list-group-item px-0">
-                            <div class="small text-muted">{{ log.changed_time|date:"Y-m-d H:i" }}</div>
-                            <div class="mt-1">
-                                <span class="badge bg-secondary">{{ log.old_status }}</span>
-                                <i class="bi bi-arrow-right mx-1"></i>
-                                <span class="badge bg-primary">{{ log.new_status }}</span>
-                            </div>
-                            {% if log.changed_by %}
-                            <div class="small text-muted mt-1">by {{ log.changed_by.get_full_name|default:log.changed_by.username }}</div>
-                            {% endif %}
-                            {% if log.change_reason %}
-                            <div class="small mt-1">{{ log.change_reason }}</div>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <p class="text-muted text-center py-4 small">暂无状态日志</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+    {% if issues|length > 10 %}
+    <div class="mt-3 text-center">
+      <a href="{% url 'plan_pages:plan_issue_list' plan.id %}" class="btn btn-sm btn-outline-primary">查看所有问题</a>
     </div>
-</div>
+    {% endif %}
+  </div>
+  {% endif %}
 {% endblock %}

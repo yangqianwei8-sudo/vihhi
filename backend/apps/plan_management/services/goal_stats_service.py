@@ -34,11 +34,11 @@ def get_user_goal_stats(user, filter_department_id=None, filter_responsible_pers
     this_month_end = (this_month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
     
     # 根据筛选条件决定查询逻辑
-    # 如果筛选了负责人或部门，查询所有符合条件的目标（不限制owner）
-    # 如果没有筛选，查询当前用户拥有的个人目标
+    # 如果筛选了负责人或部门，查询所有符合条件的目标（不限制owner和level）
+    # 如果没有筛选，查询当前用户相关的目标（owner、responsible_person、participants）
     if filter_responsible_person_id or filter_department_id:
-        # 筛选了负责人或部门，查询所有符合条件的目标
-        my_goals = StrategicGoal.objects.filter(level='personal')
+        # 筛选了负责人或部门，查询所有符合条件的目标（包括个人和公司级别）
+        my_goals = StrategicGoal.objects.all()
         if filter_responsible_person_id:
             try:
                 my_goals = my_goals.filter(responsible_person_id=filter_responsible_person_id)
@@ -50,21 +50,25 @@ def get_user_goal_stats(user, filter_department_id=None, filter_responsible_pers
             except ValueError:
                 pass
     else:
-        # 没有筛选，查询当前用户拥有的个人目标
-        my_goals = StrategicGoal.objects.filter(level='personal', owner=user)
+        # 没有筛选，查询当前用户相关的目标（owner、responsible_person、participants）
+        from django.db.models import Q
+        my_goals = StrategicGoal.objects.filter(
+            Q(owner=user) | Q(responsible_person=user) | Q(participants=user)
+        ).distinct()
     
-    # 应用日期筛选条件
+    # 应用日期筛选条件（使用执行时间范围：start_date 和 end_date）
     if filter_start_date:
         try:
             start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
-            my_goals = my_goals.filter(created_time__gte=start_date)
+            # 筛选：结束日期 >= 筛选开始日期（目标在执行时间范围内）
+            my_goals = my_goals.filter(end_date__gte=start_date)
         except ValueError:
             pass
     if filter_end_date:
         try:
             end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
-            end_datetime = datetime.combine(end_date, datetime.max.time())
-            my_goals = my_goals.filter(created_time__lte=end_datetime)
+            # 筛选：开始日期 <= 筛选结束日期（目标在执行时间范围内）
+            my_goals = my_goals.filter(start_date__lte=end_date)
         except ValueError:
             pass
     
@@ -142,18 +146,19 @@ def get_user_collaboration_goal_stats(user, filter_department_id=None, filter_re
         # 没有筛选，查询当前用户作为参与者的目标（排除自己负责的）
         collaboration_goals = StrategicGoal.objects.filter(participants=user).exclude(responsible_person=user)
     
-    # 应用日期筛选条件
+    # 应用日期筛选条件（使用执行时间范围：start_date 和 end_date）
     if filter_start_date:
         try:
             start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
-            collaboration_goals = collaboration_goals.filter(created_time__gte=start_date)
+            # 筛选：结束日期 >= 筛选开始日期（目标在执行时间范围内）
+            collaboration_goals = collaboration_goals.filter(end_date__gte=start_date)
         except ValueError:
             pass
     if filter_end_date:
         try:
             end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
-            end_datetime = datetime.combine(end_date, datetime.max.time())
-            collaboration_goals = collaboration_goals.filter(created_time__lte=end_datetime)
+            # 筛选：开始日期 <= 筛选结束日期（目标在执行时间范围内）
+            collaboration_goals = collaboration_goals.filter(start_date__lte=end_date)
         except ValueError:
             pass
     

@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db.models import Sum
 from datetime import datetime, date
+from decimal import Decimal, InvalidOperation
 from .models import (
     StrategicGoal, GoalProgressRecord, GoalAdjustment,
     Plan, PlanProgressRecord, PlanIssue, PlanAdjustment
@@ -41,13 +42,11 @@ class StrategicGoalForm(forms.ModelForm):
             # 固定字段（前三个）：所属部门、负责人、表单编号
             'responsible_department', 'responsible_person', 'goal_number',
             # 基本信息
-            'name', 'level', 'goal_type', 'goal_period', 'status',  # P2-2: 添加 level
+            'name', 'level', 'goal_type', 'goal_period',  # P2-2: 添加 level，status由系统自动设置
             # 目标指标
             'indicator_name', 'indicator_type', 'indicator_unit', 'target_value', 'current_value',
             # 时间信息
             'start_date', 'end_date',
-            # 关联信息
-            'parent_goal',
         ]
         widgets = {
             'goal_number': forms.TextInput(attrs={
@@ -63,7 +62,6 @@ class StrategicGoalForm(forms.ModelForm):
             'level': forms.Select(attrs={'class': 'form-select'}),
             'goal_type': forms.Select(attrs={'class': 'form-select'}),
             'goal_period': forms.Select(attrs={'class': 'form-select'}),
-            'status': forms.Select(attrs={'class': 'form-select'}),
             'indicator_name': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': '请输入目标指标名称',
@@ -101,10 +99,6 @@ class StrategicGoalForm(forms.ModelForm):
                     'type': 'date'
                 }
             ),
-            'parent_goal': forms.Select(attrs={
-                'class': 'form-select',
-                'title': '用于目标分解，选择上级目标后，当前目标将成为下级目标'
-            }),
         }
     
     def __init__(self, *args, **kwargs):
@@ -120,14 +114,6 @@ class StrategicGoalForm(forms.ModelForm):
         # 确保 name 和 level 字段为必填
         self.fields['name'].required = True
         self.fields['level'].required = True
-        
-        # 设置上级目标查询集（排除自己和自己的下级目标）
-        if self.instance and self.instance.pk:
-            exclude_ids = [self.instance.pk]
-            exclude_ids.extend([g.pk for g in self.instance.get_all_descendants()])
-            self.fields['parent_goal'].queryset = StrategicGoal.objects.exclude(pk__in=exclude_ids)
-        else:
-            self.fields['parent_goal'].queryset = StrategicGoal.objects.all()
         
         # 目标编号字段处理：完全由系统自动生成，不允许修改
         self.fields['goal_number'].widget.attrs['readonly'] = True
@@ -163,17 +149,13 @@ class StrategicGoalForm(forms.ModelForm):
                 self.fields['responsible_department'].label = '所属部门（默认，不可修改）'
                 self.fields['responsible_person'].widget.attrs['disabled'] = True
                 self.fields['responsible_person'].label = '负责人（默认，不可修改）'
-            
-            # 根据是否有 parent_goal 设置 level
-            parent_goal_id = self.data.get('parent_goal') or self.initial.get('parent_goal')
-            if parent_goal_id:
-                # 有父目标，说明是个人目标
-                self.fields['level'].initial = 'personal'
-            else:
-                # 没有父目标，说明是公司目标
-                self.fields['level'].initial = 'company'
-            
-            # 设置开始日期默认为当天
+        
+        # 设置 level 的默认值（新建时默认为公司目标，个人目标通过目标分解功能创建）
+        if not self.instance or not self.instance.pk:
+            self.fields['level'].initial = 'company'
+        
+        # 设置开始日期默认为当天
+        if not self.instance or not self.instance.pk:
             today = date.today()
             # 确保初始值正确设置，并且格式化为 YYYY-MM-DD 格式（HTML5 date input 需要的格式）
             self.fields['start_date'].initial = today
@@ -275,18 +257,50 @@ class StrategicGoalForm(forms.ModelForm):
             if end_date < start_date:
                 raise ValidationError({'end_date': '结束日期不能早于开始日期'})
         
-        # 验证目标值
-        if target_value is not None and target_value <= 0:
-            raise ValidationError({'target_value': '目标值必须大于0'})
+        # 验证目标值（根据指标类型）
+        if not indicator_type:
+            # 如果没有选择指标类型，跳过目标值验证（会在字段验证中提示）
+            pass
+        elif indicator_type == 'text':
+            # 文本型：目标值统一存储为0，实际文本内容存储在description中
+            # 注意：这里target_value可能是文本字符串，需要转换为0
+            if target_value is not None:
+                # 如果是文本内容，保存到description中
+                text_content = str(target_value).strip()
+                if text_content and text_content != '0':
+                    # 将文本内容保存到description字段
+                    description = cleaned_data.get('description', '')
+                    if description:
+                        cleaned_data['description'] = f"{description}\n\n目标内容：{text_content}"
+                    else:
+                        cleaned_data['description'] = f"目标内容：{text_content}"
+                target_value = Decimal('0')  # 文本型统一存储为0
+        elif indicator_type == 'percentage':
+            # 百分比型：0-100
+            if target_value is not None:
+                try:
+                    target_value = Decimal(str(target_value))
+                    if target_value < 0 or target_value > 100:
+                        raise ValidationError({'target_value': '百分比型指标的目标值应在0-100之间'})
+                except (ValueError, InvalidOperation):
+                    raise ValidationError({'target_value': '百分比型指标的目标值格式不正确'})
+        else:
+            # 数值型：必须大于0
+            if target_value is not None:
+                try:
+                    target_value = Decimal(str(target_value))
+                    if target_value <= 0:
+                        raise ValidationError({'target_value': '数值型指标的目标值必须大于0'})
+                except (ValueError, InvalidOperation):
+                    raise ValidationError({'target_value': '数值型指标的目标值格式不正确'})
+        
+        # 更新cleaned_data中的target_value
+        if target_value is not None:
+            cleaned_data['target_value'] = target_value
         
         # 验证当前值
         if current_value is not None and current_value < 0:
             raise ValidationError({'current_value': '当前值不能小于0'})
-        
-        # 验证百分比型指标
-        if indicator_type == 'percentage' and target_value:
-            if target_value > 100:
-                raise ValidationError({'target_value': '百分比型指标的目标值不能超过100'})
         
         # 验证权重
         if weight is not None:
@@ -320,6 +334,12 @@ class StrategicGoalForm(forms.ModelForm):
         # 新建时，如果目标编号为空，系统会自动生成（在模型的save方法中）
         # 编辑时，目标编号不可修改，保持原值
         
+        # 状态由系统自动设置，不通过表单修改
+        # 新建时设置为'draft'，编辑时保持原状态
+        if not instance.pk:
+            instance.status = 'draft'
+        # 编辑时，状态保持不变（由系统通过状态转换方法管理）
+        
         if commit:
             instance.save()
             
@@ -343,27 +363,26 @@ class StrategicGoalForm(forms.ModelForm):
 
 
 class GoalProgressUpdateForm(forms.ModelForm):
-    """目标进度更新表单"""
+    """目标进度更新表单（根据指标类型动态调整字段）"""
     
     class Meta:
         model = GoalProgressRecord
         fields = ['current_value', 'progress_description', 'notes']
         widgets = {
-            'current_value': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'placeholder': '0.00'
-            }),
             'progress_description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '4',
-                'placeholder': '请输入进度说明',
-                'required': True
+                'class': 'track-form-textarea',
+                'id': 'id_progress_description',
+                'rows': 3,
+                'placeholder': '请详细描述当前进度情况（至少10个字符）...',
+                'minlength': '10',
+                'maxlength': '500'
             }),
             'notes': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '2',
-                'placeholder': '备注（可选）'
+                'class': 'track-form-textarea',
+                'id': 'id_notes',
+                'rows': 2,
+                'placeholder': '可选，添加其他说明（最多200个字符）...',
+                'maxlength': '200'
             }),
         }
     
@@ -371,22 +390,178 @@ class GoalProgressUpdateForm(forms.ModelForm):
         self.goal = kwargs.pop('goal', None)
         super().__init__(*args, **kwargs)
         
-        if self.goal:
-            self.fields['current_value'].initial = self.goal.current_value
+        if not self.goal:
+            # 如果没有 goal，使用默认的数字型字段
+            self.fields['current_value'] = forms.DecimalField(
+                label='当前值',
+                required=True,
+                widget=forms.NumberInput(attrs={
+                    'class': 'track-form-input',
+                    'id': 'id_current_value',
+                    'step': '0.01'
+                }),
+                help_text='请输入当前值'
+            )
+            return
+        
+        indicator_type = self.goal.indicator_type
+        
+        # 根据指标类型创建不同的字段
+        if indicator_type == 'percentage':
+            self.fields['current_value'] = forms.IntegerField(
+                label='完成百分比',
+                required=True,
+                min_value=0,
+                max_value=100,
+                initial=int(float(self.goal.current_value)) if self.goal.current_value else 0,
+                widget=forms.NumberInput(attrs={
+                    'class': 'track-form-input',
+                    'id': 'id_current_value',
+                    'step': '1',
+                    'min': '0',
+                    'max': '100',
+                    'placeholder': '0-100'
+                }),
+                help_text='请输入0-100之间的百分比值'
+            )
+        elif indicator_type == 'text':
+            # 文本型：从最新的进度记录的 notes 中提取文本内容
+            initial_text = ''
+            if self.goal and hasattr(self.goal, 'progress_records'):
+                latest_record = self.goal.progress_records.first()
+                if latest_record and latest_record.notes:
+                    if latest_record.notes.startswith('[文本进度]'):
+                        # 提取标记后的内容（第一行）
+                        text_part = latest_record.notes[8:].strip()
+                        if '\n' in text_part:
+                            initial_text = text_part.split('\n', 1)[0]
+                        else:
+                            initial_text = text_part
+            
+            self.fields['current_value'] = forms.CharField(
+                label='当前进度',
+                required=True,
+                max_length=200,
+                initial=initial_text,
+                widget=forms.TextInput(attrs={
+                    'class': 'track-form-input',
+                    'placeholder': '请描述当前进度情况...'
+                }),
+                help_text='请输入当前进度的文字描述'
+            )
+        else:
+            # 默认：数字型
+            self.fields['current_value'] = forms.DecimalField(
+                label='当前值',
+                required=True,
+                initial=self.goal.current_value if self.goal.current_value else 0,
+                widget=forms.NumberInput(attrs={
+                    'class': 'track-form-input',
+                    'id': 'id_current_value',
+                    'step': '0.01'
+                }),
+                help_text='请输入当前值'
+            )
     
     def clean_current_value(self):
+        """验证当前值的业务规则"""
         current_value = self.cleaned_data.get('current_value')
-        if current_value is not None and current_value < 0:
-            raise ValidationError('当前值不能小于0')
+        if not self.goal:
+            return current_value
+        
+        indicator_type = self.goal.indicator_type
+        
+        if indicator_type == 'numeric':
+            # 检查是否倒退
+            if current_value < self.goal.current_value:
+                raise ValidationError(
+                    f'进度不能倒退。当前值为 {self.goal.current_value}，'
+                    f'新值不能小于当前值。如需调整，请使用"调整申请"功能。'
+                )
+        elif indicator_type == 'percentage':
+            if isinstance(current_value, str):
+                try:
+                    current_value = int(current_value)
+                except ValueError:
+                    raise ValidationError('请输入有效的百分比数字')
+            if not (0 <= current_value <= 100):
+                raise ValidationError('完成百分比必须在0-100之间')
+            # 检查是否倒退
+            old_value = int(float(self.goal.current_value)) if self.goal.current_value else 0
+            if current_value < old_value:
+                raise ValidationError(
+                    f'进度不能倒退。当前完成百分比为 {old_value}%，'
+                    f'新值不能小于当前值。如需调整，请使用"调整申请"功能。'
+                )
+        elif indicator_type == 'text':
+            if len(current_value.strip()) < 5:
+                raise ValidationError('进度描述至少需要5个字符')
+        
         return current_value
+    
+    def clean_progress_description(self):
+        """验证进度说明"""
+        description = self.cleaned_data.get('progress_description', '').strip()
+        
+        if len(description) < 10:
+            raise ValidationError('进度说明至少需要10个字符，请详细描述进度情况')
+        
+        if len(description) > 500:
+            raise ValidationError('进度说明不能超过500个字符')
+        
+        return description
     
     def save(self, commit=True):
         instance = super().save(commit=False)
         if self.goal:
             instance.goal = self.goal
-            # 更新目标的当前值
-            self.goal.current_value = instance.current_value
+            # 更新目标的当前值（根据类型转换）
+            indicator_type = self.goal.indicator_type
+            current_value = self.cleaned_data.get('current_value')
+            
+            if indicator_type == 'text':
+                # 文本型：将文本内容存储在 notes 字段的开头，current_value 存储文本长度
+                text_content = str(current_value).strip()
+                # 将文本内容添加到 notes 的开头（覆盖之前的文本进度标记）
+                if instance.notes and instance.notes.startswith('[文本进度]'):
+                    # 如果已有文本进度标记，替换它
+                    old_notes = instance.notes
+                    # 提取标记后的内容
+                    if '\n' in old_notes:
+                        parts = old_notes.split('\n', 1)
+                        if len(parts) > 1:
+                            instance.notes = f"[文本进度] {text_content}\n{parts[1]}"
+                        else:
+                            instance.notes = f"[文本进度] {text_content}"
+                    else:
+                        instance.notes = f"[文本进度] {text_content}"
+                else:
+                    # 如果没有文本进度标记，添加它
+                    if instance.notes:
+                        instance.notes = f"[文本进度] {text_content}\n{instance.notes}"
+                    else:
+                        instance.notes = f"[文本进度] {text_content}"
+                # current_value 存储文本长度（作为数值）
+                self.goal.current_value = Decimal(str(len(text_content)))
+            else:
+                # 数字型和百分比型：直接赋值
+                self.goal.current_value = Decimal(str(current_value))
+            
+            # 重新计算完成率
+            self.goal.completion_rate = self.goal.calculate_completion_rate()
             self.goal.save()
+            
+            # 设置记录的完成率
+            instance.completion_rate = self.goal.completion_rate
+            
+            # 设置记录的 current_value（根据类型）
+            if indicator_type == 'text':
+                # 文本型：存储文本长度
+                text_content = str(current_value).strip()
+                instance.current_value = Decimal(str(len(text_content)))
+            else:
+                instance.current_value = Decimal(str(current_value))
+        
         if commit:
             instance.save()
         return instance
@@ -1075,7 +1250,24 @@ class PlanForm(forms.ModelForm):
 
 
 class PlanProgressUpdateForm(forms.ModelForm):
-    """计划进度更新表单"""
+    """计划进度更新表单（兼容 tracking_base.html）"""
+    
+    # 添加 current_value 字段以兼容 tracking_base.html（映射到 progress）
+    current_value = forms.IntegerField(
+        label='完成百分比',
+        required=True,
+        min_value=0,
+        max_value=100,
+        widget=forms.NumberInput(attrs={
+            'class': 'track-form-input',
+            'id': 'id_current_value',
+            'step': '1',
+            'min': '0',
+            'max': '100',
+            'placeholder': '0-100'
+        }),
+        help_text='请输入0-100之间的百分比值'
+    )
     
     class Meta:
         model = PlanProgressRecord
@@ -1089,25 +1281,29 @@ class PlanProgressUpdateForm(forms.ModelForm):
                 'placeholder': '0.00'
             }),
             'progress_description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '4',
-                'placeholder': '请输入进度说明',
-                'required': True
+                'class': 'track-form-textarea',
+                'id': 'id_progress_description',
+                'rows': 3,
+                'placeholder': '请详细描述当前进度情况（至少10个字符）...',
+                'minlength': '10',
+                'maxlength': '500'
             }),
             'execution_result': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '3',
+                'class': 'track-form-textarea',
+                'rows': 3,
                 'placeholder': '执行结果（可选）'
             }),
             'execution_issues': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '3',
+                'class': 'track-form-textarea',
+                'rows': 3,
                 'placeholder': '执行问题（可选）'
             }),
             'notes': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': '2',
-                'placeholder': '备注（可选）'
+                'class': 'track-form-textarea',
+                'id': 'id_notes',
+                'rows': 2,
+                'placeholder': '可选，添加其他说明（最多200个字符）...',
+                'maxlength': '200'
             }),
         }
     
@@ -1117,19 +1313,45 @@ class PlanProgressUpdateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         if self.plan:
-            self.fields['progress'].initial = self.plan.progress
+            # 设置 current_value 的初始值
+            self.fields['current_value'].initial = int(float(self.plan.progress)) if self.plan.progress else 0
+            # 隐藏 progress 字段（使用 current_value 代替）
+            self.fields['progress'].widget = forms.HiddenInput()
     
-    def clean_progress(self):
-        progress = self.cleaned_data.get('progress')
-        if progress is not None:
-            if progress < 0 or progress > 100:
-                raise ValidationError('进度必须在0-100之间')
-        return progress
+    def clean_current_value(self):
+        """验证当前值的业务规则"""
+        current_value = self.cleaned_data.get('current_value')
+        if not (0 <= current_value <= 100):
+            raise ValidationError('完成百分比必须在0-100之间')
+        
+        # 检查是否倒退（不允许进度倒退）
+        if self.plan and current_value < int(float(self.plan.progress)):
+            raise ValidationError(
+                f'进度不能倒退。当前完成百分比为 {int(float(self.plan.progress))}%，'
+                f'新值不能小于当前值。如需调整，请使用"调整申请"功能。'
+            )
+        
+        return current_value
+    
+    def clean_progress_description(self):
+        """验证进度说明"""
+        description = self.cleaned_data.get('progress_description', '').strip()
+        
+        if len(description) < 10:
+            raise ValidationError('进度说明至少需要10个字符，请详细描述进度情况')
+        
+        if len(description) > 500:
+            raise ValidationError('进度说明不能超过500个字符')
+        
+        return description
     
     def save(self, commit=True):
         instance = super().save(commit=False)
         if self.plan:
             instance.plan = self.plan
+            # 从 current_value 更新 progress
+            current_value = self.cleaned_data.get('current_value')
+            instance.progress = Decimal(str(current_value))
             # 更新计划的进度
             self.plan.progress = instance.progress
             self.plan.save()

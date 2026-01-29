@@ -197,7 +197,6 @@ class StrategicGoalAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
         color_map = {
             'draft': '#6c757d',
             'published': '#17a2b8',
-            'accepted': '#ffc107',
             'in_progress': '#007bff',
             'completed': '#28a745',
             'cancelled': '#dc3545',
@@ -296,7 +295,7 @@ class StrategicGoalAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
     def mark_as_cancelled(self, request, queryset):
         """批量标记为已取消"""
         count = 0
-        for goal in queryset.filter(status__in=['draft', 'published', 'accepted', 'in_progress']):
+        for goal in queryset.filter(status__in=['draft', 'published', 'in_progress']):
             try:
                 goal.transition_to('cancelled', user=request.user)
                 count += 1
@@ -677,7 +676,6 @@ class PlanAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
         color_map = {
             'draft': '#6c757d',
             'published': '#17a2b8',
-            'accepted': '#ffc107',
             'in_progress': '#007bff',
             'completed': '#28a745',
             'cancelled': '#dc3545',
@@ -739,7 +737,7 @@ class PlanAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
     
     def overdue_indicator(self, obj):
         """逾期指示器"""
-        if obj.status in ['draft', 'published', 'accepted', 'in_progress']:
+        if obj.status in ['draft', 'published', 'in_progress']:
             if obj.end_time and obj.end_time < timezone.now():
                 days = (timezone.now().date() - obj.end_time.date()).days
                 return format_html(
@@ -776,7 +774,7 @@ class PlanAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
     def mark_as_cancelled(self, request, queryset):
         """批量取消"""
         count = 0
-        for plan in queryset.filter(status__in=['draft', 'published', 'accepted', 'in_progress']):
+        for plan in queryset.filter(status__in=['draft', 'published', 'in_progress']):
             try:
                 plan.transition_to('cancelled', user=request.user)
                 count += 1
@@ -790,8 +788,8 @@ class PlanAdmin(StatusBadgeMixin, AuditAdminMixin, BaseModelAdmin):
         if request.user.is_superuser:
             return True
         
-        # 已发布/已接收的计划，不允许在后台直接修改（应通过前端流程）
-        if obj and obj.status in ['published', 'accepted', 'in_progress', 'completed']:
+        # 已发布的计划，不允许在后台直接修改（应通过前端流程）
+        if obj and obj.status in ['published', 'in_progress', 'completed']:
             return False
         
         return super().has_change_permission(request, obj)

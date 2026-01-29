@@ -79,7 +79,21 @@
     {% for todo in page_obj %}
     <tr>
       <td>
-        <div class="fw-medium text-dark">{{ todo.title }}</div>
+        {% if todo.related_url %}
+          <div class="fw-medium">
+            <a href="{{ todo.related_url }}" class="text-decoration-none text-primary" style="cursor: pointer;" title="点击查看关联的{{ todo.related_object_type|default:'对象' }}">
+              {{ todo.title }}
+              <i class="bi bi-box-arrow-up-right small ms-1"></i>
+            </a>
+          </div>
+        {% elif todo.related_label and '已删除' in todo.related_label %}
+          <div class="fw-medium text-dark">
+            {{ todo.title }}
+            <span class="badge bg-secondary small ms-1" title="关联对象已删除">已删除</span>
+          </div>
+        {% else %}
+          <div class="fw-medium text-dark">{{ todo.title }}</div>
+        {% endif %}
         {% if todo.description %}
           <div class="text-muted small">{{ todo.description|truncatechars:60 }}</div>
         {% endif %}
@@ -133,8 +147,21 @@
         {% endif %}
       </td>
       <td>
-        {% if todo.related_object_type and todo.related_object_id %}
-          <code>{{ todo.related_object_type }}:{{ todo.related_object_id }}</code>
+        {% if todo.related_url %}
+          <a href="{{ todo.related_url }}" class="text-primary text-decoration-none">
+            {% if todo.related_label %}
+              <i class="bi bi-link-45deg"></i> {{ todo.related_label }}
+            {% else %}
+              <i class="bi bi-link-45deg"></i> {{ todo.related_object_type }}:{{ todo.related_object_id }}
+            {% endif %}
+          </a>
+        {% elif todo.related_label and '已删除' in todo.related_label %}
+          <span class="text-muted">
+            {{ todo.related_label }}
+            <i class="bi bi-exclamation-triangle text-warning ms-1" title="关联对象已删除"></i>
+          </span>
+        {% elif todo.related_object_type and todo.related_object_id %}
+          <code class="text-muted">{{ todo.related_object_type }}:{{ todo.related_object_id }}</code>
         {% else %}
           <span class="text-muted">-</span>
         {% endif %}

@@ -95,7 +95,7 @@ def get_today_battlefield(user) -> Dict[str, Any]:
         # 所有截止到今天未完成的任务
         pending_plans = Plan.objects.filter(
             owner=user,
-            status__in=['draft', 'published', 'accepted', 'in_progress'],
+            status__in=['draft', 'published', 'in_progress'],
             end_time__lte=today_end
         ).order_by('end_time')
         
@@ -175,7 +175,7 @@ def get_risk_warnings(user) -> Dict[str, Any]:
         # 三天内到期任务数量
         due_soon_plans = Plan.objects.filter(
             owner=user,
-            status__in=['draft', 'published', 'accepted', 'in_progress'],
+            status__in=['draft', 'published', 'in_progress'],
             end_time__lte=three_days_later_dt,
             end_time__gte=now
         )
@@ -195,7 +195,7 @@ def get_risk_warnings(user) -> Dict[str, Any]:
             for member in department_members:
                 overdue_plans = Plan.objects.filter(
                     owner=member,
-                    status__in=['draft', 'published', 'accepted', 'in_progress'],
+                    status__in=['draft', 'published', 'in_progress'],
                     end_time__lt=now
                 )
                 

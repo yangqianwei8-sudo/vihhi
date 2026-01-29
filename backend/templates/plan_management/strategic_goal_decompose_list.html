@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block page_title %}目标分解列表{% endblock page_title %}
-{% block page_subtitle %}选择要分解的目标{% endblock page_subtitle %}
+{% block page_subtitle %}查看已分解的目标{% endblock page_subtitle %}
 
 {% block module_styles %}
   {{ block.super }}
@@ -25,7 +25,7 @@
   <div class="row g-3">
     <div class="col-md-3">
       <div class="list-stat-card">
-        <div class="list-stat-label">可分解目标总数</div>
+        <div class="list-stat-label">分解目标总数</div>
         <div class="list-stat-value">{{ total_count|default:0 }}</div>
       </div>
     </div>
@@ -107,6 +107,7 @@
 {% block list_table_headers %}
   <th>目标编号</th>
   <th>目标名称</th>
+  <th>父目标</th>
   <th>目标层级</th>
   <th>目标类型</th>
   <th>目标周期</th>
@@ -124,6 +125,17 @@
       <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="text-dark text-decoration-none fw-medium">
         {{ goal.name }}
       </a>
+    </td>
+    <td>
+      {% if goal.parent_goal %}
+      <a href="{% url 'plan_pages:strategic_goal_detail' goal.parent_goal.id %}" class="text-primary text-decoration-none">
+        <code>{{ goal.parent_goal.goal_number }}</code>
+        <br>
+        <small class="text-muted">{{ goal.parent_goal.name }}</small>
+      </a>
+      {% else %}
+      <span class="text-muted">-</span>
+      {% endif %}
     </td>
     <td>{{ goal.get_level_display }}</td>
     <td>{{ goal.get_goal_type_display }}</td>
@@ -145,16 +157,19 @@
     </td>
     <td>
       <div class="btn-group btn-group-sm">
-        <a href="{% url 'plan_pages:strategic_goal_decompose' goal.id %}" class="btn btn-sm" title="开始分解">分解</a>
+        <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="btn btn-sm" title="查看详情">查看</a>
+        {% if goal.parent_goal %}
+        <a href="{% url 'plan_pages:strategic_goal_detail' goal.parent_goal.id %}" class="btn btn-sm" title="查看父目标">父目标</a>
+        {% endif %}
       </div>
     </td>
   </tr>
   {% empty %}
   <tr>
-    <td colspan="9" class="list-empty-state">
+    <td colspan="10" class="list-empty-state">
       <div class="list-empty-state-icon">🎯</div>
-      <div class="list-empty-state-text">暂无可分解的目标</div>
-      <div class="list-empty-state-hint">请先创建目标或调整筛选条件</div>
+      <div class="list-empty-state-text">暂无分解目标</div>
+      <div class="list-empty-state-hint">请先进行目标分解或调整筛选条件</div>
     </td>
   </tr>
   {% endfor %}

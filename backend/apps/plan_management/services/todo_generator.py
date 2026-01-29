@@ -245,14 +245,12 @@ def generate_plan_creation_todo(plan_type: str = 'monthly', deadline: datetime =
     """
     try:
         if plan_type == 'monthly':
-            # 月度公司计划创建待办（给总经理）
-            general_managers = User.objects.filter(
-                roles__code='general_manager',
-                is_active=True
-            ).distinct()
-            
-            if not general_managers.exists():
-                logger.warning("未找到总经理角色用户，无法生成月度公司计划创建待办")
+            # 月度公司计划创建待办（只通知杨乾维）
+            try:
+                # 查找杨乾维用户（ID: 114）
+                yang_qianwei = User.objects.get(id=114, is_active=True)
+            except User.DoesNotExist:
+                logger.warning("未找到杨乾维用户（ID: 114），无法生成月度公司计划创建待办")
                 return []
             
             # 如果没有指定截止时间，使用当月23日下午5点
@@ -267,11 +265,10 @@ def generate_plan_creation_todo(plan_type: str = 'monthly', deadline: datetime =
                         deadline = deadline.replace(month=now.month + 1)
             
             todos = []
-            for gm in general_managers:
                 try:
                     todo = create_todo_task(
                         task_type='plan_creation',
-                        user=gm,
+                    user=yang_qianwei,
                         title='【计划创建】请创建月度公司计划',
                         description=f'请在每月23日下午5点前完成月度公司计划的创建。截止时间：{deadline.strftime("%Y-%m-%d %H:%M")}',
                         deadline=deadline,
@@ -281,7 +278,7 @@ def generate_plan_creation_todo(plan_type: str = 'monthly', deadline: datetime =
                     
                     # 发送系统通知
                     safe_approval_notification(
-                        user=gm,
+                    user=yang_qianwei,
                         title='【待办提醒】月度公司计划创建待办事项',
                         content=f'系统已为您生成月度公司计划创建待办事项，请在{deadline.strftime("%Y年%m月%d日 %H:%M")}前完成。',
                         object_type='todo',
@@ -291,9 +288,9 @@ def generate_plan_creation_todo(plan_type: str = 'monthly', deadline: datetime =
                     )
                     
                 except Exception as e:
-                    logger.error(f"为总经理 {gm.username} 创建月度公司计划创建待办失败: {str(e)}", exc_info=True)
+                logger.error(f"为杨乾维创建月度公司计划创建待办失败: {str(e)}", exc_info=True)
             
-            logger.info(f"成功生成 {len(todos)} 个月度公司计划创建待办")
+            logger.info(f"成功生成 {len(todos)} 个月度公司计划创建待办（通知杨乾维）")
             return todos
         
         return []
@@ -318,14 +315,20 @@ def generate_plan_decomposition_todo(plan_type: str = 'weekly', deadline: dateti
         users = User.objects.filter(is_active=True)
         
         if plan_type == 'weekly':
-            # 周计划分解待办
-            # 如果没有指定截止时间，使用当天下午6点
+            # 周计划创建待办
+            # 如果没有指定截止时间，使用本周五下午6点
             if deadline is None:
                 now = timezone.now()
-                deadline = now.replace(hour=18, minute=0, second=0, microsecond=0)
-                # 如果已经过了6点，使用明天下午6点
-                if now.hour >= 18:
-                    deadline = deadline + timedelta(days=1)
+                today = now.date()
+                # 计算本周五（weekday: 0=Monday, 4=Friday）
+                days_until_friday = (4 - today.weekday()) % 7
+                if days_until_friday == 0 and now.hour >= 18:
+                    # 如果今天是周五且已过6点，使用下周五
+                    days_until_friday = 7
+                friday = today + timedelta(days=days_until_friday)
+                deadline = timezone.make_aware(
+                    datetime.combine(friday, datetime.min.time().replace(hour=18, minute=0))
+                )
             
             todos = []
             for user in users:
@@ -333,8 +336,8 @@ def generate_plan_decomposition_todo(plan_type: str = 'weekly', deadline: dateti
                     todo = create_todo_task(
                         task_type='plan_decomposition_weekly',
                         user=user,
-                        title='【周计划分解】请创建下周工作计划',
-                        description=f'请在每周五下午6点前完成下周工作计划的分解。截止时间：{deadline.strftime("%Y-%m-%d %H:%M")}',
+                        title='【计划创建】创建下周工作计划',
+                        description=f'请在每周五下午6点前完成下周工作计划的创建。截止时间：{deadline.strftime("%Y-%m-%d %H:%M")}',
                         deadline=deadline,
                         auto_generated=True
                     )
@@ -343,8 +346,8 @@ def generate_plan_decomposition_todo(plan_type: str = 'weekly', deadline: dateti
                     # 发送系统通知
                     safe_approval_notification(
                         user=user,
-                        title='【待办提醒】周计划分解待办事项',
-                        content=f'系统已为您生成周计划分解待办事项，请在{deadline.strftime("%Y年%m月%d日 %H:%M")}前完成。',
+                        title='【待办提醒】创建下周工作计划',
+                        content=f'系统已为您生成创建下周工作计划的待办事项，请在{deadline.strftime("%Y年%m月%d日 %H:%M")}前完成。',
                         object_type='todo',
                         object_id=str(todo.id),
                         event='weekly_plan_reminder',
@@ -358,12 +361,12 @@ def generate_plan_decomposition_todo(plan_type: str = 'weekly', deadline: dateti
             return todos
         
         elif plan_type == 'daily':
-            # 日计划分解待办
-            # 如果没有指定截止时间，使用明天上午9点
+            # 日计划创建待办
+            # 如果没有指定截止时间，使用明天下午18点
             if deadline is None:
                 now = timezone.now()
                 tomorrow = now + timedelta(days=1)
-                deadline = tomorrow.replace(hour=9, minute=0, second=0, microsecond=0)
+                deadline = tomorrow.replace(hour=18, minute=0, second=0, microsecond=0)
             
             todos = []
             for user in users:
@@ -371,8 +374,8 @@ def generate_plan_decomposition_todo(plan_type: str = 'weekly', deadline: dateti
                     todo = create_todo_task(
                         task_type='plan_decomposition_daily',
                         user=user,
-                        title='【日计划分解】请创建明日工作计划',
-                        description=f'请在明天上午9点前完成明日工作计划的分解。截止时间：{deadline.strftime("%Y-%m-%d %H:%M")}',
+                        title='【计划创建】创建明日工作计划',
+                        description=f'请在明天下午18点前完成明日工作计划的创建。截止时间：{deadline.strftime("%Y-%m-%d %H:%M")}',
                         deadline=deadline,
                         auto_generated=True
                     )
@@ -381,8 +384,8 @@ def generate_plan_decomposition_todo(plan_type: str = 'weekly', deadline: dateti
                     # 发送系统通知
                     safe_approval_notification(
                         user=user,
-                        title='【待办提醒】日计划分解待办事项',
-                        content=f'系统已为您生成日计划分解待办事项，请在{deadline.strftime("%Y年%m月%d日 %H:%M")}前完成。',
+                        title='【待办提醒】创建明日工作计划',
+                        content=f'系统已为您生成创建明日工作计划的待办事项，请在{deadline.strftime("%Y年%m月%d日 %H:%M")}前完成。',
                         object_type='todo',
                         object_id=str(todo.id),
                         event='daily_plan_reminder',
@@ -390,9 +393,9 @@ def generate_plan_decomposition_todo(plan_type: str = 'weekly', deadline: dateti
                     )
                     
                 except Exception as e:
-                    logger.error(f"为用户 {user.username} 创建日计划分解待办失败: {str(e)}", exc_info=True)
+                    logger.error(f"为用户 {user.username} 创建日计划创建待办失败: {str(e)}", exc_info=True)
             
-            logger.info(f"成功生成 {len(todos)} 个日计划分解待办")
+            logger.info(f"成功生成 {len(todos)} 个日计划创建待办")
             return todos
         
         return []
@@ -408,7 +411,10 @@ def generate_plan_progress_update_todo(plan: Plan, deadline: datetime = None) ->
     
     Args:
         plan: 计划对象
-        deadline: 截止时间，如果为None则使用默认值（当天下午6点）
+        deadline: 截止时间，如果为None则根据计划类型自动计算：
+            - 日计划：当天下午6点
+            - 周计划：本周五下午6点
+            - 月计划：当月28日下午6点
     
     Returns:
         TodoTask实例或None
@@ -417,19 +423,63 @@ def generate_plan_progress_update_todo(plan: Plan, deadline: datetime = None) ->
         if plan.status != 'in_progress' or not plan.responsible_person:
             return None
         
-        # 如果没有指定截止时间，使用当天下午6点
+        # 如果没有指定截止时间，根据计划类型自动计算
         if deadline is None:
             now = timezone.now()
+            today = now.date()
+            
+            if plan.plan_period == 'daily':
+                # 日计划：当天下午6点
             deadline = now.replace(hour=18, minute=0, second=0, microsecond=0)
             # 如果已经过了6点，使用明天下午6点
             if now.hour >= 18:
                 deadline = deadline + timedelta(days=1)
+            
+            elif plan.plan_period == 'weekly':
+                # 周计划：本周五下午6点
+                days_until_friday = (4 - today.weekday()) % 7
+                if days_until_friday == 0 and now.hour >= 18:
+                    # 如果今天是周五且已过6点，使用下周五
+                    days_until_friday = 7
+                friday = today + timedelta(days=days_until_friday)
+                deadline = timezone.make_aware(
+                    datetime.combine(friday, datetime.min.time().replace(hour=18, minute=0))
+                )
+            
+            elif plan.plan_period == 'monthly':
+                # 月计划：当月28日下午6点
+                deadline = now.replace(day=28, hour=18, minute=0, second=0, microsecond=0)
+                # 如果今天已经超过28日，使用下个月28日
+                if now.day > 28:
+                    if now.month == 12:
+                        deadline = deadline.replace(year=now.year + 1, month=1)
+                    else:
+                        deadline = deadline.replace(month=now.month + 1)
+                # 如果今天是28日且已过6点，使用下个月28日
+                elif now.day == 28 and now.hour >= 18:
+                    if now.month == 12:
+                        deadline = deadline.replace(year=now.year + 1, month=1)
+                    else:
+                        deadline = deadline.replace(month=now.month + 1)
+            
+            else:
+                # 其他计划类型：默认使用当天下午6点
+                deadline = now.replace(hour=18, minute=0, second=0, microsecond=0)
+                if now.hour >= 18:
+                    deadline = deadline + timedelta(days=1)
+        
+        # 根据计划类型生成不同的标题
+        plan_period_display = {
+            'daily': '日计划',
+            'weekly': '周计划',
+            'monthly': '月计划',
+        }.get(plan.plan_period, '计划')
         
         todo = create_todo_task(
             task_type='plan_progress_update',
             user=plan.responsible_person,
-            title=f'【计划进度更新】请更新计划进度：{plan.name}',
-            description=f'请更新计划《{plan.name}》的进度。截止时间：{deadline.strftime("%Y-%m-%d %H:%M")}',
+            title=f'【计划进度更新】请更新{plan_period_display}进度：{plan.name}',
+            description=f'请更新{plan_period_display}《{plan.name}》的进度。截止时间：{deadline.strftime("%Y-%m-%d %H:%M")}',
             related_object_type='plan',
             related_object_id=str(plan.id),
             deadline=deadline,
@@ -439,8 +489,8 @@ def generate_plan_progress_update_todo(plan: Plan, deadline: datetime = None) ->
         # 发送系统通知
         safe_approval_notification(
             user=plan.responsible_person,
-            title='【待办提醒】计划进度更新待办事项',
-            content=f'请更新计划《{plan.name}》的进度。截止时间：{deadline.strftime("%Y年%m月%d日 %H:%M")}',
+            title=f'【待办提醒】更新{plan_period_display}进度',
+            content=f'请更新{plan_period_display}《{plan.name}》的进度。截止时间：{deadline.strftime("%Y年%m月%d日 %H:%M")}',
             object_type='plan',
             object_id=str(plan.id),
             event='plan_progress_update',

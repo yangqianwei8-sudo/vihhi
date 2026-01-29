@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = '生成周计划分解待办事项'
+    help = '生成周计划创建待办事项（每周五上午9点执行，截止时间为周五下午6点）'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -39,12 +39,17 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('【DRY RUN 模式】仅显示，不创建'))
         
         try:
-            # 计算截止时间：当天下午6点
+            # 计算截止时间：本周五下午6点
+            from datetime import datetime
             now = timezone.now()
-            deadline = now.replace(hour=18, minute=0, second=0, microsecond=0)
-            # 如果已经过了6点，使用明天下午6点
-            if now.hour >= 18:
-                deadline = deadline + timedelta(days=1)
+            today = now.date()
+            # 计算本周五（weekday: 0=Monday, 4=Friday）
+            days_until_friday = (4 - today.weekday()) % 7
+            if days_until_friday == 0 and now.hour >= 18:
+                # 如果今天是周五且已过6点，使用下周五
+                days_until_friday = 7
+            friday = today + timedelta(days=days_until_friday)
+            deadline = timezone.make_aware(datetime.combine(friday, datetime.min.time().replace(hour=18, minute=0)))
             
             if not dry_run:
                 todos = generate_plan_decomposition_todo(plan_type='weekly', deadline=deadline)

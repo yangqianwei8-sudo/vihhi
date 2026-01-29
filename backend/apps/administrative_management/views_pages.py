@@ -2904,72 +2904,102 @@ def seal_borrowing_create(request):
 def seal_borrowing_return(request, borrowing_id):
     """归还印章"""
     borrowing = get_object_or_404(SealBorrowing, id=borrowing_id)
+    seal = borrowing.seal
     permission_codes = get_user_permission_codes(request.user)
     
-    # 检查权限：借用人可以归还，或者有印章管理权限的人可以代为归还
-    can_return = (
-        borrowing.borrower == request.user or
-        _permission_granted('administrative_management.seal.view', permission_codes) or
-        _permission_granted('administrative_management.seal.manage', permission_codes)
+    # 判断是借用人提交归还，还是保管员确认归还
+    is_borrower = borrowing.borrower == request.user
+    is_keeper = seal.keeper == request.user
+    has_manage_permission = (
+        _permission_granted('administrative_management.seal.manage', permission_codes) or
+        _permission_granted('administrative_management.seal.view', permission_codes)
     )
     
-    if not can_return:
-        messages.error(request, '您没有权限归还此印章')
-        return redirect('admin_pages:seal_detail', seal_id=borrowing.seal.id)
-    
-    # 检查状态：只有借用中或已批准的状态可以归还
-    if borrowing.status not in ['borrowed', 'approved']:
-        messages.error(request, f'只有借用中或已批准状态的印章可以归还，当前状态：{borrowing.get_status_display()}')
-        return redirect('admin_pages:seal_detail', seal_id=borrowing.seal.id)
-    
     if request.method == 'POST':
-        actual_return_date = request.POST.get('actual_return_date')
-        return_notes = request.POST.get('return_notes', '').strip()
+        action = request.POST.get('action', 'submit_return')  # submit_return 或 confirm_return
         
-        if not actual_return_date:
-            messages.error(request, '请填写实际归还日期')
-            return redirect('admin_pages:seal_borrowing_return', borrowing_id=borrowing_id)
+        # 借用人提交归还申请
+        if action == 'submit_return' and is_borrower:
+            # 检查状态：只有借用中或已批准的状态可以提交归还
+            if borrowing.status not in ['borrowed', 'approved']:
+                messages.error(request, f'只有借用中或已批准状态的印章可以归还，当前状态：{borrowing.get_status_display()}')
+                return redirect('admin_pages:seal_detail', seal_id=seal.id)
+            
+            actual_return_date = request.POST.get('actual_return_date')
+            return_notes = request.POST.get('return_notes', '').strip()
+            
+            if not actual_return_date:
+                messages.error(request, '请填写实际归还日期')
+                return redirect('admin_pages:seal_borrowing_return', borrowing_id=borrowing_id)
+            
+            try:
+                from datetime import datetime
+                return_date = datetime.strptime(actual_return_date, '%Y-%m-%d').date()
+                
+                # 更新借用记录为待确认归还状态
+                borrowing.actual_return_date = return_date
+                borrowing.status = 'pending_return_confirmation'
+                if return_notes:
+                    borrowing.notes = (borrowing.notes + '\n归还备注：' + return_notes).strip()
+                borrowing.save()
+                
+                messages.success(request, f'归还申请已提交，等待保管员 {seal.keeper.get_full_name|default:seal.keeper.username} 确认归还')
+                return redirect('admin_pages:seal_detail', seal_id=seal.id)
+                
+            except ValueError:
+                messages.error(request, '归还日期格式不正确')
+                return redirect('admin_pages:seal_borrowing_return', borrowing_id=borrowing_id)
+            except Exception as e:
+                logger.exception('提交归还申请失败: %s', str(e))
+                messages.error(request, f'提交归还申请失败：{str(e)}')
+                return redirect('admin_pages:seal_detail', seal_id=seal.id)
         
-        try:
-            from datetime import datetime
-            return_date = datetime.strptime(actual_return_date, '%Y-%m-%d').date()
+        # 保管员确认归还
+        elif action == 'confirm_return' and (is_keeper or has_manage_permission):
+            # 检查状态：只有待确认归还状态可以确认
+            if borrowing.status != 'pending_return_confirmation':
+                messages.error(request, f'只有待确认归还状态的印章可以确认，当前状态：{borrowing.get_status_display()}')
+                return redirect('admin_pages:seal_detail', seal_id=seal.id)
             
-            # 更新借用记录
-            borrowing.actual_return_date = return_date
-            borrowing.return_received_by = request.user
-            borrowing.status = 'returned'
-            if return_notes:
-                borrowing.notes = (borrowing.notes + '\n归还备注：' + return_notes).strip()
-            borrowing.save()
-            
-            # 更新印章状态为可用
-            seal = borrowing.seal
-            seal.status = 'available'
-            seal.save(update_fields=['status'])
-            
-            messages.success(request, f'印章 {seal.seal_name} 已成功归还！')
+            try:
+                # 更新借用记录为已归还
+                borrowing.return_received_by = request.user
+                borrowing.status = 'returned'
+                borrowing.save()
+                
+                # 更新印章状态为可用
+                seal.status = 'available'
+                seal.save(update_fields=['status'])
+                
+                messages.success(request, f'印章 {seal.seal_name} 已成功确认归还！')
+                return redirect('admin_pages:seal_detail', seal_id=seal.id)
+                
+            except Exception as e:
+                logger.exception('确认归还失败: %s', str(e))
+                messages.error(request, f'确认归还失败：{str(e)}')
+                return redirect('admin_pages:seal_detail', seal_id=seal.id)
+        else:
+            messages.error(request, '您没有权限执行此操作')
             return redirect('admin_pages:seal_detail', seal_id=seal.id)
-            
-        except ValueError:
-            messages.error(request, '归还日期格式不正确')
-            return redirect('admin_pages:seal_borrowing_return', borrowing_id=borrowing_id)
-        except Exception as e:
-            logger.exception('归还印章失败: %s', str(e))
-            messages.error(request, f'归还印章失败：{str(e)}')
-            return redirect('admin_pages:seal_detail', seal_id=borrowing.seal.id)
     
-    # GET 请求，显示归还表单
+    # GET 请求，显示归还表单或确认页面
+    is_pending_confirmation = borrowing.status == 'pending_return_confirmation'
+    
     context = _context(
-        "归还印章",
+        "归还印章" if not is_pending_confirmation else "确认归还",
         "🔙",
-        f"归还印章：{borrowing.seal.seal_name}",
+        f"{'归还' if not is_pending_confirmation else '确认归还'}印章：{seal.seal_name}",
         request=request,
         use_administrative_nav=True
     )
     context.update({
         'borrowing': borrowing,
-        'seal': borrowing.seal,
+        'seal': seal,
         'default_return_date': timezone.now().date(),
+        'is_borrower': is_borrower,
+        'is_keeper': is_keeper,
+        'has_manage_permission': has_manage_permission,
+        'is_pending_confirmation': is_pending_confirmation,
     })
     return render(request, "administrative_management/seal_borrowing_return.html", context)
 
@@ -4996,12 +5026,12 @@ def seal_detail(request, seal_id):
         logger.exception('获取印章借用记录失败: %s', str(e))
         borrowings = []
     
-    # 获取当前借用中的记录（状态为 borrowed 或 approved）
+    # 获取当前借用中的记录（状态为 borrowed、approved 或 pending_return_confirmation）
     current_borrowing = None
     try:
         current_borrowing = SealBorrowing.objects.filter(
             seal=seal,
-            status__in=['borrowed', 'approved']
+            status__in=['borrowed', 'approved', 'pending_return_confirmation']
         ).select_related('borrower', 'approver').order_by('-borrowing_date').first()
     except Exception as e:
         logger.exception('获取当前借用记录失败: %s', str(e))
@@ -5017,6 +5047,7 @@ def seal_detail(request, seal_id):
         'seal': seal,
         'borrowings': borrowings,
         'current_borrowing': current_borrowing,
+        'user': request.user,  # 传递当前用户，用于判断权限
     })
     return render(request, "administrative_management/seal_detail.html", context)
 

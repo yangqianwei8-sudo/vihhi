@@ -49,23 +49,20 @@ WORKFLOW_ENGINE_MENU = [
         'expanded': False,
         'children': [
             {
-                'id': 'pending_approvals',
+                'id': 'approval_list_pending',
                 'label': '待我审批',
-                'icon': '⏳',
+                'icon': '✅',
                 'url_name': 'workflow_engine:approval_list',
-                'url_query': 'tab=pending',
-                # 没传 tab 时默认也是 pending，这里一起视为激活
-                'active_when': {'tab': ['pending', '']},
+                'url_params': {'tab': 'pending'},
                 'permission': 'workflow_engine.view',
                 'path_keywords': ['approval', 'approvals'],
             },
             {
-                'id': 'historical_approvals',
+                'id': 'approval_list_historical',
                 'label': '历史审批',
-                'icon': '🗂️',
+                'icon': '📜',
                 'url_name': 'workflow_engine:approval_list',
-                'url_query': 'tab=historical',
-                'active_when': {'tab': ['historical']},
+                'url_params': {'tab': 'historical'},
                 'permission': 'workflow_engine.view',
                 'path_keywords': ['approval', 'approvals'],
             },
@@ -82,7 +79,7 @@ WORKFLOW_ENGINE_MENU = [
 ]
 
 
-def _build_workflow_engine_sidebar_nav(permission_set, request_path=None, user=None, request=None):
+def _build_workflow_engine_sidebar_nav(permission_set, request_path=None, user=None):
     """生成审批引擎模块的左侧菜单导航（分组格式）
     
     Args:
@@ -145,33 +142,59 @@ def _build_workflow_engine_sidebar_nav(permission_set, request_path=None, user=N
             if item.get('url_name'):
                 try:
                     url = reverse(item['url_name'])
+                    # 如果有url_params，添加到URL中
+                    if item.get('url_params'):
+                        from urllib.parse import urlencode
+                        params = urlencode(item['url_params'])
+                        url = f"{url}?{params}"
                 except Exception:
                     pass
-            if url != '#' and item.get('url_query'):
-                joiner = '&' if '?' in url else '?'
-                url = f"{url}{joiner}{item['url_query']}"
             
             # 判断是否激活
             is_active = False
-            if request_path and item.get('path_keywords'):
-                for keyword in item['path_keywords']:
-                    if keyword in request_path:
-                        is_active = True
-                        break
-            
-            # 额外：按查询参数判定激活（用于拆分“待我审批/历史审批”）
-            if is_active and request is not None and item.get('active_when'):
-                try:
-                    active_when = item.get('active_when') or {}
-                    for key, allowed_values in active_when.items():
-                        allowed_values = allowed_values if isinstance(allowed_values, (list, tuple, set)) else [allowed_values]
-                        current_val = (request.GET.get(key) or '')
-                        if current_val not in allowed_values:
-                            is_active = False
+            if request_path:
+                # 如果有url_params，需要检查URL参数是否匹配
+                if item.get('url_params'):
+                    # 解析当前请求的查询参数
+                    from urllib.parse import urlparse, parse_qs
+                    parsed = urlparse(request_path)
+                    query_params = parse_qs(parsed.query)
+                    # 检查路径关键词是否匹配
+                    path_match = False
+                    if item.get('path_keywords'):
+                        for keyword in item['path_keywords']:
+                            if keyword in request_path:
+                                path_match = True
+                                break
+                    else:
+                        # 如果没有path_keywords，检查URL路径是否匹配
+                        base_url = reverse(item['url_name']) if item.get('url_name') else ''
+                        if base_url and request_path.startswith(base_url):
+                            path_match = True
+                    
+                    if path_match:
+                        # 检查url_params中的每个参数是否匹配
+                        match = True
+                        for key, value in item['url_params'].items():
+                            # 如果请求中没有该参数，检查是否为默认值
+                            if key not in query_params:
+                                # 对于tab参数，如果没有指定且菜单项是pending，则认为是匹配的（默认值）
+                                if key == 'tab' and value == 'pending':
+                                    match = True
+                                else:
+                                    match = False
+                                    break
+                            elif str(query_params[key][0]) != str(value):
+                                match = False
+                                break
+                        if match:
+                            is_active = True
+                elif item.get('path_keywords'):
+                    # 没有url_params时，只检查path_keywords
+                    for keyword in item['path_keywords']:
+                        if keyword in request_path:
+                            is_active = True
                             break
-                except Exception:
-                    # 容错：查询参数判定失败时，不影响基础路径匹配
-                    pass
             
             children.append({
                 'id': item.get('id', ''),
@@ -208,11 +231,9 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
     }
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
-        # 注意：Django 的 auth 上下文处理器已经自动提供了 context['user'] = request.user
-        # 这里不需要再次设置，避免覆盖或混淆
-        # context['user'] = request.user  # 已移除：让 Django 上下文处理器自动处理
+        context['user'] = request.user
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        sidebar_nav = _build_workflow_engine_sidebar_nav(permission_set, request.path, request.user, request=request)
+        sidebar_nav = _build_workflow_engine_sidebar_nav(permission_set, request.path, request.user)
         context['sidebar_menu'] = sidebar_nav
         context['sidebar_nav'] = sidebar_nav  # 为三栏布局模板提供
         # 设置侧边栏标题和副标题
@@ -326,7 +347,7 @@ def workflow_home(request):
     page_context.update(context)
     
     # 添加 sidebar_nav（如果 _context 中已设置，这里可以覆盖或保留）
-    page_context['sidebar_menu'] = _build_workflow_engine_sidebar_nav(permission_codes, request_path=request.path, user=request.user, request=request)
+    page_context['sidebar_menu'] = _build_workflow_engine_sidebar_nav(permission_codes, request_path=request.path, user=request.user)
     
     # 添加 top_actions 以避免模板警告（如果需要，可以在这里添加操作按钮）
     page_context.setdefault('top_actions', [])
@@ -689,10 +710,6 @@ def approval_list(request):
     # 获取标签页参数
     tab = request.GET.get('tab', 'pending')
     per_page = request.GET.get('per_page', 20)
-
-    # “我提交的审批”统一归到“我的申请”页面，审批列表仅保留：待我审批、历史审批
-    if tab == 'my_submitted':
-        return redirect('workflow_engine:my_application_list')
     
     # 获取筛选参数
     search = request.GET.get('search', '').strip()
@@ -705,9 +722,15 @@ def approval_list(request):
     # 历史审批 - 用户作为审批人审批过的所有记录（已完成的）
     historical_approvals = ApprovalEngine.get_my_historical_approvals(request.user)
     
+    # 我提交的审批（所有我作为申请人提交的审批）
+    my_applications = ApprovalEngine.get_my_applications(request.user)
+    my_submitted_approvals = my_applications
+    
     # 根据标签页选择数据
     if tab == 'historical':
         items = historical_approvals
+    elif tab == 'my_submitted':
+        items = my_submitted_approvals
     else:
         items = pending_approvals
     
@@ -751,9 +774,11 @@ def approval_list(request):
         'tab': tab,
         'pending_approvals': pending_approvals,
         'historical_approvals': historical_approvals,
+        'my_submitted_approvals': my_submitted_approvals,
         'page_obj': page_obj,
         'pending_count': pending_approvals.count(),
         'historical_count': historical_approvals.count(),
+        'my_submitted_count': my_submitted_approvals.count(),
         'column_settings_btn': True,  # 启用列设置按钮
         'workflows': workflows,  # 流程列表，用于筛选
     })

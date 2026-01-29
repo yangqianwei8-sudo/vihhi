@@ -9,14 +9,49 @@ import logging
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav, _build_scene_groups
 
+# Fallback: 如果 _build_unified_sidebar_nav 不存在，提供简单实现
+try:
+    from backend.core.views import _build_unified_sidebar_nav
+except ImportError:
+    def _build_unified_sidebar_nav(menu_structure, permission_set, active_id=None):
+        """简单的侧边栏导航构建函数（fallback）"""
+        nav = []
+        for item in menu_structure:
+            if item.get('permission') and not _permission_granted(item['permission'], permission_set):
+                continue
+            nav_item = {
+                'label': item.get('label', ''),
+                'url': reverse(item['url_name']) if item.get('url_name') else '#',
+                'active': item.get('id') == active_id,
+            }
+            if item.get('children'):
+                nav_item['children'] = []
+                for child in item['children']:
+                    if child.get('permission') and not _permission_granted(child['permission'], permission_set):
+                        continue
+                    nav_item['children'].append({
+                        'label': child.get('label', ''),
+                        'url': reverse(child['url_name']) if child.get('url_name') else '#',
+                        'active': child.get('id') == active_id,
+                    })
+            nav.append(nav_item)
+        return nav
+
 logger = logging.getLogger(__name__)
 
 
 # 使用统一的顶部导航菜单生成函数（已从 backend.core.views 导入）
 
 
-# ==================== 收发管理模块左侧菜单结构 =====================
-DELIVERY_MANAGEMENT_MENU = [
+# ==================== 收文管理模块左侧菜单结构 =====================
+INCOMING_DOCUMENT_MENU_STRUCTURE = [
+    {
+        'id': 'incoming_document_home',
+        'label': '收文管理首页',
+        'icon': '🏠',
+        'url_name': 'delivery_pages:incoming_document_home',
+        'permission': 'delivery_center.view',
+    },
     {
         'id': 'incoming_document',
         'label': '收文管理',
@@ -25,12 +60,31 @@ DELIVERY_MANAGEMENT_MENU = [
         'children': [
             {
                 'id': 'incoming_document_list',
-                'label': '创建收文',
+                'label': '收文列表',
                 'icon': '📋',
                 'url_name': 'delivery_pages:incoming_document_list',
                 'permission': 'delivery_center.view',
             },
+            {
+                'id': 'incoming_document_create',
+                'label': '创建收文',
+                'icon': '➕',
+                'url_name': 'delivery_pages:incoming_document_create',
+                'permission': 'delivery_center.create',
+            },
         ]
+    },
+]
+
+
+# ==================== 发文管理模块左侧菜单结构 =====================
+OUTGOING_DOCUMENT_MENU_STRUCTURE = [
+    {
+        'id': 'outgoing_document_home',
+        'label': '发文管理首页',
+        'icon': '🏠',
+        'url_name': 'delivery_pages:outgoing_document_home',
+        'permission': 'delivery_center.view',
     },
     {
         'id': 'outgoing_document',
@@ -40,9 +94,38 @@ DELIVERY_MANAGEMENT_MENU = [
         'children': [
             {
                 'id': 'outgoing_document_list',
-                'label': '创建发文',
+                'label': '发文列表',
                 'icon': '📋',
                 'url_name': 'delivery_pages:outgoing_document_list',
+                'permission': 'delivery_center.view',
+            },
+            {
+                'id': 'outgoing_document_create',
+                'label': '创建发文',
+                'icon': '➕',
+                'url_name': 'delivery_pages:outgoing_document_create',
+                'permission': 'delivery_center.create',
+            },
+            {
+                'id': 'outgoing_document_performance_report',
+                'label': '效能报告',
+                'icon': '📊',
+                'url_name': 'delivery_pages:outgoing_document_performance_report',
+                'permission': 'delivery_center.view',
+            },
+        ]
+    },
+    {
+        'id': 'outgoing_document_receipt',
+        'label': '发出跟踪',
+        'icon': '✅',
+        'permission': 'delivery_center.view',
+        'children': [
+            {
+                'id': 'outgoing_document_receipt_list',
+                'label': '跟踪列表',
+                'icon': '📋',
+                'url_name': 'delivery_pages:outgoing_document_receipt_list',
                 'permission': 'delivery_center.view',
             },
         ]
@@ -60,6 +143,13 @@ DELIVERY_MANAGEMENT_MENU = [
                 'url_name': 'delivery_pages:express_company_list',
                 'permission': 'delivery_center.view',
             },
+            {
+                'id': 'express_company_create',
+                'label': '新建快递公司',
+                'icon': '➕',
+                'url_name': 'delivery_pages:express_company_create',
+                'permission': 'delivery_center.view',
+            },
         ]
     },
     {
@@ -70,8 +160,8 @@ DELIVERY_MANAGEMENT_MENU = [
         'children': [
             {
                 'id': 'file_category_manage',
-                'label': '创建文件分类',
-                'icon': '➕',
+                'label': '文件分类管理',
+                'icon': '📁',
                 'url_name': 'delivery_pages:file_category_manage',
                 'permission': 'delivery_center.view',
             },
@@ -87,6 +177,11 @@ DELIVERY_MANAGEMENT_MENU = [
 ]
 
 
+# ==================== 兼容旧代码：保留旧的菜单结构（已废弃）====================
+# 注意：此菜单结构已废弃，仅用于向后兼容
+DELIVERY_MANAGEMENT_MENU = INCOMING_DOCUMENT_MENU_STRUCTURE + OUTGOING_DOCUMENT_MENU_STRUCTURE
+
+
 def _get_active_id_from_path(request_path):
     """
     从请求路径推断激活的菜单项ID
@@ -100,25 +195,43 @@ def _get_active_id_from_path(request_path):
     if not request_path:
         return None
     
-    # URL路径到菜单ID的映射
-    path_to_id_map = {
+    # URL路径到菜单ID的映射（收文管理）
+    incoming_path_to_id_map = {
+        '/incoming-document/home': 'incoming_document_home',
+        '/incoming-document/create': 'incoming_document_create',
         '/incoming-document/': 'incoming_document_list',
+    }
+    
+    # URL路径到菜单ID的映射（发文管理）
+    outgoing_path_to_id_map = {
+        '/outgoing-document/home': 'outgoing_document_home',
+        '/outgoing-document/create': 'outgoing_document_create',
+        '/outgoing-document/performance-report': 'outgoing_document_performance_report',
+        '/outgoing-document/receipt': 'outgoing_document_receipt_list',
+        '/outgoing-document/tracking': 'outgoing_document_receipt_list',
         '/outgoing-document/': 'outgoing_document_list',
+        '/express-company/create': 'express_company_create',
         '/express-company/': 'express_company_list',
         '/file-category/manage': 'file_category_manage',
         '/file-template/manage': 'file_template_manage',
     }
     
-    for path_pattern, menu_id in path_to_id_map.items():
+    # 先检查收文管理路径
+    for path_pattern, menu_id in incoming_path_to_id_map.items():
+        if path_pattern in request_path:
+            return menu_id
+    
+    # 再检查发文管理路径
+    for path_pattern, menu_id in outgoing_path_to_id_map.items():
         if path_pattern in request_path:
             return menu_id
     
     return None
 
 
-def _build_delivery_sidebar_nav(permission_set, request_path=None, active_id=None):
+def _build_incoming_document_sidebar_nav(permission_set, request_path=None, active_id=None):
     """
-    生成收发管理模块左侧菜单
+    生成收文管理模块左侧菜单（独立菜单）
     
     参数:
         permission_set: 用户权限集合（set）
@@ -126,74 +239,77 @@ def _build_delivery_sidebar_nav(permission_set, request_path=None, active_id=Non
         active_id: 当前激活的菜单项ID（可选，如果提供则优先使用）
     
     返回:
-        list: 菜单项列表，每个菜单项包含：
-            - id: 菜单项ID
-            - label: 菜单项标签
-            - icon: 菜单项图标
-            - url: 菜单项URL（如果有）
-            - active: 是否激活
-            - expanded: 是否展开
-            - children: 子菜单项列表（如果有）
+        list: 菜单项列表（统一格式）
     """
     # 如果没有提供active_id，尝试从request_path推断
     if active_id is None and request_path:
         active_id = _get_active_id_from_path(request_path)
     
-    menu = []
-    
-    for menu_group in DELIVERY_MANAGEMENT_MENU:
-        # 检查父菜单权限
-        permission = menu_group.get('permission')
-        if permission and not _permission_granted(permission, permission_set):
-            continue
-        
-        # 处理子菜单
-        children = []
-        for child in menu_group.get('children', []):
-            # 检查子菜单权限
-            if not _permission_granted(child.get('permission'), permission_set):
-                continue
-            
-            # 获取URL
-            url_name = child.get('url_name')
-            url = '#'
-            if url_name:
-                try:
-                    url = reverse(url_name)
-                except NoReverseMatch:
-                    url = '#'
-            
-            # 判断是否激活
-            is_active = child.get('id') == active_id
-            
-            children.append({
-                'id': child.get('id'),
-                'label': child.get('label'),
-                'icon': child.get('icon'),
-                'url': url,
-                'active': is_active,
-            })
-        
-        # 如果父菜单没有可见的子菜单，跳过
-        if not children:
-            continue
-        
-        # 判断父菜单是否激活（任意子菜单激活则父菜单激活）
-        group_active = any(child.get('id') == active_id for child in menu_group.get('children', []))
-        
-        menu.append({
-            'id': menu_group.get('id'),
-            'label': menu_group.get('label'),
-            'icon': menu_group.get('icon'),
-            'active': group_active,
-            'expanded': group_active,  # 如果有激活项，默认展开（与商机管理格式一致）
-            'children': children,
-        })
-    
-    return menu
+    # 使用统一的菜单构建函数
+    return _build_unified_sidebar_nav(INCOMING_DOCUMENT_MENU_STRUCTURE, permission_set, active_id=active_id)
 
 
-def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None):
+def _build_outgoing_document_sidebar_nav(permission_set, request_path=None, active_id=None):
+    """
+    生成发文管理模块左侧菜单（独立菜单）
+    
+    参数:
+        permission_set: 用户权限集合（set）
+        request_path: 请求路径（可选，用于推断active_id）
+        active_id: 当前激活的菜单项ID（可选，如果提供则优先使用）
+    
+    返回:
+        list: 菜单项列表（统一格式）
+    """
+    # 如果没有提供active_id，尝试从request_path推断
+    if active_id is None and request_path:
+        active_id = _get_active_id_from_path(request_path)
+    
+    # 使用统一的菜单构建函数
+    return _build_unified_sidebar_nav(OUTGOING_DOCUMENT_MENU_STRUCTURE, permission_set, active_id=active_id)
+
+
+def _build_delivery_sidebar_nav(permission_set, request_path=None, active_id=None):
+    """
+    生成收发管理模块左侧菜单（兼容函数，根据路径自动选择收文或发文菜单）
+    
+    注意：此函数已废弃，建议直接使用 _build_incoming_document_sidebar_nav 或 _build_outgoing_document_sidebar_nav
+    
+    参数:
+        permission_set: 用户权限集合（set）
+        request_path: 请求路径（可选，用于推断active_id和选择菜单类型）
+        active_id: 当前激活的菜单项ID（可选，如果提供则优先使用）
+    
+    返回:
+        list: 菜单项列表
+    """
+    # 根据路径自动选择收文或发文菜单
+    if request_path:
+        if '/incoming-document' in request_path:
+            return _build_incoming_document_sidebar_nav(permission_set, request_path, active_id)
+        elif '/outgoing-document' in request_path or '/express-company' in request_path or '/file-category' in request_path or '/file-template' in request_path:
+            return _build_outgoing_document_sidebar_nav(permission_set, request_path, active_id)
+    
+    # 默认返回空菜单（如果无法判断路径）
+    return []
+
+
+def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None, active_menu_id=None):
+    """
+    构建页面上下文
+    
+    参数:
+        page_title: 页面标题
+        page_icon: 页面图标
+        description: 页面描述
+        summary_cards: 摘要卡片列表
+        sections: 章节列表
+        request: 请求对象
+        active_menu_id: 激活的菜单项ID（可选，如果提供则优先使用）
+    
+    返回:
+        dict: 页面上下文
+    """
     context = {
         "page_title": page_title,
         "page_icon": page_icon,
@@ -206,13 +322,38 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
     if request and request.user.is_authenticated:
         permission_set = get_user_permission_codes(request.user)
         context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
-        # 添加左侧菜单
-        context['sidebar_nav'] = _build_delivery_sidebar_nav(permission_set, request.path)
-        context['sidebar_title'] = '交付客户'
-        context['sidebar_subtitle'] = 'Delivery Customer'
+        
+        # 根据路径自动选择收文或发文菜单
+        if request.path:
+            if '/incoming-document' in request.path:
+                # 收文管理菜单
+                context['sidebar_nav'] = _build_incoming_document_sidebar_nav(permission_set, request.path, active_id=active_menu_id)
+                context['module_sidebar_nav'] = context['sidebar_nav']  # 兼容变量
+                context['sidebar_title'] = '收文管理'
+                context['sidebar_subtitle'] = 'Incoming Document'
+            elif '/outgoing-document' in request.path or '/express-company' in request.path or '/file-category' in request.path or '/file-template' in request.path:
+                # 发文管理菜单
+                context['sidebar_nav'] = _build_outgoing_document_sidebar_nav(permission_set, request.path, active_id=active_menu_id)
+                context['module_sidebar_nav'] = context['sidebar_nav']  # 兼容变量
+                context['sidebar_title'] = '发文管理'
+                context['sidebar_subtitle'] = 'Outgoing Document'
+            else:
+                # 其他路径，使用兼容函数（向后兼容）
+                context['sidebar_nav'] = _build_delivery_sidebar_nav(permission_set, request.path, active_id=active_menu_id)
+                context['module_sidebar_nav'] = context['sidebar_nav']  # 兼容变量
+                context['sidebar_title'] = '交付客户'
+                context['sidebar_subtitle'] = 'Delivery Customer'
+        else:
+            context['sidebar_nav'] = []
+            context['module_sidebar_nav'] = []
+            context['sidebar_title'] = '交付客户'
+            context['sidebar_subtitle'] = 'Delivery Customer'
     else:
         context['full_top_nav'] = []
         context['sidebar_nav'] = []
+        context['module_sidebar_nav'] = []
+        context['sidebar_title'] = '交付客户'
+        context['sidebar_subtitle'] = 'Delivery Customer'
     
     return context
 
@@ -4129,12 +4270,12 @@ def incoming_document_home(request):
         request=request,
     )
     
-    # 设置侧边栏导航
-    delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path, active_id='incoming_document_home')
+    # 设置侧边栏导航（使用收文管理独立菜单）
+    delivery_sidebar_nav = _build_incoming_document_sidebar_nav(permission_set, request.path, active_id='incoming_document_home')
     page_context['sidebar_nav'] = delivery_sidebar_nav
-    page_context['sidebar_nav'] = delivery_sidebar_nav
-    page_context['sidebar_title'] = '收发管理'
-    page_context['sidebar_subtitle'] = 'Delivery Management'
+    page_context['module_sidebar_nav'] = delivery_sidebar_nav
+    page_context['sidebar_title'] = '收文管理'
+    page_context['sidebar_subtitle'] = 'Incoming Document'
     
     # 合并所有数据
     page_context.update(context)
@@ -4150,7 +4291,7 @@ def incoming_document_list(request):
     from backend.apps.delivery_customer.models import IncomingDocument
     
     permission_set = get_user_permission_codes(request.user)
-    delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path, active_id='incoming_document_list')
+    delivery_sidebar_nav = _build_incoming_document_sidebar_nav(permission_set, request.path, active_id='incoming_document_list')
     
     # 获取查询参数
     search = request.GET.get('search', '').strip()
@@ -4711,12 +4852,12 @@ def outgoing_document_home(request):
         request=request,
     )
     
-    # 设置侧边栏导航
-    delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path, active_id='outgoing_document_home')
+    # 设置侧边栏导航（使用发文管理独立菜单）
+    delivery_sidebar_nav = _build_outgoing_document_sidebar_nav(permission_set, request.path, active_id='outgoing_document_home')
     page_context['sidebar_nav'] = delivery_sidebar_nav
-    page_context['sidebar_nav'] = delivery_sidebar_nav
-    page_context['sidebar_title'] = '收发管理'
-    page_context['sidebar_subtitle'] = 'Delivery Management'
+    page_context['module_sidebar_nav'] = delivery_sidebar_nav
+    page_context['sidebar_title'] = '发文管理'
+    page_context['sidebar_subtitle'] = 'Outgoing Document'
     
     # 合并所有数据
     page_context.update(context)
@@ -4732,7 +4873,7 @@ def outgoing_document_list(request):
     from backend.apps.delivery_customer.models import OutgoingDocument
     
     permission_set = get_user_permission_codes(request.user)
-    delivery_sidebar_nav = _build_delivery_sidebar_nav(permission_set, request.path, active_id='outgoing_document_list')
+    delivery_sidebar_nav = _build_outgoing_document_sidebar_nav(permission_set, request.path, active_id='outgoing_document_list')
     
     # 获取查询参数
     search = request.GET.get('search', '').strip()

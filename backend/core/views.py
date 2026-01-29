@@ -354,10 +354,7 @@ def home(request):
             return resp
         
         user = request.user
-        
-        # 调试：记录当前用户信息
-        logger.debug(f'home视图 - request.user.id: {user.id if user.is_authenticated else None}, username: {user.get_username() if user.is_authenticated else "anonymous"}')
-        
+
         # 获取用户权限（可能因为数据库连接失败而抛出异常）
         try:
             permission_set = get_user_permission_codes(user)

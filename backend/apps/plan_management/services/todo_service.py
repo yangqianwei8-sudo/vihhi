@@ -257,14 +257,21 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
         if filter_start_date:
             try:
                 start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
-                qs = qs.filter(created_time__gte=start_date)
+                if model_type == 'plan':
+                    start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+                    qs = qs.filter(end_time__gte=start_datetime)
+                elif model_type == 'goal':
+                    qs = qs.filter(end_date__gte=start_date)
             except ValueError:
                 pass
         if filter_end_date:
             try:
                 end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
-                end_datetime = datetime.combine(end_date, datetime.max.time())
-                qs = qs.filter(created_time__lte=end_datetime)
+                if model_type == 'plan':
+                    end_datetime = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+                    qs = qs.filter(start_time__lte=end_datetime)
+                elif model_type == 'goal':
+                    qs = qs.filter(start_date__lte=end_date)
             except ValueError:
                 pass
         return qs
@@ -309,7 +316,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
         # 应用日期筛选条件（负责人和部门筛选已经在查询时应用）
         should_include = True
         if filter_start_date or filter_end_date:
-            # 如果有关联对象，检查关联对象的创建时间
+            # 如果有关联对象，检查关联对象的执行时间范围
             if todo.related_object_type == 'plan' and todo.related_object_id:
                 try:
                     plan = Plan.objects.filter(id=todo.related_object_id).first()
@@ -317,14 +324,16 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                         if filter_start_date:
                             try:
                                 start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
-                                if plan.created_time.date() < start_date:
+                                # 检查计划的结束时间是否在筛选范围内
+                                if plan.end_time and plan.end_time.date() < start_date:
                                     should_include = False
                             except (ValueError, AttributeError):
                                 pass
                         if should_include and filter_end_date:
                             try:
                                 end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
-                                if plan.created_time.date() > end_date:
+                                # 检查计划的开始时间是否在筛选范围内
+                                if plan.start_time and plan.start_time.date() > end_date:
                                     should_include = False
                             except (ValueError, AttributeError):
                                 pass
@@ -337,32 +346,38 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
                         if filter_start_date:
                             try:
                                 start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
-                                if goal.created_time.date() < start_date:
+                                # 检查目标的结束日期是否在筛选范围内
+                                if goal.end_date and goal.end_date < start_date:
                                     should_include = False
                             except (ValueError, AttributeError):
                                 pass
                         if should_include and filter_end_date:
                             try:
                                 end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
-                                if goal.created_time.date() > end_date:
+                                # 检查目标的开始日期是否在筛选范围内
+                                if goal.start_date and goal.start_date > end_date:
                                     should_include = False
                             except (ValueError, AttributeError):
                                 pass
                 except Exception:
                     pass
             else:
-                # 如果没有关联对象，使用待办本身的创建时间
+                # 如果没有关联对象，使用待办本身的截止时间（deadline）或创建时间
                 if filter_start_date:
                     try:
                         start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
-                        if todo.created_at.date() < start_date:
+                        # 优先使用deadline，如果没有则使用created_at
+                        check_date = todo.deadline.date() if todo.deadline else todo.created_at.date()
+                        if check_date < start_date:
                             should_include = False
                     except (ValueError, AttributeError):
                         pass
                 if should_include and filter_end_date:
                     try:
                         end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
-                        if todo.created_at.date() > end_date:
+                        # 优先使用deadline，如果没有则使用created_at
+                        check_date = todo.deadline.date() if todo.deadline else todo.created_at.date()
+                        if check_date > end_date:
                             should_include = False
                     except (ValueError, AttributeError):
                         pass
@@ -782,9 +797,9 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             'created_at': plan.published_at or plan.created_time,
         })
     
-    # ========== 3. 待执行目标（accepted，owner=user）==========
+    # ========== 3. 待执行目标（published，owner=user）==========
     # 根据筛选条件决定查询逻辑
-    # 待执行目标：owner=筛选的负责人（因为目标已接收，等待执行）
+    # 待执行目标：owner=筛选的负责人（因为目标已发布，等待执行）
     if filter_responsible_person_id:
         # 筛选了负责人，查询该负责人拥有的待执行目标
         try:
@@ -794,7 +809,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             if filter_user:
                 accepted_goals = StrategicGoal.objects.filter(
                     level='personal',
-                    status='accepted',
+                    status='published',
                     owner=filter_user
                 ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
                 # 应用部门筛选（基于owner的部门）
@@ -812,7 +827,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             department_users = User.objects.filter(department_id=filter_department_id, is_active=True)
             accepted_goals = StrategicGoal.objects.filter(
                 level='personal',
-                status='accepted',
+                status='published',
                 owner__in=department_users
             ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
         except (ValueError, AttributeError):
@@ -821,7 +836,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
         # 没有筛选，查询当前用户拥有的个人目标
         accepted_goals = StrategicGoal.objects.filter(
             level='personal',
-            status='accepted',
+            status='published',
             owner=user
         ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
     
@@ -829,16 +844,16 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
         todos.append({
             'type': 'goal_execute',
             'title': f'待执行目标：{goal.name}',
-            'description': f'目标已接收，请开始执行',
+            'description': f'目标已发布，请开始执行',
             'priority': 'medium',
             'url': reverse('plan_pages:strategic_goal_detail', args=[goal.id]),
             'object': goal,
-            'created_at': goal.accepted_at or goal.created_time,
+            'created_at': goal.published_at or goal.created_time,
         })
     
-    # ========== 4. 待执行计划（accepted，owner=user）==========
+    # ========== 4. 待执行计划（published，owner=user）==========
     # 根据筛选条件决定查询逻辑
-    # 待执行计划：owner=筛选的负责人（因为计划已接收，等待执行）
+    # 待执行计划：owner=筛选的负责人（因为计划已发布，等待执行）
     if filter_responsible_person_id:
         # 筛选了负责人，查询该负责人拥有的待执行计划
         try:
@@ -848,7 +863,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             if filter_user:
                 accepted_plans = Plan.objects.filter(
                     level='personal',
-                    status='accepted',
+                    status='published',
                     owner=filter_user
                 ).exclude(status__in=['completed', 'cancelled']).select_related('parent_plan', 'responsible_person')
                 # 应用部门筛选（基于owner的部门）
@@ -866,7 +881,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             department_users = User.objects.filter(department_id=filter_department_id, is_active=True)
             accepted_plans = Plan.objects.filter(
                 level='personal',
-                status='accepted',
+                status='published',
                 owner__in=department_users
             ).exclude(status__in=['completed', 'cancelled']).select_related('parent_plan', 'responsible_person')
         except (ValueError, AttributeError):
@@ -875,7 +890,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
         # 没有筛选，查询当前用户拥有的个人计划
         accepted_plans = Plan.objects.filter(
             level='personal',
-            status='accepted',
+            status='published',
             owner=user
         ).exclude(status__in=['completed', 'cancelled']).select_related('parent_plan', 'responsible_person')
     
@@ -883,11 +898,11 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
         todos.append({
             'type': 'plan_execute',
             'title': f'待执行计划：{plan.name}',
-            'description': f'计划已接收，请开始执行',
+            'description': f'计划已发布，请开始执行',
             'priority': 'medium',
             'url': reverse('plan_pages:plan_detail', args=[plan.id]),
             'object': plan,
-            'created_at': plan.accepted_at or plan.created_time,
+            'created_at': plan.published_at or plan.created_time,
         })
     
     # ========== 5. 今日应执行计划（in_progress，today在[start_time, end_time]）==========
@@ -985,7 +1000,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             if filter_user:
                 overdue_plans = Plan.objects.filter(
                     level='personal',
-                    status__in=['draft', 'published', 'accepted', 'in_progress'],
+                    status__in=['draft', 'published', 'in_progress'],
                     owner=filter_user,
                     end_time__lt=now
                 ).exclude(status__in=['completed', 'cancelled']).select_related('responsible_person')
@@ -1004,7 +1019,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             department_users = User.objects.filter(department_id=filter_department_id, is_active=True)
             overdue_plans = Plan.objects.filter(
                 level='personal',
-                status__in=['draft', 'published', 'accepted', 'in_progress'],
+                status__in=['draft', 'published', 'in_progress'],
                 owner__in=department_users,
                 end_time__lt=now
             ).exclude(status__in=['completed', 'cancelled']).select_related('responsible_person')
@@ -1043,7 +1058,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             if filter_user:
                 overdue_goals = StrategicGoal.objects.filter(
                     level='personal',
-                    status__in=['published', 'accepted', 'in_progress'],
+                    status__in=['published', 'in_progress'],
                     owner=filter_user,
                     end_date__lt=today
                 ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
@@ -1062,7 +1077,7 @@ def get_user_todos(user, filter_department_id=None, filter_responsible_person_id
             department_users = User.objects.filter(department_id=filter_department_id, is_active=True)
             overdue_goals = StrategicGoal.objects.filter(
                 level='personal',
-                status__in=['published', 'accepted', 'in_progress'],
+                status__in=['published', 'in_progress'],
                 owner__in=department_users,
                 end_date__lt=today
             ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person')
@@ -1203,14 +1218,21 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
         if filter_start_date:
             try:
                 start_date = datetime.strptime(filter_start_date, '%Y-%m-%d').date()
-                qs = qs.filter(created_time__gte=start_date)
+                if model_type == 'plan':
+                    start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+                    qs = qs.filter(end_time__gte=start_datetime)
+                elif model_type == 'goal':
+                    qs = qs.filter(end_date__gte=start_date)
             except ValueError:
                 pass
         if filter_end_date:
             try:
                 end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').date()
-                end_datetime = datetime.combine(end_date, datetime.max.time())
-                qs = qs.filter(created_time__lte=end_datetime)
+                if model_type == 'plan':
+                    end_datetime = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+                    qs = qs.filter(start_time__lte=end_datetime)
+                elif model_type == 'goal':
+                    qs = qs.filter(start_date__lte=end_date)
             except ValueError:
                 pass
         return qs
@@ -1536,7 +1558,7 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
     # 个人目标应该由 owner 执行，所以查询 owner=responsible_user 的目标
     accepted_goals = StrategicGoal.objects.filter(
         level='personal',
-        status='accepted',
+        status='published',
         owner=responsible_user
     ).exclude(status__in=['completed', 'cancelled']).select_related('parent_goal', 'responsible_person', 'owner')
     accepted_goals = apply_filters(accepted_goals, 'goal')
@@ -1545,18 +1567,18 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
         todos.append({
             'type': 'goal_execute',
             'title': f'待执行目标：{goal.name}',
-            'description': f'目标已接收，请开始执行',
+            'description': f'目标已发布，请开始执行',
             'priority': 'medium',
             'url': reverse('plan_pages:strategic_goal_detail', args=[goal.id]),
             'object': goal,
-            'created_at': goal.accepted_at or goal.created_time,
+            'created_at': goal.published_at or goal.created_time,
         })
     
     # ========== 待执行计划（负责人负责的）==========
     # 个人计划应该由 owner 执行，所以查询 owner=responsible_user 的计划
     accepted_plans = Plan.objects.filter(
         level='personal',
-        status='accepted',
+        status='published',
         owner=responsible_user
     ).exclude(status__in=['completed', 'cancelled']).select_related('parent_plan', 'responsible_person', 'owner')
     accepted_plans = apply_filters(accepted_plans, 'plan')
@@ -1565,11 +1587,11 @@ def get_responsible_todos(responsible_user, filter_department_id=None, filter_re
         todos.append({
             'type': 'plan_execute',
             'title': f'待执行计划：{plan.name}',
-            'description': f'计划已接收，请开始执行',
+            'description': f'计划已发布，请开始执行',
             'priority': 'medium',
             'url': reverse('plan_pages:plan_detail', args=[plan.id]),
             'object': plan,
-            'created_at': plan.accepted_at or plan.created_time,
+            'created_at': plan.published_at or plan.created_time,
         })
     
     # ========== 今日应执行计划（负责人负责的）==========

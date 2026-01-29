@@ -39,19 +39,24 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('【DRY RUN 模式】仅检查，不更新'))
         
         try:
-            # 查找所有状态为 accepted 的计划
-            accepted_plans = Plan.objects.filter(status='accepted')
+            # 查找所有状态为 published 的计划（根据新的状态流转规则）
+            published_plans = Plan.objects.filter(status='published')
             
-            self.stdout.write(f'找到 {accepted_plans.count()} 个已确认的计划')
+            self.stdout.write(f'找到 {published_plans.count()} 个已发布的计划')
             
             now = timezone.now()
-            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            # 检查是否到达计划开始日期的上午9点
+            today_9am = now.replace(hour=9, minute=0, second=0, microsecond=0)
             
             updated_count = 0
             
-            for plan in accepted_plans:
-                # 检查计划的 start_time 是否已到达（当天或之前）
-                if plan.start_time and plan.start_time <= today_start:
+            for plan in published_plans:
+                # 检查计划的 start_time 是否已到达（当天上午9点或之前）
+                if plan.start_time:
+                    plan_start_date = plan.start_time.date()
+                    today = now.date()
+                    # 如果计划开始日期是今天或之前，且当前时间已过上午9点，则自动转换
+                    if plan_start_date <= today and now >= today_9am:
                     if dry_run:
                         self.stdout.write(
                             self.style.WARNING(
@@ -77,7 +82,7 @@ class Command(BaseCommand):
                             )
             
             self.stdout.write('')
-            self.stdout.write(self.style.SUCCESS(f'检查完成：总计={accepted_plans.count()}, 更新={updated_count}'))
+            self.stdout.write(self.style.SUCCESS(f'检查完成：总计={published_plans.count()}, 更新={updated_count}'))
             
             if dry_run:
                 self.stdout.write(self.style.WARNING('\n这是试运行模式，未实际更新数据'))

@@ -1,73 +1,53 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/module_home_base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
-{% block pm_title %}
-  {% if page_icon %}{{ page_icon }} {% endif %}{% if page_title %}{{ page_title }}{% endif %}
-{% endblock pm_title %}
-
-{% block pm_subtitle %}
-  {% if description %}
-    <div class="pm-subtitle" style="font-size: 12px; color: var(--vh-text-muted, #6B7280); margin-top: 4px;">
-      {{ description }}
-    </div>
-  {% endif %}
-{% endblock pm_subtitle %}
-
-{% block pm_content %}
-    {% if summary_cards %}
-    <div class="row g-3 mb-4">
-        {% for card in summary_cards %}
-        <div class="col-lg-3 col-sm-6">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">{{ card.label }}</h5>
-                    <h3 class="card-text">{{ card.value }}</h3>
-                    {% if card.hint %}
-                    <p class="card-text text-muted small">{{ card.hint }}</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {% for section in sections %}
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-                <div>
-                    <h4 class="card-title">{{ section.title }}</h4>
-                    {% if section.description %}
-                    <p class="card-text text-muted">{{ section.description }}</p>
-                    {% endif %}
-                </div>
-                {% if section.action %}
-                <a class="btn btn-sm btn-outline-primary" href="{{ section.action.url }}">{{ section.action.label }}</a>
-                {% endif %}
-            </div>
-            <div class="row g-3">
-                {% for item in section.items %}
-                <div class="col-xl-3 col-lg-4 col-md-6">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                {% if item.icon %}{{ item.icon }} {% endif %}{{ item.label }}
-                            </h5>
-                            {% if item.description %}
-                            <p class="card-text">{{ item.description }}</p>
-                            {% endif %}
-                            {% if item.url %}
-                            <a href="{{ item.url }}" class="btn btn-sm btn-outline-primary">{{ item.link_label|default:"进入模块 →" }}</a>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
+{% block module_home_core_cards %}
+  {% if summary_cards %}
+  <div class="module-home-core-cards">
+    {% for card in summary_cards %}
+    <div class="module-home-core-card">
+      {% if card.icon %}
+      <div class="module-home-core-card-icon">{{ card.icon }}</div>
+      {% endif %}
+      <div class="module-home-core-card-label">{{ card.label }}</div>
+      <div class="module-home-core-card-value">{{ card.value }}</div>
+      {% if card.hint %}
+      <div class="module-home-core-card-subvalue">{{ card.hint }}</div>
+      {% endif %}
     </div>
     {% endfor %}
-{% endblock pm_content %}
+  </div>
+  {% endif %}
+{% endblock module_home_core_cards %}
+
+{% block module_home_custom_content %}
+  {% for section in sections %}
+  <div class="module-home-stats-card mb-4">
+    <div class="module-home-stats-card-title">{{ section.title }}</div>
+    {% if section.description %}
+    <p style="font-size: 14px; color: var(--vh-text-tertiary, #666666); margin-bottom: 16px;">{{ section.description }}</p>
+    {% endif %}
+    <div class="row g-3">
+      {% for item in section.items %}
+      <div class="col-xl-3 col-lg-4 col-md-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">
+              {% if item.icon %}{{ item.icon }} {% endif %}{{ item.label }}
+            </h5>
+            {% if item.description %}
+            <p class="card-text">{{ item.description }}</p>
+            {% endif %}
+            {% if item.url %}
+            <a href="{{ item.url }}" class="btn btn-sm btn-outline-primary">{{ item.link_label|default:"进入模块 →" }}</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+{% endblock module_home_custom_content %}

@@ -227,11 +227,8 @@ class PlanApprovalService:
                 if plan.status == 'draft':
                     plan.transition_to('published', user=instance.applicant)
                     logger.info(f'计划 {plan.plan_number} 启动审批通过，状态已更新为 published')
-                    
-                    # P2-3: 公司计划发布后，通知员工创建个人计划
-                    if plan.level == 'company':
-                        from backend.apps.plan_management.notifications import notify_company_plan_published
-                        notify_company_plan_published(plan)
+                    # 注意：公司计划发布后的通知处理已由信号处理器统一处理（signals.py）
+                    # 避免重复调用 notify_company_plan_published
             
             elif instance.workflow.code == PlanApprovalService.PLAN_CANCEL_WORKFLOW_CODE:
                 # 取消审批通过，将计划状态改为 cancelled

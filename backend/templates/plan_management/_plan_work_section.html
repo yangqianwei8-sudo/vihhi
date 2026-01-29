@@ -1,0 +1,101 @@
+{% comment %}
+工作计划显示片段（仅显示工作计划，不包含战略目标）
+参数：
+- plans_by_period: 按周期分类的计划字典 {monthly: [], weekly: [], daily: [], monthly_count: 0, weekly_count: 0, daily_count: 0}
+{% endcomment %}
+
+<!-- 工作计划（拆分为三个卡片：月计划、周计划、日计划） -->
+<div class="mb-4">
+  <!-- 工作计划：三个卡片 -->
+  <div class="pm-core-cards mb-4">
+    <!-- 月计划 -->
+    <div class="pm-my-work-card">
+      <div class="pm-card-title">月计划 ({{ plans_by_period.monthly_count|default:0 }})</div>
+      {% if plans_by_period.monthly %}
+      <ul class="pm-work-list">
+        {% for plan in plans_by_period.monthly %}
+        <li class="pm-work-item pm-plan-item">
+          <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
+          <div class="pm-plan-progress-row">
+            <div class="pm-plan-progress-info">
+              <span class="pm-plan-progress-label">完成率</span>
+              <span class="pm-plan-progress-value">{{ plan.progress|floatformat:1 }}%</span>
+            </div>
+            <div class="pm-plan-progress-bar-wrapper">
+              <div class="pm-plan-progress-bar">
+                <div class="pm-plan-progress-fill" style="width: {{ plan.progress }}%;"></div>
+              </div>
+            </div>
+            {% if plan.progress_status %}
+            <span class="badge {{ plan.progress_status.class }} pm-plan-status-badge">{{ plan.progress_status.label }}</span>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="pm-empty" style="padding: 20px;">暂无月计划</div>
+      {% endif %}
+    </div>
+    
+    <!-- 周计划 -->
+    <div class="pm-my-work-card">
+      <div class="pm-card-title">周计划 ({{ plans_by_period.weekly_count|default:0 }})</div>
+      {% if plans_by_period.weekly %}
+      <ul class="pm-work-list">
+        {% for plan in plans_by_period.weekly %}
+        <li class="pm-work-item pm-plan-item">
+          <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
+          <div class="pm-plan-progress-row">
+            <div class="pm-plan-progress-info">
+              <span class="pm-plan-progress-label">完成率</span>
+              <span class="pm-plan-progress-value">{{ plan.progress|floatformat:1 }}%</span>
+            </div>
+            <div class="pm-plan-progress-bar-wrapper">
+              <div class="pm-plan-progress-bar">
+                <div class="pm-plan-progress-fill" style="width: {{ plan.progress }}%;"></div>
+              </div>
+            </div>
+            {% if plan.progress_status %}
+            <span class="badge {{ plan.progress_status.class }} pm-plan-status-badge">{{ plan.progress_status.label }}</span>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="pm-empty" style="padding: 20px;">暂无周计划</div>
+      {% endif %}
+    </div>
+    
+    <!-- 日计划 -->
+    <div class="pm-my-work-card">
+      <div class="pm-card-title">日计划 ({{ plans_by_period.daily_count|default:0 }})</div>
+      {% if plans_by_period.daily %}
+      <ul class="pm-work-list">
+        {% for plan in plans_by_period.daily %}
+        <li class="pm-work-item pm-plan-item">
+          <a href="{{ plan.url }}" class="pm-work-item-title">{{ plan.title }}</a>
+          <div class="pm-plan-progress-row">
+            <div class="pm-plan-progress-info">
+              <span class="pm-plan-progress-label">完成率</span>
+              <span class="pm-plan-progress-value">{{ plan.progress|floatformat:1 }}%</span>
+            </div>
+            <div class="pm-plan-progress-bar-wrapper">
+              <div class="pm-plan-progress-bar">
+                <div class="pm-plan-progress-fill" style="width: {{ plan.progress }}%;"></div>
+              </div>
+            </div>
+            {% if plan.progress_status %}
+            <span class="badge {{ plan.progress_status.class }} pm-plan-status-badge">{{ plan.progress_status.label }}</span>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="pm-empty" style="padding: 20px;">暂无日计划</div>
+      {% endif %}
+    </div>
+  </div>
+</div>

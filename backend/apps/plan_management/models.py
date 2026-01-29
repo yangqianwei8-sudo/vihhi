@@ -9,6 +9,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from backend.apps.system_management.models import User, Department
+from decimal import Decimal
 import os
 
 
@@ -47,7 +48,6 @@ class StrategicGoal(models.Model):
     INDICATOR_TYPE_CHOICES = [
         ('numeric', '数值型'),
         ('percentage', '百分比型'),
-        ('boolean', '布尔型'),
         ('text', '文本型'),
     ]
     
@@ -63,6 +63,7 @@ class StrategicGoal(models.Model):
     indicator_name = models.CharField(max_length=100, verbose_name='目标指标名称')
     indicator_type = models.CharField(max_length=20, choices=INDICATOR_TYPE_CHOICES, verbose_name='指标类型')
     indicator_unit = models.CharField(max_length=20, blank=True, verbose_name='指标单位', help_text='如：万元、%、个、次等')
+    value_choices = models.JSONField(default=list, blank=True, verbose_name='选择项', help_text='选择型指标的选项列表，格式：[{"value": "1", "label": "选项1"}, ...]')
     target_value = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='目标值')
     current_value = models.DecimalField(max_digits=20, decimal_places=2, default=0, verbose_name='当前值')
     completion_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='完成率', help_text='百分比，自动计算')
@@ -199,11 +200,21 @@ class StrategicGoal(models.Model):
             return f"{pattern}{seq:04d}"
     
     def calculate_completion_rate(self):
-        """计算完成率"""
-        if self.target_value and self.target_value > 0:
-            rate = (self.current_value / self.target_value) * 100
-            return min(rate, 100)  # 完成率不超过100%
-        return 0
+        """计算完成率（根据指标类型）"""
+        indicator_type = self.indicator_type
+        
+        if indicator_type == 'percentage':
+            # 百分比型：当前值就是完成率
+            return float(self.current_value) if self.current_value else 0.0
+        elif indicator_type == 'text':
+            # 文本型：不计算完成率，保持原值或返回0
+            return float(self.completion_rate) if self.completion_rate else 0.0
+        else:
+            # 数字型：按比例计算
+            if self.target_value and self.target_value > 0:
+                rate = (self.current_value / self.target_value) * Decimal('100')
+                return float(min(rate, Decimal('100')))  # 完成率不超过100%，转换为 float
+            return 0.0
     
     def calculate_duration_days(self):
         """计算目标周期（天）"""
@@ -217,7 +228,9 @@ class StrategicGoal(models.Model):
             self.goal_number = self.generate_goal_number()
         
         # 自动计算完成率
-        self.completion_rate = self.calculate_completion_rate()
+        completion_rate_value = self.calculate_completion_rate()
+        # 将 float 转换为 Decimal，以匹配 DecimalField 类型
+        self.completion_rate = Decimal(str(completion_rate_value))
         
         # 自动计算周期天数
         self.duration_days = self.calculate_duration_days()
@@ -226,6 +239,29 @@ class StrategicGoal(models.Model):
         is_new = self.pk is None
         
         super().save(*args, **kwargs)
+        
+        # 如果这是子目标，更新父目标的进度
+        if self.parent_goal:
+            # 使用 update_progress_from_children 方法更新父目标
+            # 注意：这里不直接调用 save，避免递归
+            try:
+                self.parent_goal.update_progress_from_children()
+            except Exception as e:
+                # 记录错误但不阻止保存
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"更新父目标进度失败: {e}")
+        
+        # 如果这是父目标（有子目标），保存后重新从子目标计算（覆盖手动设置的值）
+        if self.child_goals.exists():
+            try:
+                # 重新从子目标计算，覆盖手动设置的值
+                self.update_progress_from_children()
+            except Exception as e:
+                # 记录错误但不阻止保存
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"从子目标更新父目标进度失败: {e}")
         
         # 如果是新建且状态为 draft，记录初始状态变更日志
         if is_new and self.status == 'draft':
@@ -317,6 +353,116 @@ class StrategicGoal(models.Model):
             descendants.append(child)
             descendants.extend(child.get_all_descendants())
         return descendants
+    
+    def update_progress_from_children(self):
+        """
+        从子目标自动更新父目标的进度（考虑权重）
+        
+        计算逻辑：
+        - 数值型：如果有权重则按权重比例计算，否则求和
+        - 百分比型：如果有权重则加权平均，否则简单平均
+        - 文本型：不更新数值，但更新平均完成率（考虑权重）
+        """
+        child_goals = self.child_goals.all()
+        
+        if not child_goals.exists():
+            # 如果没有子目标，不更新
+            return
+        
+        indicator_type = self.indicator_type
+        
+        if indicator_type == 'numeric':
+            # 数值型：考虑权重
+            from django.db.models import Sum
+            total_weight = child_goals.aggregate(Sum('weight'))['weight__sum'] or Decimal('0')
+            
+            if total_weight > 0:
+                # 有权重：按权重比例计算
+                # 计算加权和（权重是百分比，需要除以100）
+                weighted_target_sum = sum(float(g.target_value or 0) * float(g.weight or 0) / 100.0 for g in child_goals)
+                weighted_current_sum = sum(float(g.current_value or 0) * float(g.weight or 0) / 100.0 for g in child_goals)
+                
+                # 如果权重总和不是100%，需要归一化
+                if abs(float(total_weight) - 100.0) > 0.01:  # 允许0.01的误差
+                    # 归一化：按实际权重总和的比例计算
+                    weight_ratio = float(total_weight) / 100.0
+                    total_target = weighted_target_sum / weight_ratio if weight_ratio > 0 else 0
+                    total_current = weighted_current_sum / weight_ratio if weight_ratio > 0 else 0
+                else:
+                    # 权重总和正好是100%，直接使用加权和
+                    total_target = weighted_target_sum
+                    total_current = weighted_current_sum
+            else:
+                # 无权重：简单求和
+                total_target = child_goals.aggregate(Sum('target_value'))['target_value__sum'] or Decimal('0')
+                total_current = child_goals.aggregate(Sum('current_value'))['current_value__sum'] or Decimal('0')
+            
+            # 更新父目标的目标值和当前值
+            self.target_value = Decimal(str(total_target))
+            self.current_value = Decimal(str(total_current))
+            
+            # 重新计算完成率
+            completion_rate_value = self.calculate_completion_rate()
+            self.completion_rate = Decimal(str(completion_rate_value))
+            
+        elif indicator_type == 'percentage':
+            # 百分比型：加权平均或简单平均
+            from django.db.models import Sum, Avg
+            total_weight = child_goals.aggregate(Sum('weight'))['weight__sum'] or Decimal('0')
+            
+            if total_weight > 0:
+                # 加权平均（权重是百分比，需要除以100）
+                weighted_sum = sum(float(g.current_value or 0) * float(g.weight or 0) / 100.0 for g in child_goals)
+                # 如果权重总和不是100%，需要归一化
+                if abs(float(total_weight) - 100.0) > 0.01:
+                    weight_ratio = float(total_weight) / 100.0
+                    avg_current = weighted_sum / weight_ratio if weight_ratio > 0 else 0
+                else:
+                    avg_current = weighted_sum
+            else:
+                # 简单平均
+                avg_current = child_goals.aggregate(Avg('current_value'))['current_value__avg'] or Decimal('0')
+            
+            # 更新父目标的当前值（百分比型的当前值就是完成率）
+            self.current_value = Decimal(str(avg_current))
+            
+            # 重新计算完成率
+            completion_rate_value = self.calculate_completion_rate()
+            self.completion_rate = Decimal(str(completion_rate_value))
+            
+        else:  # text
+            # 文本型：更新平均完成率（考虑权重）
+            from django.db.models import Sum, Avg
+            total_weight = child_goals.aggregate(Sum('weight'))['weight__sum'] or Decimal('0')
+            
+            if total_weight > 0:
+                # 加权平均完成率（权重是百分比，需要除以100）
+                weighted_completion_sum = sum(float(g.completion_rate or 0) * float(g.weight or 0) / 100.0 for g in child_goals)
+                # 如果权重总和不是100%，需要归一化
+                if abs(float(total_weight) - 100.0) > 0.01:
+                    weight_ratio = float(total_weight) / 100.0
+                    avg_completion = weighted_completion_sum / weight_ratio if weight_ratio > 0 else 0
+                else:
+                    avg_completion = weighted_completion_sum
+            else:
+                # 简单平均完成率
+                avg_completion = child_goals.aggregate(Avg('completion_rate'))['completion_rate__avg'] or Decimal('0')
+            
+            self.completion_rate = Decimal(str(avg_completion))
+        
+        # 直接更新数据库，避免触发 save 方法（防止递归）
+        StrategicGoal.objects.filter(pk=self.pk).update(
+            target_value=self.target_value,
+            current_value=self.current_value,
+            completion_rate=self.completion_rate
+        )
+        
+        # 刷新实例属性
+        self.refresh_from_db()
+        
+        # 如果父目标也是子目标，递归更新
+        if self.parent_goal:
+            self.parent_goal.update_progress_from_children()
 
 
 class GoalStatusLog(models.Model):
@@ -594,10 +740,11 @@ class Plan(models.Model):
     STATUS_CHOICES = [
         ('draft', '草稿'),
         ('published', '已发布'),
-        ('accepted', '已接收'),
         ('in_progress', '执行中'),
         ('completed', '已完成'),
         ('cancelled', '已取消'),
+        ('paused', '已暂停'),
+        ('delayed', '已延期'),
     ]
     
     # 基本信息
@@ -895,12 +1042,12 @@ class Plan(models.Model):
             self.check_overdue_status()
         
         # P1: 状态变更必须通过裁决器，不在 save() 中直接设置
-        # 新建计划默认状态：日计划为 published（无须审批），其他计划为 draft
+        # 新建计划默认状态：日计划和周计划为 published（无须审批），其他计划为 draft
         is_new = self.pk is None
         if is_new and not self.status:
-            if self.plan_period == 'daily':
+            if self.plan_period in ['daily', 'weekly']:
                 self.status = 'published'
-                # 日计划创建即为发布，设置发布时间戳
+                # 日计划和周计划创建即为发布，设置发布时间戳
                 if not self.published_at:
                     from django.utils import timezone
                     self.published_at = timezone.now()
@@ -950,28 +1097,37 @@ class Plan(models.Model):
     
     def get_valid_transitions(self):
         """
-        获取有效的状态转换（P2-1：统一状态机规则）
+        获取有效的状态转换（工作计划状态流转规则）
         
         状态机规则：
-        draft → published → accepted → in_progress → completed
+        draft → published → in_progress → completed
                       ↘ cancelled
+                      ↘ paused (已暂停)
+                      ↘ delayed (已延期)
         
-        - draft: 草稿
-        - published: 已发布（已下达，审批通过后）
-        - accepted: 已接收（员工确认）
-        - in_progress: 执行中（自动/人工进入）
-        - completed: 已完成（满足完成条件）
-        - cancelled: 已取消（可从 draft 或 published 取消）
+        - draft: 草稿（员工提交计划，系统自动标记）
+        - published: 已发布（日计划和周计划创建时直接发布，其他计划需审批通过后发布）
+        - in_progress: 执行中（员工启动工作任务，或到达计划开始时间，系统自动标记）
+        - completed: 已完成（工作任务完成后，自动标记）
+        - cancelled: 已取消（系统自动标记）
+        - paused: 已暂停（系统自动标记）
+        - delayed: 已延期（系统自动标记）
         
-        注意：draft -> published 必须通过审批流程（PlanDecision）
+        注意：
+        - 日计划和周计划创建时直接为 published 状态，无需审批
+        - 其他计划类型（月计划、季度计划、年计划）的 draft -> published 必须通过审批流程
+        - published -> in_progress: 员工启动或到达计划开始日期的上午9点时自动转换
+        - 若任务在截止日未完成，自动标记为"逾期X天"
+        - 若任务在截止日前完成，自动标记为"提前X天"
         """
         transitions = {
             'draft': ['published', 'cancelled'],
-            'published': ['accepted', 'cancelled'],
-            'accepted': ['in_progress', 'cancelled'],
-            'in_progress': ['completed', 'cancelled'],
+            'published': ['in_progress', 'cancelled', 'paused', 'delayed'],
+            'in_progress': ['completed', 'cancelled', 'paused', 'delayed'],
             'completed': [],
             'cancelled': [],
+            'paused': ['in_progress', 'cancelled'],
+            'delayed': ['in_progress', 'cancelled'],
         }
         return transitions.get(self.status, [])
     
@@ -981,7 +1137,7 @@ class Plan(models.Model):
     
     def transition_to(self, new_status, user=None):
         """
-        转换状态（P2-1：统一状态机，自动记录时间戳）
+        转换状态（工作计划状态流转，自动记录时间戳）
         """
         if not self.can_transition_to(new_status):
             raise ValueError(f"无法从 {self.get_status_display()} 转换到 {new_status}")
@@ -992,8 +1148,6 @@ class Plan(models.Model):
         # 自动记录状态时间戳
         if new_status == 'published' and not self.published_at:
             self.published_at = now
-        elif new_status == 'accepted' and not self.accepted_at:
-            self.accepted_at = now
         elif new_status == 'completed' and not self.completed_at:
             self.completed_at = now
         
@@ -1071,8 +1225,8 @@ class Plan(models.Model):
             # 草稿或已发布状态，如果已过截止时间，则逾期
             if now > self.submission_deadline:
                 is_overdue = True
-        elif self.status in ['accepted', 'in_progress']:
-            # 已接收或执行中状态，如果创建时间在截止时间之后，则逾期提交
+        elif self.status in ['in_progress']:
+            # 执行中状态，如果创建时间在截止时间之后，则逾期提交
             if self.created_time and self.created_time > self.submission_deadline:
                 is_overdue = True
         
@@ -1104,6 +1258,44 @@ class Plan(models.Model):
             self.is_overdue = False
             self.overdue_days = 0
             self.risk_level = 'low'
+    
+    def calculate_completion_timing(self):
+        """
+        计算任务完成时间与截止日期的关系
+        返回：('ahead', days) 提前X天 或 ('overdue', days) 逾期X天 或 None
+        """
+        if not self.end_time or self.status != 'completed' or not self.completed_at:
+            return None
+        
+        from datetime import timedelta
+        end_date = self.end_time.date() if hasattr(self.end_time, 'date') else self.end_time
+        completed_date = self.completed_at.date() if hasattr(self.completed_at, 'date') else self.completed_at
+        
+        if completed_date < end_date:
+            # 提前完成
+            days = (end_date - completed_date).days
+            return ('ahead', days)
+        elif completed_date > end_date:
+            # 逾期完成
+            days = (completed_date - end_date).days
+            return ('overdue', days)
+        else:
+            # 正好在截止日完成
+            return None
+    
+    def get_completion_timing_display(self):
+        """
+        获取完成时间显示文本
+        返回：'提前X天' 或 '逾期X天' 或 None
+        """
+        timing = self.calculate_completion_timing()
+        if timing:
+            timing_type, days = timing
+            if timing_type == 'ahead':
+                return f'提前{days}天'
+            elif timing_type == 'overdue':
+                return f'逾期{days}天'
+        return None
     
     @property
     def plan_type(self):
@@ -1185,23 +1377,25 @@ class PlanStatusLog(models.Model):
         STATUS_CHOICES = [
             ('draft', '草稿'),
             ('published', '已发布'),
-            ('accepted', '已接收'),
             ('in_progress', '执行中'),
             ('completed', '已完成'),
             ('cancelled', '已取消'),
+            ('paused', '已暂停'),
+            ('delayed', '已延期'),
         ]
         status_dict = dict(STATUS_CHOICES)
         return status_dict.get(self.old_status, self.old_status)
     
     def get_new_status_display(self):
-        """获取新状态的中文显示（P2-1：统一状态机）"""
+        """获取新状态的中文显示（工作计划状态流转）"""
         STATUS_CHOICES = [
             ('draft', '草稿'),
             ('published', '已发布'),
-            ('accepted', '已接收'),
             ('in_progress', '执行中'),
             ('completed', '已完成'),
             ('cancelled', '已取消'),
+            ('paused', '已暂停'),
+            ('delayed', '已延期'),
         ]
         status_dict = dict(STATUS_CHOICES)
         return status_dict.get(self.new_status, self.new_status)
@@ -1835,6 +2029,7 @@ class WorkSummary(models.Model):
     plan_completion_summary = models.JSONField(default=dict, verbose_name='计划完成汇总')
     achievements = models.JSONField(default=list, verbose_name='成就亮点')
     risk_items = models.JSONField(default=list, verbose_name='风险项')
+    summary_content = models.TextField(blank=True, verbose_name='AI生成的简报内容', help_text='使用DeepSeek语言模型生成的简报内容')
     sent_to_supervisor = models.BooleanField(default=False, verbose_name='是否已发送给上级')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     

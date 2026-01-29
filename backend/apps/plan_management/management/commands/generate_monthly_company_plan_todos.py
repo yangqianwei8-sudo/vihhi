@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = '生成月度公司计划创建待办事项（给总经理）'
+    help = '生成月度公司计划创建待办事项（通知杨乾维）'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -42,7 +42,7 @@ class Command(BaseCommand):
                 todos = generate_plan_creation_todo(plan_type='monthly')
                 self.stdout.write(self.style.SUCCESS(f'成功生成 {len(todos)} 个月度公司计划创建待办'))
             else:
-                self.stdout.write(self.style.WARNING('试运行模式：将生成月度公司计划创建待办给所有总经理'))
+                self.stdout.write(self.style.WARNING('试运行模式：将生成月度公司计划创建待办给杨乾维'))
             
         except Exception as e:
             logger.error(f"生成月度公司计划创建待办失败: {str(e)}", exc_info=True)

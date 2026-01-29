@@ -472,7 +472,17 @@
                   <div style="margin-bottom: 8px;">
                     <strong>指标：</strong>{{ goal_item.indicator_name }}{% if goal_item.indicator_unit %} ({{ goal_item.indicator_unit }}){% endif %}
                     <span style="margin-left: 16px;">
-                      <strong>目标值：</strong>{{ goal_item.target_value }}{% if goal_item.indicator_unit %} {{ goal_item.indicator_unit }}{% endif %}
+                      <strong>指标类型：</strong>{{ goal_item.get_indicator_type_display }}
+                    </span>
+                    <span style="margin-left: 16px;">
+                      <strong>目标值：</strong>
+                      {% if goal_item.indicator_type == 'boolean' %}
+                        <span class="text-muted">布尔型（完成/未完成）</span>
+                      {% elif goal_item.indicator_type == 'text' %}
+                        <span class="text-muted">文本型</span>
+                      {% else %}
+                        {{ goal_item.target_value }}{% if goal_item.indicator_unit %} {{ goal_item.indicator_unit }}{% endif %}
+                      {% endif %}
                     </span>
                     {% if goal_item.weight > 0 %}
                     <span style="margin-left: 16px;">
@@ -492,6 +502,28 @@
                       <strong>结束：</strong>{{ goal_item.end_date|date:"Y-m-d" }}
                     </span>
                     {% endif %}
+                  </div>
+
+                  <div style="margin-bottom: 8px;">
+                    <span>
+                      <strong>当前值：</strong>
+                      {% if goal_item.indicator_type == 'boolean' %}
+                        {% if goal_item.current_value >= 1 %}已完成{% else %}未完成{% endif %}
+                      {% elif goal_item.indicator_type == 'text' %}
+                        <span class="text-muted">文本型</span>
+                      {% elif goal_item.indicator_type == 'choice' %}
+                        {% for choice in goal_item.value_choices %}
+                          {% if choice.value == goal_item.current_value|stringformat:"s" %}{{ choice.label }}{% endif %}
+                        {% empty %}
+                          {{ goal_item.current_value }}
+                        {% endfor %}
+                      {% else %}
+                        {{ goal_item.current_value }}{% if goal_item.indicator_unit %} {{ goal_item.indicator_unit }}{% endif %}
+                      {% endif %}
+                    </span>
+                    <span style="margin-left: 16px;">
+                      <strong>完成率：</strong>{{ goal_item.completion_rate|floatformat:1 }}%
+                    </span>
                   </div>
 
                   <div>
@@ -553,24 +585,12 @@
               <label class="form-label required">
                 <i class="bi bi-diagram-3"></i> 分解方式
               </label>
-              <select name="goal_type" class="form-control" id="goalTypeSelect" required>
+              <select name="decompose_method" class="form-control" id="decomposeMethodSelect" required>
                 <option value="">请选择分解方式</option>
                 <option value="department">按部门分解</option>
                 <option value="personal">按个人分解</option>
               </select>
               <div class="form-hint">选择分解方式后，将自动填充负责人信息</div>
-            </div>
-
-            <div class="form-group" id="departmentSelectDiv" style="display: none;">
-              <label class="form-label required">
-                <i class="bi bi-building"></i> 选择部门
-              </label>
-              <select name="department_id" class="form-control" id="departmentSelect">
-                <option value="">请选择部门</option>
-                {% for dept in departments %}
-                <option value="{{ dept.id }}">{{ dept.name }}</option>
-                {% endfor %}
-              </select>
             </div>
 
             <div class="form-group" id="userSelectDiv" style="display: none;">
@@ -587,22 +607,118 @@
 
             <div class="form-group">
               <label class="form-label required">
+                <i class="bi bi-list-ul"></i> 目标类型
+              </label>
+              <select name="goal_type" class="form-control" id="goalTypeSelect" required>
+                <option value="">请选择目标类型</option>
+                {% for value, label in goal_type_choices %}
+                <option value="{{ value }}" {% if goal.goal_type == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-hint">继承父目标类型：{{ goal.get_goal_type_display }}</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">
                 <i class="bi bi-tag"></i> 目标名称
               </label>
               <input type="text" name="name" class="form-control" required placeholder="请输入目标名称">
             </div>
 
             <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-tag"></i> 指标名称
+              </label>
+              <input type="text" name="indicator_name" class="form-control" id="indicatorNameInput" placeholder="请输入指标名称" value="{{ goal.indicator_name }}">
+              <div class="form-hint">继承父目标指标名称：{{ goal.indicator_name }}</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label required">
+                <i class="bi bi-speedometer2"></i> 指标类型
+              </label>
+              <select name="indicator_type" class="form-control" id="indicatorTypeSelect" required>
+                <option value="">请选择指标类型</option>
+                {% for value, label in indicator_type_choices %}
+                <option value="{{ value }}" {% if goal.indicator_type == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-hint">继承父目标指标类型：{{ goal.get_indicator_type_display }}</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-rulers"></i> 指标单位
+              </label>
+              <input type="text" name="indicator_unit" class="form-control" id="indicatorUnitInput" placeholder="如：万元、%、个、次等" value="{{ goal.indicator_unit }}">
+              <div class="form-hint">继承父目标指标单位：{{ goal.indicator_unit|default:"无" }}</div>
+            </div>
+
+            <div class="form-group" id="valueChoicesDiv" style="display: {% if goal.indicator_type == 'choice' %}block{% else %}none{% endif %};">
+              <label class="form-label">
+                <i class="bi bi-list-check"></i> 选择项（JSON格式）
+              </label>
+              <textarea name="value_choices" class="form-control" id="valueChoicesInput" rows="4" placeholder='[{"value": "1", "label": "选项1"}, {"value": "2", "label": "选项2"}]'>{% if goal.indicator_type == 'choice' %}{{ goal_value_choices_json }}{% endif %}</textarea>
+              <div class="form-hint">选择型指标需要填写选项列表，JSON格式</div>
+            </div>
+
+            <div class="form-group" id="departmentSelectDiv" style="display: none;">
+              <label class="form-label required">
+                <i class="bi bi-building"></i> 选择部门
+              </label>
+              <select name="department_id" class="form-control" id="departmentSelect">
+                <option value="">请选择部门</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
               <label class="form-label required">
                 <i class="bi bi-bullseye"></i> 目标值
               </label>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <input type="number" name="target_value" class="form-control" step="0.01" required placeholder="0.00" style="flex: 1;">
-                {% if goal.indicator_unit %}
-                <span style="font-size: 0.9rem; color: var(--vh-text-muted, #6B7280); white-space: nowrap; padding: 0 8px;">{{ goal.indicator_unit }}</span>
+              <div id="targetValueContainer">
+                {# 默认显示父目标的指标类型对应的输入 #}
+                {% if goal.indicator_type == 'boolean' %}
+                <select name="target_value" class="form-control" id="targetValueInput" required>
+                  <option value="0">未完成</option>
+                  <option value="1">已完成</option>
+                </select>
+                <div class="form-hint" id="targetValueHint">继承指标：{{ goal.indicator_name }}（布尔型：完成/未完成）</div>
+                {% elif goal.indicator_type == 'text' %}
+                <input type="text" name="target_value" class="form-control" id="targetValueInput" required placeholder="请输入文本内容">
+                <div class="form-hint" id="targetValueHint">继承指标：{{ goal.indicator_name }}（文本型）</div>
+                {% elif goal.indicator_type == 'choice' %}
+                <select name="target_value" class="form-control" id="targetValueInput" required>
+                  <option value="">请选择</option>
+                  {% for choice in goal.value_choices %}
+                  <option value="{{ choice.value }}">{{ choice.label }}</option>
+                  {% endfor %}
+                </select>
+                <div class="form-hint" id="targetValueHint">继承指标：{{ goal.indicator_name }}（选择型）</div>
+                {% elif goal.indicator_type == 'percentage' %}
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <input type="number" name="target_value" class="form-control" id="targetValueInput" step="0.01" min="0" max="100" required placeholder="0.00" style="flex: 1;">
+                  <span style="font-size: 0.9rem; color: var(--vh-text-muted, #6B7280); white-space: nowrap; padding: 0 8px;">%</span>
+                </div>
+                <div class="form-hint" id="targetValueHint">继承指标：{{ goal.indicator_name }}（百分比型：0-100%）</div>
+                {% else %}
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <input type="number" name="target_value" class="form-control" id="targetValueInput" step="0.01" required placeholder="0.00" style="flex: 1;">
+                  <span id="indicatorUnitDisplay" style="font-size: 0.9rem; color: var(--vh-text-muted, #6B7280); white-space: nowrap; padding: 0 8px;">{{ goal.indicator_unit|default:"" }}</span>
+                </div>
+                <div class="form-hint" id="targetValueHint">继承指标：{{ goal.indicator_name }}{% if goal.indicator_unit %} ({{ goal.indicator_unit }}){% endif %}（数值型）</div>
                 {% endif %}
               </div>
-              <div class="form-hint">继承指标：{{ goal.indicator_name }}{% if goal.indicator_unit %} ({{ goal.indicator_unit }}){% endif %}</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-percent"></i> 目标权重
+              </label>
+              <input type="number" name="weight" class="form-control" id="weightInput" step="0.01" min="0" max="100" placeholder="0-100" value="0">
+              <div class="form-hint">设置此子目标在父目标中的权重比例（0-100%），用于计算父目标进度</div>
             </div>
 
             <div class="form-group">
@@ -640,6 +756,30 @@
               <span class="stats-item-label">完成进度</span>
               <span class="stats-item-value">{{ goal.completion_rate|floatformat:0 }}%</span>
             </li>
+            {% if child_goals_summary and child_goals_summary.display_mode != 'none' %}
+            <li class="stats-item" style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 8px;">
+              <span class="stats-item-label">子目标汇总</span>
+              <div style="margin-top: 4px;">
+                {% if child_goals_summary.display_mode == 'sum' %}
+                  <div style="font-size: 0.85rem; color: #6B7280;">
+                    目标值：{{ child_goals_summary.total_target_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}<br>
+                    当前值：{{ child_goals_summary.total_current_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+                  </div>
+                {% elif child_goals_summary.display_mode == 'average' %}
+                  <div style="font-size: 0.85rem; color: #6B7280;">
+                    平均值：{{ child_goals_summary.total_current_value|floatformat:2 }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}
+                  </div>
+                {% elif child_goals_summary.display_mode == 'count' %}
+                  <div style="font-size: 0.85rem; color: #6B7280;">
+                    已完成：{{ child_goals_summary.total_current_value }} / {{ child_goals_summary.total_target_value }}
+                  </div>
+                {% endif %}
+                <div style="font-size: 0.85rem; color: #6B7280; margin-top: 4px;">
+                  平均完成率：{{ child_goals_summary.avg_completion_rate|floatformat:1 }}%
+                </div>
+              </div>
+            </li>
+            {% endif %}
           </ul>
         </div>
       </div>
@@ -650,30 +790,166 @@
 {% block module_extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const decomposeMethodSelect = document.getElementById('decomposeMethodSelect');
     const goalTypeSelect = document.getElementById('goalTypeSelect');
+    const indicatorTypeSelect = document.getElementById('indicatorTypeSelect');
+    const indicatorNameInput = document.getElementById('indicatorNameInput');
+    const indicatorUnitInput = document.getElementById('indicatorUnitInput');
+    const valueChoicesDiv = document.getElementById('valueChoicesDiv');
+    const valueChoicesInput = document.getElementById('valueChoicesInput');
+    const targetValueContainer = document.getElementById('targetValueContainer');
     const departmentSelectDiv = document.getElementById('departmentSelectDiv');
     const userSelectDiv = document.getElementById('userSelectDiv');
     const departmentSelect = document.getElementById('departmentSelect');
     const userSelect = document.getElementById('userSelect');
-
-    goalTypeSelect.addEventListener('change', function() {
-        if (this.value === 'department') {
-            departmentSelectDiv.style.display = 'block';
-            userSelectDiv.style.display = 'block';
-            departmentSelect.required = true;
-            userSelect.required = true;
-        } else if (this.value === 'personal') {
-            departmentSelectDiv.style.display = 'none';
-            userSelectDiv.style.display = 'block';
-            departmentSelect.required = false;
-            userSelect.required = true;
+    
+    // 父目标的指标信息（用于继承）
+    const parentIndicatorType = '{{ goal.indicator_type }}';
+    const parentIndicatorName = '{{ goal.indicator_name|escapejs }}';
+    const parentIndicatorUnit = '{{ goal.indicator_unit|escapejs }}';
+    const parentValueChoices = {{ goal.value_choices|safe|default:"[]" }};
+    
+    // 根据指标类型更新目标值输入字段
+    function updateTargetValueInput(indicatorType, valueChoices = []) {
+        if (!targetValueContainer) return;
+        
+        const indicatorName = indicatorNameInput ? indicatorNameInput.value : parentIndicatorName;
+        const indicatorUnit = indicatorUnitInput ? indicatorUnitInput.value : parentIndicatorUnit;
+        
+        let html = '';
+        let hint = '';
+        
+        if (indicatorType === 'boolean') {
+            html = '<select name="target_value" class="form-control" id="targetValueInput" required>' +
+                   '<option value="0">未完成</option>' +
+                   '<option value="1">已完成</option>' +
+                   '</select>';
+            hint = `继承指标：${indicatorName}（布尔型：完成/未完成）`;
+        } else if (indicatorType === 'text') {
+            html = '<input type="text" name="target_value" class="form-control" id="targetValueInput" required placeholder="请输入文本内容">';
+            hint = `继承指标：${indicatorName}（文本型）`;
+        } else if (indicatorType === 'choice') {
+            let options = '<option value="">请选择</option>';
+            if (valueChoices && valueChoices.length > 0) {
+                valueChoices.forEach(function(choice) {
+                    options += `<option value="${choice.value}">${choice.label}</option>`;
+                });
+            }
+            html = '<select name="target_value" class="form-control" id="targetValueInput" required>' + options + '</select>';
+            hint = `继承指标：${indicatorName}（选择型）`;
+        } else if (indicatorType === 'percentage') {
+            html = '<div style="display: flex; align-items: center; gap: 8px;">' +
+                   '<input type="number" name="target_value" class="form-control" id="targetValueInput" step="0.01" min="0" max="100" required placeholder="0.00" style="flex: 1;">' +
+                   '<span style="font-size: 0.9rem; color: var(--vh-text-muted, #6B7280); white-space: nowrap; padding: 0 8px;">%</span>' +
+                   '</div>';
+            hint = `继承指标：${indicatorName}（百分比型：0-100%）`;
         } else {
-            departmentSelectDiv.style.display = 'none';
-            userSelectDiv.style.display = 'none';
-            departmentSelect.required = false;
-            userSelect.required = false;
+            const unitDisplay = indicatorUnit ? `<span id="indicatorUnitDisplay" style="font-size: 0.9rem; color: var(--vh-text-muted, #6B7280); white-space: nowrap; padding: 0 8px;">${indicatorUnit}</span>` : '';
+            html = '<div style="display: flex; align-items: center; gap: 8px;">' +
+                   '<input type="number" name="target_value" class="form-control" id="targetValueInput" step="0.01" required placeholder="0.00" style="flex: 1;">' +
+                   unitDisplay +
+                   '</div>';
+            hint = `继承指标：${indicatorName}${indicatorUnit ? ' (' + indicatorUnit + ')' : ''}（数值型）`;
         }
-    });
+        
+        targetValueContainer.innerHTML = html + '<div class="form-hint" id="targetValueHint">' + hint + '</div>';
+    }
+    
+    // 指标类型变化时更新目标值输入
+    if (indicatorTypeSelect) {
+        indicatorTypeSelect.addEventListener('change', function() {
+            const selectedType = this.value;
+            // 显示/隐藏选择项输入
+            if (selectedType === 'choice') {
+                valueChoicesDiv.style.display = 'block';
+                valueChoicesInput.required = true;
+            } else {
+                valueChoicesDiv.style.display = 'none';
+                valueChoicesInput.required = false;
+            }
+            
+            // 更新目标值输入
+            if (selectedType) {
+                let choices = [];
+                if (selectedType === 'choice' && valueChoicesInput.value) {
+                    try {
+                        choices = JSON.parse(valueChoicesInput.value);
+                    } catch(e) {
+                        choices = parentValueChoices;
+                    }
+                } else if (selectedType === parentIndicatorType) {
+                    choices = parentValueChoices;
+                }
+                updateTargetValueInput(selectedType, choices);
+            }
+        });
+    }
+    
+    // 指标名称或单位变化时更新提示
+    if (indicatorNameInput) {
+        indicatorNameInput.addEventListener('input', function() {
+            if (indicatorTypeSelect && indicatorTypeSelect.value) {
+                let choices = [];
+                if (indicatorTypeSelect.value === 'choice' && valueChoicesInput.value) {
+                    try {
+                        choices = JSON.parse(valueChoicesInput.value);
+                    } catch(e) {
+                        choices = parentValueChoices;
+                    }
+                } else if (indicatorTypeSelect.value === parentIndicatorType) {
+                    choices = parentValueChoices;
+                }
+                updateTargetValueInput(indicatorTypeSelect.value, choices);
+            }
+        });
+    }
+    
+    if (indicatorUnitInput) {
+        indicatorUnitInput.addEventListener('input', function() {
+            if (indicatorTypeSelect && indicatorTypeSelect.value === 'numeric') {
+                updateTargetValueInput('numeric', []);
+            }
+        });
+    }
+    
+    // 选择项变化时更新目标值输入
+    if (valueChoicesInput) {
+        valueChoicesInput.addEventListener('input', function() {
+            if (indicatorTypeSelect && indicatorTypeSelect.value === 'choice') {
+                let choices = [];
+                if (this.value) {
+                    try {
+                        choices = JSON.parse(this.value);
+                    } catch(e) {
+                        // 解析失败时不更新
+                        return;
+                    }
+                }
+                updateTargetValueInput('choice', choices);
+            }
+        });
+    }
+
+    if (decomposeMethodSelect) {
+        decomposeMethodSelect.addEventListener('change', function() {
+            if (this.value === 'department') {
+                departmentSelectDiv.style.display = 'block';
+                userSelectDiv.style.display = 'block';
+                departmentSelect.required = true;
+                userSelect.required = true;
+            } else if (this.value === 'personal') {
+                departmentSelectDiv.style.display = 'none';
+                userSelectDiv.style.display = 'block';
+                departmentSelect.required = false;
+                userSelect.required = true;
+            } else {
+                departmentSelectDiv.style.display = 'none';
+                userSelectDiv.style.display = 'none';
+                departmentSelect.required = false;
+                userSelect.required = false;
+            }
+        });
+    }
 
     const form = document.getElementById('createChildGoalForm');
     if (form) {
@@ -685,10 +961,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            if (!goalTypeSelect.value) {
+            if (!decomposeMethodSelect || !decomposeMethodSelect.value) {
                 alert('请选择分解方式');
-                goalTypeSelect.focus();
+                if (decomposeMethodSelect) decomposeMethodSelect.focus();
                 return;
+            }
+
+            if (!goalTypeSelect || !goalTypeSelect.value) {
+                alert('请选择目标类型');
+                if (goalTypeSelect) goalTypeSelect.focus();
+                return;
+            }
+
+            if (!indicatorTypeSelect || !indicatorTypeSelect.value) {
+                alert('请选择指标类型');
+                if (indicatorTypeSelect) indicatorTypeSelect.focus();
+                return;
+            }
+
+            // 验证选择型指标的选择项
+            if (indicatorTypeSelect.value === 'choice') {
+                if (!valueChoicesInput.value) {
+                    alert('选择型指标需要填写选择项');
+                    valueChoicesInput.focus();
+                    return;
+                }
+                try {
+                    const choices = JSON.parse(valueChoicesInput.value);
+                    if (!Array.isArray(choices) || choices.length === 0) {
+                        alert('选择项必须是包含至少一个选项的JSON数组');
+                        valueChoicesInput.focus();
+                        return;
+                    }
+                } catch(e) {
+                    alert('选择项格式错误，请输入有效的JSON格式');
+                    valueChoicesInput.focus();
+                    return;
+                }
             }
 
             if (!userSelect.value) {
@@ -697,14 +1006,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            if (goalTypeSelect.value === 'department' && !departmentSelect.value) {
+            if (decomposeMethodSelect.value === 'department' && !departmentSelect.value) {
                 alert('请选择部门');
                 departmentSelect.focus();
                 return;
             }
 
             const formData = new FormData(form);
-            if (goalTypeSelect.value === 'personal') {
+            // 确保分解方式字段被正确传递
+            formData.set('decompose_method', decomposeMethodSelect.value);
+            if (decomposeMethodSelect.value === 'personal') {
                 formData.delete('department_id');
             }
 
@@ -749,6 +1060,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('创建失败：' + error.message);
             });
         });
+    }
+    
+    // 页面加载时初始化选择项字段
+    if (indicatorTypeSelect && indicatorTypeSelect.value === 'choice' && valueChoicesInput && parentValueChoices && parentValueChoices.length > 0) {
+        if (!valueChoicesInput.value) {
+            valueChoicesInput.value = JSON.stringify(parentValueChoices);
+        }
     }
 });
 </script>

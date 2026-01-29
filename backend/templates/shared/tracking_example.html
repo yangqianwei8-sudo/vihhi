@@ -1,0 +1,163 @@
+{% extends "shared/tracking_base.html" %}
+{% load static %}
+
+{% comment %}
+  目标跟踪模板使用示例
+  这是一个完整的使用示例，展示如何使用 tracking_base.html 模板
+{% endcomment %}
+
+{% block tracking_title %}战略目标跟踪{% endblock %}
+{% block tracking_page_title %}战略目标跟踪 - {{ goal.name }}{% endblock %}
+
+{% block pm_subtitle %}跟踪战略目标的执行进度{% endblock %}
+
+{% block pm_actions %}
+  <a href="{% url 'plan_pages:strategic_goal_list' %}" class="btn btn-outline-secondary">返回列表</a>
+  <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="btn btn-outline-primary">查看详情</a>
+{% endblock %}
+
+{# 如果需要自定义统计卡片，可以覆盖这个 block #}
+{% comment %}
+{% block tracking_stats_content %}
+  <div class="track-stats-grid">
+    <div class="track-stat-card">
+      <div class="track-stat-label">目标值</div>
+      <div class="track-stat-value">
+        {{ goal.target_value }}
+        {% if goal.indicator_unit %}<span class="track-stat-unit">{{ goal.indicator_unit }}</span>{% endif %}
+      </div>
+    </div>
+    {# 其他统计卡片... #}
+  </div>
+{% endblock %}
+{% endcomment %}
+
+{# 如果需要自定义进度表单字段，可以覆盖这个 block #}
+{% comment %}
+{% block tracking_progress_form_fields %}
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+    <div class="track-form-group" style="margin-bottom: 0;">
+      <label class="track-form-label required">当前值</label>
+      {{ progress_form.current_value }}
+      {% if progress_form.current_value.errors %}
+      <div style="font-size: 12px; color: #999999; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+      {% endif %}
+    </div>
+    <div class="track-form-group" style="margin-bottom: 0;">
+      <label class="track-form-label">预计完成率</label>
+      <input type="text" class="track-form-input" id="predictedRate" readonly placeholder="自动计算">
+    </div>
+  </div>
+  
+  {# 添加自定义字段 #}
+  <div class="track-form-group">
+    <label class="track-form-label">自定义字段</label>
+    <input type="text" class="track-form-input" name="custom_field">
+  </div>
+  
+  {# 其他字段... #}
+{% endblock %}
+{% endcomment %}
+
+{# 如果需要自定义进度记录表格，可以覆盖这些 block #}
+{% comment %}
+{% block tracking_records_headers %}
+  <th>记录时间</th>
+  <th>记录人</th>
+  <th>当前值</th>
+  <th>完成率</th>
+  <th>进度说明</th>
+  <th>备注</th>
+  <th>操作</th>  {# 添加操作列 #}
+{% endblock %}
+
+{% block tracking_records_rows %}
+  {% for record in page_obj %}
+  <tr>
+    <td>
+      <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ record.recorded_time|date:"Y-m-d" }}</div>
+      <div style="font-size: 12px; color: #999999;">{{ record.recorded_time|date:"H:i" }}</div>
+    </td>
+    <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
+    <td>
+      <span class="list-badge">{{ record.current_value }}{% if goal.indicator_unit %} {{ goal.indicator_unit }}{% endif %}</span>
+    </td>
+    <td>
+      <div class="list-progress">
+        <div class="list-progress-fill" style="width: {{ record.completion_rate }}%"></div>
+        <span class="list-progress-text">{{ record.completion_rate }}%</span>
+      </div>
+    </td>
+    <td>
+      <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ record.progress_description|truncatewords:15 }}</div>
+    </td>
+    <td>
+      {% if record.notes %}
+      <div style="font-size: 12px; color: #999999;">{{ record.notes|truncatewords:10 }}</div>
+      {% else %}
+      <span style="color: #999999;">-</span>
+      {% endif %}
+    </td>
+    <td>
+      <a href="{% url 'plan_pages:progress_record_detail' record.id %}" class="btn btn-sm btn-outline-primary">查看</a>
+    </td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="7" class="list-empty-state">
+      <div class="list-empty-state-icon">📋</div>
+      <div class="list-empty-state-text">暂无进度记录</div>
+      <div class="list-empty-state-hint">更新进度后将显示在这里</div>
+    </td>
+  </tr>
+  {% endfor %}
+{% endblock %}
+{% endcomment %}
+
+{# 如果需要添加自定义样式 #}
+{% block tracking_custom_styles %}
+  {# 示例：自定义统计卡片样式 #}
+  .track-stat-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .track-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+{% endblock %}
+
+{# 如果需要添加自定义脚本 #}
+{% block tracking_custom_scripts %}
+  {# 示例：添加表单验证 #}
+  const form = document.getElementById('tracking-progress-form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      const currentValue = document.querySelector('#id_current_value');
+      if (currentValue && (!currentValue.value || parseFloat(currentValue.value) < 0)) {
+        e.preventDefault();
+        alert('当前值必须大于等于0');
+        currentValue.focus();
+        return false;
+      }
+      
+      const progressDescription = document.querySelector('#id_progress_description');
+      if (progressDescription && !progressDescription.value.trim()) {
+        e.preventDefault();
+        alert('请输入进度说明');
+        progressDescription.focus();
+        return false;
+      }
+    });
+  }
+  
+  {# 示例：添加确认对话框 #}
+  const completeForms = document.querySelectorAll('form[action*="complete_goal"]');
+  completeForms.forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+      if (!confirm('确认完成此目标？完成后将无法继续更新进度。')) {
+        e.preventDefault();
+      }
+    });
+  });
+{% endblock %}

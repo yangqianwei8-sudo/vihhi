@@ -1,0 +1,1012 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+{% load admin_tags %}
+
+{% comment %}
+  目标/计划跟踪基础模板
+  提供统一的目标跟踪和计划跟踪功能，包括：
+  - 统计卡片展示（目标值、当前值、完成率等）
+  - 进度更新表单
+  - 状态转换功能
+  - 完成确认功能
+  - 进度记录列表
+  - 状态日志
+  - 调整申请记录
+  
+  使用说明：
+  1. 继承此模板：{% extends "shared/tracking_base.html" %}
+  2. 覆盖相应的 block 来定制内容
+  3. 在视图中传递必要的上下文变量
+{% endcomment %}
+
+{% block module_title %}{% block tracking_title %}目标跟踪{% endblock %}{% endblock %}
+{% block title %}{% block tracking_page_title %}目标跟踪 - 维海生产系统{% endblock %}{% endblock %}
+
+{% block module_styles %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
+  <style>
+    /* ===== 跟踪表单卡片样式 ===== */
+    .track-form-card {
+      background: #FFFFFF;
+      border: 1px solid #E0E0E0;
+      border-radius: 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 16px;
+    }
+
+    .track-form-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #E0E0E0;
+      background: #F5F5F5;
+    }
+
+    .track-form-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1A1A1A;
+      margin: 0;
+    }
+
+    .track-form-body {
+      padding: 16px;
+    }
+
+    .track-form-group {
+      margin-bottom: 16px;
+    }
+
+    .track-form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .track-form-label {
+      font-size: 12px;
+      color: var(--vh-primary);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .track-form-label.required::after {
+      content: ' *';
+      color: #999999;
+    }
+
+    .track-form-input,
+    .track-form-textarea,
+    .track-form-select {
+      color: var(--vh-primary);
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #E0E0E0;
+      border-radius: 0;
+      font-size: 14px;
+      background: #FFFFFF;
+      font-family: inherit;
+    }
+
+    .track-form-textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .track-form-input:focus,
+    .track-form-textarea:focus,
+    .track-form-select:focus {
+      outline: none;
+      border-color: #999999;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .track-form-input[readonly],
+    .track-form-textarea[readonly] {
+      background: #F5F5F5;
+      color: var(--vh-primary);
+      cursor: not-allowed;
+    }
+
+    .track-form-submit {
+      padding: 10px 20px;
+      background: #1A1A1A;
+      color: #FFFFFF;
+      border: 1px solid #1A1A1A;
+      border-radius: 0;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .track-form-submit:hover {
+      background: #333333;
+      border-color: #333333;
+    }
+
+    /* ===== 操作卡片网格样式 ===== */
+    .track-action-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .track-action-card {
+      background: #FFFFFF;
+      border: 1px solid #E0E0E0;
+      border-radius: 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .track-action-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #E0E0E0;
+      background: #F5F5F5;
+    }
+
+    .track-action-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1A1A1A;
+      margin: 0;
+    }
+
+    .track-action-body {
+      padding: 16px;
+    }
+
+    .track-action-text {
+      font-size: 12px;
+      color: var(--vh-primary);
+      margin-bottom: 12px;
+    }
+
+    .track-action-select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #E0E0E0;
+      border-radius: 0;
+      font-size: 12px;
+      margin-bottom: 12px;
+      background: #FFFFFF;
+      color: #333333;
+    }
+
+    .track-action-select:focus {
+      outline: none;
+      border-color: #999999;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .track-action-btn {
+      width: 100%;
+      padding: 8px;
+      background: #1A1A1A;
+      color: #FFFFFF;
+      border: 1px solid #1A1A1A;
+      border-radius: 0;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .track-action-btn:hover {
+      background: #333333;
+      border-color: #333333;
+    }
+
+    /* ===== 额外部分样式 ===== */
+    .track-extra-section {
+      margin-top: 24px;
+    }
+
+    .track-extra-section-title {
+      font-weight: 600;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #E0E0E0;
+      font-size: 14px;
+      color: #1A1A1A;
+    }
+
+    /* ===== 响应式设计 ===== */
+    /* 操作卡片已经是单列布局，无需响应式调整 */
+
+    /* ===== 统计卡片样式增强 ===== */
+    .track-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .track-stat-card {
+      background: #FFFFFF;
+      border: 1px solid #E0E0E0;
+      border-radius: 0;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .track-stat-label {
+      font-size: 12px;
+      color: #6B7280;
+      margin-bottom: 8px;
+    }
+
+    .track-stat-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1A1A1A;
+    }
+
+    .track-stat-unit {
+      font-size: 14px;
+      color: #6B7280;
+      margin-left: 4px;
+    }
+
+    /* ===== 进度条样式 ===== */
+    .track-progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #E5E7EB;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .track-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #1A1A1A 0%, #333333 100%);
+      transition: width 0.3s ease;
+    }
+
+    {% block tracking_custom_styles %}{% endblock %}
+  </style>
+{% endblock module_styles %}
+
+{% block pm_content %}
+  {# ===== 统计卡片区域 ===== #}
+  {% block tracking_stats_section %}
+  <div class="track-stats-grid">
+    {% block tracking_stats_content %}
+    <div class="track-stat-card">
+      <div class="track-stat-label">目标值</div>
+      <div class="track-stat-value">
+        {% block tracking_target_value %}{{ tracking_object.target_value|default:"-" }}{% endblock %}
+        {% block tracking_target_unit %}{% if tracking_object.indicator_unit %}<span class="track-stat-unit">{{ tracking_object.indicator_unit }}</span>{% endif %}{% endblock %}
+      </div>
+    </div>
+    <div class="track-stat-card">
+      <div class="track-stat-label">当前值</div>
+      <div class="track-stat-value">
+        {% block tracking_current_value %}{{ tracking_object.current_value|default:"0" }}{% endblock %}
+        {% block tracking_current_unit %}{% if tracking_object.indicator_unit %}<span class="track-stat-unit">{{ tracking_object.indicator_unit }}</span>{% endif %}{% endblock %}
+      </div>
+    </div>
+    <div class="track-stat-card">
+      <div class="track-stat-label">完成率</div>
+      <div class="track-stat-value">
+        {% block tracking_completion_rate %}{{ tracking_object.completion_rate|default:"0" }}%{% endblock %}
+      </div>
+      {% block tracking_progress_bar %}
+      {% if tracking_object.completion_rate %}
+      <div class="track-progress-bar">
+        <div class="track-progress-fill" style="width: {{ tracking_object.completion_rate }}%"></div>
+      </div>
+      {% endif %}
+      {% endblock %}
+    </div>
+    <div class="track-stat-card">
+      <div class="track-stat-label">进度记录</div>
+      <div class="track-stat-value">
+        {% block tracking_records_count %}{{ progress_records|length|default:"0" }}{% endblock %}
+      </div>
+    </div>
+    {% endblock tracking_stats_content %}
+  </div>
+  {% endblock tracking_stats_section %}
+
+  {# ===== 进度更新表单 ===== #}
+  {% block tracking_progress_form_section %}
+  {% if can_update_progress %}
+  <div class="track-form-card">
+    <div class="track-form-header">
+      <h3 class="track-form-title">{% block tracking_progress_form_title %}更新进度{% endblock %}</h3>
+    </div>
+    <div class="track-form-body">
+      <form method="post" id="tracking-progress-form">
+        {% csrf_token %}
+        <input type="hidden" name="update_progress" value="1">
+        
+        {% block tracking_progress_form_fields %}
+        {# 获取跟踪类型，默认为 numeric #}
+        {% block tracking_value_type %}
+        {% with value_type=tracking_object.value_type|default:"numeric" %}
+        
+        {# 数字型：显示数字输入框和完成率 #}
+        {% if value_type == "numeric" %}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="track-form-group" style="margin-bottom: 0;">
+            <label class="track-form-label required">当前值</label>
+            {% block tracking_current_value_input %}
+            {{ progress_form.current_value }}
+            {% endblock %}
+            {% if progress_form.current_value.errors %}
+            <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+            {% endif %}
+            {% if progress_form.current_value.help_text %}
+            <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.current_value.help_text }}</div>
+            {% endif %}
+          </div>
+          <div class="track-form-group" style="margin-bottom: 0;">
+            <label class="track-form-label">预计完成率</label>
+            <input type="text" class="track-form-input" id="predictedRate" readonly placeholder="自动计算">
+          </div>
+        </div>
+        
+        {# 布尔型：显示完成状态选择 #}
+        {% elif value_type == "boolean" %}
+        <div class="track-form-group" style="margin-bottom: 16px;">
+          <label class="track-form-label required">完成状态</label>
+          {% block tracking_boolean_input %}
+          {% if progress_form.current_value %}
+          {{ progress_form.current_value }}
+          {% if progress_form.current_value.errors %}
+          <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+          {% endif %}
+          {% if progress_form.current_value.help_text %}
+          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.current_value.help_text }}</div>
+          {% endif %}
+          {% else %}
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="radio" name="current_value" value="1" {% if tracking_object.current_value %}checked{% endif %} style="width: 18px; height: 18px;">
+              <span>已完成</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="radio" name="current_value" value="0" {% if not tracking_object.current_value %}checked{% endif %} style="width: 18px; height: 18px;">
+              <span>未完成</span>
+            </label>
+          </div>
+          {% endif %}
+          {% endblock %}
+        </div>
+        
+        {# 百分比型：显示百分比输入框 #}
+        {% elif value_type == "percentage" %}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="track-form-group" style="margin-bottom: 0;">
+            <label class="track-form-label required">完成百分比</label>
+            {% block tracking_percentage_input %}
+            {% if progress_form.current_value %}
+            {{ progress_form.current_value }}
+            {% if progress_form.current_value.errors %}
+            <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+            {% endif %}
+            {% if progress_form.current_value.help_text %}
+            <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.current_value.help_text }}</div>
+            {% endif %}
+            {% else %}
+            <input type="number" name="current_value" class="track-form-input" 
+                   value="{{ tracking_object.current_value|default:0 }}" 
+                   min="0" max="100" step="1" 
+                   placeholder="0-100">
+            <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">请输入0-100之间的百分比值</div>
+            {% endif %}
+            {% endblock %}
+          </div>
+          <div class="track-form-group" style="margin-bottom: 0;">
+            <label class="track-form-label">进度条</label>
+            <div class="track-progress-bar" style="margin-top: 8px;">
+              <div class="track-progress-fill" id="percentageProgressBar" style="width: {{ tracking_object.current_value|default:0 }}%"></div>
+            </div>
+          </div>
+        </div>
+        
+        {# 选择型：显示下拉选择框 #}
+        {% elif value_type == "choice" %}
+        <div class="track-form-group" style="margin-bottom: 16px;">
+          <label class="track-form-label required">当前阶段</label>
+          {% block tracking_choice_input %}
+          {% if progress_form.current_value %}
+          {{ progress_form.current_value }}
+          {% if progress_form.current_value.errors %}
+          <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+          {% endif %}
+          {% if progress_form.current_value.help_text %}
+          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.current_value.help_text }}</div>
+          {% endif %}
+          {% else %}
+          <select name="current_value" class="track-form-input">
+            {% for choice_value, choice_label in tracking_object.value_choices %}
+            <option value="{{ choice_value }}" {% if tracking_object.current_value == choice_value %}selected{% endif %}>
+              {{ choice_label }}
+            </option>
+            {% endfor %}
+          </select>
+          {% endif %}
+          {% endblock %}
+        </div>
+        
+        {# 文本型：显示文本输入框 #}
+        {% elif value_type == "text" %}
+        <div class="track-form-group" style="margin-bottom: 16px;">
+          <label class="track-form-label required">当前进度</label>
+          {% block tracking_text_input %}
+          {% if progress_form.current_value %}
+          {{ progress_form.current_value }}
+          {% if progress_form.current_value.errors %}
+          <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+          {% endif %}
+          {% if progress_form.current_value.help_text %}
+          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.current_value.help_text }}</div>
+          {% endif %}
+          {% else %}
+          <input type="text" name="current_value" class="track-form-input" 
+                 value="{{ tracking_object.current_value|default:'' }}" 
+                 placeholder="请描述当前进度情况...">
+          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">请输入当前进度的文字描述</div>
+          {% endif %}
+          {% endblock %}
+        </div>
+        
+        {# 默认：数字型 #}
+        {% else %}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="track-form-group" style="margin-bottom: 0;">
+            <label class="track-form-label required">当前值</label>
+            {% block tracking_default_value_input %}
+            {{ progress_form.current_value }}
+            {% endblock %}
+            {% if progress_form.current_value.errors %}
+            <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.current_value.errors }}</div>
+            {% endif %}
+            {% if progress_form.current_value.help_text %}
+            <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.current_value.help_text }}</div>
+            {% endif %}
+          </div>
+          <div class="track-form-group" style="margin-bottom: 0;">
+            <label class="track-form-label">预计完成率</label>
+            <input type="text" class="track-form-input" id="predictedRate" readonly placeholder="自动计算">
+          </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+        {% endblock tracking_value_type %}
+
+        <div class="track-form-group">
+          <label class="track-form-label required">进度说明</label>
+          {% block tracking_progress_description_input %}
+          {{ progress_form.progress_description }}
+          {% endblock %}
+          {% if progress_form.progress_description.errors %}
+          <div style="font-size: 12px; color: #dc3545; margin-top: 4px;">{{ progress_form.progress_description.errors }}</div>
+          {% endif %}
+          {% if progress_form.progress_description.help_text %}
+          <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">{{ progress_form.progress_description.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="track-form-group">
+          <label class="track-form-label">备注</label>
+          {% block tracking_notes_input %}
+          {{ progress_form.notes }}
+          {% endblock %}
+        </div>
+        {% endblock tracking_progress_form_fields %}
+
+        <button type="submit" class="track-form-submit">{% block tracking_progress_submit_text %}更新进度{% endblock %}</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+  {% endblock tracking_progress_form_section %}
+
+  {# ===== 状态转换和完成确认 ===== #}
+  {% block tracking_actions_section %}
+  {% if valid_transitions or can_complete %}
+  <div class="track-action-grid">
+    {% block tracking_status_transition %}
+    {% if valid_transitions %}
+    <div class="track-action-card">
+      <div class="track-action-header">
+        <h6 class="track-action-title">状态转换</h6>
+      </div>
+      <div class="track-action-body">
+        <div class="track-action-text">
+          当前：<span class="list-badge list-badge-{{ tracking_object.status }}">{% block tracking_current_status_display %}{{ tracking_object.get_status_display }}{% endblock %}</span>
+        </div>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="transition_status" value="1">
+          <select name="new_status" class="track-action-select">
+            {% block tracking_status_options %}
+            {% for status in valid_transitions %}
+            <option value="{{ status }}">
+              {% block tracking_status_option_display %}
+              {{ status|tracking_status_display }}
+              {% endblock %}
+            </option>
+            {% endfor %}
+            {% endblock %}
+          </select>
+          <button type="submit" class="track-action-btn">转换状态</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+    {% endblock tracking_status_transition %}
+
+    {% block tracking_complete_action %}
+    {% if can_complete %}
+    <div class="track-action-card">
+      <div class="track-action-header">
+        <h6 class="track-action-title">完成确认</h6>
+      </div>
+      <div class="track-action-body">
+        <div class="track-action-text">{% block tracking_complete_message %}确认目标已完成？完成后将无法继续更新进度。{% endblock %}</div>
+        <form method="post">
+          {% csrf_token %}
+          {% block tracking_complete_input %}
+          <input type="hidden" name="complete_goal" value="1">
+          {% endblock %}
+          <button type="submit" class="track-action-btn">确认完成</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+    {% endblock tracking_complete_action %}
+  </div>
+  {% endif %}
+  {% endblock tracking_actions_section %}
+
+  {# ===== 筛选器区域 ===== #}
+  {% block tracking_filters_section %}
+  <div class="list-filters-section">
+    <form method="get">
+      <div class="row">
+        {% block tracking_filters_content %}
+        <div class="col-md-3">
+          <label class="form-label">记录人</label>
+          <select name="recorded_by" class="form-select">
+            <option value="">全部记录人</option>
+            {% for user in all_users %}
+            <option value="{{ user.id }}" {% if recorded_by_filter|stringformat:"s" == user.id|stringformat:"s" %}selected{% endif %}>
+              {{ user.get_full_name|default:user.username }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">开始时间</label>
+          <input type="date" name="date_from" class="form-control" value="{{ date_from|default:'' }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">结束时间</label>
+          <input type="date" name="date_to" class="form-control" value="{{ date_to|default:'' }}">
+        </div>
+        {% endblock tracking_filters_content %}
+        <div class="col-md-auto d-flex align-items-end">
+          <button type="submit" class="list-btn list-btn-primary">查询</button>
+          <a href="{{ request.path }}" class="list-btn list-btn-outline ms-2">重置</a>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% endblock tracking_filters_section %}
+
+  {# ===== 进度记录列表 ===== #}
+  {% block tracking_records_section %}
+  <div class="list-table-section">
+    <div class="list-table-wrapper">
+      <table class="list-table">
+        <thead>
+          <tr>
+            {% block tracking_records_headers %}
+            <th>记录时间</th>
+            <th>记录人</th>
+            <th>当前值</th>
+            <th>完成率</th>
+            <th>进度说明</th>
+            <th>备注</th>
+            {% endblock tracking_records_headers %}
+          </tr>
+        </thead>
+        <tbody>
+          {% block tracking_records_rows %}
+          {% for record in page_obj %}
+          <tr>
+            <td>
+              <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ record.recorded_time|date:"Y-m-d" }}</div>
+              <div style="font-size: 12px; color: #999999;">{{ record.recorded_time|date:"H:i" }}</div>
+            </td>
+            <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
+            <td>
+              {% block tracking_record_current_value_display %}
+              {% with value_type=tracking_object.value_type|default:tracking_object.indicator_type|default:"numeric" %}
+              {% if value_type == 'text' %}
+                {# 文本型：从 notes 中提取文本内容 #}
+                {% if record.notes|slice:":8" == "[文本进度]" %}
+                  {% with text_part=record.notes|slice:"8:"|truncatewords:10 %}
+                  <span class="list-badge">{{ text_part }}</span>
+                  {% endwith %}
+                {% else %}
+                  <span class="list-badge">-</span>
+                {% endif %}
+              {% elif value_type == 'boolean' %}
+                <span class="list-badge">{% if record.current_value >= 1 %}已完成{% else %}未完成{% endif %}</span>
+              {% elif value_type == 'choice' %}
+                {# 选择型：显示选择项的标签 #}
+                {% with record_value=record.current_value|stringformat:"s" %}
+                  {% for choice_value, choice_label in tracking_object.value_choices %}
+                    {% if choice_value == record_value %}
+                      <span class="list-badge">{{ choice_label }}</span>
+                    {% endif %}
+                  {% empty %}
+                    <span class="list-badge">{{ record.current_value }}</span>
+                  {% endfor %}
+                {% endwith %}
+              {% else %}
+                <span class="list-badge">{{ record.current_value }}{% if tracking_object.indicator_unit %} {{ tracking_object.indicator_unit }}{% endif %}</span>
+              {% endif %}
+              {% endwith %}
+              {% endblock %}
+            </td>
+            <td>
+              <div class="list-progress">
+                <div class="list-progress-fill" style="width: {{ record.completion_rate }}%"></div>
+                <span class="list-progress-text">{{ record.completion_rate }}%</span>
+              </div>
+            </td>
+            <td>
+              <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ record.progress_description|truncatewords:15 }}</div>
+            </td>
+            <td>
+              {% block tracking_record_notes_display %}
+              {% with value_type=tracking_object.value_type|default:tracking_object.indicator_type|default:"numeric" %}
+              {% if value_type == 'text' %}
+                {# 文本型：使用 extract_notes 过滤器提取备注部分 #}
+                {% with extracted_notes=record.notes|extract_notes %}
+                  {% if extracted_notes %}
+                    <div style="font-size: 12px; color: #999999;">{{ extracted_notes|truncatewords:10 }}</div>
+                  {% else %}
+                    <span style="color: #999999;">-</span>
+                  {% endif %}
+                {% endwith %}
+              {% else %}
+                {# 非文本型：正常显示备注 #}
+                {% if record.notes %}
+                <div style="font-size: 12px; color: #999999;">{{ record.notes|truncatewords:10 }}</div>
+                {% else %}
+                <span style="color: #999999;">-</span>
+                {% endif %}
+              {% endif %}
+              {% endwith %}
+              {% endblock %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="list-empty-state">
+              <div class="list-empty-state-icon">📋</div>
+              <div class="list-empty-state-text">暂无进度记录</div>
+              <div class="list-empty-state-hint">更新进度后将显示在这里</div>
+            </td>
+          </tr>
+          {% endfor %}
+          {% endblock tracking_records_rows %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endblock tracking_records_section %}
+
+  {# ===== 分页 ===== #}
+  {% block tracking_pagination_section %}
+  {% if page_obj and page_obj.has_other_pages %}
+  <div class="list-pagination-section">
+    {% include "shared/_pagination.html" %}
+  </div>
+  {% endif %}
+  {% endblock tracking_pagination_section %}
+
+  {# ===== 状态日志 ===== #}
+  {% block tracking_status_logs_section %}
+  {% if status_logs %}
+  <div class="track-extra-section">
+    <div class="track-extra-section-title">状态日志（共 {{ status_logs|length }} 条记录）</div>
+    <div class="list-table-section">
+      <div class="list-table-wrapper">
+        <table class="list-table">
+          <thead>
+            <tr>
+              {% block tracking_status_logs_headers %}
+              <th>变更时间</th>
+              <th>状态变更</th>
+              <th>变更人</th>
+              <th>变更原因</th>
+              {% endblock tracking_status_logs_headers %}
+            </tr>
+          </thead>
+          <tbody>
+            {% block tracking_status_logs_rows %}
+            {% for log in status_logs %}
+            <tr>
+              <td>
+                <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ log.changed_time|date:"Y-m-d" }}</div>
+                <div style="font-size: 12px; color: #999999;">{{ log.changed_time|date:"H:i" }}</div>
+              </td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="list-badge">
+                    {% block tracking_status_log_display %}
+                    {{ log.old_status|tracking_status_display }}
+                    {% endblock %}
+                  </span>
+                  <span style="color: #999999;">→</span>
+                  <span class="list-badge">
+                    {% block tracking_status_log_new_display %}
+                    {{ log.new_status|tracking_status_display }}
+                    {% endblock %}
+                  </span>
+                </div>
+              </td>
+              <td>
+                {% if log.changed_by %}
+                {{ log.changed_by.get_full_name|default:log.changed_by.username }}
+                {% else %}
+                <span style="color: #999999;">-</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if log.change_reason %}
+                <div style="font-size: 12px; color: #333333;">{{ log.change_reason|truncatewords:15 }}</div>
+                {% else %}
+                <span style="color: #999999;">-</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="list-empty-state">
+                <div class="list-empty-state-icon">▢</div>
+                <div class="list-empty-state-text">暂无状态日志</div>
+              </td>
+            </tr>
+            {% endfor %}
+            {% endblock tracking_status_logs_rows %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endblock tracking_status_logs_section %}
+
+  {# ===== 调整申请记录 ===== #}
+  {% block tracking_adjustments_section %}
+  {% if adjustments %}
+  <div class="track-extra-section">
+    <div class="track-extra-section-title">调整申请（共 {{ adjustments|length }} 条记录）</div>
+    <div class="list-table-section">
+      <div class="list-table-wrapper">
+        <table class="list-table">
+          <thead>
+            <tr>
+              {% block tracking_adjustments_headers %}
+              <th>申请时间</th>
+              <th>状态</th>
+              <th>调整原因</th>
+              <th>审批人</th>
+              {% endblock tracking_adjustments_headers %}
+            </tr>
+          </thead>
+          <tbody>
+            {% block tracking_adjustments_rows %}
+            {% for adjustment in adjustments %}
+            <tr>
+              <td>
+                <div style="font-size: 12px; color: #333333; font-weight: 500;">{{ adjustment.created_time|date:"Y-m-d" }}</div>
+                <div style="font-size: 12px; color: #999999;">{{ adjustment.created_time|date:"H:i" }}</div>
+              </td>
+              <td>
+                <span class="list-badge list-badge-{{ adjustment.status }}">{{ adjustment.get_status_display }}</span>
+              </td>
+              <td>
+                <div style="font-size: 12px; color: #333333; max-width: 300px;">{{ adjustment.adjustment_reason|truncatewords:15 }}</div>
+              </td>
+              <td>
+                {% if adjustment.approved_by %}
+                {{ adjustment.approved_by.get_full_name|default:adjustment.approved_by.username }}
+                {% else %}
+                <span style="color: #999999;">-</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="list-empty-state">
+                <div class="list-empty-state-icon">▢</div>
+                <div class="list-empty-state-text">暂无调整申请</div>
+              </td>
+            </tr>
+            {% endfor %}
+            {% endblock tracking_adjustments_rows %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endblock tracking_adjustments_section %}
+{% endblock pm_content %}
+
+{% block module_scripts %}
+  {{ block.super }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // 完成率自动计算和验证
+      const currentValueInput = document.querySelector('#id_current_value');
+      const predictedRateInput = document.getElementById('predictedRate');
+      const progressForm = document.getElementById('tracking-progress-form');
+      const targetValue = parseFloat('{% block tracking_target_value_js %}{{ tracking_object.target_value|default:0 }}{% endblock %}') || 0;
+      const currentValue = parseFloat('{% block tracking_current_value_js %}{{ tracking_object.current_value|default:0 }}{% endblock %}') || 0;
+      const allowBackward = {% block tracking_allow_backward %}false{% endblock %}; // 是否允许进度倒退
+      const maxExceedPercent = {% block tracking_max_exceed_percent %}10{% endblock %}; // 允许超过目标值的百分比
+      const valueType = {% block tracking_value_type_js %}'{{ tracking_object.value_type|default:"numeric" }}'{% endblock %}; // 跟踪类型
+
+      // 验证函数
+      function validateCurrentValue(value) {
+        const numValue = parseFloat(value);
+        
+        // 检查是否为有效数字
+        if (isNaN(numValue)) {
+          return { valid: false, message: '请输入有效的数字' };
+        }
+        
+        // 检查是否为负数
+        if (numValue < 0) {
+          return { valid: false, message: '当前值不能为负数' };
+        }
+        
+        // 检查是否超过目标值（允许一定超出）
+        const maxAllowed = targetValue * (1 + maxExceedPercent / 100);
+        if (numValue > maxAllowed) {
+          return { 
+            valid: false, 
+            message: `当前值不能超过目标值的 ${100 + maxExceedPercent}%（${maxAllowed.toFixed(2)}）` 
+          };
+        }
+        
+        // 检查是否倒退（如果不允许）
+        if (!allowBackward && numValue < currentValue) {
+          return { 
+            valid: false, 
+            message: `进度不能倒退，当前值不能小于 ${currentValue}` 
+          };
+        }
+        
+        return { valid: true };
+      }
+
+      // 显示验证错误
+      function showValidationError(input, message) {
+        // 移除之前的错误提示
+        const existingError = input.parentElement.querySelector('.validation-error');
+        if (existingError) {
+          existingError.remove();
+        }
+        
+        // 添加错误样式
+        input.style.borderColor = '#dc3545';
+        
+        // 显示错误消息
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'validation-error';
+        errorDiv.style.cssText = 'font-size: 12px; color: #dc3545; margin-top: 4px;';
+        errorDiv.textContent = message;
+        input.parentElement.appendChild(errorDiv);
+      }
+
+      // 清除验证错误
+      function clearValidationError(input) {
+        const existingError = input.parentElement.querySelector('.validation-error');
+        if (existingError) {
+          existingError.remove();
+        }
+        input.style.borderColor = '';
+      }
+
+      if (currentValueInput && predictedRateInput) {
+        // 初始化完成率显示
+        const initialValue = parseFloat(currentValueInput.value) || 0;
+        if (targetValue > 0 && initialValue > 0) {
+          const rate = (initialValue / targetValue) * 100;
+          predictedRateInput.value = Math.min(rate, 100).toFixed(2) + '%';
+        }
+
+        // 实时验证和更新完成率
+        currentValueInput.addEventListener('input', function() {
+          const value = this.value.trim();
+          
+          if (value === '') {
+            clearValidationError(this);
+            predictedRateInput.value = '0.00%';
+            return;
+          }
+          
+          const validation = validateCurrentValue(value);
+          
+          if (!validation.valid) {
+            showValidationError(this, validation.message);
+          } else {
+            clearValidationError(this);
+            const numValue = parseFloat(value) || 0;
+            if (targetValue > 0) {
+              const rate = (numValue / targetValue) * 100;
+              predictedRateInput.value = Math.min(rate, 100).toFixed(2) + '%';
+            } else {
+              predictedRateInput.value = '0.00%';
+            }
+          }
+        });
+
+        // 失去焦点时再次验证
+        currentValueInput.addEventListener('blur', function() {
+          const value = this.value.trim();
+          if (value !== '') {
+            const validation = validateCurrentValue(value);
+            if (!validation.valid) {
+              showValidationError(this, validation.message);
+            }
+          }
+        });
+      }
+
+      // 表单提交验证
+      if (progressForm) {
+        progressForm.addEventListener('submit', function(e) {
+          if (currentValueInput) {
+            const value = currentValueInput.value.trim();
+            
+            if (!value) {
+              e.preventDefault();
+              showValidationError(currentValueInput, '请输入当前值');
+              currentValueInput.focus();
+              return false;
+            }
+            
+            const validation = validateCurrentValue(value);
+            if (!validation.valid) {
+              e.preventDefault();
+              showValidationError(currentValueInput, validation.message);
+              currentValueInput.focus();
+              return false;
+            }
+          }
+          
+          // 验证进度说明
+          const progressDescriptionInput = document.querySelector('#id_progress_description');
+          if (progressDescriptionInput) {
+            const description = progressDescriptionInput.value.trim();
+            if (!description) {
+              e.preventDefault();
+              const errorDiv = document.createElement('div');
+              errorDiv.className = 'validation-error';
+              errorDiv.style.cssText = 'font-size: 12px; color: #dc3545; margin-top: 4px;';
+              errorDiv.textContent = '请输入进度说明';
+              progressDescriptionInput.parentElement.appendChild(errorDiv);
+              progressDescriptionInput.focus();
+              progressDescriptionInput.style.borderColor = '#dc3545';
+              return false;
+            }
+          }
+        });
+      }
+
+      {% block tracking_custom_scripts %}{% endblock %}
+    });
+  </script>
+{% endblock module_scripts %}

@@ -1,0 +1,47 @@
+{% extends "shared/tracking_base.html" %}
+{% load static %}
+{% load admin_tags %}
+
+{% comment %}
+  统一的跟踪示例页面（目标跟踪/计划跟踪）
+  完全按照 tracking_base.html 模板进行渲染
+  通过 category 参数区分：goal（目标跟踪）或 plan（计划跟踪）
+{% endcomment %}
+
+{% block tracking_title %}
+  {% if category == 'plan' %}计划跟踪示例{% else %}目标跟踪示例{% endif %}
+{% endblock %}
+
+{% block tracking_page_title %}
+  {% if category == 'plan' %}计划跟踪示例{% else %}目标跟踪示例{% endif %} - 维海生产系统
+{% endblock %}
+
+{% block pm_subtitle %}
+  {% if category == 'plan' %}
+    这是一个完整的计划跟踪示例，展示 tracking_base.html 模板在计划跟踪场景下的应用
+  {% else %}
+    这是一个完整的目标跟踪示例，展示 tracking_base.html 模板的所有功能
+  {% endif %}
+  {% if tracking_type == 'percentage' %}（百分比型）{% elif tracking_type == 'boolean' %}（布尔型）{% elif tracking_type == 'choice' %}（选择型）{% elif tracking_type == 'text' %}（文本型）{% else %}（数字型）{% endif %}
+{% endblock %}
+
+{% block pm_actions %}
+  <a href="{% url 'system_pages:example_form' %}" class="btn btn-outline-secondary">返回示例列表</a>
+  <div class="btn-group ml-2" role="group">
+    <a href="?category={{ category }}&type=numeric" class="btn btn-sm {% if tracking_type == 'numeric' or not tracking_type %}btn-primary{% else %}btn-outline-primary{% endif %}">数字型</a>
+    <a href="?category={{ category }}&type=percentage" class="btn btn-sm {% if tracking_type == 'percentage' %}btn-primary{% else %}btn-outline-primary{% endif %}">百分比型</a>
+    <a href="?category={{ category }}&type=boolean" class="btn btn-sm {% if tracking_type == 'boolean' %}btn-primary{% else %}btn-outline-primary{% endif %}">布尔型</a>
+    <a href="?category={{ category }}&type=choice" class="btn btn-sm {% if tracking_type == 'choice' %}btn-primary{% else %}btn-outline-primary{% endif %}">选择型</a>
+    <a href="?category={{ category }}&type=text" class="btn btn-sm {% if tracking_type == 'text' %}btn-primary{% else %}btn-outline-primary{% endif %}">文本型</a>
+  </div>
+{% endblock %}
+
+{# 完全使用 tracking_base.html 的默认渲染，不需要覆盖其他 block #}
+{# 如果需要自定义，可以覆盖以下 block：
+   - tracking_stats_content: 自定义统计卡片
+   - tracking_progress_form_fields: 自定义进度表单字段
+   - tracking_records_headers: 自定义记录表格表头
+   - tracking_records_rows: 自定义记录表格数据行
+   - tracking_status_logs_section: 自定义状态日志区域
+   - tracking_adjustments_section: 自定义调整申请区域
+#}

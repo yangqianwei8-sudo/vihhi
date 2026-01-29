@@ -1336,6 +1336,7 @@ class SealBorrowing(models.Model):
         ('approved', '已批准'),
         ('rejected', '已拒绝'),
         ('borrowed', '借用中'),
+        ('pending_return_confirmation', '待确认归还'),
         ('returned', '已归还'),
         ('overdue', '逾期'),
     ]
@@ -1347,7 +1348,7 @@ class SealBorrowing(models.Model):
     borrowing_reason = models.TextField(verbose_name='借用事由')
     expected_return_date = models.DateField(verbose_name='预计归还日期')
     actual_return_date = models.DateField(null=True, blank=True, verbose_name='实际归还日期')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending_approval', verbose_name='状态')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='pending_approval', verbose_name='状态')
     approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_seal_borrowings', verbose_name='审批人')
     approved_time = models.DateTimeField(null=True, blank=True, verbose_name='审批时间')
     return_received_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='received_seal_returns', verbose_name='归还接收人')

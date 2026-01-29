@@ -191,6 +191,9 @@ def system_management_home(request):
         request=request
     )
     
+    # 添加顶部导航菜单
+    context['full_top_nav'] = _build_full_top_nav(permission_set, user=request.user)
+    
     # 添加侧边栏导航
     context['sidebar_nav'] = _build_system_management_sidebar_nav(
         permission_set, 
@@ -575,34 +578,44 @@ def _build_system_management_sidebar_nav(permission_set, request_path=None, acti
             'icon': '📝',
             'url_name': 'system_pages:example_form',
             'admin_only': True,
-        },
-        {
-            'id': 'create_form_example',
-            'label': '创建提交表单示例',
-            'icon': '📋',
-            'url_name': 'system_pages:create_form_example',
-            'admin_only': True,
-        },
-        {
-            'id': 'detail_page_example',
-            'label': '详情页面示例',
-            'icon': '📄',
-            'url_name': 'system_pages:detail_page_example',
-            'admin_only': True,
-        },
-        {
-            'id': 'list_page_example',
-            'label': '列表页面示例',
-            'icon': '📊',
-            'url_name': 'system_pages:list_page_example',
-            'admin_only': True,
-        },
-        {
-            'id': 'three_column_layout_example',
-            'label': '三栏布局模板',
-            'icon': '📐',
-            'url_name': 'system_pages:three_column_layout_example',
-            'admin_only': True,
+            'expanded': False,
+            'children': [
+                {
+                    'id': 'create_form_example',
+                    'label': '创建提交表单示例',
+                    'icon': '📋',
+                    'url_name': 'system_pages:create_form_example',
+                    'admin_only': True,
+                },
+                {
+                    'id': 'detail_page_example',
+                    'label': '详情页面示例',
+                    'icon': '📄',
+                    'url_name': 'system_pages:detail_page_example',
+                    'admin_only': True,
+                },
+                {
+                    'id': 'list_page_example',
+                    'label': '列表页面示例',
+                    'icon': '📊',
+                    'url_name': 'system_pages:list_page_example',
+                    'admin_only': True,
+                },
+                {
+                    'id': 'three_column_layout_example',
+                    'label': '三栏布局模板',
+                    'icon': '📐',
+                    'url_name': 'system_pages:three_column_layout_example',
+                    'admin_only': True,
+                },
+                {
+                    'id': 'tracking_example',
+                    'label': '跟踪示例',
+                    'icon': '🎯',
+                    'url_name': 'system_pages:tracking_example',
+                    'admin_only': True,
+                },
+            ],
         },
         {
             'id': 'permission_matrix',
@@ -638,31 +651,115 @@ def _build_system_management_sidebar_nav(permission_set, request_path=None, acti
             if not _permission_granted(item['permission'], permission_set):
                 continue
         
-        # 处理 URL
-        url = '#'
-        url_name = item.get('url_name')
-        if url_name:
-            try:
-                url = reverse(url_name)
-            except NoReverseMatch:
-                url = item.get('url', '#')
+        # 处理有子菜单的情况
+        if 'children' in item and item.get('children'):
+            # 构建子菜单
+            children = []
+            for child in item['children']:
+                # 检查子项权限和admin_only
+                if child.get('admin_only'):
+                    if not user or not _is_admin(user):
+                        continue
+                if child.get('permission'):
+                    if not _permission_granted(child['permission'], permission_set):
+                        continue
+                
+                # 处理子项 URL
+                child_url = '#'
+                child_url_name = child.get('url_name')
+                if child_url_name:
+                    try:
+                        child_url = reverse(child_url_name)
+                    except NoReverseMatch:
+                        child_url = child.get('url', '#')
+                else:
+                    child_url = child.get('url', '#')
+                
+                # 判断子项是否激活
+                child_active = False
+                if active_id and child.get('id') == active_id:
+                    child_active = True
+                elif request_path and child_url != '#' and request_path.startswith(child_url.rstrip('/')):
+                    child_active = True
+                
+                children.append({
+                    'id': child.get('id', ''),
+                    'label': child.get('label', ''),
+                    'icon': child.get('icon', ''),
+                    'url': child_url,
+                    'active': child_active,
+                })
+            
+            # 只有当有可见的子项时才添加父菜单
+            if children:
+                # 处理父菜单 URL
+                url = '#'
+                url_name = item.get('url_name')
+                if url_name:
+                    try:
+                        url = reverse(url_name)
+                    except NoReverseMatch:
+                        url = item.get('url', '#')
+                else:
+                    url = item.get('url', '#')
+                
+                # 判断父菜单是否激活（如果有激活的子项，父菜单也激活）
+                is_active = False
+                if active_id and item.get('id') == active_id:
+                    is_active = True
+                elif request_path and url != '#' and request_path.startswith(url.rstrip('/')):
+                    is_active = True
+                else:
+                    # 检查是否有子项激活
+                    for child in children:
+                        if child.get('active'):
+                            is_active = True
+                            break
+                
+                # 判断是否展开（如果有激活的子项，则展开）
+                expanded = item.get('expanded', False)
+                if not expanded:
+                    for child in children:
+                        if child.get('active'):
+                            expanded = True
+                            break
+                
+                nav.append({
+                    'id': item.get('id', ''),
+                    'label': item.get('label', ''),
+                    'icon': item.get('icon', ''),
+                    'url': url,
+                    'active': is_active,
+                    'expanded': expanded,
+                    'children': children,
+                })
         else:
-            url = item.get('url', '#')
-        
-        # 判断是否激活
-        is_active = False
-        if active_id and item.get('id') == active_id:
-            is_active = True
-        elif request_path and url != '#' and request_path.startswith(url.rstrip('/')):
-            is_active = True
-        
-        nav.append({
-            'id': item.get('id', ''),
-            'label': item.get('label', ''),
-            'icon': item.get('icon', ''),
-            'url': url,
-            'active': is_active,
-        })
+            # 处理没有子菜单的菜单项
+            # 处理 URL
+            url = '#'
+            url_name = item.get('url_name')
+            if url_name:
+                try:
+                    url = reverse(url_name)
+                except NoReverseMatch:
+                    url = item.get('url', '#')
+            else:
+                url = item.get('url', '#')
+            
+            # 判断是否激活
+            is_active = False
+            if active_id and item.get('id') == active_id:
+                is_active = True
+            elif request_path and url != '#' and request_path.startswith(url.rstrip('/')):
+                is_active = True
+            
+            nav.append({
+                'id': item.get('id', ''),
+                'label': item.get('label', ''),
+                'icon': item.get('icon', ''),
+                'url': url,
+                'active': is_active,
+            })
     
     return nav
 
@@ -942,3 +1039,591 @@ def three_column_layout_example(request):
     context['sidebar_subtitle'] = 'System Management'
     
     return render(request, "system_management/three_column_layout_example.html", context)
+
+
+@login_required
+def tracking_example(request):
+    """跟踪示例页面（目标跟踪/计划跟踪）- 完全按照 tracking_base.html 模板渲染（仅 admin 可访问）
+    支持多种跟踪类型：numeric（数字型）、percentage（百分比型）等
+    通过 URL 参数：
+    - category: goal（目标跟踪）或 plan（计划跟踪），默认为 goal
+    - type: numeric, percentage, boolean, choice, text，默认为 numeric
+    """
+    if not _is_admin(request.user):
+        raise PermissionDenied("仅管理员可访问示例表单模块。")
+    
+    from django import forms
+    from datetime import datetime, timedelta
+    
+    permission_set = get_user_permission_codes(request.user)
+    
+    # 获取类别和跟踪类型
+    category = request.GET.get('category', 'goal')  # goal（目标跟踪）或 plan（计划跟踪）
+    tracking_type = request.GET.get('type', 'numeric')  # numeric, percentage, boolean, choice, text
+    
+    # 创建模拟的跟踪对象（统一类，根据 category 区分目标跟踪和计划跟踪）
+    class MockTrackingObject:
+        """模拟跟踪对象（统一类，支持目标跟踪和计划跟踪）"""
+        def __init__(self, tracking_type='numeric', category='goal'):
+            self.tracking_type = tracking_type
+            self.status = "in_progress"
+            # 为了兼容模板，同时设置 value_type 和 indicator_type
+            # indicator_type 是 StrategicGoal 模型使用的属性名
+            # value_type 是 tracking_base.html 模板使用的属性名
+            
+            # 根据 category 设置额外字段
+            if category == 'plan':
+                self.plan_number = "PLAN-2024-001"
+                self.plan_period = "年度计划"
+            
+            if tracking_type == 'percentage':
+                # 百分比型
+                if category == 'plan':
+                    self.name = "2024年度项目完成度"
+                else:
+                    self.name = "2024年度销售完成度"
+                self.value_type = "percentage"
+                self.indicator_type = "percentage"  # 兼容模板中的 indicator_type
+                self.target_value = 100
+                self.current_value = 65
+                self.indicator_unit = "%"
+                self.completion_rate = 65.0
+            elif tracking_type == 'boolean':
+                # 布尔型
+                if category == 'plan':
+                    self.name = "2024年度项目完成状态"
+                else:
+                    self.name = "2024年度销售目标完成状态"
+                self.value_type = "boolean"
+                self.indicator_type = "boolean"  # 兼容模板中的 indicator_type
+                self.target_value = 1
+                self.current_value = 0  # 0=未完成, 1=已完成
+                self.indicator_unit = ""
+                self.completion_rate = 0.0
+            elif tracking_type == 'choice':
+                # 选择型
+                if category == 'plan':
+                    self.name = "2024年度项目阶段"
+                    self.value_choices = [
+                        ("stage1", "阶段1：需求分析"),
+                        ("stage2", "阶段2：设计开发"),
+                        ("stage3", "阶段3：测试验收"),
+                    ]
+                else:
+                    self.name = "2024年度销售阶段"
+                    self.value_choices = [
+                        ("stage1", "阶段1：市场调研"),
+                        ("stage2", "阶段2：销售执行"),
+                        ("stage3", "阶段3：完成验收"),
+                    ]
+                self.value_type = "choice"
+                self.indicator_type = "choice"  # 兼容模板中的 indicator_type
+                self.target_value = "stage3"
+                self.current_value = "stage2"
+                self.indicator_unit = ""
+                self.completion_rate = 66.7
+            elif tracking_type == 'text':
+                # 文本型
+                if category == 'plan':
+                    self.name = "2024年度项目进度描述"
+                    self.current_value = "已完成需求分析，正在进行设计开发"
+                else:
+                    self.name = "2024年度销售进度描述"
+                    self.current_value = "已完成市场调研，正在进行销售执行"
+                self.value_type = "text"
+                self.indicator_type = "text"  # 兼容模板中的 indicator_type
+                self.target_value = ""
+                self.indicator_unit = ""
+                self.completion_rate = 50.0
+            else:
+                # 默认：数字型
+                if category == 'plan':
+                    self.name = "2024年度产品研发计划"
+                    self.target_value = 500
+                    self.current_value = 320
+                    self.indicator_unit = "项"
+                else:
+                    self.name = "2024年度销售目标"
+                    self.target_value = 1000
+                    self.current_value = 650
+                    self.indicator_unit = "万元"
+                self.value_type = "numeric"
+                self.indicator_type = "numeric"  # 兼容模板中的 indicator_type
+                self.completion_rate = (self.current_value / self.target_value) * 100
+        
+        def get_status_display(self):
+            status_map = {
+                'draft': '草稿',
+                'published': '已发布',
+                'in_progress': '执行中',
+                'completed': '已完成',
+                'cancelled': '已取消',
+            }
+            return status_map.get(self.status, self.status)
+    
+    tracking_object = MockTrackingObject(tracking_type=tracking_type, category=category)
+    
+    # 创建进度更新表单（根据类型动态创建）
+    class ProgressUpdateForm(forms.Form):
+        """进度更新表单（带业务规则验证）"""
+        def __init__(self, *args, tracking_object=None, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.tracking_object = tracking_object
+            
+            if not tracking_object:
+                # 如果没有 tracking_object，使用默认的数字型字段
+                self.fields['current_value'] = forms.DecimalField(
+                    label='当前值',
+                    required=True,
+                    min_value=0,
+                    widget=forms.NumberInput(attrs={
+                        'class': 'track-form-input',
+                        'id': 'id_current_value',
+                        'step': '0.01',
+                        'min': '0'
+                    }),
+                    help_text='当前值不能为负数，不能超过目标值的110%'
+                )
+                return
+            
+            value_type = tracking_object.value_type
+            
+            # 根据类型创建不同的字段
+            if value_type == 'percentage':
+                self.fields['current_value'] = forms.IntegerField(
+                    label='完成百分比',
+                    required=True,
+                    min_value=0,
+                    max_value=100,
+                    initial=tracking_object.current_value,
+                    widget=forms.NumberInput(attrs={
+                        'class': 'track-form-input',
+                        'id': 'id_current_value',
+                        'step': '1',
+                        'min': '0',
+                        'max': '100',
+                        'placeholder': '0-100'
+                    }),
+                    help_text='请输入0-100之间的百分比值'
+                )
+            elif value_type == 'boolean':
+                self.fields['current_value'] = forms.ChoiceField(
+                    label='完成状态',
+                    required=True,
+                    choices=[('0', '未完成'), ('1', '已完成')],
+                    initial=str(tracking_object.current_value),
+                    widget=forms.RadioSelect(attrs={
+                        'class': 'track-form-radio'
+                    }),
+                    help_text='请选择完成状态'
+                )
+            elif value_type == 'choice':
+                self.fields['current_value'] = forms.ChoiceField(
+                    label='当前阶段',
+                    required=True,
+                    choices=tracking_object.value_choices,
+                    initial=tracking_object.current_value,
+                    widget=forms.Select(attrs={
+                        'class': 'track-form-input'
+                    }),
+                    help_text='请选择当前阶段'
+                )
+            elif value_type == 'text':
+                self.fields['current_value'] = forms.CharField(
+                    label='当前进度',
+                    required=True,
+                    max_length=200,
+                    initial=tracking_object.current_value,
+                    widget=forms.TextInput(attrs={
+                        'class': 'track-form-input',
+                        'placeholder': '请描述当前进度情况...'
+                    }),
+                    help_text='请输入当前进度的文字描述'
+                )
+            else:
+                # 默认：数字型
+                self.fields['current_value'] = forms.DecimalField(
+                    label='当前值',
+                    required=True,
+                    min_value=0,
+                    initial=tracking_object.current_value,
+                    widget=forms.NumberInput(attrs={
+                        'class': 'track-form-input',
+                        'id': 'id_current_value',
+                        'step': '0.01',
+                        'min': '0'
+                    }),
+                    help_text='当前值不能为负数，不能超过目标值的110%'
+                )
+        progress_description = forms.CharField(
+            label='进度说明',
+            required=True,
+            min_length=10,
+            max_length=500,
+            widget=forms.Textarea(attrs={
+                'class': 'track-form-textarea',
+                'rows': 3,
+                'placeholder': '请详细说明本次进度更新的情况...'
+            }),
+            help_text='进度说明至少10个字符，最多500个字符'
+        )
+        remark = forms.CharField(
+            label='备注',
+            required=False,
+            max_length=200,
+            widget=forms.Textarea(attrs={
+                'class': 'track-form-textarea',
+                'rows': 2,
+                'placeholder': '可选，添加其他备注信息...'
+            })
+        )
+        
+        def clean_current_value(self):
+            current_value = self.cleaned_data.get('current_value')
+            if not self.tracking_object:
+                return current_value
+            
+            value_type = self.tracking_object.value_type
+            
+            if value_type == 'percentage':
+                # 百分比型验证
+                if isinstance(current_value, str):
+                    current_value = int(current_value)
+                if current_value < 0 or current_value > 100:
+                    raise forms.ValidationError('完成百分比必须在0-100之间')
+                return current_value
+            elif value_type == 'boolean':
+                # 布尔型验证
+                return int(current_value) if isinstance(current_value, str) else current_value
+            elif value_type in ['choice', 'text']:
+                # 选择型和文本型直接返回
+                return current_value
+            else:
+                # 数字型验证
+                target_value = self.tracking_object.target_value
+                if current_value < 0:
+                    raise forms.ValidationError('当前值不能为负数')
+                if current_value > target_value * 1.1:
+                    raise forms.ValidationError(f'当前值不能超过目标值的110%（{target_value * 1.1}）')
+                return current_value
+        
+        def clean_progress_description(self):
+            description = self.cleaned_data.get('progress_description')
+            if len(description.strip()) < 10:
+                raise forms.ValidationError('进度说明至少需要10个字符')
+            return description
+    
+    progress_form = ProgressUpdateForm(tracking_object=tracking_object)
+    
+    # 处理表单提交
+    now = timezone.now()
+    current_user = request.user
+    
+    # 使用 session 存储模拟数据（模拟数据库）
+    session_key = f'tracking_mock_records_{category}'  # 根据 category 区分 session key
+    if session_key not in request.session:
+        # 初始化模拟进度记录（使用可序列化的格式）
+        mock_records = [
+            {
+                'id': 1,
+                'recorded_time': (now - timedelta(days=30)).isoformat(),
+                'current_value': 100,
+                'completion_rate': 20.0,
+                'progress_description': '第一阶段研发任务完成，已完成100项研发任务',
+                'recorded_by_id': current_user.id,
+                'remark': '按计划推进'
+            },
+            {
+                'id': 2,
+                'recorded_time': (now - timedelta(days=20)).isoformat(),
+                'current_value': 200,
+                'completion_rate': 40.0,
+                'progress_description': '第二阶段研发任务完成，累计完成200项研发任务',
+                'recorded_by_id': current_user.id,
+                'remark': '进度良好'
+            },
+            {
+                'id': 3,
+                'recorded_time': (now - timedelta(days=10)).isoformat(),
+                'current_value': 300,
+                'completion_rate': 60.0,
+                'progress_description': '第三阶段研发任务完成，累计完成300项研发任务',
+                'recorded_by_id': current_user.id,
+                'remark': '按计划执行'
+            },
+        ]
+        request.session[session_key] = mock_records
+    else:
+        mock_records = request.session[session_key]
+    
+    # 处理进度更新
+    if 'update_progress' in request.POST:
+        progress_form = ProgressUpdateForm(request.POST, tracking_object=tracking_object)
+        if progress_form.is_valid():
+            new_current_value = progress_form.cleaned_data['current_value']
+            
+            # 根据类型计算完成率
+            value_type = tracking_object.value_type
+            if value_type == 'percentage':
+                new_completion_rate = float(new_current_value)
+            elif value_type == 'boolean':
+                new_completion_rate = 100.0 if new_current_value == 1 or new_current_value == '1' else 0.0
+            elif value_type == 'choice':
+                # 根据选择的阶段计算完成率
+                stage_index = [c[0] for c in tracking_object.value_choices].index(new_current_value)
+                total_stages = len(tracking_object.value_choices)
+                new_completion_rate = ((stage_index + 1) / total_stages) * 100
+            elif value_type == 'text':
+                # 文本型不计算完成率，保持原值
+                new_completion_rate = tracking_object.completion_rate
+            else:
+                # 数字型
+                new_completion_rate = (float(new_current_value) / tracking_object.target_value) * 100
+            
+            # 验证不能倒退（仅对数字型和百分比型）
+            can_check_backward = value_type in ['numeric', 'percentage']
+            if can_check_backward:
+                old_value = float(tracking_object.current_value)
+                new_value = float(new_current_value)
+                if new_value < old_value:
+                    messages.error(request, '当前值不能小于之前的进度，不能倒退')
+                    progress_form = ProgressUpdateForm(tracking_object=tracking_object)
+                else:
+                    # 更新对象状态
+                    tracking_object.current_value = new_current_value
+                    tracking_object.completion_rate = new_completion_rate
+                    
+                    # 添加新记录（使用可序列化的格式）
+                    new_record = {
+                        'id': max([r['id'] for r in mock_records], default=0) + 1,
+                        'recorded_time': now.isoformat(),
+                        'current_value': new_current_value,
+                        'completion_rate': new_completion_rate,
+                        'progress_description': progress_form.cleaned_data['progress_description'],
+                        'recorded_by_id': current_user.id,
+                        'remark': progress_form.cleaned_data.get('remark', '')
+                    }
+                    mock_records.insert(0, new_record)
+                    request.session[session_key] = mock_records
+                    
+                    # 格式化显示消息
+                    if value_type == 'percentage':
+                        messages.success(request, f'进度已更新：完成百分比 {new_current_value}%，完成率 {new_completion_rate:.1f}%')
+                    elif value_type == 'boolean':
+                        status_text = '已完成' if new_current_value == 1 or new_current_value == '1' else '未完成'
+                        messages.success(request, f'进度已更新：完成状态 {status_text}')
+                    elif value_type == 'choice':
+                        choice_label = dict(tracking_object.value_choices).get(new_current_value, new_current_value)
+                        messages.success(request, f'进度已更新：当前阶段 {choice_label}，完成率 {new_completion_rate:.1f}%')
+                    elif value_type == 'text':
+                        messages.success(request, f'进度已更新：{new_current_value}')
+                    else:
+                        messages.success(request, f'进度已更新：当前值 {new_current_value} {tracking_object.indicator_unit}，完成率 {new_completion_rate:.1f}%')
+                    
+                    progress_form = ProgressUpdateForm(tracking_object=tracking_object)
+            else:
+                # 对于非数字型，直接更新
+                tracking_object.current_value = new_current_value
+                tracking_object.completion_rate = new_completion_rate
+                
+                # 添加新记录
+                new_record = {
+                    'id': max([r['id'] for r in mock_records], default=0) + 1,
+                    'recorded_time': now.isoformat(),
+                    'current_value': new_current_value,
+                    'completion_rate': new_completion_rate,
+                    'progress_description': progress_form.cleaned_data['progress_description'],
+                    'recorded_by_id': current_user.id,
+                    'remark': progress_form.cleaned_data.get('remark', '')
+                }
+                mock_records.insert(0, new_record)
+                request.session[session_key] = mock_records
+                
+                # 格式化显示消息
+                if value_type == 'boolean':
+                    status_text = '已完成' if new_current_value == 1 or new_current_value == '1' else '未完成'
+                    messages.success(request, f'进度已更新：完成状态 {status_text}')
+                elif value_type == 'choice':
+                    choice_label = dict(tracking_object.value_choices).get(new_current_value, new_current_value)
+                    messages.success(request, f'进度已更新：当前阶段 {choice_label}，完成率 {new_completion_rate:.1f}%')
+                elif value_type == 'text':
+                    messages.success(request, f'进度已更新：{new_current_value}')
+                
+                progress_form = ProgressUpdateForm(tracking_object=tracking_object)
+    
+    # 处理状态转换
+    if 'transition_status' in request.POST:
+        new_status = request.POST.get('new_status')
+        old_status = tracking_object.status
+        status_map = {
+            'draft': '草稿',
+            'published': '已发布',
+            'in_progress': '执行中',
+            'completed': '已完成',
+            'cancelled': '已取消',
+        }
+        old_display = status_map.get(old_status, old_status)
+        new_display = status_map.get(new_status, new_status)
+        tracking_object.status = new_status
+        messages.success(request, f'状态已从 {old_display} 转换为 {new_display}')
+    elif 'complete_goal' in request.POST:
+        tracking_object.status = 'completed'
+        tracking_object.completion_rate = 100.0
+        if hasattr(tracking_object, 'target_value'):
+            tracking_object.current_value = tracking_object.target_value
+        messages.success(request, '已完成！')
+    
+    # 筛选功能（处理序列化后的数据格式）
+    recorded_by_filter = request.GET.get('recorded_by', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    filtered_records = mock_records.copy()
+    
+    if recorded_by_filter:
+        filtered_records = [r for r in filtered_records if str(r.get('recorded_by_id', '')) == recorded_by_filter]
+    
+    if date_from:
+        date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+        filtered_records = [
+            r for r in filtered_records 
+            if datetime.fromisoformat(r['recorded_time']).date() >= date_from_obj
+        ]
+    
+    if date_to:
+        date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+        filtered_records = [
+            r for r in filtered_records 
+            if datetime.fromisoformat(r['recorded_time']).date() <= date_to_obj
+        ]
+    
+    # 将 session 中的记录转换为模板可用的格式
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    all_users = User.objects.filter(is_active=True).order_by('username')
+    user_map = {user.id: user for user in all_users}
+    user_map[current_user.id] = current_user
+    
+    # 转换记录格式（将 ISO 字符串转换为 datetime，将用户 ID 转换为用户对象）
+    class MockProgressRecord:
+        """模拟进度记录对象"""
+        def __init__(self, record_data):
+            self.id = record_data.get('id')
+            self.recorded_time = datetime.fromisoformat(record_data['recorded_time'])
+            self.current_value = record_data['current_value']
+            self.completion_rate = record_data['completion_rate']
+            self.progress_description = record_data.get('progress_description', '')
+            self.recorded_by = user_map.get(record_data.get('recorded_by_id'), current_user)
+            self.remark = record_data.get('remark', '')
+    
+    # 转换所有记录
+    converted_records = []
+    for record_data in filtered_records:
+        try:
+            converted_records.append(MockProgressRecord(record_data))
+        except Exception as e:
+            # 如果转换失败，跳过该记录
+            continue
+    
+    # 分页
+    from django.core.paginator import Paginator
+    paginator = Paginator(converted_records, 10)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # 创建模拟状态日志
+    class MockStatusLog:
+        """模拟状态日志"""
+        def __init__(self, changed_time, old_status, new_status, changed_by, change_reason=None):
+            self.changed_time = changed_time
+            self.old_status = old_status
+            self.new_status = new_status
+            self.changed_by = changed_by
+            self.change_reason = change_reason
+    
+    status_logs = [
+        MockStatusLog(
+            changed_time=now - timedelta(days=60),
+            old_status='draft',
+            new_status='published',
+            changed_by=current_user,
+            change_reason='计划审核通过，正式发布'
+        ),
+        MockStatusLog(
+            changed_time=now - timedelta(days=45),
+            old_status='published',
+            new_status='in_progress',
+            changed_by=current_user,
+            change_reason='计划启动，开始执行'
+        ),
+    ]
+    
+    # 创建模拟调整申请
+    class MockAdjustment:
+        """模拟调整申请"""
+        def __init__(self, applied_time, adjustment_type, old_value, new_value, applied_by, status, reason=None):
+            self.applied_time = applied_time
+            self.adjustment_type = adjustment_type
+            self.old_value = old_value
+            self.new_value = new_value
+            self.applied_by = applied_by
+            self.status = status
+            self.reason = reason
+        
+        def get_status_display(self):
+            status_map = {
+                'pending': '待审批',
+                'approved': '已批准',
+                'rejected': '已拒绝',
+            }
+            return status_map.get(self.status, self.status)
+    
+    adjustments = [
+        MockAdjustment(
+            applied_time=now - timedelta(days=25),
+            adjustment_type='target_value',
+            old_value=450,
+            new_value=500,
+            applied_by=current_user,
+            status='approved',
+            reason='根据实际情况调整目标值'
+        ),
+    ]
+    
+    # 有效的状态转换
+    valid_transitions = ['completed', 'cancelled'] if tracking_object.status == 'in_progress' else []
+    
+    # 是否可以更新进度和完成
+    can_update_progress = tracking_object.status == 'in_progress'
+    can_complete = tracking_object.status == 'in_progress'
+    
+    context = {
+        'tracking_object': tracking_object,
+        'progress_records': converted_records,  # 使用转换后的记录对象
+        'can_update_progress': can_update_progress,
+        'valid_transitions': valid_transitions,
+        'can_complete': can_complete,
+        'all_users': all_users,
+        'status_logs': status_logs,
+        'adjustments': adjustments,
+        'progress_form': progress_form,
+        'page_obj': page_obj,
+        'recorded_by_filter': recorded_by_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'tracking_type': tracking_type,  # 传递跟踪类型到模板
+        'category': category,  # 传递类别到模板（goal 或 plan）
+    }
+    
+    # 添加侧边栏导航
+    context['sidebar_nav'] = _build_system_management_sidebar_nav(
+        permission_set, 
+        request_path=request.path,
+        active_id='tracking_example',
+        user=request.user,
+    )
+    
+    # 添加顶部导航
+    context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+    
+    return render(request, "system_management/unified_tracking_example.html", context)

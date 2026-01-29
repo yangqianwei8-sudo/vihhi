@@ -1,0 +1,148 @@
+{% comment %}
+第一排卡片：战略目标、风险预警、待办事项（三个并排）
+参数：
+- goals: 目标列表
+- goals_count: 目标数量
+- risk_items: 风险项列表
+- todo_items: 待办项列表
+- can_manage_todo_cancel: 是否可以管理待办取消
+- user: 当前用户
+- request: request对象
+{% endcomment %}
+
+<!-- 第一排：战略目标、风险预警、待办事项（三个并排） -->
+<div class="pm-core-cards mb-4">
+  <!-- 第一个：战略目标 -->
+  <div class="pm-my-work-card">
+    <div class="pm-card-title">战略目标 ({{ goals_count|default:0 }})</div>
+    {% if goals %}
+    <ul class="pm-work-list">
+      {% for goal in goals %}
+      <li class="pm-work-item pm-goal-item">
+        <a href="{{ goal.url }}" class="pm-work-item-title">{{ goal.title }}</a>
+        <div class="pm-goal-stats">
+          <div class="pm-goal-stat-row">
+            <div class="pm-goal-stat-item">
+              <span class="pm-goal-stat-label">目标值</span>
+              <span class="pm-goal-stat-value">
+                {% if goal.indicator_type == 'boolean' %}
+                  <span class="text-muted">-</span>
+                {% elif goal.indicator_type == 'text' %}
+                  <span class="text-muted">文本型</span>
+                {% elif goal.indicator_type == 'choice' %}
+                  {% for choice in goal.value_choices %}
+                    {% if choice.value == goal.target_value|stringformat:"s" %}{{ choice.label }}{% endif %}
+                  {% empty %}
+                    {{ goal.target_value|floatformat:2 }}
+                  {% endfor %}
+                {% else %}
+                  {{ goal.target_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}
+                {% endif %}
+              </span>
+            </div>
+            <div class="pm-goal-stat-item">
+              <span class="pm-goal-stat-label">已完成</span>
+              <span class="pm-goal-stat-value">
+                {% if goal.indicator_type == 'boolean' %}
+                  {% if goal.current_value >= 1 %}已完成{% else %}未完成{% endif %}
+                {% elif goal.indicator_type == 'text' %}
+                  <span class="text-muted">-</span>
+                {% elif goal.indicator_type == 'choice' %}
+                  {% for choice in goal.value_choices %}
+                    {% if choice.value == goal.current_value|stringformat:"s" %}{{ choice.label }}{% endif %}
+                  {% empty %}
+                    {{ goal.current_value|floatformat:2 }}
+                  {% endfor %}
+                {% else %}
+                  {{ goal.current_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}
+                {% endif %}
+              </span>
+            </div>
+          </div>
+          <div class="pm-goal-progress-row">
+            <div class="pm-goal-progress-info">
+              <span class="pm-goal-progress-label">完成率</span>
+              <span class="pm-goal-progress-value">{{ goal.completion_rate|floatformat:1 }}%</span>
+            </div>
+            <div class="pm-goal-progress-bar-wrapper">
+              <div class="pm-goal-progress-bar">
+                <div class="pm-goal-progress-fill" style="width: {{ goal.completion_rate }}%;"></div>
+              </div>
+            </div>
+            {% if goal.progress_status %}
+            <span class="badge {{ goal.progress_status.class }} pm-goal-status-badge">{{ goal.progress_status.label }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="pm-empty" style="padding: 20px;">暂无数据</div>
+    {% endif %}
+  </div>
+  
+  <!-- 第二个：风险预警 -->
+  <div class="pm-warning-card">
+    <div class="pm-card-title">风险预警</div>
+    {% if risk_items %}
+    <ul class="pm-warning-list">
+      {% for item in risk_items %}
+      <li class="pm-warning-item {% if item.days_overdue %}overdue{% endif %}">
+        <div class="pm-item-title">
+          <a href="{{ item.url }}" class="pm-item-link">{{ item.title }}</a>
+        </div>
+        <div class="pm-item-meta">
+          {{ item.description }}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="pm-empty">暂无风险预警</div>
+    {% endif %}
+  </div>
+  
+  <!-- 第三个：待办事项 -->
+  <div class="pm-todo-card">
+    <div class="pm-card-title">待办事项</div>
+    {% if todo_items %}
+    <ul class="pm-todo-list">
+      {% for item in todo_items %}
+      <li class="pm-todo-item {% if item.is_overdue %}overdue{% endif %}">
+        <div class="pm-item-title">
+          <a href="{{ item.url }}" class="pm-item-link">{{ item.title }}</a>
+          {% if item.is_overdue %}
+          <span class="badge bg-danger" style="font-size: 10px; margin-left: 8px;">逾期</span>
+          {% endif %}
+        </div>
+        <div class="pm-item-meta">
+          {% if item.meta %}{{ item.meta }}{% elif item.responsible %}负责人：{{ item.responsible }}{% endif %}
+        </div>
+        {% if item.db_todo_id and item.db_todo_owner_id == user.id %}
+        <div class="mt-2 d-flex gap-2">
+          <form method="post" action="{% url 'plan_pages:todo_task_complete' item.db_todo_id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn btn-sm btn-success">完成</button>
+          </form>
+          {% if item.db_todo_auto_generated and not can_manage_todo_cancel %}
+            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="系统自动生成待办取消需管理员权限">取消(需管理员)</button>
+          {% else %}
+            <form method="post" action="{% url 'plan_pages:todo_task_cancel' item.db_todo_id %}" onsubmit="var r=prompt('请输入取消原因（至少4个字，用于审计与巡检）：',''); if(!r||r.trim().length<4){alert('取消原因不能为空，且至少4个字'); return false;} this.querySelector('input[name=cancel_reason]').value=r.trim(); return true;">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <input type="hidden" name="cancel_reason" value="">
+              <button type="submit" class="btn btn-sm btn-outline-secondary">取消</button>
+            </form>
+          {% endif %}
+        </div>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="pm-empty">暂无待办事项</div>
+    {% endif %}
+  </div>
+</div>

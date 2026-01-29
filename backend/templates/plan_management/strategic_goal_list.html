@@ -171,12 +171,36 @@
         </small>
       </td>
       <td>
-        <strong>{{ goal.target_value|floatformat:2 }}</strong>
-        {% if goal.indicator_unit %}<small class="text-muted"> {{ goal.indicator_unit }}</small>{% endif %}
+        {% if goal.indicator_type == 'boolean' %}
+          <span class="text-muted">-</span>
+        {% elif goal.indicator_type == 'text' %}
+          <span class="text-muted">文本型</span>
+        {% elif goal.indicator_type == 'choice' %}
+          {% for choice in goal.value_choices %}
+            {% if choice.value == goal.target_value|stringformat:"s" %}{{ choice.label }}{% endif %}
+          {% empty %}
+            {{ goal.target_value|floatformat:2 }}
+          {% endfor %}
+        {% else %}
+          <strong>{{ goal.target_value|floatformat:2 }}</strong>
+          {% if goal.indicator_unit %}<small class="text-muted"> {{ goal.indicator_unit }}</small>{% endif %}
+        {% endif %}
       </td>
       <td>
-        <strong>{{ goal.current_value|floatformat:2 }}</strong>
-        {% if goal.indicator_unit %}<small class="text-muted"> {{ goal.indicator_unit }}</small>{% endif %}
+        {% if goal.indicator_type == 'boolean' %}
+          {% if goal.current_value >= 1 %}已完成{% else %}未完成{% endif %}
+        {% elif goal.indicator_type == 'text' %}
+          <span class="text-muted">-</span>
+        {% elif goal.indicator_type == 'choice' %}
+          {% for choice in goal.value_choices %}
+            {% if choice.value == goal.current_value|stringformat:"s" %}{{ choice.label }}{% endif %}
+          {% empty %}
+            {{ goal.current_value|floatformat:2 }}
+          {% endfor %}
+        {% else %}
+          <strong>{{ goal.current_value|floatformat:2 }}</strong>
+          {% if goal.indicator_unit %}<small class="text-muted"> {{ goal.indicator_unit }}</small>{% endif %}
+        {% endif %}
       </td>
       <td>
         <div class="d-flex align-items-center gap-2">

@@ -160,10 +160,22 @@
     <div class="info-card">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0">当前借用信息</h5>
-            {% if current_borrowing and current_borrowing.status in 'borrowed,approved' %}
-            <a href="{% url 'admin_pages:seal_borrowing_return' current_borrowing.id %}" class="btn btn-sm btn-success">
-                <i class="bi bi-box-arrow-in-left"></i> 归还印章
-            </a>
+            {% if current_borrowing %}
+                {% if current_borrowing.status == 'pending_return_confirmation' %}
+                    {# 待确认归还：保管员可以看到确认按钮 #}
+                    {% if seal.keeper == user or user.is_superuser %}
+                    <a href="{% url 'admin_pages:seal_borrowing_return' current_borrowing.id %}" class="btn btn-sm btn-success">
+                        <i class="bi bi-check-circle"></i> 确认归还
+                    </a>
+                    {% endif %}
+                {% elif current_borrowing.status in 'borrowed,approved' %}
+                    {# 借用中：借用人可以看到归还按钮 #}
+                    {% if current_borrowing.borrower == user or user.is_superuser %}
+                    <a href="{% url 'admin_pages:seal_borrowing_return' current_borrowing.id %}" class="btn btn-sm btn-success">
+                        <i class="bi bi-box-arrow-in-left"></i> 归还印章
+                    </a>
+                    {% endif %}
+                {% endif %}
             {% endif %}
         </div>
         {% if current_borrowing %}
@@ -206,6 +218,8 @@
                         <span class="badge bg-info">已批准</span>
                         {% elif borrowing.status == 'borrowed' %}
                         <span class="badge bg-info">已借出</span>
+                        {% elif borrowing.status == 'pending_return_confirmation' %}
+                        <span class="badge bg-warning">待确认归还</span>
                         {% elif borrowing.status == 'returned' %}
                         <span class="badge bg-success">已归还</span>
                         {% elif borrowing.status == 'overdue' %}
@@ -242,10 +256,20 @@
                     {% endif %}
                 </div>
                 <div class="d-flex gap-2">
-                    {% if borrowing.status == 'borrowed' or borrowing.status == 'approved' %}
-                    <a href="{% url 'admin_pages:seal_borrowing_return' borrowing.id %}" class="btn btn-sm btn-success">
-                        <i class="bi bi-box-arrow-in-left"></i> 归还
-                    </a>
+                    {% if borrowing.status == 'pending_return_confirmation' %}
+                        {# 待确认归还：保管员可以看到确认按钮 #}
+                        {% if seal.keeper == user or user.is_superuser %}
+                        <a href="{% url 'admin_pages:seal_borrowing_return' borrowing.id %}" class="btn btn-sm btn-success">
+                            <i class="bi bi-check-circle"></i> 确认归还
+                        </a>
+                        {% endif %}
+                    {% elif borrowing.status == 'borrowed' or borrowing.status == 'approved' %}
+                        {# 借用中：借用人可以看到归还按钮 #}
+                        {% if borrowing.borrower == user or user.is_superuser %}
+                        <a href="{% url 'admin_pages:seal_borrowing_return' borrowing.id %}" class="btn btn-sm btn-success">
+                            <i class="bi bi-box-arrow-in-left"></i> 归还
+                        </a>
+                        {% endif %}
                     {% endif %}
                     <a href="/admin/administrative_management/sealborrowing/{{ borrowing.id }}/" class="btn btn-sm btn-outline-info">
                         <i class="bi bi-eye"></i>

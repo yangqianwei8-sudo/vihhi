@@ -38,11 +38,16 @@ MONTHLY_COMPANY_PLAN_CRON="0 10 20 * * cd $PROJECT_DIR && $VENV_PYTHON manage.py
 # 周计划分解待办（每周五上午9点）
 WEEKLY_PLAN_CRON="0 9 * * 5 cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_weekly_plan_todos >> $LOG_DIR/weekly_plan_todos.log 2>&1"
 
-# 日计划分解待办（每天下午5点）
+# 日计划创建待办（每天下午5点）
 DAILY_PLAN_CRON="0 17 * * * cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_daily_plan_todos >> $LOG_DIR/daily_plan_todos.log 2>&1"
 
-# 计划进度更新待办（每天下午5点）
-PLAN_PROGRESS_UPDATE_CRON="0 17 * * * cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_plan_progress_update_todos >> $LOG_DIR/plan_progress_update_todos.log 2>&1"
+# 计划进度更新待办
+# 日计划进度更新待办（每天下午5点）
+DAILY_PLAN_PROGRESS_UPDATE_CRON="0 17 * * * cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_plan_progress_update_todos --plan-type daily >> $LOG_DIR/daily_plan_progress_update_todos.log 2>&1"
+# 周计划进度更新待办（每周五下午5点）
+WEEKLY_PLAN_PROGRESS_UPDATE_CRON="0 17 * * 5 cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_plan_progress_update_todos --plan-type weekly >> $LOG_DIR/weekly_plan_progress_update_todos.log 2>&1"
+# 月计划进度更新待办（每月28日下午5点）
+MONTHLY_PLAN_PROGRESS_UPDATE_CRON="0 17 28 * * cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_plan_progress_update_todos --plan-type monthly >> $LOG_DIR/monthly_plan_progress_update_todos.log 2>&1"
 
 # 待办事项逾期检查（每天凌晨1点）
 TODO_OVERDUE_CHECK_CRON="0 1 * * * cd $PROJECT_DIR && $VENV_PYTHON manage.py check_todo_overdue >> $LOG_DIR/todo_overdue_check.log 2>&1"
@@ -68,8 +73,14 @@ echo ""
 echo "# 日计划分解待办（每天下午5点）"
 echo "$DAILY_PLAN_CRON"
 echo ""
-echo "# 计划进度更新待办（每天下午5点）"
-echo "$PLAN_PROGRESS_UPDATE_CRON"
+echo "# 日计划进度更新待办（每天下午5点）"
+echo "$DAILY_PLAN_PROGRESS_UPDATE_CRON"
+echo ""
+echo "# 周计划进度更新待办（每周五下午5点）"
+echo "$WEEKLY_PLAN_PROGRESS_UPDATE_CRON"
+echo ""
+echo "# 月计划进度更新待办（每月28日下午5点）"
+echo "$MONTHLY_PLAN_PROGRESS_UPDATE_CRON"
 echo ""
 echo "# 待办事项逾期检查（每天凌晨1点）"
 echo "$TODO_OVERDUE_CHECK_CRON"
@@ -153,7 +164,7 @@ done
 NEW_CRONTAB=$(crontab -l 2>/dev/null | grep -v "send_daily_plan_reminder" | grep -v "send_weekly_plan_reminder" | grep -v "send_monthly_plan_reminder" | grep -v "send_quarterly_plan_reminder" | grep -v "check_weekly_plan_overdue" | grep -v "send_daily_notifications" | grep -v "auto_transition_plans_to_in_progress" | grep -v "generate_goal_progress_update_todos" | grep -v "generate_weekly_summaries" | grep -v "generate_monthly_summaries" | grep -v "generate_goal_creation_todos" | grep -v "generate_monthly_company_plan_todos" | grep -v "generate_weekly_plan_todos" | grep -v "generate_daily_plan_todos" | grep -v "generate_plan_progress_update_todos" | grep -v "check_todo_overdue")
 
 # 添加新条目
-(crontab -l 2>/dev/null | grep -v "计划管理" | grep -v "plan_management"; echo ""; echo "# ========== 计划管理自动任务 =========="; echo "$DAILY_NOTIFICATION_CRON"; echo "$AUTO_TRANSITION_CRON"; echo "$GOAL_PROGRESS_UPDATE_CRON"; echo "$WEEKLY_SUMMARY_CRON"; echo "$MONTHLY_SUMMARY_CRON"; echo "$GOAL_CREATION_CRON"; echo "$MONTHLY_COMPANY_PLAN_CRON"; echo "$WEEKLY_PLAN_CRON"; echo "$DAILY_PLAN_CRON"; echo "$PLAN_PROGRESS_UPDATE_CRON"; echo "$TODO_OVERDUE_CHECK_CRON"; echo "$OVERDUE_CHECK_CRON") | crontab -
+(crontab -l 2>/dev/null | grep -v "计划管理" | grep -v "plan_management"; echo ""; echo "# ========== 计划管理自动任务 =========="; echo "$DAILY_NOTIFICATION_CRON"; echo "$AUTO_TRANSITION_CRON"; echo "$GOAL_PROGRESS_UPDATE_CRON"; echo "$WEEKLY_SUMMARY_CRON"; echo "$MONTHLY_SUMMARY_CRON"; echo "$GOAL_CREATION_CRON"; echo "$MONTHLY_COMPANY_PLAN_CRON"; echo "$WEEKLY_PLAN_CRON"; echo "$DAILY_PLAN_CRON"; echo "$DAILY_PLAN_PROGRESS_UPDATE_CRON"; echo "$WEEKLY_PLAN_PROGRESS_UPDATE_CRON"; echo "$MONTHLY_PLAN_PROGRESS_UPDATE_CRON"; echo "$TODO_OVERDUE_CHECK_CRON"; echo "$OVERDUE_CHECK_CRON") | crontab -
 
 echo ""
 echo "✅ Crontab 任务已添加！"
@@ -171,7 +182,9 @@ echo "  tail -f $LOG_DIR/goal_creation_todos.log              # 目标创建待�
 echo "  tail -f $LOG_DIR/monthly_company_plan_todos.log       # 月度公司计划创建待办日志"
 echo "  tail -f $LOG_DIR/weekly_plan_todos.log                 # 周计划分解待办日志"
 echo "  tail -f $LOG_DIR/daily_plan_todos.log                 # 日计划分解待办日志"
-echo "  tail -f $LOG_DIR/plan_progress_update_todos.log       # 计划进度更新待办日志"
+echo "  tail -f $LOG_DIR/daily_plan_progress_update_todos.log  # 日计划进度更新待办日志"
+echo "  tail -f $LOG_DIR/weekly_plan_progress_update_todos.log # 周计划进度更新待办日志"
+echo "  tail -f $LOG_DIR/monthly_plan_progress_update_todos.log # 月计划进度更新待办日志"
 echo "  tail -f $LOG_DIR/todo_overdue_check.log                # 待办事项逾期检查日志"
 echo "  tail -f $LOG_DIR/weekly_plan_overdue.log              # 周计划逾期检查日志"
 echo ""
@@ -185,7 +198,9 @@ echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_goal_creation_todos -
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_monthly_company_plan_todos --dry-run"
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_weekly_plan_todos --dry-run"
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_daily_plan_todos --dry-run"
-echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_plan_progress_update_todos --dry-run"
+echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_plan_progress_update_todos --plan-type daily --dry-run"
+echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_plan_progress_update_todos --plan-type weekly --dry-run"
+echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py generate_plan_progress_update_todos --plan-type monthly --dry-run"
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py check_todo_overdue --dry-run"
 echo "  cd $PROJECT_DIR && $VENV_PYTHON manage.py check_weekly_plan_overdue --dry-run"
 echo ""
