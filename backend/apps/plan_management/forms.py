@@ -13,7 +13,7 @@ from .models import (
 )
 from backend.apps.system_management.models import User, Department
 from backend.apps.production_management.models import Project
-from backend.apps.customer_management.models import BusinessOpportunity
+from backend.apps.opportunity_management.models import BusinessOpportunity
 
 
 def set_date_fields_default_today(form_instance):
@@ -821,6 +821,8 @@ class PlanForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
+        # 保存 user 到实例变量，供 clean() 方法使用
+        self._user = user
         # 获取has_formset_data参数，判断详细信息表格是否有数据
         has_formset_data = kwargs.pop('has_formset_data', False)
         # 保存到实例变量，供 clean() 方法使用
@@ -883,39 +885,115 @@ class PlanForm(forms.ModelForm):
                 self.fields['responsible_person'].widget.attrs['disabled'] = True
                 self.fields['responsible_person'].label = '负责人（默认，不可修改）'
         
-        # 设置关联战略目标查询集：只显示当前用户负责的目标
-        # 状态必须是已发布或进行中，且负责人必须是当前用户
+        # 设置关联战略目标查询集：只显示当前用户负责的个人目标
+        # 状态必须是已发布或进行中，负责人必须是当前用户，且必须是个人目标
         if user:
             self.fields['related_goal'].queryset = StrategicGoal.objects.filter(
                 status__in=['published', 'in_progress'],
-                responsible_person=user
+                responsible_person=user,
+                level='personal'
             )
         else:
             # 如果没有传入用户，返回空查询集
             self.fields['related_goal'].queryset = StrategicGoal.objects.none()
+        # 设置关联战略目标的提示信息
+        self.fields['related_goal'].help_text = '仅显示您负责的个人目标（状态为已发布或进行中）'
         # 关联战略目标为必填（除非详细信息表格有数据）
         if not has_formset_data:
             self.fields['related_goal'].required = True
         
-        # 设置父计划查询集（只显示公司计划，排除自己和自己的下级计划）
-        # 确保字段始终存在，即使查询集为空也要显示
+        # 设置父计划查询集：根据计划周期过滤父计划
+        # 日计划 -> 周计划，周计划 -> 月计划，月计划 -> 季计划，季计划 -> 年计划，年计划 -> 无父计划
         if 'parent_plan' in self.fields:
             try:
-                base_queryset = Plan.objects.filter(level='company')  # 只显示公司计划
+                # 获取当前计划的 plan_period
+                current_plan_period = None
                 if self.instance and self.instance.pk:
-                    exclude_ids = [self.instance.pk]
-                    try:
-                        exclude_ids.extend([p.pk for p in self.instance.get_all_descendants()])
-                    except:
-                        pass
-                    self.fields['parent_plan'].queryset = base_queryset.exclude(pk__in=exclude_ids)
+                    # 编辑模式：从实例获取
+                    current_plan_period = self.instance.plan_period
+                elif self.data and 'plan_period' in self.data:
+                    # POST 请求：从表单数据获取
+                    current_plan_period = self.data.get('plan_period')
+                elif self.initial and 'plan_period' in self.initial:
+                    # 初始数据：从 initial 获取
+                    current_plan_period = self.initial.get('plan_period')
+                
+                # 根据当前计划周期确定父计划的周期
+                parent_plan_period_map = {
+                    'daily': 'weekly',      # 日计划的父计划是周计划
+                    'weekly': 'monthly',   # 周计划的父计划是月计划
+                    'monthly': 'quarterly', # 月计划的父计划是季计划
+                    'quarterly': 'yearly',  # 季计划的父计划是年计划
+                    'yearly': None,         # 年计划不需要父计划
+                }
+                
+                parent_plan_period = parent_plan_period_map.get(current_plan_period) if current_plan_period else None
+                
+                # 如果 plan_period 未设置或不在映射中，返回空查询集
+                if not current_plan_period or current_plan_period not in parent_plan_period_map:
+                    self.fields['parent_plan'].queryset = Plan.objects.none()
+                    self.fields['parent_plan'].required = False
+                    self.fields['parent_plan'].help_text = '请先选择计划周期'
                 else:
+                    # 构建基础查询集：只显示当前用户负责的个人计划，且状态必须是已发布或执行中
+                    if user:
+                        # 使用 responsible_person 字段过滤，只显示当前用户负责的计划
+                        # 父计划必须是已发布或执行中的状态
+                        base_queryset = Plan.objects.filter(
+                            level='personal',
+                            responsible_person=user,
+                            status__in=['published', 'in_progress']
+                        )
+                    else:
+                        # 如果没有传入用户，返回空查询集
+                        base_queryset = Plan.objects.none()
+                    
+                    # 如果有父计划周期要求，则过滤
+                    if parent_plan_period:
+                        base_queryset = base_queryset.filter(plan_period=parent_plan_period)
+                    elif current_plan_period == 'yearly':
+                        # 年计划不需要父计划，返回空查询集
+                        base_queryset = Plan.objects.none()
+                    
+                    # 排除自己和自己的下级计划
+                    if self.instance and self.instance.pk:
+                        exclude_ids = [self.instance.pk]
+                        try:
+                            exclude_ids.extend([p.pk for p in self.instance.get_all_descendants()])
+                        except:
+                            pass
+                        base_queryset = base_queryset.exclude(pk__in=exclude_ids)
+                    
                     self.fields['parent_plan'].queryset = base_queryset
+                    
+                    # 设置必填性：年计划不要求父计划，其他计划要求父计划
+                    if current_plan_period == 'yearly':
+                        self.fields['parent_plan'].required = False
+                        self.fields['parent_plan'].help_text = '年计划不需要填写父计划'
+                    else:
+                        self.fields['parent_plan'].required = True
+                        period_names = {
+                            'daily': '日计划',
+                            'weekly': '周计划',
+                            'monthly': '月计划',
+                            'quarterly': '季计划',
+                        }
+                        parent_period_names = {
+                            'weekly': '周计划',
+                            'monthly': '月计划',
+                            'quarterly': '季计划',
+                            'yearly': '年计划',
+                        }
+                        current_name = period_names.get(current_plan_period, current_plan_period)
+                        parent_name = parent_period_names.get(parent_plan_period, parent_plan_period)
+                        self.fields['parent_plan'].help_text = f'{current_name}的父计划必须是{parent_name}（仅显示您负责的个人计划，状态为已发布或执行中）'
+                
             except Exception as e:
                 # 如果查询出错，使用空查询集，但字段仍然显示
                 self.fields['parent_plan'].queryset = Plan.objects.none()
+                self.fields['parent_plan'].required = False
+            
             # 确保字段始终显示，即使查询集为空
-            self.fields['parent_plan'].required = False
             self.fields['parent_plan'].empty_label = '-------'
             # 确保字段的 widget 有正确的属性
             if not hasattr(self.fields['parent_plan'].widget, 'attrs'):
@@ -1156,6 +1234,76 @@ class PlanForm(forms.ModelForm):
         if not related_goal:
             raise ValidationError({'related_goal': '关联战略目标为必填项，请选择关联的战略目标'})
         
+        # 验证父计划：根据计划周期验证父计划
+        plan_period = cleaned_data.get('plan_period')
+        parent_plan = cleaned_data.get('parent_plan')
+        
+        # 父计划周期映射
+        parent_plan_period_map = {
+            'daily': 'weekly',      # 日计划的父计划是周计划
+            'weekly': 'monthly',   # 周计划的父计划是月计划
+            'monthly': 'quarterly', # 月计划的父计划是季计划
+            'quarterly': 'yearly',  # 季计划的父计划是年计划
+            'yearly': None,         # 年计划不需要父计划
+        }
+        
+        if plan_period:
+            expected_parent_period = parent_plan_period_map.get(plan_period)
+            
+            # 年计划不需要父计划
+            if plan_period == 'yearly':
+                if parent_plan:
+                    raise ValidationError({'parent_plan': '年计划不需要填写父计划'})
+            else:
+                # 其他计划必须有父计划
+                if not parent_plan:
+                    period_names = {
+                        'daily': '日计划',
+                        'weekly': '周计划',
+                        'monthly': '月计划',
+                        'quarterly': '季计划',
+                    }
+                    current_name = period_names.get(plan_period, plan_period)
+                    raise ValidationError({'parent_plan': f'{current_name}必须选择父计划'})
+                else:
+                    # 验证父计划的层级：必须是个人计划
+                    if parent_plan.level != 'personal':
+                        raise ValidationError({
+                            'parent_plan': '父计划必须是个人计划，不能选择公司计划'
+                        })
+                    # 验证父计划的负责人：必须是当前用户
+                    user = getattr(self, '_user', None)
+                    if user and parent_plan.responsible_person != user:
+                        raise ValidationError({
+                            'parent_plan': '父计划必须是您负责的个人计划，不能选择其他人负责的计划'
+                        })
+                    # 验证父计划的状态：必须是已发布或执行中
+                    if parent_plan.status not in ['published', 'in_progress']:
+                        raise ValidationError({
+                            'parent_plan': '父计划必须是已发布或执行中的状态，不能选择草稿、已完成、已取消等状态的计划'
+                        })
+                    # 验证父计划的周期是否正确
+                    if parent_plan.plan_period != expected_parent_period:
+                        period_names = {
+                            'daily': '日计划',
+                            'weekly': '周计划',
+                            'monthly': '月计划',
+                            'quarterly': '季计划',
+                            'yearly': '年计划',
+                        }
+                        parent_period_names = {
+                            'weekly': '周计划',
+                            'monthly': '月计划',
+                            'quarterly': '季计划',
+                            'yearly': '年计划',
+                        }
+                        current_name = period_names.get(plan_period, plan_period)
+                        expected_name = parent_period_names.get(expected_parent_period, expected_parent_period)
+                        actual_name = period_names.get(parent_plan.plan_period, parent_plan.plan_period)
+                        raise ValidationError({
+                            'parent_plan': f'{current_name}的父计划必须是{expected_name}，当前选择的是{actual_name}'
+                        })
+        
         # 编辑时，确保计划编号不被修改
         if self.instance and self.instance.pk:
             if plan_number and plan_number != self.instance.plan_number:
@@ -1317,6 +1465,8 @@ class PlanProgressUpdateForm(forms.ModelForm):
             self.fields['current_value'].initial = int(float(self.plan.progress)) if self.plan.progress else 0
             # 隐藏 progress 字段（使用 current_value 代替）
             self.fields['progress'].widget = forms.HiddenInput()
+            # 【修复】将 progress 字段设置为非必填，因为它的值会从 current_value 获取
+            self.fields['progress'].required = False
     
     def clean_current_value(self):
         """验证当前值的业务规则"""
@@ -1345,13 +1495,26 @@ class PlanProgressUpdateForm(forms.ModelForm):
         
         return description
     
+    def clean(self):
+        """整体验证：确保 progress 字段从 current_value 获取值"""
+        cleaned_data = super().clean()
+        
+        # 如果 current_value 存在，将其值赋给 progress（用于保存到数据库）
+        current_value = cleaned_data.get('current_value')
+        if current_value is not None:
+            from decimal import Decimal
+            cleaned_data['progress'] = Decimal(str(current_value))
+        
+        return cleaned_data
+    
     def save(self, commit=True):
         instance = super().save(commit=False)
         if self.plan:
             instance.plan = self.plan
-            # 从 current_value 更新 progress
+            # 从 current_value 更新 progress（clean 方法已经设置了，这里作为备用）
             current_value = self.cleaned_data.get('current_value')
-            instance.progress = Decimal(str(current_value))
+            if current_value is not None:
+                instance.progress = Decimal(str(current_value))
             # 更新计划的进度
             self.plan.progress = instance.progress
             self.plan.save()
@@ -1710,10 +1873,13 @@ class PlanItemForm(forms.ModelForm):
             if user:
                 self.fields['related_goal'].queryset = StrategicGoal.objects.filter(
                     status__in=['published', 'in_progress'],
-                    responsible_person=user
+                    responsible_person=user,
+                    level='personal'
                 )
             else:
                 self.fields['related_goal'].queryset = StrategicGoal.objects.none()
+            # 设置关联战略目标的提示信息
+            self.fields['related_goal'].help_text = '仅显示您负责的个人目标（状态为已发布或进行中）'
         # 设置字段必填性：除协作计划、协作人员、关联项目外，其他字段都为必填
         # 注意：如果该行被标记为删除（DELETE），则不需要验证
         # 但如果填写了该行，则除了以下字段外，其他字段必须填写

@@ -1,5 +1,4 @@
 from django.urls import path
-
 from . import views_pages
 
 app_name = "contract_pages"

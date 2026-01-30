@@ -22,7 +22,7 @@ except ImportError:
 
 # 尝试导入文件分类模型（用于在档案管理中显示）
 try:
-    from backend.apps.delivery_customer.models import FileCategory as DeliveryFileCategory
+    from backend.apps.document_management.models import FileCategory as DeliveryFileCategory
     
     class FileCategory(DeliveryFileCategory):
         """文件分类（档案管理代理模型）"""

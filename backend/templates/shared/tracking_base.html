@@ -316,6 +316,18 @@
       <h3 class="track-form-title">{% block tracking_progress_form_title %}更新进度{% endblock %}</h3>
     </div>
     <div class="track-form-body">
+      {# 显示消息（成功/错误） #}
+      {% if messages %}
+      <div style="margin-bottom: 16px;">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert" style="margin-bottom: 8px;">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      
       <form method="post" id="tracking-progress-form">
         {% csrf_token %}
         <input type="hidden" name="update_progress" value="1">

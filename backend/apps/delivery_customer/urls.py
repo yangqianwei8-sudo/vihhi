@@ -68,35 +68,34 @@ urlpatterns = [
     path("file-prep/", views_pages.delivery_file_prep_list, name="delivery_file_prep_list"),
     path("file-prep/upload/", views_pages.delivery_file_prep_upload, name="delivery_file_prep_upload"),
     
-    # 收文管理
-    path("incoming-document/home/", views_pages.incoming_document_home, name="incoming_document_home"),
-    path("incoming-document/", views_pages.incoming_document_list, name="incoming_document_list"),
-    path("incoming-document/create/", views_pages.incoming_document_create, name="incoming_document_create"),
-    path("incoming-document/<int:document_id>/", views_pages.incoming_document_detail, name="incoming_document_detail"),
-    path("incoming-document/<int:document_id>/edit/", views_pages.incoming_document_edit, name="incoming_document_edit"),
-    
-    # 发文管理
-    path("outgoing-document/home/", views_pages.outgoing_document_home, name="outgoing_document_home"),
-    path("outgoing-document/", views_pages.outgoing_document_list, name="outgoing_document_list"),
-    path("outgoing-document/create/", views_pages.outgoing_document_create, name="outgoing_document_create"),
-    path("outgoing-document/<int:document_id>/", views_pages.outgoing_document_detail, name="outgoing_document_detail"),
-    path("outgoing-document/<int:document_id>/edit/", views_pages.outgoing_document_edit, name="outgoing_document_edit"),
-    
-    # 快递公司管理
-    path("express-company/", views_pages.express_company_list, name="express_company_list"),
-    path("express-company/create/", views_pages.express_company_create, name="express_company_create"),
-    path("express-company/<int:company_id>/", views_pages.express_company_detail, name="express_company_detail"),
-    path("express-company/<int:company_id>/edit/", views_pages.express_company_edit, name="express_company_edit"),
-    path("express-company/<int:company_id>/delete/", views_pages.express_company_delete, name="express_company_delete"),
-    
-    # 文件分类维护（统一管理页面）
-    path("file-category/manage/", views_pages.file_category_manage, name="file_category_manage"),
-    # 保留旧路由以兼容（可选）
-    path("file-category/<str:stage_code>/", views_pages.file_category_list, name="file_category_list"),
-    path("file-category/<str:stage_code>/create/", views_pages.file_category_create, name="file_category_create"),
-    
-    # 文件模板维护
-    path("file-template/manage/", views_pages.file_template_manage, name="file_template_manage"),
+    # ==================== 收文管理路由（已迁移到 document_management）====================
+    # path("incoming-document/home/", views_pages.incoming_document_home, name="incoming_document_home"),
+    # path("incoming-document/", views_pages.incoming_document_list, name="incoming_document_list"),
+    # path("incoming-document/create/", views_pages.incoming_document_create, name="incoming_document_create"),
+    # path("incoming-document/<int:document_id>/", views_pages.incoming_document_detail, name="incoming_document_detail"),
+    # path("incoming-document/<int:document_id>/edit/", views_pages.incoming_document_edit, name="incoming_document_edit"),
+
+    # ==================== 发文管理路由（已迁移到 document_management）====================
+    # path("outgoing-document/home/", views_pages.outgoing_document_home, name="outgoing_document_home"),
+    # path("outgoing-document/", views_pages.outgoing_document_list, name="outgoing_document_list"),
+    # path("outgoing-document/create/", views_pages.outgoing_document_create, name="outgoing_document_create"),
+    # path("outgoing-document/<int:document_id>/", views_pages.outgoing_document_detail, name="outgoing_document_detail"),
+    # path("outgoing-document/<int:document_id>/edit/", views_pages.outgoing_document_edit, name="outgoing_document_edit"),
+
+    # ==================== 快递公司管理（已迁移到 document_management）====================
+    # path("express-company/", views_pages.express_company_list, name="express_company_list"),
+    # path("express-company/create/", views_pages.express_company_create, name="express_company_create"),
+    # path("express-company/<int:company_id>/", views_pages.express_company_detail, name="express_company_detail"),
+    # path("express-company/<int:company_id>/edit/", views_pages.express_company_edit, name="express_company_edit"),
+    # path("express-company/<int:company_id>/delete/", views_pages.express_company_delete, name="express_company_delete"),
+
+    # ==================== 文件分类维护（已迁移到 document_management）====================
+    # path("file-category/manage/", views_pages.file_category_manage, name="file_category_manage"),
+    # path("file-category/<str:stage_code>/", views_pages.file_category_list, name="file_category_list"),
+    # path("file-category/<str:stage_code>/create/", views_pages.file_category_create, name="file_category_create"),
+
+    # ==================== 文件模板维护（已迁移到 document_management）====================
+    # path("file-template/manage/", views_pages.file_template_manage, name="file_template_manage"),
     
     # ==================== 老版本路由（已注释，待实现）====================
     # 以下功能使用老版本的center_dashboard.html模板，已注释掉

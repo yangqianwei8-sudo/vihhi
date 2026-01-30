@@ -8,9 +8,10 @@ from decimal import Decimal
 from datetime import timedelta, datetime
 
 from backend.apps.settlement_center.models import (
-    OutputValueStage, OutputValueMilestone, OutputValueEvent, OutputValueRecord,
-    PaymentRecord
+    OutputValueStage, OutputValueMilestone, OutputValueEvent, OutputValueRecord
 )
+# PaymentRecord已迁移到payment_management
+from backend.apps.payment_management.models import PaymentRecord
 from backend.apps.settlement_management.models import (
     ProjectSettlement, SettlementItem, ServiceFeeRate, ContractSettlement
 )
@@ -21,7 +22,7 @@ from backend.apps.production_management.models import Project
 from backend.apps.system_management.models import User
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.core.views import _permission_granted, _build_full_top_nav
-from backend.apps.production_management.models import BusinessContract
+from backend.apps.contract_management.models import BusinessContract
 from django.urls import reverse, NoReverseMatch
 from django.core.paginator import Paginator
 from django.db.models import Max

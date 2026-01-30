@@ -23,6 +23,8 @@ from backend.apps.administrative_management.models import (
     FixedAsset, AssetTransfer, AssetMaintenance,
     # 差旅
     TravelApplication,
+    # 借款
+    LoanApplication,
     # 报销
     ExpenseReimbursement, ExpenseItem,
     # 采购管理
@@ -765,6 +767,42 @@ class TravelApplicationAdmin(AuditAdminMixin, BaseModelAdmin):
         }),
         ('审批信息', {
             'fields': ('approver', 'approved_time', 'approval_notes'),
+            'classes': ('collapse',)
+        }),
+        ('其他信息', {
+            'fields': ('notes', 'created_time', 'updated_time')
+        }),
+    )
+
+
+# ==================== 借款管理 ====================
+
+@admin.register(LoanApplication)
+class LoanApplicationAdmin(AuditAdminMixin, BaseModelAdmin):
+    """借款申请管理"""
+    list_display = ('application_number', 'applicant', 'loan_type', 'loan_amount', 'department', 'application_date', 'expected_repay_date', 'status', 'repaid_amount', 'remaining_amount', 'approver', 'approved_time', 'created_time')
+    list_filter = ('status', 'loan_type', 'application_date', 'expected_repay_date', 'created_time')
+    search_fields = ('application_number', 'loan_reason', 'applicant__username')
+    ordering = ('-application_date', '-created_time')
+    raw_id_fields = ('applicant', 'approver', 'department', 'paid_by')
+    readonly_fields = ('application_number', 'remaining_amount', 'created_time', 'updated_time')
+    date_hierarchy = 'application_date'
+    fieldsets = (
+        ('基本信息', {
+            'fields': ('application_number', 'applicant', 'application_date', 'loan_type', 'loan_amount', 'department', 'status')
+        }),
+        ('借款信息', {
+            'fields': ('loan_reason', 'expected_repay_date')
+        }),
+        ('还款信息', {
+            'fields': ('repaid_amount', 'remaining_amount', 'repaid_time')
+        }),
+        ('审批信息', {
+            'fields': ('approver', 'approved_time', 'approval_notes'),
+            'classes': ('collapse',)
+        }),
+        ('放款信息', {
+            'fields': ('paid_by', 'paid_time'),
             'classes': ('collapse',)
         }),
         ('其他信息', {

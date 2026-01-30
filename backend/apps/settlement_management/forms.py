@@ -1,7 +1,7 @@
 from django import forms
 from backend.apps.settlement_management.models import ProjectSettlement, ContractSettlement
 from backend.apps.production_management.models import Project
-from backend.apps.production_management.models import BusinessContract
+from backend.apps.contract_management.models import BusinessContract
 
 
 class ProjectSettlementForm(forms.ModelForm):

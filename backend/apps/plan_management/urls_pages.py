@@ -74,5 +74,8 @@ urlpatterns = [
     path("todos/", views_pages.todo_task_list, name="todo_task_list"),
     path("todos/<int:todo_id>/complete/", views_pages.todo_task_complete, name="todo_task_complete"),
     path("todos/<int:todo_id>/cancel/", views_pages.todo_task_cancel, name="todo_task_cancel"),
+    
+    # API 端点
+    path("api/parent-plan-options/", views_pages.get_parent_plan_options, name="get_parent_plan_options"),
 ]
 

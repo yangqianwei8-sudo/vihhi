@@ -1826,6 +1826,105 @@ class ExpenseItem(models.Model):
         return f"{self.reimbursement.reimbursement_number} - {self.get_expense_type_display()} - {self.amount}"
 
 
+# ==================== 借款管理 ====================
+
+class LoanApplication(models.Model):
+    """借款申请"""
+    STATUS_CHOICES = [
+        ('draft', '草稿'),
+        ('pending_approval', '待审批'),
+        ('approved', '已批准'),
+        ('rejected', '已拒绝'),
+        ('paid', '已放款'),
+        ('repaid', '已还款'),
+        ('cancelled', '已取消'),
+    ]
+    
+    LOAN_TYPE_CHOICES = [
+        ('personal', '个人借款'),
+        ('business', '业务借款'),
+        ('emergency', '应急借款'),
+        ('reserve_fund', '备用金'),
+        ('other', '其他'),
+    ]
+    
+    application_number = models.CharField(max_length=100, unique=True, verbose_name='申请单号')
+    applicant = models.ForeignKey(User, on_delete=models.PROTECT, related_name='loan_applications', verbose_name='申请人')
+    application_date = models.DateField(default=timezone.now, verbose_name='申请日期')
+    loan_date = models.DateField(default=timezone.now, verbose_name='借款日期')
+    loan_type = models.CharField(max_length=20, choices=LOAN_TYPE_CHOICES, default='business', verbose_name='借款类型')
+    loan_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='借款金额')
+    loan_reason = models.TextField(verbose_name='借款事由')
+    expected_repay_date = models.DateField(null=True, blank=True, verbose_name='预计还款日期')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='loan_applications', verbose_name='申请部门')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='状态')
+    approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_loans', verbose_name='审批人')
+    approved_time = models.DateTimeField(null=True, blank=True, verbose_name='审批时间')
+    approval_notes = models.TextField(blank=True, verbose_name='审批意见')
+    paid_time = models.DateTimeField(null=True, blank=True, verbose_name='放款时间')
+    paid_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='paid_loans', verbose_name='放款人')
+    repaid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='已还金额')
+    repaid_time = models.DateTimeField(null=True, blank=True, verbose_name='还款时间')
+    pending_repayment_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='待确认还款金额', help_text='已提交但未确认的还款金额')
+    pending_repayment_notes = models.TextField(blank=True, verbose_name='待确认还款备注')
+    pending_repayment_time = models.DateTimeField(null=True, blank=True, verbose_name='还款申请时间')
+    confirmed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='confirmed_loan_repayments', verbose_name='确认人')
+    confirmed_time = models.DateTimeField(null=True, blank=True, verbose_name='确认时间')
+    iou_file = models.FileField(upload_to='loan_applications/iou/', null=True, blank=True, verbose_name='手写借条', help_text='必须上传手写的借条作为附件')
+    notes = models.TextField(blank=True, verbose_name='备注')
+    created_time = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 'admin_loan_application'
+        verbose_name = '借款申请'
+        verbose_name_plural = verbose_name
+        ordering = ['-application_date', '-created_time']
+        indexes = [
+            models.Index(fields=['applicant', 'status']),
+            models.Index(fields=['application_date', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.application_number} - {self.applicant.username} - ¥{self.loan_amount}"
+    
+    def save(self, *args, **kwargs):
+        if not self.application_number:
+            current_date = datetime.now()
+            date_str = current_date.strftime('%Y%m%d')
+            max_loan = LoanApplication.objects.filter(
+                application_number__startswith=f'LOAN-{date_str}-'
+            ).aggregate(max_num=Max('application_number'))['max_num']
+            if max_loan:
+                try:
+                    seq = int(max_loan.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.application_number = f'LOAN-{date_str}-{seq:04d}'
+        super().save(*args, **kwargs)
+    
+    @property
+    def remaining_amount(self):
+        """剩余未还金额（不包括待确认的还款）"""
+        return self.loan_amount - self.repaid_amount
+    
+    @property
+    def total_remaining_amount(self):
+        """总剩余未还金额（包括待确认的还款）"""
+        return self.loan_amount - self.repaid_amount - self.pending_repayment_amount
+    
+    @property
+    def is_overdue(self):
+        """是否逾期"""
+        if self.status == 'repaid' or not self.expected_repay_date:
+            return False
+        if self.expected_repay_date and timezone.now().date() > self.expected_repay_date:
+            return True
+        return False
+
+
 # ==================== 行政事务管理 ====================
 
 class AdministrativeAffair(models.Model):

@@ -64,15 +64,35 @@ api.interceptors.response.use(
     
     if (error.response) {
       // 服务器返回了错误状态码
-      if (error.response.status === 401) {
-        // 未授权，清除 token 并跳转到登录页
+      const status = error.response.status
+      const responseData = error.response.data || {}
+      
+      // 对于 401 错误，清除过期的认证信息，但不自动跳转
+      // 让组件自行决定如何处理错误（显示错误信息或跳转）
+      if (status === 401) {
         localStorage.removeItem('token')
         localStorage.removeItem('user')
-        window.location.href = '/login'
       }
-      return Promise.reject(error.response.data || error.message)
+      
+      // 构造统一的错误对象，包含状态码和错误信息
+      const errorMessage = responseData.message || 
+                          responseData.error || 
+                          responseData.detail ||
+                          (typeof responseData === 'string' ? responseData : null) ||
+                          `请求失败 (${status})`
+      
+      return Promise.reject({
+        status: status,
+        message: errorMessage,
+        data: responseData,
+        originalError: error
+      })
     }
-    return Promise.reject(error.message || '网络错误')
+    return Promise.reject({
+      message: error.message || '网络错误',
+      code: 'UNKNOWN_ERROR',
+      originalError: error
+    })
   }
 )
 

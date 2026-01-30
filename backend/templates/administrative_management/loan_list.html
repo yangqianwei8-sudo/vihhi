@@ -1,0 +1,240 @@
+{% extends "shared/list_page_base.html" %}
+{% load static %}
+
+{% block pm_title %}借款列表{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有借款申请{% endblock pm_subtitle %}
+
+{% block list_filters_content %}
+  {# 筛选器区域 #}
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">搜索</label>
+    <input type="text" name="search" class="form-control" placeholder="搜索申请单号、事由、申请人..." value="{{ search }}">
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">状态</label>
+    <select name="status" class="form-select">
+      <option value="">全部状态</option>
+      {% for code, label in status_choices %}
+      <option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+{% endblock list_filters_content %}
+
+{% block list_table_checkbox_header %}
+  <th style="width: 50px;">
+    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
+  </th>
+{% endblock list_table_checkbox_header %}
+
+{% block list_table_headers %}
+  <th>申请单号</th>
+  <th>借款类型</th>
+  <th>借款金额</th>
+  <th>申请人</th>
+  <th>申请部门</th>
+  <th>申请日期</th>
+  <th>预计还款日期</th>
+  <th>状态</th>
+  <th>已还金额</th>
+  <th>操作</th>
+{% endblock list_table_headers %}
+
+{% block list_table_rows %}
+  {% if page_obj %}
+    {% for loan in page_obj %}
+    <tr>
+      <td>
+        <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ loan.id }}" id="item_{{ loan.id }}">
+      </td>
+      <td>
+        <a href="{% url 'admin_pages:loan_detail' loan.id %}" class="text-dark text-decoration-none fw-medium">
+          <code>{{ loan.application_number }}</code>
+        </a>
+      </td>
+      <td>
+        {% if loan.loan_type == 'personal' %}
+        <span class="badge bg-info">个人借款</span>
+        {% elif loan.loan_type == 'business' %}
+        <span class="badge bg-primary">业务借款</span>
+        {% elif loan.loan_type == 'emergency' %}
+        <span class="badge bg-danger">应急借款</span>
+        {% else %}
+        <span class="badge bg-secondary">其他</span>
+        {% endif %}
+      </td>
+      <td>
+        <strong class="text-primary">¥{{ loan.loan_amount|floatformat:2 }}</strong>
+      </td>
+      <td>{{ loan.applicant.get_full_name|default:loan.applicant.username }}</td>
+      <td>
+        {% if loan.department %}
+        {{ loan.department.name }}
+        {% else %}
+        <span class="text-muted">-</span>
+        {% endif %}
+      </td>
+      <td>
+        <small class="text-muted">{{ loan.application_date|date:"Y-m-d" }}</small>
+      </td>
+      <td>
+        {% if loan.expected_repay_date %}
+        <small class="text-muted">{{ loan.expected_repay_date|date:"Y-m-d" }}</small>
+        {% else %}
+        <span class="text-muted">-</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if loan.status == 'draft' %}
+        <span class="badge bg-secondary">草稿</span>
+        {% elif loan.status == 'pending_approval' %}
+        <span class="badge bg-warning">待审批</span>
+        {% elif loan.status == 'approved' %}
+        <span class="badge bg-success">已批准</span>
+        {% elif loan.status == 'rejected' %}
+        <span class="badge bg-danger">已拒绝</span>
+        {% elif loan.status == 'paid' %}
+        <span class="badge bg-info">已放款</span>
+        {% elif loan.status == 'repaid' %}
+        <span class="badge bg-success">已还款</span>
+        {% elif loan.status == 'cancelled' %}
+        <span class="badge bg-danger">已取消</span>
+        {% else %}
+        <span class="badge bg-secondary">{{ loan.get_status_display }}</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if loan.repaid_amount > 0 %}
+        <span class="text-success">¥{{ loan.repaid_amount|floatformat:2 }}</span>
+        {% if loan.remaining_amount > 0 %}
+        <br><small class="text-muted">剩余：¥{{ loan.remaining_amount|floatformat:2 }}</small>
+        {% endif %}
+        {% else %}
+        <span class="text-muted">-</span>
+        {% endif %}
+      </td>
+      <td>
+        <div class="list-page-table-actions">
+          <a href="{% url 'admin_pages:loan_detail' loan.id %}" class="action-view" title="查看详情">
+            <i class="bi bi-eye"></i>
+          </a>
+          {% if loan.status in 'paid,approved' and loan.remaining_amount > 0 %}
+          <a href="{% url 'admin_pages:loan_repay' loan.id %}" class="action-edit" title="还款">
+            <i class="bi bi-cash-coin"></i>
+          </a>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+    <tr>
+      <td colspan="11" class="list-empty">
+        <div class="list-empty-icon">💰</div>
+        <div class="list-empty-text">暂无借款申请数据</div>
+      </td>
+    </tr>
+  {% endif %}
+{% endblock list_table_rows %}
+
+{% block list_empty_hint %}
+  <div class="list-empty-hint">请创建第一个借款申请开始使用</div>
+{% endblock list_empty_hint %}
+
+{% block extra_js %}
+  {{ block.super }}
+  
+  <!-- 借款列表专用复选框初始化 -->
+  <script>
+  (function() {
+    'use strict';
+    
+    function initLoanListCheckboxes() {
+      const selectAll = document.getElementById('selectAll');
+      const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+      
+      if (!selectAll || rowCheckboxes.length === 0) {
+        return;
+      }
+      
+      if (selectAll.dataset.loanListInitialized === 'true') {
+        return;
+      }
+      
+      selectAll.dataset.loanListInitialized = 'true';
+      
+      function updateSelectAllState() {
+        const allChecked = rowCheckboxes.length > 0 && Array.from(rowCheckboxes).every(function(cb) {
+          return cb.checked;
+        });
+        const someChecked = Array.from(rowCheckboxes).some(function(cb) {
+          return cb.checked;
+        });
+        selectAll.checked = allChecked;
+        selectAll.indeterminate = someChecked && !allChecked;
+      }
+      
+      function updateSelectedCount() {
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        const count = checked.length;
+        const event = new CustomEvent('checkboxSelectionChanged', {
+          detail: { 
+            count: count, 
+            selectedIds: Array.from(checked).map(function(cb) {
+              return cb.value;
+            })
+          }
+        });
+        document.dispatchEvent(event);
+      }
+      
+      selectAll.addEventListener('change', function(e) {
+        e.stopPropagation();
+        const checked = this.checked;
+        rowCheckboxes.forEach(function(cb) {
+          cb.checked = checked;
+        });
+        updateSelectedCount();
+      });
+      
+      rowCheckboxes.forEach(function(cb) {
+        if (cb.dataset.loanListInitialized === 'true') {
+          return;
+        }
+        cb.dataset.loanListInitialized = 'true';
+        
+        cb.addEventListener('change', function(e) {
+          e.stopPropagation();
+          updateSelectAllState();
+          updateSelectedCount();
+        });
+      });
+      
+      window.getSelectedIds = function() {
+        const checked = document.querySelectorAll('.row-checkbox:checked');
+        return Array.from(checked).map(function(cb) {
+          return cb.value;
+        });
+      };
+      
+      updateSelectAllState();
+      updateSelectedCount();
+    }
+    
+    function tryInit() {
+      try {
+        initLoanListCheckboxes();
+      } catch (e) {
+        console.error('[借款列表] 复选框初始化失败:', e);
+      }
+    }
+    
+    tryInit();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', tryInit);
+    }
+    setTimeout(tryInit, 100);
+    setTimeout(tryInit, 500);
+  })();
+  </script>
+{% endblock extra_js %}

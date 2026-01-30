@@ -83,7 +83,7 @@ class ServiceFeeSettlementSchemeViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def by_contract(self, request):
         """根据合同获取结算方案"""
-        from backend.apps.production_management.models import BusinessContract
+        from backend.apps.contract_management.models import BusinessContract
         
         contract_id = request.query_params.get('contract_id')
         if not contract_id:
@@ -238,7 +238,7 @@ class ServiceFeeSettlementSchemeViewSet(viewsets.ModelViewSet):
         
         new_contract = None
         if new_contract_id:
-            from backend.apps.production_management.models import BusinessContract
+            from backend.apps.contract_management.models import BusinessContract
             try:
                 new_contract = BusinessContract.objects.get(id=new_contract_id)
             except BusinessContract.DoesNotExist:

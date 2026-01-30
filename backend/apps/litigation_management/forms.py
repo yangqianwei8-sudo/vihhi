@@ -10,7 +10,7 @@ from backend.apps.litigation_management.models import (
 )
 from backend.apps.production_management.models import Project
 from backend.apps.customer_management.models import Client
-from backend.apps.production_management.models import BusinessContract
+from backend.apps.contract_management.models import BusinessContract
 
 
 class LitigationCaseForm(forms.ModelForm):

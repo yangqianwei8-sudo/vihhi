@@ -455,10 +455,11 @@ PLAN_MANAGEMENT_MENU_STRUCTURE = [
         'id': 'strategic_goal_management',
         'label': '目标制订',
         'icon': '🎯',
-        'permission': 'plan_management.manage_goal',
+        # 有 manage_goal 或 view_assigned/view_all 即可看到本分组；员工只看本人目标时也能进目标列表
+        'permission': ['plan_management.manage_goal', 'plan_management.goal.view_assigned', 'plan_management.goal.view_all'],
         'expanded': True,  # 默认展开
         'children': [
-            {'id': 'strategic_goal_list', 'label': '目标列表', 'icon': '🎯', 'url_name': 'plan_pages:strategic_goal_list', 'permission': 'plan_management.manage_goal'},
+            {'id': 'strategic_goal_list', 'label': '目标列表', 'icon': '🎯', 'url_name': 'plan_pages:strategic_goal_list', 'permission': ['plan_management.manage_goal', 'plan_management.goal.view_assigned', 'plan_management.goal.view_all']},
             {'id': 'strategic_goal_create', 'label': '创建目标', 'icon': '➕', 'url_name': 'plan_pages:strategic_goal_create', 'permission': 'plan_management.manage_goal'},
         ]
     },
@@ -476,10 +477,11 @@ PLAN_MANAGEMENT_MENU_STRUCTURE = [
         'id': 'strategic_goal_track',
         'label': '目标跟踪',
         'icon': '📈',
-        'permission': 'plan_management.view_goal_progress',
+        # 有 view_goal_progress 或 view_assigned 即可看到（员工只看本人目标时也能进跟踪列表）
+        'permission': ['plan_management.view_goal_progress', 'plan_management.goal.view_assigned', 'plan_management.goal.view_all'],
         'expanded': True,  # 默认展开
         'children': [
-            {'id': 'strategic_goal_track_list', 'label': '目标跟踪列表', 'icon': '📋', 'url_name': 'plan_pages:strategic_goal_track_entry', 'permission': 'plan_management.view_goal_progress'},
+            {'id': 'strategic_goal_track_list', 'label': '目标跟踪列表', 'icon': '📋', 'url_name': 'plan_pages:strategic_goal_track_entry', 'permission': ['plan_management.view_goal_progress', 'plan_management.goal.view_assigned', 'plan_management.goal.view_all']},
         ]
     },
     {
@@ -755,30 +757,38 @@ def plan_management_home(request):
     
     # 辅助函数：从计划对象构建计划字典（包含plan_period）
     def build_plan_dict(plan):
-        """从计划对象构建包含plan_period的字典"""
+        """从计划对象构建包含plan_period的字典（支持 Plan 实例或已有字典）"""
+        if isinstance(plan, dict):
+            # 已是字典时确保包含 plan_period，避免重复构建
+            return dict(plan, plan_period=plan.get('plan_period', ''))
         return {
             'title': plan.name,
             'progress': float(getattr(plan, 'progress', 0) or 0),
             'progress_status': calculate_plan_progress_status(plan),
             'url': reverse('plan_pages:plan_detail', args=[plan.id]),
-            'plan_period': getattr(plan, 'plan_period', ''),
+            'plan_period': getattr(plan, 'plan_period', '') or '',
         }
     
-    # 辅助函数：按计划周期分类计划
+    # 辅助函数：按计划周期分类计划（支持字典或 Plan 实例列表）
     def categorize_plans_by_period(plans_list):
         """将计划列表按周期分类为月计划、周计划、日计划"""
         monthly_plans = []
         weekly_plans = []
         daily_plans = []
         
-        for plan in plans_list:
-            plan_period = plan.get('plan_period', '')
+        for plan in plans_list or []:
+            if isinstance(plan, dict):
+                plan_period = (plan.get('plan_period') or '').strip()
+                item = plan
+            else:
+                plan_period = (getattr(plan, 'plan_period', None) or '').strip()
+                item = build_plan_dict(plan)
             if plan_period == 'monthly':
-                monthly_plans.append(plan)
+                monthly_plans.append(item)
             elif plan_period == 'weekly':
-                weekly_plans.append(plan)
+                weekly_plans.append(item)
             elif plan_period == 'daily':
-                daily_plans.append(plan)
+                daily_plans.append(item)
         
         return {
             'monthly': monthly_plans,
@@ -1443,10 +1453,21 @@ def plan_management_home(request):
         context.setdefault('collaboration_goal_stats', {'total': 0, 'in_progress': 0, 'overdue': 0, 'this_month': 0})
         context.setdefault('subordinate_collaboration_plan_summary', {'total': 0, 'in_progress': 0, 'today': 0, 'overdue': 0})
         context.setdefault('subordinate_collaboration_goal_summary', {'total': 0, 'in_progress': 0, 'overdue': 0, 'this_month': 0})
+        # 空计划按周期结构，供模板安全访问月/周/日计划卡片
+        _empty_plans_by_period = {
+            'monthly': [], 'weekly': [], 'daily': [],
+            'monthly_count': 0, 'weekly_count': 0, 'daily_count': 0,
+        }
+        _empty_my_work = {
+            'my_plans': [], 'my_plans_count': 0,
+            'my_goals': [], 'my_goals_count': 0,
+            'participating_plans': [], 'participating_plans_count': 0,
+            'plans_by_period': _empty_plans_by_period,
+        }
         context.setdefault('category_data', {
-            'all': {'plan_status_dist': None, 'goal_status_dist': None, 'risk_items': [], 'todo_items': [], 'my_work': {}},
-            'mine': {'plan_status_dist': None, 'goal_status_dist': None, 'risk_items': [], 'todo_items': [], 'my_work': {}},
-            'collaboration': {'plan_status_dist': None, 'goal_status_dist': None, 'risk_items': [], 'todo_items': [], 'my_work': {}},
+            'all': {'plan_status_dist': None, 'goal_status_dist': None, 'risk_items': [], 'todo_items': [], 'my_work': _empty_my_work},
+            'mine': {'plan_status_dist': None, 'goal_status_dist': None, 'risk_items': [], 'todo_items': [], 'my_work': _empty_my_work},
+            'collaboration': {'plan_status_dist': None, 'goal_status_dist': None, 'risk_items': [], 'todo_items': [], 'my_work': _empty_my_work},
         })
     
     # ========== 安全字段检查（统一获取，避免重复）==========
@@ -1486,14 +1507,14 @@ def plan_management_home(request):
         plan_related_fields.append('related_goal')
     
     # 根据筛选条件决定查询逻辑
-    # 如果筛选了负责人，查询该负责人负责的计划（所有级别）；否则查询当前用户负责的个人计划
+    # 如果筛选了负责人，查询该负责人负责的计划（所有级别）；否则查询当前用户负责的所有计划（个人+公司）
     if 'responsible_person' in plan_fields:
         if filter_responsible_person_id:
             # 筛选了负责人，查询该负责人负责的计划（所有级别）
             my_plans_qs = Plan.objects.filter(responsible_person_id=filter_responsible_person_id).order_by('-updated_time')
         else:
-            # 没有筛选负责人，查询当前用户负责的个人计划
-            my_plans_qs = Plan.objects.filter(level='personal', responsible_person=request.user).order_by('-updated_time')
+            # 没有筛选负责人，查询当前用户负责的所有计划（个人计划+公司计划，月/周/日卡片一致展示）
+            my_plans_qs = Plan.objects.filter(responsible_person=request.user).order_by('-updated_time')
     else:
         my_plans_qs = Plan.objects.none()
     
@@ -1513,14 +1534,14 @@ def plan_management_home(request):
         goal_related_fields.append('parent_goal')
     
     # 根据筛选条件决定查询逻辑
-    # 如果筛选了负责人，查询该负责人负责的目标（所有级别）；否则查询当前用户负责的个人目标
+    # 如果筛选了负责人，查询该负责人负责的目标（所有级别）；否则查询当前用户负责的所有目标（个人+公司）
     if 'responsible_person' in goal_fields:
         if filter_responsible_person_id:
             # 筛选了负责人，查询该负责人负责的目标（所有级别）
             my_goals_qs = StrategicGoal.objects.filter(responsible_person_id=filter_responsible_person_id).order_by('-updated_time')
         else:
-            # 没有筛选负责人，查询当前用户负责的个人目标
-            my_goals_qs = StrategicGoal.objects.filter(level='personal', responsible_person=request.user).order_by('-updated_time')
+            # 没有筛选负责人，查询当前用户负责的所有目标（个人目标+公司目标）
+            my_goals_qs = StrategicGoal.objects.filter(responsible_person=request.user).order_by('-updated_time')
     else:
         my_goals_qs = StrategicGoal.objects.none()
     
@@ -4299,6 +4320,34 @@ def plan_execution_track(request, plan_id):
             
             messages.success(request, f'进度已更新：完成百分比 {int(float(plan.progress))}%')
             return redirect('plan_pages:plan_execution_track', plan_id=plan_id)
+        else:
+            # 【修复】表单验证失败时显示错误消息（显示在当前页面，不重定向）
+            error_messages = []
+            for field, errors in progress_form.errors.items():
+                # 获取字段的显示名称
+                field_label = progress_form.fields.get(field)
+                if field_label and hasattr(field_label, 'label') and field_label.label:
+                    field_name = field_label.label
+                else:
+                    # 如果没有标签，使用字段名
+                    field_name_map = {
+                        'current_value': '完成百分比',
+                        'progress_description': '进度说明',
+                        'execution_result': '执行结果',
+                        'execution_issues': '执行问题',
+                        'notes': '备注',
+                    }
+                    field_name = field_name_map.get(field, field)
+                
+                # 收集所有错误
+                for error in errors:
+                    error_messages.append(f'{field_name}: {error}')
+            
+            if error_messages:
+                messages.error(request, '表单验证失败：' + '；'.join(error_messages))
+            else:
+                messages.error(request, '表单验证失败，请检查输入')
+            # 注意：不重定向，继续渲染当前页面，这样错误消息和表单错误都会显示
     
     # 开始执行（published → in_progress）
     if request.method == 'POST' and 'start_execution' in request.POST:
@@ -5660,9 +5709,38 @@ def plan_delete(request, plan_id):
         
         # 执行删除
         plan_name = plan.name
-        plan.delete()
-        messages.success(request, f'计划 {plan_name} 已删除')
-        return redirect('plan_pages:plan_list')
+        plan_id_to_check = plan.id  # 保存计划ID用于验证
+        
+        try:
+            plan.delete()
+            
+            # 验证删除是否成功
+            try:
+                Plan.objects.get(pk=plan_id_to_check)
+                # 如果还能查到，说明删除失败
+                messages.error(request, f'删除失败：计划 {plan_name} 仍然存在，可能是数据库约束阻止了删除')
+                return redirect('plan_pages:plan_detail', plan_id=plan_id_to_check)
+            except Plan.DoesNotExist:
+                # 计划已成功删除
+                messages.success(request, f'计划 {plan_name} 已删除')
+                return redirect('plan_pages:plan_list')
+                
+        except Exception as e:
+            # 捕获删除异常（可能是数据库约束、外键保护等）
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception('删除计划失败: %s', str(e))
+            
+            # 检查是否是数据库约束错误
+            error_msg = str(e)
+            if 'PROTECTED' in error_msg.upper() or 'FOREIGN KEY' in error_msg.upper():
+                messages.error(request, f'删除失败：该计划被其他数据引用，无法删除。错误详情：{error_msg}')
+            elif 'IntegrityError' in type(e).__name__:
+                messages.error(request, f'删除失败：数据库完整性约束阻止了删除操作。错误详情：{error_msg}')
+            else:
+                messages.error(request, f'删除失败：{error_msg}')
+            
+            return redirect('plan_pages:plan_detail', plan_id=plan_id)
     
     # GET请求时显示确认页面，但检查是否可以删除（用于显示警告信息）
     can_delete = True
@@ -7609,4 +7687,84 @@ def todo_task_cancel(request, todo_id):
     if not ok:
         messages.info(request, '待办已处于终态，无需重复操作')
     return redirect(next_url)
+
+
+@login_required
+def get_parent_plan_options(request):
+    """获取父计划选项的 API 端点（用于 AJAX 动态加载）"""
+    plan_period = request.GET.get('plan_period', '').strip()
+    plan_id = request.GET.get('plan_id', '').strip()  # 当前正在编辑的计划ID（用于排除）
+    
+    if not plan_period:
+        return JsonResponse({'options': [], 'error': '请提供计划周期参数'})
+    
+    # 父计划周期映射
+    parent_plan_period_map = {
+        'daily': 'weekly',      # 日计划的父计划是周计划
+        'weekly': 'monthly',   # 周计划的父计划是月计划
+        'monthly': 'quarterly', # 月计划的父计划是季计划
+        'quarterly': 'yearly',  # 季计划的父计划是年计划
+        'yearly': None,         # 年计划不需要父计划
+    }
+    
+    parent_plan_period = parent_plan_period_map.get(plan_period)
+    
+    if not parent_plan_period:
+        if plan_period == 'yearly':
+            return JsonResponse({'options': [], 'help_text': '年计划不需要填写父计划'})
+        else:
+            return JsonResponse({'options': [], 'error': '无效的计划周期'})
+    
+    # 构建查询集：只显示当前用户负责的个人计划，且状态必须是已发布或执行中
+    from .models import Plan
+    base_queryset = Plan.objects.filter(
+        level='personal',
+        responsible_person=request.user,
+        status__in=['published', 'in_progress'],
+        plan_period=parent_plan_period
+    )
+    
+    # 排除当前计划及其下级计划
+    if plan_id:
+        try:
+            current_plan = Plan.objects.get(pk=int(plan_id))
+            exclude_ids = [current_plan.pk]
+            try:
+                exclude_ids.extend([p.pk for p in current_plan.get_all_descendants()])
+            except:
+                pass
+            base_queryset = base_queryset.exclude(pk__in=exclude_ids)
+        except (Plan.DoesNotExist, ValueError):
+            pass
+    
+    # 构建选项列表
+    options = [{'value': '', 'text': '-------'}]
+    for plan in base_queryset.order_by('-created_time'):
+        options.append({
+            'value': str(plan.id),
+            'text': f'{plan.plan_number} - {plan.name}'
+        })
+    
+    # 生成帮助文本
+    period_names = {
+        'daily': '日计划',
+        'weekly': '周计划',
+        'monthly': '月计划',
+        'quarterly': '季计划',
+    }
+    parent_period_names = {
+        'weekly': '周计划',
+        'monthly': '月计划',
+        'quarterly': '季计划',
+        'yearly': '年计划',
+    }
+    current_name = period_names.get(plan_period, plan_period)
+    parent_name = parent_period_names.get(parent_plan_period, parent_plan_period)
+    help_text = f'{current_name}的父计划必须是{parent_name}（仅显示您负责的个人计划，状态为已发布或执行中）'
+    
+    return JsonResponse({
+        'options': options,
+        'help_text': help_text,
+        'required': True
+    })
 

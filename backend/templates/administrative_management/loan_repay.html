@@ -1,0 +1,146 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block pm_title %}借款还款{% endblock pm_title %}
+{% block pm_subtitle %}为借款申请进行还款操作{% endblock pm_subtitle %}
+
+{% block pm_content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-cash-coin"></i> 借款还款 - {{ loan.application_number }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- 借款信息摘要 -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">借款信息</h6>
+                        <hr>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>申请单号：</strong>{{ loan.application_number }}</p>
+                                <p class="mb-1"><strong>借款人：</strong>{{ loan.applicant.get_full_name|default:loan.applicant.username }}</p>
+                                <p class="mb-1"><strong>借款类型：</strong>{{ loan.get_loan_type_display }}</p>
+                                <p class="mb-1"><strong>借款金额：</strong>¥{{ loan.loan_amount|floatformat:2 }}</p>
+                            </div>
+            <div class="col-md-6">
+              <p class="mb-1"><strong>已还金额：</strong>¥{{ loan.repaid_amount|floatformat:2 }}</p>
+              <p class="mb-1"><strong>剩余未还：</strong><span class="text-danger fw-bold">¥{{ remaining_amount|floatformat:2 }}</span></p>
+              {% if loan.pending_repayment_amount > 0 %}
+              <p class="mb-1"><strong>待确认还款：</strong><span class="text-warning fw-bold">¥{{ loan.pending_repayment_amount|floatformat:2 }}</span></p>
+              {% endif %}
+              <p class="mb-1"><strong>借款日期：</strong>{{ loan.loan_date|date:"Y-m-d" }}</p>
+              {% if loan.expected_repay_date %}
+              <p class="mb-1"><strong>预计还款日期：</strong>{{ loan.expected_repay_date|date:"Y-m-d" }}</p>
+              {% endif %}
+            </div>
+                        </div>
+                    </div>
+                    
+                    {% if loan.pending_repayment_amount > 0 %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> 该借款已有待确认的还款申请（¥{{ loan.pending_repayment_amount|floatformat:2 }}），请等待出纳员确认后再提交新的还款申请。
+                        <div class="mt-2">
+                            <a href="{% url 'admin_pages:loan_detail' loan.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> 查看详情
+                            </a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- 还款表单 -->
+                    <form method="post" id="repayForm">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.repay_amount.id_for_label }}" class="form-label">
+                                    {{ form.repay_amount.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">¥</span>
+                                    {{ form.repay_amount }}
+                                </div>
+                                {% if form.repay_amount.errors %}
+                                <div class="text-danger small mt-1">{{ form.repay_amount.errors }}</div>
+                                {% endif %}
+                                {% if form.repay_amount.help_text %}
+                                <div class="form-text">{{ form.repay_amount.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label for="{{ form.repay_notes.id_for_label }}" class="form-label">
+                                    {{ form.repay_notes.label }}
+                                </label>
+                                {{ form.repay_notes }}
+                                {% if form.repay_notes.errors %}
+                                <div class="text-danger small mt-1">{{ form.repay_notes.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> 提交还款申请
+                                </button>
+                                <a href="{% url 'admin_pages:loan_list' %}" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle"></i> 取消
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const repayAmountInput = document.getElementById('{{ form.repay_amount.id_for_label }}');
+    const remainingAmount = {{ remaining_amount }};
+    
+    if (repayAmountInput) {
+        // 设置最大值为剩余未还金额
+        repayAmountInput.setAttribute('max', remainingAmount);
+        
+        // 监听输入，验证金额
+        repayAmountInput.addEventListener('input', function() {
+            const value = parseFloat(this.value) || 0;
+            if (value > remainingAmount) {
+                this.setCustomValidity(`还款金额不能超过剩余未还金额 ¥${remainingAmount.toFixed(2)}`);
+            } else if (value <= 0) {
+                this.setCustomValidity('还款金额必须大于0');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+        
+        // 表单提交前验证
+        document.getElementById('repayForm').addEventListener('submit', function(e) {
+            const value = parseFloat(repayAmountInput.value) || 0;
+            if (value <= 0) {
+                e.preventDefault();
+                alert('还款金额必须大于0');
+                repayAmountInput.focus();
+                return false;
+            }
+            if (value > remainingAmount) {
+                e.preventDefault();
+                alert(`还款金额不能超过剩余未还金额 ¥${remainingAmount.toFixed(2)}`);
+                repayAmountInput.focus();
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock pm_content %}

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from backend.apps.delivery_customer.models import (
     DeliveryRecord, DeliveryFile, DeliveryFeedback, DeliveryTracking, 
-    ExpressCompany, IncomingDocument, OutgoingDocument
+    ExpressCompany
 )
 from backend.core.admin_base import BaseModelAdmin, AuditAdminMixin
 
@@ -119,76 +119,3 @@ class ExpressCompanyAdmin(AuditAdminMixin, BaseModelAdmin):
     )
 
 
-@admin.register(IncomingDocument)
-class IncomingDocumentAdmin(AuditAdminMixin, BaseModelAdmin):
-    """收文管理"""
-    list_display = ('document_number', 'title', 'sender', 'receive_date', 'status', 'priority', 'handler', 'created_at')
-    list_filter = ('status', 'priority', 'receive_date', 'created_at')
-    search_fields = ('document_number', 'title', 'sender', 'sender_contact')
-    readonly_fields = ('document_number', 'created_at', 'updated_at')
-    fieldsets = (
-        ('基本信息', {
-            'fields': ('document_number', 'title', 'sender', 'sender_contact', 'sender_phone')
-        }),
-        ('文件信息', {
-            'fields': ('document_date', 'receive_date', 'document_type')
-        }),
-        ('内容', {
-            'fields': ('content', 'summary')
-        }),
-        ('状态和优先级', {
-            'fields': ('status', 'priority')
-        }),
-        ('处理信息', {
-            'fields': ('handler', 'handle_notes', 'completed_at')
-        }),
-        ('附件', {
-            'fields': ('attachment',)
-        }),
-        ('备注', {
-            'fields': ('notes',)
-        }),
-        ('操作信息', {
-            'fields': ('created_by',)
-        }),
-        # 时间信息会自动添加
-    )
-
-
-@admin.register(OutgoingDocument)
-class OutgoingDocumentAdmin(AuditAdminMixin, BaseModelAdmin):
-    """发文管理"""
-    list_display = ('document_number', 'title', 'recipient', 'send_date', 'status', 'priority', 'reviewer', 'created_at')
-    list_filter = ('status', 'priority', 'send_date', 'created_at')
-    search_fields = ('document_number', 'title', 'recipient', 'recipient_contact')
-    readonly_fields = ('document_number', 'created_at', 'updated_at')
-    fieldsets = (
-        ('基本信息', {
-            'fields': ('document_number', 'title', 'recipient', 'recipient_contact', 'recipient_phone', 'recipient_address')
-        }),
-        ('文件信息', {
-            'fields': ('document_date', 'send_date', 'document_type')
-        }),
-        ('内容', {
-            'fields': ('content', 'summary')
-        }),
-        ('状态和优先级', {
-            'fields': ('status', 'priority')
-        }),
-        ('审核信息', {
-            'fields': ('reviewer', 'review_notes', 'reviewed_at')
-        }),
-        ('发送信息', {
-            'fields': ('sender', 'send_method', 'sent_at')
-        }),
-        ('附件', {
-            'fields': ('attachment',)
-        }),
-        ('备注', {
-            'fields': ('notes',)
-        }),
-        ('操作信息', {
-            'fields': ('created_by',)
-        }),
-        # 时间信息会自动添加
-    )

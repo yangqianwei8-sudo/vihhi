@@ -16,9 +16,8 @@ from django.contrib.auth.decorators import login_required
 @login_required
 def payment_management_redirect(request):
     """回款管理重定向视图"""
-    # 直接调用回款计划列表视图，而不是重定向
-    from backend.apps.settlement_center.views_pages import payment_plan_list
-    return payment_plan_list(request)
+    # 重定向到新的回款管理应用
+    return redirect('payment_pages:payment_home')
 
 @login_required
 def report_management_redirect(request):
@@ -87,7 +86,10 @@ urlpatterns = [
     path('api/production/', include(('backend.apps.production_management.urls', 'production'), namespace='production')),  # 生产管理API
     # path('api/project/', include(('backend.apps.project_center.urls', 'project'), namespace='project')),  # 已删除：迁移到production_management
     path('api/customer/', include(('backend.apps.customer_management.urls', 'customer'), namespace='customer')),  # 客户管理API
+    path('api/opportunity/', include(('backend.apps.opportunity_management.urls', 'opportunity'), namespace='opportunity')),  # 商机管理API
+    path('api/payment/', include(('backend.apps.payment_management.urls', 'payment'), namespace='payment')),  # 回款管理API
     path('api/delivery/', include(('backend.apps.delivery_customer.urls_api', 'delivery'), namespace='delivery_api')),
+    path('api/document/', include(('backend.apps.document_management.urls', 'document'), namespace='document')),  # 文档管理API
     path('api/settlement/', include(('backend.apps.settlement_center.urls', 'settlement'), namespace='settlement')),  # 结算中心API
     path('api/archive/', include(('backend.apps.archive_management.urls_api', 'archive'), namespace='archive_api')),
     path('api/plan/', include(('backend.apps.plan_management.urls', 'plan'), namespace='plan')),  # 计划管理API
@@ -97,15 +99,17 @@ urlpatterns = [
     # path('project/', include(('backend.apps.project_center.urls', 'project'), namespace='project_pages')),  # 已删除：迁移到production_management
     path('resource/', include(('backend.apps.resource_standard.urls', 'resource_standard'), namespace='resource_standard_pages')),
     path('delivery/', include(('backend.apps.delivery_customer.urls', 'delivery'), namespace='delivery_pages')),
+    path('documents/', include(('backend.apps.document_management.urls_pages', 'document_pages'), namespace='document_pages')),  # 文档管理页面（独立应用）
     # 客户管理、商机管理、合同管理分离为独立路径
     path('customers/', include(('backend.apps.customer_management.customer_urls', 'customer'), namespace='customer_pages')),  # 客户管理页面
-    path('opportunities/', include(('backend.apps.customer_management.opportunity_urls', 'opportunity'), namespace='opportunity_pages')),  # 商机管理页面
-    path('contracts/', include(('backend.apps.customer_management.contract_urls', 'contract'), namespace='contract_pages')),  # 合同管理页面
+    path('opportunities/', include(('backend.apps.opportunity_management.urls_pages', 'opportunity_pages'), namespace='opportunity_pages')),  # 商机管理页面（独立应用）
+    path('contracts/', include(('backend.apps.contract_management.urls_pages', 'contract_pages'), namespace='contract_pages')),  # 合同管理页面（独立应用）
     # 保持向后兼容：business/路径重定向到customers/
     path('business/', include(('backend.apps.customer_management.customer_urls', 'business'), namespace='business_pages')),  # 向后兼容重定向
     path('collaboration/', include(('backend.apps.task_collaboration.urls', 'task_collaboration'), namespace='collaboration_pages')),
     path('system-center/', include(('backend.apps.system_management.urls_pages', 'system_pages'), namespace='system_pages')),
     path('settlement/', include(('backend.apps.settlement_center.urls_pages', 'settlement_pages'), namespace='settlement_pages')),  # 结算管理（使用settlement_center模块）
+    path('payment/', include(('backend.apps.payment_management.urls_pages', 'payment_pages'), namespace='payment_pages')),  # 回款管理页面（独立应用）
     # 行政管理、财务管理模块
     path('administrative/', include(('backend.apps.administrative_management.urls', 'admin_pages'), namespace='admin_pages')),
     path('financial/', include(('backend.apps.financial_management.urls', 'finance_pages'), namespace='finance_pages')),

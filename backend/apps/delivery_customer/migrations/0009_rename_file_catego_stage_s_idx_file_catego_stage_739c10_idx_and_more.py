@@ -63,9 +63,10 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(rename_indexes_if_exist, reverse_rename_indexes),
-        migrations.AlterField(
-            model_name='filetemplate',
-            name='template_file',
-            field=models.FileField(blank=True, help_text='上传模板文件（Word、Excel、PDF等）', null=True, upload_to=backend.apps.delivery_customer.models.file_template_upload_path, verbose_name='模板文件'),
-        ),
+        # FileTemplate模型已迁移到document_management，此操作已不再需要
+        # migrations.AlterField(
+        #     model_name='filetemplate',
+        #     name='template_file',
+        #     field=models.FileField(blank=True, help_text='上传模板文件（Word、Excel、PDF等）', null=True, upload_to=backend.apps.document_management.models.file_template_upload_path, verbose_name='模板文件'),
+        # ),
     ]

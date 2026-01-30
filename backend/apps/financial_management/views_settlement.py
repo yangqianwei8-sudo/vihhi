@@ -18,7 +18,7 @@ from backend.apps.production_management.models import Project
 from backend.apps.system_management.models import User
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.core.views import _permission_granted, _build_full_top_nav
-from backend.apps.production_management.models import BusinessContract
+from backend.apps.contract_management.models import BusinessContract
 from django.core.paginator import Paginator
 from django.db.models import Max
 

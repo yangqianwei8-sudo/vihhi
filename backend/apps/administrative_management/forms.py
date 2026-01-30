@@ -1,9 +1,10 @@
 from django import forms
+import os
 from .models import (
     OfficeSupply, SupplyPurchase, SupplyCategory, MeetingRoom, MeetingRoomBooking, Meeting, MeetingRecord, MeetingResolution,
     Vehicle, VehicleBooking, ReceptionRecord,
     Announcement, Seal, SealBorrowing, SealUsage, FixedAsset, ExpenseReimbursement, ExpenseItem,
-    AdministrativeAffair, AffairProgressRecord, TravelApplication,
+    AdministrativeAffair, AffairProgressRecord, TravelApplication, LoanApplication,
     Supplier, PurchaseContract, PurchasePayment,
     InventoryCheck, InventoryCheckItem, InventoryAdjust, InventoryAdjustItem
 )
@@ -1443,4 +1444,221 @@ class InventoryAdjustItemForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['supply'].queryset = OfficeSupply.objects.filter(is_active=True).order_by('code')
         self.fields['notes'].required = False
+
+
+class LoanApplicationForm(forms.ModelForm):
+    """借款申请表单"""
+    
+    # 固定字段：所属部门、负责人、表单编号（必须字段，基模板会自动显示）
+    responsible_department = forms.ModelChoiceField(
+        queryset=Department.objects.none(),
+        required=True,
+        label='所属部门',
+        widget=forms.Select(attrs={'class': 'form-select', 'disabled': True})
+    )
+    responsible_person = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        required=True,
+        label='负责人',
+        widget=forms.Select(attrs={'class': 'form-select', 'disabled': True})
+    )
+    form_number = forms.CharField(
+        required=False,
+        label='申请单号',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'readonly': True,
+            'placeholder': '系统自动生成'
+        })
+    )
+    
+    # 借款人字段（默认，不可修改）
+    borrower = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        required=True,
+        label='借款人（默认，不可修改）',
+        widget=forms.Select(attrs={'class': 'form-select', 'disabled': True})
+    )
+    
+    class Meta:
+        model = LoanApplication
+        fields = [
+            # 固定字段（前三个）：所属部门、负责人、表单编号（基模板会自动显示）
+            'responsible_department', 'responsible_person', 'form_number',
+            # 其他字段
+            'borrower', 'loan_type', 'loan_amount', 'loan_reason',
+            'loan_date', 'expected_repay_date', 'iou_file', 'notes'
+        ]
+        widgets = {
+            'loan_type': forms.Select(attrs={'class': 'form-select'}),
+            'loan_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '借款金额'
+            }),
+            'loan_reason': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': '请详细说明借款事由'
+            }),
+            'loan_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+                'format': '%Y-%m-%d'
+            }),
+            'expected_repay_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+                'format': '%Y-%m-%d'
+            }),
+            'borrower': forms.Select(attrs={'class': 'form-select', 'disabled': True}),
+            'iou_file': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.jpg,.jpeg,.png,.gif',
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': '备注信息（可选）'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # 设置固定字段的查询集和初始值
+        self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
+        self.fields['responsible_person'].queryset = User.objects.filter(is_active=True)
+        self.fields['borrower'].queryset = User.objects.filter(is_active=True)
+        
+        # 设置默认值：所属部门为当前用户所在部门，负责人为当前用户，借款人为当前用户
+        if user:
+            if user.department:
+                self.fields['responsible_department'].initial = user.department
+            self.fields['responsible_person'].initial = user
+            self.fields['borrower'].initial = user
+        
+        # 表单编号：使用 application_number 的值，如果存在
+        if self.instance and self.instance.pk:
+            self.fields['form_number'].initial = self.instance.application_number
+        else:
+            self.fields['form_number'].initial = '系统将自动生成'
+        
+        # 设置借款日期默认值为当前日期
+        if not self.instance or not self.instance.pk:
+            from django.utils import timezone
+            self.fields['loan_date'].initial = timezone.now().date()
+        # 确保 loan_date 字段有默认值（即使已有实例）
+        elif self.instance and self.instance.pk and not self.instance.loan_date:
+            from django.utils import timezone
+            self.fields['loan_date'].initial = timezone.now().date()
+        
+        # loan_date 字段必填
+        self.fields['loan_date'].required = True
+        self.fields['expected_repay_date'].required = False
+        self.fields['iou_file'].required = True  # 借条附件必须上传
+        self.fields['notes'].required = False
+    
+    def clean_loan_date(self):
+        """确保 loan_date 有值，如果为空则使用当前日期"""
+        loan_date = self.cleaned_data.get('loan_date')
+        if not loan_date:
+            from django.utils import timezone
+            loan_date = timezone.now().date()
+        return loan_date
+    
+    def save(self, commit=True):
+        # 固定字段不保存到模型（因为模型中没有这些字段）
+        # borrower字段也不保存到模型（使用applicant字段）
+        # 只保存其他字段
+        instance = super().save(commit=False)
+        # 如果模型中有department字段，使用responsible_department的值
+        if hasattr(instance, 'department') and 'responsible_department' in self.cleaned_data:
+            instance.department = self.cleaned_data['responsible_department']
+        # 确保 loan_date 有值（clean_loan_date 应该已经处理，但这里再确保一次）
+        if not instance.loan_date:
+            from django.utils import timezone
+            instance.loan_date = timezone.now().date()
+        if commit:
+            instance.save()
+        return instance
+    
+    def clean_loan_amount(self):
+        loan_amount = self.cleaned_data.get('loan_amount')
+        if loan_amount and loan_amount <= 0:
+            raise forms.ValidationError('借款金额必须大于0')
+        return loan_amount
+    
+    def clean_iou_file(self):
+        iou_file = self.cleaned_data.get('iou_file')
+        if not iou_file:
+            raise forms.ValidationError('必须上传手写的借条作为附件')
+        
+        # 检查文件大小（限制为10MB）
+        if iou_file.size > 10 * 1024 * 1024:
+            raise forms.ValidationError('借条文件大小不能超过10MB')
+        
+        # 检查文件类型
+        allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif']
+        file_extension = os.path.splitext(iou_file.name)[1].lower()
+        if file_extension not in allowed_extensions:
+            raise forms.ValidationError(f'不支持的文件类型，仅支持：{", ".join(allowed_extensions)}')
+        
+        return iou_file
+
+
+class LoanRepaymentForm(forms.Form):
+    """借款还款表单"""
+    repay_amount = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        label='还款金额',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': '请输入还款金额'
+        }),
+        help_text='请输入本次还款金额，支持部分还款'
+    )
+    repay_notes = forms.CharField(
+        required=False,
+        label='还款备注',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': '还款备注（可选）'
+        })
+    )
+    
+    def __init__(self, *args, **kwargs):
+        self.loan = kwargs.pop('loan', None)
+        super().__init__(*args, **kwargs)
+        
+        if self.loan:
+            # 使用总剩余金额（包括待确认的还款）
+            remaining = self.loan.total_remaining_amount
+            pending = self.loan.pending_repayment_amount
+            if pending > 0:
+                self.fields['repay_amount'].help_text = f'剩余未还金额：¥{remaining:,.2f}（已有待确认还款：¥{pending:,.2f}）'
+            else:
+                self.fields['repay_amount'].help_text = f'剩余未还金额：¥{remaining:,.2f}'
+            self.fields['repay_amount'].widget.attrs['max'] = str(remaining)
+    
+    def clean_repay_amount(self):
+        repay_amount = self.cleaned_data.get('repay_amount')
+        if not repay_amount or repay_amount <= 0:
+            raise forms.ValidationError('还款金额必须大于0')
+        
+        if self.loan:
+            # 检查是否有待确认的还款
+            if self.loan.pending_repayment_amount > 0:
+                raise forms.ValidationError(f'该借款已有待确认的还款金额 ¥{self.loan.pending_repayment_amount:,.2f}，请等待出纳员确认后再提交新的还款申请')
+            
+            # 使用总剩余金额（包括待确认的还款）
+            remaining = self.loan.total_remaining_amount
+            if repay_amount > remaining:
+                raise forms.ValidationError(f'还款金额不能超过剩余未还金额 ¥{remaining:,.2f}')
+        
+        return repay_amount
 

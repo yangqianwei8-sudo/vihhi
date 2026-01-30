@@ -100,6 +100,41 @@ class ApprovalEngine:
                 else:
                     debug_info += ', 申请人没有部门'
             logger.warning(debug_info)
+            # 如果是非必审节点，没有审批人也可以继续（抄送节点）
+            if not node.is_required:
+                logger.info(f'节点 {node.name} 是非必审节点，即使没有审批人也可以继续流程')
+                return
+            return
+        
+        # 如果是非必审节点（抄送节点），创建审批记录但标记为已通过，流程自动继续
+        if not node.is_required:
+            # 非必审节点：创建审批记录并自动通过，仅发送通知
+            for approver in approvers:
+                ApprovalRecord.objects.create(
+                    instance=instance,
+                    node=node,
+                    approver=approver,
+                    result='approved',  # 自动通过
+                    comment='抄送通知，自动通过',
+                    approval_time=timezone.now()
+                )
+                # 发送通知
+                ApprovalEngine._send_approval_notification(instance, approver, node)
+            # 非必审节点创建完记录后，立即进入下一个节点
+            next_node = ApprovalEngine._get_next_node(node)
+            if next_node:
+                instance.current_node = next_node
+                instance.save()
+                ApprovalEngine._create_pending_records(instance, next_node)
+                logger.info(f'非必审节点 {node.name} 自动通过，进入下一个节点: {next_node.name}')
+            else:
+                # 流程完成
+                instance.status = 'approved'
+                instance.completed_time = timezone.now()
+                instance.current_node = None
+                instance.save()
+                logger.info(f'非必审节点 {node.name} 自动通过，审批流程完成')
+                ApprovalEngine._update_business_object_status(instance, 'approved')
             return
         
         # 如果是单人审批模式，只创建第一个审批人的记录
@@ -153,6 +188,19 @@ class ApprovalEngine:
                         department=instance.applicant.department,
                         roles__code='department_manager'
                     ).distinct())
+        elif node.approver_type == 'custom':
+            # 自定义规则：根据节点名称判断
+            if '印章保管员' in node.name or 'seal_keeper' in node.name.lower():
+                # 动态获取印章保管员（从关联的印章对象中获取）
+                try:
+                    if instance.content_type and instance.content_type.model == 'sealborrowing':
+                        content_obj = instance.content_type.get_object_for_this_type(id=instance.object_id)
+                        if hasattr(content_obj, 'seal') and content_obj.seal:
+                            if hasattr(content_obj.seal, 'keeper') and content_obj.seal.keeper:
+                                approvers = [content_obj.seal.keeper]
+                                logger.info(f'动态获取印章保管员: {content_obj.seal.keeper.username} (印章: {content_obj.seal.seal_name})')
+                except Exception as e:
+                    logger.warning(f'获取印章保管员失败: {str(e)}')
         # 其他类型可以根据需要扩展
         
         return approvers if approvers else []
@@ -311,34 +359,10 @@ class ApprovalEngine:
     @staticmethod
     def withdraw(instance: ApprovalInstance, user: User) -> bool:
         """撤回审批"""
-        # 明确禁止已结束的流程被撤回
-        if instance.status == 'approved':
-            logger.warning(f'尝试撤回已通过的审批: {instance.instance_number}')
-            return False
-        
-        if instance.status == 'rejected':
-            logger.warning(f'尝试撤回已驳回的审批: {instance.instance_number}')
-            return False
-        
-        if instance.status == 'withdrawn':
-            logger.warning(f'尝试重复撤回已撤回的审批: {instance.instance_number}')
-            return False
-        
-        if instance.status == 'cancelled':
-            logger.warning(f'尝试撤回已取消的审批: {instance.instance_number}')
-            return False
-        
         if instance.status != 'pending':
-            logger.warning(f'尝试撤回非审批中状态的审批: {instance.instance_number}, 状态: {instance.status}')
-            return False
-        
-        # 额外检查：如果已完成时间已设置，说明审批已结束，不允许撤回
-        if instance.completed_time:
-            logger.warning(f'尝试撤回已完成的审批: {instance.instance_number}, completed_time: {instance.completed_time}')
             return False
         
         if instance.applicant != user:
-            logger.warning(f'非申请人尝试撤回审批: {instance.instance_number}, 申请人: {instance.applicant}, 操作人: {user}')
             return False
         
         with transaction.atomic():

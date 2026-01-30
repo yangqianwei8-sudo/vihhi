@@ -21,6 +21,9 @@ from backend.apps.system_management.services import get_user_permission_codes
 def _permission_granted(required_code, user_permissions: set) -> bool:
     if not required_code:
         return True
+    # 支持多个权限任一满足（用于菜单“有任一即可显示”）
+    if isinstance(required_code, (list, tuple)):
+        return any(_permission_granted(c, user_permissions) for c in required_code)
     # 检查是否有所有权限
     if '__all__' in user_permissions:
         return True
@@ -122,7 +125,7 @@ HOME_NAV_STRUCTURE = [
     {'label': '客户管理', 'icon': '👥', 'url_name': 'customer_pages:customer_management_home_alt', 'permission': 'customer_management.client.view'},
     {'label': '商机管理', 'icon': '💼', 'url_name': 'opportunity_pages:opportunity_management_home_alt', 'permission': 'customer_management.opportunity.view'},
     {'label': '合同管理', 'icon': '📄', 'url_name': 'contract_pages:contract_management_home_alt', 'permission': 'customer_management.contract.view'},
-    {'label': '回款管理', 'icon': '💰', 'url_name': 'settlement_pages:settlement_home', 'permission': 'payment_management.payment_plan.view'},  # 回款管理独立模块
+    {'label': '回款管理', 'icon': '💰', 'url_name': 'payment_pages:payment_home', 'permission': 'payment_management.payment_plan.view'},  # 回款管理独立模块
     {'label': '生产管理', 'icon': '🏗️', 'url_name': 'production_pages:production_management_home', 'permission': 'production_management.view_assigned'},
     {'label': '资源管理', 'icon': '🗂️', 'url_name': 'resource_standard_pages:standard_list', 'permission': 'resource_center.view'},
     {'label': '任务协作', 'icon': '🤝', 'url_name': 'collaboration_pages:task_board', 'permission': 'task_collaboration.view'},
@@ -190,7 +193,7 @@ SCENE_GROUPS = [
             {'label': '客户管理', 'icon': 'fa-users', 'url_name': 'customer_pages:customer_management_home_alt', 'permission': 'customer_management.client.view'},
             {'label': '商机管理', 'icon': 'fa-briefcase', 'url_name': 'opportunity_pages:opportunity_management_home_alt', 'permission': 'customer_management.opportunity.view'},
             {'label': '合同管理', 'icon': 'fa-file-contract', 'url_name': 'contract_pages:contract_management_home_alt', 'permission': 'customer_management.contract.view'},
-            {'label': '回款管理', 'icon': 'fa-money-bill-wave', 'url_name': 'settlement_pages:settlement_home', 'permission': 'payment_management.payment_plan.view'},
+            {'label': '回款管理', 'icon': 'fa-money-bill-wave', 'url_name': 'payment_pages:payment_home', 'permission': 'payment_management.payment_plan.view'},
         ]
     },
     {

@@ -2,7 +2,7 @@
 
 from django.core.management.base import BaseCommand
 from django.db.models import Q, Count
-from backend.apps.customer_management.models import BusinessOpportunity
+from backend.apps.opportunity_management.models import BusinessOpportunity
 
 
 class Command(BaseCommand):

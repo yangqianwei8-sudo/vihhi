@@ -169,61 +169,67 @@ PERMISSION_DEFINITIONS = [
     {"code": "archive_management.borrow.create", "module": "档案管理", "action": "borrow.create", "name": "档案管理-创建借阅", "description": "创建档案借阅申请"},
     
     # 计划管理
-    # 模块级权限：查看计划管理模块
-    {"code": "plan_management.view", "module": "计划管理", "action": "view", "name": "计划管理-查看", "description": "查看计划管理模块（模块级权限）"},
+    # 模块级权限：查看计划管理模块（用于菜单显示和基础访问）
+    {"code": "plan_management.view", "module": "计划管理", "action": "view", "name": "计划管理-查看", "description": "查看计划管理模块（模块级权限，用于菜单显示和基础访问）"},
     
     # 计划相关权限
     # 查看权限（数据级）：plan.view 保留为兼容，推荐使用 view_all 或 view_assigned
     {"code": "plan_management.plan.view", "module": "计划管理", "action": "plan.view", "name": "计划管理-查看计划", "description": "查看计划列表和详情（兼容权限，推荐使用 view_all 或 view_assigned）"},
-    {"code": "plan_management.plan.view_all", "module": "计划管理", "action": "plan.view_all", "name": "计划管理-查看全部计划", "description": "查看所有计划（不限负责人，数据级权限）"},
-    {"code": "plan_management.plan.view_assigned", "module": "计划管理", "action": "plan.view_assigned", "name": "计划管理-查看负责计划", "description": "查看本人负责或参与的计划（数据级权限）"},
+    {"code": "plan_management.plan.view_all", "module": "计划管理", "action": "plan.view_all", "name": "计划管理-查看全部计划", "description": "查看所有计划（不限负责人，数据级权限，用于计划列表页面）"},
+    {"code": "plan_management.plan.view_assigned", "module": "计划管理", "action": "plan.view_assigned", "name": "计划管理-查看负责计划", "description": "查看本人负责或参与的计划（数据级权限，用于计划列表页面）"},
     # 基础操作权限
-    {"code": "plan_management.plan.create", "module": "计划管理", "action": "plan.create", "name": "计划管理-创建计划", "description": "创建计划"},
-    {"code": "plan_management.plan.edit", "module": "计划管理", "action": "plan.edit", "name": "计划管理-编辑计划", "description": "编辑计划信息（拥有 manage 权限时自动拥有此权限）"},
-    {"code": "plan_management.plan.edit_assigned", "module": "计划管理", "action": "plan.edit_assigned", "name": "计划管理-编辑负责计划", "description": "编辑本人负责的计划（受限编辑权限）"},
-    {"code": "plan_management.plan.delete", "module": "计划管理", "action": "plan.delete", "name": "计划管理-删除计划", "description": "删除计划（拥有 manage 权限时自动拥有此权限）"},
+    {"code": "plan_management.plan.create", "module": "计划管理", "action": "plan.create", "name": "计划管理-创建计划", "description": "创建计划（用于创建计划表单和菜单项）"},
+    {"code": "plan_management.plan.edit", "module": "计划管理", "action": "plan.edit", "name": "计划管理-编辑计划", "description": "编辑计划信息（用于编辑计划表单，拥有 manage 权限时自动拥有此权限）"},
+    {"code": "plan_management.plan.edit_assigned", "module": "计划管理", "action": "plan.edit_assigned", "name": "计划管理-编辑负责计划", "description": "编辑本人负责的计划（受限编辑权限，用于编辑计划表单）"},
+    {"code": "plan_management.plan.delete", "module": "计划管理", "action": "plan.delete", "name": "计划管理-删除计划", "description": "删除计划（用于删除计划操作，拥有 manage 权限时自动拥有此权限）"},
     # 管理权限：包含创建、编辑、删除、分解等所有管理操作
-    {"code": "plan_management.plan.manage", "module": "计划管理", "action": "plan.manage", "name": "计划管理-管理计划", "description": "管理计划（创建、编辑、删除、分解等所有管理操作，自动包含 edit 和 delete 权限）"},
-    {"code": "plan_management.plan.update_progress", "module": "计划管理", "action": "plan.update_progress", "name": "计划管理-更新计划进度", "description": "更新计划执行进度、执行结果、执行问题"},
-    {"code": "plan_management.plan.manage_issue", "module": "计划管理", "action": "plan.manage_issue", "name": "计划管理-管理计划问题", "description": "创建、编辑、处理计划问题"},
-    {"code": "plan_management.plan.apply_adjustment", "module": "计划管理", "action": "plan.apply_adjustment", "name": "计划管理-申请计划调整", "description": "申请计划延期或调整"},
-    {"code": "plan_management.plan.approve_adjustment", "module": "计划管理", "action": "plan.approve_adjustment", "name": "计划管理-审批计划调整", "description": "审批计划调整申请"},
-    {"code": "plan_management.plan.request_start", "module": "计划管理", "action": "plan.request_start", "name": "计划管理-申请启动计划", "description": "申请启动计划（从草稿状态发布）"},
-    {"code": "plan_management.plan.request_cancel", "module": "计划管理", "action": "plan.request_cancel", "name": "计划管理-申请取消计划", "description": "申请取消计划"},
-    {"code": "plan_management.plan.approve_decision", "module": "计划管理", "action": "plan.approve_decision", "name": "计划管理-审批计划决策", "description": "审批计划的启动/取消请求（标准审批权限）"},
-    {"code": "plan_management.plan.export", "module": "计划管理", "action": "plan.export", "name": "计划管理-导出计划", "description": "导出计划数据"},
-    {"code": "plan_management.plan.view_statistics", "module": "计划管理", "action": "plan.view_statistics", "name": "计划管理-查看计划统计", "description": "查看计划统计分析报表"},
+    {"code": "plan_management.plan.manage", "module": "计划管理", "action": "plan.manage", "name": "计划管理-管理计划", "description": "管理计划（创建、编辑、删除、分解、批量删除等所有管理操作，自动包含 create、edit、delete 权限）"},
+    {"code": "plan_management.plan.update_progress", "module": "计划管理", "action": "plan.update_progress", "name": "计划管理-更新计划进度", "description": "更新计划执行进度、执行结果、执行问题（用于计划进度更新表单）"},
+    {"code": "plan_management.plan.manage_issue", "module": "计划管理", "action": "plan.manage_issue", "name": "计划管理-管理计划问题", "description": "创建、编辑、处理计划问题（用于计划问题管理表单）"},
+    {"code": "plan_management.plan.apply_adjustment", "module": "计划管理", "action": "plan.apply_adjustment", "name": "计划管理-申请计划调整", "description": "申请计划延期或调整（用于计划调整申请表单）"},
+    {"code": "plan_management.plan.approve_adjustment", "module": "计划管理", "action": "plan.approve_adjustment", "name": "计划管理-审批计划调整", "description": "审批计划调整申请（用于计划调整审批）"},
+    {"code": "plan_management.plan.request_start", "module": "计划管理", "action": "plan.request_start", "name": "计划管理-申请启动计划", "description": "申请启动计划（从草稿状态发布，用于计划启动申请）"},
+    {"code": "plan_management.plan.request_cancel", "module": "计划管理", "action": "plan.request_cancel", "name": "计划管理-申请取消计划", "description": "申请取消计划（用于计划取消申请）"},
+    {"code": "plan_management.plan.approve_decision", "module": "计划管理", "action": "plan.approve_decision", "name": "计划管理-审批计划决策", "description": "审批计划的启动/取消请求（标准审批权限，用于计划审批页面）"},
+    {"code": "plan_management.plan.export", "module": "计划管理", "action": "plan.export", "name": "计划管理-导出计划", "description": "导出计划数据（用于计划数据导出功能）"},
+    {"code": "plan_management.plan.view_statistics", "module": "计划管理", "action": "plan.view_statistics", "name": "计划管理-查看计划统计", "description": "查看计划统计分析报表（用于计划统计页面）"},
+    {"code": "plan_management.plan.complete", "module": "计划管理", "action": "plan.complete", "name": "计划管理-办结计划", "description": "办结计划（计划完成页面提交完成，用于计划完成表单）"},
+    
+    # 待办事项（TodoTask）权限：与计划管理表单/闭环功能对应
+    {"code": "plan_management.todo.view", "module": "计划管理", "action": "todo.view", "name": "计划管理-查看待办", "description": "查看待办事项列表（计划/目标相关待办，用于待办事项菜单和列表页面）"},
+    {"code": "plan_management.todo.complete", "module": "计划管理", "action": "todo.complete", "name": "计划管理-完成待办", "description": "完成待办事项（提交完成证据闭环，用于待办完成表单）"},
+    {"code": "plan_management.todo.cancel", "module": "计划管理", "action": "todo.cancel", "name": "计划管理-取消待办", "description": "取消待办事项（如系统生成的待办需本权限或 plan.manage，用于待办取消操作）"},
     
     # 目标相关权限
     # 查看权限（数据级）：goal.view 保留为兼容，推荐使用 view_all 或 view_assigned
     {"code": "plan_management.goal.view", "module": "计划管理", "action": "goal.view", "name": "计划管理-查看目标", "description": "查看战略目标（兼容权限，推荐使用 view_all 或 view_assigned）"},
-    {"code": "plan_management.goal.view_all", "module": "计划管理", "action": "goal.view_all", "name": "计划管理-查看全部目标", "description": "查看所有战略目标（不限负责人，数据级权限）"},
-    {"code": "plan_management.goal.view_assigned", "module": "计划管理", "action": "goal.view_assigned", "name": "计划管理-查看负责目标", "description": "查看本人负责或参与的目标（数据级权限）"},
+    {"code": "plan_management.goal.view_all", "module": "计划管理", "action": "goal.view_all", "name": "计划管理-查看全部目标", "description": "查看所有战略目标（不限负责人，数据级权限，用于目标列表页面）"},
+    {"code": "plan_management.goal.view_assigned", "module": "计划管理", "action": "goal.view_assigned", "name": "计划管理-查看负责目标", "description": "查看本人负责或参与的目标（数据级权限，用于目标列表页面）"},
     # 基础操作权限
-    {"code": "plan_management.goal.create", "module": "计划管理", "action": "goal.create", "name": "计划管理-创建目标", "description": "创建战略目标（拥有 manage 权限时自动拥有此权限）"},
-    {"code": "plan_management.goal.edit", "module": "计划管理", "action": "goal.edit", "name": "计划管理-编辑目标", "description": "编辑战略目标信息（拥有 manage 权限时自动拥有此权限）"},
-    {"code": "plan_management.goal.edit_assigned", "module": "计划管理", "action": "goal.edit_assigned", "name": "计划管理-编辑负责目标", "description": "编辑本人负责的目标（受限编辑权限）"},
-    {"code": "plan_management.goal.delete", "module": "计划管理", "action": "goal.delete", "name": "计划管理-删除目标", "description": "删除战略目标（拥有 manage 权限时自动拥有此权限）"},
-    {"code": "plan_management.goal.decompose", "module": "计划管理", "action": "goal.decompose", "name": "计划管理-目标分解", "description": "将目标分解为下级目标（拥有 manage 权限时自动拥有此权限）"},
+    {"code": "plan_management.goal.create", "module": "计划管理", "action": "goal.create", "name": "计划管理-创建目标", "description": "创建战略目标（用于创建目标表单和菜单项，拥有 manage 权限时自动拥有此权限）"},
+    {"code": "plan_management.goal.edit", "module": "计划管理", "action": "goal.edit", "name": "计划管理-编辑目标", "description": "编辑战略目标信息（用于编辑目标表单，拥有 manage 权限时自动拥有此权限）"},
+    {"code": "plan_management.goal.edit_assigned", "module": "计划管理", "action": "goal.edit_assigned", "name": "计划管理-编辑负责目标", "description": "编辑本人负责的目标（受限编辑权限，用于编辑目标表单）"},
+    {"code": "plan_management.goal.delete", "module": "计划管理", "action": "goal.delete", "name": "计划管理-删除目标", "description": "删除战略目标（用于删除目标操作，拥有 manage 权限时自动拥有此权限）"},
+    {"code": "plan_management.goal.decompose", "module": "计划管理", "action": "goal.decompose", "name": "计划管理-目标分解", "description": "将目标分解为下级目标（用于目标分解表单和菜单项，拥有 manage 权限时自动拥有此权限）"},
     # 管理权限：包含创建、编辑、删除、分解等所有管理操作
-    {"code": "plan_management.goal.manage", "module": "计划管理", "action": "goal.manage", "name": "计划管理-管理目标", "description": "管理战略目标（创建、编辑、删除、分解等所有管理操作，自动包含 create、edit、delete、decompose 权限）"},
-    {"code": "plan_management.manage_goal", "module": "计划管理", "action": "goal.manage", "name": "计划管理-管理目标", "description": "管理战略目标（创建、编辑、删除、分解等所有管理操作，兼容别名，action 已统一为 goal.manage）"},
-    {"code": "plan_management.goal.update_progress", "module": "计划管理", "action": "goal.update_progress", "name": "计划管理-更新目标进度", "description": "更新目标当前值和进度说明"},
-    {"code": "plan_management.goal.apply_adjustment", "module": "计划管理", "action": "goal.apply_adjustment", "name": "计划管理-申请目标调整", "description": "申请调整目标值或结束日期"},
-    {"code": "plan_management.goal.approve_adjustment", "module": "计划管理", "action": "goal.approve_adjustment", "name": "计划管理-审批目标调整", "description": "审批目标调整申请"},
-    {"code": "plan_management.goal.publish", "module": "计划管理", "action": "goal.publish", "name": "计划管理-发布目标", "description": "发布目标（从制定中状态发布）"},
-    {"code": "plan_management.goal.accept", "module": "计划管理", "action": "goal.accept", "name": "计划管理-接收目标", "description": "接收已发布的目标"},
-    {"code": "plan_management.goal.cancel", "module": "计划管理", "action": "goal.cancel", "name": "计划管理-取消目标", "description": "取消目标"},
-    {"code": "plan_management.goal.export", "module": "计划管理", "action": "goal.export", "name": "计划管理-导出目标", "description": "导出目标数据"},
-    {"code": "plan_management.goal.view_statistics", "module": "计划管理", "action": "goal.view_statistics", "name": "计划管理-查看目标统计", "description": "查看目标统计分析报表"},
-    {"code": "plan_management.view_goal_progress", "module": "计划管理", "action": "goal.view_progress", "name": "计划管理-查看目标进度", "description": "查看目标跟踪页面，查看目标进度记录"},
+    {"code": "plan_management.goal.manage", "module": "计划管理", "action": "goal.manage", "name": "计划管理-管理目标", "description": "管理战略目标（创建、编辑、删除、分解等所有管理操作，用于目标制订菜单，自动包含 create、edit、delete、decompose 权限）"},
+    {"code": "plan_management.manage_goal", "module": "计划管理", "action": "goal.manage", "name": "计划管理-管理目标", "description": "管理战略目标（创建、编辑、删除、分解等所有管理操作，兼容别名，用于目标制订菜单，action 已统一为 goal.manage）"},
+    {"code": "plan_management.goal.update_progress", "module": "计划管理", "action": "goal.update_progress", "name": "计划管理-更新目标进度", "description": "更新目标当前值和进度说明（用于目标进度更新表单）"},
+    {"code": "plan_management.goal.apply_adjustment", "module": "计划管理", "action": "goal.apply_adjustment", "name": "计划管理-申请目标调整", "description": "申请调整目标值或结束日期（用于目标调整申请表单）"},
+    {"code": "plan_management.goal.approve_adjustment", "module": "计划管理", "action": "goal.approve_adjustment", "name": "计划管理-审批目标调整", "description": "审批目标调整申请（用于目标调整审批）"},
+    {"code": "plan_management.goal.publish", "module": "计划管理", "action": "goal.publish", "name": "计划管理-发布目标", "description": "发布目标（从制定中状态发布，用于目标发布操作）"},
+    {"code": "plan_management.goal.accept", "module": "计划管理", "action": "goal.accept", "name": "计划管理-接收目标", "description": "接收已发布的目标（用于目标接收操作）"},
+    {"code": "plan_management.goal.cancel", "module": "计划管理", "action": "goal.cancel", "name": "计划管理-取消目标", "description": "取消目标（用于目标取消操作）"},
+    {"code": "plan_management.goal.export", "module": "计划管理", "action": "goal.export", "name": "计划管理-导出目标", "description": "导出目标数据（用于目标数据导出功能）"},
+    {"code": "plan_management.goal.view_statistics", "module": "计划管理", "action": "goal.view_statistics", "name": "计划管理-查看目标统计", "description": "查看目标统计分析报表（用于目标统计页面）"},
+    {"code": "plan_management.view_goal_progress", "module": "计划管理", "action": "goal.view_progress", "name": "计划管理-查看目标进度", "description": "查看目标跟踪页面，查看目标进度记录（用于目标跟踪菜单和页面）"},
     
     # 分析相关权限
-    {"code": "plan_management.view_analysis", "module": "计划管理", "action": "view_analysis", "name": "计划管理-查看分析", "description": "查看计划分析模块（完成度分析、目标达成分析、统计报表）"},
+    {"code": "plan_management.view_analysis", "module": "计划管理", "action": "view_analysis", "name": "计划管理-查看分析", "description": "查看计划分析模块（完成度分析、目标达成分析、统计报表，用于计划分析菜单）"},
     
     # 审批相关权限（兼容旧权限，推荐使用 plan.approve_decision）
-    {"code": "plan_management.approve_plan", "module": "计划管理", "action": "plan.approve_decision", "name": "计划管理-审批计划", "description": "审批计划的启动/取消请求（兼容别名，等同于 plan.approve_decision）"},
-    {"code": "plan_management.approve", "module": "计划管理", "action": "plan.approve_decision", "name": "计划管理-审批", "description": "审批计划（兼容别名，等同于 plan.approve_decision）"},
+    {"code": "plan_management.approve_plan", "module": "计划管理", "action": "plan.approve_decision", "name": "计划管理-审批计划", "description": "审批计划的启动/取消请求（兼容别名，等同于 plan.approve_decision，用于计划审批页面）"},
+    {"code": "plan_management.approve", "module": "计划管理", "action": "plan.approve_decision", "name": "计划管理-审批", "description": "审批计划（兼容别名，等同于 plan.approve_decision，用于计划审批页面）"},
     
     # 诉讼管理
     {"code": "litigation_management.view", "module": "诉讼管理", "action": "view", "name": "诉讼管理-查看", "description": "查看诉讼管理模块"},

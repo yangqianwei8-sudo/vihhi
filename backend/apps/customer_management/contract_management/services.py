@@ -8,7 +8,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.contrib import messages
-from backend.apps.production_management.models import BusinessContract
+from backend.apps.contract_management.models import BusinessContract
 from .utils import (
     generate_contract_number,
     calculate_contract_period,

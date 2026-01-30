@@ -234,12 +234,19 @@
     {% endif %}
     {% if form.parent_plan %}
     <div class="col-5-fields form-field-wrapper">
-      <label for="{{ form.parent_plan.id_for_label }}" class="form-label">父计划</label>
+      <label for="{{ form.parent_plan.id_for_label }}" class="form-label">
+        父计划
+        {% if form.parent_plan.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
       {{ form.parent_plan }}
       {% if form.parent_plan.errors %}
       <div class="text-danger small">{{ form.parent_plan.errors }}</div>
       {% endif %}
-      <div class="form-text text-muted small">用于计划分解，选择上级计划（仅显示公司级别计划）</div>
+      {% if form.parent_plan.help_text %}
+      <div class="form-text text-muted small">{{ form.parent_plan.help_text }}</div>
+      {% else %}
+      <div class="form-text text-muted small">用于计划分解，选择上级计划（仅显示您负责的个人计划）</div>
+      {% endif %}
     </div>
     {% endif %}
   </div>
@@ -279,6 +286,9 @@
       {{ form.related_goal }}
       {% if form.related_goal.errors %}
       <div class="text-danger small">{{ form.related_goal.errors }}</div>
+      {% endif %}
+      {% if form.related_goal.help_text %}
+      <div class="form-text text-muted small">{{ form.related_goal.help_text }}</div>
       {% endif %}
     </div>
     {% endif %}
@@ -499,6 +509,9 @@
         {{ planitem_form.related_goal }}
         {% if planitem_form.related_goal.errors %}
         <div class="text-danger small">{{ planitem_form.related_goal.errors }}</div>
+        {% endif %}
+        {% if planitem_form.related_goal.help_text %}
+        <div class="form-text text-muted small">{{ planitem_form.related_goal.help_text }}</div>
         {% endif %}
       </div>
       <div class="col-5-fields form-field-wrapper">
@@ -929,6 +942,7 @@
                     id="id_${planItemFormPrefix}-${planItemFormCount}-related_goal">
               ${goalOptions}
             </select>
+            <div class="form-text text-muted small">仅显示您负责的个人目标（状态为已发布或进行中）</div>
           </div>
           <div class="col-5-fields form-field-wrapper">
             <label class="form-label">关联项目</label>
@@ -1042,6 +1056,70 @@
       if (planPeriodSelect && !planPeriodSelect.dataset.endTimeCalculated) {
         planPeriodSelect.dataset.endTimeCalculated = 'true';
         planPeriodSelect.addEventListener('change', function() {
+          const selectedPeriod = planPeriodSelect.value;
+          
+          // 动态加载父计划选项
+          const parentPlanSelect = document.getElementById('id_parent_plan');
+          const parentPlanHelpText = parentPlanSelect ? parentPlanSelect.parentElement.querySelector('.form-text') : null;
+          
+          if (parentPlanSelect) {
+            // 先清空选项并显示加载状态
+            parentPlanSelect.innerHTML = '<option value="">加载中...</option>';
+            parentPlanSelect.disabled = true;
+            
+            // 获取当前计划ID（如果是编辑模式）
+            const planId = window.location.pathname.match(/\/plans\/(\d+)\/edit\//);
+            const planIdParam = planId ? planId[1] : '';
+            
+            // 发送 AJAX 请求获取父计划选项
+            let url = '{% url "plan_pages:get_parent_plan_options" %}?plan_period=' + encodeURIComponent(selectedPeriod);
+            if (planIdParam) {
+              url += '&plan_id=' + encodeURIComponent(planIdParam);
+            }
+            
+            fetch(url, {
+              method: 'GET',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+              },
+              credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+              // 更新父计划下拉框选项
+              parentPlanSelect.innerHTML = '';
+              if (data.options && data.options.length > 0) {
+                data.options.forEach(function(option) {
+                  const optionElement = document.createElement('option');
+                  optionElement.value = option.value;
+                  optionElement.textContent = option.text;
+                  parentPlanSelect.appendChild(optionElement);
+                });
+                parentPlanSelect.disabled = false;
+              } else {
+                const optionElement = document.createElement('option');
+                optionElement.value = '';
+                optionElement.textContent = '-------';
+                parentPlanSelect.appendChild(optionElement);
+                parentPlanSelect.disabled = false;
+              }
+              
+              // 更新帮助文本
+              if (parentPlanHelpText && data.help_text) {
+                parentPlanHelpText.textContent = data.help_text;
+              }
+              
+              // 清空已选择的值
+              parentPlanSelect.value = '';
+            })
+            .catch(error => {
+              console.error('加载父计划选项失败:', error);
+              parentPlanSelect.innerHTML = '<option value="">加载失败，请刷新页面</option>';
+              parentPlanSelect.disabled = false;
+            });
+          }
+          
+          // 更新计划项的结束时间
           const allCards = container.querySelectorAll('.plan-item-card');
           allCards.forEach(function(card) {
             const deleteCheckbox = card.querySelector('input[type="checkbox"][name*="DELETE"]');

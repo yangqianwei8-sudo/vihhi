@@ -58,14 +58,14 @@ from backend.apps.administrative_management.models import (
     FixedAsset, AssetTransfer, AssetMaintenance,
     ExpenseReimbursement, ExpenseItem,
     AdministrativeAffair, AffairStatusHistory, AffairProgressRecord,
-    TravelApplication,
+    TravelApplication, LoanApplication,
     Supplier, PurchaseContract, PurchasePayment,
 )
 from .forms import (
     OfficeSupplyForm, SupplyCategoryForm, MeetingRoomForm, MeetingRoomBookingForm, MeetingForm, MeetingRecordForm,
     VehicleForm, VehicleBookingForm, ReceptionRecordForm,
     AnnouncementForm, SealForm, SealBorrowingForm, SealUsageForm, FixedAssetForm, ExpenseReimbursementForm, ExpenseItemForm,
-    AdministrativeAffairForm, AffairProgressRecordForm, TravelApplicationForm,
+    AdministrativeAffairForm, AffairProgressRecordForm, TravelApplicationForm, LoanApplicationForm,
     SupplierForm, PurchaseContractForm, PurchasePaymentForm,
     InventoryCheckForm, InventoryCheckItemForm, InventoryAdjustForm, InventoryAdjustItemForm,
 )
@@ -509,6 +509,31 @@ ADMINISTRATIVE_MANAGEMENT_SIDEBAR_MENU = [
                 'url_name': 'admin_pages:expense_create',
                 'permission': 'administrative_management.expense.create',
                 'path_keywords': ['expenses/create'],
+                'icon': 'bi-plus-circle',
+            },
+        ],
+    },
+    {
+        'id': 'loan',
+        'label': '借款管理',
+        'icon': '💰',
+        'permission': None,  # 所有用户都可以访问，具体权限在视图函数中控制
+        'expanded': False,
+        'children': [
+            {
+                'id': 'loan_list',
+                'label': '借款列表',
+                'url_name': 'admin_pages:loan_list',
+                'permission': None,  # 所有用户都可以查看自己的借款列表
+                'path_keywords': ['loan', 'loans'],
+                'icon': 'bi-list-ul',
+            },
+            {
+                'id': 'loan_create',
+                'label': '借款申请',
+                'url_name': 'admin_pages:loan_create',
+                'permission': None,  # 所有用户都可以申请，具体权限在视图函数中控制
+                'path_keywords': ['loans/create'],
                 'icon': 'bi-plus-circle',
             },
         ],
@@ -7728,4 +7753,404 @@ def inventory_adjust_execute(request, adjust_id):
         'items': items,
     })
     return render(request, "administrative_management/inventory_adjust_execute.html", context)
+
+
+@login_required
+def loan_list(request):
+    """借款列表"""
+    # 获取筛选参数
+    search = request.GET.get('search', '')
+    status = request.GET.get('status', '')
+    applicant_id = request.GET.get('applicant_id', '')
+    
+    # 获取借款申请列表
+    try:
+        loans = LoanApplication.objects.select_related(
+            'applicant', 'department', 'approver', 'paid_by'
+        ).order_by('-application_date', '-created_time')
+        
+        # 应用筛选条件
+        if search:
+            loans = loans.filter(
+                Q(application_number__icontains=search) |
+                Q(loan_reason__icontains=search) |
+                Q(applicant__username__icontains=search)
+            )
+        if status:
+            loans = loans.filter(status=status)
+        if applicant_id:
+            loans = loans.filter(applicant_id=applicant_id)
+        
+        # 权限检查：普通用户只能看到自己的申请
+        # 如果没有 loan.manage 权限，则只显示自己的申请
+        permission_codes = get_user_permission_codes(request.user)
+        if not _permission_granted('administrative_management.loan.manage', permission_codes):
+            loans = loans.filter(applicant=request.user)
+        
+        # 分页
+        page_size = request.GET.get('page_size', '10')
+        try:
+            per_page = int(page_size)
+            if per_page not in [10, 20, 50]:
+                per_page = 10
+        except (ValueError, TypeError):
+            per_page = 10
+        paginator = Paginator(loans, per_page)
+        page_number = request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+    except Exception as e:
+        logger.exception('获取借款申请列表失败: %s', str(e))
+        page_obj = None
+    
+    # 统计信息
+    try:
+        permission_codes = get_user_permission_codes(request.user)
+        if _permission_granted('administrative_management.loan.manage', permission_codes):
+            total_loans = LoanApplication.objects.count()
+            pending_count = LoanApplication.objects.filter(status='pending_approval').count()
+            approved_count = LoanApplication.objects.filter(status='approved').count()
+            paid_count = LoanApplication.objects.filter(status='paid').count()
+        else:
+            total_loans = LoanApplication.objects.filter(applicant=request.user).count()
+            pending_count = LoanApplication.objects.filter(applicant=request.user, status='pending_approval').count()
+            approved_count = LoanApplication.objects.filter(applicant=request.user, status='approved').count()
+            paid_count = LoanApplication.objects.filter(applicant=request.user, status='paid').count()
+        
+        summary_cards = [
+            {
+                'title': '总申请数',
+                'value': total_loans,
+                'icon': 'bi-file-text',
+                'color': 'primary'
+            },
+            {
+                'title': '待审批',
+                'value': pending_count,
+                'icon': 'bi-clock-history',
+                'color': 'warning'
+            },
+            {
+                'title': '已批准',
+                'value': approved_count,
+                'icon': 'bi-check-circle',
+                'color': 'success'
+            },
+            {
+                'title': '已放款',
+                'value': paid_count,
+                'icon': 'bi-cash-coin',
+                'color': 'info'
+            },
+        ]
+    except Exception as e:
+        logger.exception('获取统计信息失败: %s', str(e))
+        summary_cards = []
+    
+    context = _context(
+        "借款管理",
+        "💰",
+        "管理借款申请和审批。",
+        summary_cards=summary_cards,
+        request=request,
+        use_administrative_nav=True
+    )
+    context.update({
+        'page_obj': page_obj,
+        'search': search,
+        'status': status,
+        'applicant_id': applicant_id,
+        'status_choices': LoanApplication.STATUS_CHOICES,
+    })
+    return render(request, "administrative_management/loan_list.html", context)
+
+
+@login_required
+def loan_create(request):
+    """创建借款申请"""
+    # 所有登录用户都可以创建借款申请
+    # 如果需要权限控制，可以取消下面的注释
+    # permission_codes = get_user_permission_codes(request.user)
+    # if not _permission_granted('administrative_management.loan.create', permission_codes):
+    #     messages.error(request, '您没有权限创建借款申请')
+    #     return redirect('admin_pages:loan_list')
+    
+    if request.method == 'POST':
+        form = LoanApplicationForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            loan = form.save(commit=False)
+            loan.applicant = request.user
+            loan.application_date = timezone.now().date()
+            # 确保 loan_date 有值（表单的 clean_loan_date 应该已经处理，但这里再确保一次）
+            if not loan.loan_date:
+                loan.loan_date = timezone.now().date()
+            # 使用responsible_department的值设置department（如果模型中有department字段）
+            if hasattr(loan, 'department') and hasattr(request.user, 'department') and request.user.department:
+                loan.department = request.user.department
+            loan.status = 'pending_approval'  # 设置为待审批状态
+            loan.save()
+            
+            # 启动审批流程
+            try:
+                from backend.apps.workflow_engine.models import WorkflowTemplate
+                from backend.apps.workflow_engine.services import ApprovalEngine
+                
+                # 获取借款申请审批流程
+                workflow = WorkflowTemplate.objects.filter(
+                    code='loan_approval',
+                    status='active'
+                ).first()
+                
+                if workflow:
+                    # 启动审批流程
+                    approval_instance = ApprovalEngine.start_approval(
+                        workflow=workflow,
+                        content_object=loan,
+                        applicant=request.user,
+                        comment=f'借款申请：{loan.application_number}，借款金额：¥{loan.loan_amount}，借款类型：{loan.get_loan_type_display()}'
+                    )
+                    messages.success(request, f'借款申请 {loan.application_number} 提交成功！审批流程已启动，审批单号：{approval_instance.instance_number}')
+                else:
+                    # 如果没有配置审批流程，使用原有的逻辑
+                    messages.success(request, f'借款申请 {loan.application_number} 创建成功！')
+            except Exception as e:
+                logger.exception('启动审批流程失败: %s', str(e))
+                # 审批流程启动失败不影响申请提交
+                messages.warning(request, f'借款申请 {loan.application_number} 提交成功，但审批流程启动失败：{str(e)}')
+            
+            return redirect('admin_pages:loan_list')
+    else:
+        form = LoanApplicationForm(initial={
+            'department': request.user.department if hasattr(request.user, 'department') else None
+        }, user=request.user)
+    
+    context = _context(
+        "借款申请",
+        "➕",
+        "创建新的借款申请",
+        request=request,
+        use_administrative_nav=True
+    )
+    context.update({
+        'form': form,
+        'is_create': True,
+    })
+    return render(request, "administrative_management/loan_form.html", context)
+
+
+@login_required
+def loan_repay(request, loan_id):
+    """借款还款"""
+    from decimal import Decimal
+    from .forms import LoanRepaymentForm
+    
+    loan = get_object_or_404(LoanApplication, id=loan_id)
+    
+    # 权限检查：只有申请人或管理员可以还款
+    permission_codes = get_user_permission_codes(request.user)
+    if not _permission_granted('administrative_management.loan.manage', permission_codes):
+        if loan.applicant != request.user:
+            messages.error(request, '您没有权限对此借款进行还款操作')
+            return redirect('admin_pages:loan_list')
+    
+    # 检查借款状态：只有已放款或已批准状态的借款可以还款
+    if loan.status not in ['paid', 'approved']:
+        messages.error(request, f'只有已放款或已批准状态的借款可以还款，当前状态：{loan.get_status_display()}')
+        return redirect('admin_pages:loan_list')
+    
+    # 检查是否已全部还清
+    if loan.remaining_amount <= 0:
+        messages.info(request, '该借款已全部还清')
+        return redirect('admin_pages:loan_list')
+    
+    if request.method == 'POST':
+        form = LoanRepaymentForm(request.POST, loan=loan)
+        if form.is_valid():
+            repay_amount = form.cleaned_data['repay_amount']
+            repay_notes = form.cleaned_data.get('repay_notes', '')
+            
+            # 检查是否有待确认的还款
+            if loan.pending_repayment_amount > 0:
+                messages.warning(request, f'该借款已有待确认的还款金额 ¥{loan.pending_repayment_amount:,.2f}，请等待出纳员确认后再提交新的还款申请')
+                return redirect('admin_pages:loan_detail', loan_id=loan.id)
+            
+            # 提交还款申请（待出纳员确认），不直接更新已还金额
+            loan.pending_repayment_amount = repay_amount
+            loan.pending_repayment_notes = repay_notes
+            loan.pending_repayment_time = timezone.now()
+            loan.save()
+            
+            messages.success(request, f'还款申请已提交！本次申请还款金额：¥{repay_amount:,.2f}，等待出纳员确认。')
+            return redirect('admin_pages:loan_detail', loan_id=loan.id)
+    else:
+        form = LoanRepaymentForm(loan=loan)
+    
+    context = _context(
+        f"借款还款 - {loan.application_number}",
+        "💰",
+        f"为借款申请 {loan.application_number} 进行还款操作",
+        request=request,
+        use_administrative_nav=True
+    )
+    context.update({
+        'form': form,
+        'loan': loan,
+        'remaining_amount': loan.total_remaining_amount,  # 使用总剩余金额（包括待确认的）
+        'sidebar_title': '行政管理',
+        'sidebar_subtitle': 'Administrative Management',
+    })
+    return render(request, "administrative_management/loan_repay.html", context)
+
+
+@login_required
+def loan_detail(request, loan_id):
+    """借款申请详情"""
+    loan = get_object_or_404(
+        LoanApplication.objects.select_related(
+            'applicant', 'department', 'approver', 'paid_by'
+        ),
+        id=loan_id
+    )
+    
+    # 权限检查：普通用户只能查看自己的申请
+    permission_codes = get_user_permission_codes(request.user)
+    if not _permission_granted('administrative_management.loan.manage', permission_codes):
+        if loan.applicant != request.user:
+            messages.error(request, '您没有权限查看此借款申请')
+            return redirect('admin_pages:loan_list')
+    
+    # 获取审批记录（如果有）
+    approval_records = []
+    try:
+        from backend.apps.workflow_engine.models import ApprovalInstance, ApprovalRecord
+        approval_instance = ApprovalInstance.objects.filter(
+            content_type__app_label='administrative_management',
+            content_type__model='loanapplication',
+            object_id=loan.id
+        ).first()
+        
+        if approval_instance:
+            approval_records = ApprovalRecord.objects.filter(
+                instance=approval_instance
+            ).select_related('approver', 'node').order_by('created_time')
+    except Exception as e:
+        logger.exception('获取审批记录失败: %s', str(e))
+    
+    # 检查当前用户是否是出纳员
+    from backend.apps.system_management.models import Role
+    cashier_role = Role.objects.filter(code='cashier').first()
+    is_cashier = cashier_role and request.user.roles.filter(id=cashier_role.id).exists() if cashier_role else False
+    
+    context = _context(
+        f"借款申请详情 - {loan.application_number}",
+        "💰",
+        f"查看借款申请 {loan.application_number} 的详细信息",
+        request=request,
+        use_administrative_nav=True
+    )
+    # 为了兼容 detail_base.html，设置 object 变量
+    context.update({
+        'object': loan,  # detail_base.html 使用 object 变量
+        'loan': loan,
+        'approval_records': approval_records,
+        'can_repay': loan.status in ['paid', 'approved'] and loan.total_remaining_amount > 0 and loan.pending_repayment_amount == 0,
+        'can_edit': loan.status == 'draft' and loan.applicant == request.user,
+        'can_confirm_repayment': is_cashier and loan.pending_repayment_amount > 0,
+        'sidebar_title': '行政管理',
+        'sidebar_subtitle': 'Administrative Management',
+    })
+    return render(request, "administrative_management/loan_detail.html", context)
+
+
+@login_required
+def loan_repay_confirm(request, loan_id):
+    """出纳员确认还款"""
+    from backend.apps.system_management.models import Role
+    
+    loan = get_object_or_404(LoanApplication, id=loan_id)
+    
+    # 权限检查：只有出纳员可以确认还款
+    cashier_role = Role.objects.filter(code='cashier').first()
+    if not cashier_role:
+        messages.error(request, '系统未配置出纳员角色，无法确认还款')
+        return redirect('admin_pages:loan_detail', loan_id=loan_id)
+    
+    # 检查当前用户是否有出纳员角色
+    if not request.user.roles.filter(id=cashier_role.id).exists():
+        messages.error(request, '只有出纳员可以确认还款')
+        return redirect('admin_pages:loan_detail', loan_id=loan_id)
+    
+    # 检查是否有待确认的还款
+    if loan.pending_repayment_amount <= 0:
+        messages.warning(request, '该借款没有待确认的还款申请')
+        return redirect('admin_pages:loan_detail', loan_id=loan_id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')  # 'confirm' 或 'reject'
+        
+        if action == 'confirm':
+            # 确认还款
+            repay_amount = loan.pending_repayment_amount
+            loan.repaid_amount += repay_amount
+            loan.repaid_time = timezone.now()
+            loan.confirmed_by = request.user
+            loan.confirmed_time = timezone.now()
+            
+            # 清空待确认还款信息
+            loan.pending_repayment_amount = 0
+            pending_notes = loan.pending_repayment_notes
+            loan.pending_repayment_notes = ''
+            loan.pending_repayment_time = None
+            
+            # 更新状态
+            if loan.repaid_amount >= loan.loan_amount:
+                # 全部还清
+                loan.status = 'repaid'
+                messages.success(request, f'还款已确认！借款 {loan.application_number} 已全部还清！')
+            else:
+                messages.success(request, f'还款已确认！本次确认还款金额：¥{repay_amount:,.2f}，剩余未还金额：¥{loan.remaining_amount:,.2f}')
+            
+            # 保存备注
+            if pending_notes:
+                if loan.notes:
+                    loan.notes += f'\n\n还款备注（{timezone.now().strftime("%Y-%m-%d %H:%M:%S")}）：{pending_notes}'
+                else:
+                    loan.notes = f'还款备注（{timezone.now().strftime("%Y-%m-%d %H:%M:%S")}）：{pending_notes}'
+            
+            loan.save()
+            
+        elif action == 'reject':
+            # 拒绝还款申请
+            reject_reason = request.POST.get('reject_reason', '')
+            if not reject_reason:
+                messages.error(request, '请填写拒绝原因')
+                return redirect('admin_pages:loan_repay_confirm', loan_id=loan_id)
+            
+            # 清空待确认还款信息
+            loan.pending_repayment_amount = 0
+            loan.pending_repayment_notes = ''
+            loan.pending_repayment_time = None
+            loan.save()
+            
+            messages.success(request, f'还款申请已拒绝：{reject_reason}')
+        else:
+            messages.error(request, '无效的操作')
+        
+        return redirect('admin_pages:loan_detail', loan_id=loan_id)
+    
+    # GET请求，显示确认页面
+    context = _context(
+        f"确认还款 - {loan.application_number}",
+        "✅",
+        f"确认借款申请 {loan.application_number} 的还款",
+        request=request,
+        use_administrative_nav=True
+    )
+    context.update({
+        'loan': loan,
+        'pending_amount': loan.pending_repayment_amount,
+        'pending_notes': loan.pending_repayment_notes,
+        'sidebar_title': '行政管理',
+        'sidebar_subtitle': 'Administrative Management',
+    })
+    return render(request, "administrative_management/loan_repay_confirm.html", context)
 

@@ -4,7 +4,7 @@
     python manage.py seed_file_templates --stage conversion --names "评估报告,服务建议书,报价函"
 """
 from django.core.management.base import BaseCommand
-from backend.apps.delivery_customer.models import FileTemplate
+from backend.apps.document_management.models import FileTemplate
 
 
 class Command(BaseCommand):

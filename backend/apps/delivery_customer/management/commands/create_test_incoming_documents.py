@@ -8,7 +8,7 @@ from django.utils import timezone
 from datetime import timedelta, date
 import random
 
-from backend.apps.delivery_customer.models import IncomingDocument
+from backend.apps.document_management.models import IncomingDocument
 
 User = get_user_model()
 

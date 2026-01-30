@@ -50,6 +50,10 @@ INSTALLED_APPS = [
     'backend.apps.production_management.apps.ProductionManagementConfig',  # 生产管理（原项目中心）
     # 'backend.apps.project_center.apps.ProjectCenterConfig',  # 暂时保留：迁移文件依赖（临时注释：镜像中缺少此模块）
     'backend.apps.customer_management.apps.CustomerManagementConfig',  # 客户管理（从customer_success迁移）
+    'backend.apps.opportunity_management.apps.OpportunityManagementConfig',  # 商机管理（独立应用）
+    'backend.apps.payment_management.apps.PaymentManagementConfig',  # 回款管理（独立应用）
+    'backend.apps.contract_management.apps.ContractManagementConfig',  # 合同管理（独立应用）
+    'backend.apps.document_management.apps.DocumentManagementConfig',  # 文档管理（独立应用）
     'backend.apps.resource_standard',
     'backend.apps.task_collaboration',
     'backend.apps.delivery_customer',

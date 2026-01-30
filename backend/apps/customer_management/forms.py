@@ -28,7 +28,8 @@ try:
     from .models import ContactInfoChange
 except ImportError:
     ContactInfoChange = None
-from backend.apps.production_management.models import BusinessContract, Project
+from backend.apps.contract_management.models import BusinessContract
+from backend.apps.production_management.models import Project
 
 
 class ContractForm(forms.ModelForm):

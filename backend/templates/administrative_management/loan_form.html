@@ -1,0 +1,371 @@
+{% extends "shared/create_form_base.html" %}
+{% load static %}
+
+{% block form_title %}借款申请{% endblock form_title %}
+{% block form_subtitle %}创建新的借款申请{% endblock form_subtitle %}
+
+{% block form_header_actions %}
+  <a href="{% url 'admin_pages:loan_list' %}" class="btn btn-secondary">返回列表</a>
+{% endblock form_header_actions %}
+
+{# 基本信息卡片：只保留三个固定字段（responsible_department, responsible_person, form_number），不添加额外字段 #}
+{% block form_first_row_extra_fields %}{% endblock %}
+{% block form_second_row_extra_fields %}{% endblock %}
+
+{# 详细信息卡片：所有业务字段都放在这里 #}
+{% block form_fields %}
+  {# 第一排：借款人、借款类型、借款金额 #}
+  <div class="row mb-3">
+    {# 借款人 #}
+    <div class="col-md-4 form-field-wrapper">
+      <label for="{{ form.borrower.id_for_label }}" class="form-label">
+        {{ form.borrower.label }}
+        {% if form.borrower.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.borrower }}
+      {% if form.borrower.errors %}
+      <div class="text-danger small">{{ form.borrower.errors }}</div>
+      {% endif %}
+      {% if form.borrower.help_text %}
+      <div class="form-text">{{ form.borrower.help_text }}</div>
+      {% endif %}
+    </div>
+    
+    {# 借款类型 #}
+    <div class="col-md-4 form-field-wrapper">
+      <label for="{{ form.loan_type.id_for_label }}" class="form-label">
+        {{ form.loan_type.label }}
+        {% if form.loan_type.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.loan_type }}
+      {% if form.loan_type.errors %}
+      <div class="text-danger small">{{ form.loan_type.errors }}</div>
+      {% endif %}
+      {% if form.loan_type.help_text %}
+      <div class="form-text">{{ form.loan_type.help_text }}</div>
+      {% endif %}
+    </div>
+    
+    {# 借款金额 #}
+    <div class="col-md-4 form-field-wrapper">
+      <label for="{{ form.loan_amount.id_for_label }}" class="form-label">
+        {{ form.loan_amount.label }}
+        {% if form.loan_amount.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      <div class="input-group">
+        <span class="input-group-text">¥</span>
+        {{ form.loan_amount }}
+      </div>
+      {% if form.loan_amount.errors %}
+      <div class="text-danger small">{{ form.loan_amount.errors }}</div>
+      {% endif %}
+      {% if form.loan_amount.help_text %}
+      <div class="form-text">{{ form.loan_amount.help_text }}</div>
+      {% endif %}
+      {# 大写金额显示 #}
+      <div class="form-text mt-2">
+        <strong>大写：</strong><span id="loanAmountChinese" class="text-primary fw-bold">零元整</span>
+      </div>
+    </div>
+  </div>
+  
+  {# 第二排：借款日期、预计还款日期 #}
+  <div class="row mb-3">
+    {# 借款日期 #}
+    <div class="col-md-6 form-field-wrapper">
+      <label for="{{ form.loan_date.id_for_label }}" class="form-label">
+        {{ form.loan_date.label }}
+        {% if form.loan_date.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.loan_date }}
+      {% if form.loan_date.errors %}
+      <div class="text-danger small">{{ form.loan_date.errors }}</div>
+      {% endif %}
+      {% if form.loan_date.help_text %}
+      <div class="form-text">{{ form.loan_date.help_text }}</div>
+      {% endif %}
+    </div>
+    
+    {# 预计还款日期 #}
+    <div class="col-md-6 form-field-wrapper">
+      <label for="{{ form.expected_repay_date.id_for_label }}" class="form-label">
+        {{ form.expected_repay_date.label }}
+        {% if form.expected_repay_date.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.expected_repay_date }}
+      {% if form.expected_repay_date.errors %}
+      <div class="text-danger small">{{ form.expected_repay_date.errors }}</div>
+      {% endif %}
+      {% if form.expected_repay_date.help_text %}
+      <div class="form-text">{{ form.expected_repay_date.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+  
+  {# 第三排：借款事由（多行文本，占整行） #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.loan_reason.id_for_label }}" class="form-label">
+        {{ form.loan_reason.label }}
+        {% if form.loan_reason.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.loan_reason }}
+      {% if form.loan_reason.errors %}
+      <div class="text-danger small">{{ form.loan_reason.errors }}</div>
+      {% endif %}
+      {% if form.loan_reason.help_text %}
+      <div class="form-text">{{ form.loan_reason.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+  
+  {# 第四排：手写借条附件（必填） #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.iou_file.id_for_label }}" class="form-label">
+        {{ form.iou_file.label }}
+        {% if form.iou_file.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.iou_file }}
+      {% if form.iou_file.errors %}
+      <div class="text-danger small">{{ form.iou_file.errors }}</div>
+      {% endif %}
+      {% if form.iou_file.help_text %}
+      <div class="form-text">{{ form.iou_file.help_text }}</div>
+      {% endif %}
+      <div class="form-text text-muted">
+        <small>支持格式：PDF、JPG、JPEG、PNG、GIF，文件大小不超过10MB</small>
+      </div>
+    </div>
+  </div>
+  
+  {# 第五排：备注（多行文本，占整行） #}
+  <div class="row mb-3">
+    <div class="col-12 form-field-wrapper">
+      <label for="{{ form.notes.id_for_label }}" class="form-label">
+        {{ form.notes.label }}
+        {% if form.notes.field.required %}<span class="text-danger">*</span>{% endif %}
+      </label>
+      {{ form.notes }}
+      {% if form.notes.errors %}
+      <div class="text-danger small">{{ form.notes.errors }}</div>
+      {% endif %}
+      {% if form.notes.help_text %}
+      <div class="form-text">{{ form.notes.help_text }}</div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock form_fields %}
+
+{# 表单底部操作按钮 #}
+{% block form_actions %}
+  <a href="{% url 'admin_pages:loan_list' %}" class="btn btn-secondary">取消</a>
+  <button type="button" class="btn btn-primary" id="headerSubmitButton">提交申请</button>
+{% endblock form_actions %}
+
+{% block module_extra_js %}
+  {{ block.super }}
+  <script>
+    // 数字转中文大写金额
+    function convertToChineseCurrency(num) {
+      if (!num || num === '' || isNaN(num)) {
+        return '零元整';
+      }
+      
+      const amount = parseFloat(num);
+      if (amount === 0) {
+        return '零元整';
+      }
+      
+      const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
+      const units = ['', '拾', '佰', '仟'];
+      const bigUnits = ['', '万', '亿'];
+      
+      // 分离整数部分和小数部分
+      const parts = amount.toFixed(2).split('.');
+      const integerPart = parseInt(parts[0]);
+      const decimalPart = parseInt(parts[1]);
+      
+      let result = '';
+      
+      // 处理整数部分
+      if (integerPart === 0) {
+        result = '零';
+      } else {
+        const integerStr = integerPart.toString();
+        const len = integerStr.length;
+        
+        for (let i = 0; i < len; i++) {
+          const digit = parseInt(integerStr[i]);
+          const pos = len - i - 1;
+          const unitIndex = pos % 4;
+          const bigUnitIndex = Math.floor(pos / 4);
+          
+          if (digit !== 0) {
+            result += digits[digit] + units[unitIndex];
+          } else if (result && result[result.length - 1] !== '零' && unitIndex !== 0) {
+            result += '零';
+          }
+          
+          // 添加大单位（万、亿）
+          if (unitIndex === 0 && bigUnitIndex > 0 && bigUnits[bigUnitIndex]) {
+            result += bigUnits[bigUnitIndex];
+          }
+        }
+      }
+      
+      result += '元';
+      
+      // 处理小数部分（角和分）
+      if (decimalPart === 0) {
+        result += '整';
+      } else {
+        const jiao = Math.floor(decimalPart / 10);
+        const fen = decimalPart % 10;
+        
+        if (jiao > 0) {
+          result += digits[jiao] + '角';
+        }
+        if (fen > 0) {
+          result += digits[fen] + '分';
+        }
+        if (jiao === 0 && fen > 0) {
+          result = result.replace('元', '元零') + digits[fen] + '分';
+        }
+      }
+      
+      return result;
+    }
+    
+    // 自定义表单验证（在基模板验证之后执行）
+    (function() {
+      'use strict';
+      
+      document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('createForm');
+        if (!form) return;
+        
+        // 确保表单支持文件上传
+        if (!form.hasAttribute('enctype')) {
+          form.setAttribute('enctype', 'multipart/form-data');
+        }
+        
+        // 修复日期字段格式：确保日期格式为 YYYY-MM-DD
+        const dateInputs = form.querySelectorAll('input[type="date"]');
+        dateInputs.forEach(function(input) {
+          // 如果输入框有值但格式不正确（包含斜杠），转换为正确的格式
+          if (input.value && input.value.includes('/')) {
+            const parts = input.value.split('/');
+            if (parts.length === 3) {
+              // 将 YYYY/MM/DD 转换为 YYYY-MM-DD
+              const year = parts[0].padStart(4, '0');
+              const month = parts[1].padStart(2, '0');
+              const day = parts[2].padStart(2, '0');
+              input.value = `${year}-${month}-${day}`;
+            }
+          }
+          
+          // 监听输入变化，确保格式正确
+          input.addEventListener('change', function() {
+            if (this.value && this.value.includes('/')) {
+              const parts = this.value.split('/');
+              if (parts.length === 3) {
+                const year = parts[0].padStart(4, '0');
+                const month = parts[1].padStart(2, '0');
+                const day = parts[2].padStart(2, '0');
+                this.value = `${year}-${month}-${day}`;
+              }
+            }
+          });
+        });
+        
+        // 借款金额转大写
+        const loanAmountInput = form.querySelector('[name="loan_amount"]');
+        const loanAmountChinese = document.getElementById('loanAmountChinese');
+        
+        if (loanAmountInput && loanAmountChinese) {
+          function updateChineseAmount() {
+            const value = loanAmountInput.value;
+            if (value && !isNaN(value) && parseFloat(value) > 0) {
+              loanAmountChinese.textContent = convertToChineseCurrency(value);
+            } else {
+              loanAmountChinese.textContent = '零元整';
+            }
+          }
+          
+          // 监听输入变化
+          loanAmountInput.addEventListener('input', updateChineseAmount);
+          loanAmountInput.addEventListener('change', updateChineseAmount);
+          
+          // 初始化显示
+          if (loanAmountInput.value) {
+            updateChineseAmount();
+          }
+        }
+        
+        // 在基模板的 submit 事件监听器之后添加自定义验证
+        // 使用 setTimeout 确保在基模板的监听器注册之后执行
+        setTimeout(function() {
+          // 获取现有的 submit 事件监听器（如果有）
+          const existingListeners = form._submitListeners || [];
+          
+          // 添加自定义验证监听器
+          form.addEventListener('submit', function(e) {
+            // 自定义验证：借款金额
+            const loanAmount = form.querySelector('[name="loan_amount"]');
+            if (loanAmount && loanAmount.value) {
+              const amount = parseFloat(loanAmount.value);
+              if (isNaN(amount) || amount <= 0) {
+                e.preventDefault();
+                alert('借款金额必须大于0');
+                loanAmount.focus();
+                loanAmount.classList.add('is-invalid');
+                return false;
+              } else {
+                loanAmount.classList.remove('is-invalid');
+              }
+            }
+            
+            // 自定义验证：借款事由
+            const loanReason = form.querySelector('[name="loan_reason"]');
+            if (loanReason && loanReason.value) {
+              const reason = loanReason.value.trim();
+              if (!reason) {
+                e.preventDefault();
+                alert('请填写借款事由');
+                loanReason.focus();
+                loanReason.classList.add('is-invalid');
+                return false;
+              } else {
+                loanReason.classList.remove('is-invalid');
+              }
+            }
+            
+            // 自定义验证：借条附件（必填）
+            const iouFile = form.querySelector('[name="iou_file"]');
+            if (iouFile) {
+              if (!iouFile.files || iouFile.files.length === 0) {
+                e.preventDefault();
+                alert('必须上传手写的借条作为附件');
+                iouFile.focus();
+                iouFile.classList.add('is-invalid');
+                return false;
+              } else {
+                // 检查文件大小（10MB）
+                const file = iouFile.files[0];
+                if (file.size > 10 * 1024 * 1024) {
+                  e.preventDefault();
+                  alert('借条文件大小不能超过10MB');
+                  iouFile.focus();
+                  iouFile.classList.add('is-invalid');
+                  return false;
+                }
+                iouFile.classList.remove('is-invalid');
+              }
+            }
+          }, true); // 使用 capture 阶段，在基模板的监听器之前执行
+        }, 100);
+      });
+    })();
+  </script>
+{% endblock module_extra_js %}

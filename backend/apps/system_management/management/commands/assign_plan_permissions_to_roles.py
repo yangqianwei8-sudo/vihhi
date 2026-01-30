@@ -29,6 +29,7 @@ PERMISSION_MAPPING = {
 }
 
 # 角色权限分配规则
+# 目标查看：goal.view_assigned = 员工只能看本人负责/参与的目标+公司目标；goal.view_all = 可看全部目标
 ROLE_PERMISSION_RULES = {
     # 计划管理相关角色
     'plan_manager': {
@@ -39,7 +40,7 @@ ROLE_PERMISSION_RULES = {
             'plan_management.plan.manage',
             'plan_management.approve_plan',
             'plan_management.manage_goal',
-            'plan_management.goal.view',
+            'plan_management.goal.view_all',  # 管理员看全部目标
         ]
     },
     'project_manager': {
@@ -48,7 +49,7 @@ ROLE_PERMISSION_RULES = {
             'plan_management.view',
             'plan_management.plan.create',
             'plan_management.plan.manage',
-            'plan_management.goal.view',
+            'plan_management.goal.view_assigned',  # 只看本人相关目标
         ]
     },
     'plan_approver': {
@@ -56,14 +57,14 @@ ROLE_PERMISSION_RULES = {
         'permissions': [
             'plan_management.view',
             'plan_management.approve_plan',
-            'plan_management.goal.view',
+            'plan_management.goal.view_assigned',
         ]
     },
     'plan_viewer': {
         'name': '计划查看者',
         'permissions': [
             'plan_management.view',
-            'plan_management.goal.view',
+            'plan_management.goal.view_assigned',  # 员工只能看本人目标
         ]
     },
     # 其他角色：根据角色名称推断权限
@@ -75,7 +76,7 @@ ROLE_PERMISSION_RULES = {
             'plan_management.plan.manage',
             'plan_management.approve_plan',
             'plan_management.manage_goal',
-            'plan_management.goal.view',
+            'plan_management.goal.view_all',
         ]
     },
     'system_admin': {
@@ -86,7 +87,7 @@ ROLE_PERMISSION_RULES = {
             'plan_management.plan.manage',
             'plan_management.approve_plan',
             'plan_management.manage_goal',
-            'plan_management.goal.view',
+            'plan_management.goal.view_all',
         ]
     },
 }
@@ -146,7 +147,7 @@ class Command(BaseCommand):
             other_roles = Role.objects.exclude(code__in=plan_role_codes).filter(is_active=True).order_by('code')
             roles = list(plan_roles) + list(other_roles)
 
-        self.stdout.write(f'\n找到 {roles.count()} 个角色需要处理\n')
+        self.stdout.write(f'\n找到 {len(roles)} 个角色需要处理\n')
 
         updated_count = 0
         skipped_count = 0
@@ -159,16 +160,16 @@ class Command(BaseCommand):
                     rule = ROLE_PERMISSION_RULES.get(role.code)
                     
                     if not rule:
-                        # 如果没有特定规则，使用默认规则（只给查看权限）
+                        # 如果没有特定规则，使用默认规则：员工只能看本人目标（view_assigned）
                         rule = {
                             'name': role.name,
                             'permissions': [
                                 'plan_management.view',
-                                'plan_management.goal.view',
+                                'plan_management.goal.view_assigned',
                             ]
                         }
                         self.stdout.write(
-                            self.style.NOTICE(f'⊘ {role.name} ({role.code}) - 使用默认权限（仅查看）')
+                            self.style.NOTICE(f'⊘ {role.name} ({role.code}) - 使用默认权限（仅查看本人目标）')
                         )
                     else:
                         self.stdout.write(
@@ -249,7 +250,7 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.SUCCESS('执行结果：'))
         
-        self.stdout.write(f'  处理角色: {roles.count()} 个')
+        self.stdout.write(f'  处理角色: {len(roles)} 个')
         self.stdout.write(f'  更新角色: {updated_count} 个')
         self.stdout.write(f'  跳过角色: {skipped_count} 个')
         if error_count > 0:

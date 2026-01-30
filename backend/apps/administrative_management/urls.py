@@ -136,6 +136,13 @@ urlpatterns = [
     path("travels/<int:travel_id>/approve/", views_pages.travel_approve, name="travel_approve"),
     path("travels/<int:travel_id>/reject/", views_pages.travel_reject, name="travel_reject"),
     
+    # 借款管理
+    path("loans/", views_pages.loan_list, name="loan_list"),
+    path("loans/create/", views_pages.loan_create, name="loan_create"),
+    path("loans/<int:loan_id>/", views_pages.loan_detail, name="loan_detail"),
+    path("loans/<int:loan_id>/repay/", views_pages.loan_repay, name="loan_repay"),
+    path("loans/<int:loan_id>/repay/confirm/", views_pages.loan_repay_confirm, name="loan_repay_confirm"),
+    
     # 报销管理
     path("expenses/", views_pages.expense_management, name="expense_management"),
     path("expenses/create/", views_pages.expense_create, name="expense_create"),

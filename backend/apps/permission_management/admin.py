@@ -24,8 +24,8 @@ class ModuleFilter(admin.SimpleListFilter):
 @admin.register(PermissionItem)
 class PermissionItemAdmin(LinkAdminMixin, BaseModelAdmin):
     """权限管理 - 按模块分类"""
-    list_display = ('code', 'name', 'module_badge', 'action', 'role_count', 'is_active', 'created_time')
-    list_filter = (ModuleFilter, 'action', 'is_active', 'created_time')
+    list_display = ('code', 'name', 'module_badge', 'permission_content', 'role_count', 'is_active')
+    list_filter = (ModuleFilter, 'action', 'is_active')
     search_fields = ('code', 'name', 'description', 'module', 'action')
     ordering = ('module', 'action', 'code')
     readonly_fields = ('created_time',)
@@ -72,6 +72,21 @@ class PermissionItemAdmin(LinkAdminMixin, BaseModelAdmin):
         )
     module_badge.short_description = '功能模块'
     module_badge.admin_order_field = 'module'
+    
+    def permission_content(self, obj):
+        """显示权限内容（详细描述）"""
+        if obj.description:
+            # 如果描述较长，截取前200个字符并添加省略号
+            description = obj.description
+            if len(description) > 200:
+                description = description[:200] + '...'
+            return format_html(
+                '<div style="max-width: 500px; word-wrap: break-word; line-height: 1.5;">{}</div>',
+                description
+            )
+        return format_html('<span style="color: #999;">—</span>')
+    permission_content.short_description = '权限内容'
+    permission_content.admin_order_field = 'description'
     
     def role_count(self, obj):
         """显示拥有此权限的角色数量"""

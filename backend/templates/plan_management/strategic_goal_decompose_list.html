@@ -107,6 +107,7 @@
 {% block list_table_headers %}
   <th>目标编号</th>
   <th>目标名称</th>
+  <th>目标值</th>
   <th>父目标</th>
   <th>目标层级</th>
   <th>目标类型</th>
@@ -125,6 +126,15 @@
       <a href="{% url 'plan_pages:strategic_goal_detail' goal.id %}" class="text-dark text-decoration-none fw-medium">
         {{ goal.name }}
       </a>
+    </td>
+    <td>
+      {% if goal.value_choices %}
+        {% for choice in goal.value_choices %}
+          {% if choice.value == goal.target_value|stringformat:"s" %}{{ choice.label }}{% endif %}
+        {% endfor %}
+      {% else %}
+        {{ goal.target_value|floatformat:2 }}{% if goal.indicator_unit %} <small class="text-muted">{{ goal.indicator_unit }}</small>{% endif %}
+      {% endif %}
     </td>
     <td>
       {% if goal.parent_goal %}
@@ -166,7 +176,7 @@
   </tr>
   {% empty %}
   <tr>
-    <td colspan="10" class="list-empty-state">
+    <td colspan="11" class="list-empty-state">
       <div class="list-empty-state-icon">🎯</div>
       <div class="list-empty-state-text">暂无分解目标</div>
       <div class="list-empty-state-hint">请先进行目标分解或调整筛选条件</div>

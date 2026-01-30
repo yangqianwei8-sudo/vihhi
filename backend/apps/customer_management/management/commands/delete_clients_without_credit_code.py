@@ -65,7 +65,7 @@ class Command(BaseCommand):
             
             # 检查商机关联
             try:
-                from backend.apps.customer_management.models import BusinessOpportunity
+                from backend.apps.opportunity_management.models import BusinessOpportunity
                 opportunity_count = BusinessOpportunity.objects.filter(client=client).count()
                 if opportunity_count > 0:
                     has_relations = True
@@ -75,7 +75,7 @@ class Command(BaseCommand):
             
             # 检查合同关联
             try:
-                from backend.apps.production_management.models import BusinessContract
+                from backend.apps.contract_management.models import BusinessContract
                 contract_count = BusinessContract.objects.filter(client=client).count()
                 if contract_count > 0:
                     has_relations = True

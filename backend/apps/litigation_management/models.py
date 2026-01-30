@@ -10,7 +10,7 @@ import os
 from backend.apps.system_management.models import User, Department
 from backend.apps.production_management.models import Project
 from backend.apps.customer_management.models import Client
-from backend.apps.production_management.models import BusinessContract
+from backend.apps.contract_management.models import BusinessContract
 
 
 def litigation_document_upload_path(instance, filename):

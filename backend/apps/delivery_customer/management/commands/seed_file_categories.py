@@ -4,7 +4,7 @@
     python manage.py seed_file_categories --stage conversion --names "评估图纸,报价文件,投标文件"
 """
 from django.core.management.base import BaseCommand
-from backend.apps.delivery_customer.models import FileCategory
+from backend.apps.document_management.models import FileCategory
 
 
 class Command(BaseCommand):

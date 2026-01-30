@@ -48,10 +48,6 @@
 {% endblock form_header_actions %}{% endblock pm_actions %}
 
 {% block pm_content %}
-  {% block form_header_actions_card %}
-  {# 操作卡片已移除，按钮已移至表单底部 #}
-  {% endblock form_header_actions_card %}
-
   <form method="post" class="create-form" id="createForm">
     {% csrf_token %}
     
@@ -91,8 +87,7 @@
     </div>
     {% endif %}
 
-    {# ==================== 卡片1：基本信息 ==================== #}
-    {% block form_basic_info_card %}
+    {# ==================== 卡片1：基本信息（固定，不可覆盖） ==================== #}
     <div class="form-card form-card-basic-info">
       <div class="form-card-header">
         <h3 class="form-card-title">
@@ -101,109 +96,100 @@
         </h3>
       </div>
       <div class="form-card-body">
-        {# 第一排：字段区域 #}
+        {# 第一排：标准字段（固定） + 额外字段（可扩展） #}
         <div class="row mb-3">
-          {% block form_first_row_fields %}
-            {# 所属部门字段 #}
-            {% if form.responsible_department %}
-            <div class="col-md-4 form-field-wrapper">
-              <label for="{{ form.responsible_department.id_for_label }}" class="form-label">
-                {% if form.responsible_department.label %}
-                  {% if "默认" in form.responsible_department.label or "不可修改" in form.responsible_department.label %}
-                    {{ form.responsible_department.label }}
-                  {% else %}
-                    {{ form.responsible_department.label }}（默认，不可修改）
-                  {% endif %}
+          {# 所属部门字段（固定，必存在） #}
+          <div class="col-md-4 form-field-wrapper">
+            <label for="{{ form.responsible_department.id_for_label }}" class="form-label">
+              {% if form.responsible_department.label %}
+                {% if "默认" in form.responsible_department.label or "不可修改" in form.responsible_department.label %}
+                  {{ form.responsible_department.label }}
                 {% else %}
-                  所属部门（默认，不可修改）
+                  {{ form.responsible_department.label }}（默认，不可修改）
                 {% endif %}
-                {% if form.responsible_department.field.required %}<span class="text-danger">*</span>{% endif %}
-              </label>
-              {{ form.responsible_department }}
-              {% if form.responsible_department.errors %}
-              <div class="text-danger small">{{ form.responsible_department.errors }}</div>
+              {% else %}
+                所属部门（默认，不可修改）
               {% endif %}
-              {% if form.responsible_department.help_text %}
-              <div class="form-text">{{ form.responsible_department.help_text }}</div>
-              {% endif %}
-            </div>
+              {% if form.responsible_department.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {{ form.responsible_department }}
+            {% if form.responsible_department.errors %}
+            <div class="text-danger small">{{ form.responsible_department.errors }}</div>
             {% endif %}
+            {% if form.responsible_department.help_text %}
+            <div class="form-text">{{ form.responsible_department.help_text }}</div>
+            {% endif %}
+          </div>
 
-            {# 负责人字段 #}
-            {% if form.responsible_person %}
-            <div class="col-md-4 form-field-wrapper">
-              <label for="{{ form.responsible_person.id_for_label }}" class="form-label">
-                {% if form.responsible_person.label %}
-                  {% if "默认" in form.responsible_person.label or "不可修改" in form.responsible_person.label %}
-                    {{ form.responsible_person.label }}
-                  {% else %}
-                    {{ form.responsible_person.label }}（默认，不可修改）
-                  {% endif %}
+          {# 负责人字段（固定，必存在） #}
+          <div class="col-md-4 form-field-wrapper">
+            <label for="{{ form.responsible_person.id_for_label }}" class="form-label">
+              {% if form.responsible_person.label %}
+                {% if "默认" in form.responsible_person.label or "不可修改" in form.responsible_person.label %}
+                  {{ form.responsible_person.label }}
                 {% else %}
-                  负责人（默认，不可修改）
+                  {{ form.responsible_person.label }}（默认，不可修改）
                 {% endif %}
-                {% if form.responsible_person.field.required %}<span class="text-danger">*</span>{% endif %}
-              </label>
-              {{ form.responsible_person }}
-              {% if form.responsible_person.errors %}
-              <div class="text-danger small">{{ form.responsible_person.errors }}</div>
+              {% else %}
+                负责人（默认，不可修改）
               {% endif %}
-              {% if form.responsible_person.help_text %}
-              <div class="form-text">{{ form.responsible_person.help_text }}</div>
-              {% endif %}
-            </div>
+              {% if form.responsible_person.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {{ form.responsible_person }}
+            {% if form.responsible_person.errors %}
+            <div class="text-danger small">{{ form.responsible_person.errors }}</div>
             {% endif %}
+            {% if form.responsible_person.help_text %}
+            <div class="form-text">{{ form.responsible_person.help_text }}</div>
+            {% endif %}
+          </div>
 
-            {# 表单编号字段：自动检测 goal_number、plan_number、form_number 等 #}
-            {% if form.goal_number %}
-            <div class="col-md-4 form-field-wrapper">
-              <label for="{{ form.goal_number.id_for_label }}" class="form-label">
-                {{ form.goal_number.label }}
-                {% if form.goal_number.field.required %}<span class="text-danger">*</span>{% endif %}
-              </label>
-              {{ form.goal_number }}
-              {% if form.goal_number.errors %}
-              <div class="text-danger small">{{ form.goal_number.errors }}</div>
-              {% endif %}
-            </div>
-            {% elif form.plan_number %}
-            <div class="col-md-4 form-field-wrapper">
-              <label for="{{ form.plan_number.id_for_label }}" class="form-label">
-                {{ form.plan_number.label }}
-                {% if form.plan_number.field.required %}<span class="text-danger">*</span>{% endif %}
-              </label>
-              {{ form.plan_number }}
-              {% if form.plan_number.errors %}
-              <div class="text-danger small">{{ form.plan_number.errors }}</div>
-              {% endif %}
-            </div>
-            {% elif form.form_number %}
-            <div class="col-md-4 form-field-wrapper">
-              <label for="{{ form.form_number.id_for_label }}" class="form-label">
-                {{ form.form_number.label }}
-                {% if form.form_number.field.required %}<span class="text-danger">*</span>{% endif %}
-              </label>
-              {{ form.form_number }}
-              {% if form.form_number.errors %}
-              <div class="text-danger small">{{ form.form_number.errors }}</div>
-              {% endif %}
-            </div>
+          {# 表单编号字段（固定，必存在）：自动检测 goal_number、plan_number、form_number #}
+          {% if form.goal_number %}
+          <div class="col-md-4 form-field-wrapper">
+            <label for="{{ form.goal_number.id_for_label }}" class="form-label">
+              {{ form.goal_number.label }}
+              {% if form.goal_number.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {{ form.goal_number }}
+            {% if form.goal_number.errors %}
+            <div class="text-danger small">{{ form.goal_number.errors }}</div>
             {% endif %}
-            
-            {# 第一排额外字段：子模板可以覆盖此块添加额外字段 #}
-            {% block form_first_row_extra_fields %}{% endblock %}
-          {% endblock %}
+          </div>
+          {% elif form.plan_number %}
+          <div class="col-md-4 form-field-wrapper">
+            <label for="{{ form.plan_number.id_for_label }}" class="form-label">
+              {{ form.plan_number.label }}
+              {% if form.plan_number.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {{ form.plan_number }}
+            {% if form.plan_number.errors %}
+            <div class="text-danger small">{{ form.plan_number.errors }}</div>
+            {% endif %}
+          </div>
+          {% elif form.form_number %}
+          <div class="col-md-4 form-field-wrapper">
+            <label for="{{ form.form_number.id_for_label }}" class="form-label">
+              {{ form.form_number.label }}
+              {% if form.form_number.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {{ form.form_number }}
+            {% if form.form_number.errors %}
+            <div class="text-danger small">{{ form.form_number.errors }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
+          
+          {# 第一排额外字段：子模板可以在此添加额外字段 #}
+          {% block form_first_row_extra_fields %}{% endblock %}
         </div>
         
-        {# 第二排：基本信息其他字段 #}
-        {% block form_second_row_fields %}
+        {# 第二排：基本信息其他字段（子模板可扩展） #}
         <div class="row mb-3">
           {% block form_second_row_extra_fields %}{% endblock %}
         </div>
-        {% endblock form_second_row_fields %}
       </div>
     </div>
-    {% endblock form_basic_info_card %}
 
     {# ==================== 卡片2：其他字段 ==================== #}
     {% block form_other_fields_card %}
@@ -335,43 +321,6 @@
           field.classList.add('is-invalid');
         } else {
           field.classList.remove('is-invalid');
-        }
-      });
-      
-      // 验证FormSet中的时间逻辑
-      const formsetCards = form.querySelectorAll('#planItemsContainer .plan-item-card');
-      formsetCards.forEach(function(card) {
-        const deleteCheckbox = card.querySelector('input[type="checkbox"][name*="DELETE"]');
-        if (deleteCheckbox && deleteCheckbox.checked) return;
-        
-        const cardStartTime = card.querySelector('input[name*="start_time"]');
-        const cardEndTime = card.querySelector('input[name*="end_time"]');
-        
-        if (cardStartTime && cardEndTime && cardStartTime.value && cardEndTime.value) {
-          const startDate = new Date(cardStartTime.value);
-          const endDate = new Date(cardEndTime.value);
-          
-          if (endDate < startDate || endDate.getTime() === startDate.getTime()) {
-            hasError = true;
-            cardStartTime.classList.add('is-invalid');
-            cardEndTime.classList.add('is-invalid');
-            
-            // 显示错误消息
-            let errorMsg = cardEndTime.parentElement.querySelector('.time-validation-error');
-            if (!errorMsg) {
-              errorMsg = document.createElement('div');
-              errorMsg.className = 'text-danger small time-validation-error';
-              errorMsg.textContent = '结束时间必须晚于开始时间';
-              cardEndTime.parentElement.appendChild(errorMsg);
-            }
-          } else {
-            cardStartTime.classList.remove('is-invalid');
-            cardEndTime.classList.remove('is-invalid');
-            const errorMsg = cardEndTime.parentElement.querySelector('.time-validation-error');
-            if (errorMsg) {
-              errorMsg.remove();
-            }
-          }
         }
       });
       

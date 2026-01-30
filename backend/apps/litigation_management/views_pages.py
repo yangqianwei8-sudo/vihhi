@@ -27,7 +27,7 @@ from .forms import (
 from .services_approval import LitigationApprovalService
 from backend.apps.production_management.models import Project
 from backend.apps.customer_management.models import Client
-from backend.apps.production_management.models import BusinessContract
+from backend.apps.contract_management.models import BusinessContract
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@
 """
 
 from rest_framework import serializers
-from backend.apps.production_management.models import BusinessContract
+from backend.apps.contract_management.models import BusinessContract
 # Client和Project模型在其他模块中，这里不需要导入
 
 

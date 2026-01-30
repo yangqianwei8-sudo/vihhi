@@ -1,6 +1,6 @@
 """
 配置用印申请审批流程
-流程：申请人 -> 部门经理审批 -> 结束
+流程：申请人 -> 部门经理审批 -> 抄送行政主管 -> 结束
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
@@ -12,7 +12,7 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = '配置用印申请审批流程：申请人 -> 部门经理审批'
+    help = '配置用印申请审批流程：申请人 -> 部门经理审批 -> 抄送行政主管'
 
     def handle(self, *args, **options):
         self.stdout.write('开始配置用印申请审批流程...')
@@ -22,7 +22,7 @@ class Command(BaseCommand):
             code='seal_usage_approval',
             defaults={
                 'name': '用印申请审批流程',
-                'description': '用印申请的审批流程：申请人 -> 部门经理审批',
+                'description': '用印申请的审批流程：申请人 -> 部门经理审批 -> 抄送行政主管',
                 'category': '行政管理',
                 'status': 'active',
                 'allow_withdraw': True,
@@ -114,10 +114,61 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'✓ 创建/更新节点1：{node1.name}'))
         self.stdout.write(f'  审批人类型：部门经理（自动获取申请人所在部门的经理）')
         
-        # 节点2：结束节点
-        end_node, _ = ApprovalNode.objects.get_or_create(
+        # 节点2：行政主管抄送（非必审，仅通知）
+        # 获取行政主管角色（尝试多个可能的角色代码）
+        admin_supervisor_role = None
+        possible_codes = ['consulting_admin_supervisor', 'admin_supervisor', 'admin-supervisor']
+        for code in possible_codes:
+            admin_supervisor_role = Role.objects.filter(code=code).first()
+            if admin_supervisor_role:
+                break
+        # 如果通过代码找不到，尝试通过名称查找
+        if not admin_supervisor_role:
+            admin_supervisor_role = Role.objects.filter(name__icontains='行政主管').first()
+        
+        node2, _ = ApprovalNode.objects.get_or_create(
             workflow=workflow,
             sequence=2,
+            defaults={
+                'name': '抄送行政主管',
+                'node_type': 'approval',
+                'approver_type': 'role' if admin_supervisor_role else 'user',
+                'approval_mode': 'single',
+                'is_required': False,  # 非必审，仅抄送通知
+                'can_reject': False,  # 抄送节点不允许驳回
+                'can_transfer': False,
+                'timeout_hours': None,  # 抄送节点不设置超时
+                'description': '抄送行政主管，无需审批，仅通知'
+            }
+        )
+        # 更新节点配置（如果已存在）
+        if not _:
+            node2.name = '抄送行政主管'
+            node2.node_type = 'approval'
+            node2.approver_type = 'role' if admin_supervisor_role else 'user'
+            node2.approval_mode = 'single'
+            node2.is_required = False
+            node2.can_reject = False
+            node2.can_transfer = False
+            node2.timeout_hours = None
+            node2.description = '抄送行政主管，无需审批，仅通知'
+            node2.save()
+        
+        # 设置审批角色或用户
+        if admin_supervisor_role:
+            node2.approver_roles.clear()
+            node2.approver_roles.add(admin_supervisor_role)
+            self.stdout.write(self.style.SUCCESS(f'✓ 创建/更新节点2：{node2.name}'))
+            self.stdout.write(f'  审批人：角色 - {admin_supervisor_role.name}（非必审，仅抄送通知）')
+        else:
+            self.stdout.write(self.style.WARNING(f'⚠ 未找到行政主管角色，请手动配置节点2的审批人'))
+            self.stdout.write(f'  节点名称：{node2.name}')
+            self.stdout.write(f'  请在后台管理中手动设置审批人为行政主管角色或用户')
+        
+        # 节点3：结束节点
+        end_node, _ = ApprovalNode.objects.get_or_create(
+            workflow=workflow,
+            sequence=3,
             defaults={
                 'name': '结束',
                 'node_type': 'end',
@@ -166,7 +217,8 @@ class Command(BaseCommand):
         self.stdout.write('流程说明：')
         self.stdout.write('1. 申请人提交用印申请')
         self.stdout.write('2. 申请人所在部门的经理审批（必须通过）')
-        self.stdout.write('3. 审批完成，用印申请生效')
+        self.stdout.write('3. 抄送行政主管（非必审，仅通知）')
+        self.stdout.write('4. 审批完成，用印申请生效')
         self.stdout.write('\n使用方法：')
         self.stdout.write('在用印申请创建视图中调用：')
         self.stdout.write('  from backend.apps.workflow_engine.services import ApprovalEngine')

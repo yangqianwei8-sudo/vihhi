@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.text import slugify
 from django.contrib import messages
 from django.db.models import Count
 from django import forms
@@ -31,15 +32,58 @@ class RoleAdmin(BaseModelAdmin):
         }
         js = ('admin/js/permission_filter.js',)
     
-    fieldsets = (
-        ('基本信息', {
-            'fields': ('name', 'code', 'description', 'is_active')
-        }),
-        ('业务权限', {
-            'fields': ('custom_permissions',),
-        }),
-        # 时间信息会自动添加，无需手动定义
-    )
+    def get_fieldsets(self, request, obj=None):
+        """根据是添加还是编辑，返回不同的字段集"""
+        if obj is None:
+            # 添加新角色时，不显示 code 字段（由系统自动生成）
+            fieldsets = (
+                ('基本信息', {
+                    'fields': ('name', 'description', 'is_active')
+                }),
+                ('业务权限', {
+                    'fields': ('custom_permissions',),
+                }),
+            )
+        else:
+            # 编辑现有角色时，显示 code 字段为只读
+            fieldsets = (
+                ('基本信息', {
+                    'fields': ('name', 'code', 'description', 'is_active')
+                }),
+                ('业务权限', {
+                    'fields': ('custom_permissions',),
+                }),
+            )
+        return fieldsets
+    
+    def get_readonly_fields(self, request, obj=None):
+        """设置只读字段"""
+        readonly = list(super().get_readonly_fields(request, obj))
+        if obj is not None:
+            # 编辑时，code 字段为只读
+            readonly.append('code')
+        return readonly
+    
+    def save_model(self, request, obj, form, change):
+        """保存模型时，如果是新角色，自动生成 code"""
+        if not change:  # 添加新角色
+            if not obj.code or obj.code.strip() == '':
+                # 从角色名称生成 code
+                base_code = slugify(obj.name)
+                if not base_code:
+                    # 如果 slugify 结果为空，使用默认值
+                    base_code = 'role'
+                
+                # 确保 code 唯一
+                code = base_code
+                counter = 1
+                while Role.objects.filter(code=code).exists():
+                    code = f'{base_code}_{counter}'
+                    counter += 1
+                
+                obj.code = code
+        
+        super().save_model(request, obj, form, change)
     
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         """自定义字段的显示"""

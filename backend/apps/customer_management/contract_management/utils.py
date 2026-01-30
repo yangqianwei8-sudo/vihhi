@@ -15,7 +15,7 @@ def generate_contract_number():
     Returns:
         str: 合同编号
     """
-    from backend.apps.production_management.models import BusinessContract
+    from backend.apps.contract_management.models import BusinessContract
     
     current_year = timezone.now().year
     

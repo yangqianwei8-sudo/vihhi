@@ -236,7 +236,7 @@ def _process_project_archive(archive):
     
     # 6. 回款文件（从回款管理模块获取）
     try:
-        from backend.apps.settlement_center.models import PaymentRecord
+        from backend.apps.payment_management.models import PaymentRecord
         # 注意：PaymentRecord可能通过payment_plan关联项目，需要根据实际模型结构调整
         # 这里简化处理，实际实现需要根据PaymentRecord的实际关联关系调整
         payment_records = PaymentRecord.objects.filter(

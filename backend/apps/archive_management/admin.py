@@ -218,7 +218,7 @@ except ImportError:
 # 注意：FileCategory 是在 models.py 中定义的 proxy model
 try:
     # 先确保 delivery_customer 的 FileCategory 已导入
-    from backend.apps.delivery_customer.models import FileCategory as DeliveryFileCategory
+    from backend.apps.document_management.models import FileCategory as DeliveryFileCategory
     
     # 然后导入 archive_management 中的 proxy model
     from backend.apps.archive_management.models import FileCategory

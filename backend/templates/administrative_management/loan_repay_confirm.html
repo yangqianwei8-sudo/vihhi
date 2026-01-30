@@ -1,0 +1,139 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block pm_title %}确认还款 - {{ loan.application_number }}{% endblock pm_title %}
+{% block pm_subtitle %}出纳员确认借款还款{% endblock pm_subtitle %}
+
+{% block pm_actions %}
+  <a href="{% url 'admin_pages:loan_detail' loan.id %}" class="btn btn-secondary">
+    <i class="bi bi-arrow-left"></i> 返回详情
+  </a>
+{% endblock pm_actions %}
+
+{% block pm_content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-check-circle"></i> 确认还款 - {{ loan.application_number }}
+          </h5>
+        </div>
+        <div class="card-body">
+          <!-- 借款信息摘要 -->
+          <div class="alert alert-info">
+            <h6 class="alert-heading">借款信息</h6>
+            <hr>
+            <div class="row">
+              <div class="col-md-6">
+                <p class="mb-1"><strong>申请单号：</strong>{{ loan.application_number }}</p>
+                <p class="mb-1"><strong>借款人：</strong>{{ loan.applicant.get_full_name|default:loan.applicant.username }}</p>
+                <p class="mb-1"><strong>借款类型：</strong>{{ loan.get_loan_type_display }}</p>
+                <p class="mb-1"><strong>借款金额：</strong>¥{{ loan.loan_amount|floatformat:2 }}</p>
+              </div>
+              <div class="col-md-6">
+                <p class="mb-1"><strong>已还金额：</strong>¥{{ loan.repaid_amount|floatformat:2 }}</p>
+                <p class="mb-1"><strong>剩余未还：</strong>¥{{ loan.remaining_amount|floatformat:2 }}</p>
+                <p class="mb-1"><strong>本次申请还款：</strong><span class="text-primary fw-bold">¥{{ pending_amount|floatformat:2 }}</span></p>
+                {% if loan.pending_repayment_time %}
+                <p class="mb-1"><strong>还款申请时间：</strong>{{ loan.pending_repayment_time|date:"Y-m-d H:i:s" }}</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          {% if pending_notes %}
+          <div class="alert alert-secondary">
+            <h6 class="alert-heading">还款备注</h6>
+            <p class="mb-0" style="white-space: pre-wrap;">{{ pending_notes }}</p>
+          </div>
+          {% endif %}
+          
+          <!-- 确认/拒绝表单 -->
+          <form method="post" id="confirmForm">
+            {% csrf_token %}
+            <input type="hidden" name="action" id="actionInput" value="confirm">
+            
+            <div class="row mb-3">
+              <div class="col-12">
+                <label class="form-label">确认操作</label>
+                <div class="btn-group w-100" role="group">
+                  <button type="button" class="btn btn-success" id="confirmBtn" onclick="setAction('confirm')">
+                    <i class="bi bi-check-circle"></i> 确认还款
+                  </button>
+                  <button type="button" class="btn btn-danger" id="rejectBtn" onclick="setAction('reject')">
+                    <i class="bi bi-x-circle"></i> 拒绝还款
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div id="rejectReasonSection" style="display: none;" class="row mb-3">
+              <div class="col-12">
+                <label for="reject_reason" class="form-label">
+                  拒绝原因 <span class="text-danger">*</span>
+                </label>
+                <textarea class="form-control" id="reject_reason" name="reject_reason" rows="3" placeholder="请填写拒绝原因" required></textarea>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                  <i class="bi bi-check-circle"></i> 提交
+                </button>
+                <a href="{% url 'admin_pages:loan_detail' loan.id %}" class="btn btn-secondary">
+                  <i class="bi bi-x-circle"></i> 取消
+                </a>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function setAction(action) {
+  const actionInput = document.getElementById('actionInput');
+  const confirmBtn = document.getElementById('confirmBtn');
+  const rejectBtn = document.getElementById('rejectBtn');
+  const rejectReasonSection = document.getElementById('rejectReasonSection');
+  const rejectReason = document.getElementById('reject_reason');
+  const submitBtn = document.getElementById('submitBtn');
+  
+  actionInput.value = action;
+  
+  if (action === 'confirm') {
+    confirmBtn.classList.add('active');
+    rejectBtn.classList.remove('active');
+    rejectReasonSection.style.display = 'none';
+    rejectReason.removeAttribute('required');
+    submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> 确认还款';
+    submitBtn.className = 'btn btn-success';
+  } else {
+    rejectBtn.classList.add('active');
+    confirmBtn.classList.remove('active');
+    rejectReasonSection.style.display = 'block';
+    rejectReason.setAttribute('required', 'required');
+    submitBtn.innerHTML = '<i class="bi bi-x-circle"></i> 拒绝还款';
+    submitBtn.className = 'btn btn-danger';
+  }
+}
+
+document.getElementById('confirmForm').addEventListener('submit', function(e) {
+  const action = document.getElementById('actionInput').value;
+  if (action === 'reject') {
+    const rejectReason = document.getElementById('reject_reason').value.trim();
+    if (!rejectReason) {
+      e.preventDefault();
+      alert('请填写拒绝原因');
+      document.getElementById('reject_reason').focus();
+      return false;
+    }
+  }
+});
+</script>
+{% endblock pm_content %}

@@ -1,0 +1,438 @@
+{% extends "shared/detail_base.html" %}
+{% load static %}
+
+{% block detail_title %}借款申请详情 - {{ loan.application_number }}{% endblock %}
+{% block detail_subtitle %}查看借款申请的详细信息{% endblock %}
+
+{% block detail_header_actions %}
+  <a href="{% url 'admin_pages:loan_list' %}" class="btn btn-secondary">
+    <i class="fas fa-arrow-left"></i> 返回列表
+  </a>
+  {% if can_repay %}
+  <a href="{% url 'admin_pages:loan_repay' loan.id %}" class="btn btn-primary">
+    <i class="fas fa-coins"></i> 还款
+  </a>
+  {% endif %}
+{% endblock %}
+
+{# 覆盖基本信息卡片，使用借款申请自己的字段 #}
+{% block detail_basic_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-basic-info">
+  <div class="detail-card detail-card-basic-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-info-circle"></i>
+        基本信息
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      <div class="row mb-3">
+        {# 申请单号 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">申请单号</label>
+            <div class="detail-field-value">
+              <code>{{ loan.application_number }}</code>
+            </div>
+          </div>
+        </div>
+        {# 状态 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">状态</label>
+            <div class="detail-field-value">
+              {% if loan.status == 'draft' %}
+              <span class="badge badge-status badge-secondary">草稿</span>
+              {% elif loan.status == 'pending_approval' %}
+              <span class="badge badge-status badge-warning">待审批</span>
+              {% elif loan.status == 'approved' %}
+              <span class="badge badge-status badge-success">已批准</span>
+              {% elif loan.status == 'rejected' %}
+              <span class="badge badge-status badge-danger">已拒绝</span>
+              {% elif loan.status == 'paid' %}
+              <span class="badge badge-status badge-info">已放款</span>
+              {% elif loan.status == 'repaid' %}
+              <span class="badge badge-status badge-success">已还款</span>
+              {% elif loan.status == 'cancelled' %}
+              <span class="badge badge-status badge-danger">已取消</span>
+              {% else %}
+              <span class="badge badge-status badge-secondary">{{ loan.get_status_display }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {# 借款类型 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">借款类型</label>
+            <div class="detail-field-value">
+              {% if loan.loan_type == 'personal' %}
+              <span class="badge bg-info">个人借款</span>
+              {% elif loan.loan_type == 'business' %}
+              <span class="badge bg-primary">业务借款</span>
+              {% elif loan.loan_type == 'emergency' %}
+              <span class="badge bg-danger">应急借款</span>
+              {% elif loan.loan_type == 'reserve_fund' %}
+              <span class="badge bg-success">备用金</span>
+              {% else %}
+              <span class="badge bg-secondary">其他</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row mb-3">
+        {# 借款人 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">借款人</label>
+            <div class="detail-field-value">
+              {{ loan.applicant.get_full_name|default:loan.applicant.username }}
+            </div>
+          </div>
+        </div>
+        {# 申请部门 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">申请部门</label>
+            <div class="detail-field-value">
+              {% if loan.department %}
+              {{ loan.department.name }}
+              {% else %}
+              <span class="text-muted">-</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {# 借款金额 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">借款金额</label>
+            <div class="detail-field-value">
+              <strong class="text-primary" style="font-size: 18px;">¥{{ loan.loan_amount|floatformat:2 }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row mb-3">
+        {# 申请日期 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">申请日期</label>
+            <div class="detail-field-value">
+              {{ loan.application_date|date:"Y-m-d" }}
+            </div>
+          </div>
+        </div>
+        {# 借款日期 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">借款日期</label>
+            <div class="detail-field-value">
+              {{ loan.loan_date|date:"Y-m-d" }}
+            </div>
+          </div>
+        </div>
+        {# 预计还款日期 #}
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">预计还款日期</label>
+            <div class="detail-field-value">
+              {% if loan.expected_repay_date %}
+              {{ loan.expected_repay_date|date:"Y-m-d" }}
+              {% else %}
+              <span class="text-muted">-</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{# 详细信息卡片：还款信息、借款事由等 #}
+{% block detail_detail_info_card %}
+<div class="detail-card-wrapper detail-card-wrapper-detail-info">
+  <div class="detail-card detail-card-detail-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-list-alt"></i>
+        详细信息
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      {% block detail_detail_info_rows %}
+      {# 还款信息 #}
+      <div class="row mb-3">
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">借款金额</label>
+            <div class="detail-field-value">
+              <strong>¥{{ loan.loan_amount|floatformat:2 }}</strong>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">已还金额</label>
+            <div class="detail-field-value">
+              <span class="text-success fw-bold">¥{{ loan.repaid_amount|floatformat:2 }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">剩余未还</label>
+            <div class="detail-field-value">
+              <span class="text-danger fw-bold" style="font-size: 18px;">¥{{ loan.remaining_amount|floatformat:2 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {% if loan.pending_repayment_amount > 0 %}
+      <div class="row mb-3">
+        <div class="col-md-6 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">待确认还款</label>
+            <div class="detail-field-value">
+              <span class="text-warning fw-bold" style="font-size: 16px;">¥{{ loan.pending_repayment_amount|floatformat:2 }}</span>
+              {% if loan.pending_repayment_time %}
+              <br><small class="text-muted">申请时间：{{ loan.pending_repayment_time|date:"Y-m-d H:i:s" }}</small>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% if loan.repaid_time %}
+        <div class="col-md-6 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">最后还款时间</label>
+            <div class="detail-field-value">
+              {{ loan.repaid_time|date:"Y-m-d H:i:s" }}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      
+      <div class="alert alert-warning mt-3">
+        <h6 class="alert-heading">
+          <i class="fas fa-exclamation-triangle"></i> 有待确认的还款申请
+        </h6>
+        <p class="mb-2">还款金额：<strong>¥{{ loan.pending_repayment_amount|floatformat:2 }}</strong></p>
+        {% if loan.pending_repayment_notes %}
+        <p class="mb-2"><strong>还款备注：</strong>{{ loan.pending_repayment_notes }}</p>
+        {% endif %}
+        {% if can_confirm_repayment %}
+        <hr>
+        <a href="{% url 'admin_pages:loan_repay_confirm' loan.id %}" class="btn btn-primary">
+          <i class="fas fa-check-circle"></i> 确认还款
+        </a>
+        {% else %}
+        <p class="mb-0 text-muted"><small>等待出纳员确认...</small></p>
+        {% endif %}
+      </div>
+      {% elif loan.repaid_time %}
+      <div class="row mb-3">
+        <div class="col-md-6 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">最后还款时间</label>
+            <div class="detail-field-value">
+              {{ loan.repaid_time|date:"Y-m-d H:i:s" }}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      
+      {# 借款事由 #}
+      <div class="row mb-3">
+        <div class="col-md-12 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">借款事由</label>
+            <div class="detail-field-value" style="white-space: pre-wrap;">{{ loan.loan_reason }}</div>
+          </div>
+        </div>
+      </div>
+      
+      {# 备注信息 #}
+      {% if loan.notes %}
+      <div class="row mb-3">
+        <div class="col-md-12 detail-field-wrapper">
+          <div class="detail-field">
+            <label class="detail-field-label">备注信息</label>
+            <div class="detail-field-value" style="white-space: pre-wrap;">{{ loan.notes }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% endblock detail_detail_info_rows %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{# 附件卡片：借条附件 #}
+{% block detail_attachments_card %}
+{% if loan.iou_file %}
+<div class="detail-card-wrapper detail-card-wrapper-attachments">
+  <div class="detail-card detail-card-attachments">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-paperclip"></i>
+        附件与文件信息
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      <div class="detail-attachments-list">
+        <table class="detail-table attachment-table">
+          <tbody>
+            <tr>
+              <th class="attachment-icon-cell">
+                <div class="attachment-icon">
+                  <i class="fas fa-file-pdf"></i>
+                </div>
+              </th>
+              <td class="attachment-name-cell">手写借条附件</td>
+              <td class="attachment-meta-cell">
+                <i class="fas fa-calendar"></i>
+                {{ loan.created_time|date:"Y-m-d H:i" }}
+              </td>
+              <td class="attachment-actions-cell">
+                <a href="{{ loan.iou_file.url }}" class="btn btn-sm btn-light" download>
+                  <i class="fas fa-download"></i>
+                  下载
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{# 审批信息卡片 #}
+{% block detail_approval_info_card %}
+{% if approval_records or loan.approver %}
+<div class="detail-card-wrapper detail-card-wrapper-approval-info">
+  <div class="detail-card detail-card-approval-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-check-circle"></i>
+        审批信息
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      {% if approval_records %}
+      {# 使用基础模板的审批信息表格 #}
+      <table class="detail-table">
+        <thead>
+          <tr>
+            <th style="width: 60px;">序号</th>
+            <th style="width: 120px;">审批节点</th>
+            <th style="width: 120px;">审批人</th>
+            <th style="width: 100px;">审批结果</th>
+            <th style="width: 160px;">审批时间</th>
+            <th>审批意见</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in approval_records %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ record.node.name|default:"-" }}</td>
+            <td>
+              {% if record.approver %}
+              {{ record.approver.get_full_name|default:record.approver.username }}
+              {% else %}
+              -
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge badge-status badge-{{ record.result }}">
+                {{ record.get_result_display }}
+              </span>
+            </td>
+            <td>
+              {% if record.approval_time %}
+              {{ record.approval_time|date:"Y-m-d H:i:s" }}
+              {% else %}
+              <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td>{{ record.comment|default:"-" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% elif loan.approver or loan.approved_time %}
+      {# 如果没有审批记录，显示简单的审批信息 #}
+      <table class="detail-table">
+        <tbody>
+          {% if loan.approver %}
+          <tr>
+            <th style="width: 150px;">审批人</th>
+            <td>{{ loan.approver.get_full_name|default:loan.approver.username }}</td>
+          </tr>
+          {% endif %}
+          {% if loan.approved_time %}
+          <tr>
+            <th>审批时间</th>
+            <td>{{ loan.approved_time|date:"Y-m-d H:i:s" }}</td>
+          </tr>
+          {% endif %}
+          {% if loan.approval_notes %}
+          <tr>
+            <th>审批意见</th>
+            <td style="white-space: pre-wrap;">{{ loan.approval_notes }}</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{# 关联信息卡片：放款信息 #}
+{% block detail_related_info_card %}
+{% if loan.paid_by or loan.paid_time %}
+<div class="detail-card-wrapper detail-card-wrapper-related-info">
+  <div class="detail-card detail-card-related-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title">
+        <i class="fas fa-bank"></i>
+        放款信息
+      </h3>
+    </div>
+    <div class="detail-card-body">
+      <table class="detail-table">
+        <tbody>
+          {% if loan.paid_by %}
+          <tr>
+            <th style="width: 150px;">放款人</th>
+            <td>{{ loan.paid_by.get_full_name|default:loan.paid_by.username }}</td>
+          </tr>
+          {% endif %}
+          {% if loan.paid_time %}
+          <tr>
+            <th>放款时间</th>
+            <td>{{ loan.paid_time|date:"Y-m-d H:i:s" }}</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{# 系统信息卡片由基础模板自动提供 #}

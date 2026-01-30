@@ -345,7 +345,7 @@ def get_service_fee_scheme(contract=None, project=None, scheme_id=None, contract
     
     # 如果提供了ID但没有实例，尝试获取实例
     if contract_id and not contract:
-        from backend.apps.production_management.models import BusinessContract
+        from backend.apps.contract_management.models import BusinessContract
         try:
             contract = BusinessContract.objects.get(id=contract_id)
         except BusinessContract.DoesNotExist:

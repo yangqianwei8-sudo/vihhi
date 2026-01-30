@@ -8,7 +8,8 @@ from backend.apps.settlement_center.models import (
     ServiceFeeJumpPointRate,
     ServiceFeeUnitCapDetail
 )
-from backend.apps.production_management.models import BusinessContract, Project
+from backend.apps.contract_management.models import BusinessContract
+from backend.apps.production_management.models import Project
 
 
 class ServiceFeeSegmentedRateSerializer(serializers.ModelSerializer):

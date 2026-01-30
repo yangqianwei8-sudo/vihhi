@@ -66,18 +66,31 @@ def check_todo_business_evidence(todo: TodoTask) -> tuple[bool, str]:
                     except Exception:
                         pass
 
-            if user and Plan.objects.filter(
-                Q(owner=user) | Q(responsible_person=user),
-                plan_period='daily',
-                start_time__gte=target_start,
-                start_time__lte=target_end,
-                status='published'
-            ).exists():
-                return True, '存在目标日期的已发布日计划'
+            # 检查用户是否有对应日期的已发布日计划
+            if user:
+                # 方法1：精确匹配日期
+                if Plan.objects.filter(
+                    Q(owner=user) | Q(responsible_person=user),
+                    plan_period='daily',
+                    start_time__gte=target_start,
+                    start_time__lte=target_end,
+                    status='published'
+                ).exists():
+                    return True, '存在目标日期的已发布日计划'
+                
+                # 方法2：放宽条件 - 检查是否有任何已发布的日计划（不限制日期）
+                # 这样可以处理历史遗留问题：员工可能已经创建了日计划，但日期不完全匹配
+                if Plan.objects.filter(
+                    Q(owner=user) | Q(responsible_person=user),
+                    plan_period='daily',
+                    status='published',
+                    created_time__gte=todo.created_at
+                ).exists():
+                    return True, '存在已发布的日计划（放宽检查）'
 
             return False, '未找到目标日期的已发布日计划'
 
-        # 周计划分解：存在“下周”的周计划（非草稿/非取消）
+        # 周计划分解：存在"下周"的周计划（非草稿/非取消）
         if todo.task_type == 'plan_decomposition_weekly':
             base_day = todo.deadline.date() if todo.deadline else today
             days_until_next_monday = (7 - base_day.weekday()) % 7
@@ -87,13 +100,26 @@ def check_todo_business_evidence(todo: TodoTask) -> tuple[bool, str]:
             next_sunday = next_monday + timedelta(days=6)
             next_start = timezone.make_aware(datetime.combine(next_monday, datetime.min.time()))
             next_end = timezone.make_aware(datetime.combine(next_sunday, datetime.max.time()))
-            if user and Plan.objects.filter(
-                Q(owner=user) | Q(responsible_person=user),
-                plan_period='weekly',
-                start_time__gte=next_start,
-                start_time__lte=next_end,
-            ).exclude(status__in=['draft', 'cancelled']).exists():
-                return True, '存在下周周计划'
+            
+            if user:
+                # 方法1：精确匹配下周
+                if Plan.objects.filter(
+                    Q(owner=user) | Q(responsible_person=user),
+                    plan_period='weekly',
+                    start_time__gte=next_start,
+                    start_time__lte=next_end,
+                ).exclude(status__in=['draft', 'cancelled']).exists():
+                    return True, '存在下周周计划'
+                
+                # 方法2：放宽条件 - 检查是否有任何已发布的周计划（不限制日期）
+                # 这样可以处理历史遗留问题
+                if Plan.objects.filter(
+                    Q(owner=user) | Q(responsible_person=user),
+                    plan_period='weekly',
+                    created_time__gte=todo.created_at
+                ).exclude(status__in=['draft', 'cancelled']).exists():
+                    return True, '存在已发布的周计划（放宽检查）'
+            
             return False, '未找到下周周计划'
 
         # 目标分解：存在以该公司目标为 parent_goal 的个人目标
@@ -118,24 +144,60 @@ def check_todo_business_evidence(todo: TodoTask) -> tuple[bool, str]:
 
         # 目标进度更新：存在进度记录（创建时间之后、且记录人是当前用户）
         if todo.task_type == 'goal_progress_update' and todo.related_object_type == 'goal' and todo.related_object_id:
-            from ..models import GoalProgressRecord
-            if user and GoalProgressRecord.objects.filter(
-                goal_id=int(todo.related_object_id),
-                recorded_by=user,
-                recorded_time__gte=todo.created_at,
-            ).exists():
-                return True, '存在目标进度记录'
+            from ..models import GoalProgressRecord, StrategicGoal
+            goal_id = int(todo.related_object_id)
+            
+            # 方法0：如果目标已经完成，认为待办已完成
+            goal = StrategicGoal.objects.filter(id=goal_id).first()
+            if goal and goal.status == 'completed':
+                return True, '目标已标记为完成'
+            
+            if user:
+                # 方法1：精确匹配 - 记录时间在待办创建之后
+                if GoalProgressRecord.objects.filter(
+                    goal_id=goal_id,
+                    recorded_by=user,
+                    recorded_time__gte=todo.created_at,
+                ).exists():
+                    return True, '存在目标进度记录'
+                
+                # 方法2：放宽条件 - 检查是否有任何进度记录（不限制时间）
+                # 这样可以处理历史遗留问题
+                if GoalProgressRecord.objects.filter(
+                    goal_id=goal_id,
+                    recorded_by=user,
+                ).exists():
+                    return True, '存在目标进度记录（放宽检查）'
+            
             return False, '未找到目标进度记录'
 
         # 计划进度更新：存在进度记录（创建时间之后、且记录人是当前用户）
         if todo.task_type == 'plan_progress_update' and todo.related_object_type == 'plan' and todo.related_object_id:
-            from ..models import PlanProgressRecord
-            if user and PlanProgressRecord.objects.filter(
-                plan_id=int(todo.related_object_id),
-                recorded_by=user,
-                recorded_time__gte=todo.created_at,
-            ).exists():
-                return True, '存在计划进度记录'
+            from ..models import PlanProgressRecord, Plan
+            plan_id = int(todo.related_object_id)
+            
+            # 方法0：如果计划已经完成，认为待办已完成
+            plan = Plan.objects.filter(id=plan_id).first()
+            if plan and plan.status == 'completed':
+                return True, '计划已标记为完成'
+            
+            if user:
+                # 方法1：精确匹配 - 记录时间在待办创建之后
+                if PlanProgressRecord.objects.filter(
+                    plan_id=plan_id,
+                    recorded_by=user,
+                    recorded_time__gte=todo.created_at,
+                ).exists():
+                    return True, '存在计划进度记录'
+                
+                # 方法2：放宽条件 - 检查是否有任何进度记录（不限制时间）
+                # 这样可以处理历史遗留问题：员工可能已经更新了进度，但时间比较可能有问题
+                if PlanProgressRecord.objects.filter(
+                    plan_id=plan_id,
+                    recorded_by=user,
+                ).exists():
+                    return True, '存在计划进度记录（放宽检查）'
+            
             return False, '未找到计划进度记录'
 
         # 目标创建：创建人是当前用户，且在待办创建之后创建过公司目标（非草稿/非取消）
