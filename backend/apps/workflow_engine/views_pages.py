@@ -934,8 +934,32 @@ def approval_detail(request, instance_id):
                     content_object_type_name = '计划'
                 except:
                     pass
+            elif model_name == 'sealusage':
+                from django.urls import reverse, NoReverseMatch
+                try:
+                    content_object_detail_url = reverse('admin_pages:seal_usage_detail', args=[instance.object_id])
+                    content_object_type_name = '用印申请'
+                except (NoReverseMatch, Exception) as e:
+                    # 如果reverse失败，尝试直接构造URL路径（基于URL配置：/administrative/seals/usages/<usage_id>/）
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f'无法通过reverse生成用印申请详情URL: {str(e)}，尝试直接构造URL')
+                    try:
+                        # 根据URL配置：path('administrative/', include(...)) + path("seals/usages/<int:usage_id>/", ...)
+                        content_object_detail_url = f'/administrative/seals/usages/{instance.object_id}/'
+                        content_object_type_name = '用印申请'
+                    except Exception as e2:
+                        logger.error(f'构造用印申请详情URL失败: {str(e2)}')
+                        content_object_detail_url = None
+                        content_object_type_name = '用印申请'
+            elif model_name == 'sealborrowing':
+                # 印章借用没有详情页，不设置详情链接
+                content_object_detail_url = None
+                content_object_type_name = '印章借用'
             else:
                 content_object_type_name = model_name
+                # 对于其他类型，如果没有详情页，不设置详情链接（不显示按钮）
+                # 不再使用admin链接，因为需要admin登录
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
@@ -973,10 +997,8 @@ def approval_detail(request, instance_id):
         'all_users': all_users,  # 用于转交的用户列表
     })
     
-    # 默认使用三栏布局模板，可以通过URL参数切换回旧布局
-    use_three_column = request.GET.get('layout') != 'old'
-    template_name = "workflow_engine/approval_detail_three_column.html" if use_three_column else "workflow_engine/approval_detail.html"
-    return render(request, template_name, context)
+    # 统一使用三栏布局模板（旧的两栏布局已弃用）
+    return render(request, "workflow_engine/approval_detail_three_column.html", context)
 
 
 @login_required

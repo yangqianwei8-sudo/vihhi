@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'backend.apps.payment_management.apps.PaymentManagementConfig',  # 回款管理（独立应用）
     'backend.apps.contract_management.apps.ContractManagementConfig',  # 合同管理（独立应用）
     'backend.apps.document_management.apps.DocumentManagementConfig',  # 文档管理（独立应用）
+    'backend.apps.output_value_management.apps.OutputValueManagementConfig',  # 产值管理（独立应用）
     'backend.apps.resource_standard',
     'backend.apps.task_collaboration',
     'backend.apps.delivery_customer',

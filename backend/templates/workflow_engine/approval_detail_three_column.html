@@ -1,24 +1,20 @@
-{% extends "shared/three_column_layout_base.html" %}
+{% extends "shared/three_column_layout_approval_base.html" %}
 {% load static %}
 
 {% block title %}审批详情 - {{ instance.instance_number }} - 维海科技信息化管理平台{% endblock %}
 
 {% block extra_head %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'css/common.css' %}">
 {% endblock %}
 
-{% block main_content %}
+{% block main_content_body %}
 {% if content_object %}
 <div class="detail-card-wrapper detail-card-wrapper-basic-info">
   <div class="detail-card detail-card-basic-info">
     <div class="detail-card-header">
       <h3 class="detail-card-title">
-        <i class="fas fa-file-alt"></i>
-        待审批内容 - {{ content_object_type_name|default:"业务对象" }}
-        {% if content_object_detail_url %}
-        <a href="{{ content_object_detail_url }}" class="btn btn-sm btn-outline-primary ms-2" target="_blank">查看详情</a>
-        {% endif %}
+        <i class="fas fa-info-circle"></i>
+        基本信息
       </h3>
     </div>
     <div class="detail-card-body">
@@ -30,6 +26,10 @@
         {% include 'workflow_engine/partials/opportunity_content.html' with opportunity=content_object %}
       {% elif instance.content_type.model == 'plan' %}
         {% include 'workflow_engine/partials/plan_content.html' with plan=content_object %}
+      {% elif instance.content_type.model == 'sealusage' %}
+        {% include 'workflow_engine/partials/sealusage_content.html' with sealusage=content_object %}
+      {% elif instance.content_type.model == 'sealborrowing' %}
+        {% include 'workflow_engine/partials/sealborrowing_content.html' with sealborrowing=content_object %}
       {% else %}
         <div class="info-grid">
           <div class="info-item">
@@ -57,8 +57,8 @@
   <div class="detail-card detail-card-basic-info">
     <div class="detail-card-header">
       <h3 class="detail-card-title">
-        <i class="fas fa-info-circle"></i>
-        审批信息
+        <i class="fas fa-list-alt"></i>
+        详细信息
       </h3>
     </div>
     <div class="detail-card-body">
@@ -107,7 +107,9 @@
     </div>
   </div>
 </div>
+{% endblock main_content_body %}
 
+{% block main_content_card_2 %}
 <div class="detail-card-wrapper detail-card-wrapper-detail-info">
   <div class="detail-card detail-card-detail-info">
     <div class="detail-card-header">
@@ -181,54 +183,52 @@
     </div>
   </div>
 </div>
-{% endblock main_content %}
+{% endblock main_content_card_2 %}
 
-{% block approval_title %}审批栏{% endblock %}
+{% block right_sidebar_title %}审批栏{% endblock %}
 
-{% block approval_content %}
-{% block approval_status %}
-<div class="three-column-actions__group">
-  <div class="three-column-actions__group-title">审批状态</div>
-  <div class="three-column-actions__info-item">
-    <div class="three-column-actions__info-label">当前状态</div>
-    <div class="three-column-actions__info-value">
-      {% if instance.status == 'pending' %}
-        <span class="badge bg-warning">审批中</span>
-      {% elif instance.status == 'approved' %}
-        <span class="badge bg-success">已通过</span>
-      {% elif instance.status == 'rejected' %}
-        <span class="badge bg-danger">已驳回</span>
-      {% elif instance.status == 'withdrawn' %}
-        <span class="badge bg-secondary">已撤回</span>
-      {% elif instance.status == 'cancelled' %}
-        <span class="badge bg-secondary">已取消</span>
-      {% else %}
-        <span class="badge bg-secondary">{{ instance.get_status_display }}</span>
-      {% endif %}
-    </div>
-  </div>
-  <div class="three-column-actions__info-item">
-    <div class="three-column-actions__info-label">当前节点</div>
-    <div class="three-column-actions__info-value">
-      {{ instance.current_node.name|default:"-" }}
-    </div>
-  </div>
-  <div class="three-column-actions__info-item">
-    <div class="three-column-actions__info-label">申请人</div>
-    <div class="three-column-actions__info-value">
-      {{ instance.applicant.username }}
-    </div>
-  </div>
-  <div class="three-column-actions__info-item">
-    <div class="three-column-actions__info-label">申请时间</div>
-    <div class="three-column-actions__info-value">
-      {{ instance.apply_time|date:"Y-m-d H:i" }}
-    </div>
+{% block right_sidebar_group_1_title %}审批状态{% endblock %}
+
+{% block right_sidebar_group_1_body %}
+<div class="three-column-actions__info-item">
+  <div class="three-column-actions__info-label">当前状态</div>
+  <div class="three-column-actions__info-value">
+    {% if instance.status == 'pending' %}
+      <span class="badge bg-warning">审批中</span>
+    {% elif instance.status == 'approved' %}
+      <span class="badge bg-success">已通过</span>
+    {% elif instance.status == 'rejected' %}
+      <span class="badge bg-danger">已驳回</span>
+    {% elif instance.status == 'withdrawn' %}
+      <span class="badge bg-secondary">已撤回</span>
+    {% elif instance.status == 'cancelled' %}
+      <span class="badge bg-secondary">已取消</span>
+    {% else %}
+      <span class="badge bg-secondary">{{ instance.get_status_display }}</span>
+    {% endif %}
   </div>
 </div>
-{% endblock approval_status %}
+<div class="three-column-actions__info-item">
+  <div class="three-column-actions__info-label">当前节点</div>
+  <div class="three-column-actions__info-value">
+    {{ instance.current_node.name|default:"-" }}
+  </div>
+</div>
+<div class="three-column-actions__info-item">
+  <div class="three-column-actions__info-label">申请人</div>
+  <div class="three-column-actions__info-value">
+    {{ instance.applicant.username }}
+  </div>
+</div>
+<div class="three-column-actions__info-item">
+  <div class="three-column-actions__info-label">申请时间</div>
+  <div class="three-column-actions__info-value">
+    {{ instance.apply_time|date:"Y-m-d H:i" }}
+  </div>
+</div>
+{% endblock right_sidebar_group_1_body %}
 
-{% block approval_form %}
+{% block right_sidebar_group_2 %}
 {% if can_approve %}
 <div class="three-column-actions__group">
   <div class="three-column-actions__group-title">审批操作</div>
@@ -252,19 +252,17 @@
         <i class="fas fa-times"></i> 驳回
       </button>
       {% if instance.workflow.allow_transfer %}
-      {% block approval_transfer %}
       <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#transferModal">
         <i class="fas fa-exchange-alt"></i> 转交
       </button>
-      {% endblock approval_transfer %}
       {% endif %}
     </div>
   </form>
 </div>
 {% endif %}
-{% endblock approval_form %}
+{% endblock right_sidebar_group_2 %}
 
-{% block approval_history %}
+{% block right_sidebar_group_3 %}
 <div class="three-column-actions__group">
   <div class="three-column-actions__group-title">审批历史</div>
   <div class="approval-history-list">
@@ -308,8 +306,7 @@
     {% endif %}
   </div>
 </div>
-{% endblock approval_history %}
-{% endblock approval_content %}
+{% endblock right_sidebar_group_3 %}
 
 {% block approval_transfer_modal %}
 {% if can_approve and instance.workflow.allow_transfer %}

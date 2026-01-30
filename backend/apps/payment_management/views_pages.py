@@ -10,7 +10,8 @@ from django.utils import timezone
 from decimal import Decimal
 from datetime import timedelta, datetime
 
-from backend.apps.settlement_center.models import (
+# 产值管理相关模型已迁移到output_value_management
+from backend.apps.output_value_management.models import (
     OutputValueStage, OutputValueMilestone, OutputValueEvent, OutputValueRecord,
 )
 from backend.apps.settlement_management.models import (

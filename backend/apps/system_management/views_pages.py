@@ -602,10 +602,10 @@ def _build_system_management_sidebar_nav(permission_set, request_path=None, acti
                     'admin_only': True,
                 },
                 {
-                    'id': 'three_column_layout_example',
-                    'label': '三栏布局模板',
-                    'icon': '📐',
-                    'url_name': 'system_pages:three_column_layout_example',
+                    'id': 'three_column_layout_base_example',
+                    'label': '三栏布局基模板示例',
+                    'icon': '📑',
+                    'url_name': 'system_pages:three_column_layout_base_example',
                     'admin_only': True,
                 },
                 {
@@ -1015,14 +1015,15 @@ def list_page_example(request):
 
 
 @login_required
-def three_column_layout_example(request):
-    """三栏布局模板示例 - 完全按照 three_column_layout_base.html 模板渲染（仅 admin 可访问）"""
+@login_required
+def three_column_layout_base_example(request):
+    """三栏布局基模板示例 - 使用 three_column_layout_base.html 模板（仅 admin 可访问）"""
     if not _is_admin(request.user):
         raise PermissionDenied("仅管理员可访问示例表单模块。")
     permission_set = get_user_permission_codes(request.user)
     
     context = {
-        'page_title': '三栏布局模板示例',
+        'page_title': '三栏布局基模板示例',
     }
     
     # 添加顶部导航（使用标准的顶部栏模板）
@@ -1032,13 +1033,13 @@ def three_column_layout_example(request):
     context['sidebar_nav'] = _build_system_management_sidebar_nav(
         permission_set, 
         request_path=request.path,
-        active_id='three_column_layout_example',
+        active_id='three_column_layout_base_example',
         user=request.user,
     )
     context['sidebar_title'] = '系统管理'
     context['sidebar_subtitle'] = 'System Management'
     
-    return render(request, "system_management/three_column_layout_example.html", context)
+    return render(request, "system_management/three_column_layout_base_example.html", context)
 
 
 @login_required

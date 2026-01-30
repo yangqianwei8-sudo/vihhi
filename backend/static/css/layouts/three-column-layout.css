@@ -83,16 +83,17 @@
 }
 
 .three-column-body .vh-sb {
-    position: relative !important;
-    top: 0 !important;
+    position: fixed !important;
+    top: var(--navbar-height, 62px) !important;
     bottom: 0 !important;
     left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
+    width: var(--vh-sb-width, 232px) !important;
+    height: calc(100vh - var(--navbar-height, 62px)) !important;
     flex: 0 0 232px;
     min-width: 232px;
     max-width: 232px;
     margin-top: 0 !important;
+    z-index: var(--z-sticky, 1020) !important;
 }
 
 .three-column-sidebar__header {
@@ -236,13 +237,15 @@
     overflow: hidden;
     min-width: 0;
     background: var(--vh-surface, #F5F5F5);
+    margin-left: var(--vh-sb-width, 232px); /* 为固定的左侧栏留出空间 */
+    margin-right: 320px; /* 为固定的右侧栏留出空间 */
 }
 
 .three-column-main__content {
     flex: 1 1 auto;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: var(--spacing-lg, 24px);
+    padding: var(--spacing-lg, 24px) var(--spacing-sm, 8px);
     min-height: 0;
 }
 
@@ -361,7 +364,7 @@
 }
 
 .three-column-main__content .detail-card-wrapper {
-    margin-bottom: var(--spacing-lg, 24px);
+    margin-bottom: var(--spacing-sm, 8px);
 }
 
 .three-column-main__content .detail-card-wrapper:last-child {
@@ -381,14 +384,20 @@
 }
 
 .three-column-actions {
+    position: fixed !important;
+    top: var(--navbar-height, 62px) !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    width: 320px !important;
+    height: calc(100vh - var(--navbar-height, 62px)) !important;
     flex: 0 0 320px;
-    width: 320px;
     min-width: 320px;
     background: var(--vh-card-bg, #FFFFFF);
     border-left: 1px solid var(--vh-border, #E0E0E0);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    z-index: var(--z-sticky, 1020) !important;
     transition: width var(--transition-base, 0.2s ease),
                 min-width var(--transition-base, 0.2s ease);
 }
@@ -617,9 +626,12 @@
 
 @media (max-width: 1400px) {
     .three-column-actions {
-        flex: 0 0 280px;
-        width: 280px;
+        width: 280px !important;
         min-width: 280px;
+    }
+    
+    .three-column-main {
+        margin-right: 280px; /* 为固定的右侧栏留出空间 */
     }
 }
 
@@ -629,14 +641,17 @@
     }
     
     .three-column-actions {
-        position: absolute;
-        right: 0;
-        top: 0;
-        bottom: 0;
+        position: fixed !important;
+        right: 0 !important;
+        top: var(--navbar-height, 62px) !important;
+        bottom: 0 !important;
         z-index: var(--z-fixed, 1030);
         box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
     }
     
+    .three-column-main {
+        margin-right: 0; /* 小屏幕下右侧栏覆盖，不需要边距 */
+    }
 }
 
 @media (max-width: 992px) {
@@ -655,6 +670,14 @@
     
     .three-column-main {
         margin-left: 0;
+        margin-right: 0; /* 小屏幕下左右侧栏都覆盖，不需要边距 */
+    }
+    
+    .three-column-actions {
+        position: fixed !important;
+        right: 0 !important;
+        top: var(--navbar-height, 62px) !important;
+        bottom: 0 !important;
     }
 }
 

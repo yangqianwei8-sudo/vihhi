@@ -7,12 +7,11 @@
 from django.contrib import admin
 from django.db.models import Sum
 from backend.core.admin_base import BaseModelAdmin
-# 注意：这些模型已迁移到 settlement_management，但为了保持向后兼容，仍从 settlement_center 导入
+# 注意：产值管理相关模型已迁移到 output_value_management
+# 结算管理相关模型已迁移到 settlement_management
 from backend.apps.settlement_center.models import (
-    OutputValueStage, OutputValueMilestone, OutputValueEvent, OutputValueRecord,
     ServiceFeeSettlementScheme, ServiceFeeSegmentedRate, 
     ServiceFeeJumpPointRate, ServiceFeeUnitCapDetail,
-      # PaymentRecord 已迁移到 settlement_center
     SettlementMethod,
 )
 # 以下模型已迁移到 settlement_management

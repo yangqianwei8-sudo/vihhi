@@ -109,6 +109,7 @@ urlpatterns = [
     path('collaboration/', include(('backend.apps.task_collaboration.urls', 'task_collaboration'), namespace='collaboration_pages')),
     path('system-center/', include(('backend.apps.system_management.urls_pages', 'system_pages'), namespace='system_pages')),
     path('settlement/', include(('backend.apps.settlement_center.urls_pages', 'settlement_pages'), namespace='settlement_pages')),  # 结算管理（使用settlement_center模块）
+    path('output-value/', include(('backend.apps.output_value_management.urls_pages', 'output_value_pages'), namespace='output_value_pages')),  # 产值管理页面（独立应用）
     path('payment/', include(('backend.apps.payment_management.urls_pages', 'payment_pages'), namespace='payment_pages')),  # 回款管理页面（独立应用）
     # 行政管理、财务管理模块
     path('administrative/', include(('backend.apps.administrative_management.urls', 'admin_pages'), namespace='admin_pages')),

@@ -3,7 +3,7 @@
 根据用户提供的产值计算表创建阶段、里程碑和事件配置
 """
 from django.core.management.base import BaseCommand
-from backend.apps.settlement_center.models import OutputValueStage, OutputValueMilestone, OutputValueEvent
+from backend.apps.output_value_management.models import OutputValueStage, OutputValueMilestone, OutputValueEvent
 
 
 # 产值模板数据结构

@@ -127,6 +127,7 @@ HOME_NAV_STRUCTURE = [
     {'label': '合同管理', 'icon': '📄', 'url_name': 'contract_pages:contract_management_home_alt', 'permission': 'customer_management.contract.view'},
     {'label': '回款管理', 'icon': '💰', 'url_name': 'payment_pages:payment_home', 'permission': 'payment_management.payment_plan.view'},  # 回款管理独立模块
     {'label': '生产管理', 'icon': '🏗️', 'url_name': 'production_pages:production_management_home', 'permission': 'production_management.view_assigned'},
+    {'label': '结算管理', 'icon': '💼', 'url_name': 'settlement_pages:settlement_management_home', 'permission': 'settlement_center.view_settlement'},
     {'label': '资源管理', 'icon': '🗂️', 'url_name': 'resource_standard_pages:standard_list', 'permission': 'resource_center.view'},
     {'label': '任务协作', 'icon': '🤝', 'url_name': 'collaboration_pages:task_board', 'permission': 'task_collaboration.view'},
     {'label': '收文管理', 'icon': '📥', 'url_name': 'delivery_pages:incoming_document_home', 'permission': 'delivery_center.view'},
@@ -136,6 +137,7 @@ HOME_NAV_STRUCTURE = [
     {'label': '诉讼管理', 'icon': '⚖️', 'url_name': 'litigation_pages:litigation_management_home', 'permission': 'litigation_management.view'},
     {'label': '风险管理', 'icon': '⚠️', 'url_name': '#', 'permission': 'risk_management.view'},  # 占位，待实现
     {'label': '财务管理', 'icon': '💵', 'url_name': 'finance_pages:financial_management_home', 'permission': 'financial_management.view'},
+    {'label': '产值管理', 'icon': '📊', 'url_name': 'output_value_pages:output_value_management_home', 'permission': ['output_value_management.view', 'settlement_center.view_output_value']},  # 兼容旧权限
     {'label': '人事管理', 'icon': '👤', 'url_name': 'personnel_pages:personnel_management_home', 'permission': 'personnel_management.view'},
     {'label': '行政管理', 'icon': '🏢', 'url_name': 'admin_pages:administrative_management_home', 'permission': 'administrative_management.view'},
     {'label': '审批引擎', 'icon': '✅', 'url_name': 'workflow_engine:workflow_home', 'permission': 'workflow_engine.view'},
@@ -201,6 +203,7 @@ SCENE_GROUPS = [
         'icon': 'fa-industry',
         'items': [
             {'label': '生产管理', 'icon': 'fa-industry', 'url_name': 'production_pages:production_management_home', 'permission': 'production_management.view_assigned'},
+            {'label': '结算管理', 'icon': 'fa-file-invoice-dollar', 'url_name': 'settlement_pages:settlement_management_home', 'permission': 'settlement_center.view_settlement'},
             {'label': '资源管理', 'icon': 'fa-tools', 'url_name': 'resource_standard_pages:standard_list', 'permission': 'resource_center.view'},
             {'label': '任务协作', 'icon': 'fa-tasks', 'url_name': 'collaboration_pages:task_board', 'permission': 'task_collaboration.view'},
             {'label': '计划管理', 'icon': 'fa-calendar-alt', 'url_name': 'plan_pages:plan_management_home', 'permission': 'plan_management.view'},
@@ -211,6 +214,7 @@ SCENE_GROUPS = [
         'icon': 'fa-chart-bar',
         'items': [
             {'label': '财务管理', 'icon': 'fa-chart-line', 'url_name': 'finance_pages:financial_management_home', 'permission': 'financial_management.view'},
+            {'label': '产值管理', 'icon': 'fa-chart-bar', 'url_name': 'output_value_pages:output_value_management_home', 'permission': ['output_value_management.view', 'settlement_center.view_output_value']},  # 兼容旧权限
             {'label': '人事管理', 'icon': 'fa-user-tie', 'url_name': 'personnel_pages:personnel_management_home', 'permission': 'personnel_management.view'},
         ]
     },

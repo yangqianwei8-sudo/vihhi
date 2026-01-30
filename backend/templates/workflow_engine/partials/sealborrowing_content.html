@@ -1,0 +1,71 @@
+{# 印章借用内容 - 与表单字段完全一致 #}
+<div class="row mb-3">
+  <div class="col-md-6 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">借用人</label>
+      <div class="detail-field-value">
+        {% if sealborrowing.borrower %}
+          {{ sealborrowing.borrower.get_full_name|default:sealborrowing.borrower.username }}
+        {% else %}
+          未指定
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">印章</label>
+      <div class="detail-field-value">
+        {% if sealborrowing.seal %}
+          {{ sealborrowing.seal.seal_name }}
+        {% else %}
+          未选择
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-6 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">借用日期</label>
+      <div class="detail-field-value">
+        {{ sealborrowing.borrowing_date|date:"Y-m-d"|default:"未填写" }}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">预计归还日期</label>
+      <div class="detail-field-value">
+        {{ sealborrowing.expected_return_date|date:"Y-m-d"|default:"未填写" }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-12 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">借用事由</label>
+      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+        {{ sealborrowing.borrowing_reason|default:"未填写" }}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# 备注 #}
+{% if sealborrowing.notes %}
+<div class="row mb-3">
+  <div class="col-md-12 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">备注</label>
+      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+        {{ sealborrowing.notes }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}

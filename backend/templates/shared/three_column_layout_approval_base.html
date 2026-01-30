@@ -1,0 +1,175 @@
+{% extends "shared/three_column_layout_base.html" %}
+{% load static %}
+
+{% block title %}审批详情 - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+{% endblock %}
+
+{% block main_content_body %}
+{# 基本信息卡片 - 由子模板填充 #}
+{% block approval_basic_info_card %}
+{% endblock approval_basic_info_card %}
+{% endblock main_content_body %}
+
+{% block main_content_card_2 %}
+{# 详细信息卡片 - 由子模板填充 #}
+{% block approval_detail_info_card %}
+{% endblock approval_detail_info_card %}
+{% endblock main_content_card_2 %}
+
+{% block main_content_card_3 %}
+{# 审批记录卡片 - 由子模板填充 #}
+{% block approval_records_card %}
+{% endblock approval_records_card %}
+{% endblock main_content_card_3 %}
+
+{% block right_sidebar_title %}审批栏{% endblock %}
+
+{% block right_sidebar_content %}
+{# 审批状态信息 #}
+{% block right_sidebar_group_1_body %}
+<div class="three-column-actions__group">
+  <div class="three-column-actions__group-title">审批状态</div>
+  {% block approval_status_info %}
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">当前状态</div>
+    <div class="three-column-actions__info-value">
+      <span class="badge bg-secondary">待审批</span>
+    </div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">当前节点</div>
+    <div class="three-column-actions__info-value">-</div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">申请人</div>
+    <div class="three-column-actions__info-value">-</div>
+  </div>
+  <div class="three-column-actions__info-item">
+    <div class="three-column-actions__info-label">申请时间</div>
+    <div class="three-column-actions__info-value">-</div>
+  </div>
+  {% endblock approval_status_info %}
+</div>
+{% endblock right_sidebar_group_1_body %}
+
+{% block right_sidebar_group_2 %}
+{# 审批操作表单 #}
+{% block approval_form %}
+<div class="three-column-actions__group">
+  <div class="three-column-actions__group-title">审批操作</div>
+  <form method="post" id="approvalForm" class="approval-form" action="{% block approval_form_action %}{% endblock %}">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="approval_comment" class="form-label small">审批意见</label>
+      <textarea 
+        id="approval_comment" 
+        name="comment" 
+        class="form-control form-control-sm" 
+        rows="4" 
+        placeholder="请输入审批意见..."
+        style="resize: vertical; min-height: 80px;"></textarea>
+    </div>
+    <div class="d-grid gap-2">
+      <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">
+        <i class="fas fa-check"></i> 通过
+      </button>
+      <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">
+        <i class="fas fa-times"></i> 驳回
+      </button>
+      {% block approval_transfer_button %}
+      {% if approval_allow_transfer %}
+      <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#transferModal">
+        <i class="fas fa-exchange-alt"></i> 转交
+      </button>
+      {% endif %}
+      {% endblock approval_transfer_button %}
+    </div>
+  </form>
+</div>
+{% endblock approval_form %}
+{% endblock right_sidebar_group_2 %}
+
+{% block right_sidebar_group_3 %}
+{# 审批历史记录 #}
+{% block approval_history %}
+<div class="three-column-actions__group">
+  <div class="three-column-actions__group-title">审批历史</div>
+  <div class="approval-history-list">
+    {% block approval_history_content %}
+    <div class="text-muted small text-center py-3">
+      暂无审批记录
+    </div>
+    {% endblock approval_history_content %}
+  </div>
+</div>
+{% endblock approval_history %}
+{% endblock right_sidebar_group_3 %}
+{% endblock right_sidebar_content %}
+
+{# 转交审批模态框 #}
+{% block approval_transfer_modal %}
+{% if approval_allow_transfer %}
+<div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="transferModalLabel">
+          <i class="fas fa-exchange-alt"></i> 转交审批
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" id="transferForm" action="{% block transfer_form_action %}{% endblock %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="transferred_to" class="form-label">转交给</label>
+            <select id="transferred_to" name="transferred_to" class="form-select" required>
+              <option value="">请选择用户</option>
+              {% block transfer_user_options %}
+              {% endblock transfer_user_options %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="transfer_comment" class="form-label">转交说明</label>
+            <textarea id="transfer_comment" name="comment" class="form-control" rows="3" placeholder="请输入转交说明"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" name="action" value="transfer" class="btn btn-primary">确认转交</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock approval_transfer_modal %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const approvalForm = document.getElementById('approvalForm');
+  if (approvalForm) {
+    approvalForm.addEventListener('submit', function(e) {
+      const action = e.submitter?.value || e.target.querySelector('button[type="submit"][name="action"]')?.value;
+      if (action === 'approve' || action === 'reject') {
+        const comment = document.getElementById('approval_comment')?.value || '';
+        if (!comment || comment.trim() === '') {
+          e.preventDefault();
+          alert('请输入审批意见');
+          return false;
+        }
+        if (!confirm(`确认${action === 'approve' ? '通过' : '驳回'}此审批吗？`)) {
+          e.preventDefault();
+          return false;
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock extra_js %}

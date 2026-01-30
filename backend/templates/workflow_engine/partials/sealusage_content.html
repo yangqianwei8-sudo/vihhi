@@ -1,0 +1,145 @@
+{# 用印申请内容 - 与表单字段完全一致 #}
+<div class="row mb-3">
+  <div class="col-md-6 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">用印类型</label>
+      <div class="detail-field-value">
+        {{ sealusage.get_usage_type_display|default:"未填写" }}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">文件名称</label>
+      <div class="detail-field-value">
+        {{ sealusage.document_name|default:"未填写" }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-6 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">用印份数</label>
+      <div class="detail-field-value">
+        {{ sealusage.usage_count|default:"未填写" }}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">用印时间</label>
+      <div class="detail-field-value">
+        {{ sealusage.usage_time|date:"Y-m-d H:i:s"|default:"未填写" }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-6 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">印章</label>
+      <div class="detail-field-value">
+        {% if sealusage.seal %}
+          {{ sealusage.seal.seal_name }}
+        {% else %}
+          未选择
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">用印人</label>
+      <div class="detail-field-value">
+        {% if sealusage.used_by %}
+          {{ sealusage.used_by.get_full_name|default:sealusage.used_by.username }}
+        {% else %}
+          未指定
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-6 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">见证人</label>
+      <div class="detail-field-value">
+        {% if sealusage.witness %}
+          {{ sealusage.witness.get_full_name|default:sealusage.witness.username }}
+        {% else %}
+          未指定
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-12 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">用印事由</label>
+      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+        {{ sealusage.usage_reason|default:"未填写" }}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# 用印文件 #}
+{% if sealusage.files.all %}
+<div class="row mb-3">
+  <div class="col-md-12 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">用印文件</label>
+      <div class="detail-field-value">
+        <div class="list-group">
+          {% for file in sealusage.files.all %}
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <i class="bi bi-file-earmark"></i>
+              <a href="{{ file.file.url }}" target="_blank" class="text-decoration-none">
+                {{ file.file_name|default:file.file.name }}
+              </a>
+              <small class="text-muted ms-2">({{ file.uploaded_time|date:"Y-m-d H:i" }})</small>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% elif sealusage.document_file %}
+{# 兼容旧数据：单个文件 #}
+<div class="row mb-3">
+  <div class="col-md-12 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">用印文件</label>
+      <div class="detail-field-value">
+        <a href="{{ sealusage.document_file.url }}" target="_blank" class="text-decoration-none">
+          <i class="bi bi-file-earmark"></i> 查看文件
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# 备注 #}
+{% if sealusage.notes %}
+<div class="row mb-3">
+  <div class="col-md-12 detail-field-wrapper">
+    <div class="detail-field">
+      <label class="detail-field-label">备注</label>
+      <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">
+        {{ sealusage.notes }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}

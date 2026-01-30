@@ -1546,7 +1546,7 @@ def project_create(request):
                             table_exists = cursor.fetchone()[0]
                         
                         if table_exists:
-                            from backend.apps.settlement_center.services import calculate_output_value
+                            from backend.apps.output_value_management.services import calculate_output_value
                             calculate_output_value(project, 'create_project', responsible_user=request.user)
                             logger.info('已为项目 %s 计算"创建新项目"产值，创建人：%s', project.project_number, request.user.username)
                     except Exception as output_exc:
@@ -2047,7 +2047,7 @@ def project_team(request, project_id):
                             table_exists = cursor.fetchone()[0]
                         
                         if table_exists:
-                            from backend.apps.settlement_center.services import calculate_output_value
+                            from backend.apps.output_value_management.services import calculate_output_value
                             # 配置团队的责任人是项目经理
                             responsible_user = project.project_manager or request.user
                             calculate_output_value(project, 'configure_team', responsible_user=responsible_user)

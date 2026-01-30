@@ -8,6 +8,7 @@
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
     <link rel="stylesheet" href="{% static 'css/core/variables.css' %}">
     <link rel="stylesheet" href="{% static 'css/components/navigation.css' %}">
     <link rel="stylesheet" href="{% static 'css/components/sidebar_v2_fixed.css' %}">
@@ -32,194 +33,54 @@
             <main class="three-column-main">
                 <div class="three-column-main__content">
                     {% block main_content %}
-                    {% block detail_basic_info_card %}
-                    <div class="detail-card-wrapper detail-card-wrapper-basic-info">
-                        <div class="detail-card detail-card-basic-info">
-                            <div class="detail-card-header">
-                                <h3 class="detail-card-title">
-                                    <i class="fas fa-info-circle"></i>
-                                    基本信息
-                                </h3>
-                            </div>
-                            <div class="detail-card-body">
-                                {% block detail_basic_info_rows %}
-                                <div class="row mb-3">
-                                    {% block detail_basic_info_row1 %}
-                                    <div class="col-md-4 detail-field-wrapper">
-                                        <div class="detail-field">
-                                            <label class="detail-field-label">所属部门</label>
-                                            <div class="detail-field-value">
-                                                {% if object.responsible_department %}{{ object.responsible_department.name }}{% else %}-{% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4 detail-field-wrapper">
-                                        <div class="detail-field">
-                                            <label class="detail-field-label">负责人</label>
-                                            <div class="detail-field-value">
-                                                {% if object.responsible_person %}{{ object.responsible_person.get_full_name|default:object.responsible_person.username }}{% else %}-{% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4 detail-field-wrapper">
-                                        <div class="detail-field">
-                                            <label class="detail-field-label">表单编号</label>
-                                            <div class="detail-field-value">
-                                                {% if object.form_number %}
-                                                    <code>{{ object.form_number }}</code>
-                                                {% elif object.goal_number %}
-                                                    <code>{{ object.goal_number }}</code>
-                                                {% elif object.plan_number %}
-                                                    <code>{{ object.plan_number }}</code>
-                                                {% elif object.usage_number %}
-                                                    <code>{{ object.usage_number }}</code>
-                                                {% else %}
-                                                    <code>{{ object.id }}</code>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endblock detail_basic_info_row1 %}
-                                </div>
-                                {% endblock detail_basic_info_rows %}
-                            </div>
-                        </div>
+                    {# 中间内容区 - 直接显示内容，无包裹容器 #}
+                    {% block main_content_body %}
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-inbox fa-3x mb-3" style="opacity: 0.3;"></i>
+                        <p class="mb-0">请在子模板中重写 <code>{% verbatim %}{% block main_content_body %}{% endblock %}{% endverbatim %}</code> 来填充内容</p>
                     </div>
-                    {% endblock detail_basic_info_card %}
+                    {% endblock main_content_body %}
                     
-                    {% block detail_detail_info_card %}
-                    <div class="detail-card-wrapper detail-card-wrapper-detail-info">
-                        <div class="detail-card detail-card-detail-info">
-                            <div class="detail-card-header">
-                                <h3 class="detail-card-title">
-                                    <i class="fas fa-list-alt"></i>
-                                    详细信息
-                                </h3>
-                            </div>
-                            <div class="detail-card-body">
-                                {% block detail_detail_info_rows %}
-                                {% endblock detail_detail_info_rows %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endblock detail_detail_info_card %}
+                    {# 可选的第二个内容块 #}
+                    {% block main_content_card_2 %}
+                    {% endblock main_content_card_2 %}
+                    
+                    {# 可选的第三个内容块 #}
+                    {% block main_content_card_3 %}
+                    {% endblock main_content_card_3 %}
                     {% endblock main_content %}
                 </div>
             </main>
             
             <aside class="three-column-actions" id="rightActions">
                 <div class="three-column-actions__header">
-                    <h2 class="three-column-actions__title">{% block approval_title %}{% block actions_title %}审批栏{% endblock %}{% endblock %}</h2>
+                    <h2 class="three-column-actions__title">{% block right_sidebar_title %}操作栏{% endblock %}</h2>
                 </div>
                 <div class="three-column-actions__content">
-                    {% block approval_content %}
-                    {% block actions_content %}
-                    {# 审批状态信息 #}
-                    {% block approval_status %}
+                    {% block right_sidebar_content %}
+                    {# 右边栏内容 - 空卡片占位 #}
+                    {% block right_sidebar_group_1 %}
                     <div class="three-column-actions__group">
-                        <div class="three-column-actions__group-title">审批状态</div>
-                        <div class="three-column-actions__info-item">
-                            <div class="three-column-actions__info-label">当前状态</div>
-                            <div class="three-column-actions__info-value">
-                                <span class="badge bg-secondary">待审批</span>
-                            </div>
+                        <div class="three-column-actions__group-title">{% block right_sidebar_group_1_title %}操作区域{% endblock %}</div>
+                        {% block right_sidebar_group_1_body %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-cog fa-2x mb-2" style="opacity: 0.3;"></i>
+                            <p class="small mb-0">请在子模板中重写 <code>{% verbatim %}{% block right_sidebar_group_1_body %}{% endblock %}{% endverbatim %}</code> 来填充内容</p>
                         </div>
-                        <div class="three-column-actions__info-item">
-                            <div class="three-column-actions__info-label">当前节点</div>
-                            <div class="three-column-actions__info-value">-</div>
-                        </div>
-                        <div class="three-column-actions__info-item">
-                            <div class="three-column-actions__info-label">申请人</div>
-                            <div class="three-column-actions__info-value">-</div>
-                        </div>
-                        <div class="three-column-actions__info-item">
-                            <div class="three-column-actions__info-label">申请时间</div>
-                            <div class="three-column-actions__info-value">-</div>
-                        </div>
+                        {% endblock right_sidebar_group_1_body %}
                     </div>
-                    {% endblock approval_status %}
+                    {% endblock right_sidebar_group_1 %}
                     
-                    {% block approval_form %}
-                    <div class="three-column-actions__group">
-                        <div class="three-column-actions__group-title">审批操作</div>
-                        <form method="post" id="approvalForm" class="approval-form">
-                            {% csrf_token %}
-                            <div class="mb-3">
-                                <label for="approval_comment" class="form-label small">审批意见</label>
-                                <textarea 
-                                    id="approval_comment" 
-                                    name="comment" 
-                                    class="form-control form-control-sm" 
-                                    rows="4" 
-                                    placeholder="请输入审批意见..."
-                                    style="resize: vertical; min-height: 80px;"></textarea>
-                            </div>
-                            <div class="d-grid gap-2">
-                                <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">
-                                    <i class="fas fa-check"></i> 通过
-                                </button>
-                                <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">
-                                    <i class="fas fa-times"></i> 驳回
-                                </button>
-                                {% block approval_transfer %}
-                                <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#transferModal">
-                                    <i class="fas fa-exchange-alt"></i> 转交
-                                </button>
-                                {% endblock approval_transfer %}
-                            </div>
-                        </form>
-                    </div>
-                    {% endblock approval_form %}
+                    {# 可选的第二个操作组 #}
+                    {% block right_sidebar_group_2 %}
+                    {% endblock right_sidebar_group_2 %}
                     
-                    {# 审批历史记录 #}
-                    {% block approval_history %}
-                    <div class="three-column-actions__group">
-                        <div class="three-column-actions__group-title">审批历史</div>
-                        <div class="approval-history-list">
-                            <div class="text-muted small text-center py-3">
-                                暂无审批记录
-                            </div>
-                        </div>
-                    </div>
-                    {% endblock approval_history %}
-                    {% endblock actions_content %}
-                    {% endblock approval_content %}
+                    {# 可选的第三个操作组 #}
+                    {% block right_sidebar_group_3 %}
+                    {% endblock right_sidebar_group_3 %}
+                    {% endblock right_sidebar_content %}
                 </div>
             </aside>
-            
-            {% block approval_transfer_modal %}
-            <div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="transferModalLabel">
-                                <i class="fas fa-exchange-alt"></i> 转交审批
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <form method="post" id="transferForm">
-                            {% csrf_token %}
-                            <div class="modal-body">
-                                <div class="mb-3">
-                                    <label for="transferred_to" class="form-label">转交给</label>
-                                    <select id="transferred_to" name="transferred_to" class="form-select" required>
-                                        <option value="">请选择用户</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="transfer_comment" class="form-label">转交说明</label>
-                                    <textarea id="transfer_comment" name="comment" class="form-control" rows="3" placeholder="请输入转交说明"></textarea>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                                <button type="submit" name="action" value="transfer" class="btn btn-primary">确认转交</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            {% endblock approval_transfer_modal %}
         </div>
     </div>
     

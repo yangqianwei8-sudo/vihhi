@@ -135,6 +135,8 @@ class ApprovalEngine:
                 instance.save()
                 logger.info(f'非必审节点 {node.name} 自动通过，审批流程完成')
                 ApprovalEngine._update_business_object_status(instance, 'approved')
+                # 抄送出纳员（如果是借款审批流程）
+                ApprovalEngine._notify_cashier_on_loan_approval(instance)
             return
         
         # 如果是单人审批模式，只创建第一个审批人的记录
@@ -297,6 +299,8 @@ class ApprovalEngine:
                         ApprovalEngine._update_business_object_status(instance, 'approved')
                         # 发送审批结果通知给提交人
                         ApprovalEngine._send_approval_result_notification(instance, 'approved', approver)
+                        # 抄送出纳员（如果是借款审批流程）
+                        ApprovalEngine._notify_cashier_on_loan_approval(instance)
                     return True
             
             return False
@@ -752,4 +756,103 @@ class ApprovalEngine:
         except Exception as e:
             # 状态更新失败不应影响审批流程
             logger.error(f'更新业务对象状态异常: {str(e)}', exc_info=True)
+    
+    @staticmethod
+    def _notify_cashier_on_loan_approval(instance: ApprovalInstance):
+        """
+        借款审批完成后，抄送出纳员
+        
+        Args:
+            instance: 审批实例
+        """
+        try:
+            # 只处理借款审批流程
+            if instance.workflow.code != 'loan_approval':
+                return
+            
+            # 只处理审批通过的情况
+            if instance.status != 'approved':
+                return
+            
+            # 获取出纳员角色
+            from backend.apps.system_management.models import Role
+            from backend.apps.production_management.models import ProjectTeamNotification
+            from django.urls import reverse
+            
+            cashier_role = Role.objects.filter(code='cashier', is_active=True).first()
+            if not cashier_role:
+                logger.warning('未找到出纳员角色（code: cashier），无法抄送出纳员')
+                return
+            
+            # 获取所有出纳员用户
+            cashier_users = cashier_role.users.filter(is_active=True)
+            if not cashier_users.exists():
+                logger.warning('没有激活的出纳员用户，无法抄送出纳员')
+                return
+            
+            # 获取业务对象信息
+            try:
+                content_obj = instance.content_type.get_object_for_this_type(id=instance.object_id)
+                obj_name = str(content_obj)[:50]
+            except Exception as e:
+                logger.warning(f'获取审批对象失败: {instance.content_type.model}#{instance.object_id}, 错误: {str(e)}')
+                obj_name = f"{instance.content_type.model}#{instance.object_id}"
+                content_obj = None
+            
+            # 生成通知标题和内容
+            title = f"[借款审批] {obj_name} 已审批通过"
+            message = f"借款申请《{obj_name}》已审批通过，请及时处理。\n"
+            message += f"审批单号：{instance.instance_number}\n"
+            message += f"申请人：{instance.applicant.get_full_name() or instance.applicant.username}\n"
+            if content_obj and hasattr(content_obj, 'loan_amount'):
+                message += f"借款金额：¥{content_obj.loan_amount}\n"
+            message += f"审批完成时间：{instance.completed_time.strftime('%Y-%m-%d %H:%M') if instance.completed_time else ''}"
+            
+            # 生成跳转链接
+            try:
+                # 尝试生成借款申请详情页链接
+                if instance.content_type.model == 'loanapplication':
+                    action_url = reverse('admin_pages:loan_detail', args=[instance.object_id])
+                else:
+                    action_url = reverse('workflow_engine:approval_detail', args=[instance.id])
+            except:
+                try:
+                    action_url = reverse('workflow_engine:approval_detail', args=[instance.id])
+                except:
+                    action_url = ''
+            
+            # 为每个出纳员发送通知
+            notified_count = 0
+            for cashier_user in cashier_users:
+                try:
+                    ProjectTeamNotification.objects.create(
+                        project=None,
+                        recipient=cashier_user,
+                        operator=instance.applicant,
+                        title=title,
+                        message=message,
+                        category='approval',  # 审批通知
+                        action_url=action_url,
+                        is_read=False,
+                        context={
+                            'approval_instance_id': instance.id,
+                            'approval_instance_number': instance.instance_number,
+                            'approval_status': 'approved',
+                            'content_type': instance.content_type.model,
+                            'object_id': instance.object_id,
+                            'is_copy': True,  # 标记为抄送
+                        }
+                    )
+                    notified_count += 1
+                except Exception as e:
+                    logger.error(f'发送出纳员通知失败: {cashier_user.username}, 错误: {str(e)}')
+            
+            if notified_count > 0:
+                logger.info(f'已抄送出纳员: {instance.instance_number}, 抄送人数: {notified_count}')
+            else:
+                logger.warning(f'抄送出纳员失败: {instance.instance_number}, 所有出纳员通知发送失败')
+                
+        except Exception as e:
+            # 抄送失败不应影响审批流程
+            logger.error(f'抄送出纳员异常: {str(e)}', exc_info=True)
 

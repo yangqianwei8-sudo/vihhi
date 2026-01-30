@@ -5,15 +5,8 @@ from . import views_settlement_items
 app_name = "settlement_pages"
 
 urlpatterns = [
-    # 回款管理首页
-    path("home/", views_pages.settlement_home, name="settlement_home"),
-    
-    # 产值管理
-    path("output-value/template/", views_pages.output_value_template_manage, name="output_value_template_manage"),
-    path("output-value/records/", views_pages.output_value_record_list, name="output_value_record_list"),
-    path("output-value/records/<int:record_id>/confirm/", views_pages.output_value_record_confirm, name="output_value_record_confirm"),
-    path("output-value/project/<int:project_id>/", views_pages.project_output_value_detail, name="project_output_value_detail"),
-    path("output-value/statistics/", views_pages.output_value_statistics, name="output_value_statistics"),
+    # 结算管理首页
+    path("home/", views_pages.settlement_management_home, name="settlement_management_home"),
     
     # 项目结算管理
     path("project-settlement/", views_pages.project_settlement_list, name="project_settlement_list"),
@@ -26,9 +19,6 @@ urlpatterns = [
     path("settlement-item/<int:item_id>/review/", views_settlement_items.settlement_item_review, name="settlement_item_review"),
     path("settlement/<int:settlement_id>/generate-items/", views_settlement_items.generate_items_from_opinions, name="generate_items_from_opinions"),
     
-    # 回款管理
-    path("payment-plans/", views_pages.payment_plan_list, name="payment_plan_list"),
-    path("payment-plans/<str:plan_type>/<int:plan_id>/", views_pages.payment_plan_detail, name="payment_plan_detail"),
-    path("payment-records/", views_pages.payment_record_list, name="payment_record_list"),
-    path("payment-records/create/<str:plan_type>/<int:plan_id>/", views_pages.payment_record_create, name="payment_record_create"),
+    # 合同结算管理（如果存在）
+    # path("contract-settlement/", views_pages.contract_settlement_list, name="contract_settlement_list"),
 ]

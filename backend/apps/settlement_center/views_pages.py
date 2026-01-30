@@ -7,9 +7,10 @@ from django.utils import timezone
 from decimal import Decimal
 from datetime import timedelta, datetime
 
-from backend.apps.settlement_center.models import (
-    OutputValueStage, OutputValueMilestone, OutputValueEvent, OutputValueRecord
-)
+# 产值管理相关模型已迁移到output_value_management
+# from backend.apps.settlement_center.models import (
+#     OutputValueStage, OutputValueMilestone, OutputValueEvent, OutputValueRecord
+# )
 # PaymentRecord已迁移到payment_management
 from backend.apps.payment_management.models import PaymentRecord
 from backend.apps.settlement_management.models import (
@@ -17,7 +18,9 @@ from backend.apps.settlement_management.models import (
 )
 # from backend.apps.production_quality.models import Opinion  # 已删除生产质量模块
 from .forms import ProjectSettlementForm, ContractSettlementForm
-from .services import get_project_output_value_for_settlement, get_project_output_value_summary
+# 产值管理相关服务函数已迁移到output_value_management
+# 结算管理仍需要调用产值管理的服务函数
+from backend.apps.output_value_management.services import get_project_output_value_for_settlement
 from backend.apps.production_management.models import Project
 from backend.apps.system_management.models import User
 from backend.apps.system_management.services import get_user_permission_codes
@@ -29,65 +32,27 @@ from django.db.models import Max
 
 
 
-# ==================== 回款管理模块左侧菜单结构 =====================
+# ==================== 结算管理模块左侧菜单结构 =====================
 SETTLEMENT_MENU = [
     {
-        'id': 'settlement_home',
-        'label': '回款管理',
-        'icon': '💰',
-        'url_name': 'settlement_pages:settlement_home',
-        'permission': None,  # 首页不需要特殊权限
-        'children': [
-            {
-                'id': 'settlement_home',
-                'label': '首页',
-                'icon': '👥',
-                'url_name': 'settlement_pages:settlement_home',
-                'permission': None,
-            },
-        ]
-    },
-    {
-        'id': 'payment_plan',
-        'label': '回款计划',
-        'icon': '💳',
-        'url_name': 'settlement_pages:payment_plan_list',
-        'permission': 'payment_management.payment_plan.view',
-    },
-    {
-        'id': 'output_value',
-        'label': '产值管理',
-        'icon': '📊',
-        'permission': 'settlement_center.view_output_value',
-        'children': [
-            {
-                'id': 'output_value_template',
-                'label': '产值模板',
-                'icon': '📋',
-                'url_name': 'settlement_pages:output_value_template_manage',
-                'permission': 'settlement_center.manage_output',
-            },
-            {
-                'id': 'output_value_record',
-                'label': '产值记录',
-                'icon': '📝',
-                'url_name': 'settlement_pages:output_value_record_list',
-                'permission': 'settlement_center.view_output_value',
-            },
-            {
-                'id': 'output_value_statistics',
-                'label': '产值统计',
-                'icon': '📈',
-                'url_name': 'settlement_pages:output_value_statistics',
-                'permission': 'settlement_center.view_output_value',
-            },
-        ]
+        'id': 'settlement_management_home',
+        'label': '结算管理首页',
+        'icon': '🏠',
+        'url_name': 'settlement_pages:settlement_management_home',
+        'permission': 'settlement_center.view_settlement',
     },
     {
         'id': 'project_settlement',
         'label': '项目结算',
         'icon': '💰',
         'url_name': 'settlement_pages:project_settlement_list',
+        'permission': 'settlement_management.view_settlement',
+    },
+    {
+        'id': 'contract_settlement',
+        'label': '合同结算',
+        'icon': '📄',
+        'url_name': 'settlement_pages:contract_settlement_list',
         'permission': 'settlement_management.view_settlement',
     },
 ]
@@ -176,8 +141,8 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
             context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
             # 添加左侧菜单
             context['sidebar_nav'] = _build_settlement_sidebar_nav(permission_set, request.path)
-            context['sidebar_title'] = '结算中心'
-            context['sidebar_subtitle'] = 'Settlement Center'
+            context['sidebar_title'] = '结算管理'
+            context['sidebar_subtitle'] = 'Settlement Management'
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
@@ -205,489 +170,13 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
     return context
 
 
-@login_required
-def output_value_template_manage(request):
-    """产值模板管理页面"""
-    # 检查权限
-    from backend.apps.system_management.services import user_has_permission
-    has_permission = user_has_permission(request.user, 'settlement_center.manage_output') or user_has_permission(request.user, 'system_management.manage_settings')
-    if not has_permission:
-        raise PermissionDenied("您没有权限访问产值模板管理。")
-    
-    # 检查数据库表是否存在
-    try:
-        from django.db import connection
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
-                    AND table_name = 'settlement_output_value_stage'
-                );
-            """)
-            table_exists = cursor.fetchone()[0]
-        
-        if not table_exists:
-            from django.contrib import messages
-            messages.warning(request, '产值管理模块尚未初始化，请先运行数据库迁移：python manage.py migrate')
-            return render(request, "settlement_center/output_value_template.html", _context(
-                "产值模板管理",
-                "📊",
-                "产值管理模块尚未初始化，请先运行数据库迁移。",
-                summary_cards=[],
-                sections=[],
-                request=request,
-            ))
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('检查产值表失败: %s', str(e))
-        from django.contrib import messages
-        messages.error(request, f'检查数据库表失败：{str(e)}')
-        return render(request, "settlement_center/output_value_template.html", _context(
-            "产值模板管理",
-            "📊",
-            "无法访问数据库，请检查数据库配置。",
-            summary_cards=[],
-            sections=[],
-            request=request,
-        ))
-    
-    # 获取所有阶段及其里程碑和事件
-    try:
-        stages = OutputValueStage.objects.filter(is_active=True).prefetch_related(
-            'milestones__events'
-        ).order_by('order')
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('获取产值阶段失败: %s', str(e))
-        from django.contrib import messages
-        messages.error(request, f'获取产值阶段失败：{str(e)}')
-        return render(request, "settlement_center/output_value_template.html", _context(
-            "产值模板管理",
-            "📊",
-            "获取产值阶段失败，请检查数据库表是否正确创建。",
-            summary_cards=[],
-            sections=[],
-            request=request,
-        ))
-    
-    # 统计信息
-    total_stages = stages.count()
-    total_milestones = OutputValueMilestone.objects.filter(is_active=True).count()
-    total_events = OutputValueEvent.objects.filter(is_active=True).count()
-    
-    summary_cards = []
-    
-    # 构建阶段数据
-    stage_data = []
-    for stage in stages:
-        milestone_list = []
-        for milestone in stage.milestones.filter(is_active=True).order_by('order'):
-            event_list = []
-            for event in milestone.events.filter(is_active=True).order_by('order'):
-                event_list.append({
-                    "id": event.id,
-                    "name": event.name,
-                    "code": event.code,
-                    "percentage": float(event.event_percentage),
-                    "role": event.responsible_role_code,
-                    "trigger_condition": event.trigger_condition,
-                })
-            milestone_list.append({
-                "id": milestone.id,
-                "name": milestone.name,
-                "code": milestone.code,
-                "percentage": float(milestone.milestone_percentage),
-                "events": event_list,
-            })
-        stage_data.append({
-            "id": stage.id,
-            "name": stage.name,
-            "code": stage.code,
-            "stage_type": stage.get_stage_type_display(),
-            "percentage": float(stage.stage_percentage),
-            "base_amount_type": stage.get_base_amount_type_display(),
-            "milestones": milestone_list,
-        })
-    
-    sections = [
-        {
-            "title": "产值模板配置",
-            "description": "查看和管理产值计算模板的配置。",
-            "items": [
-                {
-                    "label": "阶段列表",
-                    "description": "查看所有产值阶段的配置",
-                    "url": "#stages",
-                    "icon": "📊",
-                    "data": stage_data,
-                },
-            ],
-        }
-    ]
-    
-    context = _context(
-        "产值模板管理",
-        "📊",
-        "配置和管理产值计算模板，包括阶段、里程碑和事件的设置。",
-        summary_cards=summary_cards,
-        sections=sections,
-        request=request,
-    )
-    context['stages'] = stage_data
-    
-    return render(request, "settlement_center/output_value_template.html", context)
-
-
-@login_required
-def output_value_record_list(request):
-    """产值计算记录列表"""
-    # 检查权限
-    from backend.apps.system_management.services import user_has_permission
-    has_view_permission = user_has_permission(request.user, 'settlement_center.view_analysis') or user_has_permission(request.user, 'settlement_center.manage_output')
-    if not has_view_permission:
-        raise PermissionDenied("您没有权限查看产值记录。")
-    
-    # 检查数据库表是否存在
-    try:
-        from django.db import connection
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
-                    AND table_name = 'settlement_output_value_record'
-                );
-            """)
-            table_exists = cursor.fetchone()[0]
-        
-        if not table_exists:
-            from django.contrib import messages
-            messages.warning(request, '产值管理模块尚未初始化，请先运行数据库迁移：python manage.py migrate')
-            return render(request, "settlement_center/output_value_record_list.html", _context(
-                "产值记录查询",
-                "📈",
-                "产值管理模块尚未初始化，请先运行数据库迁移。",
-                summary_cards=[],
-                request=request,
-            ))
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('检查产值表失败: %s', str(e))
-        from django.contrib import messages
-        messages.error(request, f'检查数据库表失败：{str(e)}')
-        return render(request, "settlement_center/output_value_record_list.html", _context(
-            "产值记录查询",
-            "📈",
-            "无法访问数据库，请检查数据库配置。",
-            summary_cards=[],
-            request=request,
-        ))
-    
-    # 获取当前用户的产值记录
-    try:
-        records = OutputValueRecord.objects.select_related(
-            'project', 'stage', 'milestone', 'event', 'responsible_user'
-        ).order_by('-calculated_time')
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('获取产值记录失败: %s', str(e))
-        from django.contrib import messages
-        messages.error(request, f'获取产值记录失败：{str(e)}')
-        return render(request, "settlement_center/output_value_record_list.html", _context(
-            "产值记录查询",
-            "📈",
-            "获取产值记录失败，请检查数据库表是否正确创建。",
-            summary_cards=[],
-            request=request,
-        ))
-    
-    # 如果是普通用户，只显示自己的记录
-    has_manage_permission = user_has_permission(request.user, 'settlement_center.manage_output')
-    if not has_manage_permission:
-        records = records.filter(responsible_user=request.user)
-    
-    # 筛选条件
-    project_id = request.GET.get('project_id')
-    if project_id:
-        records = records.filter(project_id=project_id)
-    
-    status = request.GET.get('status')
-    if status:
-        records = records.filter(status=status)
-    
-    # 分页（简单实现）
-    paginator = Paginator(records, 20)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
-    
-    # 统计信息
-    total_value = records.filter(status__in=['calculated', 'confirmed']).aggregate(
-        total=Sum('calculated_value')
-    )['total'] or Decimal('0')
-    
-    confirmed_value = records.filter(status='confirmed').aggregate(
-        total=Sum('calculated_value')
-    )['total'] or Decimal('0')
-    
-    summary_cards = []
-    
-    context = _context(
-        "产值记录查询",
-        "📈",
-        "查看和管理产值计算记录，了解产值分配情况。",
-        summary_cards=summary_cards,
-        request=request,
-    )
-    context['records'] = page_obj
-    context['projects'] = Project.objects.filter(status__in=['in_progress', 'completed']).order_by('-created_time')
-    
-    return render(request, "settlement_center/output_value_record_list.html", context)
-
-
-@login_required
-def project_output_value_detail(request, project_id):
-    """项目产值详情页（在产值管理模块中查看项目的产值统计）"""
-    project = get_object_or_404(Project, id=project_id)
-    permission_codes = get_user_permission_codes(request.user)
-    
-    # 检查权限
-    from backend.apps.system_management.services import user_has_permission
-    has_view_permission = user_has_permission(request.user, 'settlement_center.view_analysis') or user_has_permission(request.user, 'settlement_center.manage_output')
-    if not has_view_permission:
-        # 检查是否是项目成员
-        if not (project.project_manager == request.user or 
-                project.business_manager == request.user or
-                project.team_members.filter(user=request.user, is_active=True).exists()):
-            messages.error(request, '您没有权限查看此项目的产值信息')
-            return redirect('settlement_pages:output_value_record_list')
-    
-    # 获取项目产值统计
-    try:
-        output_value_summary = get_project_output_value_summary(project)
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('获取项目产值统计失败: %s', str(e))
-        messages.error(request, f'获取项目产值统计失败：{str(e)}')
-        return redirect('settlement_pages:output_value_record_list')
-    
-    # 检查权限
-    has_manage_permission = user_has_permission(request.user, 'settlement_center.manage_output')
-    
-    # 产值记录分页
-    paginator = Paginator(output_value_summary['records'], 20)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
-    
-    context = _context(
-        f"项目产值详情 - {project.project_number}",
-        "📊",
-        f"项目：{project.name}",
-        request=request,
-    )
-    context.update({
-        'project': project,
-        'output_value_summary': output_value_summary,
-        'records': page_obj,
-        'has_manage_permission': has_manage_permission,
-    })
-    
-    return render(request, "settlement_center/project_output_value_detail.html", context)
-
-
-@login_required
-def output_value_record_confirm(request, record_id):
-    """确认产值记录"""
-    record = get_object_or_404(OutputValueRecord, id=record_id)
-    
-    # 检查权限：只有责任人或有管理权限的用户可以确认
-    from backend.apps.system_management.services import user_has_permission
-    has_manage_permission = user_has_permission(request.user, 'settlement_center.manage_output')
-    if record.responsible_user != request.user and not has_manage_permission:
-        raise PermissionDenied("您没有权限确认此产值记录。")
-    
-    if request.method == 'POST':
-        record.status = 'confirmed'
-        record.confirmed_time = timezone.now()
-        record.confirmed_by = request.user
-        record.save(update_fields=['status', 'confirmed_time', 'confirmed_by', 'updated_time'])
-        messages.success(request, '产值记录已确认。')
-        return redirect('settlement_pages:output_value_record_list')
-    
-    context = _context(
-        '确认产值记录',
-        '✅',
-        f'确认产值记录：{record.record_number}',
-        request=request,
-    )
-    context['record'] = record
-    return render(request, "settlement_center/output_value_record_confirm.html", context)
-
-
-@login_required
-def output_value_statistics(request):
-    """产值统计报表"""
-    # 检查权限
-    from backend.apps.system_management.services import user_has_permission
-    has_view_permission = user_has_permission(request.user, 'settlement_center.view_analysis') or user_has_permission(request.user, 'settlement_center.manage_output')
-    if not has_view_permission:
-        raise PermissionDenied("您没有权限查看产值统计。")
-    
-    # 检查数据库表是否存在
-    try:
-        from django.db import connection
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
-                    AND table_name = 'settlement_output_value_record'
-                );
-            """)
-            table_exists = cursor.fetchone()[0]
-        
-        if not table_exists:
-            from django.contrib import messages
-            messages.warning(request, '产值管理模块尚未初始化，请先运行数据库迁移：python manage.py migrate')
-            return render(request, "settlement_center/output_value_statistics.html", _context(
-                "产值统计报表",
-                "📊",
-                "产值管理模块尚未初始化，请先运行数据库迁移。",
-                summary_cards=[],
-                request=request,
-            ))
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('检查产值表失败: %s', str(e))
-        from django.contrib import messages
-        messages.error(request, f'检查数据库表失败：{str(e)}')
-        return render(request, "settlement_center/output_value_statistics.html", _context(
-            "产值统计报表",
-            "📊",
-            "无法访问数据库，请检查数据库配置。",
-            summary_cards=[],
-            request=request,
-        ))
-    
-    # 获取筛选参数
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
-    user_id = request.GET.get('user_id')
-    project_id = request.GET.get('project_id')
-    stage_id = request.GET.get('stage_id')
-    
-    # 构建查询
-    try:
-        records = OutputValueRecord.objects.select_related(
-            'project', 'stage', 'milestone', 'event', 'responsible_user'
-        ).filter(status__in=['calculated', 'confirmed'])
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception('获取产值记录失败: %s', str(e))
-        from django.contrib import messages
-        messages.error(request, f'获取产值记录失败：{str(e)}')
-        return render(request, "settlement_center/output_value_statistics.html", _context(
-            "产值统计报表",
-            "📊",
-            "获取产值记录失败，请检查数据库表是否正确创建。",
-            summary_cards=[],
-            request=request,
-        ))
-    
-    if date_from:
-        records = records.filter(calculated_time__gte=date_from)
-    if date_to:
-        records = records.filter(calculated_time__lte=date_to)
-    if user_id:
-        records = records.filter(responsible_user_id=user_id)
-    if project_id:
-        records = records.filter(project_id=project_id)
-    if stage_id:
-        records = records.filter(stage_id=stage_id)
-    
-    # 如果是普通用户，只显示自己的记录
-    has_manage_permission = user_has_permission(request.user, 'settlement_center.manage_output')
-    if not has_manage_permission:
-        records = records.filter(responsible_user=request.user)
-    
-    # 按用户统计
-    user_stats = records.values(
-        'responsible_user__username',
-        'responsible_user__first_name',
-        'responsible_user__last_name'
-    ).annotate(
-        total_value=Sum('calculated_value'),
-        record_count=Count('id')
-    ).order_by('-total_value')
-    
-    # 为每个用户统计添加平均值
-    user_stats_list = []
-    for stat in user_stats:
-        avg_value = float(stat['total_value'] or 0) / stat['record_count'] if stat['record_count'] > 0 else 0
-        stat_dict = dict(stat)
-        stat_dict['avg_value'] = Decimal(str(avg_value))
-        user_stats_list.append(stat_dict)
-    user_stats = user_stats_list
-    
-    # 按阶段统计
-    stage_stats = records.values('stage__name', 'stage__code').annotate(
-        total_value=Sum('calculated_value'),
-        record_count=Count('id')
-    ).order_by('-total_value')
-    
-    # 按项目统计
-    project_stats = records.values(
-        'project__project_number',
-        'project__name'
-    ).annotate(
-        total_value=Sum('calculated_value'),
-        record_count=Count('id')
-    ).order_by('-total_value')[:20]
-    
-    # 时间趋势统计（按月）
-    from django.db.models.functions import TruncMonth
-    monthly_stats = records.annotate(
-        year_month=TruncMonth('calculated_time')
-    ).values('year_month').annotate(
-        total_value=Sum('calculated_value'),
-        record_count=Count('id')
-    ).order_by('year_month')
-    
-    # 总统计
-    total_stats = records.aggregate(
-        total_value=Sum('calculated_value'),
-        confirmed_value=Sum('calculated_value', filter=Q(status='confirmed')),
-        record_count=Count('id')
-    )
-    
-    summary_cards = []
-    
-    context = _context(
-        "产值统计报表",
-        "📊",
-        "查看产值分配统计和分析报表。",
-        summary_cards=summary_cards,
-        request=request,
-    )
-    context.update({
-        'user_stats': user_stats,
-        'stage_stats': stage_stats,
-        'project_stats': project_stats,
-        'monthly_stats': monthly_stats,
-        'total_stats': total_stats,
-        'users': User.objects.filter(is_active=True).order_by('username') if has_manage_permission else [request.user],
-        'projects': Project.objects.filter(status__in=['in_progress', 'completed']).order_by('-created_time'),
-        'stages': OutputValueStage.objects.filter(is_active=True).order_by('order'),
-    })
-    
-    return render(request, "settlement_center/output_value_statistics.html", context)
+# 产值管理相关视图函数已迁移到output_value_management
+# 以下函数已删除：
+# - output_value_template_manage
+# - output_value_record_list
+# - project_output_value_detail
+# - output_value_record_confirm
+# - output_value_statistics
 
 
 # ==================== 结算管理辅助函数 ====================
@@ -710,7 +199,7 @@ def project_settlement_list(request):
     permission_codes = get_user_permission_codes(request.user)
     if not _permission_granted('settlement_center.settlement.view', permission_codes):
         messages.error(request, '您没有权限查看项目结算')
-        return redirect('settlement_pages:output_value_record_list')
+        return redirect('settlement_pages:settlement_management_home')
     
     settlements = ProjectSettlement.objects.select_related(
         'project', 'contract', 'created_by'
@@ -1634,4 +1123,191 @@ def settlement_home(request):
     # 合并所有数据
     page_context.update(context)
     
+    return render(request, "settlement_management/settlement_management_home.html", page_context)
+
+
+@login_required
+def settlement_management_home(request):
+    """结算管理首页 - 数据展示中心（只包含结算相关功能）"""
+    permission_set = get_user_permission_codes(request.user)
+    if not _permission_granted('settlement_center.view_settlement', permission_set):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("无权限访问结算管理")
+
+    now = timezone.now()
+    today = now.date()
+    this_month_start = today.replace(day=1)
+
+    context = {}
+
+    try:
+        # ========== 核心指标卡片 ==========
+        core_cards = []
+
+        # 项目结算统计
+        all_settlements = ProjectSettlement.objects.select_related('project', 'contract', 'created_by').all()
+        total_settlements = all_settlements.count()
+        draft_settlements = all_settlements.filter(status='draft').count()
+        pending_settlements = all_settlements.filter(
+            status__in=['submitted', 'client_review', 'client_feedback', 'reconciliation']
+        ).count()
+        confirmed_settlements = all_settlements.filter(status='confirmed').count()
+        this_month_settlements = all_settlements.filter(created_time__gte=this_month_start).count()
+
+        total_settlement_amount = all_settlements.filter(status__in=['confirmed', 'reconciliation']).aggregate(
+            total=Sum('total_settlement_amount')
+        )['total'] or Decimal('0')
+
+        # 卡片1：项目结算总数
+        try:
+            settlement_url = reverse('settlement_pages:project_settlement_list')
+        except NoReverseMatch:
+            settlement_url = '#'
+        core_cards.append({
+            'label': '项目结算',
+            'icon': '🧾',
+            'value': str(total_settlements),
+            'subvalue': f'草稿 {draft_settlements} | 待处理 {pending_settlements} | 已确认 {confirmed_settlements}',
+            'url': settlement_url,
+            'variant': 'dark' if pending_settlements > 0 else 'secondary'
+        })
+
+        # 卡片2：结算总金额
+        core_cards.append({
+            'label': '结算总金额',
+            'icon': '💰',
+            'value': f'¥{total_settlement_amount:,.2f}',
+            'subvalue': f'已确认结算金额',
+            'url': settlement_url,
+            'variant': 'secondary'
+        })
+
+        # 卡片3：待处理结算
+        core_cards.append({
+            'label': '待处理结算',
+            'icon': '⏳',
+            'value': str(pending_settlements),
+            'subvalue': f'需要处理',
+            'url': settlement_url + '?status=submitted',
+            'variant': 'dark' if pending_settlements > 0 else 'secondary'
+        })
+
+        # 卡片4：本月新增
+        core_cards.append({
+            'label': '本月新增',
+            'icon': '📈',
+            'value': str(this_month_settlements),
+            'subvalue': f'新结算单 {this_month_settlements} 个',
+            'url': settlement_url,
+            'variant': 'secondary'
+        })
+
+        context['core_cards'] = core_cards
+
+        # ========== 待办事项 ==========
+        todo_items = []
+
+        # 待处理项目结算
+        pending_settlement_list = all_settlements.filter(
+            status__in=['submitted', 'client_review', 'client_feedback']
+        ).select_related('created_by', 'project')[:5]
+        for settlement in pending_settlement_list:
+            creator_name = _format_user_display(settlement.created_by) if settlement.created_by else '未知'
+            project_name = settlement.project.project_number if settlement.project else '未知'
+            todo_items.append({
+                'type': 'settlement',
+                'title': f'{project_name} - {settlement.settlement_number}',
+                'settlement_number': settlement.settlement_number,
+                'responsible': creator_name,
+                'url': reverse('settlement_pages:project_settlement_detail', args=[settlement.id])
+            })
+
+        context['todo_items'] = todo_items[:10]
+        context['pending_settlement_count'] = pending_settlements
+        context['todo_summary_url'] = settlement_url + '?status=submitted'
+
+        # ========== 我的工作 ==========
+        my_work = {}
+
+        # 我创建的项目结算
+        my_settlements = all_settlements.filter(created_by=request.user).order_by('-created_time')[:3]
+        my_work['my_settlements'] = [{
+            'title': f'{settlement.project.project_number if settlement.project else "未知"} - {settlement.settlement_number}',
+            'status': settlement.get_status_display(),
+            'value': f'¥{settlement.total_settlement_amount:,.2f}',
+            'url': reverse('settlement_pages:project_settlement_detail', args=[settlement.id])
+        } for settlement in my_settlements]
+        my_work['my_settlements_count'] = all_settlements.filter(created_by=request.user).count()
+        my_work['my_total_settlement'] = all_settlements.filter(created_by=request.user).aggregate(
+            total=Sum('total_settlement_amount')
+        )['total'] or Decimal('0')
+
+        my_work['summary_url'] = settlement_url + f'?created_by={request.user.id}'
+
+        context['my_work'] = my_work
+
+        # ========== 最近活动 ==========
+        recent_activities = {}
+
+        # 最近创建的项目结算
+        recent_settlements = all_settlements.select_related('created_by', 'project').order_by('-created_time')[:5]
+        recent_activities['recent_settlements'] = [{
+            'title': f'{settlement.project.project_number if settlement.project else "未知"} - {settlement.settlement_number}',
+            'creator': settlement.created_by.get_full_name() or settlement.created_by.username if settlement.created_by else '系统',
+            'value': f'¥{settlement.total_settlement_amount:,.2f}',
+            'time': settlement.created_time,
+            'url': reverse('settlement_pages:project_settlement_detail', args=[settlement.id])
+        } for settlement in recent_settlements]
+
+        # 最近确认的项目结算
+        recent_confirmed = all_settlements.filter(status='confirmed').select_related('confirmed_by', 'project').order_by('-confirmed_time')[:5]
+        recent_activities['recent_confirmed'] = [{
+            'title': f'{settlement.project.project_number if settlement.project else "未知"} - {settlement.settlement_number}',
+            'confirmer': settlement.confirmed_by.get_full_name() or settlement.confirmed_by.username if settlement.confirmed_by else '系统',
+            'value': f'¥{settlement.total_settlement_amount:,.2f}',
+            'time': settlement.confirmed_time,
+            'url': reverse('settlement_pages:project_settlement_detail', args=[settlement.id])
+        } for settlement in recent_confirmed]
+
+        context['recent_activities'] = recent_activities
+
+    except Exception as e:
+        logger.exception('获取结算管理统计数据失败: %s', str(e))
+        context.setdefault('core_cards', [])
+        context.setdefault('todo_items', [])
+        context.setdefault('my_work', {})
+        context.setdefault('recent_activities', {})
+
+    # 顶部操作栏
+    top_actions = []
+    if _permission_granted('settlement_management.view_settlement', permission_set):
+        try:
+            top_actions.append({
+                'label': '创建项目结算',
+                'url': reverse('settlement_pages:project_settlement_create'),
+                'icon': '➕'
+            })
+        except Exception:
+            pass
+
+    context['top_actions'] = top_actions
+
+    # 构建上下文
+    page_context = _context(
+        "结算管理",
+        "💼",
+        "数据展示中心 - 集中展示结算关键指标、状态与统计",
+        request=request,
+    )
+
+    # 设置侧边栏导航
+    settlement_sidebar_nav = _build_settlement_sidebar_nav(permission_set, request.path, active_id='settlement_management_home')
+    page_context['sidebar_nav'] = settlement_sidebar_nav
+    page_context['module_sidebar_nav'] = settlement_sidebar_nav
+    page_context['sidebar_title'] = '结算管理'
+    page_context['sidebar_subtitle'] = 'Settlement Management'
+
+    # 合并所有数据
+    page_context.update(context)
+
     return render(request, "settlement_management/settlement_management_home.html", page_context)

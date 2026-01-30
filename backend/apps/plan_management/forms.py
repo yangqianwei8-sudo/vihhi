@@ -5,6 +5,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db.models import Sum
+from django.db.utils import ProgrammingError, OperationalError
 from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
 from .models import (
@@ -1002,36 +1003,50 @@ class PlanForm(forms.ModelForm):
         
         # 设置关联项目字段：从商机中获取项目信息
         # 获取所有有项目名称的商机，提取项目信息作为选项
-        opportunities_with_projects = BusinessOpportunity.objects.filter(
-            project_name__isnull=False
-        ).exclude(project_name='').select_related('client').order_by('-created_time')
-        
-        # 创建项目选项列表（从商机中提取）
         project_choices = [('', '-------')]  # 空选项
         seen_projects = set()  # 用于去重
         
-        for opp in opportunities_with_projects:
-            project_name = opp.project_name.strip() if opp.project_name else ''
-            if project_name and project_name not in seen_projects:
-                # 显示格式：项目名称（商机：商机名称）
-                display_text = project_name
-                if opp.name:
-                    display_text += f"（商机：{opp.name}）"
-                project_choices.append((project_name, display_text))
-                seen_projects.add(project_name)
-        
-        # 如果没有找到有项目名称的商机，尝试显示所有商机（使用商机名称作为项目名称）
-        if len(project_choices) == 1:  # 只有空选项
-            all_opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client').order_by('-created_time')[:50]
-            for opp in all_opportunities:
-                # 如果没有项目名称，使用商机名称作为项目名称
-                project_name = opp.project_name.strip() if opp.project_name else opp.name
+        try:
+            # 尝试查询商机数据，如果表不存在会抛出 ProgrammingError
+            opportunities_with_projects = BusinessOpportunity.objects.filter(
+                project_name__isnull=False
+            ).exclude(project_name='').select_related('client').order_by('-created_time')
+            
+            # 评估查询集（这里会触发数据库查询）
+            for opp in opportunities_with_projects:
+                project_name = opp.project_name.strip() if opp.project_name else ''
                 if project_name and project_name not in seen_projects:
+                    # 显示格式：项目名称（商机：商机名称）
                     display_text = project_name
-                    if opp.name and opp.name != project_name:
+                    if opp.name:
                         display_text += f"（商机：{opp.name}）"
                     project_choices.append((project_name, display_text))
                     seen_projects.add(project_name)
+            
+            # 如果没有找到有项目名称的商机，尝试显示所有商机（使用商机名称作为项目名称）
+            if len(project_choices) == 1:  # 只有空选项
+                all_opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client').order_by('-created_time')[:50]
+                # 评估查询集（这里会触发数据库查询）
+                for opp in all_opportunities:
+                    # 如果没有项目名称，使用商机名称作为项目名称
+                    project_name = opp.project_name.strip() if opp.project_name else opp.name
+                    if project_name and project_name not in seen_projects:
+                        display_text = project_name
+                        if opp.name and opp.name != project_name:
+                            display_text += f"（商机：{opp.name}）"
+                        project_choices.append((project_name, display_text))
+                        seen_projects.add(project_name)
+        except (ProgrammingError, OperationalError) as e:
+            # 如果查询出错（例如表不存在），使用空选项列表
+            # 这样表单仍然可以正常工作，只是没有商机相关的项目选项
+            project_choices = [('', '-------')]
+        except Exception as e:
+            # 捕获其他可能的异常，也使用空选项列表
+            # 记录错误但不影响表单显示
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to load business opportunities for plan form: {e}")
+            project_choices = [('', '-------')]
         
         # 将 related_project 改为 ChoiceField，使用商机中的项目数据
         # 先保存编辑时的初始值（如果存在）
