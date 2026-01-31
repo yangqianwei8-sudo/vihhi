@@ -16,10 +16,11 @@ Django Admin 菜单映射配置
 MENU_URL_MAPPING = {
     '首页': '/admin/',
     '客户管理': '/admin/customer_management/',
-    '合同管理': '/admin/production_management/businesscontract/',
-    '商机管理': '/admin/customer_success/',
-    '生产管理': '/admin/production_management/',
-    '结算管理': '/admin/settlement_center/',
+    '合同管理': '/admin/contract_management/businesscontract/',
+    '商机管理': '/opportunities/',
+    '基础数据': '/admin/base_data/',
+    '生产管理': '/production/',
+    '结算管理': '/admin/settlement_management/',
     '收文管理': '/admin/delivery_customer/incomingdocument/',
     '发文管理': '/admin/delivery_customer/outgoingdocument/',
     '档案管理': '/admin/archive_management/',
@@ -28,7 +29,7 @@ MENU_URL_MAPPING = {
     '行政管理': '/admin/administrative_management/',
     '计划管理': '/admin/plan_management/',
     '诉讼管理': '/admin/litigation_management/',
-    '风险管理': '/admin/risk_management/',
+    '风险管理': '/risk-management/',
     '资源管理': '/admin/resource_standard/',
     '报表管理': '/admin/report_management/',
     '系统设置': '/admin/system_management/',
@@ -108,25 +109,35 @@ MENU_MAPPING = {
     'plan_management': {
         '*': '计划管理',
     },
+    'contract_management': {
+        'BusinessContract': '合同管理',
+        'BusinessPaymentPlan': '合同管理',
+        'ContractParty': '合同管理',
+        'ResultFileType': '合同管理',
+        'ComprehensiveAdjustmentCoefficient': '合同管理 > 综合调整系数',
+        '*': '合同管理',
+    },
+    'opportunity_management': {
+        'BusinessOpportunity': '商机管理',
+        'OpportunityFollowUp': '商机管理',
+        'QuotationRule': '商机管理',
+        'OpportunityQuotation': '商机管理',
+        'OpportunityApproval': '商机管理',
+        'OpportunityStatusLog': '商机管理',
+        'BusinessNegotiation': '商机管理',
+        'OpportunityFiling': '商机管理',
+        'BiddingQuotation': '商机管理',
+        'CustomerRequirementCommunication': '商机管理',
+        '*': '商机管理',
+    },
+    'base_data': {
+        '*': '基础数据',  # 共享基础数据（服务类型、图纸阶段等）
+    },
     'production_management': {
-        'BusinessContract': '合同管理',  # 商务合同
-        'BusinessPaymentPlan': '合同管理',  # 回款计划
-        'ComprehensiveAdjustmentCoefficient': '合同管理 > 综合调整系数',  # 综合调整系数
-        'ServiceType': '合同管理',  # 服务类型
-        'ServiceProfession': '合同管理',  # 服务专业
-        'BusinessType': '合同管理',  # 项目业态
-        'StructureType': '合同管理',  # 结构形式
-        'DesignUnitCategory': '合同管理',  # 设计单位分类
         '*': '生产管理',
     },
-    'settlement_center': {
+    'settlement_management': {
         'SettlementMethod': '结算管理 > 结算方式',
-        # 注释掉：只保留结算方式二级菜单
-        # 'ServiceFeeSettlementScheme': '结算管理 > 结算方式',
-        # 'ServiceFeeSegmentedRate': '结算管理 > 结算方式',
-        # 'ServiceFeeJumpPointRate': '结算管理 > 结算方式',
-        # 'ServiceFeeUnitCapDetail': '结算管理 > 结算方式',
-        # '*': '结算管理',  # 注释掉：只保留结算方式二级菜单
     },
     'system_management': {
         '*': '系统设置',
@@ -231,10 +242,10 @@ def get_menu_path_for_model(app_label, model_name):
     Returns:
         str: 菜单路径，格式如 "行政管理 > 办公用品管理"，如果未找到匹配则返回 None
     """
-    # 对于 plan_management 和 settlement_center，直接返回 None（不显示）
+    # 对于 plan_management 和 settlement_management，直接返回 None（不显示）
     # 这些模块有自己的前端页面，不应该在 admin 首页显示
-    # 但模型仍然可以在 /admin/plan_management/ 或 /admin/settlement_center/ 页面访问（用于数据维护）
-    if app_label in ['plan_management', 'settlement_center']:
+    # 但模型仍然可以在 /admin/plan_management/ 或 /admin/settlement_management/ 页面访问（用于数据维护）
+    if app_label in ['plan_management', 'settlement_management']:
         return None
     
     app_mapping = MENU_MAPPING.get(app_label, {})

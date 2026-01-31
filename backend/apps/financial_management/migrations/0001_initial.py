@@ -128,7 +128,7 @@ class Migration(migrations.Migration):
                 ('summary', models.CharField(max_length=200, verbose_name='摘要')),
                 ('created_time', models.DateTimeField(default=django.utils.timezone.now, verbose_name='创建时间')),
                 ('created_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_fund_flows', to=settings.AUTH_USER_MODEL, verbose_name='创建人')),
-                ('project', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='fund_flows', to='project_center.project', verbose_name='关联项目')),
+                ('project', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='fund_flows', to='production_management.project', verbose_name='关联项目')),
                 ('voucher', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='fund_flows', to='financial_management.voucher', verbose_name='关联凭证')),
             ],
             options={

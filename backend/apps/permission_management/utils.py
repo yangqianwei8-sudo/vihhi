@@ -22,9 +22,13 @@ CUSTOMER_PERMISSION_MAPPING = {
     # 合同管理（向后兼容，customer_success.manage 也可以访问合同管理）
     'customer_success.contract.view': 'customer_management.contract.view',
     'customer_success.contract.manage': 'customer_management.contract.manage',
-    # 商机管理（向后兼容）
-    'customer_success.opportunity.view': 'customer_management.opportunity.view',
-    'customer_success.opportunity.manage': 'customer_management.opportunity.manage',
+    # 商机管理（向后兼容，统一到 opportunity_management 命名空间）
+    'customer_success.opportunity.view': 'opportunity_management.opportunity.view',
+    'customer_success.opportunity.manage': 'opportunity_management.opportunity.manage',
+    'customer_management.opportunity.view': 'opportunity_management.opportunity.view',
+    'customer_management.opportunity.manage': 'opportunity_management.opportunity.manage',
+    'customer_management.opportunity.view_all': 'opportunity_management.opportunity.view_all',
+    'customer_management.opportunity.create': 'opportunity_management.opportunity.create',
     # 合同管理权限代码统一映射（contract_management -> customer_management）
     'contract_management.contract.view': 'customer_management.contract.view',
     'contract_management.contract.create': 'customer_management.contract.create',
@@ -34,6 +38,11 @@ CUSTOMER_PERMISSION_MAPPING = {
     'contract_management.contract.sign': 'customer_management.contract.manage',
     'contract_management.contract.change': 'customer_management.contract.manage',
     'contract_management.contract.file.manage': 'customer_management.contract.manage',
+    # 合同管理内委托书/洽谈等沿用客户权限，统一用 contract_management.client.* 入口
+    'contract_management.client.view': 'customer_management.client.view',
+    'contract_management.client.create': 'customer_management.client.create',
+    'contract_management.client.edit': 'customer_management.client.edit',
+    'contract_management.client.delete': 'customer_management.client.delete',
 }
 
 

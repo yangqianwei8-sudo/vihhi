@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('customer_management', '0057_remove_biddingquotation_created_by_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('production_management', '0041_remove_preoptimizationmaterial_project_and_more'),
+        ('base_data', '0001_initial'),
     ]
 
     operations = [
@@ -52,8 +52,8 @@ class Migration(migrations.Migration):
                 ('business_manager', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='managed_opportunities', to=settings.AUTH_USER_MODEL, verbose_name='负责商务')),
                 ('client', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='opportunities', to='customer_management.client', verbose_name='关联客户')),
                 ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='created_opportunities', to=settings.AUTH_USER_MODEL, verbose_name='创建人')),
-                ('drawing_stage', models.ForeignKey(blank=True, db_column='drawing_stage', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='opportunities', to='production_management.designstage', verbose_name='图纸阶段')),
-                ('service_type', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='opportunities', to='production_management.servicetype', verbose_name='服务类型')),
+                ('drawing_stage', models.ForeignKey(blank=True, db_column='drawing_stage', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='opportunities', to='base_data.designstage', verbose_name='图纸阶段')),
+                ('service_type', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='opportunities', to='base_data.servicetype', verbose_name='服务类型')),
             ],
             options={
                 'verbose_name': '商机',

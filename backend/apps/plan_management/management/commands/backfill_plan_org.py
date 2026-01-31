@@ -2,75 +2,46 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
-from backend.apps.org.models import Company, Department
-from backend.apps.plan_management.models import Plan, StrategicGoal
+from backend.apps.system_management.models import OurCompany, Department
+from backend.apps.plan_management.models import Plan
 
 
 User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Backfill company/org_department for Plan and StrategicGoal."
+    help = "Backfill company/org_department for Plan（使用 system_management.OurCompany 与 Department）"
 
     def add_arguments(self, parser):
-        parser.add_argument("--company-code", default="VIHHI", help="Default company code")
-        parser.add_argument("--department-name", default="总部", help="Default department name")
+        parser.add_argument("--company-name", default="维海科技", help="Default company name")
+        parser.add_argument("--department-code", default="HQ", help="Default department code")
         parser.add_argument("--dry-run", action="store_true", help="Dry run without saving")
 
     @transaction.atomic
     def handle(self, *args, **options):
-        company_code = options["company_code"]
-        department_name = options["department_name"]
+        company_name = options["company_name"]
+        department_code = options["department_code"]
         dry_run = options["dry_run"]
 
-        company, _ = Company.objects.get_or_create(
-            code=company_code, defaults={"name": "维海科技", "is_active": True}
+        company, _ = OurCompany.objects.get_or_create(
+            company_name=company_name, defaults={"is_active": True}
         )
         department, _ = Department.objects.get_or_create(
-            company=company, name=department_name, defaults={"is_active": True}
+            code=department_code, defaults={"name": company_name + "总部", "is_active": True}
         )
 
         def pick_org_from_user(user):
             """
-            Prefer user.profile.company/department if exists.
-            Fallback to default company/department.
+            优先使用 user.department；若无则使用默认 department。
+            公司使用默认 OurCompany（system_management 无 user.company 概念）。
             """
             try:
-                profile = getattr(user, "profile", None)
-                if profile and profile.company_id:
-                    c = profile.company
-                    d = profile.department if getattr(profile, "department_id", None) else None
-                    return c, (d or department)
+                user_dept = getattr(user, "department", None)
+                if user_dept:
+                    return company, user_dept
             except Exception:
                 pass
             return company, department
-
-        # ---------- Backfill StrategicGoal ----------
-        goals = StrategicGoal.objects.all()
-        updated_goals = 0
-        for g in goals.iterator():
-            if g.company_id and g.org_department_id:
-                continue
-
-            c, d = None, None
-            # try owner/responsible/created_by fields (use whichever your model has)
-            for attr in ("created_by", "creator", "owner", "responsible_person", "responsible_user"):
-                u = getattr(g, attr, None)
-                if u:
-                    c, d = pick_org_from_user(u)
-                    break
-
-            if not c:
-                c, d = company, department
-
-            if not g.company_id:
-                g.company = c
-            if not g.org_department_id:
-                g.org_department = d
-
-            updated_goals += 1
-            if not dry_run:
-                g.save(update_fields=["company", "org_department"])
 
         # ---------- Backfill Plan ----------
         plans = Plan.objects.all()
@@ -87,13 +58,13 @@ class Command(BaseCommand):
                     c, d = pick_org_from_user(u)
                     break
 
-            # if still empty, try related_goal
+            # if still empty, try related_goal（仅当 StrategicGoal 有 company 时）
             if not c and getattr(p, "related_goal_id", None):
                 try:
                     rg = p.related_goal
-                    if rg and rg.company_id:
+                    if rg and hasattr(rg, "company_id") and rg.company_id:
                         c = rg.company
-                        d = rg.org_department if rg.org_department_id else department
+                        d = rg.org_department if (hasattr(rg, "org_department_id") and rg.org_department_id) else department
                 except Exception:
                     pass
 
@@ -111,8 +82,8 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Done backfill. company={company.code} dept={department.name} "
-                f"updated_goals={updated_goals} updated_plans={updated_plans} dry_run={dry_run}"
+                f"Done backfill. company={company.company_name} dept={department.name} "
+                f"updated_plans={updated_plans} dry_run={dry_run}"
             )
         )
 

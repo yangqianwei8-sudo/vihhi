@@ -2,75 +2,8 @@ from django.db import models
 from django.utils import timezone
 from backend.apps.system_management.models import User
 
-
-class ServiceType(models.Model):
-    """服务类型"""
-    code = models.CharField(max_length=50, unique=True, verbose_name='服务类型编码')
-    name = models.CharField(max_length=100, verbose_name='服务类型名称')
-    order = models.PositiveIntegerField(default=0, verbose_name='排序')
-
-    class Meta:
-        db_table = 'production_management_service_type'
-        verbose_name = '服务类型'
-        verbose_name_plural = verbose_name
-        ordering = ['order', 'id']
-
-    def __str__(self):
-        return self.name
-
-
-class ServiceProfession(models.Model):
-    """服务专业"""
-    service_type = models.ForeignKey(ServiceType, on_delete=models.CASCADE, related_name='professions', verbose_name='所属服务类型')
-    code = models.CharField(max_length=50, verbose_name='服务专业编码')
-    name = models.CharField(max_length=100, verbose_name='服务专业名称')
-    order = models.PositiveIntegerField(default=0, verbose_name='排序')
-
-    class Meta:
-        db_table = 'production_management_service_profession'
-        verbose_name = '服务专业'
-        verbose_name_plural = verbose_name
-        ordering = ['service_type__order', 'order', 'id']
-        unique_together = ('service_type', 'code')
-
-    def __str__(self):
-        return f"{self.service_type.name} - {self.name}"
-
-
-class BusinessType(models.Model):
-    """项目业态"""
-    code = models.CharField(max_length=50, unique=True, verbose_name='业态编码')
-    name = models.CharField(max_length=100, verbose_name='业态名称')
-    order = models.PositiveIntegerField(default=0, verbose_name='排序')
-    is_active = models.BooleanField(default=True, verbose_name='是否启用')
-    description = models.TextField(blank=True, verbose_name='业态描述')
-
-    class Meta:
-        db_table = 'production_management_business_type'
-        verbose_name = '项目业态'
-        verbose_name_plural = verbose_name
-        ordering = ['order', 'id']
-
-    def __str__(self):
-        return self.name
-
-
-class DesignStage(models.Model):
-    """图纸阶段"""
-    code = models.CharField(max_length=50, unique=True, verbose_name='阶段编码')
-    name = models.CharField(max_length=100, verbose_name='阶段名称')
-    order = models.PositiveIntegerField(default=0, verbose_name='排序')
-    is_active = models.BooleanField(default=True, verbose_name='是否启用')
-    description = models.TextField(blank=True, verbose_name='阶段描述')
-
-    class Meta:
-        db_table = 'production_management_design_stage'
-        verbose_name = '图纸阶段'
-        verbose_name_plural = verbose_name
-        ordering = ['order', 'id']
-
-    def __str__(self):
-        return self.name
+# 共享基础数据（ServiceType, DesignStage 等）已迁移至 base_data 应用
+# 各模块通过 from backend.apps.base_data.models import ... 进行数据交互
 
 
 class SettlementNodeType(models.Model):
@@ -102,42 +35,6 @@ class AfterSalesNodeType(models.Model):
     class Meta:
         db_table = 'production_management_after_sales_node_type'
         verbose_name = '售后节点类型'
-        verbose_name_plural = verbose_name
-        ordering = ['order', 'id']
-
-    def __str__(self):
-        return self.name
-
-
-class StructureType(models.Model):
-    """结构形式"""
-    code = models.CharField(max_length=50, unique=True, verbose_name='结构形式编码')
-    name = models.CharField(max_length=100, verbose_name='结构形式名称')
-    order = models.PositiveIntegerField(default=0, verbose_name='排序')
-    is_active = models.BooleanField(default=True, verbose_name='是否启用')
-    description = models.TextField(blank=True, verbose_name='结构形式描述')
-
-    class Meta:
-        db_table = 'production_management_structure_type'
-        verbose_name = '结构形式'
-        verbose_name_plural = verbose_name
-        ordering = ['order', 'id']
-
-    def __str__(self):
-        return self.name
-
-
-class DesignUnitCategory(models.Model):
-    """设计单位分类"""
-    code = models.CharField(max_length=50, unique=True, verbose_name='分类编码')
-    name = models.CharField(max_length=100, verbose_name='分类名称')
-    order = models.PositiveIntegerField(default=0, verbose_name='排序')
-    is_active = models.BooleanField(default=True, verbose_name='是否启用')
-    description = models.TextField(blank=True, verbose_name='分类描述')
-
-    class Meta:
-        db_table = 'production_management_design_unit_category'
-        verbose_name = '设计单位分类'
         verbose_name_plural = verbose_name
         ordering = ['order', 'id']
 
@@ -228,11 +125,11 @@ class Project(models.Model):
     alias = models.CharField(max_length=200, blank=True, verbose_name='项目别名')
     description = models.TextField(blank=True, verbose_name='项目描述')
     
-    # 服务信息
-    service_type = models.ForeignKey(ServiceType, on_delete=models.SET_NULL, null=True, blank=True, related_name='projects', verbose_name='服务类型')
-    business_type = models.ForeignKey('BusinessType', on_delete=models.SET_NULL, null=True, blank=True, related_name='projects', verbose_name='项目业态', db_column='business_type')
-    design_stage = models.ForeignKey('DesignStage', on_delete=models.SET_NULL, null=True, blank=True, related_name='projects', verbose_name='图纸阶段', db_column='design_stage')
-    service_professions = models.ManyToManyField('ServiceProfession', blank=True, related_name='projects', verbose_name='服务专业')
+    # 服务信息（引用 base_data 共享基础数据）
+    service_type = models.ForeignKey('base_data.ServiceType', on_delete=models.SET_NULL, null=True, blank=True, related_name='projects', verbose_name='服务类型')
+    business_type = models.ForeignKey('base_data.BusinessType', on_delete=models.SET_NULL, null=True, blank=True, related_name='projects', verbose_name='项目业态', db_column='business_type')
+    design_stage = models.ForeignKey('base_data.DesignStage', on_delete=models.SET_NULL, null=True, blank=True, related_name='projects', verbose_name='图纸阶段', db_column='design_stage')
+    service_professions = models.ManyToManyField('base_data.ServiceProfession', blank=True, related_name='projects', verbose_name='服务专业')
     
     # 委托单位（甲方）信息
     client = models.ForeignKey('customer_management.Client', on_delete=models.PROTECT, null=True, blank=True, verbose_name='客户')
@@ -779,7 +676,7 @@ class ProjectTeam(models.Model):
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='team_members', verbose_name='项目')
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='成员')
-    service_profession = models.ForeignKey(ServiceProfession, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='所属专业')
+    service_profession = models.ForeignKey('base_data.ServiceProfession', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='所属专业')
     role = models.CharField(max_length=50, choices=ROLE_CHOICES, verbose_name='角色')
     unit = models.CharField(max_length=32, choices=UNIT_CHOICES, default='management', verbose_name='所属团队')
     is_external = models.BooleanField(default=False, verbose_name='是否外部成员')
@@ -816,7 +713,7 @@ class ProjectTeamChangeLog(models.Model):
     role = models.CharField(max_length=50, verbose_name='角色')
     unit = models.CharField(max_length=32, choices=ProjectTeam.UNIT_CHOICES, default='management', verbose_name='所属团队')
     is_external = models.BooleanField(default=False, verbose_name='是否外部成员')
-    service_profession = models.ForeignKey(ServiceProfession, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='所属专业')
+    service_profession = models.ForeignKey('base_data.ServiceProfession', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='所属专业')
     action = models.CharField(max_length=20, choices=ACTION_CHOICES, verbose_name='操作类型')
     operator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='team_change_operations', verbose_name='操作人')
     timestamp = models.DateTimeField(default=timezone.now, verbose_name='操作时间')

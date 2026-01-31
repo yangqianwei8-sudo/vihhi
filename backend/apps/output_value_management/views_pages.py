@@ -1,5 +1,5 @@
 # 产值管理视图
-# 从settlement_center迁移产值管理相关视图
+# 产值管理独立模块，与结算模块分离；入口 /output-value/
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
@@ -33,28 +33,28 @@ OUTPUT_VALUE_MENU_STRUCTURE = [
         'label': '产值管理首页',
         'icon': '🏠',
         'url_name': 'output_value_pages:output_value_management_home',
-        'permission': ['output_value_management.view', 'settlement_center.view_output_value'],  # 兼容旧权限
+        'permission': ['output_value_management.view'],
     },
     {
         'id': 'output_value_template',
         'label': '产值模板',
         'icon': '📋',
         'url_name': 'output_value_pages:output_value_template_manage',
-        'permission': ['output_value_management.manage_template', 'settlement_center.manage_output'],  # 兼容旧权限
+        'permission': ['output_value_management.manage_template'],
     },
     {
         'id': 'output_value_record',
         'label': '产值记录',
         'icon': '📝',
         'url_name': 'output_value_pages:output_value_record_list',
-        'permission': ['output_value_management.view_record', 'settlement_center.view_output_value'],  # 兼容旧权限
+        'permission': ['output_value_management.view_record'],
     },
     {
         'id': 'output_value_statistics',
         'label': '产值统计',
         'icon': '📈',
         'url_name': 'output_value_pages:output_value_statistics',
-        'permission': ['output_value_management.view_statistics', 'settlement_center.view_output_value'],  # 兼容旧权限
+        'permission': ['output_value_management.view_statistics'],
     },
 ]
 
@@ -156,9 +156,7 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
 def output_value_management_home(request):
     """产值管理首页 - 数据展示中心"""
     permission_set = get_user_permission_codes(request.user)
-    # 兼容新旧权限
-    has_permission = _permission_granted('output_value_management.view', permission_set) or \
-                     _permission_granted('settlement_center.view_output_value', permission_set)
+    has_permission = _permission_granted('output_value_management.view', permission_set)
     if not has_permission:
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden("无权限访问产值管理")
@@ -320,7 +318,7 @@ def output_value_management_home(request):
     top_actions = []
     # 兼容新旧权限
     if _permission_granted('output_value_management.manage_template', permission_set) or \
-       _permission_granted('settlement_center.manage_output', permission_set):
+       _permission_granted('output_value_management.manage_template', permission_set):
         try:
             top_actions.append({
                 'label': '产值模板管理',
@@ -360,7 +358,7 @@ def output_value_template_manage(request):
     from backend.apps.system_management.services import user_has_permission
     # 兼容新旧权限
     has_permission = (user_has_permission(request.user, 'output_value_management.manage_template') or
-                      user_has_permission(request.user, 'settlement_center.manage_output') or
+                      user_has_permission(request.user, 'output_value_management.manage_template') or
                       user_has_permission(request.user, 'system_management.manage_settings'))
     if not has_permission:
         raise PermissionDenied("您没有权限访问产值模板管理。")
@@ -464,8 +462,8 @@ def output_value_record_list(request):
     # 兼容新旧权限
     has_view_permission = (user_has_permission(request.user, 'output_value_management.view_record') or
                            user_has_permission(request.user, 'output_value_management.view') or
-                           user_has_permission(request.user, 'settlement_center.view_analysis') or
-                           user_has_permission(request.user, 'settlement_center.manage_output'))
+                           user_has_permission(request.user, 'output_value_management.view_statistics') or
+                           user_has_permission(request.user, 'output_value_management.manage_template'))
     if not has_view_permission:
         raise PermissionDenied("您没有权限查看产值记录。")
     
@@ -488,7 +486,7 @@ def output_value_record_list(request):
     # 如果是普通用户，只显示自己的记录
     # 兼容新旧权限
     has_manage_permission = (user_has_permission(request.user, 'output_value_management.manage_template') or
-                             user_has_permission(request.user, 'settlement_center.manage_output'))
+                             user_has_permission(request.user, 'output_value_management.manage_template'))
     if not has_manage_permission:
         records = records.filter(responsible_user=request.user)
     
@@ -547,8 +545,8 @@ def project_output_value_detail(request, project_id):
     # 兼容新旧权限
     has_view_permission = (user_has_permission(request.user, 'output_value_management.view_record') or
                            user_has_permission(request.user, 'output_value_management.view') or
-                           user_has_permission(request.user, 'settlement_center.view_analysis') or
-                           user_has_permission(request.user, 'settlement_center.manage_output'))
+                           user_has_permission(request.user, 'output_value_management.view_statistics') or
+                           user_has_permission(request.user, 'output_value_management.manage_template'))
     if not has_view_permission:
         # 检查是否是项目成员
         if not (project.project_manager == request.user or 
@@ -568,7 +566,7 @@ def project_output_value_detail(request, project_id):
     # 检查权限
     # 兼容新旧权限
     has_manage_permission = (user_has_permission(request.user, 'output_value_management.manage_template') or
-                             user_has_permission(request.user, 'settlement_center.manage_output'))
+                             user_has_permission(request.user, 'output_value_management.manage_template'))
     
     # 产值记录分页
     paginator = Paginator(output_value_summary['records'], 20)
@@ -606,7 +604,7 @@ def output_value_record_confirm(request, record_id):
     from backend.apps.system_management.services import user_has_permission
     # 兼容新旧权限
     has_manage_permission = (user_has_permission(request.user, 'output_value_management.manage_template') or
-                             user_has_permission(request.user, 'settlement_center.manage_output'))
+                             user_has_permission(request.user, 'output_value_management.manage_template'))
     if record.responsible_user != request.user and not has_manage_permission:
         raise PermissionDenied("您没有权限确认此产值记录。")
     
@@ -643,8 +641,8 @@ def output_value_statistics(request):
     # 兼容新旧权限
     has_view_permission = (user_has_permission(request.user, 'output_value_management.view_record') or
                            user_has_permission(request.user, 'output_value_management.view') or
-                           user_has_permission(request.user, 'settlement_center.view_analysis') or
-                           user_has_permission(request.user, 'settlement_center.manage_output'))
+                           user_has_permission(request.user, 'output_value_management.view_statistics') or
+                           user_has_permission(request.user, 'output_value_management.manage_template'))
     if not has_view_permission:
         raise PermissionDenied("您没有权限查看产值统计。")
     
@@ -685,7 +683,7 @@ def output_value_statistics(request):
     # 如果是普通用户，只显示自己的记录
     # 兼容新旧权限
     has_manage_permission = (user_has_permission(request.user, 'output_value_management.manage_template') or
-                             user_has_permission(request.user, 'settlement_center.manage_output'))
+                             user_has_permission(request.user, 'output_value_management.manage_template'))
     if not has_manage_permission:
         records = records.filter(responsible_user=request.user)
     

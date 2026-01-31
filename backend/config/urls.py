@@ -5,7 +5,7 @@ from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 from backend.core.api_views import api_root, api_docs, notification_list, mark_notification_read, deepseek_seal_recognition
-from backend.core.views import home, dashboard, health_check, login_view, logout_view, favicon_view, test_admin_page, django_service_control
+from backend.core.views import home, dashboard, risk_management_placeholder, health_check, login_view, logout_view, favicon_view, test_admin_page, django_service_control
 from backend.apps.system_management import views_registration as registration_views
 
 from backend.core.dashboard_views import dashboard_stats, dashboard_todos
@@ -27,10 +27,8 @@ def report_management_redirect(request):
 
 @login_required
 def risk_management_redirect(request):
-    """风险管理重定向视图"""
-    # 风险管理模块尚未实现，暂时重定向到admin首页
-    # TODO: 当风险管理功能实现后，修改此重定向
-    return redirect('admin:index')
+    """风险管理重定向视图 - 从 admin 路径重定向到主应用占位页"""
+    return redirect('risk_management_placeholder')
 
 # 导入自定义admin配置（这会禁用"最近动作"模块）
 from backend.config import admin as custom_admin  # noqa: F401
@@ -67,7 +65,9 @@ urlpatterns = [
     path('admin/payment_management/', payment_management_redirect, name='admin_payment_management'),
     # 报表管理重定向（从admin路径重定向到financial路径）
     path('admin/report_management/', report_management_redirect, name='admin_report_management'),
-    # 风险管理重定向（风险管理模块尚未实现，暂时重定向到admin首页）
+    # 风险管理（占位页，使用主应用登录态）
+    path('risk-management/', risk_management_placeholder, name='risk_management_placeholder'),
+    # 从 admin 菜单进入时重定向到主应用占位页
     path('admin/risk_management/', risk_management_redirect, name='admin_risk_management'),
     path('admin/', admin_site.urls),
     path('api/', api_root, name='api-root'),
@@ -84,19 +84,17 @@ urlpatterns = [
     # API 路由
     path('api/system/', include(('backend.apps.system_management.urls', 'system'), namespace='system')),
     path('api/production/', include(('backend.apps.production_management.urls', 'production'), namespace='production')),  # 生产管理API
-    # path('api/project/', include(('backend.apps.project_center.urls', 'project'), namespace='project')),  # 已删除：迁移到production_management
     path('api/customer/', include(('backend.apps.customer_management.urls', 'customer'), namespace='customer')),  # 客户管理API
     path('api/opportunity/', include(('backend.apps.opportunity_management.urls', 'opportunity'), namespace='opportunity')),  # 商机管理API
     path('api/payment/', include(('backend.apps.payment_management.urls', 'payment'), namespace='payment')),  # 回款管理API
     path('api/delivery/', include(('backend.apps.delivery_customer.urls_api', 'delivery'), namespace='delivery_api')),
     path('api/document/', include(('backend.apps.document_management.urls', 'document'), namespace='document')),  # 文档管理API
-    path('api/settlement/', include(('backend.apps.settlement_center.urls', 'settlement'), namespace='settlement')),  # 结算中心API
+    path('api/settlement/', include(('backend.apps.settlement_management.urls_api', 'settlement'), namespace='settlement')),  # 结算管理API（由 settlement_center 迁入）
     path('api/archive/', include(('backend.apps.archive_management.urls_api', 'archive'), namespace='archive_api')),
     path('api/plan/', include(('backend.apps.plan_management.urls', 'plan'), namespace='plan')),  # 计划管理API
     
     # 页面路由
     path('production/', include(('backend.apps.production_management.urls', 'production'), namespace='production_pages')),  # 生产管理页面
-    # path('project/', include(('backend.apps.project_center.urls', 'project'), namespace='project_pages')),  # 已删除：迁移到production_management
     path('resource/', include(('backend.apps.resource_standard.urls', 'resource_standard'), namespace='resource_standard_pages')),
     path('delivery/', include(('backend.apps.delivery_customer.urls', 'delivery'), namespace='delivery_pages')),
     path('documents/', include(('backend.apps.document_management.urls_pages', 'document_pages'), namespace='document_pages')),  # 文档管理页面（独立应用）
@@ -108,7 +106,7 @@ urlpatterns = [
     path('business/', include(('backend.apps.customer_management.customer_urls', 'business'), namespace='business_pages')),  # 向后兼容重定向
     path('collaboration/', include(('backend.apps.task_collaboration.urls', 'task_collaboration'), namespace='collaboration_pages')),
     path('system-center/', include(('backend.apps.system_management.urls_pages', 'system_pages'), namespace='system_pages')),
-    path('settlement/', include(('backend.apps.settlement_center.urls_pages', 'settlement_pages'), namespace='settlement_pages')),  # 结算管理（使用settlement_center模块）
+    path('settlement/', include(('backend.apps.settlement_management.urls_pages', 'settlement_pages'), namespace='settlement_pages')),  # 结算管理（已由 settlement_center 迁入，后续可移除结算中心）
     path('output-value/', include(('backend.apps.output_value_management.urls_pages', 'output_value_pages'), namespace='output_value_pages')),  # 产值管理页面（独立应用）
     path('payment/', include(('backend.apps.payment_management.urls_pages', 'payment_pages'), namespace='payment_pages')),  # 回款管理页面（独立应用）
     # 行政管理、财务管理模块

@@ -92,93 +92,28 @@ urlpatterns = [
     # path("visit-plan/<int:plan_id>/edit/", views_pages.visit_plan_edit, name="visit_plan_edit"),
     # path("visit-plan/<int:plan_id>/complete/", views_pages.visit_plan_complete, name="visit_plan_complete"),
     # path("followup-record/", views_pages.followup_record, name="followup_record"),
-    path("contracts/management/", views_pages.contract_management_list, name="contract_management_list"),  # 合同管理列表（显示所有状态的合同）
-    path("contracts/<int:contract_id>/", views_pages.contract_detail, name="contract_detail"),
-    path("contracts/create/", views_pages.contract_create, name="contract_create"),
-    path("contracts/<int:contract_id>/edit/", views_pages.contract_edit, name="contract_edit"),
-    # 合同删除
-    path("contracts/<int:contract_id>/delete/", views_pages.contract_delete, name="contract_delete"),
-    # 合同审批
-    path("contracts/<int:contract_id>/submit-approval/", views_pages.contract_submit_approval, name="contract_submit_approval"),
-    # 合同争议
-    path("contracts/dispute/", views_pages.contract_dispute_list, name="contract_dispute_list"),
-    # 合同定稿
-    path("contracts/finalize/", views_pages.contract_finalize_list, name="contract_finalize_list"),
-    path("contracts/finalize/create/", views_pages.contract_finalize_create, name="contract_finalize_create"),  # 创建合同定稿
-    # 合同洽谈记录
-    path("contracts/negotiation/", views_pages.contract_negotiation_list, name="contract_negotiation_list"),  # 合同洽谈记录列表
-    path("contracts/negotiation/create/", views_pages.contract_negotiation_create, name="contract_negotiation_create"),  # 创建合同洽谈记录
-    path("contracts/negotiation/<int:negotiation_id>/", views_pages.contract_negotiation_detail, name="contract_negotiation_detail"),  # 合同洽谈记录详情
-    # 履约跟踪
-    path("contracts/performance/", views_pages.contract_performance_track, name="contract_performance_track"),
-    # 到期提醒
-    path("contracts/expiry-reminder/", views_pages.contract_expiry_reminder, name="contract_expiry_reminder"),
-    # 付款提醒
-    path("contracts/payment-reminder/", views_pages.contract_payment_reminder, name="contract_payment_reminder"),
-    # 风险预警
-    path("contracts/risk-warning/", views_pages.contract_risk_warning, name="contract_risk_warning"),
+    # 合同相关路由已迁移至独立应用 contract_management，统一入口为 /contracts/（namespace: contract_pages）
     path("settlements/", views_pages.project_settlement, name="project_settlement"),
     path("analysis/", views_pages.output_analysis, name="output_analysis"),
     path("payments/", views_pages.payment_tracking, name="payment_tracking"),
+    # 商机管理已迁移至独立应用 opportunity_management，统一入口为 /opportunities/（namespace: opportunity_pages）
+
+    # ==================== 业务委托书管理路由（已迁移至 contract_management，此处重定向以兼容 /business/ 旧路径）====================
+    path("authorization-letters/", views_pages.authorization_letter_list_redirect, name="authorization_letter_list"),
+    path("authorization-letters/create/", views_pages.authorization_letter_create_redirect, name="authorization_letter_create"),
+    path("authorization-letters/<int:letter_id>/", views_pages.authorization_letter_detail_redirect, name="authorization_letter_detail"),
+    path("authorization-letters/<int:letter_id>/edit/", views_pages.authorization_letter_edit_redirect, name="authorization_letter_edit"),
+    path("authorization-letters/<int:letter_id>/delete/", views_pages.authorization_letter_delete_redirect, name="authorization_letter_delete"),
+    path("authorization-letters/<int:letter_id>/status-transition/", views_pages.authorization_letter_status_transition_redirect, name="authorization_letter_status_transition"),
     
-    # 商机管理（根据总体设计方案）
-    path("opportunities/", views_pages.opportunity_management_home, name="opportunity_management_home"),
-    path("opportunities/home/", views_pages.opportunity_management_home, name="opportunity_management_home"),
-    path("opportunities/list/", views_pages.opportunity_management, name="opportunity_management"),
-    path("opportunities/import/", views_pages.opportunity_import, name="opportunity_import"),
-    path("opportunities/create/", views_pages.opportunity_create, name="opportunity_create"),
-    path("opportunities/<int:opportunity_id>/", views_pages.opportunity_detail, name="opportunity_detail"),
-    path("opportunities/<int:opportunity_id>/edit/", views_pages.opportunity_edit, name="opportunity_edit"),
-    path("opportunities/<int:opportunity_id>/delete/", views_pages.opportunity_delete, name="opportunity_delete"),
-    path("opportunities/<int:opportunity_id>/transition/", views_pages.opportunity_status_transition, name="opportunity_status_transition"),
-    path("opportunities/<int:opportunity_id>/followup/create/", views_pages.opportunity_followup_create, name="opportunity_followup_create"),
-    path("opportunities/<int:opportunity_id>/followup/<int:followup_id>/edit/", views_pages.opportunity_followup_edit, name="opportunity_followup_edit"),
-    path("opportunities/<int:opportunity_id>/followup/<int:followup_id>/delete/", views_pages.opportunity_followup_delete, name="opportunity_followup_delete"),
-    
-    # 商机管理子功能（根据总体设计方案）
-    path("opportunities/evaluation-application/", views_pages.opportunity_evaluation_application, name="opportunity_evaluation_application"),
-    path("opportunities/drawing-evaluation/", views_pages.opportunity_drawing_evaluation, name="opportunity_drawing_evaluation"),
-    path("opportunities/warehouse-application/", views_pages.opportunity_warehouse_application, name="opportunity_warehouse_application"),
-    path("opportunities/warehouse-list/", views_pages.opportunity_warehouse_list, name="opportunity_warehouse_list"),
-    path("opportunities/bid-bond-payment/", views_pages.opportunity_bid_bond_payment, name="opportunity_bid_bond_payment"),
-    path("opportunities/tender-fee-payment/", views_pages.opportunity_tender_fee_payment, name="opportunity_tender_fee_payment"),
-    path("opportunities/agency-fee-payment/", views_pages.opportunity_agency_fee_payment, name="opportunity_agency_fee_payment"),
-    path("opportunities/bidding-quotation-application/", views_pages.opportunity_bidding_quotation_application, name="opportunity_bidding_quotation_application"),
-    path("opportunities/bidding-document-preparation/", views_pages.opportunity_bidding_document_preparation, name="opportunity_bidding_document_preparation"),
-    path("opportunities/bidding-document-submission/", views_pages.opportunity_bidding_document_submission, name="opportunity_bidding_document_submission"),
-    # 投标报价管理
-    path("opportunities/bidding-quotation/", views_pages.opportunity_bidding_quotation, name="opportunity_bidding_quotation"),
-    path("opportunities/bidding-quotation/create/", views_pages.bidding_quotation_create, name="bidding_quotation_create"),
-    path("opportunities/bidding-quotation/<int:bidding_id>/", views_pages.bidding_quotation_detail, name="bidding_quotation_detail"),
-    path("opportunities/bidding-quotation/<int:bidding_id>/edit/", views_pages.bidding_quotation_edit, name="bidding_quotation_edit"),
-    path("opportunities/tech-meeting/", views_pages.opportunity_tech_meeting, name="opportunity_tech_meeting"),
-    path("opportunities/followup/", views_pages.opportunity_followup_list, name="opportunity_followup_list"),
-    path("opportunities/forecast/", views_pages.opportunity_sales_forecast, name="opportunity_sales_forecast"),
-    path("opportunities/win-loss/", views_pages.opportunity_win_loss, name="opportunity_win_loss"),
-    path("opportunities/win-loss/select/", views_pages.opportunity_win_loss_select, name="opportunity_win_loss_select"),
-    path("opportunities/<int:opportunity_id>/win-loss/mark/", views_pages.opportunity_mark_win_loss, name="opportunity_mark_win_loss"),
-    
-    # 商务洽谈与表单
-    path("opportunities/business-negotiation/", views_pages.opportunity_business_negotiation, name="opportunity_business_negotiation"),
-    path("opportunities/business-negotiation/form/", views_pages.opportunity_business_negotiation_form, name="opportunity_business_negotiation_form"),
-    path("opportunities/<int:opportunity_id>/business-negotiation/form/", views_pages.opportunity_business_negotiation_form, name="opportunity_business_negotiation_form_edit"),
-    
-    # ==================== 业务委托书管理路由 ====================
-    path("authorization-letters/", views_pages.authorization_letter_list, name="authorization_letter_list"),
-    path("authorization-letters/create/", views_pages.authorization_letter_create, name="authorization_letter_create"),
-    path("authorization-letters/<int:letter_id>/", views_pages.authorization_letter_detail, name="authorization_letter_detail"),
-    path("authorization-letters/<int:letter_id>/edit/", views_pages.authorization_letter_edit, name="authorization_letter_edit"),
-    path("authorization-letters/<int:letter_id>/delete/", views_pages.authorization_letter_delete, name="authorization_letter_delete"),
-    path("authorization-letters/<int:letter_id>/status-transition/", views_pages.authorization_letter_status_transition, name="authorization_letter_status_transition"),
-    
-    # 业务委托书模板管理
-    path("authorization-letter-templates/", views_pages.authorization_letter_template_list, name="authorization_letter_template_list"),
-    path("authorization-letter-templates/create/", views_pages.authorization_letter_template_create, name="authorization_letter_template_create"),
-    path("authorization-letter-templates/<int:template_id>/edit/", views_pages.authorization_letter_template_edit, name="authorization_letter_template_edit"),
-    path("authorization-letter-templates/<int:template_id>/delete/", views_pages.authorization_letter_template_delete, name="authorization_letter_template_delete"),
-    path("authorization-letter-templates/<int:template_id>/create-letter/", views_pages.authorization_letter_create_from_template, name="authorization_letter_create_from_template"),
-    path("authorization-letter-templates/<int:template_id>/file/preview/", views_pages.authorization_letter_template_file_preview, name="authorization_letter_template_file_preview"),
-    path("authorization-letter-templates/<int:template_id>/file/download/", views_pages.authorization_letter_template_file_download, name="authorization_letter_template_file_download"),
+    # 业务委托书模板管理（重定向到 contract_pages）
+    path("authorization-letter-templates/", views_pages.authorization_letter_template_list_redirect, name="authorization_letter_template_list"),
+    path("authorization-letter-templates/create/", views_pages.authorization_letter_template_create_redirect, name="authorization_letter_template_create"),
+    path("authorization-letter-templates/<int:template_id>/edit/", views_pages.authorization_letter_template_edit_redirect, name="authorization_letter_template_edit"),
+    path("authorization-letter-templates/<int:template_id>/delete/", views_pages.authorization_letter_template_delete_redirect, name="authorization_letter_template_delete"),
+    path("authorization-letter-templates/<int:template_id>/create-letter/", views_pages.authorization_letter_create_from_template_redirect, name="authorization_letter_create_from_template"),
+    path("authorization-letter-templates/<int:template_id>/file/preview/", views_pages.authorization_letter_template_file_preview_redirect, name="authorization_letter_template_file_preview"),
+    path("authorization-letter-templates/<int:template_id>/file/download/", views_pages.authorization_letter_template_file_download_redirect, name="authorization_letter_template_file_download"),
     
 ]
 

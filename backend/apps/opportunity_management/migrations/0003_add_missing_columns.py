@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('opportunity_management', '0002_initial_migration'),
         ('customer_management', '0057_remove_biddingquotation_created_by_and_more'),
-        ('production_management', '0041_remove_preoptimizationmaterial_project_and_more'),
+        ('base_data', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -72,7 +72,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name='opportunities',
-                to='production_management.servicetype',
+                to='base_data.servicetype',
                 verbose_name='服务类型'
             ),
         ),
@@ -85,7 +85,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name='opportunities',
-                to='production_management.designstage',
+                to='base_data.designstage',
                 verbose_name='图纸阶段'
             ),
         ),

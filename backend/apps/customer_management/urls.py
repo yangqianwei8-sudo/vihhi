@@ -34,12 +34,12 @@ urlpatterns = [
     # 报价管理 REST API
     path('quotations/modes/', views.get_quotation_modes, name='get_quotation_modes'),
     path('quotations/calculate-by-mode/', views.calculate_quotation_by_mode, name='calculate_quotation_by_mode'),
-    # 商机分析 REST API
-    path('opportunities/funnel-analysis/', views.opportunity_funnel_analysis_api, name='opportunity_funnel_analysis_api'),
-    path('opportunities/sales-forecast/', views.opportunity_sales_forecast_api, name='opportunity_sales_forecast_api'),
-    path('opportunities/<int:opportunity_id>/health-score/', views.opportunity_health_score_api, name='opportunity_health_score_api'),
-    path('opportunities/<int:opportunity_id>/quality-score/', views.opportunity_quality_score_api, name='opportunity_quality_score_api'),
-    path('opportunities/<int:opportunity_id>/action-suggestions/', views.opportunity_action_suggestions_api, name='opportunity_action_suggestions_api'),
+    # 商机分析 REST API (已迁移到 opportunity_management,此处保留重定向以兼容旧调用)
+    path('opportunities/funnel-analysis/', views.opportunity_funnel_analysis_redirect, name='opportunity_funnel_analysis_api'),
+    path('opportunities/sales-forecast/', views.opportunity_sales_forecast_redirect, name='opportunity_sales_forecast_api'),
+    path('opportunities/<int:opportunity_id>/health-score/', views.opportunity_health_score_redirect, name='opportunity_health_score_api'),
+    path('opportunities/<int:opportunity_id>/quality-score/', views.opportunity_quality_score_redirect, name='opportunity_quality_score_api'),
+    path('opportunities/<int:opportunity_id>/action-suggestions/', views.opportunity_action_suggestions_redirect, name='opportunity_action_suggestions_api'),
     # 销售活动 REST API
     path('activities/', views.sales_activity_rest_api, name='sales_activity_rest_api'),
     path('activities/<int:activity_id>/', views.sales_activity_rest_api, name='sales_activity_rest_api_detail'),

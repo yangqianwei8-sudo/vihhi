@@ -1,0 +1,241 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}发文详情 - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'document_pages:outgoing_document_home' %}">发文管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'document_pages:outgoing_document_list' %}">发文列表</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ document.document_number }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📤 发文详情</h2>
+            <p class="text-muted mb-0">发文编号：{{ document.document_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'document_pages:outgoing_document_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+            {% if can_edit %}
+            <a href="{% url 'document_pages:outgoing_document_edit' document.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> 编辑
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">基本信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">发文编号</span>
+                    <span class="info-value"><code>{{ document.document_number }}</code></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">文件标题</span>
+                    <span class="info-value"><strong>{{ document.title }}</strong></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">收文单位</span>
+                    <span class="info-value">{{ document.recipient }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">联系人</span>
+                    <span class="info-value">{{ document.recipient_contact|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">联系电话</span>
+                    <span class="info-value">{{ document.recipient_phone|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">文件类型</span>
+                    <span class="info-value">{{ document.document_type|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">文件日期</span>
+                    <span class="info-value">{{ document.document_date|date:"Y-m-d"|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">发文日期</span>
+                    <span class="info-value">{{ document.send_date|date:"Y-m-d"|default:"-" }}</span>
+                </div>
+                {% if document.recipient_address %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">收文地址</span>
+                    <span class="info-value">{{ document.recipient_address }}</span>
+                </div>
+                {% endif %}
+                <div class="info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">
+                        {% if document.status == 'draft' %}
+                            <span class="badge bg-secondary">草稿</span>
+                        {% elif document.status == 'reviewing' %}
+                            <span class="badge bg-warning">审核中</span>
+                        {% elif document.status == 'approved' %}
+                            <span class="badge bg-success">已批准</span>
+                        {% elif document.status == 'sent' %}
+                            <span class="badge bg-info">已发出</span>
+                        {% elif document.status == 'completed' %}
+                            <span class="badge bg-primary">已完成</span>
+                        {% elif document.status == 'archived' %}
+                            <span class="badge bg-dark">已归档</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">优先级</span>
+                    <span class="info-value">
+                        {% if document.priority == 'urgent' %}
+                            <span class="badge bg-danger">紧急</span>
+                        {% elif document.priority == 'high' %}
+                            <span class="badge bg-warning">高</span>
+                        {% elif document.priority == 'normal' %}
+                            <span class="badge bg-info">普通</span>
+                        {% else %}
+                            <span class="badge bg-secondary">低</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if document.summary or document.content %}
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">内容</h5>
+        </div>
+        <div class="info-card-body">
+            {% if document.summary %}
+            <div class="mb-3">
+                <strong>摘要：</strong>
+                <p>{{ document.summary|linebreaks }}</p>
+            </div>
+            {% endif %}
+            {% if document.content %}
+            <div>
+                <strong>文件内容：</strong>
+                <p>{{ document.content|linebreaks }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if document.reviewer or document.review_notes %}
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">审核信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                {% if document.reviewer %}
+                <div class="info-item">
+                    <span class="info-label">审核人</span>
+                    <span class="info-value">{{ document.reviewer.get_full_name|default:document.reviewer.username }}</span>
+                </div>
+                {% endif %}
+                {% if document.reviewed_at %}
+                <div class="info-item">
+                    <span class="info-label">审核时间</span>
+                    <span class="info-value">{{ document.reviewed_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+                {% if document.review_notes %}
+                <div class="info-item info-item-full-width">
+                    <span class="info-label">审核意见</span>
+                    <span class="info-value">{{ document.review_notes|linebreaks }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if document.sender or document.send_method %}
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">发送信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                {% if document.sender %}
+                <div class="info-item">
+                    <span class="info-label">发送人</span>
+                    <span class="info-value">{{ document.sender.get_full_name|default:document.sender.username }}</span>
+                </div>
+                {% endif %}
+                {% if document.send_method %}
+                <div class="info-item">
+                    <span class="info-label">发送方式</span>
+                    <span class="info-value">{{ document.send_method }}</span>
+                </div>
+                {% endif %}
+                {% if document.sent_at %}
+                <div class="info-item">
+                    <span class="info-label">发送时间</span>
+                    <span class="info-value">{{ document.sent_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if document.attachment %}
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">附件</h5>
+        </div>
+        <div class="info-card-body">
+            <a href="{{ document.attachment.url }}" target="_blank" class="btn btn-outline-primary">
+                <i class="bi bi-download"></i> 下载附件
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if document.notes %}
+    <div class="info-card info-card-fade-in mb-4">
+        <div class="info-card-header">
+            <h5 class="info-card-title">备注</h5>
+        </div>
+        <div class="info-card-body">
+            <p>{{ document.notes|linebreaks }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="info-card info-card-fade-in">
+        <div class="info-card-header">
+            <h5 class="info-card-title">时间信息</h5>
+        </div>
+        <div class="info-card-body">
+            <div class="info-grid info-grid-2">
+                <div class="info-item">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">{{ document.created_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">更新时间</span>
+                    <span class="info-value">{{ document.updated_at|date:"Y-m-d H:i:s" }}</span>
+                </div>
+                {% if document.created_by %}
+                <div class="info-item">
+                    <span class="info-label">创建人</span>
+                    <span class="info-value">{{ document.created_by.get_full_name|default:document.created_by.username }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "shared/list_page_base.html" %}
+{% load static %}
+
+{% block pm_title %}{{ page_title|default:"业务委托书模板" }}{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有业务委托书模板{% endblock pm_subtitle %}
+
+{% block list_filters_content %}
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">模板类型</label>
+    <select name="template_type" class="form-select form-select-sm">
+        <option value="">全部类型</option>
+        {% for value, label in template_type_choices %}
+        <option value="{{ value }}" {% if template_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+  <div class="list-page-filter-item">
+    <label class="list-page-filter-label">状态</label>
+    <select name="status" class="form-select form-select-sm">
+        <option value="">全部状态</option>
+        {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+  </div>
+{% endblock list_filters_content %}
+{% block list_table_headers %}
+<th>模板名称</th>
+        <th>模板类型</th>
+        <th>分类</th>
+        <th>状态</th>
+        <th>使用次数</th>
+        <th>创建人</th>
+        <th>创建时间</th>
+        <th>操作</th>
+{% endblock list_table_headers %}
+{% block list_table_rows %}
+{% for template in page_obj %}
+      <tr>
+        <td><strong>{{ template.template_name }}</strong></td>
+        <td>{{ template.get_template_type_display }}</td>
+        <td>{{ template.category|default:"--" }}</td>
+        <td>
+          <span class="badge bg-secondary">{{ template.get_status_display }}</span>
+        </td>
+        <td>{{ template.usage_count }}</td>
+        <td>{{ template.created_by.get_full_name|default:template.created_by.username }}</td>
+        <td>{{ template.created_time|date:"Y-m-d H:i" }}</td>
+        <td>
+          <div class="list-page-table-actions">
+            <a href="{% url 'contract_pages:authorization_letter_create_from_template' template.id %}" class="action-view" title="使用模板创建委托书">
+              <i class="bi bi-file-earmark-plus"></i>
+            </a>
+            <span class="action-separator">|</span>
+            <a href="{% url 'contract_pages:authorization_letter_template_edit' template.id %}" class="action-edit" title="编辑">
+              <i class="bi bi-pencil"></i>
+            </a>
+            {% if template.template_file %}
+            <span class="action-separator">|</span>
+            <a href="{% url 'contract_pages:authorization_letter_template_file_preview' template.id %}" target="_blank" class="action-view" title="预览文件">
+              <i class="bi bi-eye"></i>
+            </a>
+            <span class="action-separator">|</span>
+            <a href="{% url 'contract_pages:authorization_letter_template_file_download' template.id %}" class="action-view" title="下载文件">
+              <i class="bi bi-download"></i>
+            </a>
+            {% endif %}
+            <span class="action-separator">|</span>
+            <a href="{% url 'contract_pages:authorization_letter_template_delete' template.id %}" class="action-delete" title="删除">
+              <i class="bi bi-trash"></i>
+            </a>
+          </div>
+        </td>
+        {% if column_settings_btn|default:False %}<td></td>{% endif %}
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="{% if column_settings_btn|default:False %}9{% else %}8{% endif %}" class="list-empty">
+          <div class="list-empty-icon">📋</div>
+          <div class="list-empty-text">暂无模板数据</div>
+          {% block list_empty_hint %}
+          <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">请创建第一个模板开始使用</p>
+          {% endblock list_empty_hint %}
+        </td>
+      </tr>
+      {% endfor %}
+{% endblock list_table_rows %}
+
+
+

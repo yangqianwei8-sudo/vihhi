@@ -8,7 +8,7 @@ from django.utils import timezone
 from backend.apps.production_management.models import Project
 from backend.apps.customer_management.models import Client
 from backend.apps.delivery_customer.models import DeliveryRecord, DeliveryFile
-from backend.apps.customer_management.models import (
+from backend.apps.archive_management.models import (
     ArchiveCategory,
     ArchiveProjectArchive,
     ProjectArchiveDocument,

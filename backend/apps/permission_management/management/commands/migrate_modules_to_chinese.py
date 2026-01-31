@@ -8,9 +8,9 @@ class Command(BaseCommand):
 
     MODULE_MAPPING = {
         # 项目中心
-        'project_center': '项目中心',
-        # 结算中心
-        'settlement_center': '结算中心',
+        'project_center': '项目中心',  # 已迁移至 production_management，保留以兼容历史权限数据
+        # 结算中心（已合并为 settlement_management 结算管理）
+        'settlement_center': '结算管理',
         # 生产质量
         # 'production_quality': '生产质量',  # 已删除生产质量模块
         # 客户成功

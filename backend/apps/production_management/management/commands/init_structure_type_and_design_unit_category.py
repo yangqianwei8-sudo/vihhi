@@ -2,7 +2,7 @@
 初始化结构形式和设计单位分类数据
 """
 from django.core.management.base import BaseCommand
-from backend.apps.production_management.models import StructureType, DesignUnitCategory
+from backend.apps.base_data.models import StructureType, DesignUnitCategory
 
 
 class Command(BaseCommand):

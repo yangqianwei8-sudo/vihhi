@@ -231,7 +231,7 @@ class FundFlowAdmin(LinkAdminMixin, AuditAdminMixin, BaseModelAdmin):
     
     def project_link(self, obj):
         if obj.project:
-            url = reverse('admin:project_center_project_change', args=[obj.project.id])
+            url = reverse('admin:production_management_project_change', args=[obj.project.id])
             return self.make_link(url, obj.project.project_number)
         return '-'
     project_link.short_description = '关联项目'

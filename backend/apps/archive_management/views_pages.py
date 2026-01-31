@@ -2224,7 +2224,7 @@ def project_drawing_archive_list(request):
         return HttpResponseForbidden("无权限访问")
     
     try:
-        from backend.apps.customer_management.models import ProjectDrawingArchive
+        from backend.apps.archive_management.models import ProjectDrawingArchive
         model_available = True
     except ImportError:
         model_available = False
@@ -2306,7 +2306,7 @@ def project_drawing_archive_create(request):
         return HttpResponseForbidden("无权限访问")
     
     try:
-        from backend.apps.customer_management.models import ProjectDrawingArchive
+        from backend.apps.archive_management.models import ProjectDrawingArchive
         model_available = True
     except ImportError:
         model_available = False
@@ -2414,7 +2414,7 @@ def project_drawing_archive_detail(request, pk):
         return HttpResponseForbidden("无权限访问")
     
     try:
-        from backend.apps.customer_management.models import ProjectDrawingArchive
+        from backend.apps.archive_management.models import ProjectDrawingArchive
         model_available = True
     except ImportError:
         model_available = False
@@ -2453,7 +2453,7 @@ def project_delivery_archive_list(request):
     
     # 尝试导入ProjectDeliveryArchive模型
     try:
-        from backend.apps.customer_management.models import ProjectDeliveryArchive
+        from backend.apps.archive_management.models import ProjectDeliveryArchive
         model_available = True
     except ImportError:
         model_available = False
@@ -2533,7 +2533,7 @@ def project_delivery_archive_create(request):
     
     # 尝试导入模型
     try:
-        from backend.apps.customer_management.models import ProjectDeliveryArchive
+        from backend.apps.archive_management.models import ProjectDeliveryArchive
         from backend.apps.delivery_customer.models import DeliveryRecord, DeliveryFile
         model_available = True
     except ImportError:
@@ -2608,7 +2608,7 @@ def project_delivery_archive_detail(request, pk):
     
     # 尝试导入模型
     try:
-        from backend.apps.customer_management.models import ProjectDeliveryArchive
+        from backend.apps.archive_management.models import ProjectDeliveryArchive
         from backend.apps.delivery_customer.models import DeliveryFile
         model_available = True
     except ImportError:
@@ -3079,7 +3079,7 @@ def archive_security_access(request):
         return HttpResponseForbidden("无权限访问")
     
     try:
-        from backend.apps.customer_management.models import ArchiveOperationLog
+        from backend.apps.archive_management.models import ArchiveOperationLog
         model_available = True
     except ImportError:
         model_available = False
@@ -3159,7 +3159,7 @@ def archive_security_log(request):
     
     # 尝试导入ArchiveOperationLog模型
     try:
-        from backend.apps.customer_management.models import ArchiveOperationLog
+        from backend.apps.archive_management.models import ArchiveOperationLog
         model_available = True
     except ImportError:
         model_available = False
@@ -3282,7 +3282,7 @@ def archive_security_audit(request):
         return HttpResponseForbidden("无权限访问")
     
     try:
-        from backend.apps.customer_management.models import ArchiveOperationLog
+        from backend.apps.archive_management.models import ArchiveOperationLog
         model_available = True
     except ImportError:
         model_available = False
@@ -3376,7 +3376,7 @@ def archive_search_fulltext(request):
     
     # 尝试导入检索历史模型
     try:
-        from backend.apps.customer_management.models import ArchiveSearchHistory
+        from backend.apps.archive_management.models import ArchiveSearchHistory
         history_available = True
     except ImportError:
         history_available = False
@@ -3504,7 +3504,7 @@ def archive_search_advanced(request):
     
     # 尝试导入检索历史模型
     try:
-        from backend.apps.customer_management.models import ArchiveSearchHistory
+        from backend.apps.archive_management.models import ArchiveSearchHistory
         history_available = True
     except ImportError:
         history_available = False
@@ -3697,7 +3697,7 @@ def archive_search_history(request):
     
     # 尝试导入检索历史模型
     try:
-        from backend.apps.customer_management.models import ArchiveSearchHistory
+        from backend.apps.archive_management.models import ArchiveSearchHistory
         model_available = True
     except ImportError:
         model_available = False
@@ -3754,7 +3754,7 @@ def archive_digitization_apply_list(request):
         return HttpResponseForbidden("无权限访问")
     
     try:
-        from backend.apps.customer_management.models import ArchiveDigitizationApply
+        from backend.apps.archive_management.models import ArchiveDigitizationApply
         model_available = True
     except ImportError:
         model_available = False
@@ -3841,7 +3841,7 @@ def archive_digitization_apply_create(request):
         return HttpResponseForbidden("无权限访问")
     
     try:
-        from backend.apps.customer_management.models import ArchiveDigitizationApply
+        from backend.apps.archive_management.models import ArchiveDigitizationApply
         model_available = True
     except ImportError:
         model_available = False
@@ -3910,7 +3910,7 @@ def archive_digitization_process_list(request):
         return HttpResponseForbidden("无权限访问")
     
     try:
-        from backend.apps.customer_management.models import ArchiveDigitizationProcess
+        from backend.apps.archive_management.models import ArchiveDigitizationProcess
         model_available = True
     except ImportError:
         model_available = False
@@ -3987,7 +3987,7 @@ def archive_digitization_result_list(request):
         return HttpResponseForbidden("无权限访问")
     
     try:
-        from backend.apps.customer_management.models import ArchiveDigitizationResult
+        from backend.apps.archive_management.models import ArchiveDigitizationResult
         model_available = True
     except ImportError:
         model_available = False
@@ -4093,7 +4093,7 @@ def archive_statistics_usage(request):
     
     # 下载统计（从操作日志获取）
     try:
-        from backend.apps.customer_management.models import ArchiveOperationLog
+        from backend.apps.archive_management.models import ArchiveOperationLog
         download_queryset = ArchiveOperationLog.objects.filter(operation_type='download')
         if start_date:
             download_queryset = download_queryset.filter(operation_time__gte=start_date)
@@ -4105,7 +4105,7 @@ def archive_statistics_usage(request):
     
     # 检索统计（从检索历史获取）
     try:
-        from backend.apps.customer_management.models import ArchiveSearchHistory
+        from backend.apps.archive_management.models import ArchiveSearchHistory
         search_queryset = ArchiveSearchHistory.objects.all()
         if start_date:
             search_queryset = search_queryset.filter(search_time__gte=start_date)
@@ -4186,7 +4186,7 @@ def archive_statistics_storage(request):
     
     # 库房使用统计
     try:
-        from backend.apps.customer_management.models import ArchiveStorageRoom, ArchiveLocation
+        from backend.apps.archive_management.models import ArchiveStorageRoom, ArchiveLocation
         storage_rooms = ArchiveStorageRoom.objects.all().annotate(
             archive_count=Count('locations__shelves__archives', distinct=True)
         )
@@ -4201,7 +4201,7 @@ def archive_statistics_storage(request):
     
     # 保管期限统计
     try:
-        from backend.apps.customer_management.models import ArchiveCategory
+        from backend.apps.archive_management.models import ArchiveCategory
         categories_with_period = ArchiveCategory.objects.filter(
             storage_period__isnull=False
         ).values('storage_period').annotate(
@@ -4233,7 +4233,7 @@ def archive_statistics_storage(request):
     
     # 盘点统计
     try:
-        from backend.apps.customer_management.models import ArchiveInventory
+        from backend.apps.archive_management.models import ArchiveInventory
         inventory_total = ArchiveInventory.objects.count()
         inventory_recent = ArchiveInventory.objects.filter(
             inventory_time__gte=timezone.now() - timedelta(days=30)

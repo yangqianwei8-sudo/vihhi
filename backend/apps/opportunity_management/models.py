@@ -44,14 +44,14 @@ class BusinessOpportunity(models.Model):
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name='opportunities', verbose_name='关联客户')
     business_manager = models.ForeignKey(User, on_delete=models.PROTECT, related_name='managed_opportunities', verbose_name='负责商务')
     opportunity_type = models.CharField(max_length=30, choices=OPPORTUNITY_TYPE_CHOICES, blank=True, verbose_name='商机类型')
-    service_type = models.ForeignKey('production_management.ServiceType', on_delete=models.SET_NULL, null=True, blank=True, related_name='opportunities', verbose_name='服务类型')
+    service_type = models.ForeignKey('base_data.ServiceType', on_delete=models.SET_NULL, null=True, blank=True, related_name='opportunities', verbose_name='服务类型')
     
     # 项目信息
     project_name = models.CharField(max_length=200, blank=True, verbose_name='项目名称')
     project_address = models.CharField(max_length=500, blank=True, verbose_name='项目地址')
     project_type = models.CharField(max_length=50, blank=True, verbose_name='项目业态', help_text='住宅/综合体/商业/写字楼等')
     building_area = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True, verbose_name='建筑面积（平方米）')
-    drawing_stage = models.ForeignKey('production_management.DesignStage', on_delete=models.SET_NULL, null=True, blank=True, related_name='opportunities', verbose_name='图纸阶段', db_column='drawing_stage')
+    drawing_stage = models.ForeignKey('base_data.DesignStage', on_delete=models.SET_NULL, null=True, blank=True, related_name='opportunities', verbose_name='图纸阶段', db_column='drawing_stage')
     
     # 金额和概率
     estimated_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='预计金额（万元）')

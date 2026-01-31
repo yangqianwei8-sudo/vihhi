@@ -137,7 +137,7 @@ class PermissionItemAdmin(LinkAdminMixin, BaseModelAdmin):
 
 # 创建按模块分类的管理类
 class ProjectCenterPermissionAdmin(LinkAdminMixin, BaseModelAdmin):
-    """项目中心权限"""
+    """生产管理权限（原项目中心）"""
     list_display = ('code', 'name', 'action', 'role_count', 'is_active')
     list_filter = ('action', 'is_active')
     search_fields = ('code', 'name', 'description')
@@ -145,7 +145,9 @@ class ProjectCenterPermissionAdmin(LinkAdminMixin, BaseModelAdmin):
     
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.filter(module='project_center')
+        # 兼容历史数据：project_center 已迁移至 production_management
+        from django.db.models import Q
+        return qs.filter(Q(module='project_center') | Q(module='production_management'))
     
     def role_count(self, obj):
         from backend.apps.system_management.models import Role

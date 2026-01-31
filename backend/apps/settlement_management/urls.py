@@ -5,12 +5,7 @@ from . import views_settlement_items
 app_name = "settlement"
 
 urlpatterns = [
-    # 产值管理
-    path("output-value/template/", views_pages.output_value_template_manage, name="output_value_template_manage"),
-    path("output-value/records/", views_pages.output_value_record_list, name="output_value_record_list"),
-    path("output-value/records/<int:record_id>/confirm/", views_pages.output_value_record_confirm, name="output_value_record_confirm"),
-    path("output-value/project/<int:project_id>/", views_pages.project_output_value_detail, name="project_output_value_detail"),
-    path("output-value/statistics/", views_pages.output_value_statistics, name="output_value_statistics"),
+    # 产值管理已独立至 output_value_management 应用，路径为 /output-value/
 
     # 项目结算管理
     path("project-settlement/", views_pages.project_settlement_list, name="project_settlement_list"),

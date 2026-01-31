@@ -320,7 +320,7 @@ class UserAdmin(DjangoUserAdmin):
                     messages.error(
                         request,
                         '数据库表 settlement_payment_record 不存在。'
-                        '请运行迁移命令创建表：python manage.py migrate settlement_center'
+                        '请运行迁移命令创建表：python manage.py migrate settlement_management'
                     )
                 elif 'system_role.description' in error_msg:
                     messages.warning(

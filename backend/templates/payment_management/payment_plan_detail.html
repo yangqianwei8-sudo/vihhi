@@ -1,0 +1,49 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block pm_title %}{{ page_title }}{% endblock %}
+{% block pm_subtitle %}计划金额：¥{{ plan.planned_amount|floatformat:2 }}{% endblock %}
+{% block pm_actions %}
+<a href="{% url 'payment_pages:payment_plan_list' %}" class="btn btn-outline-secondary">返回列表</a>
+<a href="{% url 'payment_pages:payment_record_create' plan_type plan.id %}" class="btn btn-primary">新建回款记录</a>
+{% endblock %}
+
+{% block pm_content %}
+<div class="card mb-4">
+  <div class="card-header"><h5 class="mb-0">计划信息</h5></div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6"><strong>阶段名称：</strong>{{ plan.phase_name }}</div>
+      <div class="col-md-6"><strong>计划金额：</strong>¥{{ plan.planned_amount|floatformat:2 }}</div>
+      <div class="col-md-6"><strong>已回款：</strong>¥{{ total_received|floatformat:2 }}</div>
+      <div class="col-md-6"><strong>待回款：</strong>¥{{ remaining_amount|floatformat:2 }}</div>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-header"><h5 class="mb-0">回款记录</h5></div>
+  <div class="card-body p-0">
+    {% if payment_records %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead><tr><th>回款单号</th><th>金额</th><th>回款日期</th><th>状态</th></tr></thead>
+        <tbody>
+        {% for r in payment_records %}
+        <tr>
+          <td>{{ r.payment_number }}</td>
+          <td>¥{{ r.payment_amount|floatformat:2 }}</td>
+          <td>{{ r.payment_date|date:"Y-m-d" }}</td>
+          <td><span class="badge bg-{{ r.status == 'confirmed'|yesno:'success,secondary' }}">{{ r.get_status_display }}</span></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted p-3 mb-0">暂无回款记录。<a href="{% url 'payment_pages:payment_record_create' plan_type plan.id %}">新建回款记录</a></p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

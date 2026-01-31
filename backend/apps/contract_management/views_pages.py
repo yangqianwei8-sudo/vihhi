@@ -31,6 +31,7 @@ from backend.apps.customer_management.models import (
     SalesActivity,
     AuthorizationLetter,
     AuthorizationLetterTemplate,
+    ContractNegotiation,
     ContactEducation,
     ContactCareer,
     ContactColleague,
@@ -53,10 +54,18 @@ from backend.apps.contract_management.models import (
     ResultFileType,
 )
 
-from backend.apps.production_management.models import DesignStage, ServiceType
+from backend.apps.base_data.models import DesignStage, ServiceType
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav
 from backend.apps.permission_management.utils import normalize_permission_code
+from backend.apps.customer_management.views_pages import _filter_clients_by_permission
+
+
+def _check_customer_permission(permission_code, permission_set):
+    """检查权限（支持 contract_management.* 等代码经规范化后校验）"""
+    normalized = normalize_permission_code(permission_code)
+    return _permission_granted(normalized, permission_set)
+
 
 # 尝试导入统一的侧边栏菜单构建函数
 try:
@@ -124,8 +133,27 @@ logger = logging.getLogger(__name__)
 
 def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None, active_menu_id=None):
     """生成页面上下文（统一格式）"""
-    from backend.core.views import _context as _base_context
-    return _base_context(page_title, page_icon, description, summary_cards, sections, request, active_menu_id)
+    context = {
+        "page_title": page_title,
+        "page_icon": page_icon,
+        "description": description,
+        "summary_cards": summary_cards or [],
+        "sections": sections or [],
+    }
+    if request and request.user.is_authenticated:
+        permission_set = get_user_permission_codes(request.user)
+        context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+        context['sidebar_module_title'] = '合同管理'
+        context['sidebar_module_subtitle'] = 'Contract Management'
+        context['sidebar_title'] = '合同管理'
+        context['sidebar_subtitle'] = 'Contract Management'
+        context['sidebar_nav'] = _build_contract_management_sidebar_nav(
+            permission_set, request.path, active_id=active_menu_id
+        )
+    else:
+        context['full_top_nav'] = []
+        context['sidebar_nav'] = []
+    return context
 
 CONTRACT_MANAGEMENT_MENU = [
     {
@@ -133,27 +161,27 @@ CONTRACT_MANAGEMENT_MENU = [
         'label': '首页',
         'icon': '🏠',
         'url_name': 'contract_pages:contract_management_home',
-        'permission': 'customer_management.contract.view',
+        'permission': 'contract_management.contract.view',
     },
     {
         'id': 'authorization_letter',
         'label': '业务委托书',
         'icon': '📋',
-        'permission': 'customer_management.client.view',  # 使用客户管理权限（临时）
+        'permission': 'contract_management.client.view',  # 使用客户管理权限（临时）
         'children': [
             {
                 'id': 'authorization_letter_list',
                 'label': '业务委托书列表',
                 'icon': '📋',
                 'url_name': 'contract_pages:authorization_letter_list',
-                'permission': 'customer_management.client.view',
+                'permission': 'contract_management.client.view',
             },
             {
                 'id': 'authorization_letter_template_list',
                 'label': '委托书模板管理',
                 'icon': '📄',
                 'url_name': 'contract_pages:authorization_letter_template_list',
-                'permission': 'customer_management.client.view',
+                'permission': 'contract_management.client.view',
             },
         ]
     },
@@ -161,42 +189,42 @@ CONTRACT_MANAGEMENT_MENU = [
         'id': 'contract_signing',
         'label': '正式合同签署',
         'icon': '✍️',
-        'permission': 'customer_management.client.view',  # 使用客户管理权限（临时）
+        'permission': 'contract_management.client.view',  # 使用客户管理权限（临时）
         'children': [
             {
                 'id': 'contract_management_list',
                 'label': '合同列表',
                 'icon': '📄',
                 'url_name': 'contract_pages:contract_management_list',
-                'permission': 'customer_management.client.view',
+                'permission': 'contract_management.client.view',
             },
             {
                 'id': 'contract_negotiation_list',
                 'label': '合同洽谈记录',
                 'icon': '💬',
                 'url_name': 'contract_pages:contract_negotiation_list',
-                'permission': 'customer_management.client.view',
+                'permission': 'contract_management.client.view',
             },
             {
                 'id': 'contract_negotiation_create',
                 'label': '创建合同洽谈记录',
                 'icon': '➕',
                 'url_name': 'contract_pages:contract_negotiation_create',
-                'permission': 'customer_management.client.create',
+                'permission': 'contract_management.client.create',
             },
             {
                 'id': 'contract_finalize_list',
                 'label': '合同定稿列表',
                 'icon': '📋',
                 'url_name': 'contract_pages:contract_finalize_list',
-                'permission': 'customer_management.client.view',
+                'permission': 'contract_management.client.view',
             },
             {
                 'id': 'contract_finalize_create',
                 'label': '创建合同定稿',
                 'icon': '✅',
                 'url_name': 'contract_pages:contract_finalize_create',
-                'permission': 'customer_management.client.create',
+                'permission': 'contract_management.client.create',
             },
         ]
     },
@@ -204,21 +232,21 @@ CONTRACT_MANAGEMENT_MENU = [
         'id': 'contract_execution',
         'label': '合同执行',
         'icon': '📊',
-        'permission': 'customer_management.client.view',  # 使用客户管理权限（临时）
+        'permission': 'contract_management.client.view',  # 使用客户管理权限（临时）
         'children': [
             {
                 'id': 'contract_performance',
                 'label': '履约跟踪',
                 'icon': '📋',
                 'url_name': 'contract_pages:contract_performance_track',
-                'permission': 'customer_management.client.view',
+                'permission': 'contract_management.client.view',
             },
             {
                 'id': 'contract_dispute_list',
                 'label': '合同争议',
                 'icon': '⚖️',
                 'url_name': 'contract_pages:contract_dispute_list',
-                'permission': 'customer_management.client.view',
+                'permission': 'contract_management.client.view',
             },
         ]
     },
@@ -226,28 +254,28 @@ CONTRACT_MANAGEMENT_MENU = [
         'id': 'contract_reminder',
         'label': '提醒与警报',
         'icon': '⚠️',
-        'permission': 'customer_management.client.view',  # 使用客户管理权限（临时）
+        'permission': 'contract_management.client.view',  # 使用客户管理权限（临时）
         'children': [
             {
                 'id': 'contract_expiry_reminder',
                 'label': '到期提醒',
                 'icon': '📅',
                 'url_name': 'contract_pages:contract_expiry_reminder',
-                'permission': 'customer_management.client.view',
+                'permission': 'contract_management.client.view',
             },
             {
                 'id': 'contract_payment_reminder',
                 'label': '付款提醒',
                 'icon': '💰',
                 'url_name': 'contract_pages:contract_payment_reminder',
-                'permission': 'customer_management.client.view',
+                'permission': 'contract_management.client.view',
             },
             {
                 'id': 'contract_risk_warning',
                 'label': '风险预警',
                 'icon': '⚠️',
                 'url_name': 'contract_pages:contract_risk_warning',
-                'permission': 'customer_management.client.view',
+                'permission': 'contract_management.client.view',
             },
         ]
     },
@@ -408,7 +436,7 @@ def contract_management_home(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('customer_management.contract.view', permission_set):
+    if not _permission_granted('contract_management.contract.view', permission_set):
         messages.error(request, '您没有权限访问合同管理')
         return redirect('home')
     
@@ -514,7 +542,7 @@ def contract_management_home(request):
     
     # 顶部操作栏
     top_actions = []
-    if _permission_granted('customer_management.contract.create', permission_set):
+    if _permission_granted('contract_management.contract.create', permission_set):
         try:
             top_actions.append({
                 'label': '创建合同',
@@ -590,7 +618,7 @@ def contract_management_home(request):
         context['full_top_nav'] = []
         context['sidebar_nav'] = []
     
-    return render(request, "customer_management/contract_home.html", context)
+    return render(request, "contract_management/contract_home.html", context)
 
 
 @login_required
@@ -611,9 +639,9 @@ def contract_management_list(request):
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.contract.view', permission_set):
+    if not _permission_granted('contract_management.contract.view', permission_set):
         messages.error(request, '您没有权限访问合同管理')
-        return redirect('business_pages:customer_management_home')
+        return redirect('contract_pages:contract_management_home')
     
     # 获取筛选参数
     filters = {
@@ -671,7 +699,7 @@ def contract_management_list(request):
         projects = []
     
     # 检查创建权限
-    can_create = _permission_granted('customer_management.contract.create', permission_set)
+    can_create = _permission_granted('contract_management.contract.create', permission_set)
     
     context = _context(
         "合同管理",
@@ -689,14 +717,14 @@ def contract_management_list(request):
             contract.can_edit = (
                 contract.status == 'draft' and (
                     contract.created_by == request.user or 
-                    _permission_granted('customer_management.contract.manage', permission_set)
+                    _permission_granted('contract_management.contract.manage', permission_set)
                 )
             )
             # 判断是否可以删除（创建人或具有删除权限，且状态为草稿）
             contract.can_delete = (
                 contract.status == 'draft' and (
                     contract.created_by == request.user or 
-                    _permission_granted('customer_management.contract.manage', permission_set)
+                    _permission_granted('contract_management.contract.manage', permission_set)
                 )
             )
     
@@ -716,7 +744,7 @@ def contract_management_list(request):
         'can_create': can_create,
     })
     
-    return render(request, "customer_management/contract_management_list.html", context)
+    return render(request, "contract_management/contract_management_list.html", context)
 
 
 @login_required
@@ -738,7 +766,7 @@ def contract_detail(request, contract_id):
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.contract.view', permission_set):
+    if not _permission_granted('contract_management.contract.view', permission_set):
         messages.error(request, '您没有权限查看合同详情')
         return redirect('contract_pages:contract_management_list')
     
@@ -798,7 +826,7 @@ def contract_detail(request, contract_id):
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    can_manage = _check_customer_permission('customer_management.client.edit', permission_set)
+    can_manage = _check_customer_permission('contract_management.client.edit', permission_set)
     can_edit = can_manage and contract.status == 'draft'  # 只有草稿状态才能编辑
     
     # 获取审批信息
@@ -863,7 +891,7 @@ def contract_detail(request, contract_id):
     else:
         logger.info(f"合同 {contract.id} 未关联商机")
     
-    return render(request, "customer_management/contract_detail.html", base_context)
+    return render(request, "contract_management/contract_detail.html", base_context)
 
 
 @login_required
@@ -883,7 +911,7 @@ def contract_create(request):
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.contract.create', permission_set):
+    if not _permission_granted('contract_management.contract.create', permission_set):
         messages.error(request, '您没有权限创建合同')
         return redirect('contract_pages:contract_management_list')
     
@@ -1028,7 +1056,8 @@ def contract_create(request):
     # 转换为JSON字符串供JavaScript使用（兼容旧代码）
     our_units = json.dumps(our_units_list, ensure_ascii=False)
     # 从后台引入服务内容相关选项
-    from backend.apps.production_management.models import BusinessType, ServiceType, DesignStage, ServiceProfession, SettlementNodeType, AfterSalesNodeType
+    from backend.apps.base_data.models import BusinessType, ServiceType, DesignStage, ServiceProfession
+    from backend.apps.production_management.models import SettlementNodeType, AfterSalesNodeType
     business_types = BusinessType.objects.filter(is_active=True).order_by('order', 'id')
     service_types = ServiceType.objects.all().order_by('order', 'id')
     design_stages = DesignStage.objects.filter(is_active=True).order_by('order', 'id')
@@ -1041,7 +1070,7 @@ def contract_create(request):
     result_file_types = ResultFileType.objects.filter(is_active=True).order_by('service_category', 'order', 'id')
     
     # 获取结算方式（用于价款信息）
-    from backend.apps.settlement_center.models import SettlementMethod
+    from backend.apps.settlement_management.models import SettlementMethod
     settlement_methods = SettlementMethod.objects.filter(is_active=True).order_by('sort_order', 'name')
     
     # 定义约定管辖选项
@@ -1085,7 +1114,7 @@ def contract_create(request):
         'settlement_methods': settlement_methods,
     })
     
-    return render(request, "customer_management/contract_form.html", base_context)
+    return render(request, "contract_management/contract_form.html", base_context)
 
 
 @login_required
@@ -1109,7 +1138,7 @@ def contract_edit(request, contract_id):
     can_edit = (
         contract.status == 'draft' and (
             contract.created_by == request.user or 
-            _permission_granted('customer_management.contract.manage', permission_set)
+            _permission_granted('contract_management.contract.manage', permission_set)
         )
     )
     
@@ -1181,7 +1210,8 @@ def contract_edit(request, contract_id):
     # 转换为JSON字符串供JavaScript使用（兼容旧代码）
     our_units = json.dumps(our_units_list, ensure_ascii=False)
     # 从后台引入服务内容相关选项
-    from backend.apps.production_management.models import BusinessType, ServiceType, DesignStage, ServiceProfession, SettlementNodeType, AfterSalesNodeType
+    from backend.apps.base_data.models import BusinessType, ServiceType, DesignStage, ServiceProfession
+    from backend.apps.production_management.models import SettlementNodeType, AfterSalesNodeType
     business_types = BusinessType.objects.filter(is_active=True).order_by('order', 'id')
     service_types = ServiceType.objects.all().order_by('order', 'id')
     design_stages = DesignStage.objects.filter(is_active=True).order_by('order', 'id')
@@ -1194,7 +1224,7 @@ def contract_edit(request, contract_id):
     result_file_types = ResultFileType.objects.filter(is_active=True).order_by('service_category', 'order', 'id')
     
     # 获取结算方式（用于价款信息）
-    from backend.apps.settlement_center.models import SettlementMethod
+    from backend.apps.settlement_management.models import SettlementMethod
     settlement_methods = SettlementMethod.objects.filter(is_active=True).order_by('sort_order', 'name')
     
     # 定义约定管辖选项
@@ -1239,7 +1269,7 @@ def contract_edit(request, contract_id):
         'settlement_methods': settlement_methods,
     })
     
-    return render(request, "customer_management/contract_form.html", base_context)
+    return render(request, "contract_management/contract_form.html", base_context)
 
 
 @login_required
@@ -1263,7 +1293,7 @@ def contract_delete(request, contract_id):
     can_delete = (
         contract.status == 'draft' and (
             contract.created_by == request.user or 
-            _permission_granted('customer_management.contract.manage', permission_set)
+            _permission_granted('contract_management.contract.manage', permission_set)
         )
     )
     
@@ -1306,7 +1336,7 @@ def contract_submit_approval(request, contract_id):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _check_customer_permission('customer_management.client.edit', permission_set):
+    if not _check_customer_permission('contract_management.client.edit', permission_set):
         messages.error(request, '您没有权限提交合同审批')
         return redirect('contract_pages:contract_detail', contract_id=contract_id)
     
@@ -1398,7 +1428,7 @@ def contract_submit_approval(request, contract_id):
         'existing_instance': existing_instance,
     })
     
-    return render(request, "customer_management/contract_submit_approval.html", base_context)
+    return render(request, "contract_management/contract_submit_approval.html", base_context)
 
 
 @login_required
@@ -1419,7 +1449,7 @@ def contract_dispute_list(request):
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限访问合同争议')
         return redirect('contract_pages:contract_management_list')
     
@@ -1460,7 +1490,7 @@ def contract_dispute_list(request):
         summary_cards = []
     
     # 检查创建权限
-    can_create = _permission_granted('customer_management.client.create', permission_set)
+    can_create = _permission_granted('contract_management.client.create', permission_set)
     
     # 获取筛选选项
     try:
@@ -1510,7 +1540,7 @@ def contract_dispute_list(request):
         'can_create': can_create,
     })
     
-    return render(request, "customer_management/contract_list.html", context)
+    return render(request, "contract_management/contract_list.html", context)
 
 
 @login_required
@@ -1531,7 +1561,7 @@ def contract_finalize_list(request):
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限访问合同定稿')
         return redirect('contract_pages:contract_management_list')
     
@@ -1572,7 +1602,7 @@ def contract_finalize_list(request):
         summary_cards = []
     
     # 检查创建权限
-    can_create = _permission_granted('customer_management.client.create', permission_set)
+    can_create = _permission_granted('contract_management.client.create', permission_set)
     
     # 获取筛选选项
     try:
@@ -1622,7 +1652,7 @@ def contract_finalize_list(request):
         'can_create': can_create,
     })
     
-    return render(request, "customer_management/contract_list.html", context)
+    return render(request, "contract_management/contract_list.html", context)
 
 
 @login_required
@@ -1637,14 +1667,13 @@ def contract_negotiation_create(request):
     - 关联到具体合同
     """
     import logging
-    from .models import ContractNegotiation
     from .forms import ContractNegotiationForm
     
     logger = logging.getLogger(__name__)
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.create', permission_set):
+    if not _permission_granted('contract_management.client.create', permission_set):
         messages.error(request, '您没有权限创建合同洽谈记录')
         return redirect('contract_pages:contract_management_list')
     
@@ -1716,7 +1745,7 @@ def contract_negotiation_create(request):
         'contract': contract,
     })
     
-    return render(request, "customer_management/contract_negotiation_form.html", context)
+    return render(request, "contract_management/contract_negotiation_form.html", context)
 
 
 @login_required
@@ -1732,14 +1761,13 @@ def contract_negotiation_list(request):
     """
     import logging
     from django.core.paginator import Paginator
-    from .models import ContractNegotiation
     from django.db.models import Q
     
     logger = logging.getLogger(__name__)
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限访问合同洽谈记录')
         return redirect('contract_pages:contract_management_list')
     
@@ -1809,7 +1837,7 @@ def contract_negotiation_list(request):
         summary_cards = []
     
     # 检查创建权限
-    can_create = _permission_granted('customer_management.client.create', permission_set)
+    can_create = _permission_granted('contract_management.client.create', permission_set)
     
     # 获取筛选选项
     try:
@@ -1861,7 +1889,7 @@ def contract_negotiation_list(request):
         'can_create': can_create,
     })
     
-    return render(request, "customer_management/contract_negotiation_list.html", context)
+    return render(request, "contract_management/contract_negotiation_list.html", context)
 
 
 @login_required
@@ -1871,13 +1899,12 @@ def contract_negotiation_detail(request, negotiation_id):
     合同洽谈记录详情页面
     """
     import logging
-    from .models import ContractNegotiation
     
     logger = logging.getLogger(__name__)
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限查看合同洽谈记录')
         return redirect('contract_pages:contract_negotiation_list')
     
@@ -1891,7 +1918,7 @@ def contract_negotiation_detail(request, negotiation_id):
     # 检查编辑权限
     can_edit = (
         negotiation.created_by == request.user or
-        _permission_granted('customer_management.client.edit', permission_set)
+        _permission_granted('contract_management.client.edit', permission_set)
     )
     
     context = _context(
@@ -1907,7 +1934,7 @@ def contract_negotiation_detail(request, negotiation_id):
         'can_edit': can_edit,
     })
     
-    return render(request, "customer_management/contract_negotiation_detail.html", context)
+    return render(request, "contract_management/contract_negotiation_detail.html", context)
 
 
 @login_required
@@ -1926,7 +1953,7 @@ def contract_finalize_create(request):
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.create', permission_set):
+    if not _permission_granted('contract_management.client.create', permission_set):
         messages.error(request, '您没有权限创建合同定稿')
         return redirect('contract_pages:contract_finalize_list')
     
@@ -2092,7 +2119,7 @@ def contract_finalize_create(request):
         'our_units': our_units,
     })
     
-    return render(request, "customer_management/contract_form.html", base_context)
+    return render(request, "contract_management/contract_form.html", base_context)
 
 
 @login_required
@@ -2116,7 +2143,7 @@ def contract_performance_track(request):
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限访问履约跟踪')
         return redirect('contract_pages:contract_management_list')
     
@@ -2166,7 +2193,7 @@ def contract_performance_track(request):
         summary_cards = []
     
     # 检查创建权限
-    can_create = _permission_granted('customer_management.client.create', permission_set)
+    can_create = _permission_granted('contract_management.client.create', permission_set)
     
     # 获取筛选选项
     try:
@@ -2201,7 +2228,7 @@ def contract_performance_track(request):
         'can_create': can_create,
     })
     
-    return render(request, "customer_management/contract_list.html", context)
+    return render(request, "contract_management/contract_list.html", context)
 
 
 @login_required
@@ -2224,7 +2251,7 @@ def contract_expiry_reminder(request):
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限访问到期提醒')
         return redirect('contract_pages:contract_management_list')
     
@@ -2315,7 +2342,7 @@ def contract_expiry_reminder(request):
         'days_ahead': days_ahead,
     })
     
-    return render(request, "customer_management/contract_list.html", context)
+    return render(request, "contract_management/contract_list.html", context)
 
 
 @login_required
@@ -2339,7 +2366,7 @@ def contract_payment_reminder(request):
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限访问付款提醒')
         return redirect('contract_pages:contract_management_list')
     
@@ -2434,7 +2461,7 @@ def contract_payment_reminder(request):
         'overdue_only': filters['overdue_only'],
     })
     
-    return render(request, "customer_management/contract_list.html", context)
+    return render(request, "contract_management/contract_list.html", context)
 
 
 @login_required
@@ -2458,7 +2485,7 @@ def contract_risk_warning(request):
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限访问风险预警')
         return redirect('contract_pages:contract_management_list')
     
@@ -2569,7 +2596,7 @@ def contract_risk_warning(request):
         'selected_risk_type': filters['risk_type'],
     })
     
-    return render(request, "customer_management/contract_list.html", context)
+    return render(request, "contract_management/contract_list.html", context)
 
 
 @login_required
@@ -2580,9 +2607,9 @@ def authorization_letter_list(request):
     from .forms import AuthorizationLetterForm
     
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限访问业务委托书列表')
-        return redirect('business_pages:customer_list')
+        return redirect('contract_pages:contract_management_home')
     
     # 获取筛选参数
     search = request.GET.get('search', '')
@@ -2678,7 +2705,7 @@ def authorization_letter_list(request):
     ).order_by('-created_time')[:100]
     
     # 检查创建权限
-    can_create = _permission_granted('customer_management.client.create', permission_set)
+    can_create = _permission_granted('contract_management.client.create', permission_set)
     
     context = _context(
         "创建业务委托书",
@@ -2694,12 +2721,12 @@ def authorization_letter_list(request):
             # 判断是否可以编辑（创建人或具有编辑权限）
             letter.can_edit = (
                 letter.created_by == request.user or 
-                _permission_granted('customer_management.client.edit', permission_set)
+                _permission_granted('contract_management.client.edit', permission_set)
             )
             # 判断是否可以删除（创建人或具有删除权限）
             letter.can_delete = (
                 letter.created_by == request.user or 
-                _permission_granted('customer_management.client.delete', permission_set)
+                _permission_granted('contract_management.client.delete', permission_set)
             )
     
     context.update({
@@ -2717,7 +2744,7 @@ def authorization_letter_list(request):
         'can_create': can_create,
     })
     
-    return render(request, "customer_management/authorization_letter_list.html", context)
+    return render(request, "contract_management/authorization_letter_list.html", context)
 
 
 @login_required
@@ -2731,9 +2758,9 @@ def authorization_letter_create(request):
         from .forms import AuthorizationLetterForm
         
         permission_set = get_user_permission_codes(request.user)
-        if not _permission_granted('customer_management.client.create', permission_set):
+        if not _permission_granted('contract_management.client.create', permission_set):
             messages.error(request, '您没有权限创建业务委托书')
-            return redirect('business_pages:authorization_letter_list')
+            return redirect('contract_pages:authorization_letter_list')
         
         if request.method == 'POST':
             form = AuthorizationLetterForm(request.POST)
@@ -2742,7 +2769,7 @@ def authorization_letter_create(request):
                 letter.created_by = request.user
                 letter.save()
                 messages.success(request, f'业务委托书 "{letter.project_name}" 创建成功')
-                return redirect('business_pages:authorization_letter_list')
+                return redirect('contract_pages:authorization_letter_list')
         else:
             form = AuthorizationLetterForm()
         
@@ -2759,11 +2786,11 @@ def authorization_letter_create(request):
             'is_create': True,
         })
         
-        return render(request, "customer_management/authorization_letter_form.html", context)
+        return render(request, "contract_management/authorization_letter_form.html", context)
     except Exception as e:
         logger.exception('创建业务委托书页面加载失败: %s', str(e))
         messages.error(request, f'页面加载失败：{str(e)}')
-        return redirect('business_pages:authorization_letter_list')
+        return redirect('contract_pages:authorization_letter_list')
 
 
 @login_required
@@ -2773,9 +2800,9 @@ def authorization_letter_detail(request, letter_id):
     permission_set = get_user_permission_codes(request.user)
     letter = get_object_or_404(AuthorizationLetter, id=letter_id)
     
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限查看此业务委托书')
-        return redirect('business_pages:authorization_letter_list')
+        return redirect('contract_pages:authorization_letter_list')
     
     context = _context(
         f"业务委托书详情 - {letter.project_name}",
@@ -2787,12 +2814,12 @@ def authorization_letter_detail(request, letter_id):
     
     context.update({
         'letter': letter,
-        'can_edit': letter.can_edit() and _permission_granted('customer_management.client.edit', permission_set),
-        'can_delete': letter.can_delete() and _permission_granted('customer_management.client.delete', permission_set),
-        'can_convert': letter.can_convert_to_contract() and _permission_granted('customer_management.client.create', permission_set),
+        'can_edit': letter.can_edit() and _permission_granted('contract_management.client.edit', permission_set),
+        'can_delete': letter.can_delete() and _permission_granted('contract_management.client.delete', permission_set),
+        'can_convert': letter.can_convert_to_contract() and _permission_granted('contract_management.client.create', permission_set),
     })
     
-    return render(request, "customer_management/authorization_letter_detail.html", context)
+    return render(request, "contract_management/authorization_letter_detail.html", context)
 
 
 @login_required
@@ -2806,18 +2833,18 @@ def authorization_letter_edit(request, letter_id):
     
     if not letter.can_edit():
         messages.error(request, '只有草稿状态的委托书可以编辑')
-        return redirect('business_pages:authorization_letter_detail', letter_id=letter_id)
+        return redirect('contract_pages:authorization_letter_detail', letter_id=letter_id)
     
-    if not _permission_granted('customer_management.client.edit', permission_set):
+    if not _permission_granted('contract_management.client.edit', permission_set):
         messages.error(request, '您没有权限编辑此业务委托书')
-        return redirect('business_pages:authorization_letter_detail', letter_id=letter_id)
+        return redirect('contract_pages:authorization_letter_detail', letter_id=letter_id)
     
     if request.method == 'POST':
         form = AuthorizationLetterForm(request.POST, instance=letter)
         if form.is_valid():
             letter = form.save()
             messages.success(request, f'业务委托书 "{letter.project_name}" 更新成功')
-            return redirect('business_pages:authorization_letter_detail', letter_id=letter_id)
+            return redirect('contract_pages:authorization_letter_detail', letter_id=letter_id)
     else:
         form = AuthorizationLetterForm(instance=letter)
     
@@ -2835,7 +2862,7 @@ def authorization_letter_edit(request, letter_id):
         'is_create': False,
     })
     
-    return render(request, "customer_management/authorization_letter_form.html", context)
+    return render(request, "contract_management/authorization_letter_form.html", context)
 
 
 @login_required
@@ -2847,17 +2874,17 @@ def authorization_letter_delete(request, letter_id):
     
     if not letter.can_delete():
         messages.error(request, '只有草稿状态的委托书可以删除')
-        return redirect('business_pages:authorization_letter_detail', letter_id=letter_id)
+        return redirect('contract_pages:authorization_letter_detail', letter_id=letter_id)
     
-    if not _permission_granted('customer_management.client.delete', permission_set):
+    if not _permission_granted('contract_management.client.delete', permission_set):
         messages.error(request, '您没有权限删除此业务委托书')
-        return redirect('business_pages:authorization_letter_detail', letter_id=letter_id)
+        return redirect('contract_pages:authorization_letter_detail', letter_id=letter_id)
     
     if request.method == 'POST':
         letter_name = letter.project_name
         letter.delete()
         messages.success(request, f'业务委托书 "{letter_name}" 已删除')
-        return redirect('business_pages:authorization_letter_list')
+        return redirect('contract_pages:authorization_letter_list')
     
     context = _context(
         f"删除业务委托书 - {letter.project_name}",
@@ -2871,7 +2898,7 @@ def authorization_letter_delete(request, letter_id):
         'letter': letter,
     })
     
-    return render(request, "customer_management/authorization_letter_delete.html", context)
+    return render(request, "contract_management/authorization_letter_delete.html", context)
 
 
 @login_required
@@ -2881,9 +2908,9 @@ def authorization_letter_status_transition(request, letter_id):
     permission_set = get_user_permission_codes(request.user)
     letter = get_object_or_404(AuthorizationLetter, id=letter_id)
     
-    if not _permission_granted('customer_management.client.edit', permission_set):
+    if not _permission_granted('contract_management.client.edit', permission_set):
         messages.error(request, '您没有权限操作此业务委托书')
-        return redirect('business_pages:authorization_letter_detail', letter_id=letter_id)
+        return redirect('contract_pages:authorization_letter_detail', letter_id=letter_id)
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -2911,7 +2938,7 @@ def authorization_letter_status_transition(request, letter_id):
         else:
             messages.error(request, '无效的操作')
     
-    return redirect('business_pages:authorization_letter_detail', letter_id=letter_id)
+    return redirect('contract_pages:authorization_letter_detail', letter_id=letter_id)
 
 
 # ==================== 业务委托书模板管理 ====================
@@ -2922,12 +2949,11 @@ def authorization_letter_template_list(request):
     """业务委托书模板列表页面"""
     from django.core.paginator import Paginator
     from .forms import AuthorizationLetterTemplateForm
-    from .models import AuthorizationLetterTemplate
     
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限访问业务委托书模板列表')
-        return redirect('business_pages:authorization_letter_list')
+        return redirect('contract_pages:authorization_letter_list')
     
     # 获取筛选参数
     search = request.GET.get('search', '')
@@ -2993,7 +3019,7 @@ def authorization_letter_template_list(request):
         'status_choices': AuthorizationLetterTemplate.STATUS_CHOICES,
     })
     
-    return render(request, "customer_management/authorization_letter_template_list.html", context)
+    return render(request, "contract_management/authorization_letter_template_list.html", context)
 
 
 @login_required
@@ -3001,12 +3027,11 @@ def authorization_letter_template_list(request):
 def authorization_letter_template_create(request):
     """创建业务委托书模板"""
     from .forms import AuthorizationLetterTemplateForm
-    from .models import AuthorizationLetterTemplate
     
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.create', permission_set):
+    if not _permission_granted('contract_management.client.create', permission_set):
         messages.error(request, '您没有权限创建业务委托书模板')
-        return redirect('business_pages:authorization_letter_template_list')
+        return redirect('contract_pages:authorization_letter_template_list')
     
     if request.method == 'POST':
         import json
@@ -3034,7 +3059,7 @@ def authorization_letter_template_create(request):
             template.created_by = request.user
             template.save()
             messages.success(request, f'业务委托书模板 "{template.template_name}" 创建成功')
-            return redirect('business_pages:authorization_letter_template_list')
+            return redirect('contract_pages:authorization_letter_template_list')
     else:
         form = AuthorizationLetterTemplateForm()
     
@@ -3051,7 +3076,7 @@ def authorization_letter_template_create(request):
         'is_create': True,
     })
     
-    return render(request, "customer_management/authorization_letter_template_form.html", context)
+    return render(request, "contract_management/authorization_letter_template_form.html", context)
 
 
 @login_required
@@ -3059,14 +3084,13 @@ def authorization_letter_template_create(request):
 def authorization_letter_template_edit(request, template_id):
     """编辑业务委托书模板"""
     from .forms import AuthorizationLetterTemplateForm
-    from .models import AuthorizationLetterTemplate
     
     permission_set = get_user_permission_codes(request.user)
     template = get_object_or_404(AuthorizationLetterTemplate, id=template_id)
     
-    if not _permission_granted('customer_management.client.edit', permission_set):
+    if not _permission_granted('contract_management.client.edit', permission_set):
         messages.error(request, '您没有权限编辑此业务委托书模板')
-        return redirect('business_pages:authorization_letter_template_list')
+        return redirect('contract_pages:authorization_letter_template_list')
     
     if request.method == 'POST':
         import json
@@ -3094,7 +3118,7 @@ def authorization_letter_template_edit(request, template_id):
             template.updated_by = request.user
             template.save()
             messages.success(request, f'业务委托书模板 "{template.template_name}" 更新成功')
-            return redirect('business_pages:authorization_letter_template_list')
+            return redirect('contract_pages:authorization_letter_template_list')
     else:
         form = AuthorizationLetterTemplateForm(instance=template)
     
@@ -3112,27 +3136,25 @@ def authorization_letter_template_edit(request, template_id):
         'is_create': False,
     })
     
-    return render(request, "customer_management/authorization_letter_template_form.html", context)
+    return render(request, "contract_management/authorization_letter_template_form.html", context)
 
 
 @login_required
 
 def authorization_letter_template_delete(request, template_id):
     """删除业务委托书模板"""
-    from .models import AuthorizationLetterTemplate
-    
     permission_set = get_user_permission_codes(request.user)
     template = get_object_or_404(AuthorizationLetterTemplate, id=template_id)
     
-    if not _permission_granted('customer_management.client.delete', permission_set):
+    if not _permission_granted('contract_management.client.delete', permission_set):
         messages.error(request, '您没有权限删除此业务委托书模板')
-        return redirect('business_pages:authorization_letter_template_list')
+        return redirect('contract_pages:authorization_letter_template_list')
     
     if request.method == 'POST':
         template_name = template.template_name
         template.delete()
         messages.success(request, f'业务委托书模板 "{template_name}" 已删除')
-        return redirect('business_pages:authorization_letter_template_list')
+        return redirect('contract_pages:authorization_letter_template_list')
     
     context = _context(
         f"删除业务委托书模板 - {template.template_name}",
@@ -3146,7 +3168,7 @@ def authorization_letter_template_delete(request, template_id):
         'template': template,
     })
     
-    return render(request, "customer_management/authorization_letter_template_delete.html", context)
+    return render(request, "contract_management/authorization_letter_template_delete.html", context)
 
 
 @login_required
@@ -3154,12 +3176,11 @@ def authorization_letter_template_delete(request, template_id):
 def authorization_letter_create_from_template(request, template_id):
     """从模板创建业务委托书"""
     from .forms import AuthorizationLetterForm
-    from .models import AuthorizationLetterTemplate, AuthorizationLetter
     
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.create', permission_set):
+    if not _permission_granted('contract_management.client.create', permission_set):
         messages.error(request, '您没有权限创建业务委托书')
-        return redirect('business_pages:authorization_letter_list')
+        return redirect('contract_pages:authorization_letter_list')
     
     template = get_object_or_404(AuthorizationLetterTemplate, id=template_id)
     
@@ -3174,7 +3195,7 @@ def authorization_letter_create_from_template(request, template_id):
             template.increment_usage()
             
             messages.success(request, f'业务委托书 "{letter.project_name}" 创建成功（来自模板：{template.template_name}）')
-            return redirect('business_pages:authorization_letter_detail', letter_id=letter.id)
+            return redirect('contract_pages:authorization_letter_detail', letter_id=letter.id)
     else:
         # 从模板填充表单初始值
         form = AuthorizationLetterForm()
@@ -3200,7 +3221,7 @@ def authorization_letter_create_from_template(request, template_id):
         'from_template': True,
     })
     
-    return render(request, "customer_management/authorization_letter_form.html", context)
+    return render(request, "contract_management/authorization_letter_form.html", context)
 
 
 @login_required
@@ -3208,14 +3229,13 @@ def authorization_letter_create_from_template(request, template_id):
 def authorization_letter_template_file_preview(request, template_id):
     """预览业务委托书模板文件"""
     from django.http import FileResponse, Http404
-    from .models import AuthorizationLetterTemplate
     import os
     import mimetypes
     
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限预览模板文件')
-        return redirect('business_pages:authorization_letter_template_list')
+        return redirect('contract_pages:authorization_letter_template_list')
     
     template = get_object_or_404(AuthorizationLetterTemplate, id=template_id)
     
@@ -3252,7 +3272,7 @@ def authorization_letter_template_file_preview(request, template_id):
     except Exception as e:
         logger.exception('预览模板文件失败: %s', str(e))
         messages.error(request, f'预览文件失败：{str(e)}')
-        return redirect('business_pages:authorization_letter_template_edit', template_id=template_id)
+        return redirect('contract_pages:authorization_letter_template_edit', template_id=template_id)
 
 
 @login_required
@@ -3260,12 +3280,11 @@ def authorization_letter_template_file_preview(request, template_id):
 def authorization_letter_template_file_download(request, template_id):
     """下载业务委托书模板文件"""
     from django.http import FileResponse, Http404
-    from .models import AuthorizationLetterTemplate
     
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('customer_management.client.view', permission_set):
+    if not _permission_granted('contract_management.client.view', permission_set):
         messages.error(request, '您没有权限下载模板文件')
-        return redirect('business_pages:authorization_letter_template_list')
+        return redirect('contract_pages:authorization_letter_template_list')
     
     template = get_object_or_404(AuthorizationLetterTemplate, id=template_id)
     
@@ -3288,6 +3307,6 @@ def authorization_letter_template_file_download(request, template_id):
     except Exception as e:
         logger.exception('下载模板文件失败: %s', str(e))
         messages.error(request, f'下载文件失败：{str(e)}')
-        return redirect('business_pages:authorization_letter_template_edit', template_id=template_id)
+        return redirect('contract_pages:authorization_letter_template_edit', template_id=template_id)
 
 

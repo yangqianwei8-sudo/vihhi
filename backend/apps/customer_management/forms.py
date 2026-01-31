@@ -2,7 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.db import models as django_models
 from .models import (
-    Client, 
+    Client,
     ClientContact,
     ContactCareer,
     ContactColleague,
@@ -17,12 +17,12 @@ from .models import (
     VisitPlan,
     VisitCheckin,
     VisitReview,
-    BusinessOpportunity,
     AuthorizationLetter,
     AuthorizationLetterTemplate,
     CustomerLead,
-    CustomerFiling
+    CustomerFiling,
 )
+from backend.apps.opportunity_management.models import BusinessOpportunity
 # 尝试导入 ContactInfoChange（如果模型存在）
 try:
     from .models import ContactInfoChange

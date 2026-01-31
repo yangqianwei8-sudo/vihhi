@@ -77,70 +77,19 @@
   {# 隐藏的 CSRF token 字段，确保批量删除功能可以获取到 token #}
   {% csrf_token %}
 
-  {# 统计卡片区域 - 显示关键指标 #}
-  {% block list_stats_section %}
-  <div class="list-stats-section">
-    <div class="list-page-stats">
-      {% block list_stats_content %}
-      <div class="list-stat-card">
-        <div class="list-stat-label">待我审批</div>
-        <div class="list-stat-value">{{ pending_count|default:0 }}</div>
-      </div>
-      <div class="list-stat-card">
-        <div class="list-stat-label">历史审批</div>
-        <div class="list-stat-value">{{ historical_count|default:0 }}</div>
-      </div>
-      {% endblock list_stats_content %}
-    </div>
-  </div>
-  {% endblock list_stats_section %}
-
-  {# 标签页导航 - 放在统计卡片之后，筛选器之前 #}
-  <div class="list-page-tabs-section" style="margin-bottom: 16px;">
-    <ul class="nav nav-tabs">
-      <li class="nav-item">
-        <a class="nav-link {% if not tab or tab == 'pending' %}active{% endif %}" href="?tab=pending{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.workflow %}&workflow={{ request.GET.workflow }}{% endif %}">
-          待我审批 
-          {% if pending_count %}
-          <span class="badge bg-danger">{{ pending_count }}</span>
-          {% endif %}
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if tab == 'historical' %}active{% endif %}" href="?tab=historical{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.workflow %}&workflow={{ request.GET.workflow }}{% endif %}">
-          历史审批
-          {% if historical_count %}
-          <span class="badge bg-secondary">{{ historical_count }}</span>
-          {% endif %}
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if tab == 'my_submitted' %}active{% endif %}" href="?tab=my_submitted{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.workflow %}&workflow={{ request.GET.workflow }}{% endif %}">
-          我提交的审批
-          {% if my_submitted_count %}
-          <span class="badge bg-info">{{ my_submitted_count }}</span>
-          {% endif %}
-        </a>
-      </li>
-    </ul>
-  </div>
-
   {# 筛选器区域 #}
   {% block list_filters_section %}
   <div class="list-page-filters">
     <div class="list-page-filter-row">
       <form id="filterForm" method="get">
         {% block list_filters_content %}
-        {# 保持tab参数 #}
-        <input type="hidden" name="tab" value="{{ tab|default:'pending' }}">
-        
         {# 搜索框 #}
         <div class="list-page-filter-item">
           <label class="list-page-filter-label">搜索</label>
           <input type="text" name="search" class="form-control" placeholder="搜索审批编号、流程名称、申请人..." value="{{ request.GET.search|default:'' }}">
         </div>
         
-        {# 状态筛选（仅历史审批和我提交的审批显示） #}
+        {# 状态筛选（历史审批、我的申请页显示） #}
         {% if tab == 'historical' or tab == 'my_submitted' %}
         <div class="list-page-filter-item">
           <label class="list-page-filter-label">状态</label>
@@ -184,7 +133,7 @@
   {# 批量操作工具栏 - 放在筛选器之后，表格之前 #}
   {% if not tab or tab == 'pending' %}
     {% if pending_count > 0 %}
-    <form id="batchApproveForm" method="post" action="{% url 'workflow_engine:approval_list' %}" style="display: none;">
+    <form id="batchApproveForm" method="post" action="{% url 'workflow_engine:approval_list_pending' %}" style="display: none;">
       {% csrf_token %}
       <input type="hidden" name="action" id="batchAction" value="">
       <div class="list-page-batch-actions">
@@ -602,7 +551,7 @@
                 <textarea name="comment" class="form-control" rows="4" placeholder="请输入审批意见..."></textarea>
               </div>
               
-              <input type="hidden" name="redirect_to" value="{% url 'workflow_engine:approval_list' %}">
+              <input type="hidden" name="redirect_to" value="{% url 'workflow_engine:approval_list_pending' %}">
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>

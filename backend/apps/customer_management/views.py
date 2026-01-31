@@ -1157,6 +1157,58 @@ def calculate_quotation_by_mode(request):
 
 # ==================== 商机分析 REST API ====================
 
+# ==================== 商机分析 API 重定向 (已迁移到 opportunity_management) ====================
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def opportunity_funnel_analysis_redirect(request):
+    """重定向到 opportunity_management 的漏斗分析API"""
+    from django.http import HttpResponseRedirect
+    query_string = request.META.get('QUERY_STRING', '')
+    redirect_url = f'/api/opportunity/opportunities/funnel-analysis/'
+    if query_string:
+        redirect_url += f'?{query_string}'
+    return HttpResponseRedirect(redirect_url)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def opportunity_sales_forecast_redirect(request):
+    """重定向到 opportunity_management 的销售预测API"""
+    from django.http import HttpResponseRedirect
+    query_string = request.META.get('QUERY_STRING', '')
+    redirect_url = f'/api/opportunity/opportunities/sales-forecast/'
+    if query_string:
+        redirect_url += f'?{query_string}'
+    return HttpResponseRedirect(redirect_url)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def opportunity_health_score_redirect(request, opportunity_id):
+    """重定向到 opportunity_management 的健康度评分API"""
+    from django.http import HttpResponseRedirect
+    return HttpResponseRedirect(f'/api/opportunity/opportunities/{opportunity_id}/health-score/')
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def opportunity_quality_score_redirect(request, opportunity_id):
+    """重定向到 opportunity_management 的质量评分API"""
+    from django.http import HttpResponseRedirect
+    return HttpResponseRedirect(f'/api/opportunity/opportunities/{opportunity_id}/quality-score/')
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def opportunity_action_suggestions_redirect(request, opportunity_id):
+    """重定向到 opportunity_management 的行动建议API"""
+    from django.http import HttpResponseRedirect
+    return HttpResponseRedirect(f'/api/opportunity/opportunities/{opportunity_id}/action-suggestions/')
+
+
+# ==================== 商机分析 API (已废弃,保留用于参考) ====================
+
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def opportunity_funnel_analysis_api(request):

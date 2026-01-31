@@ -121,15 +121,12 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"  ⚠️  无法访问 user.profile: {e}"))
         
         if not profile:
-            # 尝试从accounts应用获取
-            try:
-                from backend.apps.accounts.models import UserProfile
-                profile = UserProfile.objects.filter(user=user).first()
-                has_profile = profile is not None
-            except ImportError:
-                self.stdout.write(self.style.WARNING(f"  ⚠️  无法导入 UserProfile 模型"))
-            except Exception as e:
-                self.stdout.write(self.style.WARNING(f"  ⚠️  查询 UserProfile 失败: {e}"))
+            # 当前项目使用 system_management，无 accounts.UserProfile；检查 user.department
+            if hasattr(user, "department") and user.department:
+                self.stdout.write(f"  ✓ 用户有 department: {user.department.name}（system_management 架构，无 profile.company）")
+                has_profile = True
+            else:
+                self.stdout.write(self.style.WARNING(f"  ⚠️  用户无 profile 且无 department"))
         
         if has_profile and profile:
             self.stdout.write(f"  ✓ 用户有 Profile")

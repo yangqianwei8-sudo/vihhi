@@ -8,13 +8,13 @@ BUILD_PROBE = "HOME_HDR_PROBE_20260113_1"
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Sum, Q
 from django.utils import timezone
 from django.urls import reverse, NoReverseMatch
 
 # 注意：Project, ProjectTask 等模型改为延迟导入，避免在数据库表不存在时导致模块加载失败
-# from backend.apps.project_center.models import Project, ProjectMilestone, ProjectTeamNotification, ProjectTask
 from backend.apps.system_management.services import get_user_permission_codes
 
 
@@ -124,20 +124,20 @@ HOME_NAV_STRUCTURE = [
     # 按数据库模块定义顺序排列，确保与数据库一致
     {'label': '客户管理', 'icon': '👥', 'url_name': 'customer_pages:customer_management_home_alt', 'permission': 'customer_management.client.view'},
     {'label': '商机管理', 'icon': '💼', 'url_name': 'opportunity_pages:opportunity_management_home_alt', 'permission': 'customer_management.opportunity.view'},
-    {'label': '合同管理', 'icon': '📄', 'url_name': 'contract_pages:contract_management_home_alt', 'permission': 'customer_management.contract.view'},
+    {'label': '合同管理', 'icon': '📄', 'url_name': 'contract_pages:contract_management_home_alt', 'permission': 'contract_management.contract.view'},
     {'label': '回款管理', 'icon': '💰', 'url_name': 'payment_pages:payment_home', 'permission': 'payment_management.payment_plan.view'},  # 回款管理独立模块
     {'label': '生产管理', 'icon': '🏗️', 'url_name': 'production_pages:production_management_home', 'permission': 'production_management.view_assigned'},
-    {'label': '结算管理', 'icon': '💼', 'url_name': 'settlement_pages:settlement_management_home', 'permission': 'settlement_center.view_settlement'},
+    {'label': '结算管理', 'icon': '💼', 'url_name': 'settlement_pages:settlement_management_home', 'permission': 'settlement_management.view'},
     {'label': '资源管理', 'icon': '🗂️', 'url_name': 'resource_standard_pages:standard_list', 'permission': 'resource_center.view'},
     {'label': '任务协作', 'icon': '🤝', 'url_name': 'collaboration_pages:task_board', 'permission': 'task_collaboration.view'},
-    {'label': '收文管理', 'icon': '📥', 'url_name': 'delivery_pages:incoming_document_home', 'permission': 'delivery_center.view'},
-    {'label': '发文管理', 'icon': '📤', 'url_name': 'delivery_pages:outgoing_document_home', 'permission': 'delivery_center.view'},
+    {'label': '收文管理', 'icon': '📥', 'url_name': 'document_pages:incoming_document_home', 'permission': 'delivery_center.view'},
+    {'label': '发文管理', 'icon': '📤', 'url_name': 'document_pages:outgoing_document_home', 'permission': 'delivery_center.view'},
     {'label': '档案管理', 'icon': '📁', 'url_name': 'archive_management:archive_management_home', 'permission': 'archive_management.view'},
     {'label': '计划管理', 'icon': '📅', 'url_name': 'plan_pages:plan_management_home', 'permission': 'plan_management.view'},
     {'label': '诉讼管理', 'icon': '⚖️', 'url_name': 'litigation_pages:litigation_management_home', 'permission': 'litigation_management.view'},
-    {'label': '风险管理', 'icon': '⚠️', 'url_name': '#', 'permission': 'risk_management.view'},  # 占位，待实现
+    {'label': '风险管理', 'icon': '⚠️', 'url_name': 'risk_management_placeholder', 'permission': 'risk_management.view'},
     {'label': '财务管理', 'icon': '💵', 'url_name': 'finance_pages:financial_management_home', 'permission': 'financial_management.view'},
-    {'label': '产值管理', 'icon': '📊', 'url_name': 'output_value_pages:output_value_management_home', 'permission': ['output_value_management.view', 'settlement_center.view_output_value']},  # 兼容旧权限
+    {'label': '产值管理', 'icon': '📊', 'url_name': 'output_value_pages:output_value_management_home', 'permission': 'output_value_management.view'},
     {'label': '人事管理', 'icon': '👤', 'url_name': 'personnel_pages:personnel_management_home', 'permission': 'personnel_management.view'},
     {'label': '行政管理', 'icon': '🏢', 'url_name': 'admin_pages:administrative_management_home', 'permission': 'administrative_management.view'},
     {'label': '审批引擎', 'icon': '✅', 'url_name': 'workflow_engine:workflow_home', 'permission': 'workflow_engine.view'},
@@ -194,7 +194,7 @@ SCENE_GROUPS = [
         'items': [
             {'label': '客户管理', 'icon': 'fa-users', 'url_name': 'customer_pages:customer_management_home_alt', 'permission': 'customer_management.client.view'},
             {'label': '商机管理', 'icon': 'fa-briefcase', 'url_name': 'opportunity_pages:opportunity_management_home_alt', 'permission': 'customer_management.opportunity.view'},
-            {'label': '合同管理', 'icon': 'fa-file-contract', 'url_name': 'contract_pages:contract_management_home_alt', 'permission': 'customer_management.contract.view'},
+            {'label': '合同管理', 'icon': 'fa-file-contract', 'url_name': 'contract_pages:contract_management_home_alt', 'permission': 'contract_management.contract.view'},
             {'label': '回款管理', 'icon': 'fa-money-bill-wave', 'url_name': 'payment_pages:payment_home', 'permission': 'payment_management.payment_plan.view'},
         ]
     },
@@ -203,7 +203,7 @@ SCENE_GROUPS = [
         'icon': 'fa-industry',
         'items': [
             {'label': '生产管理', 'icon': 'fa-industry', 'url_name': 'production_pages:production_management_home', 'permission': 'production_management.view_assigned'},
-            {'label': '结算管理', 'icon': 'fa-file-invoice-dollar', 'url_name': 'settlement_pages:settlement_management_home', 'permission': 'settlement_center.view_settlement'},
+            {'label': '结算管理', 'icon': 'fa-file-invoice-dollar', 'url_name': 'settlement_pages:settlement_management_home', 'permission': 'settlement_management.view'},
             {'label': '资源管理', 'icon': 'fa-tools', 'url_name': 'resource_standard_pages:standard_list', 'permission': 'resource_center.view'},
             {'label': '任务协作', 'icon': 'fa-tasks', 'url_name': 'collaboration_pages:task_board', 'permission': 'task_collaboration.view'},
             {'label': '计划管理', 'icon': 'fa-calendar-alt', 'url_name': 'plan_pages:plan_management_home', 'permission': 'plan_management.view'},
@@ -214,7 +214,7 @@ SCENE_GROUPS = [
         'icon': 'fa-chart-bar',
         'items': [
             {'label': '财务管理', 'icon': 'fa-chart-line', 'url_name': 'finance_pages:financial_management_home', 'permission': 'financial_management.view'},
-            {'label': '产值管理', 'icon': 'fa-chart-bar', 'url_name': 'output_value_pages:output_value_management_home', 'permission': ['output_value_management.view', 'settlement_center.view_output_value']},  # 兼容旧权限
+            {'label': '产值管理', 'icon': 'fa-chart-bar', 'url_name': 'output_value_pages:output_value_management_home', 'permission': 'output_value_management.view'},
             {'label': '人事管理', 'icon': 'fa-user-tie', 'url_name': 'personnel_pages:personnel_management_home', 'permission': 'personnel_management.view'},
         ]
     },
@@ -223,7 +223,7 @@ SCENE_GROUPS = [
         'icon': 'fa-shield-alt',
         'items': [
             {'label': '诉讼管理', 'icon': 'fa-gavel', 'url_name': 'litigation_pages:litigation_management_home', 'permission': 'litigation_management.view'},
-            {'label': '风险管理', 'icon': 'fa-exclamation-triangle', 'url_name': '#', 'permission': 'risk_management.view'},
+            {'label': '风险管理', 'icon': 'fa-exclamation-triangle', 'url_name': 'risk_management_placeholder', 'permission': 'risk_management.view'},
             {'label': '档案管理', 'icon': 'fa-archive', 'url_name': 'archive_management:archive_management_home', 'permission': 'archive_management.view'},
         ]
     },
@@ -480,7 +480,7 @@ def home(request):
                 stats_cards.append({
                     'label': '待审批',
                     'value': approval_stats['my_pending'],
-                    'url': reverse('workflow_engine:approval_list') + '?status=pending',
+                    'url': reverse('workflow_engine:approval_list_pending'),
                     'variant': 'danger'
                 })
             
@@ -558,7 +558,7 @@ def home(request):
                 'icon': '📝',
                 'value': str(approval_stats['my_pending']),
                 'subvalue': '需要您审批的事项',
-                'url': reverse('workflow_engine:approval_list') + '?status=pending',
+                'url': reverse('workflow_engine:approval_list_pending'),
                 'variant': 'danger'
             })
         
@@ -1603,6 +1603,20 @@ def dashboard(request):
     return home(request)
 
 
+@login_required(login_url='/login/')
+def risk_management_placeholder(request):
+    """风险管理占位页 - 功能开发中，使用主应用登录态"""
+    permission_set = get_user_permission_codes(request.user)
+    context = {
+        'page_title': '风险管理',
+        'page_icon': '⚠️',
+        'description': '功能开发中',
+        'full_top_nav': _build_full_top_nav(permission_set, request.user),
+        'sidebar_nav': [],
+    }
+    return render(request, 'shared/risk_management_placeholder.html', context)
+
+
 def login_view(request):
     """前端登录页面 - 与管理后台登录分开"""
     from django.contrib.auth import authenticate, login as auth_login
@@ -1780,7 +1794,7 @@ def _get_current_module_from_path(request_path):
         'contracts': 'customer_management',
         'business': 'customer_management',
         'delivery': 'delivery_customer',
-        'settlement': 'settlement_center',
+        'settlement': 'settlement_management',
         'plan': 'plan_management',
         'litigation': 'litigation_management',
         'financial': 'financial_management',
@@ -1828,9 +1842,9 @@ def _get_sidebar_menu_for_module(module_name, permission_set, request_path=None,
         'administrative_management': 'backend.apps.administrative_management.views_pages._build_administrative_sidebar_nav',
         'system_management': 'backend.apps.system_management.views_pages._build_system_management_sidebar_nav',
         'archive_management': None,  # 待实现
-        'task_collaboration': None,  # 待实现
+        'task_collaboration': 'backend.apps.task_collaboration.views_pages._build_task_collaboration_sidebar_nav',
         'resource_standard': None,  # 待实现
-        'settlement_center': None,  # 待实现
+        'settlement_management': None,  # 结算管理使用 settlement_pages 前端页面
     }
     
     # 获取菜单构建函数路径

@@ -365,17 +365,17 @@ class ApprovalInstanceAdmin(BaseModelAdmin):
                 
                 if model_name == 'businesscontract':
                     try:
-                        admin_url = reverse('admin:customer_success_businesscontract_change', args=[obj.object_id])
+                        admin_url = reverse('admin:contract_management_businesscontract_change', args=[obj.object_id])
                     except:
                         pass
                 elif model_name == 'businessopportunity':
                     try:
-                        admin_url = reverse('admin:customer_success_businessopportunity_change', args=[obj.object_id])
+                        admin_url = reverse('admin:opportunity_management_businessopportunity_change', args=[obj.object_id])
                     except:
                         pass
                 elif model_name == 'project':
                     try:
-                        admin_url = reverse('admin:project_center_project_change', args=[obj.object_id])
+                        admin_url = reverse('admin:production_management_project_change', args=[obj.object_id])
                     except:
                         pass
                 
@@ -426,17 +426,17 @@ class ApprovalInstanceAdmin(BaseModelAdmin):
                 
                 if model_name == 'businesscontract':
                     try:
-                        admin_url = reverse('admin:customer_success_businesscontract_change', args=[obj.object_id])
+                        admin_url = reverse('admin:contract_management_businesscontract_change', args=[obj.object_id])
                     except:
                         pass
                 elif model_name == 'businessopportunity':
                     try:
-                        admin_url = reverse('admin:customer_success_businessopportunity_change', args=[obj.object_id])
+                        admin_url = reverse('admin:opportunity_management_businessopportunity_change', args=[obj.object_id])
                     except:
                         pass
                 elif model_name == 'project':
                     try:
-                        admin_url = reverse('admin:project_center_project_change', args=[obj.object_id])
+                        admin_url = reverse('admin:production_management_project_change', args=[obj.object_id])
                     except:
                         pass
                 

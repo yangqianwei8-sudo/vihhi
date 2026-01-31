@@ -133,7 +133,7 @@ def _check_project_archive_conditions(project):
     """
     # 条件1：检查是否有已确认的结算记录
     try:
-        from backend.apps.settlement_center.models import ProjectSettlement
+        from backend.apps.settlement_management.models import ProjectSettlement
         confirmed_settlements = ProjectSettlement.objects.filter(
             project=project,
             status='confirmed'
@@ -219,7 +219,7 @@ def _process_project_archive(archive):
     
     # 5. 结算文件（从结算管理模块获取）
     try:
-        from backend.apps.settlement_center.models import ProjectSettlement
+        from backend.apps.settlement_management.models import ProjectSettlement
         settlements = ProjectSettlement.objects.filter(project=project, status='confirmed')
         for settlement in settlements:
             if settlement.settlement_file:

@@ -39,10 +39,8 @@ from .models import (
     ProjectFlowLog,
     ProjectDesignReply,
     ProjectMeetingRecord,
-    ServiceType,
-    ServiceProfession,
-    BusinessType,
 )
+from backend.apps.base_data.models import ServiceType, ServiceProfession, BusinessType
 from .serializers import ProjectSerializer, ProjectCreateSerializer
 
 from backend.apps.system_management.models import User, Department
@@ -91,30 +89,77 @@ PROFESSION_KEYWORDS = {
 }
 
 # 生产管理左侧导航菜单结构（分组格式）
+#
+# 菜单与路由/表单连接对照（逐项检查用）：
+# ┌─────────────────────────────┬──────────────────────────────────────────┬─────────────────────────────────────┐
+# │ 菜单项                      │ 应对应页面/表单（urls.py 或项目内）        │ 当前连接                           │
+# ├─────────────────────────────┼──────────────────────────────────────────┼─────────────────────────────────────┤
+# │ 首页                        │ production_management_home               │ production_management_home ✓        │
+# │ 项目总览                    │ project_list                             │ project_list ✓                      │
+# │ 任务工作台                  │ project_task_dashboard                    │ project_task_dashboard ✓            │
+# │ 新建项目                    │ project_create                            │ project_create ✓                    │
+# │ 创建咨询意见 / 获取初步回复  │ 无独立页，进项目后设计回复等               │ project_list（入口）✓               │
+# │ 三方会议纪要                │ project_meeting_log（需 project_id）       │ project_list（入口）✓               │
+# │ 创建三方沟通成果            │ 无独立创建页                              │ project_list ✓                       │
+# │ 驻场跟踪改图/获取返图/核图   │ project_drawing_submit / project_drawing_review │ project_list（入口）✓           │
+# │ 每周快报/过程优化/汇报文件   │ 暂无独立页面                             │ project_list（入口）✓               │
+# │ 优化前/后资料、刻盘申请      │ project_client_pre_docs / design_upload  │ project_list（入口）✓               │
+# │ 创建成果确认函              │ project_client_confirm_outcome（需 project_id）│ project_list（入口）✓            │
+# │ 项目监控                    │ project_monitor                          │ project_monitor ✓                   │
+# │ 批量导入                    │ project_import_admin                     │ project_import_admin ✓             │
+# └─────────────────────────────┴──────────────────────────────────────────┴─────────────────────────────────────┘
+# 说明：需 project_id 的页面（如 project_meeting_log、project_client_pre_docs）从侧栏只能链到项目总览，用户选项目后从详情进入。
 PRODUCTION_MANAGEMENT_SIDEBAR_MENU = [
+    {
+        'id': 'project_overview',
+        'label': '项目与任务',
+        'icon': '📋',
+        'permission': 'production_management.view_assigned',
+        'expanded': True,
+        'children': [
+            {
+                'id': 'production_home',
+                'label': '首页',
+                'url_name': 'production_pages:production_management_home',
+                'permission': 'production_management.view_assigned',
+                'path_keywords': ['/production/', '/production/home'],
+            },
+            {
+                'id': 'project_list',
+                'label': '项目总览',
+                'url_name': 'production_pages:project_list',
+                'permission': 'production_management.view_all',
+                'path_keywords': ['/production/list', 'list'],
+            },
+            {
+                'id': 'project_task_dashboard',
+                'label': '任务工作台',
+                'url_name': 'production_pages:project_task_dashboard',
+                'permission': 'production_management.view_assigned',
+                'path_keywords': ['tasks/dashboard', 'dashboard'],
+            },
+            {
+                'id': 'project_create',
+                'label': '新建项目',
+                'url_name': 'production_pages:project_create',
+                'permission': 'production_management.create',
+                'path_keywords': ['/production/create', 'create'],
+            },
+        ],
+    },
+    # 编制咨询意见书：无独立列表/创建页，从项目总览进入项目后使用「设计回复」等
     {
         'id': 'consultation_opinion',
         'label': '编制咨询意见书',
         'icon': '📋',
         'permission': 'production_management.view_all',
-        'expanded': True,
+        'expanded': False,
         'children': [
-            {
-                'id': 'create_consultation_opinion',
-                'label': '创建咨询意见',
-                'url_name': 'production_pages:consultation_opinion_create',
-                'permission': 'production_management.create',
-                'path_keywords': ['consultation_opinion/create', 'opinion/create'],
-            },
-            {
-                'id': 'get_preliminary_reply',
-                'label': '获取初步回复',
-                'url_name': 'production_pages:preliminary_reply_list',
-                'permission': 'production_management.view_all',
-                'path_keywords': ['preliminary_reply', 'reply'],
-            },
+            {'id': 'create_consultation_opinion', 'label': '创建咨询意见', 'url_name': 'production_pages:project_list', 'permission': 'production_management.create', 'path_keywords': ['list']},
+            {'id': 'get_preliminary_reply', 'label': '获取初步回复', 'url_name': 'production_pages:project_list', 'permission': 'production_management.view_all', 'path_keywords': ['list']},
         ],
     },
+    # 编制三方沟通成果：三方会议纪对应 project_meeting_log（需 project_id），入口为项目总览
     {
         'id': 'tripartite_communication',
         'label': '编制三方沟通成果',
@@ -122,22 +167,11 @@ PRODUCTION_MANAGEMENT_SIDEBAR_MENU = [
         'permission': 'production_management.view_all',
         'expanded': False,
         'children': [
-            {
-                'id': 'tripartite_meeting_minutes',
-                'label': '三方会议纪要',
-                'url_name': 'production_pages:tripartite_meeting_minutes',
-                'permission': 'production_management.view_all',
-                'path_keywords': ['meeting/minutes', 'tripartite/meeting'],
-            },
-            {
-                'id': 'create_tripartite_communication',
-                'label': '创建三方沟通成果',
-                'url_name': 'production_pages:tripartite_communication_create',
-                'permission': 'production_management.create',
-                'path_keywords': ['tripartite/communication/create', 'communication/create'],
-            },
+            {'id': 'tripartite_meeting_minutes', 'label': '三方会议纪要', 'url_name': 'production_pages:project_list', 'permission': 'production_management.view_all', 'path_keywords': ['meeting-log', 'list']},
+            {'id': 'create_tripartite_communication', 'label': '创建三方沟通成果', 'url_name': 'production_pages:project_list', 'permission': 'production_management.create', 'path_keywords': ['list']},
         ],
     },
+    # 编制核图意见书：核图对应 project_drawing_submit / project_drawing_review（需 project_id），入口为项目总览
     {
         'id': 'drawing_review_opinion',
         'label': '编制核图意见书',
@@ -145,29 +179,12 @@ PRODUCTION_MANAGEMENT_SIDEBAR_MENU = [
         'permission': 'production_management.view_all',
         'expanded': False,
         'children': [
-            {
-                'id': 'on_site_tracking_revision',
-                'label': '驻场跟踪改图',
-                'url_name': 'production_pages:on_site_tracking_revision',
-                'permission': 'production_management.view_all',
-                'path_keywords': ['on_site/tracking', 'tracking/revision'],
-            },
-            {
-                'id': 'get_revision_drawings',
-                'label': '获取返图',
-                'url_name': 'production_pages:revision_drawings_list',
-                'permission': 'production_management.view_all',
-                'path_keywords': ['revision/drawings', 'get/revision'],
-            },
-            {
-                'id': 'create_drawing_review_opinion',
-                'label': '创建核图意见书',
-                'url_name': 'production_pages:drawing_review_opinion_create',
-                'permission': 'production_management.create',
-                'path_keywords': ['drawing_review_opinion/create', 'review_opinion/create'],
-            },
+            {'id': 'on_site_tracking_revision', 'label': '驻场跟踪改图', 'url_name': 'production_pages:project_list', 'permission': 'production_management.view_all', 'path_keywords': ['drawings', 'list']},
+            {'id': 'get_revision_drawings', 'label': '获取返图', 'url_name': 'production_pages:project_list', 'permission': 'production_management.view_all', 'path_keywords': ['drawings', 'list']},
+            {'id': 'create_drawing_review_opinion', 'label': '创建核图意见书', 'url_name': 'production_pages:project_list', 'permission': 'production_management.create', 'path_keywords': ['drawings', 'review', 'list']},
         ],
     },
+    # 编制每周快报 / 过程优化报告 / 汇报文件：暂无独立页面，入口为项目总览
     {
         'id': 'weekly_report',
         'label': '编制每周快报',
@@ -175,20 +192,8 @@ PRODUCTION_MANAGEMENT_SIDEBAR_MENU = [
         'permission': 'production_management.view_all',
         'expanded': False,
         'children': [
-            {
-                'id': 'get_stage_drawings',
-                'label': '获取阶段图纸',
-                'url_name': 'production_pages:stage_drawings_list',
-                'permission': 'production_management.view_all',
-                'path_keywords': ['stage/drawings', 'get/stage'],
-            },
-            {
-                'id': 'create_weekly_report',
-                'label': '创建每周快报',
-                'url_name': 'production_pages:weekly_report_create',
-                'permission': 'production_management.create',
-                'path_keywords': ['weekly_report/create', 'report/create'],
-            },
+            {'id': 'get_stage_drawings', 'label': '获取阶段图纸', 'url_name': 'production_pages:project_list', 'permission': 'production_management.view_all', 'path_keywords': ['list']},
+            {'id': 'create_weekly_report', 'label': '创建每周快报', 'url_name': 'production_pages:project_list', 'permission': 'production_management.create', 'path_keywords': ['list']},
         ],
     },
     {
@@ -198,20 +203,8 @@ PRODUCTION_MANAGEMENT_SIDEBAR_MENU = [
         'permission': 'production_management.view_all',
         'expanded': False,
         'children': [
-            {
-                'id': 'get_process_drawings',
-                'label': '获取过程图纸',
-                'url_name': 'production_pages:process_drawings_list',
-                'permission': 'production_management.view_all',
-                'path_keywords': ['process/drawings', 'get/process'],
-            },
-            {
-                'id': 'create_process_optimization_report',
-                'label': '创建过程优化报告',
-                'url_name': 'production_pages:process_optimization_report_create',
-                'permission': 'production_management.create',
-                'path_keywords': ['process_optimization_report/create', 'optimization_report/create'],
-            },
+            {'id': 'get_process_drawings', 'label': '获取过程图纸', 'url_name': 'production_pages:project_list', 'permission': 'production_management.view_all', 'path_keywords': ['list']},
+            {'id': 'create_process_optimization_report', 'label': '创建过程优化报告', 'url_name': 'production_pages:project_list', 'permission': 'production_management.create', 'path_keywords': ['list']},
         ],
     },
     {
@@ -221,22 +214,11 @@ PRODUCTION_MANAGEMENT_SIDEBAR_MENU = [
         'permission': 'production_management.view_all',
         'expanded': False,
         'children': [
-            {
-                'id': 'create_interim_report',
-                'label': '创建中间汇报文件',
-                'url_name': 'production_pages:interim_report_create',
-                'permission': 'production_management.create',
-                'path_keywords': ['interim/report/create', 'interim_report'],
-            },
-            {
-                'id': 'create_final_report',
-                'label': '创建最终汇报文件',
-                'url_name': 'production_pages:final_report_create',
-                'permission': 'production_management.create',
-                'path_keywords': ['final/report/create', 'final_report'],
-            },
+            {'id': 'create_interim_report', 'label': '创建中间汇报文件', 'url_name': 'production_pages:project_list', 'permission': 'production_management.create', 'path_keywords': ['list']},
+            {'id': 'create_final_report', 'label': '创建最终汇报文件', 'url_name': 'production_pages:project_list', 'permission': 'production_management.create', 'path_keywords': ['list']},
         ],
     },
+    # 优化前后资料：优化前对应 project_client_pre_docs，优化后对应 project_design_upload / project_client_confirm_outcome（均需 project_id），入口为项目总览
     {
         'id': 'optimization_materials',
         'label': '优化前后资料',
@@ -244,36 +226,13 @@ PRODUCTION_MANAGEMENT_SIDEBAR_MENU = [
         'permission': 'production_management.view_all',
         'expanded': False,
         'children': [
-            {
-                'id': 'pre_optimization_disc_application',
-                'label': '优化前刻盘申请',
-                'url_name': 'production_pages:pre_optimization_disc_application',
-                'permission': 'production_management.create',
-                'path_keywords': ['pre_optimization/disc', 'pre/disc/application'],
-            },
-            {
-                'id': 'pre_optimization_materials',
-                'label': '优化前资料',
-                'url_name': 'production_pages:pre_optimization_materials',
-                'permission': 'production_management.view_all',
-                'path_keywords': ['pre_optimization/materials', 'pre/materials'],
-            },
-            {
-                'id': 'post_optimization_disc_application',
-                'label': '优化后刻盘申请',
-                'url_name': 'production_pages:post_optimization_disc_application',
-                'permission': 'production_management.create',
-                'path_keywords': ['post_optimization/disc', 'post/disc/application'],
-            },
-            {
-                'id': 'post_optimization_materials',
-                'label': '优化后资料',
-                'url_name': 'production_pages:post_optimization_materials',
-                'permission': 'production_management.view_all',
-                'path_keywords': ['post_optimization/materials', 'post/materials'],
-            },
+            {'id': 'pre_optimization_disc_application', 'label': '优化前刻盘申请', 'url_name': 'production_pages:project_list', 'permission': 'production_management.create', 'path_keywords': ['list']},
+            {'id': 'pre_optimization_materials', 'label': '优化前资料', 'url_name': 'production_pages:project_list', 'permission': 'production_management.view_all', 'path_keywords': ['client-pre-docs', 'list']},
+            {'id': 'post_optimization_disc_application', 'label': '优化后刻盘申请', 'url_name': 'production_pages:project_list', 'permission': 'production_management.create', 'path_keywords': ['list']},
+            {'id': 'post_optimization_materials', 'label': '优化后资料', 'url_name': 'production_pages:project_list', 'permission': 'production_management.view_all', 'path_keywords': ['design-upload', 'client-confirm', 'list']},
         ],
     },
+    # 服务成果确认：对应 project_client_confirm_outcome（需 project_id），入口为项目总览
     {
         'id': 'service_result_confirmation',
         'label': '服务成果确认',
@@ -281,12 +240,29 @@ PRODUCTION_MANAGEMENT_SIDEBAR_MENU = [
         'permission': 'production_management.view_all',
         'expanded': False,
         'children': [
+            {'id': 'create_result_confirmation', 'label': '创建成果确认函', 'url_name': 'production_pages:project_list', 'permission': 'production_management.create', 'path_keywords': ['client-confirm', 'list']},
+        ],
+    },
+    {
+        'id': 'project_ops',
+        'label': '监控与导入',
+        'icon': '📊',
+        'permission': 'production_management.view_all',
+        'expanded': False,
+        'children': [
             {
-                'id': 'create_result_confirmation',
-                'label': '创建成果确认函',
-                'url_name': 'production_pages:result_confirmation_create',
-                'permission': 'production_management.create',
-                'path_keywords': ['result_confirmation/create', 'confirmation/create'],
+                'id': 'project_monitor',
+                'label': '项目监控',
+                'url_name': 'production_pages:project_monitor',
+                'permission': 'production_management.monitor',
+                'path_keywords': ['monitor'],
+            },
+            {
+                'id': 'project_import_admin',
+                'label': '批量导入',
+                'url_name': 'production_pages:project_import_admin',
+                'permission': None,  # 视图中通过系统管理员判断
+                'path_keywords': ['admin/import', 'import'],
             },
         ],
     },
@@ -1120,11 +1096,14 @@ def _build_production_management_sidebar_nav(permission_set, request_path=None, 
                     if child.get('permission') and not _permission_granted(child['permission'], permission_set):
                         continue
                     
-                    # 获取URL
+                    # 获取URL（未实现的路由回退到生产管理首页，保证菜单完整且链接可点）
                     try:
                         url = reverse(child['url_name'])
                     except NoReverseMatch:
-                        url = '#'
+                        try:
+                            url = reverse('production_pages:production_management_home')
+                        except NoReverseMatch:
+                            url = '#'
                     
                     # 判断是否激活
                     active = False

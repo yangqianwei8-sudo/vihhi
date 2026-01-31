@@ -162,7 +162,7 @@ class OutputValueRecord(models.Model):
 
 class ServiceFeeRate(models.Model):
     """服务费率表配置"""
-    contract = models.ForeignKey('customer_success.BusinessContract', on_delete=models.CASCADE,
+    contract = models.ForeignKey('contract_management.BusinessContract', on_delete=models.CASCADE,
                                 related_name='service_fee_rates', verbose_name='关联合同',
                                 null=True, blank=True, help_text='如果为空，则为全局费率表')
     min_saving_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0,
@@ -299,7 +299,7 @@ class ProjectSettlement(models.Model):
     project = models.ForeignKey('production_management.Project', on_delete=models.PROTECT, 
                                related_name='settlements', verbose_name='关联项目',
                                help_text='仅显示状态为"已完工"的项目')
-    contract = models.ForeignKey('customer_success.BusinessContract', on_delete=models.SET_NULL,
+    contract = models.ForeignKey('contract_management.BusinessContract', on_delete=models.SET_NULL,
                                 null=True, blank=True, related_name='project_settlements',
                                 verbose_name='关联合同')
     
@@ -523,7 +523,7 @@ class ContractSettlement(models.Model):
     ]
     
     # 关联信息
-    contract = models.ForeignKey('customer_success.BusinessContract', on_delete=models.PROTECT,
+    contract = models.ForeignKey('contract_management.BusinessContract', on_delete=models.PROTECT,
                                 related_name='contract_settlements', verbose_name='关联合同')
     
     # 基本信息

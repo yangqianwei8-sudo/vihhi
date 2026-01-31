@@ -111,6 +111,10 @@ def sidebar_menu(request):
                 'title': '系统管理',
                 'subtitle': 'System Management'
             },
+            'task_collaboration': {
+                'title': '任务协作',
+                'subtitle': 'Task Collaboration'
+            },
         }
         
         module_info = module_titles.get(current_module, {})

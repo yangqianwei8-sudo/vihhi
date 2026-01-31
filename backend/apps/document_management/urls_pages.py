@@ -19,6 +19,9 @@ urlpatterns = [
     path("outgoing/create/", views_pages.outgoing_document_create, name="outgoing_document_create"),
     path("outgoing/<int:document_id>/", views_pages.outgoing_document_detail, name="outgoing_document_detail"),
     path("outgoing/<int:document_id>/edit/", views_pages.outgoing_document_edit, name="outgoing_document_edit"),
+    path("outgoing/<int:document_id>/delete/", views_pages.outgoing_document_delete, name="outgoing_document_delete"),
+    path("outgoing/import-template/", views_pages.outgoing_document_import_template, name="outgoing_document_import_template"),
+    path("outgoing/batch-import/", views_pages.outgoing_document_batch_import, name="outgoing_document_batch_import"),
     
     # ==================== 文件分类维护路由 ====================
     path("file-category/manage/", views_pages.file_category_manage, name="file_category_manage"),

@@ -2,7 +2,7 @@
 # 从delivery_customer迁移而来
 
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.urls import reverse, NoReverseMatch
 from django.utils import timezone
 from django.db.models import F
@@ -2075,3 +2075,22 @@ def file_template_manage(request):
     context["categories_by_stage"] = categories_by_stage
     
     return render(request, "document_management/file_template_manage.html", context)
+
+
+# ==================== 占位视图（列表页模板引用，暂未实现） ====================
+@login_required
+def outgoing_document_delete(request, document_id):
+    """发文删除占位：重定向到列表（功能待实现）"""
+    return redirect('document_pages:outgoing_document_list')
+
+
+@login_required
+def outgoing_document_import_template(request):
+    """发文导入模板下载占位：重定向到列表（功能待实现）"""
+    return redirect('document_pages:outgoing_document_list')
+
+
+@login_required
+def outgoing_document_batch_import(request):
+    """发文批量导入占位：重定向到列表（功能待实现）"""
+    return redirect('document_pages:outgoing_document_list')

@@ -8,6 +8,80 @@ from django.urls import reverse
 from django.utils import timezone
 
 from backend.apps.production_management.models import Project, ProjectMilestone
+from backend.core.views import _permission_granted
+
+# ==================== 任务协作模块左侧菜单结构 ====================
+TASK_COLLABORATION_MENU = [
+    {
+        "id": "task_board",
+        "label": "任务看板",
+        "icon": "🗂",
+        "url_name": "collaboration_pages:task_board",
+        "permission": "task_collaboration.view",
+        "path_keywords": ["board"],
+    },
+    {
+        "id": "workspace",
+        "label": "协作空间",
+        "icon": "🤝",
+        "url_name": "collaboration_pages:workspace",
+        "permission": "task_collaboration.view",
+        "path_keywords": ["workspace"],
+    },
+    {
+        "id": "process_engine",
+        "label": "流程引擎",
+        "icon": "🛠",
+        "url_name": "collaboration_pages:process_engine",
+        "permission": "task_collaboration.view",
+        "path_keywords": ["process"],
+    },
+    {
+        "id": "timesheet",
+        "label": "工时填报",
+        "icon": "⏱",
+        "url_name": "collaboration_pages:timesheet",
+        "permission": "task_collaboration.execute",
+        "path_keywords": ["timesheet"],
+    },
+    {
+        "id": "message_center",
+        "label": "消息中心",
+        "icon": "📬",
+        "url_name": "collaboration_pages:message_center",
+        "permission": "task_collaboration.view",
+        "path_keywords": ["messages"],
+    },
+]
+
+
+def _build_task_collaboration_sidebar_nav(permission_set, request_path=None, user=None):
+    """生成任务协作模块的左侧菜单导航。"""
+    sidebar_nav = []
+    for item in TASK_COLLABORATION_MENU:
+        if item.get("permission") and not _permission_granted(item["permission"], permission_set):
+            continue
+        url = "#"
+        if item.get("url_name"):
+            try:
+                url = reverse(item["url_name"])
+            except Exception:
+                pass
+        is_active = False
+        if request_path and item.get("path_keywords"):
+            for keyword in item["path_keywords"]:
+                if keyword in request_path:
+                    is_active = True
+                    break
+        sidebar_nav.append({
+            "id": item.get("id", ""),
+            "label": item.get("label", ""),
+            "icon": item.get("icon", ""),
+            "url": url,
+            "active": is_active,
+            "badge": None,
+        })
+    return sidebar_nav
 MILESTONE_PRESETS = {
     "result_optimization": [
         "优化前图纸",
@@ -75,14 +149,26 @@ def _ensure_project_milestones(project: Project) -> None:
             ProjectMilestone.objects.bulk_create(new_objects)
 
 
-def _build_context(page_title: str, page_icon: str, description: str, summary_cards=None, sections=None):
-    return {
+def _build_context(page_title: str, page_icon: str, description: str, summary_cards=None, sections=None, request=None):
+    from backend.apps.system_management.services import get_user_permission_codes
+    from backend.core.views import _build_full_top_nav
+
+    context = {
         "page_title": page_title,
         "page_icon": page_icon,
         "description": description,
         "summary_cards": summary_cards or [],
         "sections": sections or [],
     }
+    if request is not None and getattr(request, "user", None) and request.user.is_authenticated:
+        try:
+            permission_set = get_user_permission_codes(request.user)
+            context["full_top_nav"] = _build_full_top_nav(permission_set, request.user)
+        except Exception:
+            context["full_top_nav"] = []
+    else:
+        context["full_top_nav"] = []
+    return context
 
 
 @login_required
@@ -222,6 +308,7 @@ def task_board(request):
         "集中查看个人与团队任务，聚焦逾期、当日与即将到期的项目里程碑。",
         summary_cards=summary_cards,
         sections=sections,
+        request=request,
     )
     return render(request, "shared/center_dashboard.html", context)
 
@@ -264,6 +351,7 @@ def collaboration_workspace(request):
                 ],
             }
         ],
+        request=request,
     )
     return render(request, "shared/center_dashboard.html", context)
 
@@ -306,6 +394,7 @@ def process_engine(request):
                 ],
             }
         ],
+        request=request,
     )
     return render(request, "shared/center_dashboard.html", context)
 
@@ -348,6 +437,7 @@ def timesheet(request):
                 ],
             }
         ],
+        request=request,
     )
     return render(request, "shared/center_dashboard.html", context)
 
@@ -390,6 +480,7 @@ def message_center(request):
                 ],
             }
         ],
+        request=request,
     )
     return render(request, "shared/center_dashboard.html", context)
 

@@ -49,12 +49,28 @@ WORKFLOW_ENGINE_MENU = [
         'expanded': False,
         'children': [
             {
-                'id': 'approval_list',
-                'label': '我的审批',
+                'id': 'approval_list_pending',
+                'label': '待我审批',
                 'icon': '✅',
-                'url_name': 'workflow_engine:approval_list',
+                'url_name': 'workflow_engine:approval_list_pending',
                 'permission': 'workflow_engine.view',
-                'path_keywords': ['approval', 'approvals'],
+                'path_keywords': ['approvals/pending', 'approvals/pending/'],
+            },
+            {
+                'id': 'approval_list_history',
+                'label': '历史审批',
+                'icon': '📜',
+                'url_name': 'workflow_engine:approval_list_history',
+                'permission': 'workflow_engine.view',
+                'path_keywords': ['approvals/history', 'approvals/history/'],
+            },
+            {
+                'id': 'approval_list_my_submitted',
+                'label': '我的申请',
+                'icon': '📤',
+                'url_name': 'workflow_engine:approval_list_my_submitted',
+                'permission': 'workflow_engine.view',
+                'path_keywords': ['approvals/my-submitted', 'approvals/my-submitted/'],
             },
         ],
     },
@@ -237,7 +253,7 @@ def workflow_home(request):
                 'icon': '📋',
                 'value': str(pending_count),
                 'subvalue': f'待处理审批 {pending_count} 项',
-                'url': reverse('workflow_engine:approval_list') + '?status=pending',
+                'url': reverse('workflow_engine:approval_list_pending'),
                 'variant': 'primary' if pending_count > 0 else 'secondary'
             },
             {
@@ -245,7 +261,7 @@ def workflow_home(request):
                 'icon': '📝',
                 'value': str(len(my_applications)),
                 'subvalue': f'待审批 {len(my_applications_pending)} | 已通过 {len(my_applications_approved)} | 已驳回 {len(my_applications_rejected)}',
-                'url': reverse('workflow_engine:approval_list') + '?status=my',
+                'url': reverse('workflow_engine:approval_list_my_submitted'),
                 'variant': 'primary' if len(my_applications) > 0 else 'secondary'
             },
         ]
@@ -686,8 +702,8 @@ def node_delete(request, node_id):
 
 
 @login_required
-def approval_list(request):
-    """我的审批列表"""
+def approval_list(request, mode='pending'):
+    """审批列表（一分为三：待我审批 / 历史审批 / 我的申请，由 URL mode 区分）"""
     from .services import ApprovalEngine
     from django.core.paginator import Paginator
     
@@ -698,11 +714,11 @@ def approval_list(request):
         
         if not instance_ids:
             messages.error(request, '请至少选择一个审批实例')
-            return redirect('workflow_engine:approval_list')
+            return redirect('workflow_engine:approval_list_pending')
         
         if action not in ['approve', 'reject']:
             messages.error(request, '无效的操作类型')
-            return redirect('workflow_engine:approval_list')
+            return redirect('workflow_engine:approval_list_pending')
         
         # 获取待审批的实例（确保用户有权限审批）
         pending_approvals = ApprovalEngine.get_pending_approvals(request.user)
@@ -742,11 +758,10 @@ def approval_list(request):
         elif error_count > 0:
             messages.warning(request, f'{success_count} 个已处理，{error_count} 个失败')
         
-        return redirect('workflow_engine:approval_list')
+        return redirect('workflow_engine:approval_list_pending')
     
-    # GET请求：显示列表
-    # 获取标签页参数
-    tab = request.GET.get('tab', 'pending')
+    # GET请求：显示列表（一分为三：待我审批 / 历史审批 / 我的申请，由 URL 区分）
+    tab = mode  # 'pending' | 'historical' | 'my_submitted'
     per_page = request.GET.get('per_page', 20)
     
     # 获取筛选参数
@@ -802,12 +817,13 @@ def approval_list(request):
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
-    context = _context(
-        "审批引擎 ----我的审批列表",
-        "📋",
-        "查看待审批和我的申请",
-        request=request,
-    )
+    _titles = {
+        'pending': ("审批引擎 - 待我审批", "📋", "需要我审批的申请"),
+        'historical': ("审批引擎 - 历史审批", "📋", "我审批过的记录"),
+        'my_submitted': ("审批引擎 - 我的申请", "📋", "我提交的审批申请"),
+    }
+    title, icon, desc = _titles.get(tab, _titles['pending'])
+    context = _context(title, icon, desc, request=request)
     context.update({
         'tab': tab,
         'pending_approvals': pending_approvals,
@@ -909,14 +925,14 @@ def approval_detail(request, instance_id):
             elif model_name == 'businesscontract':
                 from django.urls import reverse
                 try:
-                    content_object_detail_url = reverse('business:contract_detail', args=[instance.object_id])
+                    content_object_detail_url = reverse('contract_pages:contract_detail', args=[instance.object_id])
                     content_object_type_name = '合同'
                 except:
                     pass
             elif model_name == 'businessopportunity':
                 from django.urls import reverse
                 try:
-                    content_object_detail_url = reverse('business:opportunity_detail', args=[instance.object_id])
+                    content_object_detail_url = reverse('opportunity_pages:opportunity_detail', args=[instance.object_id])
                     content_object_type_name = '商机'
                 except:
                     pass
@@ -1053,7 +1069,7 @@ def approval_action(request, instance_id):
             next_url = request.POST.get('next') or request.GET.get('next')
             if next_url:
                 return redirect(next_url)
-            return redirect('workflow_engine:approval_list')
+            return redirect('workflow_engine:approval_list_pending')
             
         except Exception as e:
             import logging
@@ -1065,7 +1081,7 @@ def approval_action(request, instance_id):
     next_url = request.GET.get('next')
     if next_url:
         return redirect(next_url)
-    return redirect('workflow_engine:approval_list')
+    return redirect('workflow_engine:approval_list_pending')
 
 
 @login_required
@@ -1076,16 +1092,16 @@ def approval_withdraw(request, instance_id):
     # 检查权限：只有申请人可以撤回
     if instance.applicant != request.user:
         messages.error(request, '您没有权限撤回此审批')
-        return redirect('workflow_engine:approval_list')
+        return redirect('workflow_engine:approval_list_my_submitted')
     
     # 检查是否可以撤回
     if instance.status != 'pending':
         messages.error(request, '只有审批中的申请才能撤回')
-        return redirect('workflow_engine:approval_list')
+        return redirect('workflow_engine:approval_list_my_submitted')
     
     if not instance.workflow.allow_withdraw:
         messages.error(request, '此流程不允许撤回')
-        return redirect('workflow_engine:approval_list')
+        return redirect('workflow_engine:approval_list_my_submitted')
     
     from .services import ApprovalEngine
     
@@ -1101,5 +1117,5 @@ def approval_withdraw(request, instance_id):
         logger.exception('撤回审批失败: %s', str(e))
         messages.error(request, f'撤回失败：{str(e)}')
     
-    return redirect('workflow_engine:approval_list') + '?tab=my_submitted'
+    return redirect('workflow_engine:approval_list_my_submitted')
 

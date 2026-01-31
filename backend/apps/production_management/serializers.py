@@ -10,8 +10,8 @@ from .models import (
     ProjectDrawingReview,
     ProjectDrawingFile,
     ProjectStartNotice,
-    ServiceProfession,
 )
+from backend.apps.base_data.models import ServiceProfession
 
 class ProjectTeamSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.get_full_name', read_only=True)

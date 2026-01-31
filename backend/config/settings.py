@@ -47,8 +47,8 @@ INSTALLED_APPS = [
     # Local apps
     'backend.apps.permission_management.apps.PermissionManagementConfig',  # 必须在 system_management 之前
     'backend.apps.system_management.apps.SystemManagementConfig',
+    'backend.apps.base_data.apps.BaseDataConfig',  # 共享基础数据（服务类型、图纸阶段等）
     'backend.apps.production_management.apps.ProductionManagementConfig',  # 生产管理（原项目中心）
-    # 'backend.apps.project_center.apps.ProjectCenterConfig',  # 暂时保留：迁移文件依赖（临时注释：镜像中缺少此模块）
     'backend.apps.customer_management.apps.CustomerManagementConfig',  # 客户管理（从customer_success迁移）
     'backend.apps.opportunity_management.apps.OpportunityManagementConfig',  # 商机管理（独立应用）
     'backend.apps.payment_management.apps.PaymentManagementConfig',  # 回款管理（独立应用）
@@ -58,8 +58,7 @@ INSTALLED_APPS = [
     'backend.apps.resource_standard',
     'backend.apps.task_collaboration',
     'backend.apps.delivery_customer',
-    'backend.apps.settlement_management.apps.SettlementManagementConfig',  # 结算管理
-    'backend.apps.settlement_center.apps.SettlementCenterConfig',  # 结算中心（仍被其他模块引用）
+    'backend.apps.settlement_management.apps.SettlementManagementConfig',  # 结算管理（已合并原结算中心）
     'backend.apps.risk_management',
     # 行政管理模块
     'backend.apps.administrative_management.apps.AdministrativeManagementConfig',

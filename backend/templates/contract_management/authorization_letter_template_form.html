@@ -1,0 +1,109 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+        </div>
+    </div>
+
+    <form method="post" class="form-card" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="form-section">
+            <h5>基本信息</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label required-field">模板名称</label>
+                    {{ form.template_name }}
+                    {% if form.template_name.errors %}
+                        <div class="text-danger small">{{ form.template_name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label required-field">模板类型</label>
+                    {{ form.template_type }}
+                    {% if form.template_type.errors %}
+                        <div class="text-danger small">{{ form.template_type.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">状态</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                        <div class="text-danger small">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <label class="form-label">模板分类</label>
+                    {{ form.category }}
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <label class="form-label">模板说明</label>
+                    {{ form.description }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h5>模板文件</h5>
+            <div class="row">
+                <div class="col-md-12">
+                    <label class="form-label">模板文件</label>
+                    {{ form.template_file }}
+                    {% if form.template_file.errors %}
+                        <div class="text-danger small">{{ form.template_file.errors }}</div>
+                    {% endif %}
+                    <small class="form-text text-muted">
+                        支持上传 Word (.doc, .docx)、PDF (.pdf)、Excel (.xls, .xlsx)、PowerPoint (.ppt, .pptx) 格式文件，文件大小不超过 50MB
+                    </small>
+                </div>
+            </div>
+            {% if not is_create and template.template_file %}
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <div class="card border-info">
+                        <div class="card-body">
+                            <h6 class="card-title">📎 当前模板文件</h6>
+                            <p class="card-text mb-2">
+                                <strong>文件名：</strong>{{ template.template_file_name|default:template.template_file.name }}<br>
+                                {% if template.template_file_size %}
+                                <strong>文件大小：</strong>{{ template.template_file_size|filesizeformat }}<br>
+                                {% endif %}
+                            </p>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'contract_pages:authorization_letter_template_file_preview' template.id %}"
+                                   target="_blank"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> 预览
+                                </a>
+                                <a href="{% url 'contract_pages:authorization_letter_template_file_download' template.id %}"
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-download"></i> 下载
+                                </a>
+                            </div>
+                            <small class="text-muted d-block mt-2">
+                                上传新文件将替换当前文件
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">保存</button>
+            <a href="{% url 'contract_pages:authorization_letter_template_list' %}" class="btn btn-secondary">取消</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

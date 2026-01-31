@@ -1,0 +1,98 @@
+<div class="list-table-container">
+  <table class="list-table">
+    <thead>
+      <tr>
+        <th>发文编号</th>
+        <th>文件标题</th>
+        <th>收文单位</th>
+        <th>发文日期</th>
+        <th>审核人</th>
+        <th>状态</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for doc in documents %}
+      <tr>
+        <td><code>{{ doc.document_number }}</code></td>
+        <td>
+          <a href="{% url 'document_pages:outgoing_document_detail' doc.id %}">
+            {{ doc.title|truncatewords:10 }}
+          </a>
+        </td>
+        <td>{{ doc.recipient }}</td>
+        <td>{{ doc.send_date|date:"Y-m-d"|default:"-" }}</td>
+        <td>
+          {% if doc.reviewer %}
+            {{ doc.reviewer.get_full_name|default:doc.reviewer.username }}
+          {% else %}
+            <span style="color: #999999;">-</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if doc.status == 'draft' %}
+            <span class="list-badge list-badge-draft">草稿</span>
+          {% elif doc.status == 'reviewing' %}
+            <span class="list-badge list-badge-reviewing">审核中</span>
+          {% elif doc.status == 'approved' %}
+            <span class="list-badge list-badge-approved">已批准</span>
+          {% elif doc.status == 'sent' %}
+            <span class="list-badge list-badge-sent">已发出</span>
+          {% elif doc.status == 'completed' %}
+            <span class="list-badge list-badge-completed">已完成</span>
+          {% elif doc.status == 'archived' %}
+            <span class="list-badge list-badge-archived">已归档</span>
+          {% else %}
+            <span class="list-badge">{{ doc.get_status_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="list-actions">
+            <a href="{% url 'document_pages:outgoing_document_detail' doc.id %}" class="list-btn" title="查看">查看</a>
+            {% if can_create %}
+            <a href="{% url 'document_pages:outgoing_document_edit' doc.id %}" class="list-btn" title="编辑">编辑</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="list-empty">
+          <div class="list-empty-icon">▢</div>
+          <div class="list-empty-text">暂无发文数据</div>
+          <div class="list-empty-hint">请创建第一个发文记录开始使用</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if documents.has_other_pages %}
+<div class="list-pagination">
+  <div class="list-pagination-info">
+    显示第 {{ documents.start_index }} - {{ documents.end_index }} 条，共 {{ documents.paginator.count }} 条
+  </div>
+  <div class="list-pagination-nav">
+    {% if documents.has_previous %}
+    <a href="?page={{ documents.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status and request.GET.status != 'all' %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority and request.GET.priority != 'all' %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.stage and request.GET.stage != 'all' %}&stage={{ request.GET.stage }}{% endif %}{% if request.GET.category and request.GET.category != 'all' %}&category={{ request.GET.category }}{% endif %}" class="list-pagination-btn">上一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">上一页</span>
+    {% endif %}
+
+    {% for num in documents.paginator.page_range %}
+    {% if documents.number == num %}
+    <span class="list-pagination-btn active">{{ num }}</span>
+    {% elif num > documents.number|add:'-3' and num < documents.number|add:'3' %}
+    <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status and request.GET.status != 'all' %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority and request.GET.priority != 'all' %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.stage and request.GET.stage != 'all' %}&stage={{ request.GET.stage }}{% endif %}{% if request.GET.category and request.GET.category != 'all' %}&category={{ request.GET.category }}{% endif %}" class="list-pagination-btn">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
+
+    {% if documents.has_next %}
+    <a href="?page={{ documents.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status and request.GET.status != 'all' %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority and request.GET.priority != 'all' %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.stage and request.GET.stage != 'all' %}&stage={{ request.GET.stage }}{% endif %}{% if request.GET.category and request.GET.category != 'all' %}&category={{ request.GET.category }}{% endif %}" class="list-pagination-btn">下一页</a>
+    {% else %}
+    <span class="list-pagination-btn disabled">下一页</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

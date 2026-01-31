@@ -1,0 +1,850 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .form-section {
+        margin-bottom: 32px;
+    }
+    .form-section h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+    .required-field::after {
+        content: " *";
+        color: #dc2626;
+    }
+    .error-list {
+        list-style: none;
+        padding: 0;
+        margin: 4px 0 0 0;
+        color: #dc2626;
+        font-size: 13px;
+    }
+    .checkbox-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .form-check {
+        margin-bottom: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block authorization_letter_content %}
+<div class="container-fluid py-4">
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">{{ description }}</p>
+        </div>
+    </div>
+
+    <form method="post" class="form-card">
+        {% csrf_token %}
+
+        <div class="form-section">
+            <h5>📋 基本信息</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">项目编号</label>
+                        {{ form.project_number }}
+                        {% if form.project_number.errors %}
+                            <ul class="error-list">
+                                {% for error in form.project_number.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                        <small class="form-text text-muted">系统自动生成（格式：HT-YYYY-NNNN），不可修改</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label required-field">委托日期</label>
+                        {{ form.letter_date }}
+                        {% if form.letter_date.errors %}
+                            <ul class="error-list">
+                                {% for error in form.letter_date.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label required-field">商务经理</label>
+                        {{ form.business_manager }}
+                        {% if form.business_manager.errors %}
+                            <ul class="error-list">
+                                {% for error in form.business_manager.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h5>👥 委托单位信息</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label required-field">关联客户</label>
+                        {{ form.client }}
+                        {% if form.client.errors %}
+                            <ul class="error-list">
+                                {% for error in form.client.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                        {{ form.client_name }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">单位代表（联系人）</label>
+                        {{ form.client_contact }}
+                        {% if form.client_contact.errors %}
+                            <ul class="error-list">
+                                {% for error in form.client_contact.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                        {{ form.client_representative }}
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">联系电话</label>
+                        {{ form.client_phone }}
+                        {% if form.client_phone.errors %}
+                            <ul class="error-list">
+                                {% for error in form.client_phone.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">电子邮箱</label>
+                        {{ form.client_email }}
+                        {% if form.client_email.errors %}
+                            <ul class="error-list">
+                                {% for error in form.client_email.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">收件地址</label>
+                        {{ form.client_address }}
+                        {% if form.client_address.errors %}
+                            <ul class="error-list">
+                                {% for error in form.client_address.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h5>🏢 服务单位信息</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label required-field">服务单位</label>
+                        {{ form.trustee_name }}
+                        {% if form.trustee_name.errors %}
+                            <ul class="error-list">
+                                {% for error in form.trustee_name.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">单位代表</label>
+                        {{ form.trustee_representative }}
+                        {% if form.trustee_representative.errors %}
+                            <ul class="error-list">
+                                {% for error in form.trustee_representative.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">联系电话</label>
+                        {{ form.trustee_phone }}
+                        {% if form.trustee_phone.errors %}
+                            <ul class="error-list">
+                                {% for error in form.trustee_phone.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">电子邮箱</label>
+                        {{ form.trustee_email }}
+                        {% if form.trustee_email.errors %}
+                            <ul class="error-list">
+                                {% for error in form.trustee_email.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">收件地址</label>
+                        {{ form.trustee_address }}
+                        {% if form.trustee_address.errors %}
+                            <ul class="error-list">
+                                {% for error in form.trustee_address.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h5>💰 服务费确定原则</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">结果优化费率（%）</label>
+                        {{ form.result_optimization_rate }}
+                        {% if form.result_optimization_rate.errors %}
+                            <ul class="error-list">
+                                {% for error in form.result_optimization_rate.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                        <small class="form-text text-muted">10-15%</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">过程优化费率（%）</label>
+                        {{ form.process_optimization_rate }}
+                        {% if form.process_optimization_rate.errors %}
+                            <ul class="error-list">
+                                {% for error in form.process_optimization_rate.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                        <small class="form-text text-muted">10-15%</small>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">精细化审图单价下限（元/平方米）</label>
+                        {{ form.detailed_review_unit_price_min }}
+                        {% if form.detailed_review_unit_price_min.errors %}
+                            <ul class="error-list">
+                                {% for error in form.detailed_review_unit_price_min.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                        <small class="form-text text-muted">例如：1.5</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">精细化审图单价上限（元/平方米）</label>
+                        {{ form.detailed_review_unit_price_max }}
+                        {% if form.detailed_review_unit_price_max.errors %}
+                            <ul class="error-list">
+                                {% for error in form.detailed_review_unit_price_max.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                        <small class="form-text text-muted">例如：3.0</small>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">服务费确定原则说明</label>
+                {{ form.fee_determination_principle }}
+                {% if form.fee_determination_principle.errors %}
+                    <ul class="error-list">
+                        {% for error in form.fee_determination_principle.errors %}<li>{{ error }}</li>{% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h5>💳 结算与支付</h5>
+            <div class="form-group">
+                <label class="form-label">结算审核流程说明</label>
+                {{ form.settlement_review_process }}
+                {% if form.settlement_review_process.errors %}
+                    <ul class="error-list">
+                        {% for error in form.settlement_review_process.errors %}<li>{{ error }}</li>{% endfor %}
+                    </ul>
+                {% endif %}
+                <small class="form-text text-muted">说明结算申请、结算审核、付款方式等流程</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label">付款计划</label>
+                <div id="payment-schedule-editor" class="payment-schedule-editor">
+                    <div class="payment-stage mb-2">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control payment-stage-name" placeholder="阶段名称（如：首付款）" value="">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control payment-stage-amount" placeholder="付款比例（如：20%）" value="">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-sm btn-danger remove-payment-stage">删除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary mt-2" id="add-payment-stage">+ 添加付款阶段</button>
+                {{ form.payment_schedule }}
+                <small class="form-text text-muted">例如：三阶段付款：20%、30%、100%</small>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h5>📄 补充约定</h5>
+            <div class="form-group">
+                <label class="form-label">补充约定</label>
+                {{ form.supplementary_agreement }}
+                {% if form.supplementary_agreement.errors %}
+                    <ul class="error-list">
+                        {% for error in form.supplementary_agreement.errors %}<li>{{ error }}</li>{% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h5>📅 委托期限</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">开始日期</label>
+                        {{ form.start_date }}
+                        {% if form.start_date.errors %}
+                            <ul class="error-list">
+                                {% for error in form.start_date.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">结束日期</label>
+                        {{ form.end_date }}
+                        {% if form.end_date.errors %}
+                            <ul class="error-list">
+                                {% for error in form.end_date.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h5>🔗 关联信息</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">关联商机</label>
+                        {{ form.opportunity }}
+                        {% if form.opportunity.errors %}
+                            <ul class="error-list">
+                                {% for error in form.opportunity.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">关联项目</label>
+                        {{ form.project }}
+                        {% if form.project.errors %}
+                            <ul class="error-list">
+                                {% for error in form.project.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">备注</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                    <ul class="error-list">
+                        {% for error in form.notes.errors %}<li>{{ error }}</li>{% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">保存</button>
+            <a href="{% if is_create %}{% url 'contract_pages:authorization_letter_list' %}{% else %}{% url 'contract_pages:authorization_letter_detail' letter.id %}{% endif %}" class="btn btn-secondary">取消</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // 安全的HTML设置函数
+    function setSafeHTML(element, html) {
+        if (!element) return;
+        // 如果内容不包含HTML标签，使用textContent
+        if (!/<[^>]+>/.test(html)) {
+            element.textContent = html;
+        } else {
+            // 对于包含HTML的内容，使用innerHTML（假设内容已清理）
+            // 在生产环境中，应该使用DOMPurify等库清理HTML
+            element.innerHTML = html;
+        }
+    }
+
+    // 安全的文本设置函数（推荐使用）
+    function setSafeText(element, text) {
+        if (element) {
+            element.textContent = text;
+        }
+    }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const clientSelect = document.getElementById('id_client');
+    const clientNameInput = document.getElementById('id_client_name');
+    const opportunitySelect = document.getElementById('id_opportunity');
+
+    // 如果使用客户下拉选择（新字段）
+    if (clientSelect && opportunitySelect) {
+        // 保存当前选中的商机ID（用于编辑模式）
+        const selectedOpportunityId = opportunitySelect.value;
+
+        // 更新商机列表
+        function updateOpportunities() {
+            const clientId = clientSelect.value;
+
+            // 显示加载状态
+            opportunitySelect.disabled = true;
+
+            // 构建API URL
+            let apiUrl = '{% url "customer:get_opportunities_by_client_name" %}';
+            if (clientId) {
+                // 获取客户名称
+                const selectedOption = clientSelect.options[clientSelect.selectedIndex];
+                const clientName = selectedOption.text;
+                apiUrl += `?client_name=${encodeURIComponent(clientName)}`;
+            }
+
+            // 获取商机列表
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 清空当前选项
+                        // TODO: 使用DOMPurify清理HTML
+            opportunitySelect.innerHTML = '<option value="">-- 选择商机（可选） --</option>';
+
+                        // 添加商机选项
+                        if (data.opportunities.length === 0) {
+                            const noOption = document.createElement('option');
+                            noOption.value = '';
+                            noOption.textContent = clientId ? '-- 该客户暂无可用商机 --' : '-- 请先选择客户 --';
+                            noOption.disabled = true;
+                            opportunitySelect.appendChild(noOption);
+                        } else {
+                            data.opportunities.forEach(opp => {
+                                const option = document.createElement('option');
+                                option.value = opp.id;
+                                option.textContent = `${opp.opportunity_number || ''} - ${opp.name}`.trim();
+                                // 如果是编辑模式且当前选中的商机，设置为选中
+                                if (selectedOpportunityId && opp.id == selectedOpportunityId) {
+                                    option.selected = true;
+                                }
+                                opportunitySelect.appendChild(option);
+                            });
+                        }
+                    } else {
+                    }
+                })
+                .catch(error => {
+                })
+                .finally(() => {
+                    opportunitySelect.disabled = false;
+                });
+        }
+
+        // 监听客户选择变化
+        clientSelect.addEventListener('change', updateOpportunities);
+
+        // 如果客户已有值，初始化时也更新一次
+        if (clientSelect.value) {
+            updateOpportunities();
+        }
+    }
+
+    // 如果使用客户名称输入（旧字段，向后兼容）
+    if (clientNameInput && opportunitySelect && !clientSelect) {
+        // 保存当前选中的商机ID（用于编辑模式）
+        const selectedOpportunityId = opportunitySelect.value;
+
+        // 防抖函数
+        let debounceTimer;
+        function debounce(func, wait) {
+            return function(...args) {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        // 更新商机列表
+        function updateOpportunities() {
+            const clientName = clientNameInput.value.trim();
+
+            // 显示加载状态
+            opportunitySelect.disabled = true;
+
+            // 构建API URL
+            let apiUrl = '{% url "customer:get_opportunities_by_client_name" %}';
+            if (clientName) {
+                apiUrl += `?client_name=${encodeURIComponent(clientName)}`;
+            }
+
+            // 获取商机列表
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 清空当前选项
+                        // TODO: 使用DOMPurify清理HTML
+            opportunitySelect.innerHTML = '<option value="">-- 选择商机（可选） --</option>';
+
+                        // 添加商机选项
+                        if (data.opportunities.length === 0) {
+                            const noOption = document.createElement('option');
+                            noOption.value = '';
+                            noOption.textContent = clientName ? '-- 该客户暂无可用商机 --' : '-- 暂无可用商机 --';
+                            noOption.disabled = true;
+                            opportunitySelect.appendChild(noOption);
+                        } else {
+                            data.opportunities.forEach(opp => {
+                                const option = document.createElement('option');
+                                option.value = opp.id;
+                                option.textContent = `${opp.opportunity_number || ''} - ${opp.name}`.trim();
+                                // 如果是编辑模式且当前选中的商机，设置为选中
+                                if (selectedOpportunityId && opp.id == selectedOpportunityId) {
+                                    option.selected = true;
+                                }
+                                opportunitySelect.appendChild(option);
+                            });
+                        }
+                    } else {
+                    }
+                })
+                .catch(error => {
+                })
+                .finally(() => {
+                    opportunitySelect.disabled = false;
+                });
+        }
+
+        // 监听客户名称输入变化（500ms防抖）
+        clientNameInput.addEventListener('input', debounce(updateOpportunities, 500));
+
+        // 监听客户名称失去焦点（处理粘贴等情况）
+        clientNameInput.addEventListener('blur', updateOpportunities);
+
+        // 如果客户名称已有值，初始化时也更新一次
+        if (clientNameInput.value.trim()) {
+            updateOpportunities();
+        }
+    }
+
+    // 付款计划编辑器
+    (function() {
+        const paymentScheduleEditor = document.getElementById('payment-schedule-editor');
+        const paymentScheduleInput = document.getElementById('id_payment_schedule');
+        const addPaymentStageBtn = document.getElementById('add-payment-stage');
+
+        if (!paymentScheduleEditor || !paymentScheduleInput || !addPaymentStageBtn) {
+            return;
+        }
+
+        // 创建付款阶段HTML
+        function createPaymentStageHTML(name = '', amount = '') {
+            return `
+                <div class="payment-stage mb-2">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control payment-stage-name" placeholder="阶段名称（如：首付款）" value="${name}">
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" class="form-control payment-stage-amount" placeholder="付款比例（如：20%）" value="${amount}">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-sm btn-danger remove-payment-stage">删除</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 更新隐藏字段的值
+        function updatePaymentSchedule() {
+            const stages = {};
+            paymentScheduleEditor.querySelectorAll('.payment-stage').forEach(stage => {
+                const name = stage.querySelector('.payment-stage-name').value.trim();
+                const amount = stage.querySelector('.payment-stage-amount').value.trim();
+                if (name && amount) {
+                    stages[name] = amount;
+                }
+            });
+            paymentScheduleInput.value = JSON.stringify(stages);
+        }
+
+        // 添加付款阶段
+        addPaymentStageBtn.addEventListener('click', function() {
+            const stageHTML = createPaymentStageHTML();
+            paymentScheduleEditor.insertAdjacentHTML('beforeend', stageHTML);
+
+            // 绑定删除按钮事件
+            const newStage = paymentScheduleEditor.lastElementChild;
+            newStage.querySelector('.remove-payment-stage').addEventListener('click', function() {
+                newStage.remove();
+                updatePaymentSchedule();
+            });
+
+            // 绑定输入事件
+            newStage.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', updatePaymentSchedule);
+            });
+        });
+
+        // 删除付款阶段
+        paymentScheduleEditor.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-payment-stage')) {
+                e.target.closest('.payment-stage').remove();
+                updatePaymentSchedule();
+            }
+        });
+
+        // 监听输入变化
+        paymentScheduleEditor.addEventListener('input', function(e) {
+            if (e.target.classList.contains('payment-stage-name') || e.target.classList.contains('payment-stage-amount')) {
+                updatePaymentSchedule();
+            }
+        });
+
+        // 初始化：如果有现有数据，加载它
+        if (paymentScheduleInput.value) {
+            try {
+                const existingSchedule = JSON.parse(paymentScheduleInput.value);
+                paymentScheduleEditor.textContent = '';
+                for (const [name, amount] of Object.entries(existingSchedule)) {
+                    const stageHTML = createPaymentStageHTML(name, amount);
+                    paymentScheduleEditor.insertAdjacentHTML('beforeend', stageHTML);
+                }
+            } catch (e) {
+            }
+        }
+
+        // 如果没有阶段，至少添加一个空阶段
+        if (paymentScheduleEditor.querySelectorAll('.payment-stage').length === 0) {
+            addPaymentStageBtn.click();
+        }
+    })();
+
+    // 委托单位信息：关联客户和联系人处理
+    (function() {
+        const clientSelect = document.getElementById('id_client');
+        const clientNameInput = document.getElementById('id_client_name');
+        const clientContactSelect = document.getElementById('id_client_contact');
+        const clientRepresentativeInput = document.getElementById('id_client_representative');
+        const clientPhoneInput = document.getElementById('id_client_phone');
+        const clientEmailInput = document.getElementById('id_client_email');
+        const clientAddressInput = document.getElementById('id_client_address');
+
+        if (!clientSelect || !clientContactSelect) {
+            return;
+        }
+
+        // 更新联系人列表
+        function updateContacts() {
+            const clientId = clientSelect.value;
+
+            if (!clientId) {
+                // 清空联系人列表
+                // TODO: 使用DOMPurify清理HTML
+            clientContactSelect.innerHTML = '<option value="">-- 选择联系人 --</option>';
+                clientContactSelect.disabled = true;
+                // 清空客户名称
+                if (clientNameInput) {
+                    clientNameInput.value = '';
+                }
+                return;
+            }
+
+            // 显示加载状态
+            clientContactSelect.disabled = true;
+            // TODO: 使用DOMPurify清理HTML
+            clientContactSelect.innerHTML = '<option value="">加载中...</option>';
+
+            // 获取客户名称
+            const selectedOption = clientSelect.options[clientSelect.selectedIndex];
+            const clientName = selectedOption.text;
+            if (clientNameInput) {
+                clientNameInput.value = clientName;
+            }
+
+            // 构建API URL
+            const apiUrl = '{% url "customer:get_contacts_by_client_id" %}?client_id=' + encodeURIComponent(clientId);
+
+            // 获取联系人列表
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 清空当前选项
+                        // TODO: 使用DOMPurify清理HTML
+            clientContactSelect.innerHTML = '<option value="">-- 选择联系人 --</option>';
+
+                        // 添加联系人选项
+                        if (data.contacts.length === 0) {
+                            const noOption = document.createElement('option');
+                            noOption.value = '';
+                            noOption.textContent = '-- 该客户暂无联系人 --';
+                            noOption.disabled = true;
+                            clientContactSelect.appendChild(noOption);
+                        } else {
+                            data.contacts.forEach(contact => {
+                                const option = document.createElement('option');
+                                option.value = contact.id;
+                                option.textContent = contact.name;
+                                clientContactSelect.appendChild(option);
+                            });
+                        }
+                    } else {
+                        // TODO: 使用DOMPurify清理HTML
+            clientContactSelect.innerHTML = '<option value="">-- 获取联系人失败 --</option>';
+                    }
+                })
+                .catch(error => {
+                    // TODO: 使用DOMPurify清理HTML
+            clientContactSelect.innerHTML = '<option value="">-- 获取联系人失败 --</option>';
+                })
+                .finally(() => {
+                    clientContactSelect.disabled = false;
+                });
+        }
+
+        // 更新联系人信息
+        function updateContactInfo() {
+            const contactId = clientContactSelect.value;
+
+            if (!contactId) {
+                // 清空联系人相关信息
+                if (clientRepresentativeInput) {
+                    clientRepresentativeInput.value = '';
+                }
+                if (clientPhoneInput) {
+                    clientPhoneInput.value = '';
+                }
+                if (clientEmailInput) {
+                    clientEmailInput.value = '';
+                }
+                if (clientAddressInput) {
+                    clientAddressInput.value = '';
+                }
+                return;
+            }
+
+            // 获取选中的联系人信息
+            const selectedOption = clientContactSelect.options[clientContactSelect.selectedIndex];
+            const contactName = selectedOption.text;
+
+            // 从API获取联系人详细信息
+            const clientId = clientSelect.value;
+            const apiUrl = '{% url "customer:get_contacts_by_client_id" %}?client_id=' + encodeURIComponent(clientId);
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const contact = data.contacts.find(c => c.id == contactId);
+                        if (contact) {
+                            // 填充联系人信息
+                            if (clientRepresentativeInput) {
+                                clientRepresentativeInput.value = contact.name;
+                            }
+                            if (clientPhoneInput) {
+                                clientPhoneInput.value = contact.phone || '';
+                            }
+                            if (clientEmailInput) {
+                                clientEmailInput.value = contact.email || '';
+                            }
+                            if (clientAddressInput) {
+                                clientAddressInput.value = contact.office_address || '';
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                });
+        }
+
+        // 监听客户选择变化
+        clientSelect.addEventListener('change', function() {
+            updateContacts();
+            // 清空联系人相关信息
+            if (clientContactSelect) {
+                clientContactSelect.value = '';
+            }
+            updateContactInfo();
+        });
+
+        // 监听联系人选择变化
+        clientContactSelect.addEventListener('change', updateContactInfo);
+
+        // 如果客户已有值，初始化时也更新一次
+        if (clientSelect.value) {
+            updateContacts();
+            // 如果联系人已有值，也更新一次
+            if (clientContactSelect.value) {
+                updateContactInfo();
+            }
+        }
+    })();
+
+});
+</script>
+{% endblock %}

@@ -82,7 +82,7 @@ def output_value_template_manage(request):
         if not table_exists:
             from django.contrib import messages
             messages.warning(request, '产值管理模块尚未初始化，请先运行数据库迁移：python manage.py migrate')
-            return render(request, "settlement_center/output_value_template.html", _context(
+            return render(request, "output_value_management/output_value_template.html", _context(
                 "产值模板管理",
                 "📊",
                 "产值管理模块尚未初始化，请先运行数据库迁移。",
@@ -96,7 +96,7 @@ def output_value_template_manage(request):
         logger.exception('检查产值表失败: %s', str(e))
         from django.contrib import messages
         messages.error(request, f'检查数据库表失败：{str(e)}')
-        return render(request, "settlement_center/output_value_template.html", _context(
+        return render(request, "output_value_management/output_value_template.html", _context(
             "产值模板管理",
             "📊",
             "无法访问数据库，请检查数据库配置。",
@@ -116,7 +116,7 @@ def output_value_template_manage(request):
         logger.exception('获取产值阶段失败: %s', str(e))
         from django.contrib import messages
         messages.error(request, f'获取产值阶段失败：{str(e)}')
-        return render(request, "settlement_center/output_value_template.html", _context(
+        return render(request, "output_value_management/output_value_template.html", _context(
             "产值模板管理",
             "📊",
             "获取产值阶段失败，请检查数据库表是否正确创建。",
@@ -195,7 +195,7 @@ def output_value_template_manage(request):
     )
     context['stages'] = stage_data
     
-    return render(request, "settlement_center/output_value_template.html", context)
+    return render(request, "output_value_management/output_value_template.html", context)
 
 
 @login_required
@@ -223,7 +223,7 @@ def output_value_record_list(request):
         if not table_exists:
             from django.contrib import messages
             messages.warning(request, '产值管理模块尚未初始化，请先运行数据库迁移：python manage.py migrate')
-            return render(request, "settlement_center/output_value_record_list.html", _context(
+            return render(request, "output_value_management/output_value_record_list.html", _context(
                 "产值记录查询",
                 "📈",
                 "产值管理模块尚未初始化，请先运行数据库迁移。",
@@ -236,7 +236,7 @@ def output_value_record_list(request):
         logger.exception('检查产值表失败: %s', str(e))
         from django.contrib import messages
         messages.error(request, f'检查数据库表失败：{str(e)}')
-        return render(request, "settlement_center/output_value_record_list.html", _context(
+        return render(request, "output_value_management/output_value_record_list.html", _context(
             "产值记录查询",
             "📈",
             "无法访问数据库，请检查数据库配置。",
@@ -255,7 +255,7 @@ def output_value_record_list(request):
         logger.exception('获取产值记录失败: %s', str(e))
         from django.contrib import messages
         messages.error(request, f'获取产值记录失败：{str(e)}')
-        return render(request, "settlement_center/output_value_record_list.html", _context(
+        return render(request, "output_value_management/output_value_record_list.html", _context(
             "产值记录查询",
             "📈",
             "获取产值记录失败，请检查数据库表是否正确创建。",
@@ -309,7 +309,7 @@ def output_value_record_list(request):
     context['records'] = page_obj
     context['projects'] = Project.objects.filter(status__in=['in_progress', 'completed']).order_by('-created_time')
     
-    return render(request, "settlement_center/output_value_record_list.html", context)
+    return render(request, "output_value_management/output_value_record_list.html", context)
 
 
 @login_required
@@ -360,7 +360,7 @@ def project_output_value_detail(request, project_id):
         'has_manage_permission': has_manage_permission,
     })
     
-    return render(request, "settlement_center/project_output_value_detail.html", context)
+    return render(request, "output_value_management/project_output_value_detail.html", context)
 
 
 @login_required
@@ -387,7 +387,7 @@ def output_value_record_confirm(request, record_id):
         'page_title': '确认产值记录',
         'page_icon': '✅',
     }
-    return render(request, "settlement_center/output_value_record_confirm.html", context)
+    return render(request, "output_value_management/output_value_record_confirm.html", context)
 
 
 @login_required
@@ -415,7 +415,7 @@ def output_value_statistics(request):
         if not table_exists:
             from django.contrib import messages
             messages.warning(request, '产值管理模块尚未初始化，请先运行数据库迁移：python manage.py migrate')
-            return render(request, "settlement_center/output_value_statistics.html", _context(
+            return render(request, "output_value_management/output_value_statistics.html", _context(
                 "产值统计报表",
                 "📊",
                 "产值管理模块尚未初始化，请先运行数据库迁移。",
@@ -428,7 +428,7 @@ def output_value_statistics(request):
         logger.exception('检查产值表失败: %s', str(e))
         from django.contrib import messages
         messages.error(request, f'检查数据库表失败：{str(e)}')
-        return render(request, "settlement_center/output_value_statistics.html", _context(
+        return render(request, "output_value_management/output_value_statistics.html", _context(
             "产值统计报表",
             "📊",
             "无法访问数据库，请检查数据库配置。",
@@ -454,7 +454,7 @@ def output_value_statistics(request):
         logger.exception('获取产值记录失败: %s', str(e))
         from django.contrib import messages
         messages.error(request, f'获取产值记录失败：{str(e)}')
-        return render(request, "settlement_center/output_value_statistics.html", _context(
+        return render(request, "output_value_management/output_value_statistics.html", _context(
             "产值统计报表",
             "📊",
             "获取产值记录失败，请检查数据库表是否正确创建。",
@@ -553,7 +553,7 @@ def output_value_statistics(request):
         'stages': OutputValueStage.objects.filter(is_active=True).order_by('order'),
     })
     
-    return render(request, "settlement_center/output_value_statistics.html", context)
+    return render(request, "output_value_management/output_value_statistics.html", context)
 
 
 # ==================== 结算管理辅助函数 ====================
@@ -685,7 +685,7 @@ def project_settlement_list(request):
         'can_create': _permission_granted('financial_management.settlement.settlement.create', permission_codes),
     })
     
-    return render(request, "settlement_center/project_settlement_list.html", context)
+    return render(request, "settlement_management/project_settlement_list.html", context)
 
 
 @login_required
@@ -775,7 +775,7 @@ def project_settlement_detail(request, settlement_id):
         'can_confirm': can_confirm,
     })
     
-    return render(request, "settlement_center/project_settlement_detail.html", context)
+    return render(request, "settlement_management/project_settlement_detail.html", context)
 
 
 @login_required
@@ -842,7 +842,7 @@ def project_settlement_create(request):
         'is_create': True,
     })
     
-    return render(request, "settlement_center/project_settlement_form.html", context)
+    return render(request, "settlement_management/project_settlement_form.html", context)
 
 
 @login_required
@@ -884,7 +884,7 @@ def project_settlement_update(request, settlement_id):
         'is_create': False,
     })
     
-    return render(request, "settlement_center/project_settlement_form.html", context)
+    return render(request, "settlement_management/project_settlement_form.html", context)
 
 
 @login_required
@@ -919,7 +919,7 @@ def project_settlement_submit(request, settlement_id):
     context.update({
         'settlement': settlement,
     })
-    return render(request, "settlement_center/project_settlement_confirm.html", context)
+    return render(request, "settlement_management/project_settlement_confirm.html", context)
 
 
 # ==================== 回款管理模块 ====================
@@ -1029,7 +1029,7 @@ def payment_plan_list(request):
         'plan_type': plan_type,
         'status_choices': ProjectPaymentPlan.STATUS_CHOICES,
     })
-    return render(request, "settlement_center/payment_plan_list.html", context)
+    return render(request, "settlement_management/payment_plan_list.html", context)
 
 
 @login_required
@@ -1076,7 +1076,7 @@ def payment_plan_detail(request, plan_type, plan_id):
         'total_received': total_received,
         'remaining_amount': plan.planned_amount - total_received,
     })
-    return render(request, "settlement_center/payment_plan_detail.html", context)
+    return render(request, "settlement_management/payment_plan_detail.html", context)
 
 
 @login_required
@@ -1152,7 +1152,7 @@ def payment_record_list(request):
         'end_date': end_date,
         'status_choices': PaymentRecord._meta.get_field('status').choices,
     })
-    return render(request, "settlement_center/payment_record_list.html", context)
+    return render(request, "settlement_management/payment_record_list.html", context)
 
 
 @login_required
@@ -1219,4 +1219,4 @@ def payment_record_create(request, plan_type, plan_id):
         'plan_type': plan_type,
         'payment_method_choices': PaymentRecord.PAYMENT_METHOD_CHOICES,
     })
-    return render(request, "settlement_center/payment_record_form.html", context)
+    return render(request, "settlement_management/payment_record_form.html", context)

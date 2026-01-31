@@ -8,7 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from backend.apps.administrative_management.models import SealUsage
 from backend.apps.system_management.models import Role
-from backend.apps.project_center.models import ProjectTeamNotification
+from backend.apps.production_management.models import ProjectTeamNotification
 from backend.apps.workflow_engine.models import ApprovalInstance
 import logging
 

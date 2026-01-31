@@ -1,0 +1,392 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}文件模板维护 - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'document_pages:incoming_document_home' %}">文档管理</a></li>
+<li class="breadcrumb-item"><a href="#">文件维护</a></li>
+<li class="breadcrumb-item active" aria-current="page">文件模板维护</li>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
+<style>
+.list-page-container {
+    padding: 12px !important;
+    gap: 8px !important;
+}
+
+.list-page-header {
+    margin-bottom: 8px !important;
+    padding: var(--spacing-md) 0 4px 0 !important;
+}
+
+.list-page-filters {
+    margin-bottom: 8px !important;
+    padding: 6px 10px !important;
+}
+
+.table {
+    margin-bottom: 8px;
+}
+
+.table th,
+.table td {
+    padding: 8px 10px;
+    font-size: 13px;
+}
+
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.status-active {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="list-page-container">
+
+    <div class="list-page-header d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0">📄 文件模板维护</h4>
+            <small class="text-muted">管理各阶段的文件模板</small>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="d-flex gap-2 align-items-center">
+                <label class="form-label mb-0">选择阶段：</label>
+                <select name="stage" class="form-select form-select-sm" style="width: 200px;" onchange="this.form.submit()">
+                    <option value="all" {% if show_all %}selected{% endif %}>全部</option>
+                    {% for code, name in stages.items %}
+                        <option value="{{ code }}" {% if code == stage_code and not show_all %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="hidden" name="search" value="{{ search_keyword }}">
+                <input type="hidden" name="status" value="{{ status_filter }}">
+            </form>
+        </div>
+    </div>
+
+    {% if can_create %}
+    <div class="mb-3">
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createTemplateModal">
+            <i class="bi bi-plus-circle"></i> 新增模板
+        </button>
+    </div>
+    {% endif %}
+
+    <div class="list-page-filters mb-2">
+        <form method="get" class="d-flex gap-2 align-items-end">
+            <input type="hidden" name="stage" value="{% if show_all %}all{% else %}{{ stage_code }}{% endif %}">
+            <div class="flex-grow-1">
+                <label class="form-label small mb-1">搜索</label>
+                <input type="text" name="search" class="form-control form-control-sm"
+                       placeholder="模板名称、代码、描述..."
+                       value="{{ search_keyword }}">
+            </div>
+            <div style="width: 150px;">
+                <label class="form-label small mb-1">状态</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">全部</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>启用</option>
+                    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>禁用</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-search"></i> 搜索
+                </button>
+                <a href="{% url 'document_pages:file_template_manage' %}?stage={% if show_all %}all{% else %}{{ stage_code }}{% endif %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-circle"></i> 重置
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="list-page-table">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 5%;">#</th>
+                        {% if show_all %}
+                        <th style="width: 12%;">阶段</th>
+                        {% endif %}
+                        <th style="width: 20%;">模板名称</th>
+                        <th style="width: 15%;">模板代码</th>
+                        <th style="width: 15%;">关联分类</th>
+                        <th style="width: 15%;">模板文件</th>
+                        <th style="width: 8%;">排序</th>
+                        <th style="width: 8%;">状态</th>
+                        <th style="width: 10%;">创建时间</th>
+                        <th style="width: 4%;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if templates %}
+                        {% for template in templates %}
+                        <tr>
+                            <td>{{ forloop.counter0|add:templates.start_index }}</td>
+                            {% if show_all %}
+                            <td>
+                                <span class="badge bg-secondary">{{ template.get_stage_display }}</span>
+                            </td>
+                            {% endif %}
+                            <td>
+                                <strong>{{ template.name }}</strong>
+                            </td>
+                            <td>
+                                {% if template.code %}
+                                    <code>{{ template.code }}</code>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if template.category %}
+                                    <span class="badge bg-info">{{ template.category.name }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if template.template_file %}
+                                    <a href="{{ template.template_file.url }}" target="_blank" class="text-decoration-none">
+                                        <i class="bi bi-file-earmark"></i> 查看文件
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ template.sort_order }}</td>
+                            <td>
+                                {% if template.is_active %}
+                                    <span class="status-badge status-active">启用</span>
+                                {% else %}
+                                    <span class="status-badge status-inactive">禁用</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ template.created_at|date:"Y-m-d H:i" }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" title="编辑" disabled>
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="{% if show_all %}10{% else %}9{% endif %}" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox"></i> 暂无数据
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if templates.has_other_pages %}
+    <div class="d-flex justify-content-center">
+        <nav>
+            <ul class="pagination pagination-sm">
+                {% if templates.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?stage={% if show_all %}all{% else %}{{ stage_code }}{% endif %}&page={{ templates.previous_page_number }}{% if search_keyword %}&search={{ search_keyword }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">上一页</a>
+                    </li>
+                {% endif %}
+
+                {% for num in templates.paginator.page_range %}
+                    {% if templates.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > templates.number|add:'-3' and num < templates.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?stage={% if show_all %}all{% else %}{{ stage_code }}{% endif %}&page={{ num }}{% if search_keyword %}&search={{ search_keyword }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if templates.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?stage={% if show_all %}all{% else %}{{ stage_code }}{% endif %}&page={{ templates.next_page_number }}{% if search_keyword %}&search={{ search_keyword }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">下一页</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+{% if can_create %}
+<div class="modal fade" id="createTemplateModal" tabindex="-1" aria-labelledby="createTemplateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createTemplateModalLabel">
+                    <i class="bi bi-plus-circle"></i> 新增文件模板
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" id="createTemplateForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_stage" class="form-label required-field">阶段</label>
+                                <select class="form-select" id="modal_stage" name="stage" required onchange="updateCategoryOptions(this.value)">
+                                    <option value="">请选择阶段</option>
+                                    {% for code, name in stages.items %}
+                                        <option value="{{ code }}" {% if code == stage_code and not show_all %}selected{% endif %}>{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">选择要创建模板的阶段</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_template_name" class="form-label required-field">模板名称</label>
+                                <input type="text" class="form-control" id="modal_template_name" name="template_name"
+                                       placeholder="请输入模板名称" required maxlength="100">
+                                <small class="form-text text-muted">该模板的具体名称</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_category" class="form-label">关联分类</label>
+                                <select class="form-select" id="modal_category" name="category">
+                                    <option value="">不关联分类</option>
+                                    {% for code, categories in categories_by_stage.items %}
+                                        {% for category in categories %}
+                                            <option value="{{ category.id }}" data-stage="{{ code }}" style="display: none;">{{ category.name }}</option>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">可选，关联到文件分类</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_sort_order" class="form-label">排序</label>
+                                <input type="number" class="form-control" id="modal_sort_order" name="sort_order"
+                                       value="0" min="0">
+                                <small class="form-text text-muted">数字越小越靠前</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modal_template_file" class="form-label">模板文件</label>
+                        <input type="file" class="form-control" id="modal_template_file" name="template_file"
+                               accept=".doc,.docx,.xls,.xlsx,.pdf,.txt">
+                        <small class="form-text text-muted">可选，上传模板文件（Word、Excel、PDF等）</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">状态</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="modal_is_active" name="is_active" checked>
+                                    <label class="form-check-label" for="modal_is_active">启用</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modal_description" class="form-label">模板描述</label>
+                        <textarea class="form-control" id="modal_description" name="description"
+                                  rows="3" placeholder="请输入模板描述"></textarea>
+                        <small class="form-text text-muted">可选，用于说明该模板的用途和特点</small>
+                    </div>
+
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>提示：</strong>模板代码将由系统自动生成（格式：阶段代码_TEMPLATE_序号，如：CONVERSION_TEMPLATE_001）
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> 取消
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> 保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// 更新分类选项
+function updateCategoryOptions(stageCode) {
+    const categorySelect = document.getElementById('modal_category');
+    const options = categorySelect.querySelectorAll('option[data-stage]');
+
+    // 隐藏所有选项
+    options.forEach(option => {
+        option.style.display = 'none';
+    });
+
+    // 显示当前阶段的选项
+    if (stageCode) {
+        options.forEach(option => {
+            if (option.getAttribute('data-stage') === stageCode) {
+                option.style.display = '';
+            }
+        });
+    }
+
+    // 重置选择
+    categorySelect.value = '';
+}
+
+// 弹窗关闭时重置表单
+document.getElementById('createTemplateModal').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('createTemplateForm').reset();
+    // 恢复默认选中当前阶段（如果不是"全部"）
+    {% if not show_all %}
+    const stageSelect = document.getElementById('modal_stage');
+    stageSelect.value = '{{ stage_code }}';
+    updateCategoryOptions('{{ stage_code }}');
+    {% endif %}
+    document.getElementById('modal_is_active').checked = true;
+});
+
+// 弹窗打开时设置默认阶段
+document.getElementById('createTemplateModal').addEventListener('show.bs.modal', function () {
+    {% if not show_all %}
+    const stageSelect = document.getElementById('modal_stage');
+    stageSelect.value = '{{ stage_code }}';
+    updateCategoryOptions('{{ stage_code }}');
+    {% endif %}
+});
+</script>
+{% endif %}
+{% endblock %}

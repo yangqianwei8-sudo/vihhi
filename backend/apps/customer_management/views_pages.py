@@ -54,7 +54,7 @@ except ImportError:
     HAS_COMMUNICATION_CHECKLIST_MODELS = False
 # BusinessContract和BusinessPaymentPlan已迁移到production_management
 from backend.apps.contract_management.models import BusinessContract, BusinessPaymentPlan
-from backend.apps.production_management.models import DesignStage, ServiceType
+from backend.apps.base_data.models import DesignStage, ServiceType
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav
 from backend.apps.permission_management.utils import normalize_permission_code
@@ -124,6 +124,61 @@ except ImportError:
         return nav
 
 logger = logging.getLogger(__name__)
+
+
+# ==================== 业务委托书路由重定向（已迁移至 contract_management，保留 /business/ 旧路径兼容）====================
+
+@login_required
+def authorization_letter_list_redirect(request):
+    return redirect('contract_pages:authorization_letter_list')
+
+@login_required
+def authorization_letter_create_redirect(request):
+    return redirect('contract_pages:authorization_letter_create')
+
+@login_required
+def authorization_letter_detail_redirect(request, letter_id):
+    return redirect('contract_pages:authorization_letter_detail', letter_id=letter_id)
+
+@login_required
+def authorization_letter_edit_redirect(request, letter_id):
+    return redirect('contract_pages:authorization_letter_edit', letter_id=letter_id)
+
+@login_required
+def authorization_letter_delete_redirect(request, letter_id):
+    return redirect('contract_pages:authorization_letter_delete', letter_id=letter_id)
+
+@login_required
+def authorization_letter_status_transition_redirect(request, letter_id):
+    return redirect('contract_pages:authorization_letter_status_transition', letter_id=letter_id)
+
+@login_required
+def authorization_letter_template_list_redirect(request):
+    return redirect('contract_pages:authorization_letter_template_list')
+
+@login_required
+def authorization_letter_template_create_redirect(request):
+    return redirect('contract_pages:authorization_letter_template_create')
+
+@login_required
+def authorization_letter_template_edit_redirect(request, template_id):
+    return redirect('contract_pages:authorization_letter_template_edit', template_id=template_id)
+
+@login_required
+def authorization_letter_template_delete_redirect(request, template_id):
+    return redirect('contract_pages:authorization_letter_template_delete', template_id=template_id)
+
+@login_required
+def authorization_letter_create_from_template_redirect(request, template_id):
+    return redirect('contract_pages:authorization_letter_create_from_template', template_id=template_id)
+
+@login_required
+def authorization_letter_template_file_preview_redirect(request, template_id):
+    return redirect('contract_pages:authorization_letter_template_file_preview', template_id=template_id)
+
+@login_required
+def authorization_letter_template_file_download_redirect(request, template_id):
+    return redirect('contract_pages:authorization_letter_template_file_download', template_id=template_id)
 
 
 # ==================== 客户管理模块左侧菜单结构（按《客户管理详细设计方案 v1.12》）====================
@@ -1144,7 +1199,7 @@ def customer_management_home(request):
             except NoReverseMatch:
                 pass
         
-        if is_admin or _permission_granted('customer_management.contract.view', permission_set):
+        if is_admin or _permission_granted('contract_management.contract.view', permission_set):
             try:
                 modules.append({
                     'label': '合同管理',
@@ -5410,7 +5465,8 @@ def opportunity_create(request):
     
     # GET请求，显示表单
     try:
-        from backend.apps.production_management.models import ServiceType, Project
+        from backend.apps.base_data.models import ServiceType
+        from backend.apps.production_management.models import Project
         from django.db.models import Max
         from datetime import datetime
         
@@ -5546,7 +5602,8 @@ def opportunity_edit(request, opportunity_id):
             messages.error(request, f'更新商机失败：{str(e)}')
     
     # GET请求，显示表单
-    from backend.apps.production_management.models import ServiceType, Project
+    from backend.apps.base_data.models import ServiceType
+    from backend.apps.production_management.models import Project
     
     clients = Client.objects.filter(is_active=True).select_related('responsible_user').order_by('name')
     service_types = ServiceType.objects.all().order_by('order', 'name')
@@ -6116,7 +6173,7 @@ def opportunity_agency_fee_payment(request):
 @login_required
 def opportunity_drawing_evaluation(request):
     """图纸评估页面（根据总体设计方案）"""
-    from backend.apps.production_management.models import ServiceProfession
+    from backend.apps.base_data.models import ServiceProfession
     
     permission_set = get_user_permission_codes(request.user)
     
@@ -8340,7 +8397,7 @@ def opportunity_import(request):
     from django.http import HttpResponse
     from django.db import transaction
     from backend.apps.system_management.models import User
-    from backend.apps.production_management.models import ServiceType, DesignStage
+    from backend.apps.base_data.models import ServiceType, DesignStage
     import csv
     import io
     

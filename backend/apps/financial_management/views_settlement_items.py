@@ -25,7 +25,7 @@ def settlement_item_review(request, item_id):
     
     # 检查权限：只有造价工程师或有管理权限的用户可以审核
     # TODO: 添加造价工程师权限检查
-    if not (_permission_granted('settlement_center.settlement.manage', permission_codes) or
+    if not (_permission_granted('settlement_management.settlement.manage', permission_codes) or
             request.user.roles.filter(code='cost_engineer').exists()):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'message': '您没有权限审核此明细项'}, status=403)
@@ -109,7 +109,7 @@ def generate_items_from_opinions(request, settlement_id):
     permission_codes = get_user_permission_codes(request.user)
     
     # 检查权限
-    if not _permission_granted('settlement_center.settlement.manage', permission_codes):
+    if not _permission_granted('settlement_management.settlement.manage', permission_codes):
         if settlement.created_by != request.user:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'message': '您没有权限执行此操作'}, status=403)

@@ -60,9 +60,9 @@ class ApprovalNotificationSerializer(serializers.ModelSerializer):
             else:
                 # 默认跳转到审批列表页
                 try:
-                    return reverse('workflow_engine:approval_list')
+                    return reverse('workflow_engine:approval_list_pending')
                 except:
-                    return "/workflow/approvals/"
+                    return "/workflow/approvals/pending/"
         
         # 非审批通知，按原来的逻辑处理
         if obj.object_type == "plan":

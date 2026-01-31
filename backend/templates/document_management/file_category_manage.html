@@ -1,0 +1,362 @@
+{% extends "shared/module_base.html" %}
+{% load static %}
+
+{% block title %}创建文件分类 - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'document_pages:incoming_document_home' %}">文档管理</a></li>
+<li class="breadcrumb-item"><a href="#">文件维护</a></li>
+<li class="breadcrumb-item active" aria-current="page">创建文件分类</li>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
+<style>
+.list-page-container {
+    padding: 12px !important;
+    gap: 8px !important;
+}
+
+.list-page-header {
+    margin-bottom: 8px !important;
+    padding: var(--spacing-md) 0 4px 0 !important;
+}
+
+.list-page-filters {
+    margin-bottom: 8px !important;
+    padding: 6px 10px !important;
+}
+
+.table {
+    margin-bottom: 8px;
+}
+
+.table th,
+.table td {
+    padding: 8px 10px;
+    font-size: 13px;
+}
+
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.status-active {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.create-form-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--vh-primary);
+    color: #495057;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: #495057;
+}
+
+.required-field::after {
+    content: " *";
+    color: #dc3545;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="list-page-container">
+
+    <div class="list-page-header d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0">➕ 创建文件分类</h4>
+            <small class="text-muted">管理各阶段的文件分类</small>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="d-flex gap-2 align-items-center">
+                <label class="form-label mb-0">选择阶段：</label>
+                <select name="stage" class="form-select form-select-sm" style="width: 200px;" onchange="this.form.submit()">
+                    <option value="all" {% if show_all %}selected{% endif %}>全部</option>
+                    {% for code, name in stages.items %}
+                        <option value="{{ code }}" {% if code == stage_code and not show_all %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="hidden" name="search" value="{{ search_keyword }}">
+                <input type="hidden" name="status" value="{{ status_filter }}">
+            </form>
+        </div>
+    </div>
+
+    {% if can_create %}
+    <div class="mb-3">
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+            <i class="bi bi-plus-circle"></i> 新增分类
+        </button>
+    </div>
+    {% endif %}
+
+    <div class="list-page-filters mb-2">
+            <form method="get" class="d-flex gap-2 align-items-end">
+            <input type="hidden" name="stage" value="{% if show_all %}all{% else %}{{ stage_code }}{% endif %}">
+            <div class="flex-grow-1">
+                <label class="form-label small mb-1">搜索</label>
+                <input type="text" name="search" class="form-control form-control-sm"
+                       placeholder="分类名称、代码、描述..."
+                       value="{{ search_keyword }}">
+            </div>
+            <div style="width: 150px;">
+                <label class="form-label small mb-1">状态</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">全部</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>启用</option>
+                    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>禁用</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-search"></i> 搜索
+                </button>
+                <a href="{% url 'document_pages:file_category_manage' %}?stage={% if show_all %}all{% else %}{{ stage_code }}{% endif %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-circle"></i> 重置
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="list-page-table">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 20%;">分类名称</th>
+                        <th style="width: 15%;">分类代码</th>
+                        <th style="width: 30%;">描述</th>
+                        <th style="width: 8%;">排序</th>
+                        <th style="width: 8%;">状态</th>
+                        <th style="width: 10%;">创建时间</th>
+                        <th style="width: 4%;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if categories %}
+                        {% for category in categories %}
+                        <tr>
+                            <td>{{ forloop.counter0|add:categories.start_index }}</td>
+                            {% if show_all %}
+                            <td>
+                                <span class="badge bg-secondary">{{ category.get_stage_display }}</span>
+                            </td>
+                            {% endif %}
+                            <td>
+                                <strong>{{ category.name }}</strong>
+                            </td>
+                            <td>
+                                {% if category.code %}
+                                    <code>{{ category.code }}</code>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if category.description %}
+                                    <small>{{ category.description|truncatewords:10 }}</small>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ category.sort_order }}</td>
+                            <td>
+                                {% if category.is_active %}
+                                    <span class="status-badge status-active">启用</span>
+                                {% else %}
+                                    <span class="status-badge status-inactive">禁用</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ category.created_at|date:"Y-m-d H:i" }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" title="编辑" disabled>
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="{% if show_all %}9{% else %}8{% endif %}" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox"></i> 暂无数据
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if categories.has_other_pages %}
+    <div class="d-flex justify-content-center">
+        <nav>
+            <ul class="pagination pagination-sm">
+                {% if categories.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?stage={% if show_all %}all{% else %}{{ stage_code }}{% endif %}&page={{ categories.previous_page_number }}{% if search_keyword %}&search={{ search_keyword }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">上一页</a>
+                    </li>
+                {% endif %}
+
+                {% for num in categories.paginator.page_range %}
+                    {% if categories.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > categories.number|add:'-3' and num < categories.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?stage={% if show_all %}all{% else %}{{ stage_code }}{% endif %}&page={{ num }}{% if search_keyword %}&search={{ search_keyword }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if categories.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?stage={% if show_all %}all{% else %}{{ stage_code }}{% endif %}&page={{ categories.next_page_number }}{% if search_keyword %}&search={{ search_keyword }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">下一页</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+{% if can_create %}
+<div class="modal fade" id="createCategoryModal" tabindex="-1" aria-labelledby="createCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createCategoryModalLabel">
+                    <i class="bi bi-plus-circle"></i> 新增文件分类
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" id="createCategoryForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_name" class="form-label required-field">阶段</label>
+                                <select class="form-select" id="modal_name" name="name" required>
+                                    <option value="">请选择阶段</option>
+                                    {% for code, name in stages.items %}
+                                        <option value="{{ code }}" {% if code == stage_code and not show_all %}selected{% endif %}>{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">选择要创建分类的阶段</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_category_name" class="form-label required-field">分类名称</label>
+                                <input type="text" class="form-control" id="modal_category_name" name="category_name"
+                                       placeholder="请输入分类名称" required maxlength="100">
+                                <small class="form-text text-muted">该分类的具体名称</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modal_sort_order" class="form-label">排序</label>
+                                <input type="number" class="form-control" id="modal_sort_order" name="sort_order"
+                                       value="0" min="0">
+                                <small class="form-text text-muted">数字越小越靠前</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">状态</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="modal_is_active" name="is_active" checked>
+                                    <label class="form-check-label" for="modal_is_active">启用</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modal_description" class="form-label">分类描述</label>
+                        <textarea class="form-control" id="modal_description" name="description"
+                                  rows="3" placeholder="请输入分类描述"></textarea>
+                        <small class="form-text text-muted">可选，用于说明该分类的用途和特点</small>
+                    </div>
+
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>提示：</strong>分类代码将由系统自动生成（格式：阶段代码_序号，如：CONVERSION_001）
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> 取消
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> 保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// 弹窗关闭时重置表单
+document.getElementById('createCategoryModal').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('createCategoryForm').reset();
+    // 恢复默认选中当前阶段（如果不是"全部"）
+    {% if not show_all %}
+    document.getElementById('modal_name').value = '{{ stage_code }}';
+    {% else %}
+    document.getElementById('modal_name').value = '';
+    {% endif %}
+    document.getElementById('modal_is_active').checked = true;
+});
+
+// 弹窗打开时设置默认阶段
+document.getElementById('createCategoryModal').addEventListener('show.bs.modal', function () {
+    {% if not show_all %}
+    document.getElementById('modal_name').value = '{{ stage_code }}';
+    {% endif %}
+});
+</script>
+{% endif %}
+{% endblock %}

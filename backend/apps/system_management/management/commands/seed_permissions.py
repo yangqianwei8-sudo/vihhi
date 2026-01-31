@@ -51,12 +51,6 @@ PERMISSION_DEFINITIONS = [
     {"code": "settlement_management.view_analysis", "module": "结算管理", "action": "view_analysis", "name": "结算管理-统计分析", "description": "查看结算统计与分析报表"},
     {"code": "settlement_management.payment_record.create", "module": "结算管理", "action": "payment_record.create", "name": "结算管理-创建回款记录", "description": "创建回款记录"},
 
-    # 结算管理（结算相关权限，回款管理已独立为 payment_management）
-    {"code": "settlement_center.view", "module": "结算管理", "action": "view", "name": "结算管理-查看", "description": "查看结算和回款管理"},
-    {"code": "settlement_center.payment_record.create", "module": "结算管理", "action": "payment_record.create", "name": "结算管理-创建回款记录", "description": "创建回款记录"},
-    {"code": "settlement_center.payment_record.view", "module": "结算管理", "action": "payment_record.view", "name": "结算管理-查看回款记录", "description": "查看回款记录"},
-    {"code": "settlement_center.payment_record.confirm", "module": "结算管理", "action": "payment_record.confirm", "name": "结算管理-确认回款记录", "description": "确认回款记录"},
-    
     # 回款管理（独立模块）
     {"code": "payment_management.view", "module": "回款管理", "action": "view", "name": "回款管理-查看", "description": "查看回款管理模块"},
     {"code": "payment_management.payment_plan.view", "module": "回款管理", "action": "payment_plan.view", "name": "回款管理-查看回款计划", "description": "查看回款计划列表和详情"},

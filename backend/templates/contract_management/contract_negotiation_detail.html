@@ -1,0 +1,264 @@
+{% extends "shared/module_base.html" %}
+
+{% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item"><a href="{% url 'contract_pages:contract_management_list' %}">合同管理</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'contract_pages:contract_negotiation_list' %}">合同洽谈记录</a></li>
+    <li class="breadcrumb-item active" aria-current="page">洽谈详情</li>
+{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/common.css' %}">
+<style>
+    .detail-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+    }
+    .detail-section {
+        margin-bottom: 32px;
+    }
+    .detail-section h5 {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--vh-primary);
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .detail-row {
+        display: flex;
+        padding: 12px 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+    .detail-label {
+        font-weight: 500;
+        color: #6b7280;
+        width: 150px;
+        flex-shrink: 0;
+    }
+    .detail-value {
+        color: #1f2937;
+        flex: 1;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .status-badge.ongoing {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    .status-badge.completed {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    .status-badge.suspended {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    .status-badge.cancelled {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="center-hero mb-4">
+        <div style="position: relative; z-index: 1;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">{{ page_title }}</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin: 0;">查看合同洽谈记录的详细信息</p>
+        </div>
+    </div>
+
+    <div class="text-end mb-4">
+        <a href="{% url 'contract_pages:contract_negotiation_list' %}" class="btn btn-secondary">返回列表</a>
+        {% if can_edit %}
+        <a href="#" class="btn btn-primary">编辑</a>
+        {% endif %}
+    </div>
+
+    <div class="detail-card">
+        <div class="detail-section">
+            <h5>📋 基本信息</h5>
+            <div class="detail-row">
+                <div class="detail-label">洽谈编号</div>
+                <div class="detail-value"><strong>{{ negotiation.negotiation_number|default:"未编号" }}</strong></div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">洽谈主题</div>
+                <div class="detail-value">{{ negotiation.title }}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">洽谈类型</div>
+                <div class="detail-value">{{ negotiation.get_negotiation_type_display }}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">洽谈状态</div>
+                <div class="detail-value">
+                    <span class="status-badge {{ negotiation.status }}">{{ negotiation.get_status_display }}</span>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">洽谈内容</div>
+                <div class="detail-value">{{ negotiation.content|linebreaks }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-card">
+        <div class="detail-section">
+            <h5>🔗 关联信息</h5>
+            <div class="detail-row">
+                <div class="detail-label">关联合同</div>
+                <div class="detail-value">
+                    {% if negotiation.contract %}
+                        <a href="{% url 'contract_pages:contract_detail' negotiation.contract.id %}">{{ negotiation.contract.contract_number|default:"未编号" }}</a>
+                    {% else %}
+                        未关联
+                    {% endif %}
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">客户</div>
+                <div class="detail-value">
+                    {% if negotiation.client %}
+                        <a href="{% url 'customer_pages:customer_detail' negotiation.client.id %}">{{ negotiation.client.name }}</a>
+                    {% else %}
+                        未指定
+                    {% endif %}
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">关联项目</div>
+                <div class="detail-value">
+                    {% if negotiation.project %}
+                        {{ negotiation.project.project_number|default:negotiation.project.name }}
+                    {% else %}
+                        未关联
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-card">
+        <div class="detail-section">
+            <h5>👥 参与人员</h5>
+            <div class="detail-row">
+                <div class="detail-label">我方参与人员</div>
+                <div class="detail-value">
+                    {% for participant in negotiation.participants.all %}
+                        {{ participant.username }}{% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                        无
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">客户参与人员</div>
+                <div class="detail-value">{{ negotiation.client_participants|default:"未填写" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-card">
+        <div class="detail-section">
+            <h5>📅 时间信息</h5>
+            <div class="detail-row">
+                <div class="detail-label">洽谈日期</div>
+                <div class="detail-value">{{ negotiation.negotiation_date|date:"Y-m-d" }}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">开始时间</div>
+                <div class="detail-value">{{ negotiation.negotiation_start_time|default:"未填写" }}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">结束时间</div>
+                <div class="detail-value">{{ negotiation.negotiation_end_time|default:"未填写" }}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">下次洽谈日期</div>
+                <div class="detail-value">{{ negotiation.next_negotiation_date|date:"Y-m-d"|default:"未设置" }}</div>
+            </div>
+        </div>
+    </div>
+
+    {% if negotiation.result_summary or negotiation.agreed_items or negotiation.pending_items %}
+    <div class="detail-card">
+        <div class="detail-section">
+            <h5>✅ 洽谈结果</h5>
+            {% if negotiation.result_summary %}
+            <div class="detail-row">
+                <div class="detail-label">结果摘要</div>
+                <div class="detail-value">{{ negotiation.result_summary|linebreaks }}</div>
+            </div>
+            {% endif %}
+            {% if negotiation.agreed_items %}
+            <div class="detail-row">
+                <div class="detail-label">已达成事项</div>
+                <div class="detail-value">{{ negotiation.agreed_items|linebreaks }}</div>
+            </div>
+            {% endif %}
+            {% if negotiation.pending_items %}
+            <div class="detail-row">
+                <div class="detail-label">待解决事项</div>
+                <div class="detail-value">{{ negotiation.pending_items|linebreaks }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if negotiation.attachments or negotiation.notes %}
+    <div class="detail-card">
+        <div class="detail-section">
+            <h5>📎 其他信息</h5>
+            {% if negotiation.attachments %}
+            <div class="detail-row">
+                <div class="detail-label">附件说明</div>
+                <div class="detail-value">{{ negotiation.attachments|linebreaks }}</div>
+            </div>
+            {% endif %}
+            {% if negotiation.notes %}
+            <div class="detail-row">
+                <div class="detail-label">备注</div>
+                <div class="detail-value">{{ negotiation.notes|linebreaks }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="detail-card">
+        <div class="detail-section">
+            <h5>📝 审计信息</h5>
+            <div class="detail-row">
+                <div class="detail-label">创建人</div>
+                <div class="detail-value">{{ negotiation.created_by.username|default:"未知" }}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">创建时间</div>
+                <div class="detail-value">{{ negotiation.created_time|date:"Y-m-d H:i:s" }}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">更新时间</div>
+                <div class="detail-value">{{ negotiation.updated_time|date:"Y-m-d H:i:s" }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
