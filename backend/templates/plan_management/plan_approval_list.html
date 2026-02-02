@@ -4,6 +4,8 @@
 {% block page_title %}计划审批列表{% endblock page_title %}
 {% block page_subtitle %}待裁决的计划请求{% endblock page_subtitle %}
 
+{% block search_placeholder %}计划编号、名称、请求人{% endblock %}
+
 {% block module_styles %}
   {{ block.super }}
   <style>
@@ -19,61 +21,45 @@
   </style>
 {% endblock %}
 
-{% block list_filters_content %}
-  {# 筛选器 - 使用标准Bootstrap栅格系统 #}
-  <div class="row g-3">
-    <div class="col-md-3">
-      <label class="form-label">搜索</label>
-      <input type="text" name="search" class="form-control form-control-sm" value="{{ search }}" placeholder="计划编号、名称、请求人">
-    </div>
-    <div class="col-md-2">
-      <label class="form-label">请求类型</label>
-      <select name="request_type" class="form-select form-select-sm">
-        <option value="">全部类型</option>
-        {% for value, label in request_type_choices %}
-        <option value="{{ value }}" {% if request_type_filter == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-2">
-      <label class="form-label">计划状态</label>
-      <select name="status" class="form-select form-select-sm">
-        <option value="">全部状态</option>
-        {% for value, label in status_options %}
-        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-2">
-      <label class="form-label">请求人</label>
-      <select name="requested_by" class="form-select form-select-sm">
-        <option value="">全部请求人</option>
-        {% for user in all_users %}
-        <option value="{{ user.id }}" {% if requested_by_filter|stringformat:"s" == user.id|stringformat:"s" %}selected{% endif %}>
-          {{ user.get_full_name|default:user.username }}
-        </option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">请求时间</label>
-      <div class="row g-2">
-        <div class="col-6">
-          <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from|default:'' }}" placeholder="开始">
-        </div>
-        <div class="col-6">
-          <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to|default:'' }}" placeholder="结束">
-        </div>
-      </div>
-    </div>
+{% block list_filters_extra %}
+  <div class="col list-page-filter-item" data-filter-key="request_type">
+    <label class="list-page-filter-label">请求类型</label>
+    <select name="request_type" class="form-select form-select-sm">
+      <option value="">全部类型</option>
+      {% for value, label in request_type_choices %}
+      <option value="{{ value }}" {% if request_type_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
   </div>
-{% endblock list_filters_content %}
-
-{% block list_table_checkbox_header %}
-  <th style="width: 50px;">
-    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
-  </th>
-{% endblock list_table_checkbox_header %}
+  <div class="col list-page-filter-item" data-filter-key="status">
+    <label class="list-page-filter-label">计划状态</label>
+    <select name="status" class="form-select form-select-sm">
+      <option value="">全部状态</option>
+      {% for value, label in status_options %}
+      <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col list-page-filter-item" data-filter-key="requested_by">
+    <label class="list-page-filter-label">请求人</label>
+    <select name="requested_by" class="form-select form-select-sm">
+      <option value="">全部请求人</option>
+      {% for user in all_users %}
+      <option value="{{ user.id }}" {% if requested_by_filter|stringformat:"s" == user.id|stringformat:"s" %}selected{% endif %}>
+        {{ user.get_full_name|default:user.username }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col list-page-filter-item" data-filter-key="date_from">
+    <label class="list-page-filter-label">请求开始</label>
+    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from|default:'' }}">
+  </div>
+  <div class="col list-page-filter-item" data-filter-key="date_to">
+    <label class="list-page-filter-label">请求结束</label>
+    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to|default:'' }}">
+  </div>
+{% endblock list_filters_extra %}
 
 {% block list_table_headers %}
   <th>计划编号</th>

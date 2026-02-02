@@ -64,6 +64,10 @@ from backend.apps.opportunity_management.models import (
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.core.views import HOME_NAV_STRUCTURE, _permission_granted, _build_full_top_nav
 from backend.apps.permission_management.utils import normalize_permission_code
+from .perm_check import (
+    opportunity_sidebar_permission,
+    expand_permission_set_for_nav,
+)
 
 try:
     from backend.core.views import _build_unified_sidebar_nav
@@ -92,6 +96,9 @@ except ImportError:
                 'icon': item.get('icon', ''),
                 'url': url,
                 'active': item.get('id') == active_id if active_id else False,
+                'children': [],
+                'badge': item.get('badge') or '',
+                'expanded': item.get('expanded', False),
             }
 
             if 'children' in item:
@@ -116,123 +123,109 @@ except ImportError:
                         'active': child.get('id') == active_id if active_id else False,
                     })
                 nav_item['children'] = children
+                # 有子菜单时根据 active 自动展开
+                nav_item['expanded'] = any(c.get('active') for c in children) or nav_item.get('expanded', False)
             nav.append(nav_item)
         return nav
 
 logger = logging.getLogger(__name__)
 
 
-# ==================== 商机管理模块左侧菜单结构 =====================
+# ==================== 商机管理模块左侧菜单结构（二级菜单） =====================
+# 按业务域分组：首页 | 商机与列表 | 项目与投标 | 商务与费用
+# 权限码统一使用 opportunity_management.opportunity.*（兼容 customer_management.* 由 perm_check 处理）
 OPPORTUNITY_MANAGEMENT_MENU = [
+    # 一级：首页
     {
         'id': 'opportunity_home',
         'label': '首页',
         'icon': '🏠',
         'url_name': 'opportunity_pages:opportunity_management_home',
-        'permission': 'customer_management.opportunity.view',
+        'permission': opportunity_sidebar_permission('view'),
     },
+    # 一级：商机与列表（新建、列表、预测、赢单输单；批量导入入口在商机列表页内）
     {
-        'id': 'basic_info',
-        'label': '基本信息',
+        'id': 'opportunity_and_list',
+        'label': '商机与列表',
         'icon': '📋',
-        'permission': 'customer_management.opportunity.view',
+        'permission': opportunity_sidebar_permission('view'),
         'children': [
+            {'id': 'opportunity_create', 'label': '新建商机', 'icon': '➕',
+             'url_name': 'opportunity_pages:opportunity_create',
+             'url': '/opportunities/create/',  # 回退地址，避免 reverse 失败时链接为 #
+             'permission': opportunity_sidebar_permission('create')},
             {'id': 'opportunity_list', 'label': '商机列表', 'icon': '📋',
              'url_name': 'opportunity_pages:opportunity_management',
-             'permission': 'customer_management.opportunity.view'},
-            {'id': 'opportunity_import', 'label': '批量导入', 'icon': '📥',
-             'url_name': 'opportunity_pages:opportunity_import',
-             'permission': 'customer_management.opportunity.view'},
+             'permission': opportunity_sidebar_permission('view')},
+            {'id': 'sales_forecast', 'label': '商机预测', 'icon': '📈',
+             'url_name': 'opportunity_pages:opportunity_sales_forecast',
+             'permission': opportunity_sidebar_permission('view')},
+            {'id': 'win_loss', 'label': '赢单与输单', 'icon': '✅',
+             'url_name': 'opportunity_pages:opportunity_win_loss',
+             'permission': opportunity_sidebar_permission('manage')},
         ]
     },
+    # 一级：项目与投标（评估、图纸、技术会、报价、投标文件）
     {
-        'id': 'project_info',
-        'label': '项目信息',
+        'id': 'project_and_bidding',
+        'label': '项目与投标',
         'icon': '🏗️',
-        'permission': 'customer_management.opportunity.view',
+        'permission': opportunity_sidebar_permission('view'),
         'children': [
             {'id': 'evaluation_application', 'label': '评估申请', 'icon': '📝',
              'url_name': 'opportunity_pages:opportunity_evaluation_application',
-             'permission': 'customer_management.opportunity.manage'},
+             'permission': opportunity_sidebar_permission('manage')},
             {'id': 'drawing_evaluation', 'label': '图纸评估', 'icon': '📐',
              'url_name': 'opportunity_pages:opportunity_drawing_evaluation',
-             'permission': 'customer_management.opportunity.view'},
+             'permission': opportunity_sidebar_permission('view')},
             {'id': 'tech_meeting', 'label': '技术沟通会', 'icon': '🤝',
              'url_name': 'opportunity_pages:opportunity_tech_meeting',
-             'permission': 'customer_management.opportunity.view'},
-        ]
-    },
-    {
-        'id': 'amount_info',
-        'label': '金额信息',
-        'icon': '💰',
-        'permission': 'customer_management.opportunity.view',
-        'children': [
+             'permission': opportunity_sidebar_permission('view')},
             {'id': 'bidding_quotation_application', 'label': '投标报价申请', 'icon': '📋',
              'url_name': 'opportunity_pages:opportunity_bidding_quotation_application',
-             'permission': 'customer_management.opportunity.view'},
+             'permission': opportunity_sidebar_permission('view')},
             {'id': 'bidding_quotation', 'label': '投标报价管理', 'icon': '📊',
              'url_name': 'opportunity_pages:opportunity_bidding_quotation',
-             'permission': 'customer_management.opportunity.view'},
-            {'id': 'warehouse_list', 'label': '创建入库', 'icon': '📥',
-             'url_name': 'opportunity_pages:opportunity_warehouse_list',
-             'permission': 'customer_management.opportunity.view'},
-        ]
-    },
-    {
-        'id': 'time_info',
-        'label': '时间信息',
-        'icon': '⏰',
-        'permission': 'customer_management.opportunity.view',
-        'children': [
+             'permission': opportunity_sidebar_permission('view')},
             {'id': 'bidding_document_preparation', 'label': '编制投标文件', 'icon': '📄',
              'url_name': 'opportunity_pages:opportunity_bidding_document_preparation',
-             'permission': 'customer_management.opportunity.manage'},
+             'permission': opportunity_sidebar_permission('manage')},
             {'id': 'bidding_document_submission', 'label': '递交投标文件', 'icon': '📤',
              'url_name': 'opportunity_pages:opportunity_bidding_document_submission',
-             'permission': 'customer_management.opportunity.manage'},
-            {'id': 'business_negotiation', 'label': '商务洽谈登记', 'icon': '💼',
+             'permission': opportunity_sidebar_permission('manage')},
+        ]
+    },
+    # 一级：商务与费用（洽谈、各类支付、入库）
+    {
+        'id': 'business_and_fee',
+        'label': '商务与费用',
+        'icon': '💼',
+        'permission': opportunity_sidebar_permission('view'),
+        'children': [
+            {'id': 'business_negotiation', 'label': '商务洽谈登记', 'icon': '🤝',
              'url_name': 'opportunity_pages:opportunity_business_negotiation',
-             'permission': 'customer_management.opportunity.view'},
-        ]
-    },
-    {
-        'id': 'opportunity_description',
-        'label': '商机描述',
-        'icon': '📝',
-        'permission': 'customer_management.opportunity.view',
-        'children': [
-            {'id': 'sales_forecast', 'label': '商机预测', 'icon': '📈',
-             'url_name': 'opportunity_pages:opportunity_sales_forecast',
-             'permission': 'customer_management.opportunity.view'},
-            {'id': 'win_loss', 'label': '赢单与输单', 'icon': '✅',
-             'url_name': 'opportunity_pages:opportunity_win_loss',
-             'permission': 'customer_management.opportunity.manage'},
-        ]
-    },
-    {
-        'id': 'payment_management',
-        'label': '费用支付',
-        'icon': '💳',
-        'permission': 'customer_management.opportunity.view',
-        'children': [
+             'permission': opportunity_sidebar_permission('view')},
             {'id': 'bid_bond_payment', 'label': '投标保证金支付', 'icon': '💰',
              'url_name': 'opportunity_pages:opportunity_bid_bond_payment',
-             'permission': 'customer_management.opportunity.manage'},
+             'permission': opportunity_sidebar_permission('manage')},
             {'id': 'tender_fee_payment', 'label': '标书费支付', 'icon': '📄',
              'url_name': 'opportunity_pages:opportunity_tender_fee_payment',
-             'permission': 'customer_management.opportunity.manage'},
+             'permission': opportunity_sidebar_permission('manage')},
             {'id': 'tender_agent_fee_payment', 'label': '招标代理费支付', 'icon': '🏢',
-             'url_name': 'opportunity_pages:opportunity_tender_agent_fee_payment',
-             'permission': 'customer_management.opportunity.manage'},
+             'url_name': 'opportunity_pages:opportunity_agency_fee_payment',
+             'permission': opportunity_sidebar_permission('manage')},
+            {'id': 'warehouse_list', 'label': '创建入库', 'icon': '📥',
+             'url_name': 'opportunity_pages:opportunity_warehouse_list',
+             'permission': opportunity_sidebar_permission('view')},
         ]
     },
 ]
 
 
 def _build_opportunity_management_sidebar_nav(permission_set, request_path=None, active_id=None):
-    """生成商机管理左侧菜单（统一格式）"""
-    return _build_unified_sidebar_nav(OPPORTUNITY_MANAGEMENT_MENU, permission_set, active_id=active_id)
+    """生成商机管理左侧菜单（统一格式，兼容 customer_management.opportunity.* 权限）"""
+    expanded = expand_permission_set_for_nav(permission_set)
+    return _build_unified_sidebar_nav(OPPORTUNITY_MANAGEMENT_MENU, expanded, active_id=active_id)
 
 
 def _context(page_title, page_icon, description, summary_cards=None, sections=None, request=None, active_menu_id=None):
@@ -259,57 +252,7 @@ def _context(page_title, page_icon, description, summary_cards=None, sections=No
     return context
 
 
-# ==================== 客户管理模块左侧菜单结构 =====================
-CUSTOMER_MANAGEMENT_MENU = [
-    {'id': 'customer_home', 'label': '首页', 'icon': '🏠',
-     'url_name': 'customer_pages:customer_management_home',
-     'permission': 'customer_management.client.view'},
-    {
-        'id': 'lead_and_public_sea',
-        'label': '线索与公海',
-        'icon': '🔍',
-        'permission': 'customer_management.client.view',
-        'children': [
-            {'id': 'customer_lead_create', 'label': '创建客户线索', 'icon': '📝',
-             'url_name': 'customer_pages:customer_lead_create',
-             'permission': 'customer_management.client.create'},
-            {'id': 'customer_filing_create', 'label': '创建新客户备案', 'icon': '📋',
-             'url_name': 'customer_pages:customer_filing_create',
-             'permission': 'customer_management.client.create'},
-            {'id': 'first_visit_create', 'label': '创建首次拜访', 'icon': '📅',
-             'url_name': 'customer_pages:first_visit_create',
-             'permission': 'customer_management.relationship.edit'},
-            {'id': 'customer_public_sea', 'label': '客户公海', 'icon': '🌊',
-             'url_name': 'customer_pages:customer_public_sea',
-             'permission': 'customer_management.public_sea.view'},
-        ]
-    },
-    {
-        'id': 'customer_info',
-        'label': '客户信息管理',
-        'icon': '👥',
-        'permission': 'customer_management.client.view',
-        'children': [
-            {'id': 'customer_list', 'label': '客户列表', 'icon': '📋',
-             'url_name': 'customer_pages:customer_list',
-             'permission': 'customer_management.client.view'},
-            {'id': 'customer_create', 'label': '创建新客户', 'icon': '➕',
-             'url_name': 'business_pages:customer_create',
-             'permission': 'customer_management.client.create'},
-        ]
-    },
-    {
-        'id': 'customer_contact',
-        'label': '人员信息管理',
-        'icon': '👤',
-        'permission': 'customer_management.contact.view',
-        'children': [
-            {'id': 'contact_list', 'label': '联系人列表', 'icon': '📇',
-             'url_name': 'customer_pages:contact_list',
-             'permission': 'customer_management.contact.view'},
-        ]
-    },
-]
+# 客户管理菜单：以 customer_management.views_pages.CUSTOMER_MANAGEMENT_MENU 为准，此处不再维护副本
 
 
 def _get_opportunities_safely(queryset, permission_set, user):

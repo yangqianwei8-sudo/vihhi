@@ -79,9 +79,9 @@ def validate_template_structure():
         if not re.search(pattern, template_content):
             warnings.append(f"缺少 CSS 类定义: {css_class}")
     
-    # 检查模板继承
-    if 'extends "shared/module_base.html"' not in template_content:
-        errors.append("模板未正确继承 module_base.html")
+    # 检查模板继承（两栏基模板）
+    if 'extends "shared/two_column_layout_base.html"' not in template_content:
+        errors.append("模板未正确继承 two_column_layout_base.html")
     
     # 检查关键功能
     if 'update_progress' not in template_content:

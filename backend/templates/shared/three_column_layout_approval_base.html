@@ -7,20 +7,71 @@
 {{ block.super }}
 {% endblock %}
 
+{% block three_column_main_title %}审批详情{% endblock %}
+{% block three_column_main_subtitle %}{% block three_column_main_subtitle_text %}查看并处理审批申请{% endblock %}{% endblock %}
+
 {% block main_content_body %}
-{# 基本信息卡片 - 由子模板填充 #}
-{% block approval_basic_info_card %}
-{% endblock approval_basic_info_card %}
+{# 第一块：基本信息（基模写死：所属部门、负责人、表单编号；其他字段留块） #}
+<div class="detail-card-wrapper detail-card-wrapper-basic-info">
+  <div class="detail-card detail-card-basic-info">
+    <div class="detail-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <h3 class="detail-card-title mb-0">
+        <i class="fas fa-info-circle"></i>
+        基本信息
+      </h3>
+      {% block approval_basic_detail_link %}
+      <a href="{% block approval_basic_detail_url %}#{% endblock %}" class="btn btn-sm btn-outline-primary" target="_blank">查看详情</a>
+      {% endblock approval_basic_detail_link %}{# 链接应为业务对象详情页，非审批详情页 #}
+    </div>
+    <div class="detail-card-body">
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">所属部门</span>
+          <span class="info-value">{% block approval_basic_department %}-{% endblock %}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">负责人</span>
+          <span class="info-value">{% block approval_basic_responsible %}-{% endblock %}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">表单编号</span>
+          <span class="info-value">{% block approval_basic_form_number %}-{% endblock %}</span>
+        </div>
+      </div>
+      {% block approval_basic_info_extra %}{% endblock %}
+    </div>
+  </div>
+</div>
 {% endblock main_content_body %}
 
 {% block main_content_card_2 %}
-{# 详细信息卡片 - 由子模板填充 #}
-{% block approval_detail_info_card %}
-{% endblock approval_detail_info_card %}
+{# 第二块：待审批内容仅展示简要信息（对象类型、名称/编号），完整字段通过「查看详情」查看；子模板可覆盖 approval_detail_info_card 自定义 #}
+<div class="detail-card-wrapper detail-card-wrapper-detail-info">
+  <div class="detail-card detail-card-detail-info">
+    <div class="detail-card-header">
+      <h3 class="detail-card-title"><i class="fas fa-file-alt"></i> 待审批内容 - {{ content_object_type_name|default:"业务对象" }}</h3>
+    </div>
+    <div class="detail-card-body">
+      {% block approval_detail_info_card %}
+      {% if content_object %}
+      <div class="info-grid">
+        <div class="info-item"><span class="info-label">对象类型</span><span class="info-value">{{ content_object_type_name|default:instance.content_type.model }}</span></div>
+        <div class="info-item"><span class="info-label">对象名称/编号</span><span class="info-value">{{ content_object }}</span></div>
+      </div>
+      {% if content_object_detail_url %}
+      <p class="text-muted small mt-3 mb-0"><i class="fas fa-info-circle"></i> 完整表单内容请点击上方基本信息卡片右侧「查看详情」打开业务详情页查看。</p>
+      {% endif %}
+      {% else %}
+      <p class="text-muted mb-0">无关联业务对象</p>
+      {% endif %}
+      {% endblock approval_detail_info_card %}
+    </div>
+  </div>
+</div>
 {% endblock main_content_card_2 %}
 
 {% block main_content_card_3 %}
-{# 审批记录卡片 - 由子模板填充 #}
+{# 第三块：审批记录表格，由子模板填充 #}
 {% block approval_records_card %}
 {% endblock approval_records_card %}
 {% endblock main_content_card_3 %}
@@ -28,10 +79,10 @@
 {% block right_sidebar_title %}审批栏{% endblock %}
 
 {% block right_sidebar_content %}
-{# 审批状态信息 #}
-{% block right_sidebar_group_1_body %}
+{% block right_sidebar_group_1 %}
 <div class="three-column-actions__group">
   <div class="three-column-actions__group-title">审批状态</div>
+  {% block right_sidebar_group_1_body %}
   {% block approval_status_info %}
   <div class="three-column-actions__info-item">
     <div class="three-column-actions__info-label">当前状态</div>
@@ -52,23 +103,23 @@
     <div class="three-column-actions__info-value">-</div>
   </div>
   {% endblock approval_status_info %}
+  {% endblock right_sidebar_group_1_body %}
 </div>
-{% endblock right_sidebar_group_1_body %}
+{% endblock right_sidebar_group_1 %}
 
 {% block right_sidebar_group_2 %}
-{# 审批操作表单 #}
-{% block approval_form %}
 <div class="three-column-actions__group">
   <div class="three-column-actions__group-title">审批操作</div>
-  <form method="post" id="approvalForm" class="approval-form" action="{% block approval_form_action %}{% endblock %}">
+  <form method="post" id="approvalForm" class="approval-form" action="{{ approval_form_action|default:'' }}">
     {% csrf_token %}
+    {% block approval_form_hidden %}{% endblock approval_form_hidden %}
     <div class="mb-3">
       <label for="approval_comment" class="form-label small">审批意见</label>
-      <textarea 
-        id="approval_comment" 
-        name="comment" 
-        class="form-control form-control-sm" 
-        rows="4" 
+      <textarea
+        id="approval_comment"
+        name="comment"
+        class="form-control form-control-sm"
+        rows="4"
         placeholder="请输入审批意见..."
         style="resize: vertical; min-height: 80px;"></textarea>
     </div>
@@ -81,7 +132,7 @@
       </button>
       {% block approval_transfer_button %}
       {% if approval_allow_transfer %}
-      <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#transferModal">
+      <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#transferModal">
         <i class="fas fa-exchange-alt"></i> 转交
       </button>
       {% endif %}
@@ -89,28 +140,14 @@
     </div>
   </form>
 </div>
-{% endblock approval_form %}
 {% endblock right_sidebar_group_2 %}
 
+{# 主内容区第三块已有审批记录，右侧栏不再重复展示审批历史 #}
 {% block right_sidebar_group_3 %}
-{# 审批历史记录 #}
-{% block approval_history %}
-<div class="three-column-actions__group">
-  <div class="three-column-actions__group-title">审批历史</div>
-  <div class="approval-history-list">
-    {% block approval_history_content %}
-    <div class="text-muted small text-center py-3">
-      暂无审批记录
-    </div>
-    {% endblock approval_history_content %}
-  </div>
-</div>
-{% endblock approval_history %}
 {% endblock right_sidebar_group_3 %}
 {% endblock right_sidebar_content %}
 
-{# 转交审批模态框 #}
-{% block approval_transfer_modal %}
+{% block extra_modals %}
 {% if approval_allow_transfer %}
 <div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -121,15 +158,17 @@
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form method="post" id="transferForm" action="{% block transfer_form_action %}{% endblock %}">
+      <form method="post" id="transferForm" action="{{ transfer_form_action|default:'' }}">
         {% csrf_token %}
+        {% block transfer_form_hidden %}{% endblock transfer_form_hidden %}
         <div class="modal-body">
           <div class="mb-3">
             <label for="transferred_to" class="form-label">转交给</label>
             <select id="transferred_to" name="transferred_to" class="form-select" required>
               <option value="">请选择用户</option>
-              {% block transfer_user_options %}
-              {% endblock transfer_user_options %}
+              {% for user in all_users %}
+              <option value="{{ user.id }}">{{ user.username }}</option>
+              {% endfor %}
             </select>
           </div>
           <div class="mb-3">
@@ -146,7 +185,7 @@
   </div>
 </div>
 {% endif %}
-{% endblock approval_transfer_modal %}
+{% endblock extra_modals %}
 
 {% block extra_js %}
 {{ block.super }}
@@ -163,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
           alert('请输入审批意见');
           return false;
         }
-        if (!confirm(`确认${action === 'approve' ? '通过' : '驳回'}此审批吗？`)) {
+        if (!confirm('确认' + (action === 'approve' ? '通过' : '驳回') + '此审批吗？')) {
           e.preventDefault();
           return false;
         }

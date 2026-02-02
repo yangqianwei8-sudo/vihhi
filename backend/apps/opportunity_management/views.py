@@ -37,9 +37,9 @@ def opportunity_funnel_analysis_api(request):
         "overall_conversion_rate": float  # 整体转化率(从初步接触到赢单)
     }
     """
-    from backend.apps.customer_management.models import BusinessOpportunity
+    from backend.apps.opportunity_management.models import BusinessOpportunity
     from backend.apps.system_management.services import get_user_permission_codes
-    from backend.core.views import _permission_granted
+    from backend.apps.opportunity_management.perm_check import opportunity_can_view_all
     
     # 获取筛选参数
     start_date = request.GET.get('start_date', '')
@@ -50,12 +50,12 @@ def opportunity_funnel_analysis_api(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 获取商机查询集
-    opportunities = BusinessOpportunity.objects.select_related(
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related(
         'client', 'business_manager'
     ).exclude(status__in=['won', 'lost', 'cancelled'])
     
     # 权限过滤
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     
     # 时间范围筛选
@@ -130,8 +130,8 @@ def opportunity_funnel_analysis_api(request):
     
     # 计算整体转化率
     initial_contact_count = next((d['count'] for d in stages if d['stage'] == 'initial_contact'), 0)
-    won_queryset = BusinessOpportunity.objects.filter(status='won')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    won_queryset = BusinessOpportunity.objects.filter(is_active=True, status='won')
+    if not opportunity_can_view_all(permission_set):
         won_queryset = won_queryset.filter(business_manager=request.user)
     won_count = won_queryset.count()
     overall_conversion_rate = None
@@ -175,9 +175,9 @@ def opportunity_sales_forecast_api(request):
     }
     """
     from calendar import monthrange
-    from backend.apps.customer_management.models import BusinessOpportunity
+    from backend.apps.opportunity_management.models import BusinessOpportunity
     from backend.apps.system_management.services import get_user_permission_codes
-    from backend.core.views import _permission_granted
+    from backend.apps.opportunity_management.perm_check import opportunity_can_view, opportunity_can_view_all, opportunity_can_access_detail
     
     # 获取预测月份
     forecast_month = request.GET.get('month', '')
@@ -201,12 +201,12 @@ def opportunity_sales_forecast_api(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 获取活跃商机
-    active_opportunities = BusinessOpportunity.objects.exclude(
+    active_opportunities = BusinessOpportunity.objects.filter(is_active=True).exclude(
         status__in=['won', 'lost', 'cancelled']
     )
     
     # 权限过滤
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    if not opportunity_can_view_all(permission_set):
         active_opportunities = active_opportunities.filter(business_manager=request.user)
     
     # 计算本月预计签约的商机
@@ -225,10 +225,10 @@ def opportunity_sales_forecast_api(request):
     )['total'] or 0)
     
     # 计算历史转化率
-    historical_queryset = BusinessOpportunity.objects.filter(
+    historical_queryset = BusinessOpportunity.objects.filter(is_active=True,
         status__in=['initial_contact', 'requirement_confirmed', 'quotation', 'negotiation', 'won']
     )
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    if not opportunity_can_view_all(permission_set):
         historical_queryset = historical_queryset.filter(business_manager=request.user)
     
     historical_initial = historical_queryset.count()
@@ -298,15 +298,15 @@ def opportunity_health_score_api(request, opportunity_id):
         "suggestions": [str]  # 改进建议
     }
     """
-    from backend.apps.customer_management.models import BusinessOpportunity
+    from backend.apps.opportunity_management.models import BusinessOpportunity
     from backend.apps.system_management.services import get_user_permission_codes
-    from backend.core.views import _permission_granted
+    from backend.apps.opportunity_management.perm_check import opportunity_can_view, opportunity_can_view_all, opportunity_can_access_detail
     
     opportunity = BusinessOpportunity.objects.select_related('client').prefetch_related('followups').get(id=opportunity_id)
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    can_view = _permission_granted('opportunity_management.opportunity.view', permission_set) or opportunity.business_manager == request.user
+    can_view = opportunity_can_access_detail(request.user, opportunity, permission_set)
     if not can_view:
         return Response({
             'error': '您没有权限查看此商机'
@@ -348,15 +348,16 @@ def opportunity_quality_score_api(request, opportunity_id):
         "suggestions": [str]  # 改进建议
     }
     """
-    from backend.apps.customer_management.models import BusinessOpportunity, ClientProject
+    from backend.apps.opportunity_management.models import BusinessOpportunity
+    from backend.apps.customer_management.models import ClientProject
     from backend.apps.system_management.services import get_user_permission_codes
-    from backend.core.views import _permission_granted
+    from backend.apps.opportunity_management.perm_check import opportunity_can_view, opportunity_can_view_all, opportunity_can_access_detail
     
     opportunity = BusinessOpportunity.objects.select_related('client').get(id=opportunity_id)
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    can_view = _permission_granted('opportunity_management.opportunity.view', permission_set) or opportunity.business_manager == request.user
+    can_view = opportunity_can_access_detail(request.user, opportunity, permission_set)
     if not can_view:
         return Response({
             'error': '您没有权限查看此商机'
@@ -563,15 +564,15 @@ def opportunity_action_suggestions_api(request, opportunity_id):
         ]
     }
     """
-    from backend.apps.customer_management.models import BusinessOpportunity
+    from backend.apps.opportunity_management.models import BusinessOpportunity
     from backend.apps.system_management.services import get_user_permission_codes
-    from backend.core.views import _permission_granted
+    from backend.apps.opportunity_management.perm_check import opportunity_can_view, opportunity_can_view_all, opportunity_can_access_detail
     
     opportunity = BusinessOpportunity.objects.prefetch_related('followups').get(id=opportunity_id)
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    can_view = _permission_granted('opportunity_management.opportunity.view', permission_set) or opportunity.business_manager == request.user
+    can_view = opportunity_can_access_detail(request.user, opportunity, permission_set)
     if not can_view:
         return Response({
             'error': '您没有权限查看此商机'

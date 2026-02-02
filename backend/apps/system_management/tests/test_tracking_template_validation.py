@@ -122,8 +122,8 @@ class TrackingTemplateValidationTests(TestCase):
         self.assertIn('DOMContentLoaded', self.template_content)
     
     def test_template_inheritance(self):
-        """测试模板继承"""
-        self.assertIn('extends "shared/module_base.html"', self.template_content)
+        """测试模板继承（两栏基模板）"""
+        self.assertIn('extends "shared/two_column_layout_base.html"', self.template_content)
         self.assertIn('{% block pm_content %}', self.template_content)
     
     def test_empty_state_handling(self):
@@ -147,6 +147,5 @@ class TrackingTemplateValidationTests(TestCase):
         self.assertIn('has_other_pages', self.template_content)
     
     def test_static_files(self):
-        """测试静态文件引用"""
+        """测试静态文件引用（list-layout.css 已由 common.css 统一引入，此处仅校验 static 用法）"""
         self.assertIn('{% static', self.template_content)
-        self.assertIn('list-layout.css', self.template_content)

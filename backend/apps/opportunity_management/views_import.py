@@ -8,13 +8,13 @@ from django.shortcuts import redirect, render
 from .views_common import (
     _build_opportunity_management_sidebar_nav,
     get_user_permission_codes,
-    _permission_granted,
     BusinessOpportunity,
     Client,
     ClientType,
     DesignStage,
     ServiceType,
 )
+from .perm_check import opportunity_can_view
 
 def opportunity_import(request):
     """商机批量导入功能"""
@@ -28,7 +28,7 @@ def opportunity_import(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 检查权限：需要商机管理权限
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限执行商机导入操作')
         return redirect('opportunity_pages:opportunity_management')
     

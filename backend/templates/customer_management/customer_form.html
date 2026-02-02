@@ -2,9 +2,121 @@
 {% load static %}
 
 {% block pm_title %}{{ page_title|default:"创建客户" }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">{{ form_page_subtitle_text|default:"请填写客户基本信息" }}</span>{% endblock %}
+{% block pm_subtitle %}{{ form_page_subtitle_text|default:"请填写客户基本信息" }}{% endblock %}
 {% block pm_actions %}
 <a href="{% url 'business_pages:customer_list' %}" class="list-btn">
   返回列表
 </a>
 {% endblock %}
+
+{% block pm_content %}
+<div class="form-container">
+  <form method="post">
+    {% csrf_token %}
+    {% if form.errors %}
+    <div class="alert alert-danger mb-3">
+      <ul class="mb-0 ps-3">{% for field in form %}{% for err in field.errors %}<li>{{ field.label }}：{{ err }}</li>{% endfor %}{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    <div class="form-card form-card-basic-info">
+      <div class="form-card-header">
+        <h3 class="form-card-title"><i class="fas fa-info-circle"></i> 基本信息</h3>
+      </div>
+      <div class="form-card-body">
+        <div class="row g-3">
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }} <span class="text-danger">*</span></label>
+            {{ form.name }}
+            {% if form.name.errors %}<div class="invalid-feedback d-block">{{ form.name.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label for="{{ form.unified_credit_code.id_for_label }}" class="form-label">{{ form.unified_credit_code.label }}</label>
+            {{ form.unified_credit_code }}
+            {% if form.unified_credit_code.errors %}<div class="invalid-feedback d-block">{{ form.unified_credit_code.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label for="{{ form.legal_representative.id_for_label }}" class="form-label">{{ form.legal_representative.label }}</label>
+            {{ form.legal_representative }}
+            {% if form.legal_representative.errors %}<div class="invalid-feedback d-block">{{ form.legal_representative.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label for="{{ form.established_date.id_for_label }}" class="form-label">{{ form.established_date.label }}</label>
+            {{ form.established_date }}
+            {% if form.established_date.errors %}<div class="invalid-feedback d-block">{{ form.established_date.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label for="{{ form.registered_capital.id_for_label }}" class="form-label">{{ form.registered_capital.label }}</label>
+            {{ form.registered_capital }}
+            {% if form.registered_capital.errors %}<div class="invalid-feedback d-block">{{ form.registered_capital.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card form-card-other-fields">
+      <div class="form-card-header">
+        <h3 class="form-card-title"><i class="fas fa-list-alt"></i> 联系与分类</h3>
+      </div>
+      <div class="form-card-body">
+        {# 第一排：分类与负责人（客户类型、分级、来源、负责人） #}
+        <div class="row g-3">
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label for="{{ form.client_type.id_for_label }}" class="form-label">{{ form.client_type.label }} <span class="text-danger">*</span></label>
+            {{ form.client_type }}
+            {% if form.client_type.errors %}<div class="invalid-feedback d-block">{{ form.client_type.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label for="{{ form.grade.id_for_label }}" class="form-label">{{ form.grade.label }}</label>
+            {{ form.grade }}
+            {% if form.grade.errors %}<div class="invalid-feedback d-block">{{ form.grade.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+            <label for="{{ form.source.id_for_label }}" class="form-label">{{ form.source.label }}</label>
+            {{ form.source }}
+            {% if form.source.errors %}<div class="invalid-feedback d-block">{{ form.source.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12 col-md-6 form-field-wrapper">
+            <label for="{{ form.responsible_user.id_for_label }}" class="form-label">{{ form.responsible_user.label }}</label>
+            {{ form.responsible_user }}
+            {% if form.responsible_user.errors %}<div class="invalid-feedback d-block">{{ form.responsible_user.errors }}</div>{% endif %}
+          </div>
+        </div>
+        {# 第二排：联系方式（电话、邮箱） #}
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-6 form-field-wrapper">
+            <label for="{{ form.company_phone.id_for_label }}" class="form-label">{{ form.company_phone.label }}</label>
+            {{ form.company_phone }}
+            {% if form.company_phone.errors %}<div class="invalid-feedback d-block">{{ form.company_phone.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12 col-md-6 form-field-wrapper">
+            <label for="{{ form.company_email.id_for_label }}" class="form-label">{{ form.company_email.label }}</label>
+            {{ form.company_email }}
+            {% if form.company_email.errors %}<div class="invalid-feedback d-block">{{ form.company_email.errors }}</div>{% endif %}
+          </div>
+        </div>
+        {# 第三排：地址信息（公司地址、办公地址，多行文本） #}
+        <div class="row g-3 mt-1">
+          <div class="col-12 form-field-wrapper">
+            <label for="{{ form.company_address.id_for_label }}" class="form-label">{{ form.company_address.label }}</label>
+            {{ form.company_address }}
+            {% if form.company_address.errors %}<div class="invalid-feedback d-block">{{ form.company_address.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12 form-field-wrapper">
+            <label for="{{ form.region.id_for_label }}" class="form-label">{{ form.region.label }}</label>
+            {{ form.region }}
+            {% if form.region.errors %}<div class="invalid-feedback d-block">{{ form.region.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions-bottom mt-4 mb-3 pt-3">
+      <div class="d-flex justify-content-end align-items-center gap-2">
+        <a href="{% url 'business_pages:customer_list' %}" class="btn btn-secondary">取消</a>
+        <button type="submit" class="btn btn-primary">保存</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock pm_content %}

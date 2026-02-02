@@ -1,9 +1,53 @@
 # 商机管理 - 商机主体视图
 
+from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, NoReverseMatch
+
+
+class _OpportunityFormPlaceholder(forms.Form):
+    """占位表单，供 create_form_base 模板使用；提供所属部门、负责人、商机编号等基本信息固定字段。"""
+    responsible_department = forms.ModelChoiceField(
+        label='所属部门',
+        queryset=None,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    responsible_person = forms.ModelChoiceField(
+        label='负责人',
+        queryset=None,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    form_number = forms.CharField(
+        label='商机编号',
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control bg-light text-muted', 'readonly': 'readonly'}),
+    )
+
+    def __init__(self, *args, user=None, opportunity=None, preview_number=None, **kwargs):
+        from backend.apps.system_management.models import User, Department
+        super().__init__(*args, **kwargs)
+        self.fields['responsible_department'].queryset = Department.objects.filter(is_active=True)
+        self.fields['responsible_person'].queryset = User.objects.filter(is_active=True)
+        number = ''
+        if opportunity and getattr(opportunity, 'opportunity_number', None):
+            number = opportunity.opportunity_number
+        elif preview_number:
+            number = preview_number
+        self.fields['form_number'].initial = number or '（保存后自动生成）'
+        self.fields['form_number'].widget.attrs['readonly'] = True
+        if user:
+            self.fields['responsible_person'].initial = user
+            self.fields['responsible_person'].widget.attrs['disabled'] = True
+            self.fields['responsible_person'].label = '负责人（默认，不可修改）'
+            user_department = getattr(user, 'department', None)
+            if user_department:
+                self.fields['responsible_department'].initial = user_department
+            self.fields['responsible_department'].widget.attrs['disabled'] = True
+            self.fields['responsible_department'].label = '所属部门（默认，不可修改）'
 
 from .views_common import (
     _context,
@@ -11,10 +55,20 @@ from .views_common import (
     _build_full_top_nav,
     _get_opportunities_safely,
     get_user_permission_codes,
-    _permission_granted,
     BusinessOpportunity,
     BusinessNegotiation,
     Client,
+)
+from backend.apps.base_data.models import DesignStage
+from .perm_check import (
+    opportunity_can_view,
+    opportunity_can_view_all,
+    opportunity_can_create,
+    opportunity_can_edit,
+    opportunity_can_delete,
+    opportunity_can_manage,
+    opportunity_can_access_detail,
+    opportunity_can_access_edit,
 )
 
 def opportunity_management_home(request):
@@ -22,7 +76,7 @@ def opportunity_management_home(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限访问商机管理')
         return redirect('home')
     
@@ -37,9 +91,9 @@ def opportunity_management_home(request):
     seven_days_ago = today - timedelta(days=7)
     
     try:
-        # 基础查询集（考虑权限）
-        base_queryset = BusinessOpportunity.objects.all()
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        # 基础查询集（考虑权限，排除软删）
+        base_queryset = BusinessOpportunity.objects.filter(is_active=True)
+        if not opportunity_can_view_all(permission_set):
             base_queryset = base_queryset.filter(business_manager=request.user)
         
         # 统计信息
@@ -124,7 +178,7 @@ def opportunity_management_home(request):
     
     # 顶部操作栏
     top_actions = []
-    if _permission_granted('opportunity_management.opportunity.create', permission_set):
+    if opportunity_can_create(permission_set):
         try:
             top_actions.append({
                 'label': '创建商机',
@@ -236,12 +290,12 @@ def opportunity_management(request):
     
     # 获取商机列表
     try:
-        opportunities = BusinessOpportunity.objects.select_related(
+        opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related(
             'client', 'business_manager', 'created_by'
         ).prefetch_related('followups').order_by('-created_time')
         
         # 权限过滤：普通商务经理只能看自己负责的商机
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        if not opportunity_can_view_all(permission_set):
             opportunities = opportunities.filter(business_manager=request.user)
         
         
@@ -286,9 +340,9 @@ def opportunity_management(request):
     
     # 统计信息
     try:
-        # 基础查询集（考虑权限）
-        base_queryset = BusinessOpportunity.objects.all()
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        # 基础查询集（考虑权限，排除软删）
+        base_queryset = BusinessOpportunity.objects.filter(is_active=True)
+        if not opportunity_can_view_all(permission_set):
             base_queryset = base_queryset.filter(business_manager=request.user)
         
         total_opportunities = base_queryset.count()
@@ -358,7 +412,7 @@ def opportunity_management(request):
         'business_managers': business_managers,
         'status_choices': BusinessOpportunity.STATUS_CHOICES,
         'urgency_choices': BusinessOpportunity.URGENCY_CHOICES,
-        'can_create': _permission_granted('opportunity_management.opportunity.create', permission_set),
+        'can_create': opportunity_can_create(permission_set),
         'user': request.user,
         # 统计信息
         'total_opportunities': total_opportunities,
@@ -374,6 +428,13 @@ def opportunity_management(request):
             {'title': '加权金额（万元）', 'value': f'{total_weighted_amount:.2f}', 'cols': 2},
             {'title': '本月新增', 'value': monthly_new, 'cols': 2},
         ],
+        'show_filter_fields_settings_btn': True,
+        'batch_delete_url': '',  # 商机列表暂无批量删除，供 list_page_base 模板使用
+        'column_settings_btn': False,
+        'filter_form_action': request.path,  # list_page_base 筛选表单 action
+        'show_list_checkboxes': False,  # list_page_base 表头/行复选框
+        'columns': None,  # 未使用 list_table 列配置时置空，避免模板 KeyError
+        'data': None,
     })
     return render(request, "opportunity_management/opportunity_list.html", context)
 
@@ -382,20 +443,33 @@ def opportunity_management(request):
 def opportunity_detail(request, opportunity_id):
     """商机详情页面（根据商机管理专项设计方案）"""
     opportunity = get_object_or_404(
-        BusinessOpportunity.objects.select_related('client', 'business_manager', 'created_by', 'approver'),
+        BusinessOpportunity.objects.select_related('client', 'business_manager', 'created_by', 'approver', 'project'),
         id=opportunity_id
     )
     
-    # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
-        if opportunity.business_manager != request.user:
+    # 已软删：仅管理员可访问
+    if not opportunity.is_active:
+        if not request.user.is_superuser:
+            messages.warning(request, '该商机已删除')
+            return redirect('opportunity_pages:opportunity_management')
+    else:
+        # 权限检查：view_all 可看全部；普通用户只能看自己负责的
+        if not opportunity_can_access_detail(request.user, opportunity, permission_set):
             messages.error(request, '您没有权限查看此商机')
             return redirect('opportunity_pages:opportunity_management')
     
-    # 获取关联数据
-    followups = opportunity.followups.select_related('created_by').order_by('-follow_date', '-created_time')
-    quotations = opportunity.quotations.select_related('created_by').order_by('-version_number')[:10]
+    # 获取关联数据（开发库可能无 followup/quotations 表时容错）
+    try:
+        followups = list(
+            opportunity.followups.select_related('created_by').order_by('-follow_date', '-created_time')[:100]
+        )
+    except Exception:
+        followups = []
+    try:
+        quotations = list(opportunity.quotations.select_related('created_by').order_by('-version_number')[:10])
+    except Exception:
+        quotations = []
     
     # 获取审批信息
     approval_instance = None
@@ -406,6 +480,7 @@ def opportunity_detail(request, opportunity_id):
         from backend.apps.workflow_engine.models import ApprovalInstance, ApprovalRecord
         
         content_type = ContentType.objects.get_for_model(BusinessOpportunity)
+        # 用于展示：取最新的审批实例
         approval_instance = ApprovalInstance.objects.filter(
             content_type=content_type,
             object_id=opportunity.id
@@ -416,8 +491,13 @@ def opportunity_detail(request, opportunity_id):
                 instance=approval_instance
             ).select_related('node', 'approver', 'transferred_to').order_by('-approval_time')
         
-        # 检查是否可以提交审批（有权限且没有正在进行的审批）
-        can_submit_approval = _permission_granted('opportunity_management.opportunity.edit', permission_set) and not approval_instance
+        # 检查是否可以提交审批：有权限且没有正在进行的审批（pending）
+        has_pending = ApprovalInstance.objects.filter(
+            content_type=content_type,
+            object_id=opportunity.id,
+            status='pending'
+        ).exists()
+        can_submit_approval = opportunity_can_edit(permission_set) and not has_pending
     except Exception:
         pass
     
@@ -446,19 +526,84 @@ def opportunity_detail(request, opportunity_id):
     else:
         context['full_top_nav'] = []
         context['sidebar_nav'] = []
+    can_edit = opportunity_can_access_edit(request.user, opportunity, permission_set) and opportunity.is_active
+    can_delete = can_edit  # 与编辑权限一致，供模板使用
     context.update({
         'opportunity': opportunity,
+        'opportunity_is_deleted': not opportunity.is_active,
         'followups': followups,
         'quotations': quotations,
         'approval_instance': approval_instance,
         'approval_records': approval_records,
-        'can_submit_approval': can_submit_approval,
+        'can_submit_approval': can_submit_approval and opportunity.is_active,
         'status_choices': BusinessOpportunity.STATUS_CHOICES,
         'urgency_choices': BusinessOpportunity.URGENCY_CHOICES,
-        'can_edit': _permission_granted('opportunity_management.opportunity.edit', permission_set) or opportunity.business_manager == request.user,
+        'can_edit': can_edit,
+        'can_delete': can_delete,
         'user': request.user,
     })
     return render(request, "opportunity_management/opportunity_detail.html", context)
+
+
+@login_required
+def opportunity_submit_for_approval(request, opportunity_id):
+    """提交商机审批：创建 ApprovalInstance，更新 BusinessOpportunity.approval_status"""
+    opportunity = get_object_or_404(BusinessOpportunity, id=opportunity_id)
+    if not opportunity.is_active and not request.user.is_superuser:
+        messages.warning(request, '该商机已删除')
+        return redirect('opportunity_pages:opportunity_management')
+    permission_set = get_user_permission_codes(request.user)
+    can_submit = opportunity_can_access_edit(request.user, opportunity, permission_set)
+    if not can_submit:
+        messages.error(request, '您没有权限提交商机审批')
+        return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
+
+    if request.method == 'POST':
+        try:
+            from django.contrib.contenttypes.models import ContentType
+            from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalInstance
+            from backend.apps.workflow_engine.services import ApprovalEngine
+
+            content_type = ContentType.objects.get_for_model(BusinessOpportunity)
+            existing = ApprovalInstance.objects.filter(
+                content_type=content_type,
+                object_id=opportunity.id,
+                status='pending'
+            ).first()
+            if existing:
+                messages.warning(request, f'该商机已有正在进行的审批（审批编号：{existing.instance_number}）')
+                return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
+
+            try:
+                workflow = WorkflowTemplate.objects.get(code='opportunity_approval', status='active')
+            except WorkflowTemplate.DoesNotExist:
+                workflow = WorkflowTemplate.objects.filter(
+                    status='active',
+                    applicable_models__contains=['businessopportunity']
+                ).first()
+                if not workflow:
+                    messages.error(request, '商机审批流程未配置，请联系管理员运行: python manage.py setup_opportunity_approval_workflow')
+                    return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
+
+            comment = request.POST.get('comment', f'申请审批商机：{opportunity.name}')
+            instance = ApprovalEngine.start_approval(
+                workflow=workflow,
+                content_object=opportunity,
+                applicant=request.user,
+                comment=comment
+            )
+            opportunity.approval_status = 'pending'
+            opportunity.save(update_fields=['approval_status'])
+            messages.success(request, f'商机审批已提交（审批编号：{instance.instance_number}）')
+            return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception('提交商机审批失败: %s', str(e))
+            messages.error(request, f'提交审批失败：{str(e)}')
+            return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
+
+    return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
 
 
 @login_required
@@ -466,7 +611,7 @@ def opportunity_create(request):
     """创建商机（根据商机管理专项设计方案）"""
     try:
         permission_set = get_user_permission_codes(request.user)
-        if not _permission_granted('opportunity_management.opportunity.create', permission_set):
+        if not opportunity_can_create(permission_set):
             messages.error(request, '您没有权限创建商机')
             return redirect('opportunity_pages:opportunity_management')
     except Exception as e:
@@ -490,12 +635,13 @@ def opportunity_create(request):
             
             # 获取项目名称，用于生成默认商机名称
             project_name = request.POST.get('project_name', '').strip()
-            
-            # 自动生成商机名称：客户名称 + 项目名称（如果有）
-            if project_name:
-                name = f"{client.name} - {project_name}"
-            else:
-                name = client.name
+            name = request.POST.get('name', '').strip()
+            # 商机名称：表单有填则用表单，否则自动生成
+            if not name:
+                if project_name:
+                    name = f"{client.name} - {project_name}"
+                else:
+                    name = client.name
             
             # 获取数值字段
             estimated_amount = Decimal(request.POST.get('estimated_amount', '0') or '0')
@@ -514,6 +660,12 @@ def opportunity_create(request):
                 except (ValueError, TypeError):
                     pass
             
+            project_id = request.POST.get('project_id') or None
+            if project_id:
+                try:
+                    project_id = int(project_id)
+                except (ValueError, TypeError):
+                    project_id = None
             opportunity = BusinessOpportunity.objects.create(
                 name=name,
                 client_id=client_id,
@@ -522,6 +674,7 @@ def opportunity_create(request):
                 opportunity_type=request.POST.get('opportunity_type') or None,
                 service_type_id=service_type_id,
                 urgency=request.POST.get('urgency', 'normal'),
+                project_id=project_id,
                 project_name=request.POST.get('project_name', '').strip(),
                 project_address=request.POST.get('project_address', '').strip(),
                 project_type=request.POST.get('project_type', '').strip(),
@@ -531,6 +684,7 @@ def opportunity_create(request):
                 success_probability=success_probability,
                 expected_sign_date=request.POST.get('expected_sign_date') or None,
                 description=request.POST.get('description', '').strip(),
+                notes=request.POST.get('notes', '').strip(),
                 created_by=request.user,
             )
             # 计算加权金额
@@ -587,13 +741,32 @@ def opportunity_create(request):
         else:
             context['full_top_nav'] = []
             context['sidebar_nav'] = []
+        projects = Project.objects.filter(
+            status__in=['configuring', 'waiting_start', 'in_progress', 'completed']
+        ).order_by('-created_time')[:200]
+        # 创建页无已有商机，传入占位对象供模板统一使用 opportunity.xxx|default
+        from types import SimpleNamespace
+        opportunity_placeholder = SimpleNamespace(
+            id=None, opportunity_number=None, client_id=None, opportunity_type=None,
+            service_type_id=None, project_name=None, project_id=None, project_address=None,
+            project_type=None, building_area=None, drawing_stage_id=None, estimated_amount=None,
+            success_probability=10, weighted_amount=None, expected_sign_date=None, urgency='normal',
+            description=None,
+        )
         context.update({
+            'form': _OpportunityFormPlaceholder(
+                user=request.user,
+                opportunity=opportunity_placeholder,
+                preview_number=preview_opportunity_number,
+            ),
+            'opportunity': opportunity_placeholder,
             'clients': clients,
             'service_types': service_types,
             'design_stages': design_stages,
             'urgency_choices': BusinessOpportunity.URGENCY_CHOICES,
             'business_types': Project.BUSINESS_TYPES,
             'preview_opportunity_number': preview_opportunity_number,
+            'projects': projects,
         })
         return render(request, "opportunity_management/opportunity_form.html", context)
     except Exception as e:
@@ -608,13 +781,15 @@ def opportunity_create(request):
 def opportunity_edit(request, opportunity_id):
     """编辑商机（根据商机管理专项设计方案）"""
     opportunity = get_object_or_404(BusinessOpportunity, id=opportunity_id)
+    if not opportunity.is_active and not request.user.is_superuser:
+        messages.warning(request, '该商机已删除')
+        return redirect('opportunity_pages:opportunity_management')
     
-    # 权限检查
+    # 权限检查：edit 权限可操作全部；否则仅可操作自己负责的
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('opportunity_management.opportunity.edit', permission_set):
-        if opportunity.business_manager != request.user:
-            messages.error(request, '您没有权限编辑此商机')
-            return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity.id)
+    if not opportunity_can_access_edit(request.user, opportunity, permission_set):
+        messages.error(request, '您没有权限编辑此商机')
+        return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity.id)
     
     if request.method == 'POST':
         try:
@@ -653,6 +828,14 @@ def opportunity_edit(request, opportunity_id):
             opportunity.opportunity_type = request.POST.get('opportunity_type') or None
             opportunity.service_type_id = request.POST.get('service_type_id') or None
             opportunity.urgency = request.POST.get('urgency')
+            project_id_val = request.POST.get('project_id') or None
+            if project_id_val:
+                try:
+                    opportunity.project_id = int(project_id_val)
+                except (ValueError, TypeError):
+                    opportunity.project_id = None
+            else:
+                opportunity.project_id = None
             opportunity.project_name = request.POST.get('project_name', '').strip()
             opportunity.project_address = request.POST.get('project_address', '').strip()
             opportunity.project_type = request.POST.get('project_type', '').strip()
@@ -671,6 +854,7 @@ def opportunity_edit(request, opportunity_id):
             opportunity.success_probability = success_probability
             opportunity.expected_sign_date = request.POST.get('expected_sign_date') or None
             opportunity.description = request.POST.get('description', '').strip()
+            opportunity.notes = request.POST.get('notes', '').strip()
             # 计算加权金额
             opportunity.weighted_amount = estimated_amount * Decimal(success_probability) / Decimal('100')
             opportunity.save()
@@ -691,6 +875,9 @@ def opportunity_edit(request, opportunity_id):
     clients = Client.objects.filter(is_active=True).select_related('responsible_user').order_by('name')
     service_types = ServiceType.objects.all().order_by('order', 'name')
     design_stages = DesignStage.objects.filter(is_active=True).order_by('order', 'id')
+    projects = Project.objects.filter(
+        status__in=['configuring', 'waiting_start', 'in_progress', 'completed']
+    ).order_by('-created_time')[:200]
     
     context = _context(
         f"编辑商机 - {opportunity.name}",
@@ -703,32 +890,37 @@ def opportunity_edit(request, opportunity_id):
     else:
         context['full_top_nav'] = []
     context.update({
+        'form': _OpportunityFormPlaceholder(user=request.user, opportunity=opportunity),
         'opportunity': opportunity,
         'clients': clients,
         'service_types': service_types,
         'design_stages': design_stages,
         'urgency_choices': BusinessOpportunity.URGENCY_CHOICES,
         'business_types': Project.BUSINESS_TYPES,
+        'projects': projects,
     })
     return render(request, "opportunity_management/opportunity_form.html", context)
 
 
 @login_required
 def opportunity_delete(request, opportunity_id):
-    """删除商机（根据商机管理专项设计方案）"""
+    """删除商机（软删：设置 is_active=False）"""
     opportunity = get_object_or_404(BusinessOpportunity, id=opportunity_id)
+    if not opportunity.is_active:
+        messages.info(request, '该商机已删除')
+        return redirect('opportunity_pages:opportunity_management')
     
-    # 权限检查
+    # 权限检查：与编辑/流转一致，edit 或负责人可删除
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('opportunity_management.opportunity.delete', permission_set):
-        if opportunity.business_manager != request.user:
-            messages.error(request, '您没有权限删除此商机')
-            return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity.id)
+    if not opportunity_can_access_edit(request.user, opportunity, permission_set):
+        messages.error(request, '您没有权限删除此商机')
+        return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity.id)
     
     if request.method == 'POST':
         try:
             opportunity_name = opportunity.name
-            opportunity.delete()
+            opportunity.is_active = False
+            opportunity.save(update_fields=['is_active'])
             messages.success(request, f'商机 "{opportunity_name}" 已删除')
             return redirect('opportunity_pages:opportunity_management')
         except Exception as e:
@@ -763,13 +955,15 @@ def opportunity_status_transition(request, opportunity_id):
         BusinessOpportunity.objects.select_related('client', 'business_manager'),
         id=opportunity_id
     )
+    if not opportunity.is_active and not request.user.is_superuser:
+        messages.warning(request, '该商机已删除')
+        return redirect('opportunity_pages:opportunity_management')
     
-    # 权限检查
+    # 权限检查：与编辑/删除一致
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('opportunity_management.opportunity.edit', permission_set):
-        if opportunity.business_manager != request.user:
-            messages.error(request, '您没有权限修改此商机状态')
-            return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
+    if not opportunity_can_access_edit(request.user, opportunity, permission_set):
+        messages.error(request, '您没有权限修改此商机状态')
+        return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
     
     # 获取可流转的状态
     valid_transitions = BusinessOpportunity.get_valid_transitions(opportunity.status)
@@ -829,7 +1023,7 @@ def opportunity_followup_create(request, opportunity_id):
     
     # 权限检查
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         if opportunity.business_manager != request.user:
             messages.error(request, '您没有权限为此商机创建跟进记录')
             return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
@@ -880,6 +1074,7 @@ def opportunity_followup_create(request, opportunity_id):
     else:
         context['full_top_nav'] = []
     context.update({
+        'form': _OpportunityFormPlaceholder(user=request.user, opportunity=opportunity),
         'opportunity': opportunity,
         'follow_type_choices': OpportunityFollowUp.FOLLOW_TYPE_CHOICES,
         'default_follow_date': date.today().isoformat(),
@@ -898,7 +1093,7 @@ def opportunity_followup_edit(request, opportunity_id, followup_id):
     
     # 权限检查：仅创建人或管理员可编辑
     permission_set = get_user_permission_codes(request.user)
-    if followup.created_by != request.user and not _permission_granted('opportunity_management.opportunity.edit', permission_set):
+    if followup.created_by != request.user and not opportunity_can_edit(permission_set):
         messages.error(request, '您没有权限编辑此跟进记录')
         return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
     
@@ -945,6 +1140,7 @@ def opportunity_followup_edit(request, opportunity_id, followup_id):
     else:
         context['full_top_nav'] = []
     context.update({
+        'form': _OpportunityFormPlaceholder(user=request.user, opportunity=opportunity),
         'opportunity': opportunity,
         'followup': followup,
         'follow_type_choices': OpportunityFollowUp.FOLLOW_TYPE_CHOICES,
@@ -962,7 +1158,7 @@ def opportunity_followup_delete(request, opportunity_id, followup_id):
     
     # 权限检查：仅创建人或管理员可删除
     permission_set = get_user_permission_codes(request.user)
-    if followup.created_by != request.user and not _permission_granted('opportunity_management.opportunity.delete', permission_set):
+    if followup.created_by != request.user and not opportunity_can_delete(permission_set):
         messages.error(request, '您没有权限删除此跟进记录')
         return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
     
@@ -1000,13 +1196,13 @@ def opportunity_evaluation_application(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限访问评估申请功能')
         return redirect('opportunity_pages:opportunity_management')
     
     # 获取商机列表（用于表单下拉框）
-    opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     
     if request.method == 'POST':
@@ -1034,13 +1230,13 @@ def opportunity_warehouse_application(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限访问入库申请功能')
         return redirect('opportunity_pages:opportunity_management')
     
     # 获取商机列表（用于表单下拉框）
-    opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     opportunities = _get_opportunities_safely(opportunities, permission_set, request.user)
     
@@ -1071,7 +1267,7 @@ def opportunity_warehouse_list(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限访问入库列表')
         return redirect('opportunity_pages:opportunity_management')
     
@@ -1115,13 +1311,13 @@ def opportunity_warehouse_list(request):
         page_obj = None
     
     # 获取商机列表（用于筛选）
-    opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     opportunities = _get_opportunities_safely(opportunities, permission_set, request.user)
     
     # 检查创建权限
-    can_create = _permission_granted('opportunity_management.opportunity.manage', permission_set)
+    can_create = opportunity_can_manage(permission_set)
     
     context = _context(
         "入库列表",
@@ -1144,6 +1340,7 @@ def opportunity_warehouse_list(request):
         'status': status,
         'opportunities': opportunities[:100],  # 限制显示数量
         'can_create': can_create,
+        'show_filter_fields_settings_btn': True,
     })
     return render(request, "opportunity_management/opportunity_warehouse_list.html", context)
 
@@ -1154,13 +1351,13 @@ def opportunity_bid_bond_payment(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限访问投标保证金支付申请功能')
         return redirect('opportunity_pages:opportunity_management')
     
     # 获取商机列表（用于表单下拉框）
-    opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     opportunities = _get_opportunities_safely(opportunities, permission_set, request.user)
     
@@ -1189,13 +1386,13 @@ def opportunity_tender_fee_payment(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限访问标书费支付申请功能')
         return redirect('opportunity_pages:opportunity_management')
     
     # 获取商机列表（用于表单下拉框）
-    opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     opportunities = _get_opportunities_safely(opportunities, permission_set, request.user)
     
@@ -1224,13 +1421,13 @@ def opportunity_agency_fee_payment(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限访问招标代理费支付申请功能')
         return redirect('opportunity_pages:opportunity_management')
     
     # 获取商机列表（用于表单下拉框）
-    opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     opportunities = _get_opportunities_safely(opportunities, permission_set, request.user)
     
@@ -1261,13 +1458,13 @@ def opportunity_drawing_evaluation(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限访问图纸评估功能')
         return redirect('opportunity_pages:opportunity_management')
     
     # 获取商机列表（用于表单下拉框）
-    opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     
     # 获取所有服务专业（用于成本节省评估）
@@ -1304,13 +1501,13 @@ def opportunity_tech_meeting(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限访问技术沟通会功能')
         return redirect('opportunity_pages:opportunity_management')
     
     # 获取商机列表（用于表单下拉框）
-    opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     
     if request.method == 'POST':
@@ -1352,7 +1549,7 @@ def opportunity_followup_list(request):
         ).order_by('-follow_date', '-created_time')
         
         # 权限过滤：普通商务经理只能看自己负责的商机的跟进记录
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        if not opportunity_can_view_all(permission_set):
             followups = followups.filter(opportunity__business_manager=request.user)
         
         # 应用筛选条件
@@ -1369,7 +1566,7 @@ def opportunity_followup_list(request):
         
         # 分页
         from django.core.paginator import Paginator
-        paginator = Paginator(followups, 20)
+        paginator = Paginator(followups, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -1395,10 +1592,10 @@ def opportunity_followup_list(request):
         'opportunity_id': opportunity_id,
         'follow_type': follow_type,
         'follow_type_choices': OpportunityFollowUp.FOLLOW_TYPE_CHOICES,
-        'opportunities': BusinessOpportunity.objects.filter(
-            business_manager=request.user
-        ).order_by('-created_time')[:50] if not _permission_granted('opportunity_management.opportunity.view_all', permission_set) 
-        else BusinessOpportunity.objects.all().order_by('-created_time')[:100],
+        'opportunities': BusinessOpportunity.objects.filter(is_active=True, business_manager=request.user
+        ).order_by('-created_time')[:50] if not opportunity_can_view_all(permission_set) 
+        else BusinessOpportunity.objects.filter(is_active=True).order_by('-created_time')[:100],
+        'show_filter_fields_settings_btn': True,
     })
     return render(request, "opportunity_management/opportunity_followup_list.html", context)
 
@@ -1432,12 +1629,12 @@ def opportunity_sales_forecast(request):
         forecast_month = f"{today.year}-{today.month:02d}"
     
     # 获取活跃商机
-    active_opportunities = BusinessOpportunity.objects.exclude(
+    active_opportunities = BusinessOpportunity.objects.filter(is_active=True).exclude(
         status__in=['won', 'lost', 'cancelled']
     )
     
     # 权限过滤
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    if not opportunity_can_view_all(permission_set):
         active_opportunities = active_opportunities.filter(business_manager=request.user)
     
     # 计算本月预计签约的商机
@@ -1456,10 +1653,8 @@ def opportunity_sales_forecast(request):
     )['total'] or 0)
     
     # 计算历史转化率
-    historical_queryset = BusinessOpportunity.objects.filter(
-        status__in=['initial_contact', 'requirement_confirmed', 'quotation', 'negotiation', 'won']
-    )
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    historical_queryset = BusinessOpportunity.objects.filter(is_active=True, status__in=['initial_contact', 'requirement_confirmed', 'quotation', 'negotiation', 'won'])
+    if not opportunity_can_view_all(permission_set):
         historical_queryset = historical_queryset.filter(business_manager=request.user)
     
     historical_initial = historical_queryset.count()
@@ -1538,18 +1733,18 @@ def opportunity_win_loss(request):
     # 获取权限
     permission_set = get_user_permission_codes(request.user)
     
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限查看赢单与输单信息')
         return redirect('opportunity_pages:opportunity_management')
     
     # 获取赢单和输单商机列表
     try:
-        opportunities = BusinessOpportunity.objects.select_related(
+        opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related(
             'client', 'business_manager', 'created_by'
         ).filter(status__in=['won', 'lost']).order_by('-updated_time')
         
         # 权限过滤：普通商务经理只能看自己负责的商机
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        if not opportunity_can_view_all(permission_set):
             opportunities = opportunities.filter(business_manager=request.user)
         
         # 应用筛选条件
@@ -1592,8 +1787,8 @@ def opportunity_win_loss(request):
     # 统计信息
     try:
         # 基础查询集（考虑权限）
-        base_queryset = BusinessOpportunity.objects.filter(status__in=['won', 'lost'])
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        base_queryset = BusinessOpportunity.objects.filter(is_active=True, status__in=['won', 'lost'])
+        if not opportunity_can_view_all(permission_set):
             base_queryset = base_queryset.filter(business_manager=request.user)
         
         total_count = base_queryset.count()
@@ -1684,7 +1879,7 @@ def opportunity_win_loss_select(request):
     # 获取权限
     permission_set = get_user_permission_codes(request.user)
     
-    if not _permission_granted('opportunity_management.opportunity.edit', permission_set):
+    if not opportunity_can_edit(permission_set):
         messages.error(request, '您没有权限标记商机为赢单/输单')
         return redirect('opportunity_pages:opportunity_win_loss')
     
@@ -1704,7 +1899,7 @@ def opportunity_win_loss_select(request):
         ).order_by('-updated_time')
         
         # 权限过滤：普通商务经理只能看自己负责的商机
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        if not opportunity_can_view_all(permission_set):
             opportunities = opportunities.filter(business_manager=request.user)
         
         # 应用筛选条件
@@ -1782,12 +1977,11 @@ def opportunity_mark_win_loss(request, opportunity_id):
         id=opportunity_id
     )
     
-    # 权限检查
+    # 权限检查：与编辑/删除一致
     permission_set = get_user_permission_codes(request.user)
-    if not _permission_granted('opportunity_management.opportunity.edit', permission_set):
-        if opportunity.business_manager != request.user:
-            messages.error(request, '您没有权限修改此商机状态')
-            return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
+    if not opportunity_can_access_edit(request.user, opportunity, permission_set):
+        messages.error(request, '您没有权限修改此商机状态')
+        return redirect('opportunity_pages:opportunity_detail', opportunity_id=opportunity_id)
     
     # 获取目标状态
     target_status = request.GET.get('target_status', '')
@@ -1909,7 +2103,7 @@ def opportunity_business_negotiation(request):
         ).order_by('-negotiation_date', '-created_time')
         
         # 权限过滤：普通商务经理只能看自己负责的商机的洽谈记录
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        if not opportunity_can_view_all(permission_set):
             negotiations = negotiations.filter(opportunity__business_manager=request.user)
         
         # 应用筛选条件
@@ -1925,7 +2119,7 @@ def opportunity_business_negotiation(request):
         
         # 分页
         from django.core.paginator import Paginator
-        paginator = Paginator(negotiations, 20)
+        paginator = Paginator(negotiations, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -1937,12 +2131,12 @@ def opportunity_business_negotiation(request):
     
     # 获取商机列表（用于筛选下拉框）
     try:
-        opportunities_for_filter = BusinessOpportunity.objects.select_related(
+        opportunities_for_filter = BusinessOpportunity.objects.filter(is_active=True).select_related(
             'client', 'business_manager'
         ).order_by('-created_time')
         
         # 权限过滤
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        if not opportunity_can_view_all(permission_set):
             opportunities_for_filter = opportunities_for_filter.filter(business_manager=request.user)
         
         opportunities_for_filter = opportunities_for_filter[:100]  # 限制数量
@@ -1979,7 +2173,7 @@ def opportunity_business_negotiation_form(request, opportunity_id=None):
     if opportunity_id:
         opportunity = get_object_or_404(BusinessOpportunity, id=opportunity_id)
         # 权限检查
-        if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+        if not opportunity_can_view(permission_set):
             if opportunity.business_manager != request.user:
                 messages.error(request, '您没有权限查看此商机')
                 return redirect('opportunity_pages:opportunity_business_negotiation')
@@ -1997,7 +2191,7 @@ def opportunity_business_negotiation_form(request, opportunity_id=None):
             opp = get_object_or_404(BusinessOpportunity, id=opportunity_id)
             
             # 权限检查
-            if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+            if not opportunity_can_view(permission_set):
                 if opp.business_manager != request.user:
                     messages.error(request, '您没有权限为此商机创建洽谈登记')
                     return redirect('opportunity_pages:opportunity_business_negotiation')
@@ -2037,11 +2231,11 @@ def opportunity_business_negotiation_form(request, opportunity_id=None):
     else:
         context['full_top_nav'] = []
     context.update({
+        'form': _OpportunityFormPlaceholder(user=request.user, opportunity=opportunity),
         'opportunity': opportunity,
-        'opportunities': BusinessOpportunity.objects.filter(
-            business_manager=request.user
-        ).order_by('-created_time')[:50] if not _permission_granted('opportunity_management.opportunity.view_all', permission_set) 
-        else BusinessOpportunity.objects.all().order_by('-created_time')[:100],
+        'opportunities': BusinessOpportunity.objects.filter(is_active=True, business_manager=request.user
+        ).order_by('-created_time')[:50] if not opportunity_can_view_all(permission_set)
+        else BusinessOpportunity.objects.filter(is_active=True).order_by('-created_time')[:100],
     })
     return render(request, "opportunity_management/opportunity_business_negotiation_form.html", context)
 

@@ -1,0 +1,69 @@
+{# 借款审批 - 申请人提交的原始表单信息（与借款详情一致） #}
+<div class="info-section">
+  <h6 class="info-section-title">基本信息</h6>
+  <div class="info-grid">
+    <div class="info-item">
+      <span class="info-label">申请单号</span>
+      <span class="info-value"><code>{{ loan.application_number|default:"-" }}</code></span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">借款类型</span>
+      <span class="info-value">{{ loan.get_loan_type_display|default:"-" }}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">借款金额</span>
+      <span class="info-value"><strong class="text-primary">¥{{ loan.loan_amount|floatformat:2 }}</strong></span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">借款人</span>
+      <span class="info-value">{{ loan.applicant.get_full_name|default:loan.applicant.username }}</span>
+    </div>
+    {% if loan.department %}
+    <div class="info-item">
+      <span class="info-label">申请部门</span>
+      <span class="info-value">{{ loan.department.name }}</span>
+    </div>
+    {% endif %}
+    <div class="info-item">
+      <span class="info-label">申请日期</span>
+      <span class="info-value">{{ loan.application_date|date:"Y-m-d" }}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">借款日期</span>
+      <span class="info-value">{{ loan.loan_date|date:"Y-m-d" }}</span>
+    </div>
+    {% if loan.expected_repay_date %}
+    <div class="info-item">
+      <span class="info-label">预计还款日期</span>
+      <span class="info-value">{{ loan.expected_repay_date|date:"Y-m-d" }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="info-section">
+  <h6 class="info-section-title">借款事由</h6>
+  <div class="info-item" style="grid-column: 1 / -1;">
+    <span class="info-value" style="white-space: pre-wrap; line-height: 1.6;">{{ loan.loan_reason|default:"未填写" }}</span>
+  </div>
+</div>
+
+{% if loan.notes %}
+<div class="info-section">
+  <h6 class="info-section-title">备注</h6>
+  <div class="info-item" style="grid-column: 1 / -1;">
+    <span class="info-value" style="white-space: pre-wrap; line-height: 1.6;">{{ loan.notes }}</span>
+  </div>
+</div>
+{% endif %}
+
+{% if loan.iou_file %}
+<div class="info-section">
+  <h6 class="info-section-title">手写借条</h6>
+  <div class="info-item" style="grid-column: 1 / -1;">
+    <a href="{{ loan.iou_file.url }}" class="btn btn-sm btn-outline-primary" target="_blank" download>
+      <i class="bi bi-file-earmark"></i> 查看/下载借条
+    </a>
+  </div>
+</div>
+{% endif %}

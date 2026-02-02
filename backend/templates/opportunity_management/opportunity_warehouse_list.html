@@ -14,27 +14,28 @@
 {% block pm_title %}{{ page_title|default:"入库列表" }}{% endblock pm_title %}
 {% block pm_subtitle %}{{ description|default:"管理所有入库申请记录" }}{% endblock pm_subtitle %}
 
-{# 筛选器区域 #}
-{% block list_filters_content %}
-  <div class="list-page-filter-item">
+{% block search_placeholder %}申请编号、商机名称、客户{% endblock search_placeholder %}
+
+{% block list_filters_extra %}
+  <div class="col list-page-filter-item" data-filter-key="opportunity_id">
     <label class="list-page-filter-label">关联商机</label>
-    <select name="opportunity_id" class="form-select" id="opportunitySelect">
+    <select name="opportunity_id" class="form-select form-select-sm" id="opportunitySelect">
       <option value="">全部商机</option>
       {% for opp in opportunities %}
       <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>{{ opp.name }}</option>
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="status">
     <label class="list-page-filter-label">状态</label>
-    <select name="status" class="form-select" id="statusSelect">
+    <select name="status" class="form-select form-select-sm" id="statusSelect">
       <option value="">全部状态</option>
       <option value="pending" {% if status == 'pending' %}selected{% endif %}>待审批</option>
       <option value="approved" {% if status == 'approved' %}selected{% endif %}>已审批</option>
       <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>已拒绝</option>
     </select>
   </div>
-{% endblock list_filters_content %}
+{% endblock list_filters_extra %}
 
 {# 表格头部 #}
 {% block list_table_headers %}

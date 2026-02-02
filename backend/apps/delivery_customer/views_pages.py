@@ -549,7 +549,7 @@ def delivery_list(request):
     # 排序和分页
     # 使用 defer 排除不存在的 total_execution_amount 字段
     queryset = queryset.select_related('project', 'client', 'created_by').defer('client__total_execution_amount').order_by('-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 统计数据
@@ -1284,7 +1284,7 @@ def delivery_warnings(request):
     
     # 排序和分页
     queryset = queryset.select_related('project', 'client', 'created_by').defer('client__total_execution_amount').order_by('-overdue_days', '-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 风险统计
@@ -1363,7 +1363,7 @@ def delivery_approval_list(request):
     
     # 排序和分页
     queryset = queryset.select_related('project', 'client', 'created_by').defer('client__total_execution_amount').prefetch_related('approvals').order_by('-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 统计信息
@@ -1458,6 +1458,7 @@ def delivery_approval_detail(request, delivery_id):
         "pending_approval": pending_approval,
         "full_top_nav": _build_full_top_nav(permission_set, request.user),
         "delivery_sidebar_nav": delivery_sidebar_nav,
+        "sidebar_nav": delivery_sidebar_nav,
     })
 
 
@@ -1634,7 +1635,7 @@ def delivery_email_list(request):
     
     # 排序和分页
     queryset = queryset.select_related('project', 'client', 'created_by', 'sent_by').defer('client__total_execution_amount').prefetch_related('files').order_by('-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 统计信息
@@ -1802,7 +1803,7 @@ def delivery_express_list(request):
     
     # 排序和分页
     queryset = queryset.select_related('project', 'client', 'created_by', 'sent_by').defer('client__total_execution_amount').prefetch_related('files').order_by('-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 统计信息
@@ -1983,7 +1984,7 @@ def delivery_receipt_list(request):
     
     # 排序和分页
     queryset = queryset.select_related('project', 'client', 'created_by', 'sent_by').defer('client__total_execution_amount').prefetch_related('files').order_by('-delivered_at', '-sent_at', '-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 统计信息
@@ -2187,7 +2188,7 @@ def delivery_hand_delivery_list(request):
     
     # 排序和分页
     queryset = queryset.select_related('project', 'client', 'created_by', 'sent_by', 'delivery_person').defer('client__total_execution_amount').prefetch_related('files').order_by('-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 统计信息
@@ -2392,7 +2393,7 @@ def delivery_receive_list(request):
     
     # 排序和分页
     queryset = queryset.select_related('project', 'client', 'created_by', 'sent_by').defer('client__total_execution_amount').prefetch_related('files').order_by('-delivered_at', '-sent_at', '-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 统计信息
@@ -2576,7 +2577,7 @@ def delivery_feedback_list(request):
     
     # 排序和分页
     queryset = queryset.select_related('project', 'client', 'created_by').defer('client__total_execution_amount').prefetch_related('feedbacks', 'files').order_by('-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 统计信息
@@ -2766,7 +2767,7 @@ def delivery_achievement_list(request):
     
     # 排序和分页
     queryset = queryset.select_related('project', 'client', 'created_by', 'sent_by').defer('client__total_execution_amount').prefetch_related('files').order_by('-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 统计信息
@@ -2965,7 +2966,7 @@ def delivery_satisfaction_list(request):
     
     # 排序和分页
     queryset = queryset.select_related('project', 'client', 'created_by').defer('client__total_execution_amount').prefetch_related('feedbacks', 'files').order_by('-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 统计信息
@@ -3254,7 +3255,7 @@ def delivery_logistics_list(request):
     
     # 排序和分页
     queryset = queryset.select_related('project', 'client', 'created_by').defer('client__total_execution_amount').prefetch_related('tracking_records', 'files').order_by('-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 统计信息
@@ -3549,7 +3550,7 @@ def delivery_weekly_report_list(request):
     
     # 排序和分页
     queryset = queryset.select_related('project', 'client', 'created_by').defer('client__total_execution_amount').prefetch_related('files').order_by('-created_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 获取全过程设计咨询项目列表（用于筛选）
@@ -3652,7 +3653,7 @@ def delivery_file_prep_list(request):
     
     # 排序和分页
     queryset = queryset.order_by('-uploaded_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 获取项目列表（用于筛选）

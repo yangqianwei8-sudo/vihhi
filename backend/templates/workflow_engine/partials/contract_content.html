@@ -1,0 +1,170 @@
+{# 合同审批 - 申请人提交的原始表单信息（与合同详情一致） #}
+<div class="info-section">
+  <h6 class="info-section-title">基本信息</h6>
+  <div class="info-grid">
+    <div class="info-item">
+      <span class="info-label">合同编号</span>
+      <span class="info-value"><code>{{ contract.contract_number|default:"-" }}</code></span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">合同名称</span>
+      <span class="info-value"><strong>{{ contract.contract_name|default:"-" }}</strong></span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">合同类型</span>
+      <span class="info-value">{{ contract.get_contract_type_display|default:"-" }}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">合同状态</span>
+      <span class="info-value">{{ contract.get_status_display|default:"-" }}</span>
+    </div>
+    {% if contract.client %}
+    <div class="info-item">
+      <span class="info-label">客户</span>
+      <span class="info-value">{{ contract.client.name }}</span>
+    </div>
+    {% endif %}
+    {% if contract.project %}
+    <div class="info-item">
+      <span class="info-label">关联项目</span>
+      <span class="info-value">{{ contract.project.name|default:contract.project }}</span>
+    </div>
+    {% endif %}
+    {% if contract.opportunity %}
+    <div class="info-item">
+      <span class="info-label">关联商机</span>
+      <span class="info-value">{{ contract.opportunity.name }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="info-section">
+  <h6 class="info-section-title">金额信息</h6>
+  <div class="info-grid">
+    {% if contract.contract_amount is not None %}
+    <div class="info-item">
+      <span class="info-label">合同金额（含税）</span>
+      <span class="info-value">¥{{ contract.contract_amount|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+    {% if contract.contract_amount_excl_tax is not None %}
+    <div class="info-item">
+      <span class="info-label">合同金额（不含税）</span>
+      <span class="info-value">¥{{ contract.contract_amount_excl_tax|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+    {% if contract.tax_rate is not None %}
+    <div class="info-item">
+      <span class="info-label">税率</span>
+      <span class="info-value">{{ contract.tax_rate }}%</span>
+    </div>
+    {% endif %}
+    {% if contract.settlement_amount is not None %}
+    <div class="info-item">
+      <span class="info-label">已结算金额</span>
+      <span class="info-value">¥{{ contract.settlement_amount|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+    {% if contract.payment_amount is not None %}
+    <div class="info-item">
+      <span class="info-label">已回款金额</span>
+      <span class="info-value">¥{{ contract.payment_amount|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+    {% if contract.unpaid_amount is not None %}
+    <div class="info-item">
+      <span class="info-label">未回款金额</span>
+      <span class="info-value">¥{{ contract.unpaid_amount|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="info-section">
+  <h6 class="info-section-title">时间信息</h6>
+  <div class="info-grid">
+    {% if contract.contract_date %}
+    <div class="info-item">
+      <span class="info-label">合同签订日期</span>
+      <span class="info-value">{{ contract.contract_date|date:"Y-m-d" }}</span>
+    </div>
+    {% endif %}
+    {% if contract.effective_date %}
+    <div class="info-item">
+      <span class="info-label">合同生效日期</span>
+      <span class="info-value">{{ contract.effective_date|date:"Y-m-d" }}</span>
+    </div>
+    {% endif %}
+    {% if contract.start_date %}
+    <div class="info-item">
+      <span class="info-label">合同开始日期</span>
+      <span class="info-value">{{ contract.start_date|date:"Y-m-d" }}</span>
+    </div>
+    {% endif %}
+    {% if contract.end_date %}
+    <div class="info-item">
+      <span class="info-label">合同结束日期</span>
+      <span class="info-value">{{ contract.end_date|date:"Y-m-d" }}</span>
+    </div>
+    {% endif %}
+    {% if contract.contract_period %}
+    <div class="info-item">
+      <span class="info-label">合同期限（天）</span>
+      <span class="info-value">{{ contract.contract_period }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if contract.structure_type or contract.design_unit_category %}
+<div class="info-section">
+  <h6 class="info-section-title">项目信息</h6>
+  <div class="info-grid">
+    {% if contract.structure_type %}
+    <div class="info-item">
+      <span class="info-label">结构形式</span>
+      <span class="info-value">{{ contract.get_structure_type_display }}</span>
+    </div>
+    {% endif %}
+    {% if contract.design_unit_category %}
+    <div class="info-item">
+      <span class="info-label">设计单位分类</span>
+      <span class="info-value">{{ contract.get_design_unit_category_display }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if contract.party_a_name or contract.party_b_name or contract.business_manager %}
+<div class="info-section">
+  <h6 class="info-section-title">甲乙双方及负责人</h6>
+  <div class="info-grid">
+    {% if contract.party_a_name %}
+    <div class="info-item">
+      <span class="info-label">甲方</span>
+      <span class="info-value">{{ contract.party_a_name }}{% if contract.party_a_contact %}（{{ contract.party_a_contact }}）{% endif %}</span>
+    </div>
+    {% endif %}
+    {% if contract.party_b_name %}
+    <div class="info-item">
+      <span class="info-label">乙方</span>
+      <span class="info-value">{{ contract.party_b_name }}{% if contract.party_b_contact %}（{{ contract.party_b_contact }}）{% endif %}</span>
+    </div>
+    {% endif %}
+    {% if contract.business_manager %}
+    <div class="info-item">
+      <span class="info-label">商务经理</span>
+      <span class="info-value">{{ contract.business_manager.get_full_name|default:contract.business_manager.username }}</span>
+    </div>
+    {% endif %}
+    {% if contract.department %}
+    <div class="info-item">
+      <span class="info-label">所属部门</span>
+      <span class="info-value">{{ contract.department.name }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

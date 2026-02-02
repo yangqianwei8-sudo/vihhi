@@ -20,12 +20,6 @@
   </div>
 {% endblock list_filters_content %}
 
-{% block list_table_checkbox_header %}
-  <th style="width: 50px;">
-    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
-  </th>
-{% endblock list_table_checkbox_header %}
-
 {% block list_table_headers %}
   <th>分类编码</th>
   <th>分类名称</th>
@@ -40,9 +34,7 @@
   {% if page_obj %}
     {% for category in page_obj %}
     <tr>
-      <td>
-        <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ category.id }}" id="item_{{ category.id }}">
-      </td>
+      {% include "shared/_list_row_checkbox_cell.html" with row_id=category.id checkbox_name=list_checkbox_name|default:'item_ids' id_prefix=list_checkbox_id_prefix|default:'item_' %}
       <td><code>{{ category.code }}</code></td>
       <td>
         {% if category.parent %}

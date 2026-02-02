@@ -44,12 +44,6 @@
   </div>
 {% endblock list_filters_content %}
 
-{% block list_table_checkbox_header %}
-  <th style="width: 50px;">
-    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
-  </th>
-{% endblock list_table_checkbox_header %}
-
 {% block list_table_headers %}
   <th>标题</th>
   <th>分类</th>
@@ -67,9 +61,7 @@
   {% if page_obj %}
     {% for announcement in page_obj %}
     <tr>
-      <td>
-        <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ announcement.id }}" id="item_{{ announcement.id }}">
-      </td>
+      {% include "shared/_list_row_checkbox_cell.html" with row_id=announcement.id checkbox_name=list_checkbox_name|default:'item_ids' id_prefix=list_checkbox_id_prefix|default:'item_' %}
       <td>
         {% if announcement.is_top %}
         <span class="badge bg-danger me-1">置顶</span>

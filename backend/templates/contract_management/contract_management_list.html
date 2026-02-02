@@ -10,6 +10,55 @@
 {% endif %}
 {% endblock pm_actions %}
 
+{% block search_placeholder %}合同编号、名称、客户、项目{% endblock search_placeholder %}
+
+{% block list_filters_extra %}
+  <div class="col list-page-filter-item" data-filter-key="status">
+    <label class="list-page-filter-label">状态</label>
+    <select name="status" class="form-select form-select-sm">
+      <option value="">全部状态</option>
+      {% for value, label in status_choices %}
+      <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col list-page-filter-item" data-filter-key="contract_type">
+    <label class="list-page-filter-label">合同类型</label>
+    <select name="contract_type" class="form-select form-select-sm">
+      <option value="">全部类型</option>
+      {% for value, label in type_choices %}
+      <option value="{{ value }}" {% if contract_type == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col list-page-filter-item" data-filter-key="client_id">
+    <label class="list-page-filter-label">客户</label>
+    <select name="client_id" class="form-select form-select-sm">
+      <option value="">全部客户</option>
+      {% for c in clients %}
+      <option value="{{ c.id }}" {% if client_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col list-page-filter-item" data-filter-key="project_id">
+    <label class="list-page-filter-label">关联项目</label>
+    <select name="project_id" class="form-select form-select-sm">
+      <option value="">全部项目</option>
+      {% for p in projects %}
+      <option value="{{ p.id }}" {% if project_id == p.id|stringformat:"s" %}selected{% endif %}>{{ p.project_number|default:p.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col list-page-filter-item" data-filter-key="date_from">
+    <label class="list-page-filter-label">签订日期起</label>
+    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+  </div>
+  <div class="col list-page-filter-item" data-filter-key="date_to">
+    <label class="list-page-filter-label">签订日期止</label>
+    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+  </div>
+{% endblock list_filters_extra %}
+
 {% block list_table_rows %}
 {% for contract in page_obj %}
       <tr>
@@ -84,6 +133,7 @@
 
 
 {% block module_extra_js %}
+  {{ block.super }}
 <div class="modal fade" id="deleteContractModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">

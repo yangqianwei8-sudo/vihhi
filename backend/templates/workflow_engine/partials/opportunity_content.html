@@ -1,0 +1,148 @@
+{# 商机审批 - 申请人提交的原始表单信息（与商机详情一致） #}
+<div class="info-section">
+  <h6 class="info-section-title">基本信息</h6>
+  <div class="info-grid">
+    <div class="info-item">
+      <span class="info-label">商机编号</span>
+      <span class="info-value"><code>{{ opportunity.opportunity_number|default:"-" }}</code></span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">商机名称</span>
+      <span class="info-value"><strong>{{ opportunity.name }}</strong></span>
+    </div>
+    {% if opportunity.client %}
+    <div class="info-item">
+      <span class="info-label">关联客户</span>
+      <span class="info-value">{{ opportunity.client.name }}</span>
+    </div>
+    {% endif %}
+    {% if opportunity.business_manager %}
+    <div class="info-item">
+      <span class="info-label">负责商务</span>
+      <span class="info-value">{{ opportunity.business_manager.get_full_name|default:opportunity.business_manager.username }}</span>
+    </div>
+    {% endif %}
+    <div class="info-item">
+      <span class="info-label">商机状态</span>
+      <span class="info-value">{{ opportunity.get_status_display|default:"-" }}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">紧急程度</span>
+      <span class="info-value">{{ opportunity.get_urgency_display|default:"-" }}</span>
+    </div>
+    {% if opportunity.opportunity_type %}
+    <div class="info-item">
+      <span class="info-label">商机类型</span>
+      <span class="info-value">{{ opportunity.get_opportunity_type_display }}</span>
+    </div>
+    {% endif %}
+    {% if opportunity.service_type %}
+    <div class="info-item">
+      <span class="info-label">服务类型</span>
+      <span class="info-value">{{ opportunity.service_type.name }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="info-section">
+  <h6 class="info-section-title">项目信息</h6>
+  <div class="info-grid">
+    {% if opportunity.project_name %}
+    <div class="info-item">
+      <span class="info-label">项目名称</span>
+      <span class="info-value">{{ opportunity.project_name }}</span>
+    </div>
+    {% endif %}
+    {% if opportunity.project_address %}
+    <div class="info-item" style="grid-column: 1 / -1;">
+      <span class="info-label">项目地址</span>
+      <span class="info-value">{{ opportunity.project_address }}</span>
+    </div>
+    {% endif %}
+    {% if opportunity.project_type %}
+    <div class="info-item">
+      <span class="info-label">项目业态</span>
+      <span class="info-value">{{ opportunity.project_type }}</span>
+    </div>
+    {% endif %}
+    {% if opportunity.building_area is not None %}
+    <div class="info-item">
+      <span class="info-label">建筑面积（㎡）</span>
+      <span class="info-value">{{ opportunity.building_area|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+    {% if opportunity.drawing_stage %}
+    <div class="info-item">
+      <span class="info-label">图纸阶段</span>
+      <span class="info-value">{{ opportunity.drawing_stage.name }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="info-section">
+  <h6 class="info-section-title">金额与概率</h6>
+  <div class="info-grid">
+    <div class="info-item">
+      <span class="info-label">预计金额（万元）</span>
+      <span class="info-value"><strong>¥{{ opportunity.estimated_amount|floatformat:2 }}</strong></span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">成功概率</span>
+      <span class="info-value">{{ opportunity.success_probability }}%</span>
+    </div>
+    {% if opportunity.weighted_amount %}
+    <div class="info-item">
+      <span class="info-label">加权金额</span>
+      <span class="info-value">¥{{ opportunity.weighted_amount|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+    {% if opportunity.actual_amount is not None %}
+    <div class="info-item">
+      <span class="info-label">实际签约金额（万元）</span>
+      <span class="info-value">¥{{ opportunity.actual_amount|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="info-section">
+  <h6 class="info-section-title">时间信息</h6>
+  <div class="info-grid">
+    {% if opportunity.expected_sign_date %}
+    <div class="info-item">
+      <span class="info-label">预计签约时间</span>
+      <span class="info-value">{{ opportunity.expected_sign_date|date:"Y-m-d" }}</span>
+    </div>
+    {% endif %}
+    {% if opportunity.actual_sign_date %}
+    <div class="info-item">
+      <span class="info-label">实际签约日期</span>
+      <span class="info-value">{{ opportunity.actual_sign_date|date:"Y-m-d" }}</span>
+    </div>
+    {% endif %}
+    <div class="info-item">
+      <span class="info-label">创建时间</span>
+      <span class="info-value">{{ opportunity.created_time|date:"Y-m-d H:i" }}</span>
+    </div>
+  </div>
+</div>
+
+{% if opportunity.description %}
+<div class="info-section">
+  <h6 class="info-section-title">商机描述</h6>
+  <div class="info-item" style="grid-column: 1 / -1;">
+    <span class="info-value" style="white-space: pre-wrap; line-height: 1.6;">{{ opportunity.description }}</span>
+  </div>
+</div>
+{% endif %}
+
+{% if opportunity.notes %}
+<div class="info-section">
+  <h6 class="info-section-title">备注</h6>
+  <div class="info-item" style="grid-column: 1 / -1;">
+    <span class="info-value" style="white-space: pre-wrap; line-height: 1.6;">{{ opportunity.notes }}</span>
+  </div>
+</div>
+{% endif %}

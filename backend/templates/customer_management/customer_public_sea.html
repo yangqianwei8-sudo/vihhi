@@ -1,14 +1,58 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block pm_title %}客户公海{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">查看和管理公海客户</span>{% endblock %}
+{% block pm_title %}客户公海{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理公海客户{% endblock pm_subtitle %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
-{% endblock %}
+{% block search_placeholder %}客户名称、统一信用代码{% endblock search_placeholder %}
 
-{% block pm_content %}
-  {% include "customer_management/_partials/_customer_public_sea_filters.html" %}
-  {% include "customer_management/_partials/_customer_public_sea_table.html" %}
-{% endblock %}
+{% block list_table_headers %}
+<th>客户名称</th>
+<th>统一信用代码</th>
+<th>客户等级</th>
+<th>进入原因</th>
+<th>进入时间</th>
+<th>操作</th>
+{% endblock list_table_headers %}
+
+{% block list_table_rows %}
+{% for client in page_obj %}
+<tr>
+  <td>
+    <a href="{% url 'customer_pages:customer_detail' client.id %}">
+      {{ client.name }}
+    </a>
+  </td>
+  <td><code>{{ client.unified_credit_code|default:"未填写" }}</code></td>
+  <td>
+    <span class="list-badge">{{ client.get_client_level_display }}</span>
+  </td>
+  <td>
+    {% if client.public_sea_reason %}
+    <span class="list-badge">{{ client.get_public_sea_reason_display }}</span>
+    {% else %}
+    <span class="text-muted">未设置</span>
+    {% endif %}
+  </td>
+  <td>{{ client.public_sea_entry_time|date:"Y-m-d H:i"|default:"未知" }}</td>
+  <td>
+    <div class="list-actions">
+      {% if can_claim %}
+      <a href="{% url 'customer_pages:customer_public_sea_claim' client.id %}" class="list-btn list-btn-primary" title="认领">认领</a>
+      {% endif %}
+      <a href="{% url 'customer_pages:customer_detail' client.id %}" class="list-btn" title="查看">查看</a>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="6" class="list-empty">
+    <div class="list-empty-icon">▢</div>
+    <div class="list-empty-text">暂无公海客户</div>
+    {% block list_empty_hint %}
+    <div class="list-empty-hint">公海客户将显示在这里</div>
+    {% endblock list_empty_hint %}
+  </td>
+</tr>
+{% endfor %}
+{% endblock list_table_rows %}

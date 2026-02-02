@@ -5,10 +5,27 @@
 {% block detail_subtitle %}{{ plan.name }}{% endblock %}
 
 {% block detail_header_actions %}
-<a href="{% url 'plan_pages:plan_list' %}" class="btn btn-secondary">
-  <i class="fas fa-arrow-left"></i>
-  返回列表
+<a href="{% url 'plan_pages:plan_list' %}" class="btn btn-secondary btn-sm">
+  <i class="fas fa-arrow-left"></i> 返回列表
 </a>
+{% if not approval_instance or approval_instance.status != 'rejected' %}
+<a href="{% url 'plan_pages:plan_decompose' plan.id %}" class="btn btn-success btn-sm">
+  <i class="fas fa-sitemap"></i> 计划分解
+</a>
+<a href="{% url 'plan_pages:plan_execution_track' plan.id %}" class="btn btn-primary btn-sm">
+  <i class="fas fa-chart-line"></i> 计划跟踪
+</a>
+{% endif %}
+{% if can_request_adjustment and not has_pending_adjustment %}
+<a href="{% url 'plan_pages:plan_adjustment_create' plan.id %}" class="btn btn-light btn-sm">
+  <i class="fas fa-edit"></i> 计划调整
+</a>
+{% elif has_pending_adjustment %}
+<button type="button" class="btn btn-secondary btn-sm" disabled title="已有待审批的调整申请">
+  <i class="fas fa-clock"></i> 调整申请审批中
+</button>
+{% endif %}
+{{ block.super }}
 {% endblock %}
 
 {# 基本信息卡片由基础模板自动提供，包含：所属部门、负责人、计划编号 #}
@@ -209,38 +226,11 @@
 {% endblock detail_submit_approval %}
 
 {% block detail_other_actions_header %}
-  {# 申请调整 #}
-  {% if can_request_adjustment and not has_pending_adjustment %}
-  <a href="{% url 'plan_pages:plan_adjustment_create' plan.id %}" class="btn btn-light">
-    <i class="fas fa-edit"></i>
-    申请调整
-  </a>
-  {% elif has_pending_adjustment %}
-  <button type="button" class="btn btn-secondary" disabled title="已有待审批的调整申请">
-    <i class="fas fa-clock"></i>
-    调整申请审批中
-  </button>
-  {% endif %}
-
+  {# 计划分解、计划跟踪、计划调整已移至页头操作区 #}
   {# 申请取消 #}
   {% if can_request_cancel %}
-  <a href="{% url 'plan_pages:plan_request_cancel' plan.id %}" class="btn btn-warning">
-    <i class="fas fa-times-circle"></i>
-    申请取消
-  </a>
-  {% endif %}
-
-  {# 跟踪与分解：审批未通过时不显示 #}
-  {% if not approval_instance or approval_instance.status != 'rejected' %}
-  {# 计划跟踪 #}
-  <a href="{% url 'plan_pages:plan_execution_track' plan.id %}" class="btn btn-primary">
-    <i class="fas fa-chart-line"></i>
-    跟踪
-  </a>
-  {# 计划分解 #}
-  <a href="{% url 'plan_pages:plan_decompose' plan.id %}" class="btn btn-success">
-    <i class="fas fa-sitemap"></i>
-    分解
+  <a href="{% url 'plan_pages:plan_request_cancel' plan.id %}" class="btn btn-warning btn-sm">
+    <i class="fas fa-times-circle"></i> 申请取消
   </a>
   {% endif %}
 {% endblock detail_other_actions_header %}

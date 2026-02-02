@@ -1,29 +1,40 @@
 {% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block pm_title %}{{ page_title|default:"客户线索" }}{% endblock pm_title %}
+{% block pm_title %}{{ page_title|default:"线索列表" }}{% endblock pm_title %}
 {% block pm_subtitle %}查看和管理所有客户线索{% endblock pm_subtitle %}
 
-{% block pm_actions %}
+{% block list_page_actions %}
 {% if can_create %}
-<a href="{% url 'business_pages:customer_lead_create' %}" class="list-btn list-btn-primary">新增客户线索</a>
+<a href="{% url 'customer_pages:customer_lead_create' %}" class="btn btn-primary btn-sm">新增线索</a>
+<a href="{% url 'customer_pages:customer_filing_create' %}" class="btn btn-outline-primary btn-sm">客户备案</a>
 {% endif %}
-{% endblock pm_actions %}
+{% endblock list_page_actions %}
 
-{% block list_filters_content %}
-  <div class="list-page-filter-item">
-    <label class="list-page-filter-label">搜索</label>
-    <div class="input-group">
-      <select name="search_field" class="form-select form-select-sm" style="max-width: 120px;">
-        <option value="all" {% if not request.GET.search_field or request.GET.search_field == 'all' %}selected{% endif %}>全部字段</option>
-        <option value="company_name" {% if request.GET.search_field == 'company_name' %}selected{% endif %}>公司名称</option>
-        <option value="contact_name" {% if request.GET.search_field == 'contact_name' %}selected{% endif %}>联系人</option>
-        <option value="contact_phone" {% if request.GET.search_field == 'contact_phone' %}selected{% endif %}>联系电话</option>
-      </select>
-      <input type="text" name="search" class="form-control form-control-sm" value="{{ search }}" placeholder="请输入关键词">
-    </div>
+{% block search_placeholder %}公司名称、联系人、联系电话{% endblock search_placeholder %}
+
+{% block list_filters_extra %}
+  <div class="col list-page-filter-item" data-filter-key="lead_source">
+    <label class="list-page-filter-label">线索来源</label>
+    <select name="lead_source" class="form-select form-select-sm">
+      <option value="">全部</option>
+      {% for value, label in lead_source_choices %}
+      <option value="{{ value }}" {% if lead_source == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="responsible_user">
+    <label class="list-page-filter-label">负责人</label>
+    <select name="responsible_user" class="form-select form-select-sm">
+      <option value="">全部</option>
+      {% for user in users %}
+      <option value="{{ user.id }}" {% if responsible_user_id == user.id|stringformat:"s" %}selected{% endif %}>
+        {{ user.get_full_name|default:user.username }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col list-page-filter-item" data-filter-key="follow_status">
     <label class="list-page-filter-label">跟进状态</label>
     <select name="follow_status" class="form-select form-select-sm">
       <option value="">全部</option>
@@ -32,51 +43,7 @@
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
-    <label class="list-page-filter-label">渠道</label>
-    <select name="channel" class="form-select form-select-sm">
-      <option value="">全部</option>
-      {% for value, label in channel_choices %}
-      <option value="{{ value }}" {% if channel == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="list-page-filter-item">
-    <label class="list-page-filter-label">负责人</label>
-    <select name="responsible_user" class="form-select form-select-sm">
-      <option value="">全部</option>
-      {% for user in responsible_users %}
-      <option value="{{ user.id }}" {% if responsible_user_id == user.id|stringformat:"s" %}selected{% endif %}>
-        {{ user.get_full_name|default:user.username }}
-      </option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="list-page-filter-item">
-    <label class="list-page-filter-label">线索来源</label>
-    <select name="lead_source" class="form-select form-select-sm">
-      <option value="">全部</option>
-      {% for value, label in channel_choices %}
-      <option value="{{ value }}" {% if lead_source == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="list-page-filter-item">
-    <label class="list-page-filter-label">创建时间</label>
-    <select name="created_time" class="form-select form-select-sm">
-      <option value="">全部</option>
-      <option value="today" {% if created_time == 'today' %}selected{% endif %}>今天</option>
-      <option value="week" {% if created_time == 'week' %}selected{% endif %}>最近7天</option>
-      <option value="month" {% if created_time == 'month' %}selected{% endif %}>最近30天</option>
-    </select>
-  </div>
-{% endblock list_filters_content %}
-
-{% block list_table_checkbox_header %}
-<th style="width: 50px;">
-  <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
-</th>
-{% endblock list_table_checkbox_header %}
+{% endblock list_filters_extra %}
 
 {% block list_table_headers %}
 <th>联系人</th>
@@ -94,15 +61,13 @@
 {% block list_table_rows %}
 {% for lead in page_obj %}
 <tr>
-  <td>
-    <input type="checkbox" class="form-check-input row-checkbox" name="lead_ids" value="{{ lead.id }}" id="lead_{{ lead.id }}">
-  </td>
+  {% include "shared/_list_row_checkbox_cell.html" with row_id=lead.id checkbox_name=list_checkbox_name|default:'lead_ids' id_prefix=list_checkbox_id_prefix|default:'lead_' %}
   <td>{{ lead.contact_name|default:"—" }}</td>
   <td>{{ lead.company_name }}</td>
   <td>
     <span class="badge bg-secondary">{{ lead.get_lead_source_display }}</span>
   </td>
-  <td>{{ lead.get_region_display|default:"—" }}</td>
+  <td>{{ lead.province|default:lead.city|default:"—" }}</td>
   <td>
     {% if lead.responsible_user %}
     {{ lead.responsible_user.get_full_name|default:lead.responsible_user.username }}
@@ -126,34 +91,24 @@
   </td>
   <td>
     <div class="list-page-table-actions">
-      <a href="{% url 'business_pages:customer_lead_detail' lead.id %}" class="action-view" title="查看">
+      <a href="{% url 'customer_pages:customer_lead_detail' lead.id %}" class="action-view" title="查看">
         <i class="bi bi-eye"></i>
       </a>
       {% if not lead.responsible_user %}
       <span class="action-separator">|</span>
-      <a href="{% url 'business_pages:customer_lead_claim' lead.id %}" class="action-edit" title="认领线索">
+      <a href="{% url 'customer_pages:customer_lead_claim' lead.id %}" class="action-edit" title="认领线索">
         <i class="bi bi-person-check"></i>
       </a>
       {% endif %}
       {% if can_create %}
-      <span class="action-separator">|</span>
-      <a href="{% url 'business_pages:customer_lead_followup_create' lead.id %}" class="action-edit" title="添加跟进">
-        <i class="bi bi-plus-circle"></i>
-      </a>
-      {% if lead.responsible_user %}
-      <span class="action-separator">|</span>
-      <a href="#" class="action-edit" title="分配负责人" onclick="alert('分配负责人功能待实现'); return false;">
-        <i class="bi bi-person-gear"></i>
-      </a>
-      {% endif %}
       {% if not lead.converted_client %}
       <span class="action-separator">|</span>
-      <a href="#" class="action-edit" title="转化为客户" onclick="alert('转化为客户功能待实现'); return false;">
+      <a href="{% url 'customer_pages:customer_lead_convert' lead.id %}" class="action-edit" title="转化为客户">
         <i class="bi bi-arrow-right-circle"></i>
       </a>
       {% endif %}
       <span class="action-separator">|</span>
-      <a href="{% url 'business_pages:customer_lead_delete' lead.id %}" class="action-delete" title="删除" onclick="return confirm('确定要删除此客户线索吗？');">
+      <a href="{% url 'customer_pages:customer_lead_delete' lead.id %}" class="action-delete" title="删除" onclick="return confirm('确定要删除此客户线索吗？');">
         <i class="bi bi-trash"></i>
       </a>
       {% endif %}
@@ -175,52 +130,5 @@
 {% endblock list_table_rows %}
 
 {% block module_extra_js %}
-<script>
-// 全选/取消全选
-document.getElementById('selectAll')?.addEventListener('change', function() {
-    const checkboxes = document.querySelectorAll('.row-checkbox');
-    checkboxes.forEach(cb => cb.checked = this.checked);
-    updateSelectedCount();
-});
-
-// 行复选框变化
-document.querySelectorAll('.row-checkbox').forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-        updateSelectedCount();
-        updateSelectAllState();
-    });
-});
-
-// 更新选中数量
-function updateSelectedCount() {
-    const selected = document.querySelectorAll('.row-checkbox:checked').length;
-    const countEl = document.getElementById('selectedCount');
-    if (countEl) {
-        countEl.textContent = selected;
-    }
-}
-
-// 更新全选状态
-function updateSelectAllState() {
-    const checkboxes = document.querySelectorAll('.row-checkbox');
-    const selectAll = document.getElementById('selectAll');
-    if (checkboxes.length > 0 && selectAll) {
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        const someChecked = Array.from(checkboxes).some(cb => cb.checked);
-        selectAll.checked = allChecked;
-        selectAll.indeterminate = someChecked && !allChecked;
-    }
-}
-
-// 初始化
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        updateSelectedCount();
-        updateSelectAllState();
-    });
-} else {
-    updateSelectedCount();
-    updateSelectAllState();
-}
-</script>
+{{ block.super }}
 {% endblock module_extra_js %}

@@ -14,11 +14,12 @@
 {% block pm_title %}{{ page_title|default:"跟进记录" }}{% endblock pm_title %}
 {% block pm_subtitle %}{{ description|default:"商机跟进记录管理" }}{% endblock pm_subtitle %}
 
-{# 筛选器区域 #}
-{% block list_filters_content %}
-  <div class="list-page-filter-item">
+{% block search_placeholder %}跟进内容、商机名称、跟进人{% endblock search_placeholder %}
+
+{% block list_filters_extra %}
+  <div class="col list-page-filter-item" data-filter-key="opportunity_id">
     <label class="list-page-filter-label">关联商机</label>
-    <select name="opportunity_id" class="form-select">
+    <select name="opportunity_id" class="form-select form-select-sm">
       <option value="">全部商机</option>
       {% for opp in opportunities %}
       <option value="{{ opp.id }}" {% if opportunity_id == opp.id|stringformat:"s" %}selected{% endif %}>
@@ -27,16 +28,16 @@
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="follow_type">
     <label class="list-page-filter-label">跟进方式</label>
-    <select name="follow_type" class="form-select">
+    <select name="follow_type" class="form-select form-select-sm">
       <option value="">全部</option>
       {% for value, label in follow_type_choices %}
       <option value="{{ value }}" {% if follow_type == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
   </div>
-{% endblock list_filters_content %}
+{% endblock list_filters_extra %}
 
 {# 表格头部 #}
 {% block list_table_headers %}

@@ -1,0 +1,225 @@
+{% load static %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>{% block title %}维海生产系统{% endblock title %}</title>
+  <link rel="stylesheet" href="{% static 'css/common.css' %}">
+  <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}" id="bootstrap-css-sync">
+
+  <script>
+    (function() {
+      var bootstrapCDNs = {
+        css: ['{% static "css/bootstrap.min.css" %}', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css'],
+        icons: ['{% static "css/bootstrap-icons.min.css" %}', 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css'],
+        js: ['{% static "js/bootstrap.bundle.min.js" %}', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js']
+      };
+      function loadResource(type, urls, index) {
+        index = index || 0;
+        if (index >= urls.length) return;
+        var url = urls[index], el;
+        if (type === 'css' || type === 'icons') {
+          el = document.createElement('link'); el.rel = 'stylesheet'; el.href = url;
+          el.onerror = function() { if (this.parentNode) this.parentNode.removeChild(this); loadResource(type, urls, index + 1); };
+          document.head.appendChild(el);
+        } else if (type === 'js') {
+          el = document.createElement('script'); el.src = url;
+          el.onerror = function() { if (this.parentNode) this.parentNode.removeChild(this); loadResource(type, urls, index + 1); };
+          (document.body || document.head).appendChild(el);
+        }
+      }
+      loadResource('css', bootstrapCDNs.css);
+      loadResource('icons', bootstrapCDNs.icons);
+      loadResource('js', bootstrapCDNs.js);
+      window.loadBootstrapResource = loadResource;
+      window.bootstrapCDNs = bootstrapCDNs;
+    })();
+  </script>
+
+  <style>
+    :root {
+      --sidebar-width: {% block sidebar_width %}{% block module_sidebar_width %}232px{% endblock %}{% endblock sidebar_width %};
+      --navbar-height: 62px;
+      --vh-bg-primary: #FFFFFF;
+      --vh-bg-secondary: #F5F5F5;
+      --vh-text-primary: #1A1A1A;
+      --vh-text-muted: #999999;
+      --vh-border-secondary: #E0E0E0;
+      --vh-card-bg: #FFFFFF;
+      --vh-card-border: #E0E0E0;
+      --vh-sidebar-bg: #F5F5F5;
+      --vh-divider: #E0E0E0;
+    }
+    .two-col-content > .d-flex.align-items-end.justify-content-between {
+      padding-left: 8px !important;
+    }
+    .two-col-content > .d-flex.align-items-end.justify-content-between {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 10;
+      background: var(--vh-bg, #fff) !important;
+      margin-top: -56px !important;
+      padding-top: 12px !important;
+      padding-bottom: 12px !important;
+      margin-left: 8px !important;
+      margin-right: 8px !important;
+      margin-bottom: 8px !important;
+      padding-left: 8px !important;
+      padding-right: 8px !important;
+      border-bottom: 1px solid #000000;
+      box-shadow: 0 1px 0 #000000;
+    }
+    body { margin: 0; padding: 0; overflow: hidden; }
+    body.two-column-layout-active { overflow-y: hidden !important; height: 100% !important; }
+    /* 两栏内容区内 .row / .col-* 完全按 Bootstrap 5 标准排版，不再覆盖栅格与 gutter */
+    /* 详细信息等表单卡片：显式栅格 + 防溢出（不依赖 Bootstrap 加载顺序，避免字段整行溢出屏幕） */
+    .two-col-content .form-card .form-card-body > .row {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin-left: calc(var(--bs-gutter-x, 0.75rem) * -0.5) !important;
+      margin-right: calc(var(--bs-gutter-x, 0.75rem) * -0.5) !important;
+      margin-top: calc(var(--bs-gutter-y, 0.5rem) * -1) !important;
+    }
+    .two-col-content .form-card .form-card-body > .row > [class*="col"] {
+      flex: 0 0 auto !important;
+      min-width: 0 !important;
+      padding-left: calc(var(--bs-gutter-x, 0.75rem) * 0.5) !important;
+      padding-right: calc(var(--bs-gutter-x, 0.75rem) * 0.5) !important;
+      margin-bottom: var(--bs-gutter-y, 0.5rem) !important;
+      box-sizing: border-box !important;
+    }
+    .two-col-content .form-card .form-card-body > .row > .col-12 {
+      flex: 0 0 100% !important;
+      max-width: 100% !important;
+    }
+    @media (min-width: 768px) {
+      .two-col-content .form-card .form-card-body > .row > .col-md-6 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+      }
+    }
+    @media (min-width: 992px) {
+      .two-col-content .form-card .form-card-body > .row > .col-lg-4 {
+        flex: 0 0 33.33333333% !important;
+        max-width: 33.33333333% !important;
+      }
+      .two-col-content .form-card .form-card-body > .row > .col-lg-6 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+      }
+      .two-col-content .form-card .form-card-body > .row > .col-lg-3 {
+        flex: 0 0 25% !important;
+        max-width: 25% !important;
+      }
+    }
+    .two-col-content .form-card .form-card-body .form-field-wrapper {
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+    .two-col-content .form-card {
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+    .two-col-content .form-card .form-card-body {
+      max-width: 100% !important;
+    }
+    .two-col-content .module-content-wrapper {
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+    .row.stats-cards-auto-layout, .stats-cards-container.row {
+      display: flex !important; flex-wrap: nowrap !important; gap: 16px !important;
+      margin-left: 0 !important; margin-right: 0 !important; width: 100% !important;
+    }
+    .row.stats-cards-auto-layout > *, .stats-cards-container.row > *,
+    .row.stats-cards-auto-layout > [class*="col"], .stats-cards-container.row > [class*="col"] {
+      flex: 1 1 0 !important; min-width: 0 !important; max-width: 100% !important;
+      padding-left: 0 !important; padding-right: 0 !important; margin-bottom: 0 !important; width: auto !important;
+    }
+  </style>
+
+  {% block extra_head %}
+    {% block extra_css %}{% endblock extra_css %}
+    {% include "shared/_module_layout_styles.html" %}
+    {% block module_base_styles %}{% endblock %}
+    {% block module_styles %}{% endblock %}
+    {% block module_sidebar_styles %}{% endblock %}
+    {% block module_page_header_styles %}{% endblock %}
+    {% block module_content_wrapper_styles %}
+      <style>.module-content-wrapper { padding: 8px 8px 24px 8px; }</style>
+    {% endblock %}
+    {% block module_extra_css %}{% endblock %}
+  {% endblock extra_head %}
+</head>
+
+<body class="two-column-layout-active">
+  {% block top_nav %}
+    {% include "shared/_top_nav.html" %}
+  {% endblock top_nav %}
+
+  <div class="two-column-layout">
+    {% block sidebar %}
+      {% block sidebar_content %}
+        {% include "shared/sidebar_v2_wireframe_fixed.html" %}
+      {% endblock sidebar_content %}
+    {% endblock sidebar %}
+
+    <main class="two-col-main">
+      {% block content %}
+        <div class="two-col-content">
+          {# 主副标题栏结构固定，子模板只能对 page_title/pm_title、page_subtitle/pm_subtitle、page_actions/pm_actions 等块赋值，禁止覆盖本区域结构 #}
+            <div class="pm-page-header d-flex align-items-end justify-content-between">
+              <div class="pm-page-header-title-wrapper" style="flex: 1; min-width: 0;">
+                <h1 class="h3">{% block page_title %}{% block pm_title %}{% endblock pm_title %}{% endblock page_title %}</h1>
+                <div class="pm-subtitle">{% block page_subtitle %}{% block pm_subtitle %}{% endblock pm_subtitle %}{% endblock page_subtitle %}</div>
+              </div>
+              <div class="pm-actions d-flex gap-2 align-items-center flex-wrap">
+                {% block page_actions %}{% block pm_actions %}{% endblock pm_actions %}{% endblock page_actions %}
+                {% block page_actions_2 %}{% block pm_actions_2 %}{% endblock pm_actions_2 %}{% endblock page_actions_2 %}
+                {% block page_actions_3 %}{% block pm_actions_3 %}{% endblock pm_actions_3 %}{% endblock page_actions_3 %}
+                {% block page_actions_4 %}{% block pm_actions_4 %}{% endblock pm_actions_4 %}{% endblock page_actions_4 %}
+                {% block page_actions_5 %}{% block pm_actions_5 %}{% endblock pm_actions_5 %}{% endblock page_actions_5 %}
+                {% block page_actions_6 %}{% block pm_actions_6 %}{% endblock pm_actions_6 %}{% endblock page_actions_6 %}
+                {% block page_actions_7 %}{% block pm_actions_7 %}{% endblock pm_actions_7 %}{% endblock page_actions_7 %}
+                {% block page_actions_8 %}{% block pm_actions_8 %}{% endblock pm_actions_8 %}{% endblock page_actions_8 %}
+              </div>
+            </div>
+
+          {% block content_inner %}
+            <div class="{% block module_content_wrapper_class %}module-content-wrapper{% endblock %}">
+              {% block pm_content %}{% endblock pm_content %}
+            </div>
+          {% endblock content_inner %}
+        </div>
+      {% endblock content %}
+    </main>
+  </div>
+
+  {% block base_scripts %}
+  <script>
+    (function() {
+      var loadResource = window.loadBootstrapResource;
+      var bootstrapCDNs = window.bootstrapCDNs || { js: ['{% static "js/bootstrap.bundle.min.js" %}'] };
+      if (loadResource && !window.bootstrap) setTimeout(function() { loadResource('js', bootstrapCDNs.js || bootstrapCDNs); }, 2000);
+    })();
+  </script>
+  {% endblock base_scripts %}
+
+  {% block extra_js %}
+    <script src="{% static 'js/components/sidebar_submenu_toggle.js' %}"></script>
+    {% block module_base_scripts %}{% endblock %}
+    {% block module_scripts %}{% endblock %}
+    {% block module_extra_js %}{% endblock %}
+  {% endblock extra_js %}
+
+  {% if notification_widget_enabled %}
+    <script src="{% static 'js/notification_widget.js' %}"></script>
+  {% endif %}
+
+  {% block extra_scripts %}{% endblock extra_scripts %}
+</body>
+</html>

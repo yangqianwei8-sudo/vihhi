@@ -3,6 +3,10 @@
  * 用于统一管理列表页面的布局结构（筛选栏、操作栏、数据表格、分页等）
  * 维海科技信息化管理平台
  * 版本: 1.0
+ *
+ * 【严禁私自引用】
+ * 本文件仅允许通过 common.css 的 @import 引入，禁止在模板、其他 CSS 或 JS 中
+ * 使用 <link>、@import 或 {% static %} 等方式直接引用本文件。
  */
 
 /* ============================================
@@ -33,7 +37,7 @@
     justify-content: space-between;
     align-items: center;
     padding: var(--spacing-md) 0 4px 0;
-    border-bottom: 2px solid var(--vh-border);
+    border-bottom: 1px solid var(--vh-border);
     margin-bottom: var(--spacing-md);
 }
 
@@ -157,16 +161,31 @@
 }
 
 /* ============================================
-   筛选栏区域
+   筛选栏区域（卡片）
    ============================================ */
-.list-page-filters {
-    background: var(--vh-card-bg);
+.card.list-page-filters {
     border-radius: 0 !important; /* 继承父模板直角样式 */
-    padding: 12px !important; /* 压缩内边距 */
     margin-bottom: 8px !important; /* 压缩间距 */
-    box-shadow: var(--shadow-md);
     border: 1px solid var(--vh-border);
     position: relative !important; /* 为固定按钮提供定位上下文 */
+}
+.list-page-filters .list-page-filters-body {
+    padding: 12px; /* 与原先容器内边距一致 */
+    overflow-x: hidden; /* 防止栅格负边距导致内容超出卡片 */
+}
+/* 筛选卡片内栅格不使用负边距，避免输入框超出卡片 */
+.list-page-filters .list-page-filter-row.row {
+    margin-left: 0;
+    margin-right: 0;
+}
+/* 筛选项与输入框不超出所在列，注意边距 */
+.list-page-filters .list-page-filter-item {
+    min-width: 0;
+}
+.list-page-filters .list-page-filter-item input,
+.list-page-filters .list-page-filter-item select {
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .list-page-filters-header {
@@ -251,9 +270,32 @@
 .list-page-filter-row {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--spacing-md);
     align-items: flex-end;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: 0;
+}
+
+/* 使用 Bootstrap 栅格时（row-cols-2 row-cols-md-5）：每排 5 格含筛选按钮 */
+.list-page-filter-row.row .list-page-filter-item,
+.list-page-filter-row.row .list-page-filter-actions {
+    margin-bottom: 0;
+}
+
+/* 强制筛选行按基模排版：小屏每排 2 格，中屏及以上每排 5 格（含筛选按钮） */
+.list-page-filters .list-page-filter-row.row.row-cols-2.row-cols-md-5 > * {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+}
+@media (max-width: 767.98px) {
+    .list-page-filters .list-page-filter-row.row.row-cols-2.row-cols-md-5 > * {
+        width: 50%;
+        max-width: 50%;
+    }
+}
+@media (min-width: 768px) {
+    .list-page-filters .list-page-filter-row.row.row-cols-2.row-cols-md-5 > * {
+        width: 20%;
+        max-width: 20%;
+    }
 }
 
 /* 让 form 标签不影响 flex 布局 */
@@ -265,8 +307,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
-    min-width: 150px;
-    flex: 0 1 auto;
+    min-width: 0;
 }
 
 .list-page-filter-item label {
@@ -1280,8 +1321,8 @@
     }
     
     /* 筛选条件响应式样式 */
-    .list-page-filters {
-        padding: 8px !important;
+    .list-page-filters .list-page-filters-body {
+        padding: 8px;
     }
     
     .filter-label {
@@ -2052,7 +2093,7 @@ html {
 
 .group-header td {
     padding: var(--spacing-md) !important;
-    border-bottom: 2px solid var(--vh-border) !important;
+    border-bottom: 1px solid var(--vh-border) !important;
     background: var(--vh-surface) !important;
 }
 
@@ -2117,9 +2158,8 @@ html {
 }
 
 /* ============================================
-   兼容旧类名样式（原 list_page_base_v2.css）
-   所有样式已从 list_page_base_v2.css 迁移并统一管理
-   文件已删除，兼容样式保留在此处
+   兼容旧类名样式（原 list_page_base_v2.css，该文件已删除）
+   兼容样式仅保留于此，由 common.css 统一引入
    ============================================ */
 
 /* 通用直角样式（兼容旧版） */

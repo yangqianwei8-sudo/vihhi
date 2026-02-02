@@ -4,6 +4,8 @@
 {% block page_title %}目标分解列表{% endblock page_title %}
 {% block page_subtitle %}查看已分解的目标{% endblock page_subtitle %}
 
+{% block search_placeholder %}目标编号、名称、负责人{% endblock %}
+
 {% block module_styles %}
   {{ block.super }}
   <style>
@@ -21,50 +23,46 @@
   </style>
 {% endblock %}
 
-{% block list_filters_content %}
-  <div class="col-md-3">
-    <label class="form-label">搜索</label>
-    <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="目标编号、名称、负责人">
-  </div>
-  <div class="col-md-2">
-    <label class="form-label">状态</label>
-    <select name="status" class="form-select">
+{% block list_filters_extra %}
+  <div class="col list-page-filter-item" data-filter-key="status">
+    <label class="list-page-filter-label">状态</label>
+    <select name="status" class="form-select form-select-sm">
       <option value="">全部状态</option>
       {% for value, label in status_options %}
       <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
   </div>
-  <div class="col-md-2">
-    <label class="form-label">目标层级</label>
-    <select name="level" class="form-select">
+  <div class="col list-page-filter-item" data-filter-key="level">
+    <label class="list-page-filter-label">目标层级</label>
+    <select name="level" class="form-select form-select-sm">
       <option value="">全部层级</option>
       {% for value, label in level_choices %}
       <option value="{{ value }}" {% if level_filter == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
   </div>
-  <div class="col-md-2">
-    <label class="form-label">目标类型</label>
-    <select name="goal_type" class="form-select">
+  <div class="col list-page-filter-item" data-filter-key="goal_type">
+    <label class="list-page-filter-label">目标类型</label>
+    <select name="goal_type" class="form-select form-select-sm">
       <option value="">全部类型</option>
       {% for value, label in goal_type_choices %}
       <option value="{{ value }}" {% if goal_type_filter == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
   </div>
-  <div class="col-md-2">
-    <label class="form-label">目标周期</label>
-    <select name="goal_period" class="form-select">
+  <div class="col list-page-filter-item" data-filter-key="goal_period">
+    <label class="list-page-filter-label">目标周期</label>
+    <select name="goal_period" class="form-select form-select-sm">
       <option value="">全部周期</option>
       {% for value, label in goal_period_choices %}
       <option value="{{ value }}" {% if goal_period_filter == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">负责人</label>
-    <select name="responsible" class="form-select">
+  <div class="col list-page-filter-item" data-filter-key="responsible">
+    <label class="list-page-filter-label">负责人</label>
+    <select name="responsible" class="form-select form-select-sm">
       <option value="">全部负责人</option>
       {% for u in all_users %}
       <option value="{{ u.id }}" {% if responsible_filter|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>
@@ -73,7 +71,7 @@
       {% endfor %}
     </select>
   </div>
-{% endblock list_filters_content %}
+{% endblock list_filters_extra %}
 
 {% block list_table_headers %}
   <th>目标编号</th>

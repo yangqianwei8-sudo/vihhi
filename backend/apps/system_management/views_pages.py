@@ -125,6 +125,7 @@ def account_settings(request):
     roles = user.roles.all().order_by("name")
     permission_codes = sorted(get_user_permission_codes(user))
 
+    permission_set = get_user_permission_codes(user)
     context = {
         "user_obj": user,
         "active_tab": tab,
@@ -137,6 +138,15 @@ def account_settings(request):
         "permission_codes": permission_codes,
         "position_choices": position_choices,
     }
+    context["full_top_nav"] = _build_full_top_nav(permission_set, request.user)
+    context["sidebar_nav"] = _build_system_management_sidebar_nav(
+        permission_set,
+        request_path=request.path,
+        active_id="account_settings",
+        user=request.user,
+    )
+    context["sidebar_title"] = "系统管理"
+    context["sidebar_subtitle"] = "System Management"
     return render(request, "system_management/account_settings.html", context)
 
 
@@ -267,25 +277,33 @@ def operation_logs(request):
     if not is_system_admin:
         from django.core.exceptions import PermissionDenied
         raise PermissionDenied("仅系统管理员可以访问操作日志。")
-    summary_cards = []
-    context = _context(
-        "操作日志",
-        "🧾",
-        "记录系统操作行为与异常告警，为审计与问题排查提供依据。",
-        summary_cards=summary_cards,
-        sections=[
-            {
-                "title": "日志视图",
-                "description": "查看不同维度的日志信息。",
-                "items": [
-                    {"label": "用户操作", "description": "审计用户关键操作记录。", "url": "#", "icon": "🧑‍💼"},
-                    {"label": "系统运行", "description": "监控系统服务运行情况。", "url": "#", "icon": "🖥"},
-                    {"label": "异常告警", "description": "处理系统异常与安全告警。", "url": "#", "icon": "🚨"},
-                ],
-            }
-        ],
+
+    permission_set = get_user_permission_codes(request.user)
+    sections = [
+        {
+            "title": "日志视图",
+            "description": "查看不同维度的日志信息。",
+            "items": [
+                {"label": "用户操作", "description": "审计用户关键操作记录。", "url": "#", "icon": "🧑‍💼"},
+                {"label": "系统运行", "description": "监控系统服务运行情况。", "url": "#", "icon": "🖥"},
+                {"label": "异常告警", "description": "处理系统异常与安全告警。", "url": "#", "icon": "🚨"},
+            ],
+        }
+    ]
+    context = {
+        "sections": sections,
+    }
+    context["full_top_nav"] = _build_full_top_nav(permission_set, request.user)
+    context["sidebar_nav"] = _build_system_management_sidebar_nav(
+        permission_set,
+        request_path=request.path,
+        active_id="operation_logs",
+        user=request.user,
     )
-    return render(request, "shared/center_dashboard.html", context)
+    context["sidebar_title"] = "系统管理"
+    context["sidebar_subtitle"] = "System Management"
+
+    return render(request, "system_management/operation_logs.html", context)
 
 
 @login_required
@@ -355,14 +373,17 @@ def data_dictionary(request):
         'type_count': type_count,
     }
     
-    # 添加系统管理的侧边栏导航
-    context['sidebar_nav'] = _build_system_management_sidebar_nav(
-        permission_set, 
+    # 添加顶部导航与侧边栏
+    context["full_top_nav"] = _build_full_top_nav(permission_set, request.user)
+    context["sidebar_nav"] = _build_system_management_sidebar_nav(
+        permission_set,
         request_path=request.path,
-        active_id='data_dictionary',
+        active_id="data_dictionary",
         user=request.user,
     )
-    
+    context["sidebar_title"] = "系统管理"
+    context["sidebar_subtitle"] = "System Management"
+
     return render(request, "system_management/data_dictionary.html", context)
 
 
@@ -406,6 +427,7 @@ def permission_matrix(request):
     for item in permission_items:
         module_catalog[item.module].append(item)
 
+    permission_set = get_user_permission_codes(request.user)
     context = {
         "role_entries": role_entries,
         "module_catalog": sorted(
@@ -415,6 +437,15 @@ def permission_matrix(request):
         "permission_total": permission_items.count(),
         "role_total": roles.count(),
     }
+    context["full_top_nav"] = _build_full_top_nav(permission_set, request.user)
+    context["sidebar_nav"] = _build_system_management_sidebar_nav(
+        permission_set,
+        request_path=request.path,
+        active_id="permission_matrix",
+        user=request.user,
+    )
+    context["sidebar_title"] = "系统管理"
+    context["sidebar_subtitle"] = "System Management"
     return render(request, "system_management/permission_matrix.html", context)
 
 
@@ -486,7 +517,7 @@ def feedback_list(request):
     
     # 排序和分页
     queryset = queryset.order_by('-submitted_at')
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page = paginator.get_page(page_num)
     
     # 统计信息
@@ -602,10 +633,38 @@ def _build_system_management_sidebar_nav(permission_set, request_path=None, acti
                     'admin_only': True,
                 },
                 {
+                    'id': 'approval_detail_example',
+                    'label': '三栏布局模板（审批）',
+                    'icon': '📋',
+                    'url_name': 'system_pages:approval_detail_example',
+                    'admin_only': True,
+                },
+                {
+                    'id': 'three_column_form_example',
+                    'label': '三栏布局表单示例',
+                    'icon': '📑',
+                    'url_name': 'system_pages:three_column_form_example',
+                    'admin_only': True,
+                },
+                {
                     'id': 'three_column_layout_base_example',
                     'label': '三栏布局基模板示例',
                     'icon': '📑',
                     'url_name': 'system_pages:three_column_layout_base_example',
+                    'admin_only': True,
+                },
+                {
+                    'id': 'two_column_layout_base_example',
+                    'label': '两栏布局基模板示例',
+                    'icon': '📄',
+                    'url_name': 'system_pages:two_column_layout_base_example',
+                    'admin_only': True,
+                },
+                {
+                    'id': 'module_base_example',
+                    'label': '模块基模板示例',
+                    'icon': '📋',
+                    'url_name': 'system_pages:module_base_example',
                     'admin_only': True,
                 },
                 {
@@ -791,7 +850,7 @@ def example_form(request):
     # 添加顶部导航
     context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
     
-    return render(request, "system_management/example_form.html", context)
+    return render(request, "shared/example/example_form.html", context)
 
 
 @login_required
@@ -880,7 +939,7 @@ def create_form_example(request):
     # 添加顶部导航
     context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
     
-    return render(request, "system_management/create_form_example.html", context)
+    return render(request, "shared/example/create_form_example.html", context)
 
 
 @login_required
@@ -953,7 +1012,7 @@ def detail_page_example(request):
     # 添加顶部导航
     context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
     
-    return render(request, "system_management/detail_page_example.html", context)
+    return render(request, "shared/example/detail_page_example.html", context)
 
 
 @login_required
@@ -984,7 +1043,7 @@ def list_page_example(request):
     ]
     
     # 分页
-    paginator = Paginator(example_data, 10)
+    paginator = Paginator(example_data, 13)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
@@ -1010,11 +1069,117 @@ def list_page_example(request):
     context['page_obj'] = page_obj
     context['page_title'] = '列表页面示例'
     context['description'] = '完全按照 list_page_base.html 模板渲染'
+    context['show_list_checkboxes'] = True
     
-    return render(request, "system_management/list_page_example.html", context)
+    return render(request, "shared/example/list_page_example.html", context)
 
 
 @login_required
+def approval_detail_example(request):
+    """审批详情示例 - 按 workflow 审批详情页模板展示效果，使用静态示例数据（仅 admin 可访问）"""
+    if not _is_admin(request.user):
+        raise PermissionDenied("仅管理员可访问示例表单模块。")
+    permission_set = get_user_permission_codes(request.user)
+
+    # 模拟审批实例与关联对象（与审批详情页模板所需结构一致）
+    class MockNode:
+        def __init__(self, name):
+            self.name = name
+
+    class MockUser:
+        def __init__(self, pk, username):
+            self.id = pk
+            self.username = username
+
+    class MockWorkflow:
+        def __init__(self, name, allow_transfer=True):
+            self.name = name
+            self.allow_transfer = allow_transfer
+
+    class MockInstance:
+        def __init__(self):
+            self.id = 0
+            self.instance_number = "WF-EXAMPLE-2024-001"
+            self.workflow = MockWorkflow("商机审批流程", allow_transfer=True)
+            self.status = "pending"
+            self.current_node = MockNode("部门负责人审批")
+            self.applicant = MockUser(1, request.user.username)
+            self.apply_time = timezone.now() - timezone.timedelta(days=1)
+            self.apply_comment = "请审批该商机立项申请，预算与资源已评估。"
+
+        def get_status_display(self):
+            return {"pending": "审批中", "approved": "已通过", "rejected": "已驳回"}.get(
+                self.status, self.status
+            )
+
+    class MockRecord:
+        def __init__(self, node_name, approver_name, result, comment, approval_time, is_obsolete=False, transferred_to=None):
+            self.node = MockNode(node_name)
+            self.approver = MockUser(0, approver_name)
+            self.result = result
+            self.comment = comment
+            self.approval_time = approval_time
+            self.is_obsolete = is_obsolete
+            self.transferred_to = MockUser(0, transferred_to) if transferred_to else None
+
+    instance = MockInstance()
+    t = timezone.now()
+    records = [
+        MockRecord("提交", "system", None, None, t - timezone.timedelta(days=1), is_obsolete=True),
+        MockRecord("部门负责人审批", "张三", "approved", "同意立项。", t - timezone.timedelta(hours=5), is_obsolete=False),
+    ]
+    can_approve = True
+    all_users = [
+        MockUser(1, "张三"),
+        MockUser(2, "李四"),
+        MockUser(3, "王五"),
+    ]
+
+    approval_allow_transfer = getattr(instance.workflow, "allow_transfer", True)
+    approval_form_action = "#"
+    transfer_form_action = "#"
+
+    context = {
+        "instance": instance,
+        "records": records,
+        "can_approve": can_approve,
+        "all_users": all_users,
+        "approval_allow_transfer": approval_allow_transfer,
+        "approval_form_action": approval_form_action,
+        "transfer_form_action": transfer_form_action,
+    }
+    context["sidebar_nav"] = _build_system_management_sidebar_nav(
+        permission_set,
+        request_path=request.path,
+        active_id="approval_detail_example",
+        user=request.user,
+    )
+    context["full_top_nav"] = _build_full_top_nav(permission_set, request.user)
+
+    return render(request, "shared/example/approval_detail_example.html", context)
+
+
+@login_required
+def three_column_form_example(request):
+    """三栏布局表单示例 - 使用 three_column_layout_approval_base 的表单示例（仅 admin 可访问）"""
+    if not _is_admin(request.user):
+        raise PermissionDenied("仅管理员可访问示例表单模块。")
+    permission_set = get_user_permission_codes(request.user)
+    context = {
+        'page_title': '三栏布局表单示例',
+    }
+    context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+    context['sidebar_nav'] = _build_system_management_sidebar_nav(
+        permission_set,
+        request_path=request.path,
+        active_id='three_column_form_example',
+        user=request.user,
+    )
+    context['sidebar_title'] = '系统管理'
+    context['sidebar_subtitle'] = 'System Management'
+    return render(request, "shared/example/three_column_form_example.html", context)
+
+
 @login_required
 def three_column_layout_base_example(request):
     """三栏布局基模板示例 - 使用 three_column_layout_base.html 模板（仅 admin 可访问）"""
@@ -1039,7 +1204,54 @@ def three_column_layout_base_example(request):
     context['sidebar_title'] = '系统管理'
     context['sidebar_subtitle'] = 'System Management'
     
-    return render(request, "system_management/three_column_layout_base_example.html", context)
+    return render(request, "shared/example/three_column_layout_base_example.html", context)
+
+
+@login_required
+def two_column_layout_base_example(request):
+    """两栏布局基模板示例 - 直接安全渲染 two_column_layout_base.html（仅 admin 可访问）"""
+    if not _is_admin(request.user):
+        raise PermissionDenied("仅管理员可访问示例表单模块。")
+    permission_set = get_user_permission_codes(request.user)
+
+    context = {
+        'page_title': '两栏布局基模板示例',
+    }
+    context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+    context['sidebar_nav'] = _build_system_management_sidebar_nav(
+        permission_set,
+        request_path=request.path,
+        active_id='two_column_layout_base_example',
+        user=request.user,
+    )
+    context['sidebar_title'] = '系统管理'
+    context['sidebar_subtitle'] = 'System Management'
+
+    return render(request, "shared/example/two_column_layout_base_example.html", context)
+
+
+@login_required
+def module_base_example(request):
+    """模块基模板示例 - 渲染两栏基模板示例页（仅 admin 可访问）"""
+    if not _is_admin(request.user):
+        raise PermissionDenied("仅管理员可访问示例表单模块。")
+    permission_set = get_user_permission_codes(request.user)
+
+    context = _context(
+        "模块基模板示例",
+        "📋",
+        "继承 two_column_layout_base 的页面示例",
+        request=request,
+    )
+    context['sidebar_nav'] = _build_system_management_sidebar_nav(
+        permission_set,
+        request_path=request.path,
+        active_id='module_base_example',
+        user=request.user,
+    )
+    context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
+
+    return render(request, "shared/example/module_base_example.html", context)
 
 
 @login_required
@@ -1528,7 +1740,7 @@ def tracking_example(request):
     
     # 分页
     from django.core.paginator import Paginator
-    paginator = Paginator(converted_records, 10)
+    paginator = Paginator(converted_records, 13)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
@@ -1627,4 +1839,4 @@ def tracking_example(request):
     # 添加顶部导航
     context['full_top_nav'] = _build_full_top_nav(permission_set, request.user)
     
-    return render(request, "system_management/unified_tracking_example.html", context)
+    return render(request, "shared/example/unified_tracking_example.html", context)

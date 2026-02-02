@@ -1022,8 +1022,16 @@ class ContactCooperation(models.Model):
         return max(0, months)
 
 
+# ==================== 模型语义说明（README） ====================
+# CustomerRelationship：客户层面的活跃事实，用于公海判定、客户活跃口径。
+#   - 记录客户级跟进/拜访，参与 auto_move_to_public_sea 的 90 天判定
+# ContactTracking：联系人维度的互动记录，不参与公海判定。
+#   - 挂在 ClientContact 下，用于联系人级跟踪；除非将来调整逻辑，否则不作为公海依据
+# =================================================================
+
+
 class ContactTracking(models.Model):
-    """人员跟踪信息记录模型"""
+    """人员跟踪信息记录模型（联系人维度，不参与公海判定）"""
     TRACKING_TYPE_CHOICES = [
         ('phone', '电话跟踪'),
         ('email', '邮件跟踪'),
@@ -1090,7 +1098,7 @@ class ContactTracking(models.Model):
 
 
 class CustomerRelationship(models.Model):
-    """客户关系记录模型（跟进与拜访记录）"""
+    """客户关系记录模型（客户层面活跃事实，参与公海判定与活跃口径）"""
     RECORD_TYPE_CHOICES = [
         ('followup', '跟进记录'),
         ('visit', '拜访记录'),

@@ -7,8 +7,9 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import Http404
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
 from backend.apps.workflow_engine.models import WorkflowTemplate, ApprovalNode, ApprovalInstance, ApprovalRecord
+from backend.apps.workflow_engine.forms import WorkflowTemplateForm
 from backend.apps.system_management.services import get_user_permission_codes
 from backend.apps.system_management.models import User, Role, Department
 from backend.core.views import _build_full_top_nav, _permission_granted
@@ -18,7 +19,7 @@ from backend.core.views import _build_full_top_nav, _permission_granted
 WORKFLOW_ENGINE_MENU = [
     {
         'id': 'workflow_home',
-        'label': '审批引擎首页',
+        'label': '首页',
         'icon': '🏠',
         'url_name': 'workflow_engine:workflow_home_alt',
         'permission': 'workflow_engine.view',
@@ -38,6 +39,14 @@ WORKFLOW_ENGINE_MENU = [
                 'url_name': 'workflow_engine:workflow_list',
                 'permission': 'workflow_engine.view',
                 'path_keywords': ['workflow', 'workflows'],
+            },
+            {
+                'id': 'workflow_create',
+                'label': '新建流程模板',
+                'icon': '➕',
+                'url_name': 'workflow_engine:workflow_create',
+                'permission': 'workflow_engine.view',
+                'path_keywords': ['workflows/create', 'workflow/create'],
             },
         ],
     },
@@ -442,7 +451,7 @@ def workflow_list(request):
     page_obj = paginator.get_page(page_number)
     
     context = _context(
-        "审批引擎 ----流程模板",
+        "流程模板",
         "⚙️",
         "配置和管理审批流程模板",
         request=request,
@@ -453,6 +462,7 @@ def workflow_list(request):
         'search': search,
         'selected_status': status,
         'status_choices': WorkflowTemplate.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     
     return render(request, 'workflow_engine/workflow_list.html', context)
@@ -481,21 +491,12 @@ def workflow_detail(request, workflow_id):
 @login_required
 def workflow_create(request):
     """创建审批流程模板"""
-    if request.method == 'POST':
+    form = WorkflowTemplateForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
         try:
-            workflow = WorkflowTemplate.objects.create(
-                name=request.POST.get('name'),
-                code=request.POST.get('code'),
-                description=request.POST.get('description', ''),
-                category=request.POST.get('category', ''),
-                status=request.POST.get('status', 'draft'),
-                allow_withdraw=request.POST.get('allow_withdraw') == 'on',
-                allow_reject=request.POST.get('allow_reject') == 'on',
-                allow_transfer=request.POST.get('allow_transfer') == 'on',
-                timeout_hours=int(request.POST.get('timeout_hours', 0) or 0) or None,
-                timeout_action=request.POST.get('timeout_action', 'notify'),
-                created_by=request.user,
-            )
+            workflow = form.save(commit=False)
+            workflow.created_by = request.user
+            workflow.save()
             messages.success(request, f'审批流程 {workflow.name} 创建成功')
             return redirect('workflow_engine:workflow_detail', workflow_id=workflow.id)
         except Exception as e:
@@ -511,6 +512,8 @@ def workflow_create(request):
         request=request,
     )
     context.update({
+        'form': form,
+        'workflow': None,
         'status_choices': WorkflowTemplate.STATUS_CHOICES,
         'timeout_action_choices': WorkflowTemplate._meta.get_field('timeout_action').choices,
     })
@@ -522,22 +525,11 @@ def workflow_create(request):
 def workflow_edit(request, workflow_id):
     """编辑审批流程模板"""
     workflow = get_object_or_404(WorkflowTemplate, id=workflow_id)
+    form = WorkflowTemplateForm(request.POST or None, instance=workflow)
     
-    if request.method == 'POST':
+    if request.method == 'POST' and form.is_valid():
         try:
-            workflow.name = request.POST.get('name')
-            workflow.code = request.POST.get('code')
-            workflow.description = request.POST.get('description', '')
-            workflow.category = request.POST.get('category', '')
-            workflow.status = request.POST.get('status', 'draft')
-            workflow.allow_withdraw = request.POST.get('allow_withdraw') == 'on'
-            workflow.allow_reject = request.POST.get('allow_reject') == 'on'
-            workflow.allow_transfer = request.POST.get('allow_transfer') == 'on'
-            timeout_hours = request.POST.get('timeout_hours', '')
-            workflow.timeout_hours = int(timeout_hours) if timeout_hours else None
-            workflow.timeout_action = request.POST.get('timeout_action', 'notify')
-            workflow.save()
-            
+            form.save()
             messages.success(request, f'审批流程 {workflow.name} 更新成功')
             return redirect('workflow_engine:workflow_detail', workflow_id=workflow.id)
         except Exception as e:
@@ -553,6 +545,7 @@ def workflow_edit(request, workflow_id):
         request=request,
     )
     context.update({
+        'form': form,
         'workflow': workflow,
         'status_choices': WorkflowTemplate.STATUS_CHOICES,
         'timeout_action_choices': WorkflowTemplate._meta.get_field('timeout_action').choices,
@@ -762,7 +755,7 @@ def approval_list(request, mode='pending'):
     
     # GET请求：显示列表（一分为三：待我审批 / 历史审批 / 我的申请，由 URL 区分）
     tab = mode  # 'pending' | 'historical' | 'my_submitted'
-    per_page = request.GET.get('per_page', 20)
+    per_page = request.GET.get('per_page', 13)
     
     # 获取筛选参数
     search = request.GET.get('search', '').strip()
@@ -911,47 +904,58 @@ def approval_detail(request, instance_id):
     
     if instance.content_type and instance.object_id:
         try:
-            content_object = instance.content_type.get_object_for_this_type(id=instance.object_id)
             model_name = instance.content_type.model
-            
-            # 根据不同的业务对象类型，生成详情页链接
+            # 按类型带 select_related 获取，便于审批页展示申请人提交的原始表单信息
+            if model_name == 'businesscontract':
+                from backend.apps.contract_management.models import BusinessContract
+                content_object = BusinessContract.objects.select_related(
+                    'client', 'project', 'opportunity', 'department', 'business_manager'
+                ).filter(id=instance.object_id).first()
+            elif model_name == 'businessopportunity':
+                from backend.apps.opportunity_management.models import BusinessOpportunity
+                content_object = BusinessOpportunity.objects.select_related(
+                    'client', 'business_manager', 'service_type', 'drawing_stage', 'created_by'
+                ).filter(id=instance.object_id).first()
+            elif model_name == 'loanapplication':
+                from backend.apps.administrative_management.models import LoanApplication
+                content_object = LoanApplication.objects.select_related(
+                    'applicant', 'department'
+                ).filter(id=instance.object_id).first()
+            else:
+                content_object = instance.content_type.get_object_for_this_type(id=instance.object_id)
+
+            # 根据不同的业务对象类型，生成业务详情页链接（非审批详情页）
             if model_name == 'client':
-                from django.urls import reverse
                 try:
-                    content_object_detail_url = reverse('business:customer_detail', args=[instance.object_id])
+                    content_object_detail_url = reverse('customer_pages:customer_detail', args=[instance.object_id])
                     content_object_type_name = '客户'
-                except:
+                except Exception:
                     pass
             elif model_name == 'businesscontract':
-                from django.urls import reverse
                 try:
                     content_object_detail_url = reverse('contract_pages:contract_detail', args=[instance.object_id])
                     content_object_type_name = '合同'
                 except:
                     pass
             elif model_name == 'businessopportunity':
-                from django.urls import reverse
                 try:
                     content_object_detail_url = reverse('opportunity_pages:opportunity_detail', args=[instance.object_id])
                     content_object_type_name = '商机'
                 except:
                     pass
             elif model_name == 'project':
-                from django.urls import reverse
                 try:
                     content_object_detail_url = reverse('production_pages:project_detail', args=[instance.object_id])
                     content_object_type_name = '项目'
                 except:
                     pass
             elif model_name == 'plan':
-                from django.urls import reverse
                 try:
                     content_object_detail_url = reverse('plan_pages:plan_detail', args=[instance.object_id])
                     content_object_type_name = '计划'
                 except:
                     pass
             elif model_name == 'sealusage':
-                from django.urls import reverse, NoReverseMatch
                 try:
                     content_object_detail_url = reverse('admin_pages:seal_usage_detail', args=[instance.object_id])
                     content_object_type_name = '用印申请'
@@ -972,6 +976,12 @@ def approval_detail(request, instance_id):
                 # 印章借用没有详情页，不设置详情链接
                 content_object_detail_url = None
                 content_object_type_name = '印章借用'
+            elif model_name == 'loanapplication':
+                try:
+                    content_object_detail_url = reverse('admin_pages:loan_detail', args=[instance.object_id])
+                    content_object_type_name = '借款申请'
+                except Exception:
+                    pass
             else:
                 content_object_type_name = model_name
                 # 对于其他类型，如果没有详情页，不设置详情链接（不显示按钮）
@@ -999,6 +1009,10 @@ def approval_detail(request, instance_id):
         key=lambda r: (r.node.sequence if r.node else 999, r.approval_time or r.created_time)
     )
     
+    approval_allow_transfer = getattr(instance.workflow, 'allow_transfer', False) if instance.workflow else False
+    approval_form_action = reverse('workflow_engine:approval_action', args=[instance.id]) if instance else ''
+    transfer_form_action = reverse('workflow_engine:approval_action', args=[instance.id]) if instance and approval_allow_transfer else ''
+
     context.update({
         'instance': instance,
         'object': instance,  # 为三栏布局模板提供 object 变量
@@ -1011,6 +1025,9 @@ def approval_detail(request, instance_id):
         'content_object_detail_url': content_object_detail_url,
         'content_object_type_name': content_object_type_name,
         'all_users': all_users,  # 用于转交的用户列表
+        'approval_allow_transfer': approval_allow_transfer,
+        'approval_form_action': approval_form_action,
+        'transfer_form_action': transfer_form_action,
     })
     
     # 统一使用三栏布局模板（旧的两栏布局已弃用）

@@ -672,7 +672,7 @@ def incoming_document_list(request):
     documents = documents.order_by('-receive_date', '-created_at')
     
     # 分页（每页20条）
-    paginator = Paginator(documents, 20)
+    paginator = Paginator(documents, 13)
     page_number = request.GET.get('page', 1)
     try:
         documents_page = paginator.page(page_number)
@@ -1255,7 +1255,7 @@ def outgoing_document_list(request):
     documents = documents.order_by('-created_at')
     
     # 分页（每页20条）
-    paginator = Paginator(documents, 20)
+    paginator = Paginator(documents, 13)
     page_number = request.GET.get('page', 1)
     try:
         documents_page = paginator.page(page_number)
@@ -1771,7 +1771,7 @@ def file_category_manage(request):
         queryset = queryset.filter(is_active=False)
     
     # 分页
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page_num = request.GET.get('page', 1)
     try:
         page = paginator.get_page(page_num)
@@ -1839,7 +1839,7 @@ def file_category_list(request, stage_code):
         queryset = queryset.filter(is_active=False)
     
     # 分页
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page_num = request.GET.get('page', 1)
     try:
         page = paginator.get_page(page_num)
@@ -2040,7 +2040,7 @@ def file_template_manage(request):
         queryset = queryset.filter(is_active=False)
     
     # 分页
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page_number = request.GET.get('page', 1)
     try:
         page = paginator.get_page(page_number)

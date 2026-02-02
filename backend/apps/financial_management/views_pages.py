@@ -1880,7 +1880,7 @@ def voucher_management(request):
         vouchers = vouchers.filter(voucher_date__lte=date_to)
     
     # 分页（每页20条）
-    paginator = Paginator(vouchers, 20)
+    paginator = Paginator(vouchers, 13)
     page_number = request.GET.get('page', 1)
     try:
         page_obj = paginator.get_page(page_number)

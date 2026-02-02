@@ -30,12 +30,6 @@
   </div>
 {% endblock list_filters_content %}
 
-{% block list_table_checkbox_header %}
-  <th style="width: 50px;">
-    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
-  </th>
-{% endblock list_table_checkbox_header %}
-
 {% block list_table_headers %}
   <th>供应商编码</th>
   <th>供应商名称</th>
@@ -51,9 +45,7 @@
   {% if page_obj %}
     {% for supplier in page_obj %}
     <tr>
-      <td>
-        <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ supplier.id }}" id="item_{{ supplier.id }}">
-      </td>
+      {% include "shared/_list_row_checkbox_cell.html" with row_id=supplier.id checkbox_name=list_checkbox_name|default:'item_ids' id_prefix=list_checkbox_id_prefix|default:'item_' %}
       <td><code>{{ supplier.code }}</code></td>
       <td>{{ supplier.name }}</td>
       <td>{{ supplier.contact_person|default:"-" }}</td>

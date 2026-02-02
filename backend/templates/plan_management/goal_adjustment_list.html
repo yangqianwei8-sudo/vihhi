@@ -14,14 +14,12 @@
   </style>
 {% endblock %}
 
-{% block list_filters_content %}
-  <div class="col-md-3">
-    <label class="form-label">搜索</label>
-    <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="目标编号、名称、负责人">
-  </div>
-  <div class="col-md-3">
-    <label class="form-label">目标</label>
-    <select name="goal" class="form-select">
+{% block search_placeholder %}目标编号、名称、负责人{% endblock %}
+
+{% block list_filters_extra %}
+  <div class="col list-page-filter-item" data-filter-key="goal">
+    <label class="list-page-filter-label">目标</label>
+    <select name="goal" class="form-select form-select-sm">
       <option value="">全部目标</option>
       {% for goal in all_goals %}
       <option value="{{ goal.id }}" {% if goal_filter|stringformat:"s" == goal.id|stringformat:"s" %}selected{% endif %}>
@@ -30,9 +28,9 @@
       {% endfor %}
     </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">调整申请状态</label>
-    <select name="adjustment_status" class="form-select">
+  <div class="col list-page-filter-item" data-filter-key="adjustment_status">
+    <label class="list-page-filter-label">调整申请状态</label>
+    <select name="adjustment_status" class="form-select form-select-sm">
       <option value="">全部</option>
       <option value="pending" {% if adjustment_status_filter == 'pending' %}selected{% endif %}>待审批</option>
       <option value="approved" {% if adjustment_status_filter == 'approved' %}selected{% endif %}>已批准</option>
@@ -40,7 +38,7 @@
       <option value="none" {% if adjustment_status_filter == 'none' %}selected{% endif %}>无调整申请</option>
     </select>
   </div>
-{% endblock list_filters_content %}
+{% endblock list_filters_extra %}
 
 {% block list_table_headers %}
   <th>目标编号</th>

@@ -834,7 +834,7 @@ def case_list(request):
     cases = cases.order_by(sort_by)
     
     # 分页（每页20条）
-    paginator = Paginator(cases, 20)
+    paginator = Paginator(cases, 13)
     page_number = request.GET.get('page', 1)
     try:
         page_obj = paginator.get_page(page_number)

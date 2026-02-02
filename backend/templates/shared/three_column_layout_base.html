@@ -14,7 +14,13 @@
     <link rel="stylesheet" href="{% static 'css/components/sidebar_v2_fixed.css' %}">
     <link rel="stylesheet" href="{% static 'css/components/detail.css' %}">
     <link rel="stylesheet" href="{% static 'css/layouts/three-column-layout.css' %}">
-    
+    <style>
+    /* 三栏布局基模：extra_modals 中的模态框未打开时不参与布局、不显示，避免在页面底部露出 */
+    .modal:not(.show) {
+        display: none !important;
+        pointer-events: none;
+    }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -31,21 +37,20 @@
             {% endblock sidebar %}
             
             <main class="three-column-main">
+                <div class="three-column-main__header">
+                    <h1 class="three-column-main__title">{% block three_column_main_title %}{% endblock %}</h1>
+                    <div class="three-column-main__subtitle">{% block three_column_main_subtitle %}{% endblock %}</div>
+                </div>
                 <div class="three-column-main__content">
                     {% block main_content %}
-                    {# 中间内容区 - 直接显示内容，无包裹容器 #}
                     {% block main_content_body %}
                     <div class="text-center text-muted py-5">
                         <i class="fas fa-inbox fa-3x mb-3" style="opacity: 0.3;"></i>
                         <p class="mb-0">请在子模板中重写 <code>{% verbatim %}{% block main_content_body %}{% endblock %}{% endverbatim %}</code> 来填充内容</p>
                     </div>
                     {% endblock main_content_body %}
-                    
-                    {# 可选的第二个内容块 #}
                     {% block main_content_card_2 %}
                     {% endblock main_content_card_2 %}
-                    
-                    {# 可选的第三个内容块 #}
                     {% block main_content_card_3 %}
                     {% endblock main_content_card_3 %}
                     {% endblock main_content %}
@@ -84,11 +89,10 @@
         </div>
     </div>
     
-    <!-- 反馈模态框 -->
-    {% include 'system_management/feedback_form_modal.html' %}
-    
+    {% block extra_modals %}{% endblock %}
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+    <script src="{% static 'js/components/sidebar_submenu_toggle.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

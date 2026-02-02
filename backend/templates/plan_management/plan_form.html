@@ -242,11 +242,7 @@
       {% if form.parent_plan.errors %}
       <div class="text-danger small">{{ form.parent_plan.errors }}</div>
       {% endif %}
-      {% if form.parent_plan.help_text %}
-      <div class="form-text text-muted small">{{ form.parent_plan.help_text }}</div>
-      {% else %}
-      <div class="form-text text-muted small">用于计划分解，选择上级计划（仅显示您负责的个人计划）</div>
-      {% endif %}
+      <div class="form-text text-muted small">{% if form.parent_plan.help_text %}{{ form.parent_plan.help_text }}{% else %}选填。可选择上一级计划（仅显示您负责的个人计划，状态为已发布或执行中）；年计划不需要父计划。{% endif %}</div>
     </div>
     {% endif %}
   </div>
@@ -464,7 +460,10 @@
 
       {# 父计划 #}
       <div class="col-5-fields form-field-wrapper">
-        <label for="id_parent_plan" class="form-label">父计划</label>
+        <label for="id_parent_plan" class="form-label">
+          父计划
+          {% if 'parent_plan' in form.fields and form.parent_plan.field.required %}<span class="text-danger">*</span>{% endif %}
+        </label>
         {% if 'parent_plan' in form.fields %}
           {{ form.parent_plan }}
           {% if form.parent_plan.errors %}
@@ -475,7 +474,7 @@
             <option value="">-------</option>
           </select>
         {% endif %}
-        <div class="form-text text-muted small">用于计划分解，选择上级计划（仅显示公司级别计划）</div>
+        <div class="form-text text-muted small">{% if 'parent_plan' in form.fields and form.parent_plan.help_text %}{{ form.parent_plan.help_text }}{% else %}选填。请先选择计划周期后可选择上一级计划（仅显示您负责的个人计划，状态为已发布或执行中）；年计划不需要父计划。{% endif %}</div>
       </div>
     </div>
 

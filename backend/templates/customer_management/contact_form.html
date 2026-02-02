@@ -1,7 +1,7 @@
 {% extends "shared/_partials/_shared_form_wrapper_customer.html" %}
 
 {% block pm_title %}{{ page_title|default:"创建联系人信息" }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">{{ form_page_subtitle_text|default:"请填写联系人基本信息" }}</span>{% endblock %}
+{% block pm_subtitle %}{{ form_page_subtitle_text|default:"请填写联系人基本信息" }}{% endblock %}
 {% block pm_actions %}
 <a href="{% url cancel_url_name|default:'business_pages:contact_list' %}" class="list-btn">
   返回列表
@@ -210,52 +210,50 @@
 
                     <div class="info-section">
                         <h6 class="info-section-title">基本信息</h6>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label class="info-label info-label-required">{{ form.client.label }}</label>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+                                <label class="form-label">{% if form.client.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.client.label }}</label>
                                 {{ form.client }}
                                 {% if form.client.errors %}
-                                <div class="form-error">{{ form.client.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.client.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="col-md-4">
-                                <label class="info-label info-label-required">{{ form.name.label }}</label>
+                            <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+                                <label class="form-label">{% if form.name.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.name.label }}</label>
                                 {{ form.name }}
                                 {% if form.name.errors %}
-                                <div class="form-error">{{ form.name.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="col-md-4">
-                                <label class="info-label info-label-required">{{ form.gender.label }}</label>
+                            <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+                                <label class="form-label">{% if form.gender.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.gender.label }}</label>
                                 {{ form.gender }}
                                 {% if form.gender.errors %}
-                                <div class="form-error">{{ form.gender.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.gender.errors }}</div>
                                 {% endif %}
                             </div>
-                        </div>
-                        <div class="info-grid info-grid-2">
-                            <div class="info-item" style="grid-column: span 2;">
-                                <label class="info-label info-label-required">{{ form.birthplace.label }}</label>
+                            <div class="col-12 form-field-wrapper">
+                                <label class="form-label">{% if form.birthplace.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.birthplace.label }}</label>
                                 <input type="hidden" name="birthplace" id="birthplaceField" value="{% if contact %}{{ contact.birthplace|default:'' }}{% elif form.birthplace.value %}{{ form.birthplace.value }}{% else %}{% endif %}">
                                 <div class="row g-2 mb-2">
-                                    <div class="col-md-4">
+                                    <div class="col-12 col-sm-6 col-lg-4">
                                         <select id="birthplaceProvinceSelect" class="form-select">
                                             <option value="">选择省份</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-12 col-sm-6 col-lg-4">
                                         <select id="birthplaceCitySelect" class="form-select">
                                             <option value="">选择城市</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-12 col-sm-6 col-lg-4">
                                         <select id="birthplaceDistrictSelect" class="form-select">
                                             <option value="">选择区县</option>
                                         </select>
                                     </div>
                                 </div>
                                 {% if form.birthplace.errors %}
-                                <div class="form-error">{{ form.birthplace.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.birthplace.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -283,51 +281,51 @@
                                     {{ form.DELETE }}
                                 </div>
                                 {% endif %}
-                                <div class="info-grid info-grid-2">
-                                    <div class="info-item">
-                                        <label class="info-label info-label-required">{{ form.company.label }}</label>
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6 form-field-wrapper">
+                                        <label class="form-label">{% if form.company.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.company.label }}</label>
                                         <div class="position-relative">
                                             {{ form.company }}
                                             <div id="companyDropdown_career_{{ forloop.counter0 }}" class="autocomplete-dropdown" style="display: none;"></div>
                                         </div>
                                         <small class="text-muted d-block mt-1">输入企业名称（至少2个字符）后自动搜索启信宝，选择匹配的企业将自动填充信息</small>
                                         {% if form.company.errors %}
-                                        <div class="form-error">{{ form.company.errors }}</div>
+                                        <div class="invalid-feedback d-block">{{ form.company.errors }}</div>
                                         {% endif %}
                                     </div>
-                                    <div class="info-item">
-                                        <label class="info-label">{{ form.unified_credit_code.label }}</label>
+                                    <div class="col-12 col-md-6 form-field-wrapper">
+                                        <label class="form-label">{{ form.unified_credit_code.label }}</label>
                                         {{ form.unified_credit_code }}
                                         {% if form.unified_credit_code.errors %}
-                                        <div class="form-error">{{ form.unified_credit_code.errors }}</div>
+                                        <div class="invalid-feedback d-block">{{ form.unified_credit_code.errors }}</div>
                                         {% endif %}
                                     </div>
-                                    <div class="info-item">
-                                        <label class="info-label info-label-required">{{ form.department.label }}</label>
+                                    <div class="col-12 col-md-6 form-field-wrapper">
+                                        <label class="form-label">{% if form.department.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.department.label }}</label>
                                         {{ form.department }}
                                         {% if form.department.errors %}
-                                        <div class="form-error">{{ form.department.errors }}</div>
+                                        <div class="invalid-feedback d-block">{{ form.department.errors }}</div>
                                         {% endif %}
                                     </div>
-                                    <div class="info-item">
-                                        <label class="info-label info-label-required">{{ form.position.label }}</label>
+                                    <div class="col-12 col-md-6 form-field-wrapper">
+                                        <label class="form-label">{% if form.position.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.position.label }}</label>
                                         {{ form.position }}
                                         {% if form.position.errors %}
-                                        <div class="form-error">{{ form.position.errors }}</div>
+                                        <div class="invalid-feedback d-block">{{ form.position.errors }}</div>
                                         {% endif %}
                                     </div>
-                                    <div class="info-item">
-                                        <label class="info-label info-label-required">{{ form.join_date.label }}</label>
+                                    <div class="col-12 col-md-6 form-field-wrapper">
+                                        <label class="form-label">{% if form.join_date.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.join_date.label }}</label>
                                         {{ form.join_date }}
                                         {% if form.join_date.errors %}
-                                        <div class="form-error">{{ form.join_date.errors }}</div>
+                                        <div class="invalid-feedback d-block">{{ form.join_date.errors }}</div>
                                         {% endif %}
                                     </div>
-                                    <div class="info-item">
-                                        <label class="info-label">{{ form.leave_date.label }}</label>
+                                    <div class="col-12 col-md-6 form-field-wrapper">
+                                        <label class="form-label">{{ form.leave_date.label }}</label>
                                         {{ form.leave_date }}
                                         {% if form.leave_date.errors %}
-                                        <div class="form-error">{{ form.leave_date.errors }}</div>
+                                        <div class="invalid-feedback d-block">{{ form.leave_date.errors }}</div>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -351,19 +349,19 @@
                                                 </div>
                                                 <input type="hidden" name="careers-{{ forloop.parentloop.counter0 }}-colleagues-{{ forloop.counter0 }}-DELETE" class="colleague-delete-input">
                                                 <div class="row g-2">
-                                                    <div class="col-md-3">
+                                                    <div class="col-12 col-sm-6 col-lg-3">
                                                         <input type="text" name="careers-{{ forloop.parentloop.counter0 }}-colleagues-{{ forloop.counter0 }}-department"
                                                                class="form-control form-control-sm" placeholder="部门" value="{{ colleague.department }}">
                                                     </div>
-                                                    <div class="col-md-3">
+                                                    <div class="col-12 col-sm-6 col-lg-3">
                                                         <input type="text" name="careers-{{ forloop.parentloop.counter0 }}-colleagues-{{ forloop.counter0 }}-name"
                                                                class="form-control form-control-sm" placeholder="姓名 *" value="{{ colleague.name }}" required>
                                                     </div>
-                                                    <div class="col-md-3">
+                                                    <div class="col-12 col-sm-6 col-lg-3">
                                                         <input type="text" name="careers-{{ forloop.parentloop.counter0 }}-colleagues-{{ forloop.counter0 }}-position"
                                                                class="form-control form-control-sm" placeholder="职位" value="{{ colleague.position }}">
                                                     </div>
-                                                    <div class="col-md-3">
+                                                    <div class="col-12 col-sm-6 col-lg-3">
                                                         <input type="text" name="careers-{{ forloop.parentloop.counter0 }}-colleagues-{{ forloop.counter0 }}-phone"
                                                                class="form-control form-control-sm" placeholder="电话" value="{{ colleague.phone }}">
                                                     </div>
@@ -404,16 +402,16 @@
                                     {{ form.DELETE }}
                                 </div>
                                 {% endif %}
-                                <div class="info-grid info-grid-3">
-                                    <div class="info-item">
-                                        <label class="info-label info-label-required">{{ form.degree.label }}</label>
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+                                        <label class="form-label">{% if form.degree.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.degree.label }}</label>
                                         {{ form.degree }}
                                         {% if form.degree.errors %}
-                                        <div class="form-error">{{ form.degree.errors }}</div>
+                                        <div class="invalid-feedback d-block">{{ form.degree.errors }}</div>
                                         {% endif %}
                                     </div>
-                                    <div class="info-item">
-                                        <label class="info-label info-label-required">{{ form.school.label }}</label>
+                                    <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+                                        <label class="form-label">{% if form.school.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.school.label }}</label>
                                         <div class="position-relative">
                                             <input type="text"
                                                    class="form-control school-search-input"
@@ -430,13 +428,13 @@
                                             {{ form.school_name }}
                                         </div>
                                         {% if form.school.errors %}
-                                        <div class="form-error">{{ form.school.errors }}</div>
+                                        <div class="invalid-feedback d-block">{{ form.school.errors }}</div>
                                         {% endif %}
                                         {% if form.school_name.errors %}
-                                        <div class="form-error">{{ form.school_name.errors }}</div>
+                                        <div class="invalid-feedback d-block">{{ form.school_name.errors }}</div>
                                         {% endif %}
                                     </div>
-                                    <div class="info-item d-flex align-items-end">
+                                    <div class="col-12 col-md-6 col-lg-4 form-field-wrapper d-flex align-items-end">
                                         <div class="form-check">
                                             <input type="checkbox" class="form-check-input" id="use_custom_school_{{ forloop.counter0 }}"data-change="handle_onchange_0">
                                             <label class="form-check-label" for="use_custom_school_{{ forloop.counter0 }}">
@@ -444,20 +442,18 @@
                                             </label>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="info-grid info-grid-2 mt-3">
-                                    <div class="info-item">
-                                        <label class="info-label info-label-required">{{ form.enrollment_date.label }}</label>
+                                    <div class="col-12 col-md-6 form-field-wrapper">
+                                        <label class="form-label">{% if form.enrollment_date.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.enrollment_date.label }}</label>
                                         {{ form.enrollment_date }}
                                         {% if form.enrollment_date.errors %}
-                                        <div class="form-error">{{ form.enrollment_date.errors }}</div>
+                                        <div class="invalid-feedback d-block">{{ form.enrollment_date.errors }}</div>
                                         {% endif %}
                                     </div>
-                                    <div class="info-item">
-                                        <label class="info-label info-label-required">{{ form.graduation_date.label }}</label>
+                                    <div class="col-12 col-md-6 form-field-wrapper">
+                                        <label class="form-label">{% if form.graduation_date.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.graduation_date.label }}</label>
                                         {{ form.graduation_date }}
                                         {% if form.graduation_date.errors %}
-                                        <div class="form-error">{{ form.graduation_date.errors }}</div>
+                                        <div class="invalid-feedback d-block">{{ form.graduation_date.errors }}</div>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -471,51 +467,51 @@
 
                     <div class="info-section">
                         <h6 class="info-section-title">联系方式</h6>
-                        <div class="info-grid info-grid-2">
-                            <div class="info-item">
-                                <label class="info-label">{{ form.phone.label }}</label>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6 form-field-wrapper">
+                                <label class="form-label">{{ form.phone.label }}</label>
                                 {{ form.phone }}
                                 {% if form.phone.errors %}
-                                <div class="form-error">{{ form.phone.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.phone.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="info-item">
-                                <label class="info-label">{{ form.email.label }}</label>
+                            <div class="col-12 col-md-6 form-field-wrapper">
+                                <label class="form-label">{{ form.email.label }}</label>
                                 {{ form.email }}
                                 {% if form.email.errors %}
-                                <div class="form-error">{{ form.email.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.email.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="info-item">
-                                <label class="info-label">{{ form.wechat.label }}</label>
+                            <div class="col-12 col-md-6 form-field-wrapper">
+                                <label class="form-label">{{ form.wechat.label }}</label>
                                 {{ form.wechat }}
                                 <small class="text-muted d-block">可输入多个微信号，用逗号分隔</small>
                                 {% if form.wechat.errors %}
-                                <div class="form-error">{{ form.wechat.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.wechat.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="info-item" style="grid-column: span 2;">
-                                <label class="info-label">{{ form.office_address.label }}</label>
+                            <div class="col-12 form-field-wrapper">
+                                <label class="form-label">{{ form.office_address.label }}</label>
                                 <input type="hidden" name="office_address" id="officeAddressField" value="{% if contact %}{{ contact.office_address|default:'' }}{% elif form.office_address.value %}{{ form.office_address.value }}{% else %}{% endif %}">
                                 <div class="row g-2 mb-2">
-                                    <div class="col-md-4">
+                                    <div class="col-12 col-sm-6 col-lg-4">
                                         <select id="officeProvinceSelect" class="form-select">
                                             <option value="">选择省份</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-12 col-sm-6 col-lg-4">
                                         <select id="officeCitySelect" class="form-select">
                                             <option value="">选择城市</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-12 col-sm-6 col-lg-4">
                                         <select id="officeDistrictSelect" class="form-select">
                                             <option value="">选择区县</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="row">
-                                    <div class="col-md-12">
+                                    <div class="col-12">
                                         <input type="text" id="officeAddressDetailInput" class="form-control"
                                                placeholder="街道、楼栋、门牌等详细地址"
                                                value="">
@@ -523,7 +519,7 @@
                                     </div>
                                 </div>
                                 {% if form.office_address.errors %}
-                                <div class="form-error">{{ form.office_address.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.office_address.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -531,30 +527,30 @@
 
                     <div class="info-section">
                         <h6 class="info-section-title">角色与关系</h6>
-                        <div class="info-grid info-grid-2">
-                            <div class="info-item">
-                                <label class="info-label info-label-required">{{ form.role.label }}</label>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6 form-field-wrapper">
+                                <label class="form-label">{% if form.role.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.role.label }}</label>
                                 {{ form.role }}
                                 {% if form.role.errors %}
-                                <div class="form-error">{{ form.role.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.role.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="info-item">
-                                <label class="info-label info-label-required">{{ form.relationship_level.label }}</label>
+                            <div class="col-12 col-md-6 form-field-wrapper">
+                                <label class="form-label">{% if form.relationship_level.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.relationship_level.label }}</label>
                                 {{ form.relationship_level }}
                                 {% if form.relationship_level.errors %}
-                                <div class="form-error">{{ form.relationship_level.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.relationship_level.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="info-item">
-                                <label class="info-label info-label-required">{{ form.decision_influence.label }}</label>
+                            <div class="col-12 col-md-6 form-field-wrapper">
+                                <label class="form-label">{% if form.decision_influence.field.required %}<span class="text-danger">*</span>{% endif %}{{ form.decision_influence.label }}</label>
                                 {{ form.decision_influence }}
                                 {% if form.decision_influence.errors %}
-                                <div class="form-error">{{ form.decision_influence.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.decision_influence.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="info-item">
-                                <label class="info-label">{{ form.is_primary.label }}</label>
+                            <div class="col-12 col-md-6 form-field-wrapper">
+                                <label class="form-label">{{ form.is_primary.label }}</label>
                                 <div class="form-check">
                                     {{ form.is_primary }}
                                     <label class="form-check-label" for="{{ form.is_primary.id_for_label }}">
@@ -562,7 +558,7 @@
                                     </label>
                                 </div>
                                 {% if form.is_primary.errors %}
-                                <div class="form-error">{{ form.is_primary.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.is_primary.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -571,20 +567,20 @@
                     <div class="info-section">
                         <h6 class="info-section-title">简历信息（可选）</h6>
                         <p class="text-muted small mb-3">上传简历可用于验证联系人信息的客观性，非必须项</p>
-                        <div class="info-grid info-grid-2">
-                            <div class="info-item">
-                                <label class="info-label">{{ form.resume_file.label }}</label>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6 form-field-wrapper">
+                                <label class="form-label">{{ form.resume_file.label }}</label>
                                 {{ form.resume_file }}
                                 <small class="text-muted d-block mt-1">支持格式：PDF、Word、图片；大小限制：10MB</small>
                                 {% if form.resume_file.errors %}
-                                <div class="form-error">{{ form.resume_file.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.resume_file.errors }}</div>
                                 {% endif %}
                             </div>
-                            <div class="info-item">
-                                <label class="info-label">{{ form.resume_source.label }}</label>
+                            <div class="col-12 col-md-6 form-field-wrapper">
+                                <label class="form-label">{{ form.resume_source.label }}</label>
                                 {{ form.resume_source }}
                                 {% if form.resume_source.errors %}
-                                <div class="form-error">{{ form.resume_source.errors }}</div>
+                                <div class="invalid-feedback d-block">{{ form.resume_source.errors }}</div>
                                 {% endif %}
                             </div>
                         </div>

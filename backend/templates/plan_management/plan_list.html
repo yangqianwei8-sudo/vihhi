@@ -4,24 +4,29 @@
 {% block pm_title %}计划列表{% endblock pm_title %}
 {% block pm_subtitle %}查看和管理所有计划{% endblock pm_subtitle %}
 
-{% block list_filters_content %}
-  {# 筛选器区域 #}
-  <div class="list-page-filter-item">
-    <label class="list-page-filter-label">搜索</label>
-    <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="计划编号、名称、负责人">
-  </div>
-  <div class="list-page-filter-item">
+{% block list_page_actions %}
+{% if can_create %}
+<a href="{% url 'plan_pages:plan_create' %}" class="list-btn list-btn-primary">
+  <i class="bi bi-plus-lg me-1"></i>新建计划
+</a>
+{% endif %}
+{% endblock list_page_actions %}
+
+{% block search_placeholder %}计划编号、名称、负责人{% endblock %}
+
+{% block list_filters_extra %}
+  <div class="col list-page-filter-item" data-filter-key="status">
     <label class="list-page-filter-label">状态</label>
-    <select name="status" class="form-select">
+    <select name="status" class="form-select form-select-sm">
       <option value="">全部状态</option>
       {% for value, label in status_options %}
       <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="plan_type">
     <label class="list-page-filter-label">计划类型</label>
-    <select name="plan_type" class="form-select">
+    <select name="plan_type" class="form-select form-select-sm">
       <option value="">全部类型</option>
       <option value="personal" {% if plan_type_filter == 'personal' %}selected{% endif %}>个人计划</option>
       <option value="department" {% if plan_type_filter == 'department' %}selected{% endif %}>部门计划</option>
@@ -29,9 +34,9 @@
       <option value="project" {% if plan_type_filter == 'project' %}selected{% endif %}>项目计划</option>
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="plan_period">
     <label class="list-page-filter-label">计划周期</label>
-    <select name="plan_period" class="form-select">
+    <select name="plan_period" class="form-select form-select-sm">
       <option value="">全部周期</option>
       <option value="daily" {% if plan_period_filter == 'daily' %}selected{% endif %}>日计划</option>
       <option value="weekly" {% if plan_period_filter == 'weekly' %}selected{% endif %}>周计划</option>
@@ -40,9 +45,9 @@
       <option value="yearly" {% if plan_period_filter == 'yearly' %}selected{% endif %}>年计划</option>
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="responsible_person">
     <label class="list-page-filter-label">负责人</label>
-    <select name="responsible_person" class="form-select">
+    <select name="responsible_person" class="form-select form-select-sm">
       <option value="">全部负责人</option>
       {% for u in responsible_options %}
       <option value="{{ u.id }}" {% if responsible_filter|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>
@@ -51,9 +56,9 @@
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="related_goal">
     <label class="list-page-filter-label">关联目标</label>
-    <select name="related_goal" class="form-select">
+    <select name="related_goal" class="form-select form-select-sm">
       <option value="">全部目标</option>
       {% for goal in all_goals %}
       <option value="{{ goal.id }}" {% if related_goal_filter|stringformat:"s" == goal.id|stringformat:"s" %}selected{% endif %}>
@@ -62,21 +67,15 @@
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="date_from">
     <label class="list-page-filter-label">开始日期</label>
-    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="date_to">
     <label class="list-page-filter-label">结束日期</label>
-    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
   </div>
-{% endblock list_filters_content %}
-
-{% block list_table_checkbox_header %}
-  <th style="width: 50px;">
-    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
-  </th>
-{% endblock list_table_checkbox_header %}
+{% endblock list_filters_extra %}
 
 {% block list_table_headers %}
   <th>计划编号</th>
@@ -95,9 +94,7 @@
   {% if page_obj %}
     {% for plan in page_obj %}
     <tr>
-      <td>
-        <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ plan.id }}" id="item_{{ plan.id }}">
-      </td>
+      {% include "shared/_list_row_checkbox_cell.html" with row_id=plan.id checkbox_name=list_checkbox_name|default:'item_ids' id_prefix=list_checkbox_id_prefix|default:'item_' %}
       <td><code>{{ plan.plan_number }}</code></td>
       <td>
         <a href="{% url 'plan_pages:plan_detail' plan.id %}" class="text-dark text-decoration-none fw-medium">

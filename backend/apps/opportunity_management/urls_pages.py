@@ -12,6 +12,7 @@ urlpatterns = [
     path("import/", views_pages.opportunity_import, name="opportunity_import"),
     path("create/", views_pages.opportunity_create, name="opportunity_create"),
     path("<int:opportunity_id>/", views_pages.opportunity_detail, name="opportunity_detail"),
+    path("<int:opportunity_id>/submit-approval/", views_pages.opportunity_submit_for_approval, name="opportunity_submit_for_approval"),
     path("<int:opportunity_id>/edit/", views_pages.opportunity_edit, name="opportunity_edit"),
     path("<int:opportunity_id>/delete/", views_pages.opportunity_delete, name="opportunity_delete"),
     path("<int:opportunity_id>/transition/", views_pages.opportunity_status_transition, name="opportunity_status_transition"),

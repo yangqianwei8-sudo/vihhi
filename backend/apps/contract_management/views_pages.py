@@ -664,7 +664,7 @@ def contract_management_list(request):
         contracts = _apply_contract_filters(contracts, filters)
         
         # 分页
-        paginator = Paginator(contracts, 20)
+        paginator = Paginator(contracts, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -742,6 +742,7 @@ def contract_management_list(request):
         'status_choices': BusinessContract.CONTRACT_STATUS_CHOICES,
         'type_choices': BusinessContract.CONTRACT_TYPE_CHOICES,
         'can_create': can_create,
+        'show_filter_fields_settings_btn': True,
     })
     
     return render(request, "contract_management/contract_management_list.html", context)
@@ -1473,7 +1474,7 @@ def contract_dispute_list(request):
         contracts = _apply_contract_filters(contracts, filters)
         
         # 分页
-        paginator = Paginator(contracts, 20)
+        paginator = Paginator(contracts, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -1538,6 +1539,7 @@ def contract_dispute_list(request):
         'date_from': filters['date_from'],
         'date_to': filters['date_to'],
         'can_create': can_create,
+        'show_filter_fields_settings_btn': True,
     })
     
     return render(request, "contract_management/contract_list.html", context)
@@ -1585,7 +1587,7 @@ def contract_finalize_list(request):
         contracts = _apply_contract_filters(contracts, filters)
         
         # 分页
-        paginator = Paginator(contracts, 20)
+        paginator = Paginator(contracts, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -1650,6 +1652,7 @@ def contract_finalize_list(request):
         'date_from': filters['date_from'],
         'date_to': filters['date_to'],
         'can_create': can_create,
+        'show_filter_fields_settings_btn': True,
     })
     
     return render(request, "contract_management/contract_list.html", context)
@@ -1818,7 +1821,7 @@ def contract_negotiation_list(request):
             negotiations = negotiations.filter(negotiation_date__lte=filters['date_to'])
         
         # 分页
-        paginator = Paginator(negotiations, 20)
+        paginator = Paginator(negotiations, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -1887,6 +1890,7 @@ def contract_negotiation_list(request):
         'date_from': filters['date_from'],
         'date_to': filters['date_to'],
         'can_create': can_create,
+        'show_filter_fields_settings_btn': True,
     })
     
     return render(request, "contract_management/contract_negotiation_list.html", context)
@@ -2164,7 +2168,7 @@ def contract_performance_track(request):
         contracts = _apply_contract_filters(contracts, filters)
         
         # 分页
-        paginator = Paginator(contracts, 20)
+        paginator = Paginator(contracts, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -2226,6 +2230,7 @@ def contract_performance_track(request):
         'selected_type': filters['contract_type'],
         'selected_client_id': filters['client_id'],
         'can_create': can_create,
+        'show_filter_fields_settings_btn': True,
     })
     
     return render(request, "contract_management/contract_list.html", context)
@@ -2281,7 +2286,7 @@ def contract_expiry_reminder(request):
         contracts = _apply_contract_filters(contracts, filters)
         
         # 分页
-        paginator = Paginator(contracts, 20)
+        paginator = Paginator(contracts, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -2340,6 +2345,7 @@ def contract_expiry_reminder(request):
         'search': filters['search'],
         'selected_type': filters['contract_type'],
         'days_ahead': days_ahead,
+        'show_filter_fields_settings_btn': True,
     })
     
     return render(request, "contract_management/contract_list.html", context)
@@ -2403,7 +2409,7 @@ def contract_payment_reminder(request):
             contracts = contracts.filter(id__in=overdue_contract_ids)
         
         # 分页
-        paginator = Paginator(contracts, 20)
+        paginator = Paginator(contracts, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -2459,6 +2465,7 @@ def contract_payment_reminder(request):
         'search': filters['search'],
         'selected_type': filters['contract_type'],
         'overdue_only': filters['overdue_only'],
+        'show_filter_fields_settings_btn': True,
     })
     
     return render(request, "contract_management/contract_list.html", context)
@@ -2542,7 +2549,7 @@ def contract_risk_warning(request):
         contracts = _apply_contract_filters(contracts, filters)
         
         # 分页
-        paginator = Paginator(contracts, 20)
+        paginator = Paginator(contracts, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -2594,6 +2601,7 @@ def contract_risk_warning(request):
         'page_obj': page_obj,
         'search': filters['search'],
         'selected_risk_type': filters['risk_type'],
+        'show_filter_fields_settings_btn': True,
     })
     
     return render(request, "contract_management/contract_list.html", context)
@@ -2643,7 +2651,7 @@ def authorization_letter_list(request):
             letters = letters.filter(created_time__date__lte=date_to)
         
         # 分页
-        paginator = Paginator(letters, 20)
+        paginator = Paginator(letters, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -2977,7 +2985,7 @@ def authorization_letter_template_list(request):
             templates = templates.filter(status=status)
         
         # 分页
-        paginator = Paginator(templates, 20)
+        paginator = Paginator(templates, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -3017,6 +3025,7 @@ def authorization_letter_template_list(request):
         'status': status,
         'template_type_choices': AuthorizationLetterTemplate.TEMPLATE_TYPE_CHOICES,
         'status_choices': AuthorizationLetterTemplate.STATUS_CHOICES,
+        'show_filter_fields_settings_btn': True,
     })
     
     return render(request, "contract_management/authorization_letter_template_list.html", context)

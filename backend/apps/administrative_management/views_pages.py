@@ -1130,7 +1130,7 @@ def affair_list(request):
             affairs = affairs.filter(responsible_user_id=responsible_user_id)
         
         # 分页（每页20条）
-        paginator = Paginator(affairs, 20)
+        paginator = Paginator(affairs, 13)
         page_number = request.GET.get('page', 1)
         try:
             page_obj = paginator.get_page(page_number)
@@ -1170,6 +1170,7 @@ def affair_list(request):
             'module_sidebar_nav': sidebar_menu,  # 兼容模板中的变量名
             'sidebar_title': '行政管理',  # 侧边栏标题
             'sidebar_subtitle': 'Administrative Management',  # 侧边栏副标题
+            'show_list_checkboxes': True,
         })
         return render(request, "administrative_management/affair_list.html", context)
     except Exception as e:
@@ -1346,6 +1347,7 @@ def supply_category_list(request):
         'page': page_obj,  # 兼容模板中的变量名
         'search': search,
         'is_active': is_active_filter,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/supply_category_list.html", context)
 
@@ -1533,6 +1535,7 @@ def supplies_management(request):
         'is_active': is_active,
         'low_stock': low_stock,
         'category_choices': OfficeSupply.CATEGORY_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/supplies_list.html", context)
 
@@ -1641,6 +1644,7 @@ def supply_purchase_list(request):
         'search': search,
         'status': status,
         'status_choices': SupplyPurchase.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/supply_purchase_list.html", context)
 
@@ -1986,6 +1990,7 @@ def supply_request_list(request):
         'search': search,
         'status': status,
         'status_choices': SupplyRequest.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/supply_request_list.html", context)
 
@@ -2832,7 +2837,7 @@ def seal_borrowing_return_list(request):
     
     # 排序和分页
     borrowings = borrowings.order_by('-borrowing_date')
-    paginator = Paginator(borrowings, 20)
+    paginator = Paginator(borrowings, 13)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -2847,6 +2852,7 @@ def seal_borrowing_return_list(request):
         'page_obj': page_obj,
         'borrowings': page_obj,
         'search': search,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/seal_borrowing_return_list.html", context)
 
@@ -3003,7 +3009,7 @@ def seal_usage_list(request):
     
     # 排序和分页
     usages = usages.order_by('-usage_date', '-usage_time')
-    paginator = Paginator(usages, 20)
+    paginator = Paginator(usages, 13)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -3055,6 +3061,7 @@ def seal_usage_list(request):
         'seal_id': seal_id,
         'usage_type_choices': SealUsage.USAGE_TYPE_CHOICES,
         'seal_choices': seal_choices,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/seal_usage_list.html", context)
 
@@ -3131,6 +3138,19 @@ def seal_usage_detail(request, usage_id):
         request=request,
         use_administrative_nav=True
     )
+    approval_allow_transfer = (
+        getattr(approval_instance, 'workflow', None) and getattr(approval_instance.workflow, 'allow_transfer', False)
+    ) if approval_instance else False
+    approval_form_action = ''
+    transfer_form_action = ''
+    if approval_instance:
+        from django.urls import reverse
+        approval_form_action = reverse('workflow_engine:approval_action', args=[approval_instance.id])
+        if approval_allow_transfer:
+            transfer_form_action = approval_form_action
+
+    # “查看详情”指向业务详情页（用印记录详情），非审批详情页
+    content_object_detail_url = reverse('admin_pages:seal_usage_detail', args=[usage.id])
     context.update({
         'object': usage,  # 用于 detail_base.html（基础模板会自动检测 usage_number）
         'usage': usage,
@@ -3139,6 +3159,10 @@ def seal_usage_detail(request, usage_id):
         'records': records,  # 审批记录
         'can_approve': can_approve,  # 是否可以审批
         'all_users': all_users,  # 用于转交的用户列表
+        'approval_allow_transfer': approval_allow_transfer,
+        'approval_form_action': approval_form_action,
+        'transfer_form_action': transfer_form_action,
+        'content_object_detail_url': content_object_detail_url,  # 业务详情页链接，供“查看详情”按钮使用
     })
     return render(request, "administrative_management/seal_usage_detail.html", context)
 
@@ -3423,6 +3447,7 @@ def meeting_room_management(request):
         'status': status,
         'is_active': is_active,
         'status_choices': MeetingRoom.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/meeting_room_list.html", context)
 
@@ -3558,6 +3583,7 @@ def meeting_room_booking_list(request):
         'room_id': room_id,
         'booking_date': booking_date,
         'status_choices': MeetingRoomBooking.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/meeting_room_booking_list.html", context)
 
@@ -3808,6 +3834,7 @@ def vehicle_management(request):
         'is_active': is_active,
         'status_choices': Vehicle.STATUS_CHOICES,
         'vehicle_type_choices': Vehicle.VEHICLE_TYPE_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/vehicle_list.html", context)
 
@@ -3942,6 +3969,7 @@ def vehicle_booking_list(request):
         'vehicle_id': vehicle_id,
         'applicant_id': applicant_id,
         'status_choices': VehicleBooking.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/vehicle_booking_list.html", context)
 
@@ -4333,6 +4361,7 @@ def reception_management(request):
         'host_id': host_id,
         'reception_type_choices': ReceptionRecord.RECEPTION_TYPE_CHOICES,
         'reception_level_choices': ReceptionRecord.RECEPTION_LEVEL_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/reception_list.html", context)
 
@@ -4613,6 +4642,7 @@ def announcement_management(request):
         'is_top': is_top,
         'category_choices': Announcement.CATEGORY_CHOICES,
         'priority_choices': Announcement.PRIORITY_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/announcement_list.html", context)
 
@@ -4800,6 +4830,7 @@ def seal_management(request):
         'is_active': is_active,
         'seal_type_choices': Seal.SEAL_TYPE_CHOICES,
         'status_choices': Seal.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/seal_list.html", context)
 
@@ -4926,6 +4957,7 @@ def asset_management(request):
         'is_active': is_active,
         'category_choices': FixedAsset.CATEGORY_CHOICES,
         'status_choices': FixedAsset.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/asset_list.html", context)
 
@@ -5042,6 +5074,7 @@ def asset_transfer_list(request):
         'search': search,
         'status': status,
         'status_choices': AssetTransfer.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/asset_transfer_list.html", context)
 
@@ -5438,6 +5471,7 @@ def expense_management(request):
         'applicant_id': applicant_id,
         'expense_type_choices': ExpenseReimbursement.EXPENSE_TYPE_CHOICES,
         'status_choices': ExpenseReimbursement.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/expense_list.html", context)
 
@@ -5873,6 +5907,7 @@ def meeting_list(request):
         'meeting_type_choices': Meeting.MEETING_TYPE_CHOICES,
         'status_choices': Meeting.STATUS_CHOICES,
         'rooms': rooms,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/meeting_list.html", context)
 
@@ -6206,6 +6241,7 @@ def travel_list(request):
         'status': status,
         'applicant_id': applicant_id,
         'status_choices': TravelApplication.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/travel_list.html", context)
 
@@ -6475,6 +6511,7 @@ def supplier_list(request):
         'rating': rating,
         'is_active': is_active,
         'rating_choices': Supplier.RATING_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/supplier_list.html", context)
 
@@ -6654,6 +6691,7 @@ def purchase_contract_list(request):
         'status': status,
         'supplier_id': supplier_id,
         'status_choices': PurchaseContract.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/purchase_contract_list.html", context)
 
@@ -6829,6 +6867,7 @@ def purchase_payment_list(request):
         'status': status,
         'contract_id': contract_id,
         'status_choices': PurchasePayment.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/purchase_payment_list.html", context)
 
@@ -7019,6 +7058,7 @@ def inventory_check_list(request):
         'search': search,
         'status': status,
         'check_date': check_date,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/inventory_check_list.html", context)
 
@@ -7296,6 +7336,7 @@ def inventory_adjust_list(request):
         'search': search,
         'status': status,
         'adjust_date': adjust_date,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/inventory_adjust_list.html", context)
 
@@ -7627,6 +7668,7 @@ def loan_list(request):
         'status': status,
         'applicant_id': applicant_id,
         'status_choices': LoanApplication.STATUS_CHOICES,
+        'show_list_checkboxes': True,
     })
     return render(request, "administrative_management/loan_list.html", context)
 

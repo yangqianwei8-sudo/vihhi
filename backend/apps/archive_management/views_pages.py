@@ -1010,7 +1010,7 @@ def project_archive_list(request):
     queryset = queryset.order_by('-created_time')
     
     # 分页（每页20条）
-    paginator = Paginator(queryset, 20)
+    paginator = Paginator(queryset, 13)
     page_number = request.GET.get('page', 1)
     try:
         page = paginator.get_page(page_number)
@@ -3472,7 +3472,7 @@ def archive_search_fulltext(request):
             )
     
     # 分页
-    paginator = Paginator(results, 20)
+    paginator = Paginator(results, 13)
     page = paginator.get_page(page_num)
     
     # 检索耗时
@@ -3655,7 +3655,7 @@ def archive_search_advanced(request):
             )
     
     # 分页
-    paginator = Paginator(results, 20)
+    paginator = Paginator(results, 13)
     page = paginator.get_page(page_num)
     
     # 检索耗时

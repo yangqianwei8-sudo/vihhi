@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/detail_base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
@@ -8,8 +8,8 @@
 {% endblock %}
 
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_list' %}">客户管理</a></li>
-<li class="breadcrumb-item"><a href="{% url 'business_pages:customer_list' %}">客户线索</a></li>
+<li class="breadcrumb-item"><a href="{% url 'customer_pages:customer_list' %}">客户管理</a></li>
+<li class="breadcrumb-item"><a href="{% url 'customer_pages:customer_lead_list' %}">客户线索</a></li>
 <li class="breadcrumb-item active" aria-current="page">{{ lead.company_name }}</li>
 {% endblock %}
 
@@ -17,30 +17,49 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div class="btn-group">
         {% if not lead.responsible_user %}
-        <a href="{% url 'business_pages:customer_lead_claim' lead.id %}" class="btn btn-success">认领线索</a>
+        <a href="{% url 'customer_pages:customer_lead_claim' lead.id %}" class="btn btn-success">认领线索</a>
         {% endif %}
         {% if can_edit %}
-        <a href="{% url 'business_pages:customer_lead_edit' lead.id %}" class="btn btn-primary">编辑线索</a>
+        <a href="{% url 'customer_pages:customer_lead_edit' lead.id %}" class="btn btn-primary">编辑线索</a>
         {% endif %}
-        {% if can_add_followup %}
-        <a href="{% url 'business_pages:customer_lead_followup_create' lead.id %}" class="btn btn-info">添加跟进</a>
-        {% endif %}
-        {% if not lead.converted_client %}
-        <button type="button" class="btn btn-warning"data-click="handle_onclick_0">转化为客户</button>
+        {% if not lead.converted_client and can_edit %}
+        <form method="post" action="{% url 'customer_pages:customer_lead_convert' lead.id %}" style="display: inline;" onsubmit="return confirm('确认将此线索转化为客户？');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning">转化为客户</button>
+        </form>
         {% endif %}
     </div>
-    <a href="{% url 'business_pages:customer_list' %}" class="btn btn-outline-secondary">返回列表</a>
+    <a href="{% url 'customer_pages:customer_lead_list' %}" class="btn btn-outline-secondary">返回列表</a>
 </div>
 
 <div class="info-card">
     <div class="info-card-header">
         <h5 class="info-card-title">基本信息</h5>
+        {% if lead.converted_client %}
+        <a href="{% url 'customer_pages:customer_detail' client_id=lead.converted_client.id %}" class="btn btn-sm btn-outline-success">查看已转化客户</a>
+        {% endif %}
     </div>
     <div class="info-card-body">
         <div class="info-grid">
             <div class="info-item">
                 <span class="info-label">公司名称</span>
                 <span class="info-value">{{ lead.company_name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">联系人</span>
+                <span class="info-value">{{ lead.contact_name|default:"—" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">联系电话</span>
+                <span class="info-value">{{ lead.contact_phone|default:"—" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">联系邮箱</span>
+                <span class="info-value">{{ lead.contact_email|default:"—" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">地区</span>
+                <span class="info-value">{% if lead.province or lead.city or lead.district %}{{ lead.province|default:"" }}{{ lead.city|default:"" }}{{ lead.district|default:"" }}{% else %}—{% endif %}</span>
             </div>
         </div>
     </div>
@@ -103,64 +122,17 @@
 </div>
 
 <div class="info-card">
-    <div class="info-card-header d-flex justify-content-between align-items-center">
-        <h5 class="info-card-title">跟进记录</h5>
-        {% if can_add_followup %}
-        <a href="{% url 'business_pages:customer_lead_followup_create' lead.id %}" class="btn btn-sm btn-primary">+ 添加跟进</a>
-        {% endif %}
+    <div class="info-card-header">
+        <h5 class="info-card-title">最新跟进记录</h5>
     </div>
     <div class="info-card-body">
-        {% if followups %}
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>跟进时间</th>
-                        <th>跟进方式</th>
-                        <th>跟进内容</th>
-                        <th>客户反馈</th>
-                        <th>下一步计划</th>
-                        <th>跟进人</th>
-                        {% if can_edit %}
-                        <th>操作</th>
-                        {% endif %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for followup in followups %}
-                    <tr>
-                        <td>{{ followup.follow_date|date:"Y-m-d H:i" }}</td>
-                        <td>
-                            <span class="badge bg-info">{{ followup.get_follow_type_display }}</span>
-                        </td>
-                        <td>{{ followup.content|truncatewords:10|default:"—" }}</td>
-                        <td>{{ followup.customer_feedback|truncatewords:5|default:"—" }}</td>
-                        <td>
-                            {% if followup.next_plan %}
-                            {{ followup.next_plan|truncatewords:5 }}
-                            {% if followup.next_follow_date %}
-                            <br><small class="text-muted">预计: {{ followup.next_follow_date|date:"Y-m-d H:i" }}</small>
-                            {% endif %}
-                            {% else %}
-                            —
-                            {% endif %}
-                        </td>
-                        <td>{{ followup.created_by.get_full_name|default:followup.created_by.username }}</td>
-                        {% if can_edit %}
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="{% url 'business_pages:customer_lead_followup_edit' lead.id followup.id %}" class="btn btn-outline-primary btn-sm">编辑</a>
-                                <a href="{% url 'business_pages:customer_lead_followup_delete' lead.id followup.id %}" class="btn btn-outline-danger btn-sm"data-click="handle_onclick_1"确认删除此跟进记录？')">删除</a>
-                            </div>
-                        </td>
-                        {% endif %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="text-muted">暂无跟进记录</p>
+        {% if lead.actual_followup_time %}
+        <p class="text-muted small mb-2">跟进时间：{{ lead.actual_followup_time|date:"Y-m-d H:i" }}</p>
+        {% endif %}
+        {% if lead.latest_followup_note %}
+        <p class="mb-0">{{ lead.latest_followup_note|linebreaks }}</p>
+        {% elif not lead.actual_followup_time %}
+        <p class="text-muted mb-0">暂无跟进记录，可在编辑时更新</p>
         {% endif %}
     </div>
 </div>
@@ -187,61 +159,4 @@
     </div>
 </div>
 
-<script>
-
-    function getCsrfToken() {
-        const token = document.querySelector('[name=csrfmiddlewaretoken]');
-        return token ? token.value : '';
-    }
-    // 转化为客户
-    function convertLead(leadId) {
-        if (!confirm('确认将此线索转化为客户？')) return;
-
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '{% url "business_pages:customer_lead_bulk_action" %}';
-
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrfmiddlewaretoken';
-        csrfInput.value = getCsrfToken();
-        form.appendChild(csrfInput);
-
-        const actionInput = document.createElement('input');
-        actionInput.type = 'hidden';
-        actionInput.name = 'action';
-        actionInput.value = 'convert';
-        form.appendChild(actionInput);
-
-        const leadIdInput = document.createElement('input');
-        leadIdInput.type = 'hidden';
-        leadIdInput.name = 'lead_ids';
-        leadIdInput.value = leadId;
-        form.appendChild(leadIdInput);
-
-        document.body.appendChild(form);
-        form.submit();
-    }
-
-    // 事件处理器: handle_onclick_0
-    document.addEventListener('DOMContentLoaded', function() {
-        const element = document.querySelector('.btn');
-        if (element) {
-            element.addEventListener('click', function(e) {
-                convertLead({{ lead.id }})
-            });
-        }
-    });
-
-    // 事件处理器: handle_onclick_1
-    document.addEventListener('DOMContentLoaded', function() {
-        const element = document.querySelector('.btn');
-        if (element) {
-            element.addEventListener('click', function(e) {
-                return confirm(
-            });
-        }
-    });
-
-</script>
 {% endblock %}

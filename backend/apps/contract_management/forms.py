@@ -409,6 +409,8 @@ class AuthorizationLetterForm(forms.ModelForm):
             self.fields['client'].widget.attrs['id'] = 'id_client'
         if 'opportunity' in self.fields:
             self.fields['opportunity'].widget.attrs['id'] = 'id_opportunity'
+        if 'project' in self.fields:
+            self.fields['project'].widget.attrs['id'] = 'id_project'
         if 'client_name' in self.fields:
             self.fields['client_name'].widget.attrs['id'] = 'id_client_name'
 

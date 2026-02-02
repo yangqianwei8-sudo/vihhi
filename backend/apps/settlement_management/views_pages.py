@@ -586,6 +586,7 @@ def payment_plan_list(request):
         'status_filter': status_filter,
         'plan_type': plan_type,
         'status_choices': BusinessPaymentPlan.STATUS_CHOICES,
+        'show_filter_fields_settings_btn': True,
     })
     return render(request, "settlement_management/payment_plan_list.html", context)
 
@@ -714,6 +715,7 @@ def payment_record_list(request):
         'start_date': start_date,
         'end_date': end_date,
         'status_choices': PaymentRecord._meta.get_field('status').choices,
+        'show_filter_fields_settings_btn': True,
     })
     return render(request, "settlement_management/payment_record_list.html", context)
 

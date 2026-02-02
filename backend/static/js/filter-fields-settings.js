@@ -24,7 +24,7 @@
     // 默认配置
     const DEFAULT_CONFIG = {
         storageKey: 'filter_fields_settings',
-        containerId: 'basicFilters',
+        containerId: 'filterFieldsContainer',  // list_page_base 中的筛选容器 ID
         modalId: 'filterFieldsSettingsModal',
         listId: 'filterFieldsList',
         settingsBtnId: 'settingsFilterFieldsBtn',
@@ -165,21 +165,12 @@
                 mutations.forEach(mutation => {
                     // 检查是否有节点添加或删除
                     if (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) {
-                        mutation.addedNodes.forEach(node => {
-                            if (node.nodeType === 1 && // Element节点
-                                (node.classList.contains('filter-row') || 
-                                 node.querySelector && node.querySelector('.filter-row'))) {
-                                shouldUpdate = true;
-                            }
-                        });
-                        
-                        mutation.removedNodes.forEach(node => {
-                            if (node.nodeType === 1 && // Element节点
-                                (node.classList.contains('filter-row') || 
-                                 node.querySelector && node.querySelector('.filter-row'))) {
-                                shouldUpdate = true;
-                            }
-                        });
+                        const isFilterRelated = (node) => node.nodeType === 1 && (
+                            node.classList?.contains('filter-row') ||
+                            node.classList?.contains('list-page-filter-item') ||
+                            (node.querySelector && node.querySelector('.filter-row, .list-page-filter-item')));
+                        mutation.addedNodes.forEach(node => { if (isFilterRelated(node)) shouldUpdate = true; });
+                        mutation.removedNodes.forEach(node => { if (isFilterRelated(node)) shouldUpdate = true; });
                     }
                     
                     // 检查属性变化（data-filter-key）
@@ -248,51 +239,117 @@
         }
 
         /**
-         * 从HTML中自动发现所有筛选字段
+         * 从 label 或表单控件提取字段显示名称
+         */
+        getFieldLabel(row, safeKey) {
+            // 优先从 label 元素获取（支持 list-page-filter-label 和 filter-label）
+            const labelEl = row.querySelector('.list-page-filter-label, .filter-label, label');
+            if (labelEl) {
+                const text = labelEl.textContent.replace(/[:：]/g, '').trim();
+                if (text) return text;
+            }
+            // 从 input placeholder 获取
+            const input = row.querySelector('input[placeholder], select, textarea[placeholder]');
+            if (input && input.placeholder) return input.placeholder.trim();
+            // 从 name 转可读文本
+            return this.humanizeFieldName(safeKey);
+        }
+
+        /**
+         * 将字段名转为可读文本（如 search -> 搜索，client_level -> 客户等级）
+         */
+        humanizeFieldName(name) {
+            const map = {
+                search: '关键词', keyword: '关键词', status: '状态', name: '名称',
+                client_level: '客户等级', client_type: '客户类型', credit_level: '信用等级',
+                responsible_user: '负责人', is_active: '状态', source: '来源',
+                date_range: '日期范围', approval_status: '审批状态'
+            };
+            if (map[name]) return map[name];
+            return String(name).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        /**
+         * 从HTML中自动发现所有筛选字段（自动映射表单所有字段）
+         * 逻辑：在筛选容器内找到 form#filterForm，再在 form 内查找所有带 .list-page-filter-item 或 .filter-row 的格子，
+         * 每个格子需有 data-filter-key 或内部 input/select 的 name，作为字段 key，用于模态框列表与显隐/排序。
          */
         initializeFilterFields() {
-            const container = document.getElementById(this.config.containerId);
+            const container = document.getElementById(this.config.containerId) ||
+                             document.getElementById('filterForm') ||
+                             document.querySelector('.list-page-filter-row');
             if (!container) {
-                console.warn(`筛选条件容器 ${this.config.containerId} 未找到`);
+                console.warn(`筛选条件容器 ${this.config.containerId} 或 filterForm 未找到`);
                 return [];
             }
-
-            const filterRows = container.querySelectorAll('.filter-row[data-filter-key]');
+            // 只在表单内查找筛选项，避免误匹配到容器外元素
+            const form = container.tagName === 'FORM' ? container : container.querySelector('form#filterForm') || container.querySelector('form') || container;
             const fields = [];
+            const seenKeys = new Set();
+
+            // 1. 查找显式标记的字段：.list-page-filter-item 或 .filter-row（限定在 form 内）
+            const selectors = '.list-page-filter-item, .filter-row';
+            const filterRows = form.querySelectorAll(selectors);
 
             filterRows.forEach(row => {
-                const rawKey = row.getAttribute('data-filter-key');
-                if (rawKey) {
-                    // 验证和清理key，确保只包含安全字符
-                    const safeKey = this.sanitizeId(String(rawKey).trim());
-                    if (!safeKey) {
-                        console.warn('筛选字段key无效，已跳过:', rawKey);
-                        return;
-                    }
-                    if (safeKey !== rawKey) {
-                        console.warn('筛选字段key包含不安全字符，已清理:', rawKey, '->', safeKey);
-                    }
-
-                    // 从label中提取字段名称（移除冒号）
-                    const labelElement = row.querySelector('.filter-label');
-                    let label = safeKey; // 默认使用清理后的key
-
-                    if (labelElement) {
-                        label = labelElement.textContent.replace(/[:：]/g, '').trim();
-                    }
-
-                    // 检查是否在默认启用列表中（使用清理后的key）
-                    const enabled = this.config.defaultEnabledFields.includes(safeKey);
-
-                    fields.push({
-                        key: safeKey, // 使用清理后的key
-                        label: label,
-                        enabled: enabled
-                    });
+                let rawKey = row.getAttribute('data-filter-key');
+                if (!rawKey) {
+                    // 自动从表单控件获取 key
+                    const control = row.querySelector('input[name], select[name], textarea[name]');
+                    if (control && control.name) rawKey = control.name;
                 }
+                if (!rawKey || seenKeys.has(rawKey)) return;
+
+                const safeKey = this.sanitizeId(String(rawKey).trim());
+                if (!safeKey) return;
+                seenKeys.add(safeKey);
+
+                // 若无 data-filter-key，自动补上便于后续 apply 使用
+                if (!row.getAttribute('data-filter-key')) {
+                    row.setAttribute('data-filter-key', safeKey);
+                }
+
+                const label = this.getFieldLabel(row, safeKey);
+                const enabled = this.config.defaultEnabledFields.length > 0
+                    ? this.config.defaultEnabledFields.includes(safeKey)
+                    : true;
+
+                fields.push({ key: safeKey, label: label, enabled: enabled, element: row });
             });
 
-            return fields;
+            // 2. 查找表单内未被 .list-page-filter-item/.filter-row 包装的 input/select/textarea
+            const formForControls = container.closest('form') || document.getElementById('filterForm') || form;
+            if (formForControls) {
+                form.querySelectorAll('input[name], select[name], textarea[name]').forEach(control => {
+                    const name = control.name;
+                    if (!name || seenKeys.has(name)) return;
+                    if (control.type === 'hidden' || control.type === 'submit' || control.type === 'button') return;
+
+                    const wrapper = control.closest('.list-page-filter-item, .filter-row');
+                    if (wrapper) return; // 已由第 1 步处理
+
+                    const row = control.parentElement;
+                    if (!row || !container.contains(row) || row.tagName === 'FORM') return;
+
+                    const safeKey = this.sanitizeId(String(name).trim());
+                    if (!safeKey) return;
+                    seenKeys.add(safeKey);
+
+                    row.setAttribute('data-filter-key', safeKey);
+                    if (!row.classList.contains('list-page-filter-item') && !row.classList.contains('filter-row')) {
+                        row.classList.add('list-page-filter-item');
+                    }
+
+                    const label = this.getFieldLabel(row, safeKey);
+                    const enabled = this.config.defaultEnabledFields.length > 0
+                        ? this.config.defaultEnabledFields.includes(safeKey)
+                        : true;
+
+                    fields.push({ key: safeKey, label: label, enabled: enabled, element: row });
+                });
+            }
+
+            return fields.map(({ key, label, enabled }) => ({ key, label, enabled }));
         }
 
         /**
@@ -504,8 +561,12 @@
                     this.mutationObserver.disconnect();
                 }
 
-                // 获取所有筛选行（重新从DOM抓取，支持动态添加的字段）
-                const filterRows = Array.from(container.querySelectorAll('.filter-row[data-filter-key]'));
+                // 获取所有筛选行（支持 .list-page-filter-item、.filter-row 及带 data-filter-key 的包装元素）
+                const allRows = container.querySelectorAll('.list-page-filter-item, .filter-row, [data-filter-key]');
+                const filterRows = Array.from(allRows).filter(el => {
+                    const key = el.getAttribute('data-filter-key');
+                    return key && el.querySelector && (el.querySelector('input, select, textarea') || el.matches('input, select, textarea'));
+                });
                 
                 // 创建映射
                 const rowsMap = {};
@@ -522,7 +583,7 @@
                             const existingField = this.filterFields.find(f => f.key === key);
                             if (!existingField) {
                                 // 从label中提取字段名称
-                                const labelElement = row.querySelector('.filter-label');
+                                const labelElement = row.querySelector('.list-page-filter-label, .filter-label, label');
                                 let label = key; // 默认使用key
                                 if (labelElement) {
                                     label = labelElement.textContent.replace(/[:：]/g, '').trim();
@@ -553,10 +614,11 @@
                     return exists;
                 });
 
-            // 先移除所有元素
+            // 先移除所有筛选行（从各自父节点移除，可能是 form 或 container）
             filterRows.forEach(row => {
-                if (row.parentNode === container) {
-                    container.removeChild(row);
+                const parent = row.parentNode;
+                if (parent) {
+                    parent.removeChild(row);
                 }
             });
 
@@ -579,20 +641,22 @@
                 }
             });
 
-                // 3. 按顺序重新添加到容器，并根据启用状态显示/隐藏
-                orderedRows.forEach(({ row, key }) => {
-                    try {
-                        const field = this.filterFields.find(f => f.key === key);
-                        if (field && field.enabled) {
-                            row.style.display = 'flex';
-                        } else {
-                            row.style.display = 'none';
-                        }
-                        container.appendChild(row);
-                    } catch (e) {
-                        console.warn('添加筛选行时出错:', e);
+            // 3. 按顺序重新添加：放入 form 内，保证「筛选/重置」按钮仍在基模定义的最后一格
+            const form = container.querySelector('form') || document.getElementById('filterForm');
+            const appendTarget = form && container.contains(form) ? form : container;
+            orderedRows.forEach(({ row, key }) => {
+                try {
+                    const field = this.filterFields.find(f => f.key === key);
+                    if (field && field.enabled) {
+                        row.style.display = 'flex';
+                    } else {
+                        row.style.display = 'none';
                     }
-                });
+                    appendTarget.appendChild(row);
+                } catch (e) {
+                    console.warn('添加筛选行时出错:', e);
+                }
+            });
             } catch (e) {
                 console.error('应用筛选字段设置失败:', e);
             } finally {
@@ -668,24 +732,31 @@
             
             console.log('模态框元素找到，准备渲染字段列表');
             
+            // 打开前重新从 DOM 扫描筛选项，避免 init 时 DOM 未就绪导致只识别到少量字段
+            try {
+                this.initFilterFieldsList();
+            } catch (e) {
+                console.warn('重新扫描筛选字段失败，使用已有列表:', e);
+            }
+            
             // 渲染筛选字段列表
             try {
                 this.renderFilterFieldsList();
-                console.log('筛选字段列表渲染完成');
+                console.log('筛选字段列表渲染完成，共', (this.filterFields && this.filterFields.length) || 0, '个字段');
             } catch (e) {
                 console.error('渲染筛选字段列表失败:', e);
                 alert('渲染筛选字段列表失败：' + (e.message || '未知错误'));
                 return;
             }
             
-            // 打开模态框
+            // 打开模态框（使用 getOrCreateInstance 复用实例，避免重复创建导致两层遮罩）
             try {
                 // 检查 bootstrap 是否可用
                 if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                    console.log('使用 Bootstrap 5 打开模态框');
-                    const modal = new bootstrap.Modal(modalElement, {
-                        backdrop: true  // 启用遮罩层
-                    });
+                    const ModalClass = bootstrap.Modal;
+                    const modal = ModalClass.getOrCreateInstance
+                        ? ModalClass.getOrCreateInstance(modalElement, { backdrop: true })
+                        : new ModalClass(modalElement, { backdrop: true });
                     modal.show();
                 } else if (typeof $ !== 'undefined' && $.fn.modal) {
                     console.log('使用 jQuery Bootstrap 打开模态框');
@@ -857,24 +928,24 @@
         setupEventListeners() {
             console.log('开始设置事件监听器，按钮ID:', this.config.settingsBtnId);
             
+            const self = this;
+            const openModalHandler = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                self.openSettingsModal();
+            };
+            
             // 设置按钮 - 使用延迟查找，确保DOM已完全加载
             const setupSettingsBtn = () => {
                 const settingsBtn = document.getElementById(this.config.settingsBtnId);
                 if (settingsBtn) {
                     console.log('找到设置按钮，准备绑定事件');
-                    // 移除可能存在的旧事件监听器
+                    // 移除可能存在的旧事件监听器（避免重复绑定）
                     const newBtn = settingsBtn.cloneNode(true);
                     settingsBtn.parentNode.replaceChild(newBtn, settingsBtn);
                     
-                    const clickHandler = (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('设置筛选字段按钮被点击');
-                        this.openSettingsModal();
-                    };
-                    
-                    newBtn.addEventListener('click', clickHandler);
-                    this.eventListeners.push({ element: newBtn, event: 'click', handler: clickHandler });
+                    newBtn.addEventListener('click', openModalHandler);
+                    this.eventListeners.push({ element: newBtn, event: 'click', handler: openModalHandler });
                     
                     console.log('设置按钮事件监听器绑定成功');
                     return true;
@@ -884,13 +955,31 @@
                 return false;
             };
             
+            // 事件委托：在筛选区域上监听点击（当按 ID 找不到按钮时使用）
+            const delegateBind = () => {
+                const container = document.getElementById(this.config.containerId);
+                const filterCard = container ? container.closest('.list-page-filters') : null;
+                const root = filterCard || document.body;
+                const delegatedClick = (e) => {
+                    const byId = e.target.closest('[id="' + this.config.settingsBtnId + '"]');
+                    const byTitle = e.target.closest('button[title="自定义筛选字段"]');
+                    const btn = byId || byTitle;
+                    if (!btn) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.openSettingsModal();
+                };
+                root.addEventListener('click', delegatedClick);
+                this.eventListeners.push({ element: root, event: 'click', handler: delegatedClick });
+                console.log('已绑定自定义筛选字段按钮的事件委托');
+            };
+            
             // 立即尝试绑定
             if (!setupSettingsBtn()) {
                 console.log('按钮未找到，使用延迟绑定机制');
-                // 如果按钮还未渲染，使用多重重试机制
                 let retryCount = 0;
-                const maxRetries = 20; // 增加重试次数
-                const retryInterval = 100;
+                const maxRetries = 30;
+                const retryInterval = 150;
                 
                 const retryTimer = setInterval(() => {
                     retryCount++;
@@ -900,38 +989,36 @@
                         this.fixSettingsButtonPosition();
                     } else if (retryCount >= maxRetries) {
                         clearInterval(retryTimer);
-                        console.error('设置按钮绑定失败：按钮 ' + this.config.settingsBtnId + ' 未找到，已重试' + maxRetries + '次');
-                        // 尝试通过文本内容查找按钮
-                        const allButtons = document.querySelectorAll('button, a');
+                        // 先通过文本查找并设置 ID 再绑定
+                        const allButtons = document.querySelectorAll('button');
+                        let bound = false;
                         for (let btn of allButtons) {
-                            if (btn.textContent && (btn.textContent.includes('设置筛选字段') || btn.textContent.includes('⚙️'))) {
-                                console.log('通过文本内容找到按钮，尝试绑定事件');
-                                btn.id = this.config.settingsBtnId;
+                            if ((btn.textContent || '').includes('自定义筛选字段')) {
+                                if (!btn.id) btn.id = this.config.settingsBtnId;
                                 if (setupSettingsBtn()) {
-                                    console.log('通过文本内容找到的按钮绑定成功');
                                     this.fixSettingsButtonPosition();
+                                    bound = true;
                                     break;
                                 }
                             }
                         }
+                        if (!bound) {
+                            console.warn('按ID未找到设置按钮，启用事件委托回退');
+                            delegateBind();
+                        }
                     }
                 }, retryInterval);
                 
-                // 同时监听DOMContentLoaded
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', () => {
                         if (!setupSettingsBtn()) {
-                            setTimeout(() => {
-                                setupSettingsBtn();
-                                this.fixSettingsButtonPosition();
-                            }, 200);
+                            setTimeout(() => { setupSettingsBtn(); this.fixSettingsButtonPosition(); }, 300);
                         } else {
                             this.fixSettingsButtonPosition();
                         }
                     });
                 }
             } else {
-                // 如果立即绑定成功，确保位置固定
                 console.log('设置按钮立即绑定成功');
                 this.fixSettingsButtonPosition();
             }

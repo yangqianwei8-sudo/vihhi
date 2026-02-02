@@ -702,8 +702,22 @@ class ApprovalEngine:
             # 获取关联的业务对象
             content_obj = instance.content_type.get_object_for_this_type(id=instance.object_id)
             
-            # 根据业务对象类型更新状态
-            if hasattr(content_obj, 'status'):
+            # 商机：使用 approval_status 字段
+            if instance.content_type.model == 'businessopportunity' and hasattr(content_obj, 'approval_status'):
+                last_record = instance.records.filter(result='approved').order_by('-approval_time').first()
+                if approval_status == 'approved':
+                    if last_record and hasattr(content_obj, 'approver'):
+                        content_obj.approver = last_record.approver
+                    if hasattr(content_obj, 'approved_time'):
+                        content_obj.approved_time = timezone.now()
+                    content_obj.approval_status = 'approved'
+                elif approval_status == 'rejected':
+                    content_obj.approval_status = 'rejected'
+                content_obj.save()
+                logger.info(f'商机审批状态已更新: #{instance.object_id} -> {approval_status}')
+                return
+            # 根据业务对象类型更新状态（使用 status 字段）
+            elif hasattr(content_obj, 'status'):
                 if approval_status == 'approved':
                     # 审批通过
                     # 更新审批人信息

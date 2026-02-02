@@ -11,10 +11,10 @@ from .views_common import (
     _build_full_top_nav,
     _get_opportunities_safely,
     get_user_permission_codes,
-    _permission_granted,
     BusinessOpportunity,
     BiddingQuotation,
 )
+from .perm_check import opportunity_can_view, opportunity_can_view_all
 
 def opportunity_bidding_quotation(request):
     """投标报价页面"""
@@ -32,7 +32,7 @@ def opportunity_bidding_quotation(request):
         ).order_by('-bidding_date', '-created_time')
         
         # 权限过滤：只能查看自己创建的或关联商机是自己负责的投标报价
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        if not opportunity_can_view_all(permission_set):
             bidding_quotations = bidding_quotations.filter(
                 Q(created_by=request.user) |
                 Q(opportunity__business_manager=request.user)
@@ -53,7 +53,7 @@ def opportunity_bidding_quotation(request):
         
         # 分页
         from django.core.paginator import Paginator
-        paginator = Paginator(bidding_quotations, 20)
+        paginator = Paginator(bidding_quotations, 13)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
     except Exception as e:
@@ -78,8 +78,8 @@ def opportunity_bidding_quotation(request):
         context['sidebar_nav'] = []
     # 获取商机列表（用于筛选下拉框）
     try:
-        opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+        if not opportunity_can_view_all(permission_set):
             opportunities = opportunities.filter(business_manager=request.user)
         opportunities = opportunities[:100]  # 限制显示数量
     except Exception as e:
@@ -92,7 +92,7 @@ def opportunity_bidding_quotation(request):
     
     # 计算统计信息
     all_bidding_quotations = BiddingQuotation.objects.select_related('opportunity', 'created_by')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    if not opportunity_can_view_all(permission_set):
         all_bidding_quotations = all_bidding_quotations.filter(
             Q(created_by=request.user) |
             Q(opportunity__business_manager=request.user)
@@ -129,13 +129,13 @@ def opportunity_bidding_quotation_application(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限访问投标报价申请功能')
         return redirect('opportunity_pages:opportunity_management')
     
     # 获取商机列表（用于表单下拉框）
-    opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     opportunities = _get_opportunities_safely(opportunities, permission_set, request.user)
     
@@ -164,13 +164,13 @@ def opportunity_bidding_document_preparation(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限访问编制投标文件功能')
         return redirect('opportunity_pages:opportunity_management')
     
     # 获取商机列表（用于表单下拉框）
-    opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     opportunities = _get_opportunities_safely(opportunities, permission_set, request.user)
     
@@ -199,13 +199,13 @@ def opportunity_bidding_document_submission(request):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限访问递交投标文件功能')
         return redirect('opportunity_pages:opportunity_management')
     
     # 获取商机列表（用于表单下拉框）
-    opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     opportunities = _get_opportunities_safely(opportunities, permission_set, request.user)
     
@@ -275,10 +275,10 @@ def bidding_quotation_create(request):
     
     # GET请求，显示表单
     # 获取可用的商机列表
-    opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
+    opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
     
     # 权限过滤
-    if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+    if not opportunity_can_view_all(permission_set):
         opportunities = opportunities.filter(business_manager=request.user)
     
     context = _context(
@@ -307,7 +307,7 @@ def bidding_quotation_detail(request, bidding_id):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限查看投标报价详情')
         return redirect('opportunity_pages:opportunity_bidding_quotation')
     
@@ -322,7 +322,7 @@ def bidding_quotation_detail(request, bidding_id):
         )
         
         # 权限过滤：只能查看自己创建的或关联商机是自己负责的投标报价
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        if not opportunity_can_view_all(permission_set):
             if bidding_quotation.created_by != request.user and bidding_quotation.opportunity.business_manager != request.user:
                 messages.error(request, '您没有权限查看此投标报价')
                 return redirect('opportunity_pages:opportunity_bidding_quotation')
@@ -361,7 +361,7 @@ def bidding_quotation_edit(request, bidding_id):
     permission_set = get_user_permission_codes(request.user)
     
     # 权限检查
-    if not _permission_granted('opportunity_management.opportunity.view', permission_set):
+    if not opportunity_can_view(permission_set):
         messages.error(request, '您没有权限编辑投标报价')
         return redirect('opportunity_pages:opportunity_bidding_quotation')
     
@@ -374,7 +374,7 @@ def bidding_quotation_edit(request, bidding_id):
         )
         
         # 权限过滤：只能编辑自己创建的或关联商机是自己负责的投标报价
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        if not opportunity_can_view_all(permission_set):
             if bidding_quotation.created_by != request.user and bidding_quotation.opportunity.business_manager != request.user:
                 messages.error(request, '您没有权限编辑此投标报价')
                 return redirect('opportunity_pages:opportunity_bidding_quotation')
@@ -430,8 +430,8 @@ def bidding_quotation_edit(request, bidding_id):
         
         # GET请求，显示编辑表单
         # 获取可用的商机列表
-        opportunities = BusinessOpportunity.objects.select_related('client', 'business_manager').order_by('-created_time')
-        if not _permission_granted('opportunity_management.opportunity.view_all', permission_set):
+        opportunities = BusinessOpportunity.objects.filter(is_active=True).select_related('client', 'business_manager').order_by('-created_time')
+        if not opportunity_can_view_all(permission_set):
             opportunities = opportunities.filter(business_manager=request.user)
         
         # 获取已完成项目（类似业绩）

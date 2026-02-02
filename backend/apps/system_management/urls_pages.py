@@ -16,7 +16,11 @@ urlpatterns = [
     path("create-form-example/", views_pages.create_form_example, name="create_form_example"),
     path("detail-page-example/", views_pages.detail_page_example, name="detail_page_example"),
     path("list-page-example/", views_pages.list_page_example, name="list_page_example"),
+    path("approval-detail-example/", views_pages.approval_detail_example, name="approval_detail_example"),
+    path("three-column-form-example/", views_pages.three_column_form_example, name="three_column_form_example"),
     path("three-column-layout-base-example/", views_pages.three_column_layout_base_example, name="three_column_layout_base_example"),
+    path("two-column-layout-base-example/", views_pages.two_column_layout_base_example, name="two_column_layout_base_example"),
+    path("module-base-example/", views_pages.module_base_example, name="module_base_example"),
     path("tracking-example/", views_pages.tracking_example, name="tracking_example"),
     # 反馈功能
     path("feedback/submit/", views_pages.feedback_submit, name="feedback_submit"),

@@ -95,10 +95,12 @@
           <label class="list-page-filter-label">状态</label>
           <select name="status" class="form-select">
             <option value="">全部状态</option>
+            <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>草稿</option>
             <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>审批中</option>
             <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>已通过</option>
             <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>已驳回</option>
             <option value="withdrawn" {% if request.GET.status == 'withdrawn' %}selected{% endif %}>已撤回</option>
+            <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>已取消</option>
           </select>
         </div>
         {% endif %}
@@ -221,7 +223,21 @@
         <td>{{ item.applicant.get_full_name|default:item.applicant.username }}</td>
         <td>{{ item.apply_time|date:"Y-m-d H:i"|default:"-" }}</td>
         <td>
-          <span class="approval-status-badge badge-pending">待审批</span>
+          {% if item.status == 'pending' %}
+            <span class="approval-status-badge badge-pending">审批中</span>
+          {% elif item.status == 'approved' %}
+            <span class="approval-status-badge badge-approved">已通过</span>
+          {% elif item.status == 'rejected' %}
+            <span class="approval-status-badge badge-rejected">已驳回</span>
+          {% elif item.status == 'withdrawn' %}
+            <span class="approval-status-badge badge-withdrawn">已撤回</span>
+          {% elif item.status == 'cancelled' %}
+            <span class="badge bg-secondary">已取消</span>
+          {% elif item.status == 'draft' %}
+            <span class="badge bg-secondary">草稿</span>
+          {% else %}
+            <span class="badge bg-secondary">{{ item.get_status_display }}</span>
+          {% endif %}
         </td>
         <td>
           {% if item.current_node %}
@@ -271,6 +287,12 @@
             <span class="approval-status-badge badge-rejected">已驳回</span>
           {% elif item.status == 'withdrawn' %}
             <span class="approval-status-badge badge-withdrawn">已撤回</span>
+          {% elif item.status == 'cancelled' %}
+            <span class="badge bg-secondary">已取消</span>
+          {% elif item.status == 'pending' %}
+            <span class="approval-status-badge badge-pending">审批中</span>
+          {% elif item.status == 'draft' %}
+            <span class="badge bg-secondary">草稿</span>
           {% else %}
             <span class="badge bg-secondary">{{ item.get_status_display }}</span>
           {% endif %}
@@ -321,6 +343,10 @@
             <span class="approval-status-badge badge-rejected">已驳回</span>
           {% elif item.status == 'withdrawn' %}
             <span class="approval-status-badge badge-withdrawn">已撤回</span>
+          {% elif item.status == 'cancelled' %}
+            <span class="badge bg-secondary">已取消</span>
+          {% elif item.status == 'draft' %}
+            <span class="badge bg-secondary">草稿</span>
           {% else %}
             <span class="badge bg-secondary">{{ item.get_status_display }}</span>
           {% endif %}

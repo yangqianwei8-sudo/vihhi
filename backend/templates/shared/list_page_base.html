@@ -1,16 +1,25 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/two_column_layout_base.html" %}
 {% load static %}
 
 {% comment %}
   列表页面基础模板
   提供统一的列表页面结构，包括筛选器、表格、分页等模块
-  使用 list-layout.css 样式系统
+  样式由 common.css 统一引入 list-layout.css
+
+  分页规则（写死）：数据超过 13 条即分页，每页 13 条。
+  各列表视图须使用 Paginator(queryset, 13) 或 request.GET.get('per_page', 13)，
+  本模板仅展示 page_obj，不控制每页条数。
+
+  筛选区域说明：
+  1. 使用 Bootstrap 栅格：每排 5 个字段（row-cols-2 row-cols-md-5），筛选按钮计入最后一格
+  2. 基本筛选字段：默认提供「关键词」搜索框（list_filters_basic 块）
+  3. 额外筛选字段：子模板通过 list_filters_extra 添加，使用 col list-page-filter-item
+  4. 自定义筛选字段按钮：通过 show_filter_fields_settings_btn=True 显示
 {% endcomment %}
 
 {% block module_styles %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
-  <link rel="stylesheet" href="{% static 'css/components/list_page_base_v2.css' %}">
+  {# 列表页样式已由 common.css → list-layout.css 统一提供，不再单独引入 list_page_base_v2.css #}
 {% endblock module_styles %}
 
 {% block module_scripts %}
@@ -241,11 +250,10 @@
     // 初始化标记，防止重复初始化
     let batchDeleteInitialized = false;
     
-    // 初始化批量删除功能
+    // 初始化批量删除功能（仅当页面存在批量删除按钮时初始化，无按钮时静默跳过）
     function initBatchDelete() {
       const batchDeleteBtn = document.getElementById('batchDeleteBtn');
       if (!batchDeleteBtn) {
-        console.warn('[批量删除] 未找到批量删除按钮');
         return;
       }
       
@@ -518,14 +526,9 @@
   {% if description %}{{ description }}{% endif %}
 {% endblock pm_subtitle %}
 
-{# 主标题右侧操作按钮 - 继承父模板的 pm_actions 块 #}
+{# 主标题右侧操作按钮 - 默认无按钮，子模板可覆盖 list_page_actions 添加 #}
 {% block pm_actions %}
   {% block list_page_actions %}
-    {# 批量删除按钮 - 默认显示，所有继承该模板的页面都自动具有 #}
-    <button type="button" id="batchDeleteBtn" class="btn btn-danger" style="display: none;">
-      <i class="bi bi-trash"></i> 批量删除
-    </button>
-    {# 子模板可以覆盖此块添加其他操作按钮 #}
   {% endblock list_page_actions %}
 {% endblock pm_actions %}
 
@@ -533,35 +536,63 @@
   {# 隐藏的 CSRF token 字段，确保批量删除功能可以获取到 token #}
   {% csrf_token %}
 
-  {# 筛选器区域 #}
+  {# 筛选器区域（使用卡片包裹） #}
   {% block list_filters_section %}
-  <div class="list-page-filters">
-    <div class="list-page-filter-row">
+  <div class="card list-page-filters">
+    <div class="card-body list-page-filters-body">
+    {# 自定义筛选字段按钮 - 需配合 filter-fields-settings.js 及 listFiltersConfig 使用 #}
+    {% block list_filter_fields_settings_btn %}
+    <button type="button" class="btn btn-sm" id="settingsFilterFieldsBtn" title="自定义筛选字段"
+            style="display: {% if show_filter_fields_settings_btn %}inline-flex{% else %}none{% endif %};">
+      <i class="bi bi-gear"></i> 自定义筛选字段
+    </button>
+    {% endblock list_filter_fields_settings_btn %}
+
+    <div class="list-page-filter-row row g-3 row-cols-2 row-cols-md-5" id="filterFieldsContainer">
       <form id="filterForm" method="get" {% if filter_form_action %} action="{{ filter_form_action }}"{% endif %}>
         {% block list_filters_content %}
-          {# 子模板可以覆盖此块添加筛选器表单字段 #}
+          {# 1. 基本的、通用的筛选字段（子模板可覆盖 list_filters_basic 扩展或替换） #}
+          {% block list_filters_basic %}
+          <div class="col list-page-filter-item" data-filter-key="search">
+            <label class="list-page-filter-label">关键词</label>
+            <input type="text" name="search" class="form-control form-control-sm"
+                   placeholder="{% block search_placeholder %}搜索...{% endblock %}"
+                   value="{{ search|default:'' }}">
+          </div>
+          {% endblock list_filters_basic %}
+          {# 2. 子模板在此添加额外的筛选字段（使用 col list-page-filter-item，每排 5 格含按钮） #}
+          {% block list_filters_extra %}
+          {% endblock list_filters_extra %}
         {% endblock list_filters_content %}
       </form>
       {% block list_filter_actions %}
-      <!-- 筛选和重置按钮 - 自动添加到所有筛选表单 -->
-      <div class="list-page-filter-actions">
-        <button type="submit" form="filterForm" class="btn btn-primary">
-          <i class="bi bi-funnel"></i> 筛选
-        </button>
-        <button type="reset" form="filterForm" class="btn btn-secondary">
-          <i class="bi bi-arrow-counterclockwise"></i> 重置
-        </button>
+      <!-- 筛选和重置按钮 - 计入每排第五格 -->
+      <div class="col list-page-filter-actions align-self-end">
+        <div class="d-flex gap-2">
+          <button type="submit" form="filterForm" class="btn btn-primary btn-sm">
+            <i class="bi bi-funnel"></i> 筛选
+          </button>
+          <button type="reset" form="filterForm" class="btn btn-secondary btn-sm">
+            <i class="bi bi-arrow-counterclockwise"></i> 重置
+          </button>
+        </div>
       </div>
       {% endblock list_filter_actions %}
     </div>
+    </div>
   </div>
+
+  {# 筛选字段设置模态框 - 使用自定义筛选字段功能时需引入 filter-fields-settings.js 并配置 listFiltersConfig #}
+  {% block list_filter_fields_settings_modal %}
+  {% include "shared/_partials/_filter_fields_settings_modal.html" %}
+  {% endblock list_filter_fields_settings_modal %}
   {% endblock list_filters_section %}
 
   {# 表格区域 #}
   {% block list_table_section %}
     {% block list_table_content %}
       {# 如果提供了 columns 和 data，使用 list_table.html 模板 #}
-      {% if columns and data %}
+      {% if columns|default:None and data|default:None %}
         {% include "shared/list_table.html" with 
           table_id=table_id|default:"dataTable"
           columns=columns 
@@ -582,8 +613,9 @@
             <thead>
               <tr>
                 {% block list_table_checkbox_header %}
-                  {# 子模板可以覆盖此块添加复选框列表头 #}
-                  {# 如果需要复选框，添加：<th style="width: 50px;"><input type="checkbox" id="selectAll" class="form-check-input" title="全选"></th> #}
+                  {% if show_list_checkboxes|default:False %}
+                  <th style="width: 50px;"><input type="checkbox" id="selectAll" class="form-check-input" title="全选"></th>
+                  {% endif %}
                 {% endblock list_table_checkbox_header %}
                 {% block list_table_headers %}
                   {# 子模板需要在此定义表头 #}
@@ -695,3 +727,19 @@
   {% endblock list_pagination_section %}
 
 {% endblock pm_content %}
+
+{# 启用自定义筛选字段时自动加载脚本（模态框自动映射表单所有字段） #}
+{% block module_extra_js %}
+  {% if show_filter_fields_settings_btn %}
+  <script>
+  if (!window.filterFieldsSettingsConfig) {
+    window.filterFieldsSettingsConfig = {
+      containerId: 'filterFieldsContainer',
+      storageKey: 'list_page_filter_fields_' + (window.location.pathname || 'default').replace(/\//g, '_'),
+      maxEnabledFields: 10
+    };
+  }
+  </script>
+  <script src="{% static 'js/filter-fields-settings.js' %}"></script>
+  {% endif %}
+{% endblock module_extra_js %}

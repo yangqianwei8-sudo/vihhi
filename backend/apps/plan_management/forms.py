@@ -967,12 +967,11 @@ class PlanForm(forms.ModelForm):
                     
                     self.fields['parent_plan'].queryset = base_queryset
                     
-                    # 设置必填性：年计划不要求父计划，其他计划要求父计划
+                    # 设置必填性：暂时取消父计划必填
+                    self.fields['parent_plan'].required = False
                     if current_plan_period == 'yearly':
-                        self.fields['parent_plan'].required = False
                         self.fields['parent_plan'].help_text = '年计划不需要填写父计划'
                     else:
-                        self.fields['parent_plan'].required = True
                         period_names = {
                             'daily': '日计划',
                             'weekly': '周计划',
@@ -987,7 +986,7 @@ class PlanForm(forms.ModelForm):
                         }
                         current_name = period_names.get(current_plan_period, current_plan_period)
                         parent_name = parent_period_names.get(parent_plan_period, parent_plan_period)
-                        self.fields['parent_plan'].help_text = f'{current_name}的父计划必须是{parent_name}（仅显示您负责的个人计划，状态为已发布或执行中）'
+                        self.fields['parent_plan'].help_text = f'{current_name}的父计划可选{parent_name}（仅显示您负责的个人计划，状态为已发布或执行中）'
                 
             except Exception as e:
                 # 如果查询出错，使用空查询集，但字段仍然显示
@@ -1249,75 +1248,10 @@ class PlanForm(forms.ModelForm):
         if not related_goal:
             raise ValidationError({'related_goal': '关联战略目标为必填项，请选择关联的战略目标'})
         
-        # 验证父计划：根据计划周期验证父计划
-        plan_period = cleaned_data.get('plan_period')
-        parent_plan = cleaned_data.get('parent_plan')
-        
-        # 父计划周期映射
-        parent_plan_period_map = {
-            'daily': 'weekly',      # 日计划的父计划是周计划
-            'weekly': 'monthly',   # 周计划的父计划是月计划
-            'monthly': 'quarterly', # 月计划的父计划是季计划
-            'quarterly': 'yearly',  # 季计划的父计划是年计划
-            'yearly': None,         # 年计划不需要父计划
-        }
-        
-        if plan_period:
-            expected_parent_period = parent_plan_period_map.get(plan_period)
-            
-            # 年计划不需要父计划
-            if plan_period == 'yearly':
-                if parent_plan:
-                    raise ValidationError({'parent_plan': '年计划不需要填写父计划'})
-            else:
-                # 其他计划必须有父计划
-                if not parent_plan:
-                    period_names = {
-                        'daily': '日计划',
-                        'weekly': '周计划',
-                        'monthly': '月计划',
-                        'quarterly': '季计划',
-                    }
-                    current_name = period_names.get(plan_period, plan_period)
-                    raise ValidationError({'parent_plan': f'{current_name}必须选择父计划'})
-                else:
-                    # 验证父计划的层级：必须是个人计划
-                    if parent_plan.level != 'personal':
-                        raise ValidationError({
-                            'parent_plan': '父计划必须是个人计划，不能选择公司计划'
-                        })
-                    # 验证父计划的负责人：必须是当前用户
-                    user = getattr(self, '_user', None)
-                    if user and parent_plan.responsible_person != user:
-                        raise ValidationError({
-                            'parent_plan': '父计划必须是您负责的个人计划，不能选择其他人负责的计划'
-                        })
-                    # 验证父计划的状态：必须是已发布或执行中
-                    if parent_plan.status not in ['published', 'in_progress']:
-                        raise ValidationError({
-                            'parent_plan': '父计划必须是已发布或执行中的状态，不能选择草稿、已完成、已取消等状态的计划'
-                        })
-                    # 验证父计划的周期是否正确
-                    if parent_plan.plan_period != expected_parent_period:
-                        period_names = {
-                            'daily': '日计划',
-                            'weekly': '周计划',
-                            'monthly': '月计划',
-                            'quarterly': '季计划',
-                            'yearly': '年计划',
-                        }
-                        parent_period_names = {
-                            'weekly': '周计划',
-                            'monthly': '月计划',
-                            'quarterly': '季计划',
-                            'yearly': '年计划',
-                        }
-                        current_name = period_names.get(plan_period, plan_period)
-                        expected_name = parent_period_names.get(expected_parent_period, expected_parent_period)
-                        actual_name = period_names.get(parent_plan.plan_period, parent_plan.plan_period)
-                        raise ValidationError({
-                            'parent_plan': f'{current_name}的父计划必须是{expected_name}，当前选择的是{actual_name}'
-                        })
+        # 父计划：暂时取消必填与验证（如需恢复请参考 git 历史）
+        # plan_period = cleaned_data.get('plan_period')
+        # parent_plan = cleaned_data.get('parent_plan')
+        # ... 原父计划校验逻辑已注释 ...
         
         # 编辑时，确保计划编号不被修改
         if self.instance and self.instance.pk:

@@ -123,7 +123,7 @@ HOME_ACTION_DEFINITIONS = [
 HOME_NAV_STRUCTURE = [
     # 按数据库模块定义顺序排列，确保与数据库一致
     {'label': '客户管理', 'icon': '👥', 'url_name': 'customer_pages:customer_management_home_alt', 'permission': 'customer_management.client.view'},
-    {'label': '商机管理', 'icon': '💼', 'url_name': 'opportunity_pages:opportunity_management_home_alt', 'permission': 'customer_management.opportunity.view'},
+    {'label': '商机管理', 'icon': '💼', 'url_name': 'opportunity_pages:opportunity_management_home_alt', 'permission': ['opportunity_management.opportunity.view', 'customer_management.opportunity.view']},
     {'label': '合同管理', 'icon': '📄', 'url_name': 'contract_pages:contract_management_home_alt', 'permission': 'contract_management.contract.view'},
     {'label': '回款管理', 'icon': '💰', 'url_name': 'payment_pages:payment_home', 'permission': 'payment_management.payment_plan.view'},  # 回款管理独立模块
     {'label': '生产管理', 'icon': '🏗️', 'url_name': 'production_pages:production_management_home', 'permission': 'production_management.view_assigned'},
@@ -193,7 +193,7 @@ SCENE_GROUPS = [
         'icon': 'fa-chart-line',
         'items': [
             {'label': '客户管理', 'icon': 'fa-users', 'url_name': 'customer_pages:customer_management_home_alt', 'permission': 'customer_management.client.view'},
-            {'label': '商机管理', 'icon': 'fa-briefcase', 'url_name': 'opportunity_pages:opportunity_management_home_alt', 'permission': 'customer_management.opportunity.view'},
+            {'label': '商机管理', 'icon': 'fa-briefcase', 'url_name': 'opportunity_pages:opportunity_management_home_alt', 'permission': ['opportunity_management.opportunity.view', 'customer_management.opportunity.view']},
             {'label': '合同管理', 'icon': 'fa-file-contract', 'url_name': 'contract_pages:contract_management_home_alt', 'permission': 'contract_management.contract.view'},
             {'label': '回款管理', 'icon': 'fa-money-bill-wave', 'url_name': 'payment_pages:payment_home', 'permission': 'payment_management.payment_plan.view'},
         ]

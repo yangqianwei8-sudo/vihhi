@@ -30,12 +30,6 @@
   </div>
 {% endblock list_filters_content %}
 
-{% block list_table_checkbox_header %}
-  <th style="width: 50px;">
-    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
-  </th>
-{% endblock list_table_checkbox_header %}
-
 {% block list_table_headers %}
   <th>报销单号</th>
   <th>申请人</th>
@@ -52,9 +46,7 @@
   {% if page_obj %}
     {% for expense in page_obj %}
     <tr>
-      <td>
-        <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ expense.id }}" id="item_{{ expense.id }}">
-      </td>
+      {% include "shared/_list_row_checkbox_cell.html" with row_id=expense.id checkbox_name=list_checkbox_name|default:'item_ids' id_prefix=list_checkbox_id_prefix|default:'item_' %}
       <td><code>{{ expense.reimbursement_number }}</code></td>
       <td>{{ expense.applicant.get_full_name|default:expense.applicant.username }}</td>
       <td>{{ expense.application_date|date:"Y-m-d" }}</td>

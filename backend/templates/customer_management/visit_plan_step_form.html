@@ -1,7 +1,7 @@
 {% extends "shared/_partials/_shared_form_wrapper_customer.html" %}
 
 {% block pm_title %}{{ page_title|default:"创建拜访计划" }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">{{ form_page_subtitle_text|default:"请填写拜访计划信息并准备沟通清单" }}</span>{% endblock %}
+{% block pm_subtitle %}{{ form_page_subtitle_text|default:"请填写拜访计划信息并准备沟通清单" }}{% endblock %}
 {% block pm_actions %}
 <a href="{% url cancel_url_name|default:'business_pages:customer_visit' %}" class="form-btn form-btn-secondary">
   返回列表
@@ -46,14 +46,14 @@
         </div>
         {% endif %}
 
-        <div class="form-row">
-            <div class="form-group">
+        <div class="row g-3">
+            <div class="col-12 col-md-6 form-field-wrapper">
                 <label class="form-label" for="{{ form.department.id_for_label }}">
                     {{ form.department.label }}
                 </label>
                 {{ form.department }}
             </div>
-            <div class="form-group">
+            <div class="col-12 col-md-6 form-field-wrapper">
                 <label class="form-label" for="{{ form.responsible_user.id_for_label }}">
                     {{ form.responsible_user.label }}
                 </label>
@@ -61,33 +61,33 @@
             </div>
         </div>
 
-        <div class="form-row">
-            <div class="form-group">
+        <div class="row g-3 mt-1">
+            <div class="col-12 col-md-6 form-field-wrapper">
                 <label class="form-label required" for="{{ form.client.id_for_label }}">
                     {{ form.client.label }}
                 </label>
                 {{ form.client }}
                 {% if form.client.errors %}
-                <div class="form-error">{{ form.client.errors }}</div>
+                <div class="invalid-feedback d-block">{{ form.client.errors }}</div>
                 {% endif %}
             </div>
-            <div class="form-group">
+            <div class="col-12 col-md-6 form-field-wrapper">
                 <label class="form-label required" for="{{ form.plan_date.id_for_label }}">
                     {{ form.plan_date.label }}
                 </label>
                 {{ form.plan_date }}
                 {% if form.plan_date.errors %}
-                <div class="form-error">{{ form.plan_date.errors }}</div>
+                <div class="invalid-feedback d-block">{{ form.plan_date.errors }}</div>
                 {% endif %}
             </div>
-            <div class="form-group form-row-full">
+            <div class="col-12 form-field-wrapper">
                 <label class="form-label" for="{{ form.location.id_for_label }}">
                     {{ form.location.label }}
                 </label>
                 {{ form.location }}
-                <small class="text-muted">将根据客户办公地址自动填充</small>
+                <small class="form-text text-muted">将根据客户办公地址自动填充</small>
             </div>
-            <div class="form-group form-row-full">
+            <div class="col-12 form-field-wrapper">
                 <label class="form-label" for="{{ form.related_opportunity.id_for_label }}">
                     {{ form.related_opportunity.label }}
                 </label>
@@ -95,21 +95,20 @@
             </div>
         </div>
 
-<div class="form-row">
+<div class="row g-3">
                         {% if questions_by_part %}
 
                         {% for part, questions in questions_by_part.items %}
-                        <div class="card mb-3">
-                            <div class="card-header">
-                                <h6 class="mb-0">
+                        <div class="col-12">
+                        <div class="form-section mb-3">
+                                <h5 class="mb-3">
                                     {% if part == 'part1' %}第一部分：客户与项目背景信息
                                     {% elif part == 'part2' %}第二部分：沟通目标与内容准备
                                     {% elif part == 'part3' %}第三部分：沟通策略与风险预案
                                     {% elif part == 'part4' %}第四部分：后勤与状态
                                     {% else %}{{ part }}{% endif %}
-                                </h6>
-                            </div>
-                            <div class="card-body">
+                                </h5>
+                            <div>
                                 {% for question in questions %}
                                 <div class="mb-3 pb-3 border-bottom">
                                     <div class="d-flex align-items-start mb-2">
@@ -160,25 +159,28 @@
                                 {% endfor %}
                             </div>
                         </div>
+                        </div>
                         {% endfor %}
 
-                        <div class="mt-3">
-                            <label class="form-label required">{{ form.communication_checklist.label }}</label>
-                            {{ form.communication_checklist }}
-                            {% if form.communication_checklist.errors %}
-                            <div class="form-error">{{ form.communication_checklist.errors }}</div>
-                            {% endif %}
-                            <small class="text-muted">请总结沟通清单的关键要点和注意事项</small>
+                        <div class="col-12 mt-3">
+                            <div class="col-12 form-field-wrapper">
+                                <label class="form-label required">{{ form.communication_checklist.label }}</label>
+                                {{ form.communication_checklist }}
+                                {% if form.communication_checklist.errors %}
+                                <div class="invalid-feedback d-block">{{ form.communication_checklist.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">请总结沟通清单的关键要点和注意事项</small>
+                            </div>
                         </div>
                         {% else %}
 
-                        <div class="form-group form-row-full">
+                        <div class="col-12 form-field-wrapper">
                             <label class="form-label required">{{ form.communication_checklist.label }}</label>
                             {{ form.communication_checklist }}
                             {% if form.communication_checklist.errors %}
-                            <div class="form-error">{{ form.communication_checklist.errors }}</div>
+                            <div class="invalid-feedback d-block">{{ form.communication_checklist.errors }}</div>
                             {% endif %}
-                            <small class="text-muted">请详细列出拜访前需要准备的沟通要点、资料和注意事项</small>
+                            <small class="form-text text-muted">请详细列出拜访前需要准备的沟通要点、资料和注意事项</small>
                         </div>
                         {% endif %}
                     </div>

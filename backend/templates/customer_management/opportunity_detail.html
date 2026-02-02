@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/detail_base.html" %}
 
 {% load static %}
 {% block extra_css %}
@@ -8,6 +8,11 @@
 {% block pm_title %}商机详情{% endblock %}
 
 {% block pm_content %}
+{% if opportunity_is_deleted %}
+<div class="alert alert-warning mb-3" role="alert">
+    <i class="bi bi-exclamation-triangle"></i> 该商机已删除，仅管理员可查看。
+</div>
+{% endif %}
 <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <p class="text-muted mb-0">商机编号：{{ opportunity.opportunity_number|default:'未编号' }}</p>
@@ -208,16 +213,16 @@
                 {% for record in approval_records %}
                 <div class="approval-timeline-item">
                     <div class="approval-timeline-marker
-                                {% if record.approval_result == 'approved' %}approved
-                                {% elif record.approval_result == 'rejected' %}rejected
+                                {% if record.result == 'approved' %}approved
+                                {% elif record.result == 'rejected' %}rejected
                                 {% else %}pending{% endif %}">
                     </div>
                     <div class="approval-timeline-content">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
                                 <strong>{{ record.node.name }}</strong>
-                                <span class="badge bg-{% if record.approval_result == 'approved' %}success{% elif record.approval_result == 'rejected' %}danger{% else %}secondary{% endif %} ms-2">
-                                    {{ record.get_approval_result_display|default:'待审批' }}
+                                <span class="badge bg-{% if record.result == 'approved' %}success{% elif record.result == 'rejected' %}danger{% else %}secondary{% endif %} ms-2">
+                                    {{ record.get_result_display|default:'待审批' }}
                     </span>
                 </div>
                             <small class="text-muted">
@@ -234,8 +239,8 @@
                             {{ record.approver.get_full_name|default:record.approver.username }}
                 </div>
                 {% endif %}
-                        {% if record.approval_comment %}
-                        <p class="mb-0 text-muted small">{{ record.approval_comment }}</p>
+                        {% if record.comment %}
+                        <p class="mb-0 text-muted small">{{ record.comment }}</p>
                         {% endif %}
                     </div>
                 </div>
@@ -255,9 +260,13 @@
         <div class="info-card-body">
             <div class="text-center py-3">
                 <p class="text-muted mb-3">暂无审批流程</p>
-                <a href="#" class="btn btn-primary"data-click="handle_onclick_0"提交审批功能待实现'); return false;">
-                    <i class="bi bi-send"></i> 提交审批
-                </a>
+                <form method="post" action="{% url 'opportunity_pages:opportunity_submit_for_approval' opportunity.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="comment" value="申请审批商机：{{ opportunity.name }}">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> 提交审批
+                    </button>
+                </form>
             </div>
         </div>
     </div>

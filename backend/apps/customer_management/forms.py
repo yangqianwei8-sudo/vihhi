@@ -2259,6 +2259,50 @@ class CustomerLeadForm(forms.ModelForm):
         return cleaned_data
 
 
+class CustomerLeadEditForm(forms.ModelForm):
+    """客户线索编辑表单（含完整可编辑字段）"""
+
+    class Meta:
+        model = CustomerLead
+        fields = [
+            'company_name', 'contact_name', 'contact_phone', 'contact_email',
+            'province', 'city', 'district',
+            'lead_source', 'channel',
+            'follow_status', 'latest_followup_note', 'is_friend_added',
+            'responsible_user', 'department',
+        ]
+        widgets = {
+            'company_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'contact_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'contact_phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'contact_email': forms.TextInput(attrs={'class': 'form-control'}),
+            'province': forms.TextInput(attrs={'class': 'form-control'}),
+            'city': forms.TextInput(attrs={'class': 'form-control'}),
+            'district': forms.TextInput(attrs={'class': 'form-control'}),
+            'lead_source': forms.Select(attrs={'class': 'form-select'}),
+            'channel': forms.TextInput(attrs={'class': 'form-control'}),
+            'follow_status': forms.Select(attrs={'class': 'form-select'}),
+            'latest_followup_note': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'is_friend_added': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'responsible_user': forms.Select(attrs={'class': 'form-select'}),
+            'department': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        from backend.apps.system_management.models import User
+        self.fields['responsible_user'].queryset = User.objects.filter(is_active=True).order_by('username')
+        self.fields['responsible_user'].empty_label = '-- 未分配 --'
+        self.fields['lead_source'].empty_label = '-- 选择来源 --'
+
+    def clean_company_name(self):
+        name = self.cleaned_data.get('company_name')
+        if not name or not name.strip():
+            raise forms.ValidationError('公司名称不能为空')
+        return name.strip()
+
+
 class CustomerFilingForm(forms.ModelForm):
     """客户备案表单"""
     

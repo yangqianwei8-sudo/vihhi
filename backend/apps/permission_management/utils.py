@@ -26,9 +26,11 @@ CUSTOMER_PERMISSION_MAPPING = {
     'customer_success.opportunity.view': 'opportunity_management.opportunity.view',
     'customer_success.opportunity.manage': 'opportunity_management.opportunity.manage',
     'customer_management.opportunity.view': 'opportunity_management.opportunity.view',
-    'customer_management.opportunity.manage': 'opportunity_management.opportunity.manage',
     'customer_management.opportunity.view_all': 'opportunity_management.opportunity.view_all',
     'customer_management.opportunity.create': 'opportunity_management.opportunity.create',
+    'customer_management.opportunity.edit': 'opportunity_management.opportunity.edit',
+    'customer_management.opportunity.delete': 'opportunity_management.opportunity.delete',
+    'customer_management.opportunity.manage': 'opportunity_management.opportunity.manage',
     # 合同管理权限代码统一映射（contract_management -> customer_management）
     'contract_management.contract.view': 'customer_management.contract.view',
     'contract_management.contract.create': 'customer_management.contract.create',

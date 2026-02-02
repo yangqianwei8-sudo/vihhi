@@ -1,0 +1,49 @@
+{# 用印详情内容：用于主内容区第二块（待审批内容/用印记录详情） #}
+<div class="info-grid">
+  <div class="info-item"><span class="info-label">用印类型</span><span class="info-value">{{ usage.get_usage_type_display }}</span></div>
+  <div class="info-item"><span class="info-label">文件名称</span><span class="info-value">{{ usage.document_name|default:"未填写" }}</span></div>
+  <div class="info-item"><span class="info-label">用印份数</span><span class="info-value">{{ usage.usage_count }}</span></div>
+  <div class="info-item"><span class="info-label">用印时间</span><span class="info-value">{{ usage.usage_time|date:"Y-m-d H:i:s" }}</span></div>
+  <div class="info-item"><span class="info-label">印章</span><span class="info-value"><a href="{% url 'admin_pages:seal_detail' seal.id %}" class="text-decoration-none">{{ seal.seal_name }}</a></span></div>
+  <div class="info-item"><span class="info-label">用印人</span><span class="info-value">{{ usage.used_by.get_full_name|default:usage.used_by.username }}</span></div>
+  <div class="info-item"><span class="info-label">见证人</span><span class="info-value">{% if usage.witness %}{{ usage.witness.get_full_name|default:usage.witness.username }}{% else %}未指定{% endif %}</span></div>
+  <div class="info-item"><span class="info-label">创建时间</span><span class="info-value">{{ usage.created_time|date:"Y-m-d H:i:s" }}</span></div>
+  {% if usage.borrowing %}
+  <div class="info-item"><span class="info-label">关联借用</span><span class="info-value"><a href="/admin/administrative_management/sealborrowing/{{ usage.borrowing.id }}/" class="text-decoration-none">{{ usage.borrowing.borrowing_number }}</a></span></div>
+  {% endif %}
+</div>
+<div class="detail-field-wrapper mt-3">
+  <div class="detail-field">
+    <label class="detail-field-label">用印事由</label>
+    <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">{{ usage.usage_reason }}</div>
+  </div>
+</div>
+{% if usage.files.all %}
+<div class="detail-field-wrapper mt-3">
+  <label class="detail-field-label">用印文件</label>
+  <div class="detail-field-value">
+    <div class="list-group">
+      {% for file in usage.files.all %}
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+        <i class="bi bi-file-earmark"></i>
+        <a href="{{ file.file.url }}" target="_blank" class="text-decoration-none">{{ file.file_name|default:file.file.name }}</a>
+        <small class="text-muted ms-2">({{ file.uploaded_time|date:"Y-m-d H:i" }})</small>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% elif usage.document_file %}
+<div class="detail-field-wrapper mt-3">
+  <label class="detail-field-label">用印文件</label>
+  <div class="detail-field-value">
+    <a href="{{ usage.document_file.url }}" target="_blank" class="text-decoration-none"><i class="bi bi-file-earmark"></i> 查看文件</a>
+  </div>
+</div>
+{% endif %}
+{% if usage.notes %}
+<div class="detail-field-wrapper mt-3">
+  <label class="detail-field-label">备注</label>
+  <div class="detail-field-value" style="white-space: pre-wrap; line-height: 1.6;">{{ usage.notes }}</div>
+</div>
+{% endif %}

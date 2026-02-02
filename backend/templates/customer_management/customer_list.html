@@ -4,27 +4,16 @@
 {% block pm_title %}客户列表{% endblock pm_title %}
 {% block pm_subtitle %}查看和管理所有客户信息{% endblock pm_subtitle %}
 
-{% block pm_actions %}
+{% block list_page_actions %}
 {% if can_create %}
-<a href="{% url 'business_pages:customer_create' %}" class="list-btn list-btn-primary">创建客户</a>
+<a href="{% url 'business_pages:customer_create' %}" class="btn btn-primary btn-sm">创建客户</a>
 {% endif %}
-{% endblock pm_actions %}
+{% endblock list_page_actions %}
 
-{% block list_filters_content %}
-  <div class="list-page-filter-item">
-    <label class="list-page-filter-label">搜索</label>
-    <div class="input-group">
-      <select name="search_field" class="form-select form-select-sm" style="max-width: 120px;">
-        <option value="name" {% if search_field == 'name' %}selected{% endif %}>客户名称</option>
-        <option value="phone" {% if search_field == 'phone' %}selected{% endif %}>电话</option>
-        <option value="wechat" {% if search_field == 'wechat' %}selected{% endif %}>微信</option>
-        <option value="address" {% if search_field == 'address' %}selected{% endif %}>地址</option>
-        <option value="unified_credit_code" {% if search_field == 'unified_credit_code' %}selected{% endif %}>统一信用代码</option>
-      </select>
-      <input type="text" name="search" class="form-control form-control-sm" value="{{ search }}" placeholder="请输入关键词">
-    </div>
-  </div>
-  <div class="list-page-filter-item">
+{% block search_placeholder %}客户名称、统一信用代码{% endblock search_placeholder %}
+
+{% block list_filters_extra %}
+  <div class="col list-page-filter-item" data-filter-key="client_level">
     <label class="list-page-filter-label">客户等级</label>
     <select name="client_level" class="form-select form-select-sm">
       <option value="">全部</option>
@@ -33,7 +22,7 @@
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="client_type">
     <label class="list-page-filter-label">客户类型</label>
     <select name="client_type" class="form-select form-select-sm">
       <option value="">全部</option>
@@ -42,7 +31,7 @@
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="credit_level">
     <label class="list-page-filter-label">信用等级</label>
     <select name="credit_level" class="form-select form-select-sm">
       <option value="">全部</option>
@@ -51,7 +40,7 @@
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="responsible_user">
     <label class="list-page-filter-label">负责人</label>
     <select name="responsible_user" class="form-select form-select-sm">
       <option value="">全部</option>
@@ -62,7 +51,7 @@
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="is_active">
     <label class="list-page-filter-label">状态</label>
     <select name="is_active" class="form-select form-select-sm">
       <option value="">全部</option>
@@ -70,7 +59,7 @@
       <option value="0" {% if is_active == '0' %}selected{% endif %}>非活跃</option>
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="source">
     <label class="list-page-filter-label">来源</label>
     <select name="source" class="form-select form-select-sm">
       <option value="">全部</option>
@@ -79,64 +68,15 @@
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="industry">
     <label class="list-page-filter-label">行业</label>
-    <input type="text" name="industry" class="form-control form-control-sm" value="{{ industry }}" placeholder="请输入行业">
+    <input type="text" name="industry" class="form-control form-control-sm" value="{{ industry }}" placeholder="行业">
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="region">
     <label class="list-page-filter-label">地区</label>
-    <input type="text" name="region" class="form-control form-control-sm" value="{{ region }}" placeholder="请输入地区">
+    <input type="text" name="region" class="form-control form-control-sm" value="{{ region }}" placeholder="地区">
   </div>
-  <div class="list-page-filter-item">
-    <label class="list-page-filter-label">审批状态</label>
-    <select name="approval_status" class="form-select form-select-sm">
-      {% for value, label in approval_status_choices %}
-      <option value="{{ value }}" {% if approval_status == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="list-page-filter-item">
-    <label class="list-page-filter-label">创建时间</label>
-    <select name="date_range" class="form-select form-select-sm" id="date_range">
-      <option value="">全部</option>
-      <option value="today" {% if date_range == 'today' %}selected{% endif %}>今天</option>
-      <option value="yesterday" {% if date_range == 'yesterday' %}selected{% endif %}>昨天</option>
-      <option value="this_week" {% if date_range == 'this_week' %}selected{% endif %}>本周</option>
-      <option value="last_week" {% if date_range == 'last_week' %}selected{% endif %}>上周</option>
-      <option value="this_month" {% if date_range == 'this_month' %}selected{% endif %}>本月</option>
-      <option value="last_month" {% if date_range == 'last_month' %}selected{% endif %}>上月</option>
-      <option value="custom" {% if date_range == 'custom' %}selected{% endif %}>自定义</option>
-    </select>
-  </div>
-  <div class="list-page-filter-item" id="custom_date_range" style="display: {% if date_range == 'custom' %}block{% else %}none{% endif %};">
-    <label class="list-page-filter-label">开始日期</label>
-    <input type="date" name="created_time_start" class="form-control form-control-sm" value="{{ created_time_start }}">
-  </div>
-  <div class="list-page-filter-item" id="custom_date_range_end" style="display: {% if date_range == 'custom' %}block{% else %}none{% endif %};">
-    <label class="list-page-filter-label">结束日期</label>
-    <input type="date" name="created_time_end" class="form-control form-control-sm" value="{{ created_time_end }}">
-  </div>
-{% endblock list_filters_content %}
-
-{% block list_table_section %}
-  {# 操作栏 #}
-  <div class="list-action-bar mb-2">
-    <div class="d-flex justify-content-between align-items-center">
-      <div class="text-muted small">
-        共 <strong>{{ page_obj.paginator.count|default:0 }}</strong> 条记录
-      </div>
-    </div>
-  </div>
-
-  {# 表格 #}
-  {{ block.super }}
-{% endblock %}
-
-{% block list_table_checkbox_header %}
-  <th style="width: 50px;">
-    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
-  </th>
-{% endblock list_table_checkbox_header %}
+{% endblock list_filters_extra %}
 
 {% block list_table_headers %}
 <th>客户名称</th>
@@ -152,9 +92,7 @@
 {% block list_table_rows %}
 {% for client in page_obj %}
 <tr>
-  <td>
-    <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ client.id }}" id="item_{{ client.id }}">
-  </td>
+  {% include "shared/_list_row_checkbox_cell.html" with row_id=client.id checkbox_name=list_checkbox_name|default:'item_ids' id_prefix=list_checkbox_id_prefix|default:'item_' %}
   <td>
     <a href="{% url 'business_pages:customer_detail' client.id %}">
       {{ client.name }}
@@ -204,25 +142,3 @@
 {% endfor %}
 {% endblock %}
 
-{% block module_extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // 日期范围选择器联动
-  const dateRangeSelect = document.getElementById('date_range');
-  const customDateRange = document.getElementById('custom_date_range');
-  const customDateRangeEnd = document.getElementById('custom_date_range_end');
-  
-  if (dateRangeSelect) {
-    dateRangeSelect.addEventListener('change', function() {
-      if (this.value === 'custom') {
-        customDateRange.style.display = 'block';
-        customDateRangeEnd.style.display = 'block';
-      } else {
-        customDateRange.style.display = 'none';
-        customDateRangeEnd.style.display = 'none';
-      }
-    });
-  }
-});
-</script>
-{% endblock %}

@@ -18,6 +18,9 @@
           <div class="vh-sb__sub">{{ sidebar_subtitle }}</div>
         {% endif %}
       </div>
+      <button type="button" class="vh-sb__expandAll" data-sb-expand-all title="展开/收起全部菜单" aria-label="展开或收起全部菜单">
+        <span class="vh-sb__expandAll-icon">⊞</span>
+      </button>
 
       {% block sidebar_top_extra %}{% endblock %}
     </div>
@@ -28,11 +31,11 @@
       {% if menu_items %}
         {% for item in menu_items %}
           {% if item.children %}
-            <div class="vh-sb__parent" data-sb-parent data-sb-key="{{ forloop.counter }}-{{ item.label }}">
+            <div class="vh-sb__parent {% if item.expanded or item.active %}is-open{% endif %}" data-sb-parent data-sb-key="{{ forloop.counter }}-{{ item.label }}">
               <button type="button"
                       class="vh-sb__item vh-sb__item--parent {% if item.active %}is-active{% endif %}"
                       data-sb-toggle
-                      aria-expanded="false">
+                      aria-expanded="{% if item.expanded or item.active %}true{% else %}false{% endif %}">
                 <span class="vh-sb__icon">
                   {% if item.icon and item.icon|slice:":3" == "fa-" %}
                     <i class="fas {{ item.icon }}"></i>

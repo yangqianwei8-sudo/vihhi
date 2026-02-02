@@ -2879,7 +2879,7 @@ def project_list(request):
     projects = projects.order_by('-created_time')
     
     # 分页（每页20条）
-    paginator = Paginator(projects, 20)
+    paginator = Paginator(projects, 13)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     

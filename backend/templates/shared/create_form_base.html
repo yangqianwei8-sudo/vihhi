@@ -1,23 +1,34 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/two_column_layout_base.html" %}
 {% load static %}
 {# 
 共享创建表单模板
-继承 module_base.html，提供统一的创建表单结构
+继承 two_column_layout_base（两栏布局基模板），提供统一的创建表单结构
 
-【重要布局规则 - 必须遵守】
+【重要布局规则 - 必须遵守（Bootstrap 5 栅格标准）】
 ============================================
-1. 字段布局使用 Bootstrap 栅格系统
-   - 可以使用 col-md-6（一行2个字段）、col-md-4（一行3个字段）、col-md-3（一行4个字段）等
-   - 根据实际需求灵活选择字段宽度
+1. 字段布局使用 Bootstrap 5 栅格系统
+   - 使用 row g-3 作为行容器（g-3 提供统一的 gutter 间距）
+   - 响应式断点：col-12（移动端）、col-md-6（中屏一行2个）、col-lg-4（大屏一行3个）
+   - 常用组合：
+     * 一行3个字段：col-12 col-md-6 col-lg-4
+     * 一行2个字段：col-12 col-md-6
+     * 一行4个字段：col-12 col-sm-6 col-lg-3
    - 多行文本字段和多选字段建议使用 col-12 占据整行
 
 2. 字段包装
    - 每个字段必须使用 form-field-wrapper 类包装
-   - 格式：<div class="col-md-6 form-field-wrapper">...</div>
+   - 格式：<div class="col-12 col-md-6 col-lg-4 form-field-wrapper">...</div>
 
-3. 多行文本字段和多选字段占据整行
+3. 错误提示样式
+   - 使用 Bootstrap 5 标准的 invalid-feedback d-block 类显示错误
+
+4. 多行文本字段和多选字段占据整行
    - 多行文本字段（Textarea）使用 col-12
    - 多选字段（SelectMultiple）使用 col-12
+
+5. 行容器由基模提供，子模板禁止在 form_fields 内再包 row
+   - 「详细信息」卡片内已有一层 <div class="row g-3">，子模板只输出 col-* form-field-wrapper，不得写 <div class="row">。
+   - 两栏布局基模板已按 Bootstrap 5 标准排版，此处直接使用 Bootstrap 栅格即可。
 
 【按钮样式规范 - 必须遵守】
 ============================================
@@ -29,6 +40,7 @@
 
 {% block module_styles %}
   {{ block.super }}
+  {# 表单卡片内 row/col 使用 Bootstrap 5 标准栅格，由基布局统一按 Bootstrap 排版，此处无需覆盖 #}
 {% endblock module_styles %}
 
 {% block pm_title %}{% block form_title %}创建表单{% endblock form_title %}{% endblock pm_title %}
@@ -87,7 +99,9 @@
     </div>
     {% endif %}
 
-    {# ==================== 卡片1：基本信息（固定，不可覆盖） ==================== #}
+    {# ==================== 卡片1：基本信息（子模板可覆盖 form_basic_info_card） ==================== #}
+    {% block form_basic_info_card %}
+    {% if form.responsible_department %}
     <div class="form-card form-card-basic-info">
       <div class="form-card-header">
         <h3 class="form-card-title">
@@ -96,10 +110,10 @@
         </h3>
       </div>
       <div class="form-card-body">
-        {# 第一排：标准字段（固定） + 额外字段（可扩展） #}
-        <div class="row mb-3">
+        {# 仅三项：所属部门、负责人、表单编号；其余字段请放在「详细信息」卡片的 form_fields 中 #}
+        <div class="row g-3">
           {# 所属部门字段（固定，必存在） #}
-          <div class="col-md-4 form-field-wrapper">
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
             <label for="{{ form.responsible_department.id_for_label }}" class="form-label">
               {% if form.responsible_department.label %}
                 {% if "默认" in form.responsible_department.label or "不可修改" in form.responsible_department.label %}
@@ -114,7 +128,7 @@
             </label>
             {{ form.responsible_department }}
             {% if form.responsible_department.errors %}
-            <div class="text-danger small">{{ form.responsible_department.errors }}</div>
+            <div class="invalid-feedback d-block">{{ form.responsible_department.errors }}</div>
             {% endif %}
             {% if form.responsible_department.help_text %}
             <div class="form-text">{{ form.responsible_department.help_text }}</div>
@@ -122,7 +136,7 @@
           </div>
 
           {# 负责人字段（固定，必存在） #}
-          <div class="col-md-4 form-field-wrapper">
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
             <label for="{{ form.responsible_person.id_for_label }}" class="form-label">
               {% if form.responsible_person.label %}
                 {% if "默认" in form.responsible_person.label or "不可修改" in form.responsible_person.label %}
@@ -137,7 +151,7 @@
             </label>
             {{ form.responsible_person }}
             {% if form.responsible_person.errors %}
-            <div class="text-danger small">{{ form.responsible_person.errors }}</div>
+            <div class="invalid-feedback d-block">{{ form.responsible_person.errors }}</div>
             {% endif %}
             {% if form.responsible_person.help_text %}
             <div class="form-text">{{ form.responsible_person.help_text }}</div>
@@ -146,50 +160,44 @@
 
           {# 表单编号字段（固定，必存在）：自动检测 goal_number、plan_number、form_number #}
           {% if form.goal_number %}
-          <div class="col-md-4 form-field-wrapper">
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
             <label for="{{ form.goal_number.id_for_label }}" class="form-label">
               {{ form.goal_number.label }}
               {% if form.goal_number.field.required %}<span class="text-danger">*</span>{% endif %}
             </label>
             {{ form.goal_number }}
             {% if form.goal_number.errors %}
-            <div class="text-danger small">{{ form.goal_number.errors }}</div>
+            <div class="invalid-feedback d-block">{{ form.goal_number.errors }}</div>
             {% endif %}
           </div>
           {% elif form.plan_number %}
-          <div class="col-md-4 form-field-wrapper">
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
             <label for="{{ form.plan_number.id_for_label }}" class="form-label">
               {{ form.plan_number.label }}
               {% if form.plan_number.field.required %}<span class="text-danger">*</span>{% endif %}
             </label>
             {{ form.plan_number }}
             {% if form.plan_number.errors %}
-            <div class="text-danger small">{{ form.plan_number.errors }}</div>
+            <div class="invalid-feedback d-block">{{ form.plan_number.errors }}</div>
             {% endif %}
           </div>
           {% elif form.form_number %}
-          <div class="col-md-4 form-field-wrapper">
+          <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
             <label for="{{ form.form_number.id_for_label }}" class="form-label">
               {{ form.form_number.label }}
               {% if form.form_number.field.required %}<span class="text-danger">*</span>{% endif %}
             </label>
             {{ form.form_number }}
             {% if form.form_number.errors %}
-            <div class="text-danger small">{{ form.form_number.errors }}</div>
+            <div class="invalid-feedback d-block">{{ form.form_number.errors }}</div>
             {% endif %}
           </div>
           {% endif %}
-          
-          {# 第一排额外字段：子模板可以在此添加额外字段 #}
-          {% block form_first_row_extra_fields %}{% endblock %}
-        </div>
-        
-        {# 第二排：基本信息其他字段（子模板可扩展） #}
-        <div class="row mb-3">
-          {% block form_second_row_extra_fields %}{% endblock %}
         </div>
       </div>
     </div>
+    {% endif %}
+    {% endblock form_basic_info_card %}
 
     {# ==================== 卡片2：其他字段 ==================== #}
     {% block form_other_fields_card %}
@@ -201,7 +209,12 @@
         </h3>
       </div>
       <div class="form-card-body">
-        {% block form_fields %}{% endblock %}
+        <div class="row g-3">
+          {% block form_fields %}{% endblock %}
+          {# 原「基本信息」中的额外字段统一移入此处展示 #}
+          {% block form_first_row_extra_fields %}{% endblock %}
+          {% block form_second_row_extra_fields %}{% endblock %}
+        </div>
       </div>
     </div>
     {% endblock form_other_fields_card %}
@@ -211,7 +224,7 @@
     {% endblock form_approval_workflow_card %}
 
     {# ==================== 表单底部操作按钮 ==================== #}
-    <div class="form-actions-bottom mt-4 mb-3 pt-3" style="border-top: 1px solid var(--vh-border, #dee2e6);">
+    <div class="form-actions-bottom mt-4 mb-3 pt-3">
       <div class="d-flex justify-content-end align-items-center gap-2">
         {% block form_actions %}
         {# 

@@ -1,22 +1,64 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block pm_title %}{{ page_title }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">查看和管理所有拜访计划</span>{% endblock %}
+{% block pm_title %}{{ page_title|default:"客户跟踪列表" }}{% endblock pm_title %}
+{% block pm_subtitle %}查看和管理所有拜访计划{% endblock pm_subtitle %}
 
-{% block pm_actions %}
+{% block list_page_actions %}
 {% if can_create %}
-<a href="{% url 'customer_pages:visit_plan_create' %}" class="list-btn list-btn-primary">
-  新增拜访
-</a>
+<a href="{% url 'customer_pages:visit_plan_create' %}" class="btn btn-primary btn-sm">创建拜访</a>
+<a href="{% url 'customer_pages:first_visit_create' %}" class="btn btn-outline-primary btn-sm">首次拜访</a>
 {% endif %}
-{% endblock %}
+{% endblock list_page_actions %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/layouts/list-layout.css' %}">
-{% endblock %}
+{% block search_placeholder %}拜访计划标题、客户名称{% endblock search_placeholder %}
 
-{% block pm_content %}
-  {% include "customer_management/_partials/_customer_visit_filters.html" %}
-  {% include "customer_management/_partials/_customer_visit_table.html" %}
-{% endblock %}
+{% block list_table_headers %}
+<th>拜访计划标题</th>
+<th>客户</th>
+<th>计划日期</th>
+<th>拜访地点</th>
+<th>状态</th>
+<th>创建人</th>
+<th>操作</th>
+{% endblock list_table_headers %}
+
+{% block list_table_rows %}
+{% for visit_plan in page_obj %}
+<tr>
+  <td>
+    <strong>{{ visit_plan.plan_title|default:"未设置标题" }}</strong>
+  </td>
+  <td>
+    <a href="{% url 'customer_pages:customer_detail' visit_plan.client.id %}">
+      {{ visit_plan.client.name }}
+    </a>
+  </td>
+  <td>{{ visit_plan.plan_date|date:"Y-m-d H:i" }}</td>
+  <td>{{ visit_plan.location|default:"—" }}</td>
+  <td>
+    <span class="badge {% if visit_plan.status == 'planned' %}bg-info{% elif visit_plan.status == 'in_progress' %}bg-warning{% elif visit_plan.status == 'completed' %}bg-success{% else %}bg-secondary{% endif %}">
+      {{ visit_plan.get_status_display }}
+    </span>
+  </td>
+  <td>{{ visit_plan.created_by.get_full_name|default:visit_plan.created_by.username }}</td>
+  <td>
+    <div class="list-page-table-actions">
+      <a href="{% url 'customer_pages:visit_plan_detail' visit_plan.id %}" class="action-view" title="查看">
+        <i class="bi bi-eye"></i>
+      </a>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="7" class="list-empty">
+    <div class="list-empty-icon">📋</div>
+    <div class="list-empty-text">暂无拜访计划</div>
+    {% block list_empty_hint %}
+    <p class="text-muted" style="font-size: 0.9rem; margin-top: 8px;">请创建第一个拜访计划开始使用</p>
+    {% endblock list_empty_hint %}
+  </td>
+</tr>
+{% endfor %}
+{% endblock list_table_rows %}

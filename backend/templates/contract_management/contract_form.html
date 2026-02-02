@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/two_column_layout_base.html" %}
 {% load static %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
@@ -51,7 +51,7 @@
             {% endif %}
         </div>
 
-    <form method="post" enctype="multipart/form-data" id="contract-form" class="form-card">
+    <form method="post" enctype="multipart/form-data" id="contract-form">
         {% csrf_token %}
 
         {% if form.non_field_errors %}
@@ -1324,19 +1324,21 @@
                 const opportunityId = this.value;
 
                 if (opportunityId) {
-                    // 从选项的data属性中获取客户信息和项目业态
+                    // 从选项的data属性中获取客户信息、项目业态、关联项目
                     const clientId = selectedOption.getAttribute('data-client-id');
                     const clientName = selectedOption.getAttribute('data-client-name');
                     const projectType = selectedOption.getAttribute('data-project-type');
+                    const projectId = selectedOption.getAttribute('data-project-id');
 
                     if (clientId && clientSelect) {
-                        // 填充关联客户
                         clientSelect.value = clientId;
                     }
-
                     if (projectType && projectBusinessTypeInput) {
-                        // 填充项目业态
                         projectBusinessTypeInput.value = projectType;
+                    }
+                    const projectSelect = document.querySelector('[name="project"]');
+                    if (projectId && projectSelect) {
+                        projectSelect.value = projectId;
                     }
 
                     // 如果选项中没有data属性（编辑模式下从Django模板渲染的选项），从API获取
@@ -1363,6 +1365,11 @@
                                 // 填充项目业态
                                 if (opp.project_type && projectBusinessTypeInput) {
                                     projectBusinessTypeInput.value = opp.project_type;
+                                }
+                                // 自动回填 project（如字段存在）
+                                const projectSelect = document.querySelector('[name="project"]');
+                                if (opp.project && opp.project.id && projectSelect) {
+                                    projectSelect.value = opp.project.id;
                                 }
                             }
                         })
@@ -1417,6 +1424,9 @@
                                     }
                                     if (opp.project_type) {
                                         option.setAttribute('data-project-type', opp.project_type);
+                                    }
+                                    if (opp.project && opp.project.id) {
+                                        option.setAttribute('data-project-id', opp.project.id);
                                     }
                                 }
                             }

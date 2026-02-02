@@ -500,7 +500,7 @@ def output_value_record_list(request):
         records = records.filter(status=status)
     
     # 分页
-    paginator = Paginator(records, 20)
+    paginator = Paginator(records, 13)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
@@ -569,7 +569,7 @@ def project_output_value_detail(request, project_id):
                              user_has_permission(request.user, 'output_value_management.manage_template'))
     
     # 产值记录分页
-    paginator = Paginator(output_value_summary['records'], 20)
+    paginator = Paginator(output_value_summary['records'], 13)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     

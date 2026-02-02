@@ -1,228 +1,70 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/two_column_layout_base.html" %}
 {% load static %}
 
-{% block title %}账号设置{% endblock %}
+{% block title %}账号设置 - 维海生产系统{% endblock %}
 
-{% block extra_head %}
-<style>
-    body {
-        background: #f4f6fb;
-        min-height: 100vh;
-    }
-    .account-settings-container {
-        max-width: 1100px;
-    }
-    .settings-hero {
-        background: linear-gradient(135deg, #142F5B, #1F3E7C);
-        border-radius: 24px;
-        color: #fff;
-        padding: 32px 36px;
-        box-shadow: 0 24px 48px rgba(20, 47, 91, 0.18);
-        margin-bottom: 26px;
-        position: relative;
-        overflow: hidden;
-    }
-    .settings-hero::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(circle at top right, rgba(255,255,255,0.22), transparent 60%);
-        pointer-events: none;
-    }
-    .settings-layout {
-        display: grid;
-        grid-template-columns: 260px 1fr;
-        gap: 24px;
-    }
-    @media (max-width: 992px) {
-        .settings-layout {
-            grid-template-columns: 1fr;
-        }
-    }
-    .settings-nav {
-        background: #fff;
-        border-radius: 20px;
-        padding: 20px;
-        border: 1px solid rgba(14, 26, 57, 0.08);
-        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    .settings-nav-title {
-        font-size: 14px;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        color: rgba(20, 47, 91, 0.6);
-        text-transform: uppercase;
-        margin-bottom: 6px;
-    }
-    .settings-nav-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        border-radius: 14px;
-        padding: 12px 16px;
-        font-size: 15px;
-        font-weight: 500;
-        color: #142F5B;
-        text-decoration: none;
-        transition: all 0.2s ease;
-    }
-    .settings-nav-item span {
-        width: 28px;
-        height: 28px;
-        border-radius: 10px;
-        background: rgba(20, 47, 91, 0.08);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-    }
-    .settings-nav-item:hover {
-        background: rgba(20, 47, 91, 0.08);
-    }
-    .settings-nav-item.active {
-        background: linear-gradient(135deg, #142F5B, #1F3E7C);
-        color: #fff;
-        box-shadow: 0 12px 24px rgba(20, 47, 91, 0.18);
-    }
-    .settings-nav-item.active span {
-        background: rgba(255,255,255,0.2);
-    }
-    .settings-card {
-        background: #fff;
-        border-radius: 22px;
-        padding: 26px 28px;
-        border: 1px solid rgba(14, 26, 57, 0.08);
-        box-shadow: 0 18px 40px rgba(20, 47, 91, 0.08);
-        margin-bottom: 24px;
-    }
-    .settings-card h3 {
-        font-size: 20px;
-        font-weight: 700;
-        color: #142F5B;
-        margin-bottom: 6px;
-    }
-    .settings-card p.description {
-        font-size: 13px;
-        color: rgba(20, 47, 91, 0.6);
-        margin-bottom: 22px;
-    }
-    .form-label {
-        font-weight: 600;
-        color: #142F5B;
-        font-size: 14px;
-    }
-    .avatar-preview {
-        width: 64px;
-        height: 64px;
-        border-radius: 16px;
-        background: #f0f4ff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #142F5B;
-        font-weight: 700;
-        font-size: 20px;
-        overflow: hidden;
-    }
-    .avatar-preview img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    .badge-role {
-        background: rgba(20, 47, 91, 0.08);
-        color: #142F5B;
-        border-radius: 999px;
-        padding: 6px 12px;
-        font-size: 13px;
-        font-weight: 500;
-    }
-    .permission-chip {
-        display: inline-flex;
-        align-items: center;
-        background: rgba(20, 47, 91, 0.06);
-        color: #142F5B;
-        border-radius: 999px;
-        padding: 4px 10px;
-        font-size: 12px;
-        margin: 3px;
-    }
-    .alert-messages .alert {
-        border-radius: 14px;
-        border: none;
-        box-shadow: 0 12px 32px rgba(20, 47, 91, 0.08);
-    }
-</style>
-{% endblock %}
+{% block pm_title %}账号设置{% endblock pm_title %}
 
-{% block content %}
-<div class="py-4 py-lg-5">
-    <div class="container account-settings-container">
-        <div class="settings-hero">
-            <div style="position: relative; z-index: 1;">
-                <div style="font-size: 14px; letter-spacing: 1px; opacity: 0.85; text-transform: uppercase;">Account Center</div>
-                <h1 class="h3 fw-bold mb-2 mt-2">账号设置</h1>
-                <p class="mb-0" style="opacity:0.75; max-width: 540px;">
-                    管理个人资料、安全密码与消息提醒，让系统体验更贴合您的工作习惯。
-                </p>
-            </div>
-        </div>
+{% block pm_subtitle %}管理个人资料、安全密码与消息提醒，让系统体验更贴合您的工作习惯。{% endblock pm_subtitle %}
 
-        {% if messages %}
-        <div class="alert-messages mb-3">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags|default:'info' }} mb-2" role="alert">
-                {{ message }}
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
+{% block pm_actions %}
+    <a href="{% url 'system_pages:system_settings' %}" class="btn btn-outline-secondary btn-sm">
+        返回系统设置
+    </a>
+{% endblock pm_actions %}
 
-        <div class="settings-layout">
-            <nav class="settings-nav">
-                <div class="settings-nav-title">设置项目</div>
-                <a href="?tab=profile" class="settings-nav-item {% if active_tab == 'profile' %}active{% endif %}">
-                    <span>👤</span> 基本资料
-                </a>
-                <a href="?tab=notifications" class="settings-nav-item {% if active_tab == 'notifications' %}active{% endif %}">
-                    <span>🔔</span> 消息通知
-                </a>
-                <a href="?tab=security" class="settings-nav-item {% if active_tab == 'security' %}active{% endif %}">
-                    <span>🔐</span> 登录安全
-                </a>
-            </nav>
+{% block pm_content %}
+{% if messages %}
+<div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} mb-2" role="alert">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
 
-            <div>
-                <section id="profile-card" class="settings-card {% if active_tab != 'profile' %}d-none{% endif %}">
-                    <h3>基本资料</h3>
-                    <p class="description">完善个人资料，便于团队成员快速了解您，并在通知中展示准确的信息。</p>
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <input type="hidden" name="form_type" value="profile">
-                        <div class="row g-4 align-items-center mb-3">
-                            <div class="col-auto">
-                                <div class="avatar-preview">
-                                    {% if user_obj.avatar %}
-                                        <img src="{{ user_obj.avatar.url }}" alt="头像">
-                                    {% else %}
-                                        {{ user_obj.first_name|default:user_obj.username|slice:":1"|upper }}
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col">
-                                <label class="form-label">上传头像</label>
-                                <input class="form-control" type="file" accept="image/*" name="avatar">
-                                <div class="form-text text-muted">支持 JPG/PNG，最大 2MB。</div>
-                                {% if profile_errors.avatar %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in profile_errors.avatar %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
-                                    </div>
+<div class="row">
+    <div class="col-md-3 mb-4 mb-md-0">
+        <ul class="nav flex-column nav-pills">
+            <li class="nav-item">
+                <a href="?tab=profile" class="nav-link {% if active_tab == 'profile' %}active{% endif %}">👤 基本资料</a>
+            </li>
+            <li class="nav-item">
+                <a href="?tab=notifications" class="nav-link {% if active_tab == 'notifications' %}active{% endif %}">🔔 消息通知</a>
+            </li>
+            <li class="nav-item">
+                <a href="?tab=security" class="nav-link {% if active_tab == 'security' %}active{% endif %}">🔐 登录安全</a>
+            </li>
+        </ul>
+    </div>
+    <div class="col-md-9">
+        <section id="profile-card" class="card mb-4 {% if active_tab != 'profile' %}d-none{% endif %}">
+            <div class="card-header"><h5 class="mb-0">基本资料</h5></div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">完善个人资料，便于团队成员快速了解您，并在通知中展示准确的信息。</p>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="profile">
+                    <div class="row g-3 align-items-center mb-3">
+                        <div class="col-auto">
+                            <div class="rounded bg-light d-flex align-items-center justify-content-center text-primary fw-bold overflow-hidden" style="width:64px;height:64px;font-size:20px;">
+                                {% if user_obj.avatar %}
+                                    <img src="{{ user_obj.avatar.url }}" alt="头像" style="width:100%;height:100%;object-fit:cover;">
+                                {% else %}
+                                    {{ user_obj.first_name|default:user_obj.username|slice:":1"|upper }}
                                 {% endif %}
                             </div>
                         </div>
+                        <div class="col">
+                            <label class="form-label">上传头像</label>
+                            <input class="form-control" type="file" accept="image/*" name="avatar">
+                            <div class="form-text text-muted">支持 JPG/PNG，最大 2MB。</div>
+                            {% if profile_errors.avatar %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in profile_errors.avatar %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
                         <div class="row g-4">
                             <div class="col-md-6">
                                 <label class="form-label">姓名（名）</label>
@@ -308,9 +150,10 @@
                     </form>
                 </section>
 
-                <section id="notification-card" class="settings-card {% if active_tab != 'notifications' %}d-none{% endif %}">
-                    <h3>消息通知</h3>
-                    <p class="description">灵活配置站内信、邮件、企微提醒方式，避免错过关键业务提醒。</p>
+                <section id="notification-card" class="card mb-4 {% if active_tab != 'notifications' %}d-none{% endif %}">
+                    <div class="card-header"><h5 class="mb-0">消息通知</h5></div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">灵活配置站内信、邮件、企微提醒方式，避免错过关键业务提醒。</p>
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="form_type" value="notifications">
@@ -352,15 +195,17 @@
                             {% endfor %}
                         </div>
                         {% endif %}
-                        <div class="mt-4">
-                            <button class="btn btn-primary px-4" type="submit">保存通知偏好</button>
+                        <div class="mt-3">
+                            <button class="btn btn-primary" type="submit">保存通知偏好</button>
                         </div>
                     </form>
-                </section>
+                </div>
+            </section>
 
-                <section id="security-card" class="settings-card {% if active_tab != 'security' %}d-none{% endif %}">
-                    <h3>登录安全</h3>
-                    <p class="description">建议定期修改密码并确保保密，系统将强制校验复杂度并即时生效。</p>
+            <section id="security-card" class="card mb-4 {% if active_tab != 'security' %}d-none{% endif %}">
+                <div class="card-header"><h5 class="mb-0">登录安全</h5></div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">建议定期修改密码并确保保密，系统将强制校验复杂度并即时生效。</p>
                     <form method="post" autocomplete="off">
                         {% csrf_token %}
                         <input type="hidden" name="form_type" value="password">
@@ -401,14 +246,12 @@
                         <div class="alert alert-warning mt-3">
                             修改密码后需要使用新密码重新登录系统。
                         </div>
-                        <div class="mt-4">
-                            <button class="btn btn-danger px-4" type="submit">更新密码</button>
+                        <div class="mt-3">
+                            <button class="btn btn-danger" type="submit">更新密码</button>
                         </div>
                     </form>
-                </section>
-
-                            </div>
-        </div>
+                </div>
+            </section>
     </div>
 </div>
-{% endblock %}
+{% endblock pm_content %}

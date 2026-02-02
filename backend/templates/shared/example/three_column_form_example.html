@@ -1,173 +1,16 @@
-{% extends "shared/three_column_layout_approval_base.html" %}
+{% extends "shared/three_column_layout_base.html" %}
 {% load static %}
 
 {% block title %}三栏布局表单示例 - 维海科技信息化管理平台{% endblock %}
 
 {% block extra_head %}
 {{ block.super }}
-<!-- 表单样式 -->
 <link rel="stylesheet" href="{% static 'css/components/forms.css' %}">
 <link rel="stylesheet" href="{% static 'css/components/cards.css' %}">
-<style>
-    /* 三栏布局中的表单样式适配 */
-    .three-column-main__content .form-card {
-        margin-bottom: var(--spacing-lg, 24px);
-    }
-    
-    .three-column-main__content .form-card:last-child {
-        margin-bottom: 0;
-    }
-    
-    /* 表单字段在中间详情区的样式 */
-    .three-column-main__content .form-field-wrapper {
-        margin-bottom: var(--spacing-md, 16px);
-    }
-    
-    /* 表单操作按钮区域 */
-    .form-actions-bottom {
-        margin-top: var(--spacing-lg, 24px);
-        padding-top: var(--spacing-md, 16px);
-        border-top: 1px solid var(--vh-border, #E0E0E0);
-    }
-    
-    /* 右侧操作区的按钮样式 */
-    .three-column-actions__button {
-        margin-bottom: var(--spacing-xs, 4px);
-    }
-    
-    .three-column-actions__button:last-child {
-        margin-bottom: 0;
-    }
-</style>
 {% endblock %}
 
-{% block header_title %}创建表单示例{% endblock %}
-{% block header_subtitle_text %}使用三栏布局的表单页面{% endblock %}
-
-{% block header_right %}
-<button class="btn btn-secondary btn-sm" onclick="window.history.back()">
-    <i class="fas fa-arrow-left"></i> 返回
-</button>
-<button class="btn btn-primary btn-sm" id="headerSubmitButton">
-    <i class="fas fa-save"></i> 保存
-</button>
-{% endblock %}
-
-{% block sidebar_title %}表单导航{% endblock %}
-
-{% block sidebar_content %}
-<!-- 页面导航 -->
-<div class="three-column-sidebar__section">
-    <div class="three-column-sidebar__section-title">页面导航</div>
-    <nav class="three-column-sidebar__nav">
-        <a href="/" class="three-column-sidebar__nav-item">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-home"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">返回首页</span>
-        </a>
-        <a href="#" class="three-column-sidebar__nav-item" onclick="window.history.back(); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-arrow-left"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">返回上一页</span>
-        </a>
-        <a href="#" class="three-column-sidebar__nav-item" onclick="alert('列表页面功能'); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-list"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">查看列表</span>
-        </a>
-        <a href="#" class="three-column-sidebar__nav-item" onclick="alert('详情页面功能'); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-file-alt"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">查看详情</span>
-        </a>
-    </nav>
-</div>
-
-<!-- 表单步骤导航 -->
-<div class="three-column-sidebar__section">
-    <div class="three-column-sidebar__section-title">表单步骤</div>
-    <nav class="three-column-sidebar__nav">
-        <a href="#basic-info" class="three-column-sidebar__nav-item active" onclick="scrollToSection('basic-info'); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-info-circle"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">基本信息</span>
-        </a>
-        <a href="#details" class="three-column-sidebar__nav-item" onclick="scrollToSection('details'); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-list-alt"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">详细信息</span>
-        </a>
-        <a href="#attachments" class="three-column-sidebar__nav-item" onclick="scrollToSection('attachments'); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-paperclip"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">附件</span>
-        </a>
-    </nav>
-</div>
-
-<!-- 快速操作 -->
-<div class="three-column-sidebar__section">
-    <div class="three-column-sidebar__section-title">快速操作</div>
-    <nav class="three-column-sidebar__nav">
-        <a href="#" class="three-column-sidebar__nav-item" onclick="clearForm(); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-redo"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">清空表单</span>
-        </a>
-        <a href="#" class="three-column-sidebar__nav-item" onclick="saveDraft(); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-save"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">保存草稿</span>
-        </a>
-        <a href="#" class="three-column-sidebar__nav-item" onclick="previewForm(); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-eye"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">预览表单</span>
-        </a>
-        <a href="#" class="three-column-sidebar__nav-item" onclick="printForm(); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-print"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">打印表单</span>
-        </a>
-    </nav>
-</div>
-
-<!-- 相关页面 -->
-<div class="three-column-sidebar__section">
-    <div class="three-column-sidebar__section-title">相关页面</div>
-    <nav class="three-column-sidebar__nav">
-        <a href="#" class="three-column-sidebar__nav-item" onclick="alert('相关表单功能'); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-file-invoice"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">相关表单</span>
-        </a>
-        <a href="#" class="three-column-sidebar__nav-item" onclick="alert('审批流程功能'); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-check-circle"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">审批流程</span>
-        </a>
-        <a href="#" class="three-column-sidebar__nav-item" onclick="alert('操作日志功能'); return false;">
-            <span class="three-column-sidebar__nav-icon">
-                <i class="fas fa-history"></i>
-            </span>
-            <span class="three-column-sidebar__nav-label">操作日志</span>
-        </a>
-    </nav>
-</div>
-{% endblock %}
+{% block three_column_main_title %}创建表单示例{% endblock %}
+{% block three_column_main_subtitle %}使用三栏布局的表单页面{% endblock %}
 
 {% block main_content %}
 <form method="post" class="create-form" id="createForm">
@@ -370,9 +213,9 @@
 </form>
 {% endblock %}
 
-{% block actions_title %}操作面板{% endblock %}
+{% block right_sidebar_title %}操作面板{% endblock %}
 
-{% block actions_content %}
+{% block right_sidebar_content %}
 <!-- 主要操作 -->
 <div class="three-column-actions__group">
     <div class="three-column-actions__group-title">主要操作</div>
@@ -435,7 +278,7 @@
         <i class="fas fa-paperclip"></i> 附件
     </button>
 </div>
-{% endblock %}
+{% endblock right_sidebar_content %}
 
 {% block extra_js %}
 {{ block.super }}
@@ -572,15 +415,6 @@ function scrollToSection(sectionId) {
     const section = document.getElementById(sectionId);
     if (section) {
         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        
-        // 更新左侧导航的激活状态
-        document.querySelectorAll('.three-column-sidebar__nav-item').forEach(function(item) {
-            item.classList.remove('active');
-        });
-        const navItem = document.querySelector(`a[href="#${sectionId}"]`);
-        if (navItem) {
-            navItem.classList.add('active');
-        }
     }
 }
 

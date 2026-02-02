@@ -1,21 +1,63 @@
 {% extends "shared/list_page_base.html" %}
 {% load static %}
 
-{% block pm_title %}人员关系管理{% endblock pm_title %}
+{% block pm_title %}联系人列表{% endblock pm_title %}
 {% block pm_subtitle %}查看和管理所有联系人{% endblock pm_subtitle %}
 
-{% block pm_actions %}
+{% block list_page_actions %}
 {% if can_create %}
-<a href="{% url 'business_pages:contact_create' %}" class="list-btn list-btn-primary">新增联系人</a>
+<a href="{% url 'customer_pages:contact_create' %}" class="btn btn-primary btn-sm">新增联系人</a>
 {% endif %}
-{% endblock pm_actions %}
+{% endblock list_page_actions %}
+
+{% block search_placeholder %}客户名称、联系人姓名、电话{% endblock search_placeholder %}
+
+{% block list_filters_extra %}
+  <div class="col list-page-filter-item" data-filter-key="client_id">
+    <label class="list-page-filter-label">客户</label>
+    <select name="client_id" class="form-select form-select-sm">
+      <option value="">全部客户</option>
+      {% for c in clients %}
+      <option value="{{ c.id }}" {% if client_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col list-page-filter-item" data-filter-key="role">
+    <label class="list-page-filter-label">人员角色</label>
+    <select name="role" class="form-select form-select-sm">
+      <option value="">全部</option>
+      {% for value, label in role_choices %}
+      <option value="{{ value }}" {% if role == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col list-page-filter-item" data-filter-key="relationship_level">
+    <label class="list-page-filter-label">关系等级</label>
+    <select name="relationship_level" class="form-select form-select-sm">
+      <option value="">全部</option>
+      {% for value, label in relationship_level_choices %}
+      <option value="{{ value }}" {% if relationship_level == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+{% endblock list_filters_extra %}
+
+{% block list_table_headers %}
+<th>客户名称</th>
+<th>联系人姓名</th>
+<th>人员角色</th>
+<th>关系等级</th>
+<th>职务</th>
+<th>电话</th>
+<th>邮箱</th>
+<th>创建时间</th>
+<th>操作</th>
+{% endblock list_table_headers %}
 
 {% block list_table_rows %}
 {% for contact in page_obj %}
       <tr>
-        <td>
-          <input type="checkbox" name="contact_ids" value="{{ contact.id }}" class="form-check-input row-checkbox">
-        </td>
+        {% include "shared/_list_row_checkbox_cell.html" with row_id=contact.id checkbox_name=list_checkbox_name|default:'contact_ids' id_prefix=list_checkbox_id_prefix|default:'item_' %}
         <td>
           <a href="{% url 'business_pages:customer_detail' contact.client.id %}">
             {{ contact.client.name }}
@@ -65,74 +107,5 @@
           {% endblock list_empty_hint %}
         </td>
       </tr>
-      {% endfor %}
+{% endfor %}
 {% endblock list_table_rows %}
-
-{% block list_table_checkbox_header %}
-<th style="width: 50px;">
-  <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
-</th>
-{% endblock list_table_checkbox_header %}
-
-{% block list_table_headers %}
-<th>客户名称</th>
-<th>联系人姓名</th>
-<th>人员角色</th>
-<th>关系等级</th>
-<th>职务</th>
-<th>电话</th>
-<th>邮箱</th>
-<th>创建时间</th>
-<th>操作</th>
-{% endblock list_table_headers %}
-
-
-
-{% block module_extra_js %}
-<script>
-// 全选/取消全选
-document.getElementById('selectAll')?.addEventListener('change', function() {
-    const checkboxes = document.querySelectorAll('.row-checkbox');
-    checkboxes.forEach(cb => cb.checked = this.checked);
-    updateSelectedCount();
-});
-
-// 行复选框变化
-document.querySelectorAll('.row-checkbox').forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-        updateSelectedCount();
-        updateSelectAllState();
-    });
-});
-
-// 更新选中数量
-function updateSelectedCount() {
-    const selected = document.querySelectorAll('.row-checkbox:checked').length;
-    const countEl = document.getElementById('selectedCount');
-    if (countEl) {
-        countEl.textContent = selected;
-    }
-
-    // 启用/禁用批量操作按钮
-    const batchButtons = document.querySelectorAll('#batchEditBtn, #batchExportBtn, .dropdown-toggle');
-    batchButtons.forEach(btn => {
-        btn.disabled = selected === 0;
-    });
-}
-
-// 更新全选状态
-function updateSelectAllState() {
-    const checkboxes = document.querySelectorAll('.row-checkbox');
-    const selectAll = document.getElementById('selectAll');
-    if (checkboxes.length > 0 && selectAll) {
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        const someChecked = Array.from(checkboxes).some(cb => cb.checked);
-        selectAll.checked = allChecked;
-        selectAll.indeterminate = someChecked && !allChecked;
-    }
-}
-
-// 初始化
-updateSelectedCount();
-</script>
-{% endblock module_extra_js %}

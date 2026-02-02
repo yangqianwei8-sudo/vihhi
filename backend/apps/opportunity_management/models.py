@@ -47,6 +47,15 @@ class BusinessOpportunity(models.Model):
     service_type = models.ForeignKey('base_data.ServiceType', on_delete=models.SET_NULL, null=True, blank=True, related_name='opportunities', verbose_name='服务类型')
     
     # 项目信息
+    project = models.ForeignKey(
+        'production_management.Project',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='opportunities',
+        verbose_name='关联项目',
+        help_text='B3 结构化锚点：商机关联的生产管理项目，便于合同/委托书选择商机时回填'
+    )
     project_name = models.CharField(max_length=200, blank=True, verbose_name='项目名称')
     project_address = models.CharField(max_length=500, blank=True, verbose_name='项目地址')
     project_type = models.CharField(max_length=50, blank=True, verbose_name='项目业态', help_text='住宅/综合体/商业/写字楼等')

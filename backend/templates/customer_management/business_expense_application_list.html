@@ -4,6 +4,12 @@
 {% block pm_title %}{{ page_title|default:"商务费用申请" }}{% endblock pm_title %}
 {% block pm_subtitle %}查看和管理所有商务费用申请{% endblock pm_subtitle %}
 
+{% block list_page_actions %}
+{% if can_create %}
+<a href="{% url 'customer_pages:business_expense_application_create' %}" class="btn btn-primary btn-sm">新增申请</a>
+{% endif %}
+{% endblock list_page_actions %}
+
 {% block list_table_headers %}
 <th>申请单号</th>
 <th>客户名称</th>
@@ -61,6 +67,7 @@
 {% endblock list_table_rows %}
 
 {% block module_extra_js %}
+    {{ block.super }}
     {% include "customer_management/includes/filter_fields_settings_modal.html" %}
 
     <!-- 引入筛选字段设置功能模块 -->

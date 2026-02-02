@@ -30,12 +30,6 @@
   </div>
 {% endblock list_filters_content %}
 
-{% block list_table_checkbox_header %}
-  <th style="width: 50px;">
-    <input type="checkbox" id="selectAll" class="form-check-input" title="全选">
-  </th>
-{% endblock list_table_checkbox_header %}
-
 {% block list_table_headers %}
   <th>用印单号</th>
   <th>印章名称</th>
@@ -52,9 +46,7 @@
   {% if page_obj %}
     {% for usage in page_obj %}
     <tr>
-      <td>
-        <input type="checkbox" class="form-check-input row-checkbox" name="item_ids" value="{{ usage.id }}" id="item_{{ usage.id }}">
-      </td>
+      {% include "shared/_list_row_checkbox_cell.html" with row_id=usage.id checkbox_name=list_checkbox_name|default:'item_ids' id_prefix=list_checkbox_id_prefix|default:'item_' %}
       <td>
         <a href="{% url 'admin_pages:seal_usage_detail' usage.id %}" class="text-dark text-decoration-none fw-medium">
           <code>{{ usage.usage_number }}</code>
@@ -76,6 +68,7 @@
       <td>
         {% if usage.approval_instance %}
           {% with instance=usage.approval_instance %}
+          <a href="{% url 'workflow_engine:approval_detail' instance.id %}" class="text-decoration-none" title="查看审批详情">
           {% if instance.status == 'pending' %}
           <span class="status-badge pending">审批中</span>
           {% elif instance.status == 'approved' %}
@@ -92,6 +85,7 @@
           {% if instance.current_node %}
           <br><small class="text-muted" style="font-size: 0.75rem;">{{ instance.current_node.name }}</small>
           {% endif %}
+          </a>
           {% endwith %}
         {% else %}
           <span class="badge bg-light text-dark">未提交审批</span>

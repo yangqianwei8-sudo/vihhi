@@ -1,132 +1,133 @@
-{% extends "shared/_partials/_shared_form_wrapper_customer.html" %}
+{% extends "shared/create_form_base.html" %}
 {% load static %}
 
-{% block pm_title %}{{ page_title|default:"创建首次拜访" }}{% endblock %}
-{% block pm_subtitle %}<span class="pm-subtitle">{{ form_page_subtitle_text|default:"请填写首次拜访信息（不需要选择联系人）" }}</span>{% endblock %}
-{% block pm_actions %}
-<a href="{% url cancel_url_name|default:'customer_pages:customer_visit' %}" class="list-btn">
-  返回
-</a>
-{% endblock %}
+{# 创建首次拜访：统一使用 create_form_base.html #}
 
-{% block form_content %}
-  <form method="post" class="form-card">
-      {% csrf_token %}
+{% block form_title %}{{ page_title|default:"创建首次拜访" }}{% endblock form_title %}
+{% block form_subtitle %}{{ form_page_subtitle_text|default:"请填写首次拜访信息（不需要选择联系人）" }}{% endblock form_subtitle %}
 
-      {% if form.non_field_errors %}
-      <div class="alert alert-danger">
-          {{ form.non_field_errors }}
+{% block form_header_actions %}
+  {% if list_url %}
+    <a href="{{ list_url }}" class="btn btn-secondary">返回列表</a>
+  {% elif cancel_url_name %}
+    <a href="{% url cancel_url_name %}" class="btn btn-secondary">返回列表</a>
+  {% else %}
+    <a href="{% url 'customer_pages:customer_visit' %}" class="btn btn-secondary">返回列表</a>
+  {% endif %}
+{% endblock form_header_actions %}
+
+{% block form_basic_info_card %}
+<div class="form-card form-card-basic-info">
+  <div class="form-card-header">
+    <h3 class="form-card-title">
+      <i class="fas fa-info-circle"></i>
+      基本信息
+    </h3>
+  </div>
+  <div class="form-card-body">
+    {# 第一排：客户、拜访日期、拜访地点（一行3个） #}
+    <div class="row g-3">
+      <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+        <label for="{{ form.client.id_for_label }}" class="form-label">{{ form.client.label }}{% if form.client.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+        {{ form.client }}
+        {% if form.client.errors %}<div class="invalid-feedback d-block">{{ form.client.errors }}</div>{% endif %}
       </div>
-      {% endif %}
-
-      <div class="form-section">
-          <h5>基本信息</h5>
-          <div class="row">
-              <div class="col-md-6">
-                  <div class="form-group">
-                      <label class="form-label required-field">{{ form.client.label }}</label>
-                      {{ form.client }}
-                      {% if form.client.errors %}
-                          <div class="text-danger small">{{ form.client.errors }}</div>
-                      {% endif %}
-                  </div>
-              </div>
-              <div class="col-md-3">
-                  <div class="form-group">
-                      <label class="form-label required-field">{{ form.plan_date.label }}</label>
-                      {{ form.plan_date }}
-                      {% if form.plan_date.errors %}
-                          <div class="text-danger small">{{ form.plan_date.errors }}</div>
-                      {% endif %}
-                  </div>
-              </div>
-              <div class="col-md-3">
-                  <div class="form-group">
-                      <label class="form-label">{{ form.location.label }}</label>
-                      {{ form.location }}
-                      {% if form.location.errors %}
-                          <div class="text-danger small">{{ form.location.errors }}</div>
-                      {% endif %}
-                      <small class="form-text text-muted">将根据客户地址自动填充</small>
-                  </div>
-              </div>
-          </div>
-          <div class="row mt-3">
-              <div class="col-md-12">
-                  <div class="form-group">
-                      <label class="form-label required-field">{{ form.plan_title.label }}</label>
-                      {{ form.plan_title }}
-                      {% if form.plan_title.errors %}
-                          <div class="text-danger small">{{ form.plan_title.errors }}</div>
-                      {% endif %}
-                  </div>
-              </div>
-          </div>
-          <div class="row mt-3">
-              <div class="col-md-12">
-                  <div class="form-group">
-                      <label class="form-label required-field">{{ form.plan_purpose.label }}</label>
-                      {{ form.plan_purpose }}
-                      {% if form.plan_purpose.errors %}
-                          <div class="text-danger small">{{ form.plan_purpose.errors }}</div>
-                      {% endif %}
-                  </div>
-              </div>
-          </div>
-          <div class="row mt-3">
-              <div class="col-md-12">
-                  <div class="form-group">
-                      <label class="form-label">{{ form.related_opportunity.label }}</label>
-                      {{ form.related_opportunity }}
-                      {% if form.related_opportunity.errors %}
-                          <div class="text-danger small">{{ form.related_opportunity.errors }}</div>
-                      {% endif %}
-                      <small class="form-text text-muted">请先选择客户后，再选择关联商机（可选）</small>
-                  </div>
-              </div>
-          </div>
+      <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+        <label for="{{ form.plan_date.id_for_label }}" class="form-label">{{ form.plan_date.label }}{% if form.plan_date.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+        {{ form.plan_date }}
+        {% if form.plan_date.errors %}<div class="invalid-feedback d-block">{{ form.plan_date.errors }}</div>{% endif %}
       </div>
-
-      <div class="form-actions">
-          <button type="submit" class="btn btn-primary">保存</button>
-          <a href="{% url cancel_url_name|default:'customer_pages:customer_visit' %}" class="btn btn-secondary">取消</a>
+      <div class="col-12 col-md-6 col-lg-4 form-field-wrapper">
+        <label for="{{ form.location.id_for_label }}" class="form-label">{{ form.location.label }}</label>
+        {{ form.location }}
+        {% if form.location.errors %}<div class="invalid-feedback d-block">{{ form.location.errors }}</div>{% endif %}
+        <div class="form-text text-muted">将根据客户地址自动填充</div>
       </div>
-  </form>
-{% endblock %}
+    </div>
+    {# 第二排：拜访标题（一行1个） #}
+    <div class="row g-3 mt-1">
+      <div class="col-12 form-field-wrapper">
+        <label for="{{ form.plan_title.id_for_label }}" class="form-label">{{ form.plan_title.label }}{% if form.plan_title.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+        {{ form.plan_title }}
+        {% if form.plan_title.errors %}<div class="invalid-feedback d-block">{{ form.plan_title.errors }}</div>{% endif %}
+      </div>
+    </div>
+    {# 第三排：拜访目的（一行1个，多行文本） #}
+    <div class="row g-3 mt-1">
+      <div class="col-12 form-field-wrapper">
+        <label for="{{ form.plan_purpose.id_for_label }}" class="form-label">{{ form.plan_purpose.label }}{% if form.plan_purpose.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+        {{ form.plan_purpose }}
+        {% if form.plan_purpose.errors %}<div class="invalid-feedback d-block">{{ form.plan_purpose.errors }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock form_basic_info_card %}
 
-{% block extra_js %}
+{% block form_other_fields_card %}
+<div class="form-card form-card-other-fields">
+  <div class="form-card-header">
+    <h3 class="form-card-title">
+      <i class="fas fa-list-alt"></i>
+      关联信息
+    </h3>
+  </div>
+  <div class="form-card-body">
+    {% block form_fields %}
+    <div class="row g-3">
+      <div class="col-12 form-field-wrapper">
+        <label for="{{ form.related_opportunity.id_for_label }}" class="form-label">{{ form.related_opportunity.label }}</label>
+        {{ form.related_opportunity }}
+        {% if form.related_opportunity.errors %}
+        <div class="invalid-feedback d-block">{{ form.related_opportunity.errors }}</div>
+        {% endif %}
+        <div class="form-text text-muted">请先选择客户后，再选择关联商机（可选）</div>
+      </div>
+    </div>
+    {% endblock form_fields %}
+  </div>
+</div>
+{% endblock form_other_fields_card %}
+
+{% block form_actions %}
+  <a href="{% url cancel_url_name|default:'customer_pages:customer_visit' %}" class="btn btn-secondary">取消</a>
+  <button type="button" class="btn btn-primary" id="headerSubmitButton">创建</button>
+{% endblock form_actions %}
+
+{% block module_extra_js %}
+{{ block.super }}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 客户地址自动填充
-    const clientsWithAddress = {{ clients_with_address_json|safe }};
-    const clientsOpportunities = {{ clients_opportunities_json|safe }};
-    const clientSelect = document.getElementById('id_client');
-    const locationInput = document.getElementById('id_location');
-    const opportunitySelect = document.getElementById('id_related_opportunity');
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    var clientsWithAddress = {{ clients_with_address_json|safe }};
+    var clientsOpportunities = {{ clients_opportunities_json|safe }};
+    var clientSelect = document.getElementById('id_client');
+    var locationInput = document.getElementById('id_location');
+    var opportunitySelect = document.getElementById('id_related_opportunity');
 
     if (clientSelect && locationInput) {
-        clientSelect.addEventListener('change', function() {
-            const clientId = this.value;
-            if (clientId && clientsWithAddress[clientId]) {
-                locationInput.value = clientsWithAddress[clientId];
-            } else {
-                locationInput.value = '';
-            }
+      clientSelect.addEventListener('change', function() {
+        var clientId = this.value;
+        if (clientId && clientsWithAddress[clientId]) {
+          locationInput.value = clientsWithAddress[clientId];
+        } else {
+          locationInput.value = '';
+        }
 
-            // 更新关联商机选项
-            if (opportunitySelect) {
-                opportunitySelect.innerHTML = '<option value="">-- 请先选择客户 (可选) --</option>';
-                if (clientId && clientsOpportunities[clientId]) {
-                    clientsOpportunities[clientId].forEach(function(opp) {
-                        const option = document.createElement('option');
-                        option.value = opp.id;
-                        option.textContent = opp.name;
-                        opportunitySelect.appendChild(option);
-                    });
-                }
-            }
-        });
+        if (opportunitySelect) {
+          opportunitySelect.innerHTML = '<option value="">-- 请先选择客户 (可选) --</option>';
+          if (clientId && clientsOpportunities[clientId]) {
+            clientsOpportunities[clientId].forEach(function(opp) {
+              var option = document.createElement('option');
+              option.value = opp.id;
+              option.textContent = opp.name;
+              opportunitySelect.appendChild(option);
+            });
+          }
+        }
+      });
     }
-});
+  });
+})();
 </script>
-{% endblock %}
+{% endblock module_extra_js %}

@@ -198,11 +198,9 @@
         // 导出 lastToggleTime 到外部作用域，供点击外部关闭事件使用
         // （通过闭包，点击外部关闭事件可以访问这个变量）
         
-        // 加载通知
+        // 加载通知（使用通用通知API，包含公告、团队通知、诉讼通知等）
         function loadNotifications() {
-            // 使用正确的API路径：/api/plan/notifications/
-            // 只加载未读通知，已读的通知自动从列表中消失
-            const apiUrl = '/api/plan/notifications/?is_read=0';
+            const apiUrl = '/api/notifications/';
             
             // 检查fetch是否可用（兼容旧浏览器）
             if (typeof fetch === 'undefined') {
@@ -277,16 +275,17 @@
             
             const html = notifications.map(notif => {
                 const unreadClass = notif.is_read ? '' : 'unread';
-                // 根据事件类型设置图标和优先级
-                const icon = getNotificationIcon(notif.event);
-                const priorityClass = getNotificationPriority(notif.event);
-                // 使用 created_at 字段（序列化器返回的字段名）
+                // 通用API返回 icon；计划API返回 event，用 getNotificationIcon 映射
+                const icon = notif.icon != null ? notif.icon : getNotificationIcon(notif.event);
+                const priorityClass = notif.priority === 'urgent' ? 'priority-urgent' : (notif.priority === 'important' ? 'priority-important' : (notif.priority ? `priority-${notif.priority}` : getNotificationPriority(notif.event)));
                 const timeStr = formatTime(notif.created_at || notif.created_time);
+                // id 可能是字符串（如 team_284）或数字，统一按字符串存储以便通用API标记已读
+                const notifIdStr = String(notif.id);
                 
                 return `
                     <div class="notification-item ${unreadClass} ${priorityClass}" 
-                         data-id="${notif.id}" 
-                         data-url="${notif.url || '#'}"
+                         data-id="${notifIdStr.replace(/"/g, '&quot;')}" 
+                         data-url="${(notif.url || '#').replace(/"/g, '&quot;')}"
                          data-is-read="${notif.is_read ? 'true' : 'false'}">
                         <div class="notification-icon-item">${icon}</div>
                         <div class="notification-content">
@@ -305,7 +304,8 @@
             
             // 绑定点击事件 - 点击整个通知项
             list.querySelectorAll('.notification-item').forEach(item => {
-                const notifId = parseInt(item.dataset.id);
+                // id 为字符串（如 team_284、announcement_1），通用API标记已读需要完整 id
+                const notifId = item.dataset.id;
                 const url = item.dataset.url;
                 const isRead = item.dataset.isRead === 'true';
                 
@@ -316,36 +316,28 @@
                     
                     // 如果未读，先立即更新UI（乐观更新），然后调用API
                     if (!isRead) {
-                        // 立即从本地数组中移除该通知（因为只显示未读通知）
                         const originalNotifications = [...notifications];
-                        notifications = notifications.filter(n => n.id !== notifId);
+                        notifications = notifications.filter(n => String(n.id) !== notifId);
                         
-                        // 立即重新渲染（通知会从列表中消失，因为已从数组中移除）
                         renderNotifications();
-                        
-                        // 立即更新徽章
                         const unreadCount = notifications.filter(n => !n.is_read).length;
                         updateBadge(unreadCount);
                         
-                        // 然后调用API标记为已读
                         markAsRead(notifId).then(data => {
-                            // API调用成功，确保数据同步
-                            console.log('通知已标记为已读:', data);
+                            if (typeof console !== 'undefined' && console.log) {
+                                console.log('通知已标记为已读:', data);
+                            }
                         }).catch(error => {
-                            // 如果API失败，回滚UI状态
                             console.error('标记已读失败，回滚UI:', error);
                             notifications = originalNotifications;
                             renderNotifications();
                             const unreadCount = originalNotifications.filter(n => !n.is_read).length;
                             updateBadge(unreadCount);
-                            // 显示错误提示
                             alert('标记已读失败，请刷新页面重试');
                         });
                     }
                     
-                    // 如果有URL，延迟跳转（让用户看到UI更新）
                     if (url && url !== '#') {
-                        // 延迟跳转，让用户看到通知从列表中消失
                         setTimeout(() => {
                             window.location.href = url;
                         }, 200);
@@ -381,11 +373,12 @@
                 headers['X-CSRFToken'] = csrfToken;
             }
             
-            // 使用正确的API路径：/api/plan/notifications/{id}/mark-read/
-            return fetch(`/api/plan/notifications/${notificationId}/mark-read/`, {
+            // 使用通用通知API，支持 announcement_*、team_*、litigation_*
+            return fetch('/api/notifications/mark-read/', {
                 method: 'POST',
                 headers: headers,
                 credentials: 'same-origin',
+                body: JSON.stringify({ notification_id: notificationId }),
             })
             .then(response => {
                 // 先尝试解析JSON，即使状态码不是200
@@ -405,58 +398,31 @@
                 });
             })
             .then(data => {
-                // API返回格式：{ok: true, id: 4, is_read: true}
                 if (!(data.ok || data.success)) {
-                    throw new Error(data.detail || data.error || 'API返回失败');
+                    throw new Error(data.detail || data.error || data.message || 'API返回失败');
                 }
                 return data;
             })
             .catch(error => {
-                // 标记已读失败，抛出错误以便调用者处理
                 console.error('标记通知已读失败:', error);
                 throw error;
             });
         }
         
-        // 全部标记为已读
+        // 全部标记为已读（通用API无批量接口，逐个调用 mark-read）
         function markAllAsRead() {
-            // 获取CSRF token
-            const csrfToken = getCsrfToken();
-            
-            // 构建请求头
-            const headers = {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Content-Type': 'application/json',
-            };
-            
-            // 如果有CSRF token，添加到请求头
-            if (csrfToken) {
-                headers['X-CSRFToken'] = csrfToken;
+            const unreadList = notifications.filter(n => !n.is_read);
+            if (unreadList.length === 0) {
+                return;
             }
-            
-            fetch('/api/plan/notifications/mark-all-read/', {
-                method: 'POST',
-                headers: headers,
-                credentials: 'same-origin',
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.ok || data.success) {
-                    // 清空所有通知（因为只显示未读通知，全部标记为已读后应该全部消失）
-                    notifications = [];
-                    // 重新渲染
-                    renderNotifications();
-                    // 更新徽章
-                    updateBadge(0);
-                }
-            })
-            .catch(error => {
-                // 标记已读失败，静默处理
+            const promises = unreadList.map(n => markAsRead(String(n.id)));
+            Promise.all(promises).then(() => {
+                notifications = notifications.filter(n => n.is_read);
+                renderNotifications();
+                updateBadge(0);
+            }).catch(err => {
+                console.error('全部已读失败:', err);
+                loadNotifications();
             });
         }
         

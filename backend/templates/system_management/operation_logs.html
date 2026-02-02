@@ -1,0 +1,54 @@
+{% extends "shared/two_column_layout_base.html" %}
+{% load static %}
+
+{% block title %}操作日志 - 维海生产系统{% endblock %}
+
+{% block pm_title %}操作日志{% endblock pm_title %}
+
+{% block pm_subtitle %}记录系统操作行为与异常告警，为审计与问题排查提供依据。{% endblock pm_subtitle %}
+
+{% block pm_actions %}
+    <a href="{% url 'system_pages:system_settings' %}" class="btn btn-outline-secondary btn-sm">
+        返回系统设置
+    </a>
+{% endblock pm_actions %}
+
+{% block pm_content %}
+<div class="py-4">
+    <div class="row g-3">
+        {% for section in sections %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light fw-semibold">{{ section.title }}</div>
+                <div class="card-body">
+                    {% if section.description %}
+                    <p class="text-muted small mb-3">{{ section.description }}</p>
+                    {% endif %}
+                    <div class="row g-3">
+                        {% for item in section.items %}
+                        <div class="col-xl-3 col-lg-4 col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        {% if item.icon %}{{ item.icon }} {% endif %}{{ item.label }}
+                                    </h6>
+                                    {% if item.description %}
+                                    <p class="card-text small text-muted">{{ item.description }}</p>
+                                    {% endif %}
+                                    {% if item.url %}
+                                    <a href="{{ item.url }}" class="btn btn-sm btn-outline-primary">
+                                        {{ item.link_label|default:"进入模块 →" }}
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock pm_content %}

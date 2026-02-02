@@ -1,4 +1,4 @@
-{% extends "shared/module_base.html" %}
+{% extends "shared/two_column_layout_base.html" %}
 
 {% block title %}{{ page_title }} - 维海科技信息化管理平台{% endblock %}
 
@@ -63,7 +63,7 @@
         </div>
     </div>
 
-    <form method="post" class="form-card">
+    <form method="post">
         {% csrf_token %}
 
         <div class="form-section">
@@ -507,9 +507,44 @@ document.addEventListener('DOMContentLoaded', function() {
         // 监听客户选择变化
         clientSelect.addEventListener('change', updateOpportunities);
 
+        // 商机选择变化：自动回填 client、project（如字段存在）
+        const projectSelect = document.getElementById('id_project');
+        opportunitySelect.addEventListener('change', function() {
+            const opportunityId = this.value;
+            if (!opportunityId) {
+                if (projectSelect) projectSelect.value = '';
+                return;
+            }
+            fetch(`{% url "customer:get_opportunities_by_client_name" %}?opportunity_id=${opportunityId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.opportunity) {
+                        const opp = data.opportunity;
+                        if (opp.client && opp.client.id && clientSelect && !clientSelect.value) {
+                            clientSelect.value = opp.client.id;
+                            updateOpportunities();
+                        }
+                        if (opp.project && opp.project.id && projectSelect) {
+                            projectSelect.value = opp.project.id;
+                        }
+                    }
+                })
+                .catch(() => {});
+        });
+
         // 如果客户已有值，初始化时也更新一次
         if (clientSelect.value) {
             updateOpportunities();
+        }
+        if (opportunitySelect.value && projectSelect) {
+            fetch(`{% url "customer:get_opportunities_by_client_name" %}?opportunity_id=${opportunitySelect.value}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.opportunity && data.opportunity.project) {
+                        projectSelect.value = data.opportunity.project.id;
+                    }
+                })
+                .catch(() => {});
         }
     }
 

@@ -279,7 +279,7 @@ def output_value_record_list(request):
     
     # 分页（简单实现）
     from django.core.paginator import Paginator
-    paginator = Paginator(records, 20)
+    paginator = Paginator(records, 13)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
@@ -343,7 +343,7 @@ def project_output_value_detail(request, project_id):
     has_manage_permission = user_has_permission(request.user, 'financial_management.settlement.manage_output')
     
     # 产值记录分页
-    paginator = Paginator(output_value_summary['records'], 20)
+    paginator = Paginator(output_value_summary['records'], 13)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
@@ -647,7 +647,7 @@ def project_settlement_list(request):
         settlements = settlements.filter(project_id=project_id)
     
     # 分页
-    paginator = Paginator(settlements, 20)
+    paginator = Paginator(settlements, 13)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
@@ -999,7 +999,7 @@ def payment_plan_list(request):
     all_plans.sort(key=lambda x: x['planned_date'], reverse=True)
     
     # 分页
-    paginator = Paginator(all_plans, 20)
+    paginator = Paginator(all_plans, 13)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
@@ -1122,7 +1122,7 @@ def payment_record_list(request):
             pass
     
     # 分页
-    paginator = Paginator(payment_records, 20)
+    paginator = Paginator(payment_records, 13)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     

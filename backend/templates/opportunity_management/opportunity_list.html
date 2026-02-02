@@ -14,45 +14,59 @@
 {% block pm_title %}{{ page_title|default:"商机列表" }}{% endblock pm_title %}
 {% block pm_subtitle %}{{ description|default:"查看和管理所有商机" }}{% endblock pm_subtitle %}
 
-{# 筛选器区域 #}
-{% block list_filters_content %}
-  <div class="list-page-filter-item">
+{# 列表页操作：新建商机、批量导入（入口在列表内） #}
+{% block list_page_actions %}
+{% if can_create %}
+<a href="{% url 'opportunity_pages:opportunity_create' %}" class="list-btn list-btn-primary">新建商机</a>
+{% endif %}
+<a href="{% url 'opportunity_pages:opportunity_import' %}" class="list-btn">批量导入</a>
+{% endblock list_page_actions %}
+
+{% block search_placeholder %}商机编号、名称、客户、负责人{% endblock search_placeholder %}
+
+{# 额外筛选字段（与基模关键词一起，支持自定义筛选字段显隐与排序） #}
+{% block list_filters_extra %}
+  <div class="col list-page-filter-item" data-filter-key="status">
     <label class="list-page-filter-label">商机状态</label>
-    <select name="status" class="form-select">
+    <select name="status" class="form-select form-select-sm">
       <option value="">全部状态</option>
       {% for value, label in status_choices %}
       <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="urgency">
     <label class="list-page-filter-label">紧急程度</label>
-    <select name="urgency" class="form-select">
+    <select name="urgency" class="form-select form-select-sm">
       <option value="">全部</option>
       {% for value, label in urgency_choices %}
       <option value="{{ value }}" {% if urgency == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="client_id">
     <label class="list-page-filter-label">关联客户</label>
-    <select name="client_id" class="form-select">
+    <select name="client_id" class="form-select form-select-sm">
       <option value="">全部客户</option>
       {% for client in clients %}
+      {% if client %}
       <option value="{{ client.id }}" {% if client_id == client.id|stringformat:"s" %}selected{% endif %}>{{ client.name }}</option>
+      {% endif %}
       {% endfor %}
     </select>
   </div>
-  <div class="list-page-filter-item">
+  <div class="col list-page-filter-item" data-filter-key="business_manager_id">
     <label class="list-page-filter-label">负责商务</label>
-    <select name="business_manager_id" class="form-select">
+    <select name="business_manager_id" class="form-select form-select-sm">
       <option value="">全部</option>
       {% for manager in business_managers %}
+      {% if manager %}
       <option value="{{ manager.id }}" {% if business_manager_id == manager.id|stringformat:"s" %}selected{% endif %}>{{ manager.get_full_name|default:manager.username }}</option>
+      {% endif %}
       {% endfor %}
     </select>
   </div>
-{% endblock list_filters_content %}
+{% endblock list_filters_extra %}
 
 {# 表格头部 #}
 {% block list_table_headers %}
@@ -74,6 +88,7 @@
 {% block list_table_rows %}
   {% if page_obj %}
     {% for opportunity in page_obj %}
+    {% if opportunity %}
     <tr>
       <td><code>{{ opportunity.opportunity_number|default:'未编号' }}</code></td>
       <td>
@@ -90,7 +105,7 @@
         <span class="text-muted">-</span>
         {% endif %}
       </td>
-      <td>{{ opportunity.business_manager.get_full_name|default:opportunity.business_manager.username }}</td>
+      <td>{% if opportunity.business_manager %}{{ opportunity.business_manager.get_full_name|default:opportunity.business_manager.username }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
       <td>
         {% with s=opportunity.status %}
         <span class="badge {% if s == 'won' %}bg-success{% elif s == 'lost' %}bg-danger{% elif s == 'cancelled' %}bg-secondary{% else %}bg-primary{% endif %}">
@@ -132,6 +147,7 @@
       {# 列设置单元格 - 保持列对齐 #}
       {% if column_settings_btn|default:False %}<td></td>{% endif %}
     </tr>
+    {% endif %}
     {% empty %}
     <tr>
       <td colspan="{% if column_settings_btn|default:False %}13{% else %}12{% endif %}" class="list-empty">
